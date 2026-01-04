@@ -23,8 +23,6 @@ type EventStoreAction =
   | { type: "UPDATE_EVENT"; payload: { index: number; event: HdayEvent } }
   | { type: "DELETE_EVENT"; payload: number }
   | { type: "DELETE_EVENTS"; payload: number[] }
-  | { type: "DUPLICATE_EVENT"; payload: number }
-  | { type: "DUPLICATE_EVENTS"; payload: number[] }
   | { type: "IMPORT_HDAY"; payload: string }
   | { type: "CLEAR_ALL" }
   | { type: "UNDO" }
@@ -57,12 +55,6 @@ interface EventStoreContextType {
 
   /** Delete multiple events by index */
   deleteEvents: (indices: number[]) => void;
-
-  /** Duplicate an event by index */
-  duplicateEvent: (index: number) => void;
-
-  /** Duplicate multiple events by index */
-  duplicateEvents: (indices: number[]) => void;
 
   /** Import .hday text (replaces all events) */
   importHday: (text: string) => void;
@@ -154,44 +146,6 @@ function eventsReducer(state: EventStoreState, action: EventStoreAction): EventS
       }
       const filtered = state.events.filter((_, i) => !indices.has(i));
       return applyWithHistory(state, sortEvents(filtered));
-    }
-
-    case "DUPLICATE_EVENT": {
-      if (action.payload < 0 || action.payload >= state.events.length) {
-        console.error(`Invalid event index: ${action.payload}`);
-        return state;
-      }
-      const event = state.events[action.payload];
-      if (!event) {
-        return state;
-      }
-      const duplicated: HdayEvent = {
-        ...event,
-        flags: event.flags ? [...event.flags] : undefined,
-      };
-      return applyWithHistory(state, sortEvents([...state.events, duplicated]));
-    }
-
-    case "DUPLICATE_EVENTS": {
-      if (action.payload.length === 0) {
-        return state;
-      }
-      const indices = action.payload.filter((index) => index >= 0 && index < state.events.length);
-      if (indices.length === 0) {
-        console.error("Invalid event indices:", action.payload);
-        return state;
-      }
-      const duplicates: HdayEvent[] = indices
-        .map((index) => state.events[index])
-        .filter((event): event is HdayEvent => Boolean(event))
-        .map((event) => ({
-          ...event,
-          flags: event.flags ? [...event.flags] : undefined,
-        }));
-      if (duplicates.length === 0) {
-        return state;
-      }
-      return applyWithHistory(state, sortEvents([...state.events, ...duplicates]));
     }
 
     case "IMPORT_HDAY": {
@@ -343,14 +297,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "DELETE_EVENTS", payload: indices });
   }, []);
 
-  const duplicateEvent = useCallback((index: number) => {
-    dispatch({ type: "DUPLICATE_EVENT", payload: index });
-  }, []);
-
-  const duplicateEvents = useCallback((indices: number[]) => {
-    dispatch({ type: "DUPLICATE_EVENTS", payload: indices });
-  }, []);
-
   /**
    * Import .hday text (replaces all events)
    */
@@ -389,8 +335,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       updateEvent,
       deleteEvent,
       deleteEvents,
-      duplicateEvent,
-      duplicateEvents,
       importHday,
       exportHday,
       clearAll,
@@ -407,8 +351,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       updateEvent,
       deleteEvent,
       deleteEvents,
-      duplicateEvent,
-      duplicateEvents,
       importHday,
       exportHday,
       clearAll,

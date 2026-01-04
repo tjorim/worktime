@@ -253,61 +253,6 @@ describe("EventStoreContext", () => {
     });
   });
 
-  describe("duplicateEvent", () => {
-    it("should duplicate a single event by index", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEvent({
-          type: "range",
-          start: "2025/01/15",
-          end: "2025/01/15",
-          flags: ["holiday"],
-          title: "Original",
-        });
-      });
-
-      act(() => {
-        result.current.duplicateEvent(0);
-      });
-
-      expect(result.current.events).toHaveLength(2);
-      expect(result.current.events[0].title).toBe("Original");
-      expect(result.current.events[1].title).toBe("Original");
-    });
-  });
-
-  describe("duplicateEvents", () => {
-    it("should duplicate multiple events by index", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEvent({
-          type: "range",
-          start: "2025/01/15",
-          end: "2025/01/15",
-          flags: ["holiday"],
-          title: "Event 1",
-        });
-        result.current.addEvent({
-          type: "range",
-          start: "2025/01/16",
-          end: "2025/01/16",
-          flags: ["holiday"],
-          title: "Event 2",
-        });
-      });
-
-      act(() => {
-        result.current.duplicateEvents([0, 1]);
-      });
-
-      expect(result.current.events).toHaveLength(4);
-      expect(result.current.events.filter((event) => event.title === "Event 1")).toHaveLength(2);
-      expect(result.current.events.filter((event) => event.title === "Event 2")).toHaveLength(2);
-    });
-  });
-
   describe("getEventsInRange", () => {
     it("should return events within the date range", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });

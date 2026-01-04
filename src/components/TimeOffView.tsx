@@ -107,7 +107,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     updateEvent,
     deleteEvent,
     deleteEvents,
-    duplicateEvents,
     importHday,
     exportHday,
     canUndo,
@@ -223,22 +222,13 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setEndDateError("");
   };
 
-  /**
-   * Opens the event modal with pre-filled form data from an existing event.
-   * @param index - Index of the event to use for pre-filling
-   * @param editIndex - The edit index to set (-1 for new/duplicate, or event index for editing)
-   */
-  const openEventModalWithPrefill = (index: number, editIndex: number) => {
+  const handleOpenEditModal = (index: number) => {
     const event = events[index];
     if (!event) return;
 
-    setEditIndex(editIndex);
+    setEditIndex(index);
     prefillFormFromEvent(event);
     setShowEventModal(true);
-  };
-
-  const handleOpenEditModal = (index: number) => {
-    openEventModalWithPrefill(index, index);
   };
 
   const handleSubmitEvent = () => {
@@ -315,17 +305,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     }
     setSelectedIndices([]);
     setShowBulkDeleteConfirm(false);
-  };
-
-  const handleDuplicate = (index: number) => {
-    openEventModalWithPrefill(index, -1);
-  };
-
-  const handleBulkDuplicate = () => {
-    if (selectedIndices.length === 0) return;
-    duplicateEvents(selectedIndices);
-    toast.showSuccess(`Duplicated ${selectedIndices.length} events`, "📄");
-    setSelectedIndices([]);
   };
 
   useEffect(() => {
@@ -529,17 +508,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
             <Button
               variant="outline-secondary"
               size="sm"
-              onClick={handleBulkDuplicate}
-              className="me-2"
-              disabled={selectedIndices.length === 0}
-              aria-label="Duplicate selected events"
-            >
-              <i className="bi bi-files me-1"></i>
-              Duplicate Selected
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
               onClick={handleSelectAll}
               className="me-2"
               disabled={events.length === 0 || selectedIndices.length === events.length}
@@ -590,7 +558,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
             <span className="text-muted small">
               {viewMode === "calendar"
                 ? "Click a day to add events, or select an event to edit."
-                : "Select events from the table to edit, duplicate, or delete."}
+                : "Select events from the table to edit or delete."}
             </span>
           </div>
 
@@ -709,15 +677,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                                 <i className="bi bi-pencil" aria-hidden="true"></i>
                               </Button>
                               <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                onClick={() => handleDuplicate(index)}
-                                className="me-2"
-                                aria-label={`Duplicate ${event.title || eventLabel}`}
-                              >
-                                <i className="bi bi-files" aria-hidden="true"></i>
-                              </Button>
-                              <Button
                                 variant="outline-danger"
                                 size="sm"
                                 onClick={() => handleDeleteClick(index)}
@@ -765,7 +724,10 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-        onHide={() => setShowEventModal(false)}
+        onHide={() => {
+          setShowEventModal(false);
+          resetForm();
+        }}
         onEntered={() => formRef.current?.focus()}
         onEventTypeChange={setEventType}
         onEventTitleChange={setEventTitle}
