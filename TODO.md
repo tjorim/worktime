@@ -411,7 +411,7 @@ Advanced features for future development phases.
 1. **Raw .hday Content Editor/Viewer** - View/edit raw .hday content in UI
 2. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
 3. **Export Schedule Feature** - Calendar export functionality (user-facing)
-4. **Enhanced Keyboard Navigation** - Calendar-specific keyboard shortcuts
+4. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
 5. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
 6. **Version Sync Fix** - Quick changelog alignment (30 min)
 
