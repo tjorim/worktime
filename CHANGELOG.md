@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Month Calendar Grid View: Visual calendar component with event overlays for time-off management
+- Month Calendar Grid View: Visual calendar component with event overlays for time-off management (commit "Add month calendar grid view for Time Off")
 - Calendar/Table View Toggle: Switch between calendar grid and table views
 - Keyboard Navigation: Arrow keys, Home, End for navigating calendar days with cross-month support
 - Visual Indicators: Public holidays (🎉), school holidays (🏫), and paydays (💶) displayed on calendar
