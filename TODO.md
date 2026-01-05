@@ -28,6 +28,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
   - **Status**: 🔲 Planned
 - **3. Unified event store (computed shifts + `.hday` events)**
   - **Current State**: `src/contexts/EventStoreContext.tsx` manages `.hday` time-off events only
+  - **Notes**: Enables HdayPlanner gap items 4.2 (Vacation Statistics), 4.3 (Raw .hday Editor), and 4.4 (Utility Functions) by standardizing event handling
   - **Implementation**: Merge computed shift events with imported time-off events in a single in-memory store
   - **Status**: 🔲 Planned (expansion beyond current time-off store)
 - **4. Overlay semantics on schedule/transfer views**
