@@ -54,17 +54,22 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 
 #### 2. Keyboard Shortcuts Implementation
 
-- **Component**: Enhanced navigation with keyboard shortcuts
+- **Component**: Enhanced navigation and time-off workflows with keyboard shortcuts
 - **Use Cases**:
   - Quick tab switching (T for Today, S for Schedule, R for Transfers)
   - Date navigation (← → arrow keys)
   - Settings panel toggle (Ctrl+,)
+  - Ctrl+S / Cmd+S to download .hday file
+  - Ctrl+N to add new time-off event
+  - Escape to cancel edit mode
+  - Delete key to remove selected event
 - **Implementation**: Integrate existing useKeyboardShortcuts hook into components
 - **Files to Modify**:
   - `src/components/MainTabs.tsx` - Add shortcut handlers
   - `src/components/ScheduleView.tsx` - Add date navigation shortcuts
   - `src/components/Header.tsx` - Add settings shortcut
-- **Estimated Effort**: 2–3 hours
+  - `src/components/TimeOffView.tsx` - Add time-off specific shortcuts
+- **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Planned
 
 #### 3. Version Sync Fix
@@ -278,19 +283,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 10. Time-Off Keyboard Shortcuts
-
-- **Component**: Enhanced keyboard navigation for time-off management
-- **Use Cases**:
-  - Ctrl+S / Cmd+S to download .hday file
-  - Ctrl+N to add new event
-  - Escape to cancel edit mode
-  - Delete key to remove selected event
-- **Implementation**: Add keyboard event handlers to TimeOffView
-- **Estimated Effort**: 2 hours
-- **Status**: 🔲 Future
-
-#### 11. Time-Off Bulk Operations
+#### 10. Time-Off Bulk Operations
 
 - **Component**: Multi-event management
 - **Use Cases**:
@@ -301,7 +294,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 12. Calendar Export Formats
+#### 11. Calendar Export Formats
 
 - **Component**: Multi-format export functionality
 - **Use Cases**:
@@ -317,7 +310,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 13. Time-Off Statistics Dashboard
+#### 12. Time-Off Statistics Dashboard
 
 - **Component**: Vacation and time-off analytics
 - **Use Cases**:
@@ -333,7 +326,7 @@ Features that enhance functionality with moderate development effort.
 
 Advanced features for future development phases.
 
-#### 14. Carousel for Mobile Team View
+#### 13. Carousel for Mobile Team View
 
 - **Component**: `react-bootstrap/Carousel`
 - **Use Cases**:
@@ -343,7 +336,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Future
 
-#### 15. Accordion for Transfer History
+#### 14. Accordion for Transfer History
 
 - **Component**: `react-bootstrap/Accordion`
 - **Use Cases**:
@@ -353,7 +346,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 16. Notification System Implementation
+#### 15. Notification System Implementation
 
 - **Component**: Browser notification functionality
 - **Use Cases**:
@@ -364,7 +357,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 17. Advanced Accessibility Features
+#### 16. Advanced Accessibility Features
 
 - **Component**: Enhanced accessibility support
 - **Use Cases**:
@@ -376,7 +369,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 18. Multi-Roster Pattern Support
+#### 17. Multi-Roster Pattern Support
 
 - **Component**: Configurable shift patterns beyond 5-team 2-2-2-4 cycle
 - **Use Cases**:
@@ -399,7 +392,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 8–12 hours (Major feature)
 - **Status**: 🔲 Future
 
-#### 19. Floating Action Button
+#### 18. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -418,7 +411,7 @@ Advanced features for future development phases.
 1. **Raw .hday Content Editor/Viewer** - View/edit raw .hday content in UI
 2. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
 3. **Export Schedule Feature** - Calendar export functionality (user-facing)
-4. **Keyboard Shortcuts** - Enhanced navigation and UX
+4. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
 5. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
 6. **Version Sync Fix** - Quick changelog alignment (30 min)
 
@@ -435,19 +428,18 @@ Advanced features for future development phases.
 ### 📋 Backlog (Time-Off Management)
 
 9. **Time-Off Calendar Visual Enhancements** - Color-coded events, auto-load current month, highlight today
-10. **Time-Off Keyboard Shortcuts** - Ctrl+S download, Ctrl+N new event, Escape cancel
-11. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
-12. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
-13. **Time-Off Statistics Dashboard** - Vacation days used/remaining, breakdown by type
+10. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
+11. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
+12. **Time-Off Statistics Dashboard** - Vacation days used/remaining, breakdown by type
 
 ### 📋 Backlog (UI/UX)
 
-14. **Mobile Carousel** - Improved mobile navigation
-15. **Transfer History Accordion** - Organized historical data
-16. **Notification System** - Browser notifications for shifts and time-off
-17. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-18. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
-19. **Floating Action Button** - Quick actions overlay
+13. **Mobile Carousel** - Improved mobile navigation
+14. **Transfer History Accordion** - Organized historical data
+15. **Notification System** - Browser notifications for shifts and time-off
+16. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
+17. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
+18. **Floating Action Button** - Quick actions overlay
 
 ## Technical Requirements
 
