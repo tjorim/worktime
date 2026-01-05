@@ -72,7 +72,7 @@ function getFlagLabel(flag: EventFlag): string {
 /**
  * Props for the FlagSection component
  */
-type FlagSectionProps<Flag extends string> = {
+type FlagSectionProps<Flag extends EventFlag | "none"> = {
   mode: "add" | "edit" | "view";
   title: string;
   fieldsetTitle?: string;
@@ -95,7 +95,7 @@ type FlagSectionProps<Flag extends string> = {
  * @param flagGroup - Array of flags that belong to this section
  * @param onFlagChange - Callback when a flag is changed
  */
-function FlagSection<Flag extends string>({
+function FlagSection<Flag extends EventFlag | "none">({
   mode,
   title,
   fieldsetTitle,
