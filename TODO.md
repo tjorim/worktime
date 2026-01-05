@@ -415,10 +415,12 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
-2. **Export Schedule Feature** - Calendar export functionality (user-facing)
-3. **Keyboard Shortcuts** - Enhanced navigation and UX
-4. **Version Sync Fix** - Quick changelog alignment (30 min)
+1. **Raw .hday Content Editor/Viewer** - View/edit raw .hday content in UI
+2. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
+3. **Export Schedule Feature** - Calendar export functionality (user-facing)
+4. **Keyboard Shortcuts** - Enhanced navigation and UX
+5. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
+6. **Version Sync Fix** - Quick changelog alignment (30 min)
 
 ### 📋 Backlog (Code Quality)
 
