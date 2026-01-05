@@ -96,7 +96,7 @@ export function useOpenHolidays<T>({
     timeoutError,
     networkError,
     unknownError,
-  ]);
+  ]); // oxlint-disable-line react/exhaustive-deps -- paramsKey tracks params changes via useMemo, preventing unnecessary re-fetches on identical content
 
   return { holidays, loading, error };
 }
