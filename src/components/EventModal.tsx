@@ -69,6 +69,92 @@ function getFlagLabel(flag: EventFlag): string {
   return labels[flag] || flag;
 }
 
+/**
+ * Props for the FlagSection component
+ */
+type FlagSectionProps = {
+  mode: "add" | "edit" | "view";
+  title: string;
+  fieldsetTitle?: string;
+  flagOptions: Array<[string, string]>;
+  eventFlags: EventFlag[];
+  flagGroup: EventFlag[];
+  onFlagChange: (flag: string) => void;
+};
+
+/**
+ * Reusable component for displaying flag sections in both edit and view modes.
+ * In edit/add mode, displays radio buttons for all flag options.
+ * In view mode, displays badges for active flags only.
+ *
+ * @param mode - Current modal mode ("add", "edit", or "view")
+ * @param title - Section title (used in view mode as form label)
+ * @param fieldsetTitle - Section title for fieldset (used in edit/add mode, defaults to title)
+ * @param flagOptions - Array of [flag, label] tuples for all available options
+ * @param eventFlags - Currently selected event flags
+ * @param flagGroup - Array of flags that belong to this section
+ * @param onFlagChange - Callback when a flag is changed
+ */
+function FlagSection({
+  mode,
+  title,
+  fieldsetTitle,
+  flagOptions,
+  eventFlags,
+  flagGroup,
+  onFlagChange,
+}: FlagSectionProps) {
+  if (mode !== "view") {
+    // Edit/Add mode: Show all radio buttons
+    return (
+      <Col xs={12}>
+        <fieldset className="border rounded p-3">
+          <legend className="float-none w-auto px-2 fs-6">{fieldsetTitle || title}</legend>
+          <Row className="g-2">
+            {flagOptions.map(([flag, label]) => (
+              <Col sm={6} lg={4} key={flag}>
+                <FlagCheckbox
+                  id={`${title.toLowerCase().replace(/\s+/g, "-")}-flag-${flag}`}
+                  name={`${title.toLowerCase().replace(/\s+/g, "-")}-flag`}
+                  type="radio"
+                  label={label}
+                  checked={
+                    flag === "none"
+                      ? !eventFlags.some((flagValue) => flagGroup.includes(flagValue))
+                      : eventFlags.includes(flag as EventFlag)
+                  }
+                  onChange={() => onFlagChange(flag)}
+                />
+              </Col>
+            ))}
+          </Row>
+        </fieldset>
+      </Col>
+    );
+  }
+
+  // View mode: Show only active flags as badges
+  return (
+    <Col xs={12}>
+      <Form.Group>
+        <Form.Label>{title}</Form.Label>
+        <div className="d-flex gap-2 align-items-center">
+          {eventFlags
+            .filter((f) => flagGroup.includes(f))
+            .map((flag) => (
+              <Badge key={flag} bg="secondary">
+                {getFlagLabel(flag)}
+              </Badge>
+            ))}
+          {!eventFlags.some((f) => flagGroup.includes(f)) && (
+            <span className="text-muted">None</span>
+          )}
+        </div>
+      </Form.Group>
+    </Col>
+  );
+}
+
 type EventModalProps = {
   show: boolean;
   mode?: "add" | "edit" | "view";
@@ -119,7 +205,7 @@ type EventModalProps = {
  * - Modal backdrop click and Escape key both trigger onHide for flexibility
  *
  * @param show - Whether the modal is visible
- * @param editIndex - Index of the event being edited, or -1 for a new event
+ * @param mode - Modal mode: `"add"` for new events, `"edit"` for editing, `"view"` for read-only viewing
  * @param formRef - Ref attached to the modal body for focus management
  * @param eventType - Either `"range"` (start/end date) or `"weekly"` (weekday)
  * @param eventWeekday - Weekday number (1–7) when `eventType` is `"weekly"`
@@ -145,6 +231,7 @@ type EventModalProps = {
  * @param onTimeFlagChange - Handler invoked with a time/location-flag key when selected
  * @param onResetForm - Resets the form to its initial state
  * @param onSubmit - Submits the form to add or update the event
+ * @param onSwitchToEdit - Optional callback when Edit button is clicked in view mode to switch to edit mode
  * @returns The rendered EventModal component (a Bootstrap Modal containing the editor)
  */
 export function EventModal({
@@ -181,7 +268,7 @@ export function EventModal({
     <Modal show={show} onHide={onHide} onEntered={onEntered} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          {mode === "view" ? "View Event" : mode === "edit" ? "Edit event" : "New event"}
+          {mode === "view" ? "View Event" : mode === "edit" ? "Edit Event" : "New Event"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body ref={formRef} tabIndex={-1}>
@@ -316,97 +403,25 @@ export function EventModal({
               </Col>
             )}
 
-            {mode !== "view" ? (
-              <Col xs={12}>
-                <fieldset className="border rounded p-3">
-                  <legend className="float-none w-auto px-2 fs-6">Type Flags</legend>
-                  <Row className="g-2">
-                    {typeFlagOptions.map(([flag, label]) => (
-                      <Col sm={6} lg={4} key={flag}>
-                        <FlagCheckbox
-                          id={`type-flag-${flag}`}
-                          name="type-flag"
-                          type="radio"
-                          label={label}
-                          checked={
-                            flag === "none"
-                              ? !eventFlags.some((flagValue) =>
-                                  typeFlagsAsEventFlags.includes(flagValue),
-                                )
-                              : eventFlags.includes(flag)
-                          }
-                          onChange={() => onTypeFlagChange(flag)}
-                        />
-                      </Col>
-                    ))}
-                  </Row>
-                </fieldset>
-              </Col>
-            ) : (
-              <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Type</Form.Label>
-                  <div className="d-flex gap-2 align-items-center">
-                    {eventFlags
-                      .filter((f) => typeFlagsAsEventFlags.includes(f))
-                      .map((flag) => (
-                        <Badge key={flag} bg="secondary">
-                          {getFlagLabel(flag)}
-                        </Badge>
-                      ))}
-                    {!eventFlags.some((f) => typeFlagsAsEventFlags.includes(f)) && (
-                      <span className="text-muted">None</span>
-                    )}
-                  </div>
-                </Form.Group>
-              </Col>
-            )}
+            <FlagSection
+              mode={mode}
+              title="Type"
+              fieldsetTitle="Type Flags"
+              flagOptions={typeFlagOptions}
+              eventFlags={eventFlags}
+              flagGroup={typeFlagsAsEventFlags}
+              onFlagChange={onTypeFlagChange}
+            />
 
-            {mode !== "view" ? (
-              <Col xs={12}>
-                <fieldset className="border rounded p-3">
-                  <legend className="float-none w-auto px-2 fs-6">Time / Location Flags</legend>
-                  <Row className="g-2">
-                    {timeLocationFlagOptions.map(([flag, label]) => (
-                      <Col sm={6} lg={4} key={flag}>
-                        <FlagCheckbox
-                          id={`time-flag-${flag}`}
-                          name="time-flag"
-                          type="radio"
-                          label={label}
-                          checked={
-                            flag === "none"
-                              ? !eventFlags.some((flagValue) =>
-                                  timeLocationFlagsAsEventFlags.includes(flagValue),
-                                )
-                              : eventFlags.includes(flag)
-                          }
-                          onChange={() => onTimeFlagChange(flag)}
-                        />
-                      </Col>
-                    ))}
-                  </Row>
-                </fieldset>
-              </Col>
-            ) : (
-              <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Time / Location</Form.Label>
-                  <div className="d-flex gap-2 align-items-center">
-                    {eventFlags
-                      .filter((f) => timeLocationFlagsAsEventFlags.includes(f))
-                      .map((flag) => (
-                        <Badge key={flag} bg="secondary">
-                          {getFlagLabel(flag)}
-                        </Badge>
-                      ))}
-                    {!eventFlags.some((f) => timeLocationFlagsAsEventFlags.includes(f)) && (
-                      <span className="text-muted">None</span>
-                    )}
-                  </div>
-                </Form.Group>
-              </Col>
-            )}
+            <FlagSection
+              mode={mode}
+              title="Time / Location"
+              fieldsetTitle="Time / Location Flags"
+              flagOptions={timeLocationFlagOptions}
+              eventFlags={eventFlags}
+              flagGroup={timeLocationFlagsAsEventFlags}
+              onFlagChange={onTimeFlagChange}
+            />
           </Row>
         </Form>
       </Modal.Body>

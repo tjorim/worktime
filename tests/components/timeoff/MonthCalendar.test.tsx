@@ -9,7 +9,6 @@ describe("MonthCalendar", () => {
   const mockOnMonthChange = vi.fn();
   const mockOnAddEvent = vi.fn();
   const mockOnViewEvent = vi.fn();
-  const mockOnEditEvent = vi.fn();
 
   const defaultProps = {
     events: [] as HdayEvent[],
@@ -17,7 +16,6 @@ describe("MonthCalendar", () => {
     onMonthChange: mockOnMonthChange,
     onAddEvent: mockOnAddEvent,
     onViewEvent: mockOnViewEvent,
-    onEditEvent: mockOnEditEvent,
   };
 
   beforeEach(() => {

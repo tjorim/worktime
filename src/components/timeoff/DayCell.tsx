@@ -101,21 +101,21 @@ const getIndicatorDetails = (
 
 /**
  * DayCell renders an individual day in the month calendar grid.
- * 
+ *
  * Features:
  * - Displays up to 3 event chips with color coding and labels
  * - Shows overflow count when more than 3 events exist
  * - Visual indicators for courses, public holidays, school holidays, and paydays
  * - Highlights for weekends, today, and holidays
- * - Click-to-add new event on the day, click-to-edit existing events
+ * - Click-to-view existing events, right-click context menu for actions
  * - Keyboard navigation support via arrow keys
- * 
+ *
  * Accessibility:
  * - ARIA labels with full date and holiday information
  * - Focus management for keyboard navigation
  * - Color indicators supplemented with emoji symbols
  * - Semantic button elements for all interactive areas
- * 
+ *
  * @param props - Component props
  * @param props.date - The date this cell represents
  * @param props.isCurrentMonth - Whether this day is in the currently displayed month
@@ -126,10 +126,11 @@ const getIndicatorDetails = (
  * @param props.paydayInfo - Payday info if this day is a payday
  * @param props.schoolHoliday - School holiday info if this day is a school holiday
  * @param props.events - Array of events occurring on this day
- * @param props.onAddEvent - Callback when user clicks to add event
- * @param props.onEditEvent - Callback when user clicks to edit an event
+ * @param props.onViewEvent - Callback when user clicks to view an event
  * @param props.onKeyDown - Callback for keyboard navigation
  * @param props.buttonRef - Ref callback for focus management
+ * @param props.onDayContextMenu - Optional callback for day cell right-click context menu
+ * @param props.onEventContextMenu - Optional callback for event chip right-click context menu
  */
 export function DayCell({
   date,

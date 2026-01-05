@@ -270,44 +270,41 @@ export function MonthCalendar({
     onEditEvent(index);
   };
 
-  // Build context menu items based on type
-  const contextMenuItems =
-    contextMenu?.type === "day"
-      ? [
-          {
-            label: "Add new event",
-            icon: "bi-plus-circle",
-            onClick: () => {
-              if (contextMenu.date) {
-                handleAddEventWrapper(contextMenu.date);
-              }
-            },
+  const getContextMenuItems = () => {
+    if (contextMenu?.type === "day" && contextMenu.date) {
+      return [
+        {
+          label: "Add new event",
+          icon: "bi-plus-circle",
+          onClick: () => handleAddEventWrapper(contextMenu.date!),
+        },
+      ];
+    }
+    if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
+      const items = [
+        {
+          label: "Edit event",
+          icon: "bi-pencil",
+          onClick: () => handleEditEventWrapper(contextMenu.eventIndex!),
+        },
+      ];
+      if (onDeleteEvent) {
+        items.push({
+          label: "Delete event",
+          icon: "bi-trash",
+          variant: "danger" as const,
+          onClick: () => {
+            handleCloseContextMenu();
+            onDeleteEvent(contextMenu.eventIndex!);
           },
-        ]
-      : contextMenu?.type === "event"
-        ? [
-            {
-              label: "Edit event",
-              icon: "bi-pencil",
-              onClick: () => {
-                if (contextMenu.eventIndex !== undefined) {
-                  handleEditEventWrapper(contextMenu.eventIndex);
-                }
-              },
-            },
-            {
-              label: "Delete event",
-              icon: "bi-trash",
-              variant: "danger" as const,
-              onClick: () => {
-                if (contextMenu.eventIndex !== undefined && onDeleteEvent) {
-                  handleCloseContextMenu();
-                  onDeleteEvent(contextMenu.eventIndex);
-                }
-              },
-            },
-          ]
-        : [];
+        });
+      }
+      return items;
+    }
+    return [];
+  };
+
+  const contextMenuItems = getContextMenuItems();
 
   return (
     <div className="month-calendar">

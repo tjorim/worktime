@@ -85,6 +85,11 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cache menu items query for performance
+      const menuItems = Array.from(
+        menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
+      );
+
       switch (e.key) {
         case "Escape":
           e.preventDefault();
@@ -93,36 +98,26 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
         case "ArrowDown":
           e.preventDefault();
           {
-            const currentIndex = Array.from(
-              menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
-            ).indexOf(document.activeElement as HTMLButtonElement);
+            const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
             const next = (currentIndex + 1) % items.length;
-            menuRef.current
-              ?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
-              [next]?.focus();
+            menuItems[next]?.focus();
           }
           break;
         case "ArrowUp":
           e.preventDefault();
           {
-            const currentIndex = Array.from(
-              menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
-            ).indexOf(document.activeElement as HTMLButtonElement);
+            const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
             const next = (currentIndex - 1 + items.length) % items.length;
-            menuRef.current
-              ?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
-              [next]?.focus();
+            menuItems[next]?.focus();
           }
           break;
         case "Home":
           e.preventDefault();
-          menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+          menuItems[0]?.focus();
           break;
         case "End":
           e.preventDefault();
-          menuRef.current
-            ?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
-            [items.length - 1]?.focus();
+          menuItems[items.length - 1]?.focus();
           break;
         case "Tab":
           e.preventDefault();

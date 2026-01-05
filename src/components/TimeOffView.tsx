@@ -53,6 +53,11 @@ const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_F
 ).filter((f) => f !== "none") as EventFlag[];
 
 /**
+ * Default weekday value for weekly events (1 = Monday).
+ */
+const DEFAULT_WEEKDAY = 1;
+
+/**
  * Empty state component for when no time-off events exist.
  * Adapts styling and messaging based on the current view mode.
  */
@@ -100,7 +105,6 @@ interface TimeOffViewProps {
 }
 
 export function TimeOffView({ isActive = true }: TimeOffViewProps) {
-  const DEFAULT_WEEKDAY = 1;
   const {
     events,
     addEvent,
@@ -744,11 +748,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-        onHide={() => {
-          setShowEventModal(false);
-          setModalMode("add");
-          resetForm();
-        }}
+        onHide={() => setShowEventModal(false)}
         onEntered={() => formRef.current?.focus()}
         onEventTypeChange={setEventType}
         onEventTitleChange={setEventTitle}
