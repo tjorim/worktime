@@ -5,7 +5,7 @@ interface ContextMenuItem {
   label: string;
   icon?: string;
   onClick: () => void;
-  variant?: "danger" | "primary" | "secondary";
+  variant?: "danger";
 }
 
 interface ContextMenuProps {

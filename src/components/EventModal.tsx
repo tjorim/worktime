@@ -416,9 +416,11 @@ export function EventModal({
             <Button variant="secondary" onClick={onHide}>
               Close
             </Button>
-            <Button variant="primary" onClick={onSwitchToEdit}>
-              Edit
-            </Button>
+            {onSwitchToEdit && (
+              <Button variant="primary" onClick={onSwitchToEdit}>
+                Edit
+              </Button>
+            )}
           </>
         ) : (
           <>
