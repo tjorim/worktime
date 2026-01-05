@@ -281,7 +281,7 @@ export function MonthCalendar({
       ];
     }
     if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
-      const items = [
+      const items: ContextMenuItem[] = [
         {
           label: "Edit event",
           icon: "bi-pencil",

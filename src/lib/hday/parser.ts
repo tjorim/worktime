@@ -498,7 +498,7 @@ export function getEventClass(flags?: EventFlag[]): string {
  * @param flags - Optional list of event flags to inspect
  * @returns The label for the event type, for example "Business trip", "Weekend", "Birthday", "Sick leave", "Training", "In office", "Other" or "Holiday"
  */
-export function getEventTypeLabel(flags?: EventFlag[]): string {
+export function getEventTypeLabel(flags?: ReadonlyArray<EventFlag>): string {
   if (!flags || flags.length === 0) return "Holiday";
 
   if (flags.includes("business")) return "Business trip";
