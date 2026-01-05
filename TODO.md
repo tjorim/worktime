@@ -16,23 +16,24 @@ Critical features and improvements that significantly impact user experience.
 
 #### 0. Worktime Integration Plan (Phase 1–3 Foundations)
 
-Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so the roadmap reflects the shared-library and unified event-store goals.
+Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so the roadmap reflects the shared-library and unified event-store goals beyond the v4.0 in-app integrations.
 
 - **1. Extract `.hday` parser/serializer into shared lib**
-  - **Source**: Current parser in `src/lib/hday/parser.ts` (Worktime) / legacy `HdayPlanner/frontend/src/lib/hday.ts`
+  - **Current State**: Parser/serializer already lives in Worktime (`src/lib/hday/parser.ts`)
   - **Implementation**: Move parsing + serialization into a shared package/module for reuse across Worktime/NextShift
-  - **Status**: 🔲 Planned
+  - **Status**: 🔲 Planned (shared-lib extraction)
 - **2. Extract shift rotation engine into shared lib**
-  - **Source**: Current rotation logic in `src/utils/shiftCalculations.ts`
+  - **Current State**: Rotation logic lives in `src/utils/shiftCalculations.ts`
   - **Implementation**: Isolate shift cycle calculation into a reusable library module
   - **Status**: 🔲 Planned
 - **3. Unified event store (computed shifts + `.hday` events)**
-  - **Source**: `src/contexts/EventStoreContext.tsx` currently handles `.hday` only
+  - **Current State**: `src/contexts/EventStoreContext.tsx` manages `.hday` time-off events only
   - **Implementation**: Merge computed shift events with imported time-off events in a single in-memory store
-  - **Status**: 🔲 Planned
+  - **Status**: 🔲 Planned (expansion beyond current time-off store)
 - **4. Overlay semantics on schedule/transfer views**
+  - **Current State**: Schedule view has time-off overlay dots; Transfer view has none yet
   - **Implementation**: Define merge/priority rules for how time-off overlays appear on Schedule + Transfer views
-  - **Status**: 🔲 Planned
+  - **Status**: 🔲 Planned (formalize semantics + add transfer overlays)
 
 #### 1. Export Schedule Feature
 
