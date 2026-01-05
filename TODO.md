@@ -117,6 +117,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
   - `src/contexts/SettingsContext.tsx` - Add vacation allowance settings
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Planned (High Priority)
+- **Note**: Consolidated here as the single roadmap entry for vacation/time-off statistics (no separate backlog item).
 
 **4.3 Raw .hday Content Editor/Viewer** 🔴 **[CRITICAL - User Request]**
 
@@ -310,23 +311,11 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 12. Time-Off Statistics Dashboard
-
-- **Component**: Vacation and time-off analytics
-- **Use Cases**:
-  - View vacation days used vs. remaining
-  - Breakdown by event type (vacation, business, training)
-  - Year-over-year comparison
-  - Team-wide statistics (if multiple users)
-- **Implementation**: New statistics component with charts
-- **Estimated Effort**: 4–5 hours
-- **Status**: 🔲 Future
-
 ### 🎨 Future Enhancements
 
 Advanced features for future development phases.
 
-#### 13. Carousel for Mobile Team View
+#### 12. Carousel for Mobile Team View
 
 - **Component**: `react-bootstrap/Carousel`
 - **Use Cases**:
@@ -336,7 +325,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Future
 
-#### 14. Accordion for Transfer History
+#### 13. Accordion for Transfer History
 
 - **Component**: `react-bootstrap/Accordion`
 - **Use Cases**:
@@ -346,7 +335,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 15. Notification System Implementation
+#### 14. Notification System Implementation
 
 - **Component**: Browser notification functionality
 - **Use Cases**:
@@ -357,7 +346,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 16. Advanced Accessibility Features
+#### 15. Advanced Accessibility Features
 
 - **Component**: Enhanced accessibility support
 - **Use Cases**:
@@ -369,7 +358,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 17. Multi-Roster Pattern Support
+#### 16. Multi-Roster Pattern Support
 
 - **Component**: Configurable shift patterns beyond 5-team 2-2-2-4 cycle
 - **Use Cases**:
@@ -392,7 +381,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 8–12 hours (Major feature)
 - **Status**: 🔲 Future
 
-#### 18. Floating Action Button
+#### 17. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -430,16 +419,14 @@ Advanced features for future development phases.
 9. **Time-Off Calendar Visual Enhancements** - Color-coded events, auto-load current month, highlight today
 10. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
 11. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
-12. **Time-Off Statistics Dashboard** - Vacation days used/remaining, breakdown by type
-
 ### 📋 Backlog (UI/UX)
 
-13. **Mobile Carousel** - Improved mobile navigation
-14. **Transfer History Accordion** - Organized historical data
-15. **Notification System** - Browser notifications for shifts and time-off
-16. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-17. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
-18. **Floating Action Button** - Quick actions overlay
+12. **Mobile Carousel** - Improved mobile navigation
+13. **Transfer History Accordion** - Organized historical data
+14. **Notification System** - Browser notifications for shifts and time-off
+15. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
+16. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
+17. **Floating Action Button** - Quick actions overlay
 
 ## Technical Requirements
 
