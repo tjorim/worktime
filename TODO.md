@@ -31,6 +31,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
   - **Implementation**: Merge computed shift events with imported time-off events in a single in-memory store
   - **Status**: 🔲 Planned (expansion beyond current time-off store)
 - **4. Overlay semantics on schedule/transfer views**
+  - **Source**: N/A (new definition)
   - **Current State**: Schedule view has time-off overlay dots; Transfer view has none yet
   - **Implementation**: Define merge/priority rules for how time-off overlays appear on Schedule + Transfer views
   - **Status**: 🔲 Planned (formalize semantics + add transfer overlays)
