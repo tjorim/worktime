@@ -65,7 +65,7 @@ Critical features and improvements that significantly impact user experience.
 - ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), month calendar grid view (v4.2.0), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0)
 - ❌ **Missing Core UI**: Vacation statistics dashboard
 - ❌ **Missing UX Features**: View/edit raw .hday content
-- 📊 **Total Effort to Achieve Parity**: ~11–13 hours (significantly reduced)
+- 📊 **Total Effort to Achieve Parity**: ~9–12 hours (significantly reduced after commit "Add month calendar grid view for Time Off")
 
 ---
 
@@ -141,7 +141,7 @@ Critical features and improvements that significantly impact user experience.
   - Escape closes modals
 - **Current Worktime**: Basic keyboard support in modals only
 - **Implementation**: Add keyboard handlers to calendar component
-- **Dependencies**: Requires 4.1 (Month Calendar Grid View) first
+- **Dependencies**: Month calendar grid view now available (commit "Add month calendar grid view for Time Off")
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future (depends on calendar view)
 
@@ -150,16 +150,15 @@ Critical features and improvements that significantly impact user experience.
 - ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all flags/types
 - ✅ **Restored in Worktime**: Undo/redo with history tracking, bulk operations (multi-select, bulk delete/duplicate, select all)
 - 🔴 **CRITICAL Missing Features** (User Requests):
-  - ❌ **MonthGrid Calendar View** - Visual month calendar with event overlays (only table view exists)
   - ❌ **View/Edit Raw .hday Content** - No way to view or paste .hday text in UI (must use external file)
+- ✅ **Completed**: MonthGrid calendar view for time off (see commit "Add month calendar grid view for Time Off")
 - ❌ **Missing Core UI**: Statistics dashboard (vacation allowance tracking)
 - ❌ **Missing UX**: Advanced keyboard nav for calendar
-- 📊 **Total Estimated Effort**: 15–19 hours to achieve feature parity
+- 📊 **Total Estimated Effort**: 9–12 hours to achieve feature parity
 - 🎯 **Priority Order**:
   1. Raw .hday viewer/editor (2-3h) - Quick win, high user value
-  2. MonthGrid calendar view (6-8h) - Core visualization feature
-  3. Statistics dashboard (5-6h) - Vacation tracking
-  4. Advanced keyboard nav (2-3h) - Efficiency improvements
+  2. Statistics dashboard (5-6h) - Vacation tracking
+  3. Advanced keyboard nav (2-3h) - Efficiency improvements
 
 ### 🎯 Medium-Priority Items
 
