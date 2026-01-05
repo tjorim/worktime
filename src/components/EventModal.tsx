@@ -72,14 +72,14 @@ function getFlagLabel(flag: EventFlag): string {
 /**
  * Props for the FlagSection component
  */
-type FlagSectionProps = {
+type FlagSectionProps<Flag extends string> = {
   mode: "add" | "edit" | "view";
   title: string;
   fieldsetTitle?: string;
-  flagOptions: Array<[string, string]>;
-  eventFlags: EventFlag[];
-  flagGroup: EventFlag[];
-  onFlagChange: (flag: string) => void;
+  flagOptions: Array<[Flag, string]>;
+  eventFlags: ReadonlyArray<EventFlag>;
+  flagGroup: ReadonlyArray<EventFlag>;
+  onFlagChange: (flag: Flag) => void;
 };
 
 /**
@@ -95,7 +95,7 @@ type FlagSectionProps = {
  * @param flagGroup - Array of flags that belong to this section
  * @param onFlagChange - Callback when a flag is changed
  */
-function FlagSection({
+function FlagSection<Flag extends string>({
   mode,
   title,
   fieldsetTitle,
@@ -103,7 +103,7 @@ function FlagSection({
   eventFlags,
   flagGroup,
   onFlagChange,
-}: FlagSectionProps) {
+}: FlagSectionProps<Flag>) {
   if (mode !== "view") {
     // Edit/Add mode: Show all radio buttons
     return (
@@ -164,7 +164,7 @@ type EventModalProps = {
   eventStart: string;
   eventEnd: string;
   eventTitle: string;
-  eventFlags: EventFlag[];
+  eventFlags: ReadonlyArray<EventFlag>;
   startDateError: string;
   endDateError: string;
   previewLine: string;

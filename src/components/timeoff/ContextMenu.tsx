@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useId } from "react";
 import { createPortal } from "react-dom";
 
-interface ContextMenuItem {
+export interface ContextMenuItem {
   label: string;
   icon?: string;
   onClick: () => void;

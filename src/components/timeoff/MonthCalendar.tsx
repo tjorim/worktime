@@ -7,7 +7,7 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import { DayCell, type DayEvent } from "./DayCell";
-import { ContextMenu } from "./ContextMenu";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
 interface MonthCalendarProps {
   events: HdayEvent[];
@@ -270,7 +270,7 @@ export function MonthCalendar({
     onEditEvent(index);
   };
 
-  const getContextMenuItems = () => {
+  const getContextMenuItems = (): ContextMenuItem[] => {
     if (contextMenu?.type === "day" && contextMenu.date) {
       return [
         {
