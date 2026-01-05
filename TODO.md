@@ -14,6 +14,26 @@ This document serves as a general to-do list and development roadmap for Worktim
 
 Critical features and improvements that significantly impact user experience.
 
+#### 0. Worktime Integration Plan (Phase 1–3 Foundations)
+
+Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so the roadmap reflects the shared-library and unified event-store goals.
+
+- **1. Extract `.hday` parser/serializer into shared lib**
+  - **Source**: Current parser in `src/lib/hday/parser.ts` (Worktime) / legacy `HdayPlanner/frontend/src/lib/hday.ts`
+  - **Implementation**: Move parsing + serialization into a shared package/module for reuse across Worktime/NextShift
+  - **Status**: 🔲 Planned
+- **2. Extract shift rotation engine into shared lib**
+  - **Source**: Current rotation logic in `src/utils/shiftCalculations.ts`
+  - **Implementation**: Isolate shift cycle calculation into a reusable library module
+  - **Status**: 🔲 Planned
+- **3. Unified event store (computed shifts + `.hday` events)**
+  - **Source**: `src/contexts/EventStoreContext.tsx` currently handles `.hday` only
+  - **Implementation**: Merge computed shift events with imported time-off events in a single in-memory store
+  - **Status**: 🔲 Planned
+- **4. Overlay semantics on schedule/transfer views**
+  - **Implementation**: Define merge/priority rules for how time-off overlays appear on Schedule + Transfer views
+  - **Status**: 🔲 Planned
+
 #### 1. Export Schedule Feature
 
 - **Component**: Calendar export functionality
