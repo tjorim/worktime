@@ -21,10 +21,11 @@ interface DayCellProps {
   paydayInfo?: PaydayInfo;
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
-  onAddEvent: (date: dayjs.Dayjs) => void;
-  onEditEvent: (index: number) => void;
+  onViewEvent: (index: number) => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => void;
   buttonRef: (node: HTMLButtonElement | null) => void;
+  onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number) => void;
+  onEventContextMenu?: (index: number, x: number, y: number) => void;
 }
 
 /**
@@ -140,10 +141,11 @@ export function DayCell({
   paydayInfo,
   schoolHoliday,
   events,
-  onAddEvent,
-  onEditEvent,
+  onViewEvent,
   onKeyDown,
   buttonRef,
+  onDayContextMenu,
+  onEventContextMenu,
 }: DayCellProps) {
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
@@ -176,11 +178,16 @@ export function DayCell({
       ]
         .filter(Boolean)
         .join(" ")}
+      onContextMenu={(e) => {
+        if (onDayContextMenu) {
+          e.preventDefault();
+          onDayContextMenu(date, e.clientX, e.clientY);
+        }
+      }}
     >
       <button
         type="button"
         className="month-calendar-day-button"
-        onClick={() => onAddEvent(date)}
         onKeyDown={(event) => onKeyDown(event, date)}
         ref={buttonRef}
         tabIndex={isFocused ? 0 : -1}
@@ -217,9 +224,16 @@ export function DayCell({
               className="month-calendar-event"
               onClick={(eventClick) => {
                 eventClick.stopPropagation();
-                onEditEvent(index);
+                onViewEvent(index);
               }}
-              aria-label={`Edit ${label}`}
+              onContextMenu={(e) => {
+                if (onEventContextMenu) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEventContextMenu(index, e.clientX, e.clientY);
+                }
+              }}
+              aria-label={`View ${label}`}
             >
               <span className="month-calendar-event-color" style={{ backgroundColor: color }} />
               <span className="month-calendar-event-label">

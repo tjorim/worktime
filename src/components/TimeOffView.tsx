@@ -124,6 +124,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
   // Event form state
   const [eventType, setEventType] = useState<"range" | "weekly">("range");
@@ -191,12 +192,14 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const handleOpenAddModal = () => {
     resetForm();
     setEditIndex(-1);
+    setModalMode("add");
     setShowEventModal(true);
   };
 
   const handleAddEventForDate = (date: dayjs.Dayjs) => {
     resetForm();
     setEditIndex(-1);
+    setModalMode("add");
     setEventType("range");
     setEventStart(date.format("YYYY/MM/DD"));
     setEventEnd(date.format("YYYY/MM/DD"));
@@ -228,7 +231,22 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
 
     setEditIndex(index);
     prefillFormFromEvent(event);
+    setModalMode("edit");
     setShowEventModal(true);
+  };
+
+  const handleOpenViewModal = (index: number) => {
+    const event = events[index];
+    if (!event) return;
+
+    setEditIndex(index);
+    prefillFormFromEvent(event);
+    setModalMode("view");
+    setShowEventModal(true);
+  };
+
+  const handleSwitchToEdit = () => {
+    setModalMode("edit");
   };
 
   const handleSubmitEvent = () => {
@@ -572,7 +590,9 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 paydayMap={paydayMapForYear}
                 onMonthChange={setCalendarMonth}
                 onAddEvent={handleAddEventForDate}
+                onViewEvent={handleOpenViewModal}
                 onEditEvent={handleOpenEditModal}
+                onDeleteEvent={handleDeleteClick}
               />
               {events.length === 0 && <EmptyState mode="calendar" />}
             </div>
@@ -709,7 +729,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
       {/* Event Modal */}
       <EventModal
         show={showEventModal}
-        editIndex={editIndex}
+        mode={modalMode}
         formRef={formRef}
         eventType={eventType}
         eventWeekday={eventWeekday}
@@ -726,6 +746,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
         onHide={() => {
           setShowEventModal(false);
+          setModalMode("add");
           resetForm();
         }}
         onEntered={() => formRef.current?.focus()}
@@ -738,6 +759,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         onTimeFlagChange={handleTimeFlagChange}
         onResetForm={resetForm}
         onSubmit={handleSubmitEvent}
+        onSwitchToEdit={handleSwitchToEdit}
       />
 
       {/* Delete Confirmation Dialog */}

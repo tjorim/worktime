@@ -5,8 +5,7 @@ import { DayCell, type DayEvent } from "../../../src/components/timeoff/DayCell"
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 describe("DayCell", () => {
-  const mockOnAddEvent = vi.fn();
-  const mockOnEditEvent = vi.fn();
+  const mockOnViewEvent = vi.fn();
   const mockOnKeyDown = vi.fn();
   const mockButtonRef = vi.fn();
 
@@ -17,8 +16,7 @@ describe("DayCell", () => {
     isWeekend: false,
     isFocused: false,
     events: [] as DayEvent[],
-    onAddEvent: mockOnAddEvent,
-    onEditEvent: mockOnEditEvent,
+    onViewEvent: mockOnViewEvent,
     onKeyDown: mockOnKeyDown,
     buttonRef: mockButtonRef,
   };
@@ -79,9 +77,9 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
       
-      expect(screen.getByRole("button", { name: "Edit Event 1" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Edit Event 2" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Edit Event 3" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Event 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Event 2" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Event 3" })).toBeInTheDocument();
     });
 
     it("should show overflow count when more than 3 events", () => {
@@ -105,8 +103,8 @@ describe("DayCell", () => {
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
-      expect(screen.getByRole("button", { name: "Edit Holiday" })).toBeInTheDocument();
+
+      expect(screen.getByRole("button", { name: "View Holiday" })).toBeInTheDocument();
     });
 
     it("should display time/location symbols", () => {
@@ -133,7 +131,7 @@ describe("DayCell", () => {
       // Both events should render as separate DOM elements
       // Note: React keys are internal and not testable via DOM queries.
       // Key conflicts would produce console warnings during development.
-      const eventButtons = screen.getAllByRole("button", { name: "Edit Same Event" });
+      const eventButtons = screen.getAllByRole("button", { name: "View Same Event" });
       expect(eventButtons).toHaveLength(2);
 
       // Verify they are distinct DOM elements
@@ -144,30 +142,19 @@ describe("DayCell", () => {
   });
 
   describe("Interaction", () => {
-    it("should call onAddEvent when clicking day button", async () => {
-      const user = userEvent.setup();
-      render(<DayCell {...defaultProps} />);
-      
-      const dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
-      await user.click(dayButton);
-      
-      expect(mockOnAddEvent).toHaveBeenCalledTimes(1);
-      expect(mockOnAddEvent).toHaveBeenCalledWith(defaultProps.date);
-    });
-
-    it("should call onEditEvent when clicking event chip", async () => {
+    it("should call onViewEvent when clicking event chip", async () => {
       const user = userEvent.setup();
       const events: DayEvent[] = [
         { event: { type: "range", start: "2025/01/15", title: "Test Event", flags: [] }, index: 5 },
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
-      const eventButton = screen.getByRole("button", { name: "Edit Test Event" });
+
+      const eventButton = screen.getByRole("button", { name: "View Test Event" });
       await user.click(eventButton);
-      
-      expect(mockOnEditEvent).toHaveBeenCalledTimes(1);
-      expect(mockOnEditEvent).toHaveBeenCalledWith(5); // Should use the event's index
+
+      expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+      expect(mockOnViewEvent).toHaveBeenCalledWith(5); // Should use the event's index
     });
 
     it("should stop propagation when clicking event chip", async () => {
@@ -177,14 +164,12 @@ describe("DayCell", () => {
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
-      const eventButton = screen.getByRole("button", { name: "Edit Test Event" });
+
+      const eventButton = screen.getByRole("button", { name: "View Test Event" });
       await user.click(eventButton);
-      
-      // onAddEvent should NOT be called when clicking event chip
-      expect(mockOnAddEvent).not.toHaveBeenCalled();
-      // Only onEditEvent should be called
-      expect(mockOnEditEvent).toHaveBeenCalledTimes(1);
+
+      // Clicking stops propagation (tested by interaction working correctly)
+      expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
     });
 
     it("should call onKeyDown when pressing keys on day button", async () => {

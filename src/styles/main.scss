@@ -25,6 +25,13 @@
   --month-calendar-school-holiday-bg: #f5f0ff;
   --month-calendar-payday-border: #198754;
   --month-calendar-payday-bg: #e9f7ef;
+
+  /* Context menu variables */
+  --context-menu-bg: #fff;
+  --context-menu-border: #dee2e6;
+  --context-menu-shadow: rgba(0, 0, 0, 0.15);
+  --context-menu-item-hover: #f8f9fa;
+  --context-menu-item-text: #212529;
 }
 
 [data-bs-theme="dark"] {
@@ -48,6 +55,13 @@
   --month-calendar-school-holiday-bg: rgba(157, 115, 212, 0.15);
   --month-calendar-payday-border: #4db380;
   --month-calendar-payday-bg: rgba(77, 179, 128, 0.15);
+
+  /* Context menu variables */
+  --context-menu-bg: #2b3035;
+  --context-menu-border: #495057;
+  --context-menu-shadow: rgba(0, 0, 0, 0.5);
+  --context-menu-item-hover: #3a3f44;
+  --context-menu-item-text: #e9ecef;
 }
 
 /* Today column highlighting for schedule table */
@@ -454,7 +468,6 @@
   width: 100%;
   font-weight: 600;
   color: inherit;
-  cursor: pointer;
 }
 
 .month-calendar-day-button:focus-visible {
@@ -635,5 +648,52 @@
 
 [data-bs-theme="dark"] .schedule-table td:first-child {
   background-color: var(--bs-table-bg, #23272b);
+}
+
+/* Context Menu */
+.context-menu {
+  position: fixed;
+  z-index: 1060; /* Above modals (1055) */
+  background: var(--context-menu-bg);
+  border: 1px solid var(--context-menu-border);
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem var(--context-menu-shadow);
+  min-width: 160px;
+  padding: 0.25rem 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--context-menu-item-text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover,
+  &:focus {
+    background: var(--context-menu-item-hover);
+    outline: none;
+  }
+
+  &.danger {
+    color: var(--bs-danger);
+
+    &:hover,
+    &:focus {
+      background: rgba(var(--bs-danger-rgb), 0.1);
+    }
+  }
+
+  i {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
 }
 

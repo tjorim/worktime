@@ -8,6 +8,7 @@ import type { HdayEvent } from "../../../src/lib/hday/types";
 describe("MonthCalendar", () => {
   const mockOnMonthChange = vi.fn();
   const mockOnAddEvent = vi.fn();
+  const mockOnViewEvent = vi.fn();
   const mockOnEditEvent = vi.fn();
 
   const defaultProps = {
@@ -15,6 +16,7 @@ describe("MonthCalendar", () => {
     month: dayjs("2025-01-15"),
     onMonthChange: mockOnMonthChange,
     onAddEvent: mockOnAddEvent,
+    onViewEvent: mockOnViewEvent,
     onEditEvent: mockOnEditEvent,
   };
 
@@ -110,7 +112,7 @@ describe("MonthCalendar", () => {
       render(<MonthCalendar {...defaultProps} events={events} />);
       
       // Event should appear on all three days (15, 16, 17)
-      const eventButtons = screen.getAllByRole("button", { name: /Edit Test vacation/i });
+      const eventButtons = screen.getAllByRole("button", { name: /View Test vacation/i });
       expect(eventButtons.length).toBe(3);
     });
 
@@ -128,7 +130,7 @@ describe("MonthCalendar", () => {
 
       // Should appear on all Mondays in the visible calendar
       // Jan 2025 grid shows: Dec 30 (Mon), Jan 6, 13, 20, 27 (Mon) = 5 Mondays total
-      const eventButtons = screen.getAllByRole("button", { name: /Edit Weekly meeting/i });
+      const eventButtons = screen.getAllByRole("button", { name: /View Weekly meeting/i });
       expect(eventButtons.length).toBe(5);
     });
 
@@ -142,8 +144,8 @@ describe("MonthCalendar", () => {
       ];
 
       render(<MonthCalendar {...defaultProps} events={events} />);
-      
-      expect(screen.getByRole("button", { name: /Edit Holiday/i })).toBeInTheDocument();
+
+      expect(screen.getByRole("button", { name: /View Holiday/i })).toBeInTheDocument();
     });
 
     it("should handle long-range events efficiently (performance optimization)", () => {
@@ -160,9 +162,9 @@ describe("MonthCalendar", () => {
 
       // Should render without hanging or errors
       render(<MonthCalendar {...defaultProps} events={events} />);
-      
+
       // Event should only appear on days visible in January 2025
-      const eventButtons = screen.getAllByRole("button", { name: /Edit Long event/i });
+      const eventButtons = screen.getAllByRole("button", { name: /View Long event/i });
       // Should be limited to days in the visible calendar grid (including a few days from Dec/Feb)
       // January has 31 days, but grid includes some Dec/Feb days, typically 35-42 total cells
       expect(eventButtons.length).toBeGreaterThan(30);
@@ -171,7 +173,7 @@ describe("MonthCalendar", () => {
   });
 
   describe("Event Interaction", () => {
-    it("should call onEditEvent when clicking event chip", async () => {
+    it("should call onViewEvent when clicking event chip", async () => {
       const user = userEvent.setup();
       const events: HdayEvent[] = [
         {
@@ -183,29 +185,12 @@ describe("MonthCalendar", () => {
       ];
 
       render(<MonthCalendar {...defaultProps} events={events} />);
-      
-      const eventButton = screen.getAllByRole("button", { name: /Edit Test vacation/i })[0];
-      await user.click(eventButton);
-      
-      expect(mockOnEditEvent).toHaveBeenCalledTimes(1);
-      expect(mockOnEditEvent).toHaveBeenCalledWith(0); // First event, index 0
-    });
 
-    it("should call onAddEvent when clicking day cell", async () => {
-      const user = userEvent.setup();
-      render(<MonthCalendar {...defaultProps} />);
-      
-      // Find a day button (January 15th should be in the grid)
-      const dayButtons = screen.getAllByRole("button");
-      const jan15Button = dayButtons.find((btn) => 
-        btn.textContent?.includes("15") && btn.getAttribute("aria-label")?.includes("Wednesday, January 15")
-      );
-      
-      expect(jan15Button).toBeDefined();
-      if (jan15Button) {
-        await user.click(jan15Button);
-        expect(mockOnAddEvent).toHaveBeenCalledTimes(1);
-      }
+      const eventButton = screen.getAllByRole("button", { name: /View Test vacation/i })[0];
+      await user.click(eventButton);
+
+      expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
+      expect(mockOnViewEvent).toHaveBeenCalledWith(0); // First event, index 0
     });
   });
 

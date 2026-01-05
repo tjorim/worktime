@@ -7,6 +7,7 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import { DayCell, type DayEvent } from "./DayCell";
+import { ContextMenu } from "./ContextMenu";
 
 interface MonthCalendarProps {
   events: HdayEvent[];
@@ -16,7 +17,9 @@ interface MonthCalendarProps {
   paydayMap?: Map<string, PaydayInfo>;
   onMonthChange: (month: dayjs.Dayjs) => void;
   onAddEvent: (date: dayjs.Dayjs) => void;
+  onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
+  onDeleteEvent?: (index: number) => void;
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";
@@ -88,7 +91,9 @@ export function MonthCalendar({
   paydayMap = new Map(),
   onMonthChange,
   onAddEvent,
+  onViewEvent,
   onEditEvent,
+  onDeleteEvent,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
@@ -100,6 +105,15 @@ export function MonthCalendar({
   });
 
   const dayRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    type: "day" | "event";
+    x: number;
+    y: number;
+    date?: dayjs.Dayjs;
+    eventIndex?: number;
+  } | null>(null);
 
   useEffect(() => {
     const monthKey = month.startOf("month").format(DAY_FORMAT);
@@ -227,6 +241,74 @@ export function MonthCalendar({
     }
   };
 
+  // Context menu handlers
+  const handleDayContextMenu = (date: dayjs.Dayjs, x: number, y: number) => {
+    setContextMenu({ type: "day", x, y, date });
+  };
+
+  const handleEventContextMenu = (index: number, x: number, y: number) => {
+    setContextMenu({ type: "event", x, y, eventIndex: index });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // Wrap callbacks to close context menu when actions are taken
+  const handleAddEventWrapper = (date: dayjs.Dayjs) => {
+    handleCloseContextMenu();
+    onAddEvent(date);
+  };
+
+  const handleViewEventWrapper = (index: number) => {
+    handleCloseContextMenu();
+    onViewEvent(index);
+  };
+
+  const handleEditEventWrapper = (index: number) => {
+    handleCloseContextMenu();
+    onEditEvent(index);
+  };
+
+  // Build context menu items based on type
+  const contextMenuItems =
+    contextMenu?.type === "day"
+      ? [
+          {
+            label: "Add new event",
+            icon: "bi-plus-circle",
+            onClick: () => {
+              if (contextMenu.date) {
+                handleAddEventWrapper(contextMenu.date);
+              }
+            },
+          },
+        ]
+      : contextMenu?.type === "event"
+        ? [
+            {
+              label: "Edit event",
+              icon: "bi-pencil",
+              onClick: () => {
+                if (contextMenu.eventIndex !== undefined) {
+                  handleEditEventWrapper(contextMenu.eventIndex);
+                }
+              },
+            },
+            {
+              label: "Delete event",
+              icon: "bi-trash",
+              variant: "danger" as const,
+              onClick: () => {
+                if (contextMenu.eventIndex !== undefined && onDeleteEvent) {
+                  handleCloseContextMenu();
+                  onDeleteEvent(contextMenu.eventIndex);
+                }
+              },
+            },
+          ]
+        : [];
+
   return (
     <div className="month-calendar">
       <div className="month-calendar-header d-flex align-items-center justify-content-between mb-3">
@@ -284,16 +366,26 @@ export function MonthCalendar({
               schoolHoliday={schoolHolidays.get(dayKey)}
               paydayInfo={paydayMap.get(dayKey)}
               events={cellEvents}
-              onAddEvent={onAddEvent}
-              onEditEvent={onEditEvent}
+              onViewEvent={handleViewEventWrapper}
               onKeyDown={handleKeyDown}
               buttonRef={(node) => {
                 dayRefs.current.set(key, node);
               }}
+              onDayContextMenu={handleDayContextMenu}
+              onEventContextMenu={handleEventContextMenu}
             />
           );
         })}
       </div>
+
+      {/* Context menu */}
+      <ContextMenu
+        isOpen={contextMenu !== null}
+        x={contextMenu?.x ?? 0}
+        y={contextMenu?.y ?? 0}
+        onClose={handleCloseContextMenu}
+        items={contextMenuItems}
+      />
     </div>
   );
 }
