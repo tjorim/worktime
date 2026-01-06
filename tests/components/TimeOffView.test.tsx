@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "../../src/components/TimeOffView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+import * as hdayParser from "../../src/lib/hday/parser";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
@@ -454,6 +455,75 @@ describe("TimeOffView", () => {
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
 
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("Raw Content Editor", () => {
+    it("should allow applying raw .hday content", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.type(textarea, "2025/01/15 # Raw vacation");
+
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      expect(screen.getByText("Raw vacation")).toBeInTheDocument();
+    });
+
+    it("should show a parse error message when raw content fails to parse", async () => {
+      const parseSpy = vi
+        .spyOn(hdayParser, "parseHday")
+        .mockImplementation(() => {
+          throw new Error("Parse failed");
+        });
+
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.type(textarea, "invalid line");
+
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      expect(
+        screen.getByText(/Failed to parse raw \.hday content/i),
+      ).toBeInTheDocument();
+
+      parseSpy.mockRestore();
+    });
+
+    it("should reset raw content back to the stored value", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.type(textarea, "2025/01/15 # Raw vacation");
+
+      await user.click(screen.getByRole("button", { name: /Reset/i }));
+
+      expect(textarea).toHaveValue("");
     });
   });
 });
