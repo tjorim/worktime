@@ -10,7 +10,6 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
   normalizeEventFlags,
-  parseHday,
 } from "../lib/hday/parser";
 import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -356,9 +355,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
 
     try {
       const text = await file.text();
-      // Validate by parsing
-      parseHday(text);
-      // Import if valid
       importHday(text);
       setSelectedIndices([]); // Clear selection after import
       toast.showSuccess(`Imported ${file.name}`, "📥");
@@ -404,7 +400,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
 
   const handleParseRawEditor = () => {
     try {
-      parseHday(rawEditorText);
       importHday(rawEditorText);
       setIsRawEditorDirty(false);
       setRawEditorError("");
