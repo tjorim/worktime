@@ -445,7 +445,7 @@ describe("TimeOffView", () => {
       await user.type(startInput, "2025-01-15");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      expect(screen.getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
 
       await user.click(screen.getByRole("checkbox", { name: /Select Holiday/i }));
       await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
@@ -494,6 +494,63 @@ describe("TimeOffView", () => {
       await user.click(screen.getByRole("button", { name: /Reset/i }));
 
       expect(textarea).toHaveValue("");
+    });
+
+    it("should clear selected indices after applying raw content", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      // Add initial events using the UI
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-01-10");
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Old event 1");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput2 = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput2);
+      await user.type(startInput2, "2025-01-11");
+      const titleInput2 = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput2, "Old event 2");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Verify old events exist
+      expect(screen.getByText("Old event 1")).toBeInTheDocument();
+      expect(screen.getByText("Old event 2")).toBeInTheDocument();
+
+      // Select both events
+      await user.click(screen.getByRole("checkbox", { name: /Select Old event 1/i }));
+      await user.click(screen.getByRole("checkbox", { name: /Select Old event 2/i }));
+
+      // Verify selections are active (Delete Selected button should be enabled)
+      const deleteSelectedButton = screen.getByRole("button", { name: /Delete Selected/i });
+      expect(deleteSelectedButton).toBeEnabled();
+
+      // Apply new raw content that replaces all events
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.clear(textarea);
+      await user.type(textarea, "2025/02/20 # New event from raw");
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Verify old events are gone
+      expect(screen.queryByText("Old event 1")).not.toBeInTheDocument();
+      expect(screen.queryByText("Old event 2")).not.toBeInTheDocument();
+
+      // Verify new event is present
+      expect(screen.getByText("New event from raw")).toBeInTheDocument();
+
+      // Crucially: verify no events are selected after applying raw content
+      const deleteSelectedButtonAfter = screen.getByRole("button", { name: /Delete Selected/i });
+      expect(deleteSelectedButtonAfter).toBeDisabled();
     });
   });
 });

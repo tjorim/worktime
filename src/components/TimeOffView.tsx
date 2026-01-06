@@ -394,11 +394,9 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     (value: string) => {
       setRawEditorText(value);
       setIsRawEditorDirty(true);
-      if (rawEditorError) {
-        setRawEditorError("");
-      }
+      setRawEditorError("");
     },
-    [rawEditorError],
+    [],
   );
 
   const handleParseRawEditor = useCallback(() => {
