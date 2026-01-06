@@ -390,15 +390,18 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     toast.showSuccess("Exported timeoff.hday", "📤");
   };
 
-  const handleRawEditorChange = (value: string) => {
-    setRawEditorText(value);
-    setIsRawEditorDirty(true);
-    if (rawEditorError) {
-      setRawEditorError("");
-    }
-  };
+  const handleRawEditorChange = useCallback(
+    (value: string) => {
+      setRawEditorText(value);
+      setIsRawEditorDirty(true);
+      if (rawEditorError) {
+        setRawEditorError("");
+      }
+    },
+    [rawEditorError],
+  );
 
-  const handleParseRawEditor = () => {
+  const handleParseRawEditor = useCallback(() => {
     try {
       importHday(rawEditorText);
       setIsRawEditorDirty(false);
@@ -409,13 +412,13 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
       setRawEditorError("Failed to parse raw .hday content. Please check the format.");
       toast.showError("Failed to parse raw .hday content.");
     }
-  };
+  }, [importHday, rawEditorText, toast]);
 
-  const handleResetRawEditor = () => {
+  const handleResetRawEditor = useCallback(() => {
     setRawEditorText(rawText);
     setIsRawEditorDirty(false);
     setRawEditorError("");
-  };
+  }, [rawText]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
