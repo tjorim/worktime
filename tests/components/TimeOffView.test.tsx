@@ -79,7 +79,7 @@ describe("TimeOffView", () => {
 
       // Check event appears in table
       expect(screen.getByText("Test vacation")).toBeInTheDocument();
-      expect(screen.getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
     });
 
     it("should display event type badge", async () => {
@@ -454,6 +454,46 @@ describe("TimeOffView", () => {
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
 
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("Raw Content Editor", () => {
+    it("should allow applying raw .hday content", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.type(textarea, "2025/01/15 # Raw vacation");
+
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      expect(screen.getByText("Raw vacation")).toBeInTheDocument();
+    });
+
+    it("should reset raw content back to the stored value", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.type(textarea, "2025/01/15 # Raw vacation");
+
+      await user.click(screen.getByRole("button", { name: /Reset/i }));
+
+      expect(textarea).toHaveValue("");
     });
   });
 });

@@ -10,7 +10,6 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
   normalizeEventFlags,
-  parseHday,
 } from "../lib/hday/parser";
 import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -23,6 +22,7 @@ import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { MonthCalendar } from "./timeoff/MonthCalendar";
+import { RawContentAccordion } from "./timeoff/RawContentAccordion";
 
 const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
   ["none", "Holiday (default)"],
@@ -106,6 +106,7 @@ interface TimeOffViewProps {
 
 export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const {
+    rawText,
     events,
     addEvent,
     updateEvent,
@@ -137,6 +138,11 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const [eventEnd, setEventEnd] = useState("");
   const [eventTitle, setEventTitle] = useState("");
   const [eventFlags, setEventFlags] = useState<EventFlag[]>([]);
+
+  // Raw .hday editor state
+  const [rawEditorText, setRawEditorText] = useState(rawText);
+  const [rawEditorError, setRawEditorError] = useState("");
+  const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
 
   // Validation errors
   const [startDateError, setStartDateError] = useState("");
@@ -333,6 +339,12 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setSelectedIndices((prev) => prev.filter((index) => index >= 0 && index < events.length));
   }, [events.length]);
 
+  useEffect(() => {
+    if (!isRawEditorDirty) {
+      setRawEditorText(rawText);
+    }
+  }, [isRawEditorDirty, rawText]);
+
   const handleImport = () => {
     fileInputRef.current?.click();
   };
@@ -343,9 +355,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
 
     try {
       const text = await file.text();
-      // Validate by parsing
-      parseHday(text);
-      // Import if valid
       importHday(text);
       setSelectedIndices([]); // Clear selection after import
       toast.showSuccess(`Imported ${file.name}`, "📥");
@@ -380,6 +389,37 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
 
     toast.showSuccess("Exported timeoff.hday", "📤");
   };
+
+  const handleRawEditorChange = useCallback(
+    (value: string) => {
+      setRawEditorText(value);
+      setIsRawEditorDirty(true);
+      if (rawEditorError) {
+        setRawEditorError("");
+      }
+    },
+    [rawEditorError],
+  );
+
+  const handleParseRawEditor = useCallback(() => {
+    try {
+      importHday(rawEditorText);
+      setSelectedIndices([]);
+      setIsRawEditorDirty(false);
+      setRawEditorError("");
+      toast.showSuccess("Raw .hday content applied", "✓");
+    } catch (error) {
+      console.error("Failed to parse raw .hday content:", error);
+      setRawEditorError("Failed to parse raw .hday content. Please check the format.");
+      toast.showError("Failed to parse raw .hday content.");
+    }
+  }, [importHday, rawEditorText, toast]);
+
+  const handleResetRawEditor = useCallback(() => {
+    setRawEditorText(rawText);
+    setIsRawEditorDirty(false);
+    setRawEditorError("");
+  }, [rawText]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -560,6 +600,14 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
           </div>
         </Card.Header>
         <Card.Body>
+          <RawContentAccordion
+            rawText={rawEditorText}
+            error={rawEditorError}
+            isDirty={isRawEditorDirty}
+            onChangeRawText={handleRawEditorChange}
+            onApply={handleParseRawEditor}
+            onReset={handleResetRawEditor}
+          />
           <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
             <ButtonGroup aria-label="Toggle time off view">
               <Button
