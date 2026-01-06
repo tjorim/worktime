@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -19,6 +20,8 @@ export function RawContentAccordion({
   onApply,
   onReset,
 }: RawContentAccordionProps) {
+  const errorId = useId();
+
   return (
     <Accordion className="mb-3">
       <Accordion.Item eventKey="raw-content">
@@ -43,9 +46,10 @@ export function RawContentAccordion({
                 "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3pb # Wednesday AM business"
               }
               className="textarea-mono"
+              aria-describedby={error ? errorId : undefined}
             />
             {error && (
-              <div className="text-danger small mt-2" role="alert">
+              <div className="text-danger small mt-2" role="alert" id={errorId}>
                 {error}
               </div>
             )}
