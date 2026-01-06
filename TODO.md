@@ -1,6 +1,6 @@
 # Worktime Development Roadmap
 
-**Current Version**: 4.2.0
+**Current Version**: 4.3.0
 **Branch**: `main`
 **Status**: Active Development
 
@@ -90,10 +90,9 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 
 **Integration Status:**
 
-- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0)
+- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0), raw .hday editor (v4.3.0)
 - ❌ **Missing Core UI**: Vacation statistics dashboard
-- ❌ **Missing UX Features**: View/edit raw .hday content
-- 📊 **Total Effort to Achieve Parity**: ~9–12 hours (significantly reduced after commit "Add month calendar grid view for Time Off")
+- 📊 **Total Effort to Achieve Parity**: ~7–9 hours
 
 ---
 
@@ -119,32 +118,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 - **Status**: 🔲 Planned (High Priority)
 - **Note**: Consolidated here as the single roadmap entry for vacation/time-off statistics (no separate backlog item).
 
-**4.3 Raw .hday Content Editor/Viewer** 🔴 **[CRITICAL - User Request]**
-
-- **Component**: View and edit raw .hday file content
-- **Source**: `HdayPlanner/frontend/src/components/RawContentAccordion.tsx`
-- **Current Gap**:
-  - ❌ **No way to VIEW raw .hday content in UI** - users must export to file, open in notepad
-  - ❌ **No way to PASTE/EDIT raw content** - users can't copy/paste .hday text into the app
-  - ✅ Export downloads .hday file (but can't see content in UI)
-  - ✅ Import reads .hday file (but can't paste text directly)
-- **Use Cases**:
-  - View entire .hday content as formatted text in UI
-  - Copy raw .hday content to clipboard
-  - Paste entire .hday file content from clipboard
-  - Parse button to convert pasted text to events
-  - Flag reference guide embedded in UI
-  - Advanced users prefer text editing over forms
-  - Quick sharing of events via text (copy/paste into email, chat)
-- **Implementation**: Add collapsible accordion with textarea showing exportHday() output
-- **Files to Modify**:
-  - `src/components/TimeOffView.tsx` - Add "View Raw Content" accordion section
-- **Files to Create**:
-  - `src/components/timeoff/RawContentEditor.tsx` - Textarea with view/edit/parse logic
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Planned (High Priority - User Request)
-
-**4.4 Missing Utility Functions**
+**4.3 Missing Utility Functions**
 
 - **Component**: Helper functions from HdayPlanner
 - **Source**: `HdayPlanner/frontend/src/lib/hday.ts`
@@ -159,7 +133,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Planned
 
-**4.5 Enhanced Keyboard Navigation**
+**4.4 Enhanced Keyboard Navigation**
 
 - **Component**: Calendar-specific keyboard shortcuts
 - **Source**: `HdayPlanner/frontend/src/components/MonthGrid.tsx` (roving tabindex)
@@ -178,15 +152,13 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 
 - ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all flags/types
 - ✅ **Restored in Worktime**: Undo/redo with history tracking, bulk operations (multi-select, bulk delete/duplicate, select all)
-- 🔴 **CRITICAL Missing Features** (User Requests):
-  - ❌ **View/Edit Raw .hday Content** - No way to view or paste .hday text in UI (must use external file)
+- ✅ **Completed in v4.3.0**: Raw .hday content editor/viewer with dedicated tab view
 - ❌ **Missing Core UI**: Statistics dashboard (vacation allowance tracking)
 - ❌ **Missing UX**: Advanced keyboard nav for calendar
-- 📊 **Total Estimated Effort**: 9–12 hours to achieve feature parity
+- 📊 **Total Estimated Effort**: 7–9 hours to achieve feature parity
 - 🎯 **Priority Order**:
-  1. Raw .hday viewer/editor (2-3h) - Quick win, high user value
-  2. Statistics dashboard (5-6h) - Vacation tracking
-  3. Advanced keyboard nav (2-3h) - Efficiency improvements
+  1. Statistics dashboard (5-6h) - Vacation tracking
+  2. Advanced keyboard nav (2-3h) - Efficiency improvements
 
 ### 🎯 Medium-Priority Items
 
@@ -397,12 +369,10 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **Raw .hday Content Editor/Viewer** - View/edit raw .hday content in UI
-2. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
-3. **Export Schedule Feature** - Calendar export functionality (user-facing)
-4. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
-5. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
-6. **Version Sync Fix** - Quick changelog alignment (30 min)
+1. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
+2. **Export Schedule Feature** - Calendar export functionality (user-facing)
+3. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
+4. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
 
 ### 📋 Backlog (Code Quality)
 
@@ -553,5 +523,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2025-12-30
-**Next Review**: After Phase 1 completion
+**Last Updated**: 2026-01-06
+**Next Review**: After v4.4.0 (Statistics Dashboard)

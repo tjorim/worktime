@@ -210,16 +210,16 @@ describe("ChangelogModal", () => {
       expect(screen.getByText("Coming Soon")).toBeInTheDocument();
 
       // Dynamically check for all versions in futurePlans
-      expect(screen.getByText(/v4.1.0:/)).toBeInTheDocument();
-      expect(screen.getByText(/v4.2.0:/)).toBeInTheDocument();
+      expect(screen.getByText(/v4.4.0:/)).toBeInTheDocument();
+      expect(screen.getByText(/v4.5.0:/)).toBeInTheDocument();
       expect(screen.getByText(/future:/)).toBeInTheDocument();
 
       // Check for specific features from the actual futurePlans data
       expect(
-        screen.getByText(/Enhanced data presentation, Advanced navigation options/),
+        screen.getByText(/Vacation statistics dashboard, Time-off allowance tracking/),
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Mobile carousel for team browsing, Advanced accessibility/),
+        screen.getByText(/Calendar export \(\.ics format\), Enhanced keyboard shortcuts/),
       ).toBeInTheDocument();
     });
   });

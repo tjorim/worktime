@@ -9,19 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 
-- Enhanced data presentation
-- Advanced navigation options
-- Calendar integration features
-- Mobile carousel for team browsing
-- Advanced accessibility features
-- Floating action buttons
-- Accordion for organized data
+- Vacation statistics dashboard
+- Time-off allowance tracking
+- Breakdown by event type
+- Year-specific analytics
+- Calendar export (.ics format)
+- Enhanced keyboard shortcuts
+- Notification system
+- Theme customization
+
+## [4.3.0] - 2026-01-06
+
+### Added
+
+- Raw .hday Content Editor Tab: Third tab view for direct text editing alongside Calendar and Table views
+- Unsaved Changes Indicator: Yellow badge on 'Raw .hday' button when content has unsaved edits
+- Visual Validation Feedback: Bootstrap isInvalid styling shows red border on textarea when errors occur
+- RawContentAccordion Component: Dedicated component with 11 unit tests for raw content editing
+- File Import State Reset: Automatically resets raw editor dirty/error state when importing .hday files
+- Help Text Lookup: Object-based help text for better maintainability
+
+### Changed
+
+- TimeOffView: Moved raw .hday editor from accordion to dedicated tab for better discoverability
+- Performance: Optimized handleRawEditorChange callback with empty dependency array
+- Code Quality: Refactored nested ternary to object lookup pattern for readability
+- Accessibility: Visually hidden redundant form labels while maintaining screen reader support
+- Documentation: Fixed placeholder example flag (d3pb → d3ab) to match AM business trip
+
+### Fixed
+
+- Selection State Management: Now correctly clears selected indices after applying raw .hday content
+- Test Coverage: Fixed 'multiple elements' test failure by scoping date search to table
+- Callback Optimization: Removed unnecessary rawEditorError dependency from handleRawEditorChange
+
+### Raw .hday Content Editor Implementation
+
+Implemented comprehensive raw .hday content editor as a dedicated tab view. Created RawContentAccordion component (69 lines) with visual validation feedback and unsaved changes indicator. Added selection clearing logic to prevent stale selections after import/apply operations. Improved file import flow to reset raw editor state. Optimized callback dependencies for better performance. Added 11 unit tests for RawContentAccordion and 4 integration tests for TimeOffView raw editor workflows. Refactored nested ternary operators and visually hidden redundant labels for better code quality and accessibility. All 529 tests passing with comprehensive coverage.
 
 ## [4.2.0] - 2026-01-02
 
 ### Added
 
-- Month Calendar Grid View: Visual calendar component with event overlays for time-off management (commit "Add month calendar grid view for Time Off")
+- Month Calendar Grid View: Visual calendar component with event overlays for time-off management
 - Calendar/Table View Toggle: Switch between calendar grid and table views
 - Keyboard Navigation: Arrow keys, Home, End for navigating calendar days with cross-month support
 - Visual Indicators: Public holidays (🎉), school holidays (🏫), and paydays (💶) displayed on calendar
@@ -326,27 +356,29 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 
 ## Version Planning
 
-### v4.1.0 - Interactive Features Phase 2
+### v4.4.0 - Statistics & Analytics
 
-- Enhanced data presentation
-- Advanced navigation options
-- Calendar integration features
+- Vacation statistics dashboard
+- Time-off allowance tracking
+- Breakdown by event type
+- Year-specific analytics
 
-### v4.2.0 - Mobile & Advanced UX Phase 3
+### v4.5.0 - Advanced Features
 
-- Mobile carousel for team browsing
-- Advanced accessibility features
-- Floating action buttons
-- Accordion for organized data
+- Calendar export (.ics format)
+- Enhanced keyboard shortcuts
+- Notification system
+- Theme customization
 
 ### Future Releases
 
-- Notification system
-- Theme customization
 - Multi-language support
 - Data export capabilities
+- Mobile carousel for team browsing
+- Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v4.2.0...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v4.3.0...HEAD
+[4.3.0]: https://github.com/tjorim/worktime/compare/v4.2.0...v4.3.0
 [4.2.0]: https://github.com/tjorim/worktime/compare/v4.1.0...v4.2.0
 [4.1.0]: https://github.com/tjorim/worktime/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/tjorim/worktime/compare/v3.4.0...v4.0.0
