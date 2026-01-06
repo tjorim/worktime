@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import {
@@ -106,6 +108,7 @@ interface TimeOffViewProps {
 
 export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const {
+    rawText,
     events,
     addEvent,
     updateEvent,
@@ -137,6 +140,11 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const [eventEnd, setEventEnd] = useState("");
   const [eventTitle, setEventTitle] = useState("");
   const [eventFlags, setEventFlags] = useState<EventFlag[]>([]);
+
+  // Raw .hday editor state
+  const [rawEditorText, setRawEditorText] = useState(rawText);
+  const [rawEditorError, setRawEditorError] = useState("");
+  const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
 
   // Validation errors
   const [startDateError, setStartDateError] = useState("");
@@ -333,6 +341,12 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setSelectedIndices((prev) => prev.filter((index) => index >= 0 && index < events.length));
   }, [events.length]);
 
+  useEffect(() => {
+    if (!isRawEditorDirty) {
+      setRawEditorText(rawText);
+    }
+  }, [isRawEditorDirty, rawText]);
+
   const handleImport = () => {
     fileInputRef.current?.click();
   };
@@ -379,6 +393,34 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     URL.revokeObjectURL(url);
 
     toast.showSuccess("Exported timeoff.hday", "📤");
+  };
+
+  const handleRawEditorChange = (value: string) => {
+    setRawEditorText(value);
+    setIsRawEditorDirty(true);
+    if (rawEditorError) {
+      setRawEditorError("");
+    }
+  };
+
+  const handleParseRawEditor = () => {
+    try {
+      parseHday(rawEditorText);
+      importHday(rawEditorText);
+      setIsRawEditorDirty(false);
+      setRawEditorError("");
+      toast.showSuccess("Raw .hday content applied", "✓");
+    } catch (error) {
+      console.error("Failed to parse raw .hday content:", error);
+      setRawEditorError("Failed to parse raw .hday content. Please check the format.");
+      toast.showError("Failed to parse raw .hday content.");
+    }
+  };
+
+  const handleResetRawEditor = () => {
+    setRawEditorText(rawText);
+    setIsRawEditorDirty(false);
+    setRawEditorError("");
   };
 
   const handleUndo = useCallback(() => {
@@ -560,6 +602,52 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
           </div>
         </Card.Header>
         <Card.Body>
+          <Accordion className="mb-3">
+            <Accordion.Item eventKey="raw-content">
+              <Accordion.Header>Raw .hday content</Accordion.Header>
+              <Accordion.Body>
+                <p className="text-muted">
+                  Paste your <code>.hday</code> content below (or load a file), click{" "}
+                  <strong>Apply</strong>, then export if needed. Flags: <code>a</code>=half AM,{" "}
+                  <code>p</code>=half PM, <code>b</code>=business, <code>e</code>=weekend,{" "}
+                  <code>h</code>=birthday, <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course,{" "}
+                  <code>u</code>=other, <code>w</code>=onsite, <code>n</code>=no fly,{" "}
+                  <code>f</code>=can fly; weekly: <code>d1-d7</code> (Mon-Sun) with flags after
+                  (e.g., <code>d3pb</code>).
+                </p>
+                <Form.Group controlId="hdayText">
+                  <Form.Label>Raw .hday content</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={8}
+                    value={rawEditorText}
+                    onChange={(event) => handleRawEditorChange(event.target.value)}
+                    placeholder={
+                      "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3pb # Wednesday AM business"
+                    }
+                    className="textarea-mono"
+                  />
+                  {rawEditorError && (
+                    <div className="text-danger small mt-2" role="alert">
+                      {rawEditorError}
+                    </div>
+                  )}
+                </Form.Group>
+                <div className="mt-3 d-flex flex-wrap gap-2">
+                  <Button variant="primary" onClick={handleParseRawEditor}>
+                    Apply raw content
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    onClick={handleResetRawEditor}
+                    disabled={!isRawEditorDirty}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </Accordion.Body>
+            </Accordion.Item>
+          </Accordion>
           <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
             <ButtonGroup aria-label="Toggle time off view">
               <Button
