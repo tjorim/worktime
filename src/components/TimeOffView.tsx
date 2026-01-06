@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import {
@@ -22,7 +23,6 @@ import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { MonthCalendar } from "./timeoff/MonthCalendar";
-import { RawContentAccordion } from "./timeoff/RawContentAccordion";
 
 const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
   ["none", "Holiday (default)"],
@@ -121,7 +121,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   } = useEventStore();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState<"calendar" | "table">("table");
+  const [viewMode, setViewMode] = useState<"calendar" | "table" | "raw">("table");
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
   const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());
@@ -600,14 +600,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
           </div>
         </Card.Header>
         <Card.Body>
-          <RawContentAccordion
-            rawText={rawEditorText}
-            error={rawEditorError}
-            isDirty={isRawEditorDirty}
-            onChangeRawText={handleRawEditorChange}
-            onApply={handleParseRawEditor}
-            onReset={handleResetRawEditor}
-          />
           <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
             <ButtonGroup aria-label="Toggle time off view">
               <Button
@@ -624,11 +616,20 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
               >
                 Table
               </Button>
+              <Button
+                variant={viewMode === "raw" ? "primary" : "outline-primary"}
+                size="sm"
+                onClick={() => setViewMode("raw")}
+              >
+                Raw .hday
+              </Button>
             </ButtonGroup>
             <span className="text-muted small">
               {viewMode === "calendar"
                 ? "Click a day to add events, or select an event to edit."
-                : "Select events from the table to edit or delete."}
+                : viewMode === "table"
+                  ? "Select events from the table to edit or delete."
+                  : "Edit raw .hday content directly. Click Apply to save changes."}
             </span>
           </div>
 
@@ -765,6 +766,48 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 </tbody>
               </Table>
             ))}
+
+          {viewMode === "raw" && (
+            <div role="region" aria-label="Raw .hday content editor">
+              <p className="text-muted">
+                Paste your <code>.hday</code> content below (or load a file), click <strong>Apply</strong>
+                , then export if needed. Flags: <code>a</code>=half AM, <code>p</code>=half PM,{" "}
+                <code>b</code>=business, <code>e</code>=weekend, <code>h</code>=birthday,{" "}
+                <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course, <code>u</code>=other,{" "}
+                <code>w</code>=onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly:{" "}
+                <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
+              </p>
+              <Form.Group controlId="hdayText" className="mb-3">
+                <Form.Label>Raw .hday content</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={20}
+                  value={rawEditorText}
+                  onChange={(event) => handleRawEditorChange(event.target.value)}
+                  placeholder={
+                    "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3ab # Wednesday AM business"
+                  }
+                  className="textarea-mono"
+                  aria-describedby={rawEditorError ? "raw-editor-error" : undefined}
+                />
+                {rawEditorError && (
+                  <div className="text-danger small mt-2" role="alert" id="raw-editor-error">
+                    {rawEditorError}
+                  </div>
+                )}
+              </Form.Group>
+              <div className="d-flex flex-wrap gap-2">
+                <Button variant="primary" onClick={handleParseRawEditor}>
+                  <i className="bi bi-check-circle me-1"></i>
+                  Apply raw content
+                </Button>
+                <Button variant="outline-secondary" onClick={handleResetRawEditor} disabled={!isRawEditorDirty}>
+                  <i className="bi bi-arrow-counterclockwise me-1"></i>
+                  Reset
+                </Button>
+              </div>
+            </div>
+          )}
         </Card.Body>
       </Card>
 

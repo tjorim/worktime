@@ -340,9 +340,9 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      // Open raw editor and make unsaved changes
-      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      // Switch to raw editor tab and make unsaved changes
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
       await user.clear(textarea);
       await user.type(textarea, "2025/01/10 # Unsaved edit");
 
@@ -358,14 +358,25 @@ describe("TimeOffView", () => {
         await user.upload(fileInput, file);
       }
 
-      // Wait for import to complete
-      await screen.findByText("Imported event");
+      // Wait for import toast
+      await screen.findByText(/Imported test.hday/i);
+
+      // Switch to table view to verify import
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify event was imported
+      expect(screen.getByText("Imported event")).toBeInTheDocument();
+
+      // Switch back to Raw tab to verify editor state
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
 
       // Verify raw editor is reset (Reset button should be disabled)
-      expect(screen.getByRole("button", { name: /Reset/i })).toBeDisabled();
+      const resetButton = screen.getByRole("button", { name: /Reset/i });
+      expect(resetButton).toBeDisabled();
 
       // Verify raw editor shows imported content (not unsaved edits)
-      expect(textarea.value.trim()).toBe(fileContent);
+      const updatedTextarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      expect(updatedTextarea.value.trim()).toBe(fileContent.trim());
     });
   });
 
@@ -506,12 +517,15 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
 
-      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
       await user.type(textarea, "2025/01/15 # Raw vacation");
 
       await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view to verify event was created
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
 
       expect(screen.getByText("Raw vacation")).toBeInTheDocument();
     });
@@ -525,9 +539,9 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
 
-      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
       await user.type(textarea, "2025/01/15 # Raw vacation");
 
       await user.click(screen.getByRole("button", { name: /Reset/i }));
@@ -574,11 +588,14 @@ describe("TimeOffView", () => {
       expect(deleteSelectedButton).toBeEnabled();
 
       // Apply new raw content that replaces all events
-      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
       await user.clear(textarea);
       await user.type(textarea, "2025/02/20 # New event from raw");
       await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view to verify events
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
 
       // Verify old events are gone
       expect(screen.queryByText("Old event 1")).not.toBeInTheDocument();
