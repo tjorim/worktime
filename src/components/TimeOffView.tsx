@@ -357,6 +357,8 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
       const text = await file.text();
       importHday(text);
       setSelectedIndices([]); // Clear selection after import
+      setIsRawEditorDirty(false); // Reset raw editor dirty state
+      setRawEditorError(""); // Clear any raw editor errors
       toast.showSuccess(`Imported ${file.name}`, "📥");
     } catch (error) {
       console.error("Failed to import .hday file:", error);

@@ -33,7 +33,7 @@ export function RawContentAccordion({
             <code>b</code>=business, <code>e</code>=weekend, <code>h</code>=birthday,{" "}
             <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course, <code>u</code>=other,{" "}
             <code>w</code>=onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly:{" "}
-            <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3pb</code>).
+            <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
           </p>
           <Form.Group controlId="hdayText">
             <Form.Label>Raw .hday content</Form.Label>
@@ -43,7 +43,7 @@ export function RawContentAccordion({
               value={rawText}
               onChange={(event) => onChangeRawText(event.target.value)}
               placeholder={
-                "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3pb # Wednesday AM business"
+                "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3ab # Wednesday AM business"
               }
               className="textarea-mono"
               aria-describedby={error ? errorId : undefined}

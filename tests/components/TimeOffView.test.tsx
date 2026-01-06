@@ -330,6 +330,45 @@ describe("TimeOffView", () => {
     });
   });
 
+  describe("Import", () => {
+    it("should reset raw editor state after file import", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      // Open raw editor and make unsaved changes
+      await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.clear(textarea);
+      await user.type(textarea, "2025/01/10 # Unsaved edit");
+
+      // Verify Reset button is enabled (indicating dirty state)
+      expect(screen.getByRole("button", { name: /Reset/i })).toBeEnabled();
+
+      // Import a file with different content
+      const fileContent = "2025/02/15 # Imported event";
+      const file = new File([fileContent], "test.hday", { type: "text/plain" });
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) {
+        await user.upload(fileInput, file);
+      }
+
+      // Wait for import to complete
+      await screen.findByText("Imported event");
+
+      // Verify raw editor is reset (Reset button should be disabled)
+      expect(screen.getByRole("button", { name: /Reset/i })).toBeDisabled();
+
+      // Verify raw editor shows imported content (not unsaved edits)
+      expect(textarea.value.trim()).toBe(fileContent);
+    });
+  });
+
   describe("Accessibility", () => {
     it("should have proper ARIA labels on buttons", () => {
       render(
