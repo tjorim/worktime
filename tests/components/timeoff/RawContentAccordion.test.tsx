@@ -48,9 +48,9 @@ describe("RawContentAccordion", () => {
     await user.clear(textarea);
     await user.type(textarea, "Test");
 
-    // Verify the callback was called when user types
+    // Verify the callback was called with string arguments
     expect(mockOnChange).toHaveBeenCalled();
-    expect(mockOnChange.mock.calls.length).toBeGreaterThan(0);
+    expect(mockOnChange).toHaveBeenCalledWith(expect.any(String));
   });
 
   it("should call onApply when Apply button is clicked", async () => {

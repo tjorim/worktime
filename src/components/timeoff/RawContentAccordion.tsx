@@ -36,7 +36,7 @@ export function RawContentAccordion({
             <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
           </p>
           <Form.Group controlId="hdayText">
-            <Form.Label>Raw .hday content</Form.Label>
+            <Form.Label className="visually-hidden">Raw .hday content</Form.Label>
             <Form.Control
               as="textarea"
               rows={8}
@@ -47,6 +47,7 @@ export function RawContentAccordion({
               }
               className="textarea-mono"
               aria-describedby={error ? errorId : undefined}
+              isInvalid={!!error}
             />
             {error && (
               <div className="text-danger small mt-2" role="alert" id={errorId}>

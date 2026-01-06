@@ -520,6 +520,12 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     return `unknown-${index}-${event.raw ?? ""}`;
   };
 
+  const viewModeHelpText = {
+    calendar: "Click a day to add events, or select an event to edit.",
+    table: "Select events from the table to edit or delete.",
+    raw: "Edit raw .hday content directly. Click Apply to save changes.",
+  } as const;
+
   return (
     <div className="time-off-view py-3">
       <Card>
@@ -622,14 +628,13 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 onClick={() => setViewMode("raw")}
               >
                 Raw .hday
+                {isRawEditorDirty && viewMode !== "raw" && (
+                  <span className="badge bg-warning text-dark ms-1">•</span>
+                )}
               </Button>
             </ButtonGroup>
             <span className="text-muted small">
-              {viewMode === "calendar"
-                ? "Click a day to add events, or select an event to edit."
-                : viewMode === "table"
-                  ? "Select events from the table to edit or delete."
-                  : "Edit raw .hday content directly. Click Apply to save changes."}
+              {viewModeHelpText[viewMode]}
             </span>
           </div>
 
@@ -778,7 +783,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
               </p>
               <Form.Group controlId="hdayText" className="mb-3">
-                <Form.Label>Raw .hday content</Form.Label>
+                <Form.Label className="visually-hidden">Raw .hday content</Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={20}
@@ -789,6 +794,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                   }
                   className="textarea-mono"
                   aria-describedby={rawEditorError ? "raw-editor-error" : undefined}
+                  isInvalid={!!rawEditorError}
                 />
                 {rawEditorError && (
                   <div className="text-danger small mt-2" role="alert" id="raw-editor-error">

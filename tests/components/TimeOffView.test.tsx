@@ -608,5 +608,35 @@ describe("TimeOffView", () => {
       const deleteSelectedButtonAfter = screen.getByRole("button", { name: /Delete Selected/i });
       expect(deleteSelectedButtonAfter).toBeDisabled();
     });
+
+    it("should show unsaved changes indicator when switching away from raw tab with dirty content", async () => {
+      render(
+        <AllProviders>
+          <TimeOffView />
+        </AllProviders>,
+      );
+
+      const user = userEvent.setup();
+
+      // Switch to raw tab
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+
+      // Make changes without applying
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.type(textarea, "2025/01/15 # Unsaved changes");
+
+      // Switch to table view
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify the Raw .hday button shows unsaved changes indicator
+      const rawButton = screen.getByRole("button", { name: /Raw \.hday/i });
+      expect(rawButton).toHaveTextContent("•");
+
+      // Switch back to raw tab
+      await user.click(rawButton);
+
+      // Indicator should disappear when on raw tab
+      expect(rawButton).not.toHaveTextContent("•");
+    });
   });
 });
