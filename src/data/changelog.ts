@@ -21,7 +21,7 @@ export const changelogData: ChangelogVersion[] = [
       "Raw .hday Content Editor Tab: Third tab view for direct text editing alongside Calendar and Table views",
       "Unsaved Changes Indicator: Yellow badge on 'Raw .hday' button when content has unsaved edits",
       "Visual Validation Feedback: Bootstrap isInvalid styling shows red border on textarea when errors occur",
-      "RawContentAccordion Component: Dedicated component with 11 unit tests for raw content editing",
+      "RawContentPanel Component: Dedicated component with 11 unit tests for raw content editing",
       "File Import State Reset: Automatically resets raw editor dirty/error state when importing .hday files",
       "Help Text Lookup: Object-based help text for better maintainability",
     ],
@@ -40,7 +40,7 @@ export const changelogData: ChangelogVersion[] = [
     technicalDetails: {
       title: "Raw .hday Content Editor Implementation",
       description:
-        "Implemented comprehensive raw .hday content editor as a dedicated tab view. Created RawContentAccordion component (69 lines) with visual validation feedback and unsaved changes indicator. Added selection clearing logic to prevent stale selections after import/apply operations. Improved file import flow to reset raw editor state. Optimized callback dependencies for better performance. Added 11 unit tests for RawContentAccordion and 4 integration tests for TimeOffView raw editor workflows. Refactored nested ternary operators and visually hidden redundant labels for better code quality and accessibility. All 529 tests passing with comprehensive coverage.",
+        "Implemented comprehensive raw .hday content editor as a dedicated tab view. Created RawContentPanel component (69 lines) with visual validation feedback and unsaved changes indicator. Added selection clearing logic to prevent stale selections after import/apply operations. Improved file import flow to reset raw editor state. Optimized callback dependencies for better performance. Added 11 unit tests for RawContentPanel and 4 integration tests for TimeOffView raw editor workflows. Refactored nested ternary operators and visually hidden redundant labels for better code quality and accessibility. All 529 tests passing with comprehensive coverage.",
     },
   },
   {

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../lib/hday/parser";
 import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
+import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import type { PaydayInfo } from "../types/paydays";
@@ -23,6 +23,8 @@ import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { MonthCalendar } from "./timeoff/MonthCalendar";
+import { RawContentPanel } from "./timeoff/RawContentPanel";
+import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
 
 const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
   ["none", "Holiday (default)"],
@@ -119,9 +121,10 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     undo,
     redo,
   } = useEventStore();
+  const { settings, updateVacationAllowance } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState<"calendar" | "table" | "raw">("table");
+  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">("table");
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
   const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());
@@ -523,6 +526,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const viewModeHelpText = {
     calendar: "Click a day to add events, or select an event to edit.",
     table: "Select events from the table to edit or delete.",
+    stats: "Review allowance usage and vacation breakdowns by year.",
     raw: "Edit raw .hday content directly. Click Apply to save changes.",
   } as const;
 
@@ -621,6 +625,13 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 onClick={() => setViewMode("table")}
               >
                 Table
+              </Button>
+              <Button
+                variant={viewMode === "stats" ? "primary" : "outline-primary"}
+                size="sm"
+                onClick={() => setViewMode("stats")}
+              >
+                Statistics
               </Button>
               <Button
                 variant={viewMode === "raw" ? "primary" : "outline-primary"}
@@ -772,46 +783,26 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
               </Table>
             ))}
 
+          {viewMode === "stats" && (
+            <div role="region" aria-label="Vacation statistics">
+              <VacationStatsPanel
+                events={events}
+                allowance={settings.vacationAllowance}
+                onUpdateAllowance={updateVacationAllowance}
+              />
+            </div>
+          )}
+
           {viewMode === "raw" && (
             <div role="region" aria-label="Raw .hday content editor">
-              <p className="text-muted">
-                Paste your <code>.hday</code> content below (or load a file), click <strong>Apply</strong>
-                , then export if needed. Flags: <code>a</code>=half AM, <code>p</code>=half PM,{" "}
-                <code>b</code>=business, <code>e</code>=weekend, <code>h</code>=birthday,{" "}
-                <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course, <code>u</code>=other,{" "}
-                <code>w</code>=onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly:{" "}
-                <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
-              </p>
-              <Form.Group controlId="hdayText" className="mb-3">
-                <Form.Label className="visually-hidden">Raw .hday content</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={20}
-                  value={rawEditorText}
-                  onChange={(event) => handleRawEditorChange(event.target.value)}
-                  placeholder={
-                    "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3ab # Wednesday AM business"
-                  }
-                  className="textarea-mono"
-                  aria-describedby={rawEditorError ? "raw-editor-error" : undefined}
-                  isInvalid={!!rawEditorError}
-                />
-                {rawEditorError && (
-                  <div className="text-danger small mt-2" role="alert" id="raw-editor-error">
-                    {rawEditorError}
-                  </div>
-                )}
-              </Form.Group>
-              <div className="d-flex flex-wrap gap-2">
-                <Button variant="primary" onClick={handleParseRawEditor}>
-                  <i className="bi bi-check-circle me-1"></i>
-                  Apply raw content
-                </Button>
-                <Button variant="outline-secondary" onClick={handleResetRawEditor} disabled={!isRawEditorDirty}>
-                  <i className="bi bi-arrow-counterclockwise me-1"></i>
-                  Reset
-                </Button>
-              </div>
+              <RawContentPanel
+                rawText={rawEditorText}
+                error={rawEditorError}
+                isDirty={isRawEditorDirty}
+                onChangeRawText={handleRawEditorChange}
+                onApply={handleParseRawEditor}
+                onReset={handleResetRawEditor}
+              />
             </div>
           )}
         </Card.Body>

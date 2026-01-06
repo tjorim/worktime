@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RawContentAccordion } from "../../../src/components/timeoff/RawContentAccordion";
+import { RawContentPanel } from "../../../src/components/timeoff/RawContentPanel";
 
-describe("RawContentAccordion", () => {
+describe("RawContentPanel", () => {
   const defaultProps = {
     rawText: "",
     error: undefined,
@@ -14,13 +14,13 @@ describe("RawContentAccordion", () => {
   };
 
   it("should render the accordion with header", () => {
-    render(<RawContentAccordion {...defaultProps} />);
+    render(<RawContentPanel {...defaultProps} />);
 
     expect(screen.getByRole("button", { name: /Raw \.hday content/i })).toBeInTheDocument();
   });
 
   it("should display textarea with correct value", async () => {
-    const { rerender } = render(<RawContentAccordion {...defaultProps} rawText="2025/01/15 # Test" />);
+    const { rerender } = render(<RawContentPanel {...defaultProps} rawText="2025/01/15 # Test" />);
 
     const user = userEvent.setup();
 
@@ -31,13 +31,13 @@ describe("RawContentAccordion", () => {
     expect(textarea).toHaveValue("2025/01/15 # Test");
 
     // Update props
-    rerender(<RawContentAccordion {...defaultProps} rawText="2025/01/20 # Updated" />);
+    rerender(<RawContentPanel {...defaultProps} rawText="2025/01/20 # Updated" />);
     expect(textarea).toHaveValue("2025/01/20 # Updated");
   });
 
   it("should call onChangeRawText when textarea value changes", async () => {
     const mockOnChange = vi.fn();
-    render(<RawContentAccordion {...defaultProps} onChangeRawText={mockOnChange} />);
+    render(<RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />);
 
     const user = userEvent.setup();
 
@@ -55,7 +55,7 @@ describe("RawContentAccordion", () => {
 
   it("should call onApply when Apply button is clicked", async () => {
     const mockOnApply = vi.fn();
-    render(<RawContentAccordion {...defaultProps} onApply={mockOnApply} />);
+    render(<RawContentPanel {...defaultProps} onApply={mockOnApply} />);
 
     const user = userEvent.setup();
 
@@ -70,7 +70,7 @@ describe("RawContentAccordion", () => {
 
   it("should call onReset when Reset button is clicked", async () => {
     const mockOnReset = vi.fn();
-    render(<RawContentAccordion {...defaultProps} isDirty={true} onReset={mockOnReset} />);
+    render(<RawContentPanel {...defaultProps} isDirty={true} onReset={mockOnReset} />);
 
     const user = userEvent.setup();
 
@@ -84,7 +84,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should disable Reset button when not dirty", async () => {
-    render(<RawContentAccordion {...defaultProps} isDirty={false} />);
+    render(<RawContentPanel {...defaultProps} isDirty={false} />);
 
     const user = userEvent.setup();
 
@@ -96,7 +96,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should enable Reset button when dirty", async () => {
-    render(<RawContentAccordion {...defaultProps} isDirty={true} />);
+    render(<RawContentPanel {...defaultProps} isDirty={true} />);
 
     const user = userEvent.setup();
 
@@ -108,7 +108,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should display error message when error prop is provided", async () => {
-    render(<RawContentAccordion {...defaultProps} error="Invalid .hday format" />);
+    render(<RawContentPanel {...defaultProps} error="Invalid .hday format" />);
 
     const user = userEvent.setup();
 
@@ -120,7 +120,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should not display error message when error prop is undefined", async () => {
-    render(<RawContentAccordion {...defaultProps} error={undefined} />);
+    render(<RawContentPanel {...defaultProps} error={undefined} />);
 
     const user = userEvent.setup();
 
@@ -131,7 +131,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should have proper accessibility attributes", async () => {
-    render(<RawContentAccordion {...defaultProps} error="Parse error" />);
+    render(<RawContentPanel {...defaultProps} error="Parse error" />);
 
     const user = userEvent.setup();
 
@@ -147,7 +147,7 @@ describe("RawContentAccordion", () => {
   });
 
   it("should show placeholder text in textarea", async () => {
-    render(<RawContentAccordion {...defaultProps} />);
+    render(<RawContentPanel {...defaultProps} />);
 
     const user = userEvent.setup();
 

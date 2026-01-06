@@ -16,6 +16,8 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
+import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
@@ -25,6 +27,7 @@ interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
   notifications: NotificationSetting;
+  vacationAllowance: VacationAllowanceSettings;
 }
 
 interface SettingsContextType {
@@ -32,6 +35,7 @@ interface SettingsContextType {
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
+  updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -46,6 +50,11 @@ export const defaultSettings: UserSettings = {
   timeFormat: "24h",
   theme: "auto",
   notifications: "off",
+  vacationAllowance: {
+    amount: 25,
+    unit: "days",
+    hoursPerDay: 8,
+  },
 };
 
 interface WorktimeUserState {
@@ -78,27 +87,45 @@ interface SettingsProviderProps {
  * All settings are persisted to localStorage for the internal user base.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  /**
-   * Determine whether a value conforms to the WorktimeUserState shape and allowed settings values.
-   *
-   * Validates presence and types of `hasCompletedOnboarding`, `myTeam` and `settings`, and that
-   * `settings.timeFormat` is "12h" or "24h", `settings.theme` is "light", "dark" or "auto",
-   * and `settings.notifications` is "on" or "off".
-   *
-   * @returns `true` if `state` is a valid WorktimeUserState, `false` otherwise.
-   */
-  function validateUserState(state: unknown): state is WorktimeUserState {
-    if (typeof state !== "object" || state === null) return false;
+  const normalizeUserState = (state: unknown): WorktimeUserState => {
+    if (typeof state !== "object" || state === null) {
+      return defaultUserState;
+    }
+
     const s = state as Record<string, unknown>;
-    if (typeof s.hasCompletedOnboarding !== "boolean") return false;
-    if (!(typeof s.myTeam === "number" || s.myTeam === null)) return false;
-    if (typeof s.settings !== "object" || s.settings === null) return false;
-    const settings = s.settings as Record<string, unknown>;
-    if (!["12h", "24h"].includes(settings.timeFormat as string)) return false;
-    if (!["light", "dark", "auto"].includes(settings.theme as string)) return false;
-    if (!["on", "off"].includes(settings.notifications as string)) return false;
-    return true;
-  }
+    const settings = typeof s.settings === "object" && s.settings !== null ? s.settings : {};
+    const settingsRecord = settings as Record<string, unknown>;
+
+    const timeFormat = ["12h", "24h"].includes(settingsRecord.timeFormat as string)
+      ? (settingsRecord.timeFormat as TimeFormat)
+      : defaultSettings.timeFormat;
+    const theme = ["light", "dark", "auto"].includes(settingsRecord.theme as string)
+      ? (settingsRecord.theme as Theme)
+      : defaultSettings.theme;
+    const notifications = ["on", "off"].includes(settingsRecord.notifications as string)
+      ? (settingsRecord.notifications as NotificationSetting)
+      : defaultSettings.notifications;
+
+    const vacationAllowance = sanitizeVacationAllowance(
+      settingsRecord.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
+      defaultSettings.vacationAllowance,
+    );
+
+    return {
+      hasCompletedOnboarding:
+        typeof s.hasCompletedOnboarding === "boolean"
+          ? s.hasCompletedOnboarding
+          : defaultUserState.hasCompletedOnboarding,
+      myTeam:
+        typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
+      settings: {
+        timeFormat,
+        theme,
+        notifications,
+        vacationAllowance,
+      },
+    };
+  };
 
   // Unified user state in a single localStorage key
   const [rawUserState, setUserState] = useLocalStorage<WorktimeUserState>(
@@ -106,9 +133,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     defaultUserState,
   );
 
-  const userState: WorktimeUserState = validateUserState(rawUserState)
-    ? rawUserState
-    : defaultUserState;
+  const userState: WorktimeUserState = normalizeUserState(rawUserState);
 
   const updateTimeFormat = useCallback(
     (format: TimeFormat) => {
@@ -135,6 +160,22 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, notifications },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateVacationAllowance = useCallback(
+    (allowance: Partial<VacationAllowanceSettings>) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          vacationAllowance: sanitizeVacationAllowance(
+            allowance,
+            prev.settings.vacationAllowance,
+          ),
+        },
       }));
     },
     [setUserState],
@@ -181,6 +222,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
+      updateVacationAllowance,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -193,6 +235,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
+      updateVacationAllowance,
       resetSettings,
       setMyTeam,
       setHasCompletedOnboarding,
