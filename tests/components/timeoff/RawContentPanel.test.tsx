@@ -13,19 +13,14 @@ describe("RawContentPanel", () => {
     onReset: vi.fn(),
   };
 
-  it("should render the accordion with header", () => {
+  it("should render the panel header", () => {
     render(<RawContentPanel {...defaultProps} />);
 
-    expect(screen.getByRole("button", { name: /Raw \.hday content/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Raw \.hday content/i).length).toBeGreaterThan(0);
   });
 
   it("should display textarea with correct value", async () => {
     const { rerender } = render(<RawContentPanel {...defaultProps} rawText="2025/01/15 # Test" />);
-
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveValue("2025/01/15 # Test");
@@ -40,9 +35,6 @@ describe("RawContentPanel", () => {
     render(<RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />);
 
     const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     await user.clear(textarea);
@@ -59,9 +51,6 @@ describe("RawContentPanel", () => {
 
     const user = userEvent.setup();
 
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-
     const applyButton = screen.getByRole("button", { name: /Apply raw content/i });
     await user.click(applyButton);
 
@@ -74,9 +63,6 @@ describe("RawContentPanel", () => {
 
     const user = userEvent.setup();
 
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     await user.click(resetButton);
 
@@ -86,22 +72,12 @@ describe("RawContentPanel", () => {
   it("should disable Reset button when not dirty", async () => {
     render(<RawContentPanel {...defaultProps} isDirty={false} />);
 
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeDisabled();
   });
 
   it("should enable Reset button when dirty", async () => {
     render(<RawContentPanel {...defaultProps} isDirty={true} />);
-
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeEnabled();
@@ -110,11 +86,6 @@ describe("RawContentPanel", () => {
   it("should display error message when error prop is provided", async () => {
     render(<RawContentPanel {...defaultProps} error="Invalid .hday format" />);
 
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-
     const errorMessage = screen.getByRole("alert");
     expect(errorMessage).toHaveTextContent("Invalid .hday format");
   });
@@ -122,21 +93,11 @@ describe("RawContentPanel", () => {
   it("should not display error message when error prop is undefined", async () => {
     render(<RawContentPanel {...defaultProps} error={undefined} />);
 
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
-
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("should have proper accessibility attributes", async () => {
     render(<RawContentPanel {...defaultProps} error="Parse error" />);
-
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     const errorMessage = screen.getByRole("alert");
@@ -148,11 +109,6 @@ describe("RawContentPanel", () => {
 
   it("should show placeholder text in textarea", async () => {
     render(<RawContentPanel {...defaultProps} />);
-
-    const user = userEvent.setup();
-
-    // Open accordion
-    await user.click(screen.getByRole("button", { name: /Raw \.hday content/i }));
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveAttribute("placeholder");

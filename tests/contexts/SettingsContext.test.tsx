@@ -18,6 +18,11 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.timeFormat).toBe("24h");
     expect(result.current.settings.theme).toBe("auto");
     expect(result.current.settings.notifications).toBe("off");
+    expect(result.current.settings.vacationAllowance).toEqual({
+      amount: 25,
+      unit: "days",
+      hoursPerDay: 8,
+    });
     expect(result.current.myTeam).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
   });
@@ -108,6 +113,11 @@ describe("SettingsContext unified user state", () => {
         timeFormat: "24h",
         theme: "auto",
         notifications: "off",
+        vacationAllowance: {
+          amount: 25,
+          unit: "days",
+          hoursPerDay: 8,
+        },
       },
     });
 

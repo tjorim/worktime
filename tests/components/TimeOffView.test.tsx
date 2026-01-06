@@ -4,13 +4,16 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "../../src/components/TimeOffView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
-  <ToastProvider>
-    <EventStoreProvider>{children}</EventStoreProvider>
-  </ToastProvider>
+  <SettingsProvider>
+    <ToastProvider>
+      <EventStoreProvider>{children}</EventStoreProvider>
+    </ToastProvider>
+  </SettingsProvider>
 );
 
 describe("TimeOffView", () => {
