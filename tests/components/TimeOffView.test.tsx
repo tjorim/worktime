@@ -79,7 +79,7 @@ describe("TimeOffView", () => {
 
       // Check event appears in table
       expect(screen.getByText("Test vacation")).toBeInTheDocument();
-      expect(screen.getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
     });
 
     it("should display event type badge", async () => {
