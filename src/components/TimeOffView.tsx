@@ -404,6 +404,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const handleParseRawEditor = useCallback(() => {
     try {
       importHday(rawEditorText);
+      setSelectedIndices([]);
       setIsRawEditorDirty(false);
       setRawEditorError("");
       toast.showSuccess("Raw .hday content applied", "✓");
