@@ -183,8 +183,9 @@ function AppContent() {
             show={showTeamModal}
             onTeamSelect={handleTeamSelect}
             onSkip={() => {
-              // User chose to browse all teams - myTeam stays null
-              // Just continue to vacation step, don't close modal yet
+              // User chose to browse all teams - clear team selection
+              setMyTeam(null);
+              // Continue to vacation step, don't close modal yet
             }}
             onHide={handleTeamModalHide}
             onDefer={handleWizardDefer}
