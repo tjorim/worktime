@@ -43,12 +43,18 @@ export function useLiveTime(options: LiveTimeOptions = {}): Dayjs {
   const [currentTime, setCurrentTime] = useState(dayjs());
 
   useEffect(() => {
+    // Ensure interval is a valid positive number to avoid NaN warnings
+    // Falls back to defaultInterval if invalid (NaN, Infinity, negative, or zero)
+    const validInterval = Number.isFinite(interval) && interval > 0 
+      ? interval 
+      : defaultInterval;
+
     const timer = setInterval(() => {
       setCurrentTime(dayjs());
-    }, interval);
+    }, validInterval);
 
     return () => clearInterval(timer);
-  }, [interval]);
+  }, [interval, defaultInterval]);
 
   return currentTime;
 }

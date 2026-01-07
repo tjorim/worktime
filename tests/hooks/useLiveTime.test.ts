@@ -190,4 +190,96 @@ describe("useLiveTime", () => {
 
     expect(dayjs).toHaveBeenCalled(); // Should be called after re-mount
   });
+
+  describe("edge cases - invalid intervals", () => {
+    it("should handle NaN updateInterval gracefully", () => {
+      const mockTime1 = { format: vi.fn(() => "14:30") } as unknown as Dayjs;
+      const mockTime2 = { format: vi.fn(() => "14:31") } as unknown as Dayjs;
+      vi.mocked(dayjs).mockReturnValueOnce(mockTime1).mockReturnValue(mockTime2);
+
+      const { result, unmount } = renderHook(() => useLiveTime({ updateInterval: NaN }));
+
+      expect(result.current).toBe(mockTime1);
+
+      // Should fall back to default minute interval (60000ms)
+      act(() => {
+        vi.advanceTimersByTime(60000);
+      });
+
+      expect(result.current).toBe(mockTime2);
+      unmount();
+    });
+
+    it("should handle negative updateInterval gracefully", () => {
+      const mockTime1 = { format: vi.fn(() => "14:30") } as unknown as Dayjs;
+      const mockTime2 = { format: vi.fn(() => "14:31") } as unknown as Dayjs;
+      vi.mocked(dayjs).mockReturnValueOnce(mockTime1).mockReturnValue(mockTime2);
+
+      const { result, unmount } = renderHook(() => useLiveTime({ updateInterval: -1000 }));
+
+      expect(result.current).toBe(mockTime1);
+
+      // Should fall back to default minute interval (60000ms)
+      act(() => {
+        vi.advanceTimersByTime(60000);
+      });
+
+      expect(result.current).toBe(mockTime2);
+      unmount();
+    });
+
+    it("should handle zero updateInterval gracefully", () => {
+      const mockTime1 = { format: vi.fn(() => "14:30") } as unknown as Dayjs;
+      const mockTime2 = { format: vi.fn(() => "14:31") } as unknown as Dayjs;
+      vi.mocked(dayjs).mockReturnValueOnce(mockTime1).mockReturnValue(mockTime2);
+
+      const { result, unmount } = renderHook(() => useLiveTime({ updateInterval: 0 }));
+
+      expect(result.current).toBe(mockTime1);
+
+      // Should fall back to default minute interval (60000ms)
+      act(() => {
+        vi.advanceTimersByTime(60000);
+      });
+
+      expect(result.current).toBe(mockTime2);
+      unmount();
+    });
+
+    it("should handle Infinity updateInterval gracefully", () => {
+      const mockTime1 = { format: vi.fn(() => "14:30") } as unknown as Dayjs;
+      const mockTime2 = { format: vi.fn(() => "14:31") } as unknown as Dayjs;
+      vi.mocked(dayjs).mockReturnValueOnce(mockTime1).mockReturnValue(mockTime2);
+
+      const { result, unmount } = renderHook(() => useLiveTime({ updateInterval: Number.POSITIVE_INFINITY }));
+
+      expect(result.current).toBe(mockTime1);
+
+      // Should fall back to default minute interval (60000ms)
+      act(() => {
+        vi.advanceTimersByTime(60000);
+      });
+
+      expect(result.current).toBe(mockTime2);
+      unmount();
+    });
+
+    it("should handle NaN with second precision gracefully", () => {
+      const mockTime1 = { format: vi.fn(() => "14:30:00") } as unknown as Dayjs;
+      const mockTime2 = { format: vi.fn(() => "14:30:01") } as unknown as Dayjs;
+      vi.mocked(dayjs).mockReturnValueOnce(mockTime1).mockReturnValue(mockTime2);
+
+      const { result, unmount } = renderHook(() => useLiveTime({ precision: "second", updateInterval: NaN }));
+
+      expect(result.current).toBe(mockTime1);
+
+      // Should fall back to second interval (1000ms)
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current).toBe(mockTime2);
+      unmount();
+    });
+  });
 });
