@@ -37,7 +37,7 @@ describe("vacationCalculations", () => {
       expect(stats.holidayDays).toBe(1);
     });
 
-    it("should prioritize holiday flag over other flags and handle half-day modifiers", () => {
+    it("should use holiday flag when no explicit type flags are present and handle half-day modifiers", () => {
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -48,6 +48,21 @@ describe("vacationCalculations", () => {
       ];
       const stats = calculateVacationStats(events, 2025, 8);
       expect(stats.holidayDays).toBe(0.5); // Half day holiday
+    });
+
+    it("should prioritize explicit type flags over holiday flag", () => {
+      const events: HdayEvent[] = [
+        {
+          type: "range",
+          start: "2025/01/15",
+          end: "2025/01/17",
+          flags: ["holiday", "business"],
+        },
+      ];
+      const stats = calculateVacationStats(events, 2025, 8);
+      expect(stats.holidayDays).toBe(0); // Should not count as holiday
+      const businessType = stats.byType.find((t) => t.key === "business");
+      expect(businessType?.days).toBe(3); // Should count as business
     });
 
     it("should correctly classify business trip events", () => {
