@@ -312,7 +312,7 @@ describe("WelcomeWizard", () => {
       await user.type(amountInput, "-5");
 
       // Should show validation error
-      expect(screen.getByText(/Please enter a valid positive number/i)).toBeVisible();
+      expect(screen.getByText(/Please enter a valid number \(0 or greater\)/i)).toBeVisible();
 
       // Complete button should be disabled
       const completeButton = screen.getByRole("button", { name: /Complete/i });

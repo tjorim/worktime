@@ -382,7 +382,7 @@ export function WelcomeWizard({
               isInvalid={validation.isInvalid}
             />
             <Form.Control.Feedback type="invalid">
-              Please enter a valid positive number
+              Please enter a valid number (0 or greater)
             </Form.Control.Feedback>
             <Form.Text className="text-muted">Leave empty to skip vacation tracking</Form.Text>
           </Form.Group>
