@@ -156,4 +156,129 @@ describe("SettingsContext unified user state", () => {
     // SettingsContext should not apply theme to DOM - that's App.tsx responsibility
     expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
   });
+
+  describe("Vacation Allowance Settings", () => {
+    it("should have default vacation allowance on initialization", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.vacationAllowance).toEqual({
+        amount: 0,
+        unit: "days",
+        hoursPerDay: 8,
+      });
+    });
+
+    it("should update vacation allowance amount", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: 25 });
+      });
+      expect(result.current.settings.vacationAllowance.amount).toBe(25);
+      expect(result.current.settings.vacationAllowance.unit).toBe("days");
+      expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(8);
+    });
+
+    it("should update vacation allowance unit", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ unit: "hours" });
+      });
+      expect(result.current.settings.vacationAllowance.unit).toBe("hours");
+      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+    });
+
+    it("should update vacation allowance hoursPerDay", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ hoursPerDay: 7.5 });
+      });
+      expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(7.5);
+    });
+
+    it("should update multiple vacation allowance properties at once", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: 200, unit: "hours", hoursPerDay: 7 });
+      });
+      expect(result.current.settings.vacationAllowance).toEqual({
+        amount: 200,
+        unit: "hours",
+        hoursPerDay: 7,
+      });
+    });
+
+    it("should sanitize negative amount to 0", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: -10 });
+      });
+      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+    });
+
+    it("should sanitize hoursPerDay less than 1 to 1", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ hoursPerDay: 0.5 });
+      });
+      expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(1);
+    });
+
+    it("should sanitize NaN amount to fallback value", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      // First set a valid value
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: 25 });
+      });
+      // Then try to set NaN
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: NaN });
+      });
+      // Should keep the previous valid value
+      expect(result.current.settings.vacationAllowance.amount).toBe(25);
+    });
+
+    it("should sanitize Infinity amount to fallback value", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: Infinity });
+      });
+      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+    });
+
+    it("should sanitize invalid unit to fallback value", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ unit: "weeks" as any });
+      });
+      expect(result.current.settings.vacationAllowance.unit).toBe("days");
+    });
+
+    it("should persist vacation allowance to localStorage", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateVacationAllowance({ amount: 30, unit: "days", hoursPerDay: 8 });
+      });
+
+      const stored = window.localStorage.getItem("worktime_user_state");
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.settings.vacationAllowance).toEqual({
+        amount: 30,
+        unit: "days",
+        hoursPerDay: 8,
+      });
+    });
+
+    it("should reset vacation allowance with resetSettings", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      act(() => {
+        result.current.updateVacationAllowance({ amount: 25, unit: "hours" });
+        result.current.resetSettings();
+      });
+      expect(result.current.settings.vacationAllowance).toEqual({
+        amount: 0,
+        unit: "days",
+        hoursPerDay: 8,
+      });
+    });
+  });
 });

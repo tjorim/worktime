@@ -70,6 +70,7 @@ const getDayWeight = (flags?: EventFlag[]): number => (isHalfDay(flags) ? 0.5 : 
 
 const getEventTypeKey = (flags?: EventFlag[]): EventTypeKey => {
   if (!flags || flags.length === 0) return "holiday";
+  // Check explicit type flags first (matching priority in getEventTypeLabel)
   if (flags.includes("business")) return "business";
   if (flags.includes("course")) return "course";
   if (flags.includes("in")) return "in";
@@ -77,6 +78,7 @@ const getEventTypeKey = (flags?: EventFlag[]): EventTypeKey => {
   if (flags.includes("birthday")) return "birthday";
   if (flags.includes("ill")) return "ill";
   if (flags.includes("other")) return "other";
+  // Only use holiday as fallback when no explicit type flags are present
   return "holiday";
 };
 

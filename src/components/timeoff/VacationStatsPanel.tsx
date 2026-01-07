@@ -20,7 +20,8 @@ import {
   getAvailableYears,
 } from "../../utils/vacationCalculations";
 
-const DEFAULT_HOURS_PER_DAY = 8;
+/** Default hours per day for vacation allowance calculations */
+export const DEFAULT_HOURS_PER_DAY = 8;
 
 interface VacationStatsProps {
   events: HdayEvent[];
@@ -31,6 +32,19 @@ interface VacationStatsProps {
 export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: VacationStatsProps) {
   const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
+
+  // Local state for input values to allow typing intermediate invalid values
+  const [amountInput, setAmountInput] = useState(allowance.amount.toString());
+  const [hoursPerDayInput, setHoursPerDayInput] = useState(allowance.hoursPerDay.toString());
+
+  // Sync local state when prop changes externally
+  useEffect(() => {
+    setAmountInput(allowance.amount.toString());
+  }, [allowance.amount]);
+
+  useEffect(() => {
+    setHoursPerDayInput(allowance.hoursPerDay.toString());
+  }, [allowance.hoursPerDay]);
 
   useEffect(() => {
     if (!years.includes(selectedYear)) {
@@ -54,9 +68,25 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
   const remainingValue = allowance.unit === "days" ? remainingDays : remainingHours;
   const usagePercent = allowanceValue > 0 ? Math.min((usedValue / allowanceValue) * 100, 100) : 0;
 
+  // Validation states
+  const amountValue = Number(amountInput);
+  const isAmountValid = amountInput !== "" && Number.isFinite(amountValue) && amountValue >= 0;
+  const isAmountInvalid = amountInput !== "" && !isAmountValid;
+
+  const hoursPerDayValue = Number(hoursPerDayInput);
+  const isHoursPerDayValid =
+    hoursPerDayInput !== "" && Number.isFinite(hoursPerDayValue) && hoursPerDayValue >= 1;
+  const isHoursPerDayInvalid = hoursPerDayInput !== "" && !isHoursPerDayValid;
+
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value);
-    onUpdateAllowance({ amount: Number.isFinite(value) ? Math.max(0, value) : 0 });
+    const input = event.target.value;
+    setAmountInput(input);
+
+    // Only update parent if valid
+    const value = Number(input);
+    if (input !== "" && Number.isFinite(value) && value >= 0) {
+      onUpdateAllowance({ amount: value });
+    }
   };
 
   const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -64,10 +94,14 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
   };
 
   const handleHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value);
-    onUpdateAllowance({
-      hoursPerDay: Number.isFinite(value) && value >= 1 ? value : DEFAULT_HOURS_PER_DAY,
-    });
+    const input = event.target.value;
+    setHoursPerDayInput(input);
+
+    // Only update parent if valid
+    const value = Number(input);
+    if (input !== "" && Number.isFinite(value) && value >= 1) {
+      onUpdateAllowance({ hoursPerDay: value });
+    }
   };
 
   return (
@@ -91,10 +125,10 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                     type="number"
                     min={0}
                     step={0.5}
-                    value={allowance.amount}
+                    value={amountInput}
                     onChange={handleAmountChange}
                     placeholder="e.g., 25"
-                    isInvalid={allowance.amount < 0}
+                    isInvalid={isAmountInvalid}
                   />
                   <Form.Control.Feedback type="invalid">
                     Please enter a positive number
@@ -120,9 +154,13 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                         type="number"
                         min={1}
                         step={0.5}
-                        value={allowance.hoursPerDay}
+                        value={hoursPerDayInput}
                         onChange={handleHoursPerDayChange}
+                        isInvalid={isHoursPerDayInvalid}
                       />
+                      <Form.Control.Feedback type="invalid">
+                        Please enter a value of at least 1
+                      </Form.Control.Feedback>
                       <Form.Text className="text-muted">For conversion</Form.Text>
                     </Form.Group>
                   </Col>
