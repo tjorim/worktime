@@ -144,7 +144,6 @@ export function WelcomeWizard({
     onHide();
   };
 
-
   const nextStep = () => {
     if (currentStep === "welcome") {
       setCurrentStep("features");
