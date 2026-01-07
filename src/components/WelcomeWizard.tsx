@@ -25,13 +25,13 @@ function validateVacationAmount(amount: string) {
     return { isValid: false, isInvalid: false, parsedAmount: null };
   }
   const parsed = parseFloat(trimmedAmount);
-  const isNaN = Number.isNaN(parsed);
+  const isNotANumber = Number.isNaN(parsed);
   const isNegative = parsed < 0;
   
   return {
-    isValid: !isNaN && parsed >= 0,
-    isInvalid: isNaN || isNegative,
-    parsedAmount: !isNaN ? parsed : null,
+    isValid: !isNotANumber && parsed >= 0,
+    isInvalid: isNotANumber || isNegative,
+    parsedAmount: !isNotANumber ? parsed : null,
   };
 }
 
