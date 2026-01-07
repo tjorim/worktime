@@ -59,7 +59,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   // Memoize filtered types to avoid duplicate filtering
   const filteredTypes = useMemo(
-    () => stats.byType.filter((type) => type.days > 0 || type.hours > 0),
+    () => stats.byType.filter((type) => type.days > 0),
     [stats.byType],
   );
 
