@@ -37,7 +37,9 @@ describe("RawContentPanel", () => {
 
   it("should call onChangeRawText when textarea value changes", async () => {
     const mockOnChange = vi.fn();
-    const { rerender } = render(<RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />);
+    const { rerender } = render(
+      <RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />,
+    );
 
     const user = userEvent.setup();
 

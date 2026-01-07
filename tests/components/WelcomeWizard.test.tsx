@@ -30,7 +30,9 @@ const findModalTitle = async (text: RegExp) => {
 const waitForStep = async (stepNumber: number, totalSteps: number = 4, timeout = 3000) => {
   await waitFor(
     () => {
-      expect(screen.getByText(new RegExp(`Step ${stepNumber} of ${totalSteps}`, "i"))).toBeInTheDocument();
+      expect(
+        screen.getByText(new RegExp(`Step ${stepNumber} of ${totalSteps}`, "i")),
+      ).toBeInTheDocument();
     },
     { timeout },
   );
@@ -128,7 +130,7 @@ describe("WelcomeWizard", () => {
       const mockOnHide = vi.fn();
 
       renderWithProviders(
-        <WelcomeWizard {...defaultProps} onDefer={mockOnDefer} onHide={mockOnHide} />
+        <WelcomeWizard {...defaultProps} onDefer={mockOnDefer} onHide={mockOnHide} />,
       );
 
       const maybeLaterButton = screen.getByRole("button", { name: /Maybe Later/i });
@@ -163,11 +165,7 @@ describe("WelcomeWizard", () => {
       const mockOnHide = vi.fn();
 
       renderWithProviders(
-        <WelcomeWizard
-          show={true}
-          onTeamSelect={mockOnTeamSelect}
-          onHide={mockOnHide}
-        />
+        <WelcomeWizard show={true} onTeamSelect={mockOnTeamSelect} onHide={mockOnHide} />,
       );
 
       const user = userEvent.setup();
@@ -194,7 +192,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={mockOnHide}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const user = userEvent.setup();
@@ -212,7 +210,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={mockOnHide}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const user = userEvent.setup();
@@ -242,7 +240,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       // No input entered - button should say "Complete" not "Save & Complete"
@@ -258,7 +256,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const amountInput = screen.getByLabelText(/Annual vacation allowance/i);
@@ -276,7 +274,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const user = userEvent.setup();
@@ -293,7 +291,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       expect(screen.getByText(/Step 4 of 4/i)).toBeInTheDocument();
@@ -307,7 +305,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const amountInput = screen.getByLabelText(/Annual vacation allowance/i);
@@ -329,7 +327,7 @@ describe("WelcomeWizard", () => {
           onTeamSelect={vi.fn()}
           onHide={vi.fn()}
           startStep="vacation-allowance"
-        />
+        />,
       );
 
       const amountInput = screen.getByLabelText(/Annual vacation allowance/i);

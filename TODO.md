@@ -389,6 +389,7 @@ Advanced features for future development phases.
 9. **Time-Off Calendar Visual Enhancements** - Color-coded events, auto-load current month, highlight today
 10. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
 11. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
+
 ### 📋 Backlog (UI/UX)
 
 12. **Mobile Carousel** - Improved mobile navigation

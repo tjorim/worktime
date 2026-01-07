@@ -375,11 +375,11 @@
 }
 
 @media (width >= 768px) {
-.install-prompt {
-  left: auto;
-  right: 1rem;
-  max-width: 300px;
-}
+  .install-prompt {
+    left: auto;
+    right: 1rem;
+    max-width: 300px;
+  }
 }
 
 /* Time-off month calendar */
@@ -419,7 +419,9 @@
   background: var(--month-calendar-day-bg);
   min-height: 140px;
   padding: 0.25rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .month-calendar-day.is-other-month {
@@ -442,7 +444,11 @@
 }
 
 .month-calendar-day.is-public-holiday.is-school-holiday {
-  background: linear-gradient(135deg, var(--month-calendar-public-holiday-bg), var(--month-calendar-school-holiday-bg));
+  background: linear-gradient(
+    135deg,
+    var(--month-calendar-public-holiday-bg),
+    var(--month-calendar-school-holiday-bg)
+  );
 }
 
 .month-calendar-day.is-payday {
@@ -698,6 +704,7 @@
 }
 
 .textarea-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
 }

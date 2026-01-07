@@ -193,6 +193,5 @@ describe("App", () => {
       expect(screen.getByTestId("current-status")).toBeInTheDocument();
       expect(screen.getByTestId("main-tabs")).toBeInTheDocument();
     });
-
   });
 });

@@ -24,10 +24,7 @@ const DEFAULT_LANGUAGE = "EN";
 const DEFAULT_COUNTRY = "NL";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
 
-export function getPublicHolidayName(
-  holiday: PublicHoliday,
-  language: string = DEFAULT_LANGUAGE,
-) {
+export function getPublicHolidayName(holiday: PublicHoliday, language: string = DEFAULT_LANGUAGE) {
   const match = holiday.name.find((entry) => entry.language === language);
   if (match?.text) {
     return match.text;

@@ -87,7 +87,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cache menu items query for performance
       const menuItems = Array.from(
-        menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
+        menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || [],
       );
 
       switch (e.key) {

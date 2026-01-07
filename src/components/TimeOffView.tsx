@@ -65,7 +65,9 @@ const DEFAULT_WEEKDAY = 1;
  */
 function EmptyState({ mode }: { mode: "calendar" | "table" }) {
   const isCalendar = mode === "calendar";
-  const containerClasses = isCalendar ? "text-center text-muted mt-4" : "text-center text-muted py-5";
+  const containerClasses = isCalendar
+    ? "text-center text-muted mt-4"
+    : "text-center text-muted py-5";
   const iconClasses = isCalendar
     ? "bi bi-calendar-x display-6 d-block mb-2"
     : "bi bi-calendar-x display-4 d-block mb-3";
@@ -76,8 +78,8 @@ function EmptyState({ mode }: { mode: "calendar" | "table" }) {
       <p className={isCalendar ? "mb-0" : ""}>No time-off events yet.</p>
       <p className="small">
         {isCalendar
-          ? "Click a day to add your first event, or use \"Import\" to load a .hday file."
-          : "Click \"Add Event\" to create your first event, or \"Import\" to load an existing .hday file."}
+          ? 'Click a day to add your first event, or use "Import" to load a .hday file.'
+          : 'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'}
       </p>
     </div>
   );
@@ -395,14 +397,11 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     toast.showSuccess("Exported timeoff.hday", "📤");
   };
 
-  const handleRawEditorChange = useCallback(
-    (value: string) => {
-      setRawEditorText(value);
-      setIsRawEditorDirty(true);
-      setRawEditorError("");
-    },
-    [],
-  );
+  const handleRawEditorChange = useCallback((value: string) => {
+    setRawEditorText(value);
+    setIsRawEditorDirty(true);
+    setRawEditorError("");
+  }, []);
 
   const handleParseRawEditor = useCallback(() => {
     try {
@@ -644,9 +643,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 )}
               </Button>
             </ButtonGroup>
-            <span className="text-muted small">
-              {viewModeHelpText[viewMode]}
-            </span>
+            <span className="text-muted small">{viewModeHelpText[viewMode]}</span>
           </div>
 
           {viewMode === "calendar" && (
@@ -708,7 +705,10 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                       event.type === "unknown" ? `unknown-event-${index}` : undefined;
 
                     return (
-                      <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
+                      <tr
+                        key={getEventRowKey(event, index)}
+                        aria-describedby={unknownDescriptionId}
+                      >
                         <td>
                           <input
                             type="checkbox"

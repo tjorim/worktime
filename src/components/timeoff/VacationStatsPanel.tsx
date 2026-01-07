@@ -8,7 +8,10 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import type { HdayEvent } from "../../lib/hday/types";
 import { dayjs } from "../../utils/dateTimeUtils";
-import type { VacationAllowanceSettings, VacationAllowanceUnit } from "../../utils/vacationCalculations";
+import type {
+  VacationAllowanceSettings,
+  VacationAllowanceUnit,
+} from "../../utils/vacationCalculations";
 import {
   calculateVacationStats,
   formatVacationValue,
@@ -62,7 +65,9 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({ hoursPerDay: Number.isFinite(value) && value >= 1 ? value : DEFAULT_HOURS_PER_DAY });
+    onUpdateAllowance({
+      hoursPerDay: Number.isFinite(value) && value >= 1 ? value : DEFAULT_HOURS_PER_DAY,
+    });
   };
 
   return (

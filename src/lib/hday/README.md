@@ -17,6 +17,7 @@ Specific date or date range:
 ```
 
 **Examples:**
+
 ```text
 2025/01/15 # Single day vacation
 2025/12/23-2025/12/27 # Christmas vacation
@@ -35,6 +36,7 @@ dN[flags] [# comment]
 Where `N` = 1-7 (Monday to Sunday, ISO week numbering)
 
 **Examples:**
+
 ```text
 d1 # Every Monday off
 d5k # Every Friday in office (k = in-office)
@@ -54,7 +56,7 @@ Only the **first** type flag is kept if multiple are present:
 - `e` - Weekend (magenta background)
 - `h` - Birthday (blue background)
 - `i` - Sick leave (olive background)
-- *(default: holiday with red background)*
+- _(default: holiday with red background)_
 
 ### Time/Location Flags (Mutually Exclusive)
 
@@ -130,6 +132,7 @@ Warnings are logged to console when multiple flags are found.
 ## Accessibility
 
 All color constants meet **WCAG AA** accessibility standards:
+
 - Minimum 4.5:1 contrast ratio with black text (#000)
 - See `EVENT_COLORS` in `parser.ts` for verified ratios
 

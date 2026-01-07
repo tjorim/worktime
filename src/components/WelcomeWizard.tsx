@@ -333,8 +333,8 @@ export function WelcomeWizard({
           <i className="bi bi-calendar-check display-4 text-primary"></i>
           <h4 className="mt-3">Set Up Vacation Tracking (Optional)</h4>
           <p className="text-muted">
-            Track your vacation allowance and see how much time off you have remaining. You can
-            skip this and set it up later in Settings.
+            Track your vacation allowance and see how much time off you have remaining. You can skip
+            this and set it up later in Settings.
           </p>
         </div>
 
@@ -354,9 +354,7 @@ export function WelcomeWizard({
             <Form.Control.Feedback type="invalid">
               Please enter a valid positive number
             </Form.Control.Feedback>
-            <Form.Text className="text-muted">
-              Leave empty to skip vacation tracking
-            </Form.Text>
+            <Form.Text className="text-muted">Leave empty to skip vacation tracking</Form.Text>
           </Form.Group>
 
           <Form.Group controlId="vacationUnit">

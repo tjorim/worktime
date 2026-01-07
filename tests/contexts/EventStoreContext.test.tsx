@@ -412,11 +412,11 @@ d1 # Every Monday`;
       expect(exported).toBe("");
     });
 
-    it("should maintain round-trip fidelity", () => {
+    it("should maintain round-trip fidelity with sorted output", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       const originalContent = `2025/01/15 # Event 1
-2025/01/16-2025/01/20b # Business trip
+b2025/01/16-2025/01/20 # Business trip
 d5 # Every Friday`;
 
       act(() => {
@@ -425,8 +425,13 @@ d5 # Every Friday`;
 
       const exported = result.current.exportHday();
 
-      // Expect normalized format with trailing newline
-      expect(exported).toBe(originalContent + "\n");
+      // Events are automatically sorted: range events by date, then weekly events
+      const expectedSorted = `2025/01/15 # Event 1
+b2025/01/16-2025/01/20 # Business trip
+d5 # Every Friday
+`;
+
+      expect(exported).toBe(expectedSorted);
     });
   });
 
@@ -668,6 +673,108 @@ d5 # Every Friday`;
 
       expect(result.current.events).toHaveLength(2);
       expect(result.current.events[1].title).toBe("Event 2");
+    });
+  });
+
+  describe("Event Sorting", () => {
+    it("should sort range events by starting date", () => {
+      const { result } = renderHook(() => useEventStore(), { wrapper });
+
+      // Add events in reverse chronological order
+      act(() => {
+        result.current.addEvent({
+          type: "range",
+          start: "2025/12/25",
+          end: "2025/12/25",
+          flags: ["holiday"],
+          title: "Christmas",
+        });
+      });
+
+      act(() => {
+        result.current.addEvent({
+          type: "range",
+          start: "2025/01/15",
+          end: "2025/01/15",
+          flags: ["holiday"],
+          title: "January event",
+        });
+      });
+
+      act(() => {
+        result.current.addEvent({
+          type: "range",
+          start: "2025/06/10",
+          end: "2025/06/10",
+          flags: ["holiday"],
+          title: "June event",
+        });
+      });
+
+      // Events should be sorted by start date (earliest first)
+      expect(result.current.events).toHaveLength(3);
+      expect(result.current.events[0].title).toBe("January event");
+      expect(result.current.events[1].title).toBe("June event");
+      expect(result.current.events[2].title).toBe("Christmas");
+    });
+
+    it("should maintain sort order after importing raw .hday content", () => {
+      const { result } = renderHook(() => useEventStore(), { wrapper });
+
+      // Import unsorted .hday content
+      const unsortedHday = `2025/12/25 # Christmas
+2025/01/15 # January event
+2025/06/10 # June event
+`;
+
+      act(() => {
+        result.current.importHday(unsortedHday);
+      });
+
+      // Events should be sorted by start date
+      expect(result.current.events).toHaveLength(3);
+      expect(result.current.events[0].title).toBe("January event");
+      expect(result.current.events[1].title).toBe("June event");
+      expect(result.current.events[2].title).toBe("Christmas");
+
+      // Raw text should reflect sorted order
+      expect(result.current.rawText).toContain("2025/01/15");
+      expect(result.current.rawText.indexOf("2025/01/15")).toBeLessThan(
+        result.current.rawText.indexOf("2025/06/10"),
+      );
+      expect(result.current.rawText.indexOf("2025/06/10")).toBeLessThan(
+        result.current.rawText.indexOf("2025/12/25"),
+      );
+    });
+
+    it("should sort range events before weekly events", () => {
+      const { result } = renderHook(() => useEventStore(), { wrapper });
+
+      act(() => {
+        result.current.addEvent({
+          type: "weekly",
+          weekday: 1,
+          flags: ["in"],
+          title: "Monday in office",
+        });
+      });
+
+      act(() => {
+        result.current.addEvent({
+          type: "range",
+          start: "2025/12/25",
+          end: "2025/12/25",
+          flags: ["holiday"],
+          title: "Christmas",
+        });
+      });
+
+      // Range events should come before weekly events
+      expect(result.current.events).toHaveLength(2);
+      expect(result.current.events[0].type).toBe("range");
+      expect(result.current.events[0].title).toBe("Christmas");
+      expect(result.current.events[1].type).toBe("weekly");
+      expect(result.current.events[1].title).toBe("Monday in office");
     });
   });
 });

@@ -76,7 +76,7 @@ describe("DayCell", () => {
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
+
       expect(screen.getByRole("button", { name: "View Event 1" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "View Event 2" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "View Event 3" })).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("DayCell", () => {
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
+
       // Should show "+2 more" (5 events - 3 visible = 2 hidden)
       expect(screen.getByText("+2 more")).toBeInTheDocument();
     });
@@ -109,11 +109,14 @@ describe("DayCell", () => {
 
     it("should display time/location symbols", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event", flags: ["half_am"] }, index: 0 },
+        {
+          event: { type: "range", start: "2025/01/15", title: "Event", flags: ["half_am"] },
+          index: 0,
+        },
       ];
 
       const { container } = render(<DayCell {...defaultProps} events={events} />);
-      
+
       // Check for symbol in the event label
       const symbol = container.querySelector(".month-calendar-event-symbol");
       expect(symbol).toBeInTheDocument();
@@ -175,23 +178,23 @@ describe("DayCell", () => {
     it("should call onKeyDown when pressing keys on day button", async () => {
       const user = userEvent.setup();
       render(<DayCell {...defaultProps} />);
-      
+
       const dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
       dayButton.focus();
-      
+
       await user.keyboard("{ArrowRight}");
-      
+
       expect(mockOnKeyDown).toHaveBeenCalledTimes(1);
     });
 
     it("should set correct tabIndex based on isFocused", () => {
       const { rerender } = render(<DayCell {...defaultProps} isFocused={false} />);
-      
+
       let dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
       expect(dayButton).toHaveAttribute("tabIndex", "-1");
-      
+
       rerender(<DayCell {...defaultProps} isFocused={true} />);
-      
+
       dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
       expect(dayButton).toHaveAttribute("tabIndex", "0");
     });
@@ -200,11 +203,14 @@ describe("DayCell", () => {
   describe("Visual Indicators", () => {
     it("should show course indicator emoji for course events", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Training", flags: ["course"] }, index: 0 },
+        {
+          event: { type: "range", start: "2025/01/15", title: "Training", flags: ["course"] },
+          index: 0,
+        },
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
+
       // Check for course emoji (📘)
       expect(screen.getByText("📘")).toBeInTheDocument();
     });
@@ -222,10 +228,10 @@ describe("DayCell", () => {
       };
 
       render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
-      
+
       // Check for holiday emoji (🎉)
       expect(screen.getByText("🎉")).toBeInTheDocument();
-      
+
       // Check aria-label includes holiday name
       const button = screen.getByRole("button", { name: /New Year/i });
       expect(button).toBeInTheDocument();
@@ -239,10 +245,10 @@ describe("DayCell", () => {
       };
 
       render(<DayCell {...defaultProps} schoolHoliday={schoolHoliday} />);
-      
+
       // Check for school holiday emoji (🏫)
       expect(screen.getByText("🏫")).toBeInTheDocument();
-      
+
       // Check aria-label includes school holiday
       const button = screen.getByRole("button", { name: /School Holiday: Winter Break/i });
       expect(button).toBeInTheDocument();
@@ -255,10 +261,10 @@ describe("DayCell", () => {
       };
 
       render(<DayCell {...defaultProps} paydayInfo={paydayInfo} />);
-      
+
       // Check for payday emoji (💶)
       expect(screen.getByText("💶")).toBeInTheDocument();
-      
+
       // Check aria-label includes payday
       const button = screen.getByRole("button", { name: /Payday/i });
       expect(button).toBeInTheDocument();
@@ -277,19 +283,25 @@ describe("DayCell", () => {
       };
 
       const { container } = render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
-      
+
       const gridcell = container.querySelector(".is-public-holiday");
       expect(gridcell).toBeInTheDocument();
     });
 
     it("should not duplicate indicators", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Course 1", flags: ["course"] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Course 2", flags: ["course"] }, index: 1 },
+        {
+          event: { type: "range", start: "2025/01/15", title: "Course 1", flags: ["course"] },
+          index: 0,
+        },
+        {
+          event: { type: "range", start: "2025/01/15", title: "Course 2", flags: ["course"] },
+          index: 1,
+        },
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
-      
+
       // Should only show one course emoji despite two course events
       const courseEmojis = screen.getAllByText("📘");
       expect(courseEmojis).toHaveLength(1);
@@ -299,14 +311,14 @@ describe("DayCell", () => {
   describe("Focus Management", () => {
     it("should call buttonRef with the button element", () => {
       render(<DayCell {...defaultProps} />);
-      
+
       expect(mockButtonRef).toHaveBeenCalledTimes(1);
       expect(mockButtonRef.mock.calls[0][0]).toBeInstanceOf(HTMLButtonElement);
     });
 
     it("should render day button with correct CSS class", () => {
       const { container } = render(<DayCell {...defaultProps} />);
-      
+
       const dayButton = container.querySelector(".month-calendar-day-button");
       expect(dayButton).toBeInTheDocument();
       expect(dayButton).toHaveClass("month-calendar-day-button");

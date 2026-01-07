@@ -57,7 +57,7 @@ const buildCalendarDays = (month: dayjs.Dayjs) => {
 
 /**
  * MonthCalendar displays a monthly calendar grid view for .hday time-off events.
- * 
+ *
  * Features:
  * - Visual month overview with event chips on each day
  * - Maps both range events (spanning multiple days) and weekly recurring events
@@ -66,13 +66,13 @@ const buildCalendarDays = (month: dayjs.Dayjs) => {
  * - Visual indicators for courses, holidays, and paydays
  * - Click-to-add events on any day, click-to-edit existing events
  * - Month navigation buttons (previous, today, next)
- * 
+ *
  * Accessibility:
  * - ARIA labels for all interactive elements
  * - Focus management with keyboard navigation
  * - Screen reader announcements for month changes
  * - Semantic calendar grid structure
- * 
+ *
  * @param props - Component props
  * @param props.events - Array of .hday events to display
  * @param props.month - The currently displayed month
@@ -135,7 +135,7 @@ export function MonthCalendar({
 
   const dayEvents = useMemo(() => {
     const map = new Map<string, DayEvent[]>();
-    
+
     // If there are no days to display, return empty map
     if (days.length === 0) {
       return map;

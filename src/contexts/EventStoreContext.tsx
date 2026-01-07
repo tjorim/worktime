@@ -150,7 +150,7 @@ function eventsReducer(state: EventStoreState, action: EventStoreAction): EventS
 
     case "IMPORT_HDAY": {
       const parsed = action.payload.trim() ? parseHday(action.payload) : [];
-      return applyWithHistory(state, parsed);
+      return applyWithHistory(state, sortEvents(parsed));
     }
 
     case "CLEAR_ALL": {

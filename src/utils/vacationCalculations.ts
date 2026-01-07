@@ -231,7 +231,8 @@ export const sanitizeVacationAllowance = (
     typeof allowance?.amount === "number" && Number.isFinite(allowance.amount)
       ? Math.max(0, allowance.amount)
       : fallback.amount;
-  const unit = allowance?.unit === "hours" || allowance?.unit === "days" ? allowance.unit : fallback.unit;
+  const unit =
+    allowance?.unit === "hours" || allowance?.unit === "days" ? allowance.unit : fallback.unit;
   const hoursPerDay =
     typeof allowance?.hoursPerDay === "number" && Number.isFinite(allowance.hoursPerDay)
       ? Math.max(1, allowance.hoursPerDay)

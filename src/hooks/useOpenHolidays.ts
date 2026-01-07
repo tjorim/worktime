@@ -88,15 +88,7 @@ export function useOpenHolidays<T>({
     return () => {
       abortController.abort();
     };
-  }, [
-    endpoint,
-    paramsKey,
-    enabled,
-    responseErrorPrefix,
-    timeoutError,
-    networkError,
-    unknownError,
-  ]); // oxlint-disable-line react/exhaustive-deps -- paramsKey tracks params changes via useMemo, preventing unnecessary re-fetches on identical content
+  }, [endpoint, paramsKey, enabled, responseErrorPrefix, timeoutError, networkError, unknownError]); // oxlint-disable-line react/exhaustive-deps -- paramsKey tracks params changes via useMemo, preventing unnecessary re-fetches on identical content
 
   return { holidays, loading, error };
 }

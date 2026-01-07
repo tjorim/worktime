@@ -104,8 +104,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
-    myTeam:
-      typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
+    myTeam: typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
     settings: {
       timeFormat,
       theme,
@@ -127,7 +126,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
  * All settings are persisted to localStorage for the internal user base.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
-
   // Unified user state in a single localStorage key
   const [rawUserState, setUserState] = useLocalStorage<WorktimeUserState>(
     "worktime_user_state",
@@ -172,10 +170,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         ...prev,
         settings: {
           ...prev.settings,
-          vacationAllowance: sanitizeVacationAllowance(
-            allowance,
-            prev.settings.vacationAllowance,
-          ),
+          vacationAllowance: sanitizeVacationAllowance(allowance, prev.settings.vacationAllowance),
         },
       }));
     },
