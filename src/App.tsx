@@ -12,6 +12,7 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
+import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
  * The main application component for team selection and shift management.
@@ -26,8 +27,13 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo } = useToast();
-  const { myTeam, setMyTeam, hasCompletedOnboarding, setHasCompletedOnboarding, settings } =
-    useSettings();
+  const {
+    myTeam,
+    setMyTeam,
+    hasCompletedOnboarding,
+    completeOnboardingWithVacation,
+    settings,
+  } = useSettings();
   const { currentDate, setCurrentDate, todayShifts } = useShiftCalculation();
   const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
 
@@ -123,10 +129,14 @@ function AppContent() {
     setShowTeamModal(true);
   };
 
-  const handleTeamModalHide = () => {
+  const handleTeamModalHide = (vacationAllowance?: {
+    amount: number;
+    unit: VacationAllowanceUnit;
+  }) => {
     // Complete onboarding when wizard closes (after vacation step)
+    // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
-      setHasCompletedOnboarding(true);
+      completeOnboardingWithVacation(myTeam, vacationAllowance);
       if (myTeam !== null) {
         showSuccess(`Team ${myTeam} selected! Your shifts are now personalized.`, "🎯");
       }

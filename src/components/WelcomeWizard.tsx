@@ -9,7 +9,6 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { CONFIG } from "../utils/config";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
-import { useSettings } from "../contexts/SettingsContext";
 
 type WizardStep = "welcome" | "features" | "team-selection" | "vacation-allowance";
 
@@ -17,7 +16,7 @@ interface WelcomeWizardProps {
   show: boolean;
   onTeamSelect: (team: number) => void;
   onSkip?: () => void;
-  onHide: () => void;
+  onHide: (vacationAllowance?: { amount: number; unit: VacationAllowanceUnit }) => void;
   onDefer?: () => void;
   isLoading?: boolean;
   startStep?: WizardStep;
@@ -29,7 +28,7 @@ interface WelcomeWizardProps {
  * @param show - Whether the wizard modal is visible
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
  * @param onSkip - Optional callback invoked when the user chooses to browse all teams instead of selecting one
- * @param onHide - Called when the wizard is completed (marks onboarding as done)
+ * @param onHide - Called when the wizard is completed with optional vacation allowance data (marks onboarding as done)
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "team-selection" | "vacation-allowance")
@@ -51,7 +50,6 @@ export function WelcomeWizard({
   // Vacation allowance form state
   const [vacationAmount, setVacationAmount] = useState<string>("");
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>("days");
-  const { updateVacationAllowance } = useSettings();
 
   // Sync currentStep when startStep prop changes
   useEffect(() => {
@@ -102,20 +100,21 @@ export function WelcomeWizard({
   };
 
   const handleVacationComplete = () => {
-    // Save vacation settings if user entered values
+    // Pass vacation allowance data to onHide for atomic update
     if (vacationAmount && parseFloat(vacationAmount) > 0) {
-      updateVacationAllowance({
+      onHide({
         amount: parseFloat(vacationAmount),
         unit: vacationUnit,
       });
+    } else {
+      // No vacation data to save
+      onHide();
     }
-    // If empty/0, leave at default 0 (no update needed)
-    onHide(); // Complete onboarding
   };
 
   const handleVacationSkip = () => {
-    // User chose to skip - leave at default 0
-    onHide(); // Complete onboarding
+    // User chose to skip - no vacation data to save
+    onHide();
   };
 
   const nextStep = () => {
@@ -186,7 +185,13 @@ export function WelcomeWizard({
       <div className="d-flex justify-content-between">
         <Button
           variant="outline-secondary"
-          onClick={onDefer || onHide}
+          onClick={() => {
+            if (onDefer) {
+              onDefer();
+            } else {
+              onHide(); // Fallback: close modal and complete onboarding via onHide handler
+            }
+          }}
           disabled={isLoading}
           ref={currentStep === "welcome" ? firstButtonRef : undefined}
         >

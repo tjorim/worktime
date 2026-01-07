@@ -44,6 +44,11 @@ interface SettingsContextType {
   setHasCompletedOnboarding: (completed: boolean) => void;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
+  // Atomic update for onboarding completion with optional vacation allowance
+  completeOnboardingWithVacation: (
+    team: number | null,
+    vacationAllowance?: Partial<VacationAllowanceSettings>,
+  ) => void;
 }
 
 export const defaultSettings: UserSettings = {
@@ -212,6 +217,23 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
+  const completeOnboardingWithVacation = useCallback(
+    (team: number | null, vacationAllowance?: Partial<VacationAllowanceSettings>) => {
+      setUserState((prev) => ({
+        ...prev,
+        hasCompletedOnboarding: true,
+        myTeam: team,
+        settings: {
+          ...prev.settings,
+          vacationAllowance: vacationAllowance
+            ? sanitizeVacationAllowance(vacationAllowance, prev.settings.vacationAllowance)
+            : prev.settings.vacationAllowance,
+        },
+      }));
+    },
+    [setUserState],
+  );
+
   const contextValue: SettingsContextType = useMemo(
     () => ({
       settings: userState.settings,
@@ -225,6 +247,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
       completeOnboardingWithTeam,
+      completeOnboardingWithVacation,
     }),
     [
       userState,
@@ -236,6 +259,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setMyTeam,
       setHasCompletedOnboarding,
       completeOnboardingWithTeam,
+      completeOnboardingWithVacation,
     ],
   );
 
