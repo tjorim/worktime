@@ -101,9 +101,12 @@ export function WelcomeWizard({
 
   const handleVacationComplete = () => {
     // Pass vacation allowance data to onHide for atomic update
-    if (vacationAmount && parseFloat(vacationAmount) > 0) {
+    const parsedAmount = parseFloat(vacationAmount);
+    const isValidAmount = vacationAmount !== "" && !Number.isNaN(parsedAmount) && parsedAmount > 0;
+    
+    if (isValidAmount) {
       onHide({
-        amount: parseFloat(vacationAmount),
+        amount: parsedAmount,
         unit: vacationUnit,
       });
     } else {
@@ -409,7 +412,7 @@ export function WelcomeWizard({
               onClick={handleVacationComplete}
               disabled={isLoading || isInvalidAmount}
             >
-              {vacationAmount && parseFloat(vacationAmount) > 0 ? "Save & Complete" : "Complete"}
+              {!isInvalidAmount && parseFloat(vacationAmount) > 0 ? "Save & Complete" : "Complete"}
               <i className="bi bi-check-lg ms-2"></i>
             </Button>
           </div>
