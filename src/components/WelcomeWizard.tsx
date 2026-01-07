@@ -189,7 +189,7 @@ export function WelcomeWizard({
             if (onDefer) {
               onDefer();
             } else {
-              onHide(); // No vacation data when deferring
+              onHide(); // Fallback: defer by closing modal without completing onboarding
             }
           }}
           disabled={isLoading}
