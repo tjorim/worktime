@@ -262,6 +262,7 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
                           <td>
                             <OverlayTrigger
                               placement="top"
+                              delay={0}
                               overlay={
                                 <Tooltip
                                   id={`tooltip-${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}

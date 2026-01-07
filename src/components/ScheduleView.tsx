@@ -167,6 +167,7 @@ export function ScheduleView({
                       <div className="small text-muted">
                         <OverlayTrigger
                           placement="bottom"
+                          delay={0}
                           overlay={
                             <Tooltip id={`date-tooltip-${day.format("YYYY-MM-DD")}`}>
                               <strong>Date Code: {formatYYWWD(day)}</strong>
@@ -211,6 +212,7 @@ export function ScheduleView({
                         {shift.isWorking && (
                           <OverlayTrigger
                             placement="bottom"
+                            delay={0}
                             overlay={
                               <Tooltip
                                 id={`schedule-tooltip-${teamNumber}-${day.format("YYYY-MM-DD")}`}

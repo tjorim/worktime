@@ -76,6 +76,7 @@ function TeamCard({
         </div>
         <OverlayTrigger
           placement="top"
+          delay={0}
           overlay={
             <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
               <strong>Shift Code: {shiftResult.shift.code}</strong>
@@ -107,6 +108,7 @@ function TeamCard({
       <div className="text-muted small mt-1">
         <OverlayTrigger
           placement="bottom"
+          delay={0}
           overlay={
             <Tooltip id={`code-tooltip-${shiftResult.teamNumber}`}>
               <strong>Full Shift Code</strong>
