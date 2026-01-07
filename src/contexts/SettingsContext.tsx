@@ -75,6 +75,46 @@ interface SettingsProviderProps {
   children: ReactNode;
 }
 
+const normalizeUserState = (state: unknown): WorktimeUserState => {
+  if (typeof state !== "object" || state === null) {
+    return defaultUserState;
+  }
+
+  const s = state as Record<string, unknown>;
+  const settings = typeof s.settings === "object" && s.settings !== null ? s.settings : {};
+  const settingsRecord = settings as Record<string, unknown>;
+
+  const timeFormat = ["12h", "24h"].includes(settingsRecord.timeFormat as string)
+    ? (settingsRecord.timeFormat as TimeFormat)
+    : defaultSettings.timeFormat;
+  const theme = ["light", "dark", "auto"].includes(settingsRecord.theme as string)
+    ? (settingsRecord.theme as Theme)
+    : defaultSettings.theme;
+  const notifications = ["on", "off"].includes(settingsRecord.notifications as string)
+    ? (settingsRecord.notifications as NotificationSetting)
+    : defaultSettings.notifications;
+
+  const vacationAllowance = sanitizeVacationAllowance(
+    settingsRecord.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
+    defaultSettings.vacationAllowance,
+  );
+
+  return {
+    hasCompletedOnboarding:
+      typeof s.hasCompletedOnboarding === "boolean"
+        ? s.hasCompletedOnboarding
+        : defaultUserState.hasCompletedOnboarding,
+    myTeam:
+      typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
+    settings: {
+      timeFormat,
+      theme,
+      notifications,
+      vacationAllowance,
+    },
+  };
+};
+
 /**
  * Settings provider that manages user preferences using localStorage.
  *
@@ -87,45 +127,6 @@ interface SettingsProviderProps {
  * All settings are persisted to localStorage for the internal user base.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  const normalizeUserState = (state: unknown): WorktimeUserState => {
-    if (typeof state !== "object" || state === null) {
-      return defaultUserState;
-    }
-
-    const s = state as Record<string, unknown>;
-    const settings = typeof s.settings === "object" && s.settings !== null ? s.settings : {};
-    const settingsRecord = settings as Record<string, unknown>;
-
-    const timeFormat = ["12h", "24h"].includes(settingsRecord.timeFormat as string)
-      ? (settingsRecord.timeFormat as TimeFormat)
-      : defaultSettings.timeFormat;
-    const theme = ["light", "dark", "auto"].includes(settingsRecord.theme as string)
-      ? (settingsRecord.theme as Theme)
-      : defaultSettings.theme;
-    const notifications = ["on", "off"].includes(settingsRecord.notifications as string)
-      ? (settingsRecord.notifications as NotificationSetting)
-      : defaultSettings.notifications;
-
-    const vacationAllowance = sanitizeVacationAllowance(
-      settingsRecord.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
-      defaultSettings.vacationAllowance,
-    );
-
-    return {
-      hasCompletedOnboarding:
-        typeof s.hasCompletedOnboarding === "boolean"
-          ? s.hasCompletedOnboarding
-          : defaultUserState.hasCompletedOnboarding,
-      myTeam:
-        typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
-      settings: {
-        timeFormat,
-        theme,
-        notifications,
-        vacationAllowance,
-      },
-    };
-  };
 
   // Unified user state in a single localStorage key
   const [rawUserState, setUserState] = useLocalStorage<WorktimeUserState>(

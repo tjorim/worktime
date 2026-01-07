@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RawContentPanel } from "../../../src/components/timeoff/RawContentPanel";
@@ -13,12 +13,15 @@ describe("RawContentPanel", () => {
     onReset: vi.fn(),
   };
 
-  it("should render the card with header", () => {
-    const { container } = render(<RawContentPanel {...defaultProps} />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    const cardHeader = container.querySelector(".card-header");
-    expect(cardHeader).toBeInTheDocument();
-    expect(cardHeader).toHaveTextContent("Raw .hday content");
+  it("should render the card with header", () => {
+    render(<RawContentPanel {...defaultProps} />);
+
+    const header = screen.getByText("Raw .hday content", { selector: ".card-header" });
+    expect(header).toBeInTheDocument();
   });
 
   it("should display textarea with correct value", () => {
@@ -34,17 +37,26 @@ describe("RawContentPanel", () => {
 
   it("should call onChangeRawText when textarea value changes", async () => {
     const mockOnChange = vi.fn();
-    render(<RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />);
+    const { rerender } = render(<RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />);
 
     const user = userEvent.setup();
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
-    await user.clear(textarea);
-    await user.type(textarea, "Test");
 
-    // Verify the callback was called with string arguments
+    // Type 'a' and update the component
+    await user.type(textarea, "a");
+    rerender(<RawContentPanel {...defaultProps} rawText="a" onChangeRawText={mockOnChange} />);
+
+    // Type 'b' and update the component
+    await user.type(textarea, "b");
+    rerender(<RawContentPanel {...defaultProps} rawText="ab" onChangeRawText={mockOnChange} />);
+
+    // Type 'c' and update the component
+    await user.type(textarea, "c");
+
+    // Verify the callback was called and final call has the complete text
     expect(mockOnChange).toHaveBeenCalled();
-    expect(mockOnChange).toHaveBeenCalledWith(expect.any(String));
+    expect(mockOnChange).toHaveBeenLastCalledWith("abc");
   });
 
   it("should call onApply when Apply button is clicked", async () => {

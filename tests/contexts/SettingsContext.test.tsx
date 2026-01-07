@@ -42,6 +42,14 @@ describe("SettingsContext unified user state", () => {
     });
     expect(result.current.settings.notifications).toBe("on");
     await act(async () => {
+      result.current.updateVacationAllowance({ amount: 28, unit: "hours" });
+    });
+    expect(result.current.settings.vacationAllowance).toEqual({
+      amount: 28,
+      unit: "hours",
+      hoursPerDay: 8,
+    });
+    await act(async () => {
       result.current.setMyTeam(3);
     });
     expect(result.current.myTeam).toBe(3);

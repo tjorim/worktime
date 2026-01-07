@@ -53,7 +53,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({ amount: Number.isFinite(value) ? value : 0 });
+    onUpdateAllowance({ amount: Number.isFinite(value) ? Math.max(0, value) : 0 });
   };
 
   const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -62,7 +62,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({ hoursPerDay: Number.isFinite(value) ? value : DEFAULT_HOURS_PER_DAY });
+    onUpdateAllowance({ hoursPerDay: Number.isFinite(value) && value >= 1 ? value : DEFAULT_HOURS_PER_DAY });
   };
 
   return (
@@ -81,14 +81,22 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
               <Card.Body>
                 <Card.Title className="h6">Allowance Settings</Card.Title>
                 <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
-                  <Form.Label>Annual allowance</Form.Label>
+                  <Form.Label>Annual vacation allowance</Form.Label>
                   <Form.Control
                     type="number"
                     min={0}
                     step={0.5}
                     value={allowance.amount}
                     onChange={handleAmountChange}
+                    placeholder="e.g., 25"
+                    isInvalid={allowance.amount < 0}
                   />
+                  <Form.Control.Feedback type="invalid">
+                    Please enter a positive number
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    Set to 0 to disable vacation tracking
+                  </Form.Text>
                 </Form.Group>
                 <Row className="g-2">
                   <Col xs={12} md={6}>
@@ -110,6 +118,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                         value={allowance.hoursPerDay}
                         onChange={handleHoursPerDayChange}
                       />
+                      <Form.Text className="text-muted">For conversion</Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -183,6 +192,13 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
               </tr>
             </thead>
             <tbody>
+              {stats.byType.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-muted text-center">
+                    No time off recorded for {selectedYear}
+                  </td>
+                </tr>
+              )}
               {stats.byType.map((type) => (
                 <tr key={type.key}>
                   <td>{type.label}</td>

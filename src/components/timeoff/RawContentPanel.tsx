@@ -49,9 +49,9 @@ export function RawContentPanel({
             isInvalid={!!error}
           />
           {error && (
-            <div className="text-danger small mt-2" role="alert" id={errorId}>
+            <Form.Control.Feedback type="invalid" id={errorId} role="alert">
               {error}
-            </div>
+            </Form.Control.Feedback>
           )}
         </Form.Group>
         <div className="d-flex flex-wrap gap-2">

@@ -106,6 +106,11 @@ const countRangeDaysInYear = (event: HdayEvent, year: number): number => {
     return 0;
   }
 
+  // Handle inverted ranges (start > end) due to malformed data
+  if (clampedStart.isAfter(clampedEnd)) {
+    return 0;
+  }
+
   // Calculate the difference in days and add 1 to include both start and end dates
   return clampedEnd.diff(clampedStart, "day") + 1;
 };

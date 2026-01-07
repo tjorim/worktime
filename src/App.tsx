@@ -26,7 +26,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo } = useToast();
-  const { myTeam, setMyTeam, hasCompletedOnboarding, setHasCompletedOnboarding, completeOnboardingWithTeam, settings } =
+  const { myTeam, setMyTeam, hasCompletedOnboarding, setHasCompletedOnboarding, settings } =
     useSettings();
   const { currentDate, setCurrentDate, todayShifts } = useShiftCalculation();
   const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
@@ -123,11 +123,6 @@ function AppContent() {
     setShowTeamModal(true);
   };
 
-  const handleSkipTeamSelection = () => {
-    // Skip team selection but continue to vacation step
-    // Onboarding will be completed when wizard closes
-  };
-
   const handleTeamModalHide = () => {
     // Complete onboarding when wizard closes (after vacation step)
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
@@ -136,6 +131,12 @@ function AppContent() {
         showSuccess(`Team ${myTeam} selected! Your shifts are now personalized.`, "🎯");
       }
     }
+    setShowTeamModal(false);
+  };
+
+  const handleWizardDefer = () => {
+    // User clicked "Maybe Later" - just close without marking onboarding as complete
+    // Wizard will show again on next visit
     setShowTeamModal(false);
   };
 
@@ -171,8 +172,12 @@ function AppContent() {
           <WelcomeWizard
             show={showTeamModal}
             onTeamSelect={handleTeamSelect}
-            onSkip={handleSkipTeamSelection}
+            onSkip={() => {
+              // User chose to browse all teams - myTeam stays null
+              // Just continue to vacation step, don't close modal yet
+            }}
             onHide={handleTeamModalHide}
+            onDefer={handleWizardDefer}
             startStep={teamModalMode === "onboarding" ? "welcome" : "team-selection"}
           />
           <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />

@@ -18,6 +18,7 @@ interface WelcomeWizardProps {
   onTeamSelect: (team: number) => void;
   onSkip?: () => void;
   onHide: () => void;
+  onDefer?: () => void;
   isLoading?: boolean;
   startStep?: WizardStep;
 }
@@ -28,7 +29,8 @@ interface WelcomeWizardProps {
  * @param show - Whether the wizard modal is visible
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
  * @param onSkip - Optional callback invoked when the user chooses to browse all teams instead of selecting one
- * @param onHide - Called to request the wizard be hidden
+ * @param onHide - Called when the wizard is completed (marks onboarding as done)
+ * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "team-selection" | "vacation-allowance")
  * @returns The WelcomeWizard React element
@@ -38,6 +40,7 @@ export function WelcomeWizard({
   onTeamSelect,
   onSkip,
   onHide,
+  onDefer,
   isLoading = false,
   startStep = "welcome",
 }: WelcomeWizardProps) {
@@ -183,7 +186,7 @@ export function WelcomeWizard({
       <div className="d-flex justify-content-between">
         <Button
           variant="outline-secondary"
-          onClick={onHide}
+          onClick={onDefer || onHide}
           disabled={isLoading}
           ref={currentStep === "welcome" ? firstButtonRef : undefined}
         >
@@ -319,84 +322,98 @@ export function WelcomeWizard({
     </>
   );
 
-  const renderVacationAllowanceStep = () => (
-    <>
-      <div className="text-center mb-4">
-        <i className="bi bi-calendar-check display-4 text-primary"></i>
-        <h4 className="mt-3">Set Up Vacation Tracking (Optional)</h4>
-        <p className="text-muted">
-          Track your vacation allowance and see how much time off you have remaining. You can
-          skip this and set it up later in Settings.
-        </p>
-      </div>
+  const renderVacationAllowanceStep = () => {
+    const isInvalidAmount =
+      vacationAmount !== "" &&
+      (Number.isNaN(parseFloat(vacationAmount)) || parseFloat(vacationAmount) < 0);
 
-      <Form>
-        <Form.Group className="mb-3" controlId="vacationAmount">
-          <Form.Label>Annual vacation allowance</Form.Label>
-          <Form.Control
-            type="number"
-            min={0}
-            step={0.5}
-            placeholder="e.g., 25"
-            value={vacationAmount}
-            onChange={(e) => setVacationAmount(e.target.value)}
-            disabled={isLoading}
-            ref={currentStep === "vacation-allowance" ? firstButtonRef : undefined}
-          />
-          <Form.Text className="text-muted">
-            Leave empty to skip vacation tracking
-          </Form.Text>
-        </Form.Group>
+    return (
+      <>
+        <div className="text-center mb-4">
+          <i className="bi bi-calendar-check display-4 text-primary"></i>
+          <h4 className="mt-3">Set Up Vacation Tracking (Optional)</h4>
+          <p className="text-muted">
+            Track your vacation allowance and see how much time off you have remaining. You can
+            skip this and set it up later in Settings.
+          </p>
+        </div>
 
-        <Form.Group controlId="vacationUnit">
-          <Form.Label>Unit</Form.Label>
-          <div className="d-flex gap-3">
-            <Form.Check
-              type="radio"
-              id="unit-days"
-              label="Days"
-              checked={vacationUnit === "days"}
-              onChange={() => setVacationUnit("days")}
+        <Form>
+          <Form.Group className="mb-3" controlId="vacationAmount">
+            <Form.Label>Annual vacation allowance</Form.Label>
+            <Form.Control
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="e.g., 25"
+              value={vacationAmount}
+              onChange={(e) => setVacationAmount(e.target.value)}
               disabled={isLoading}
+              isInvalid={isInvalidAmount}
             />
-            <Form.Check
-              type="radio"
-              id="unit-hours"
-              label="Hours"
-              checked={vacationUnit === "hours"}
-              onChange={() => setVacationUnit("hours")}
-              disabled={isLoading}
-            />
-          </div>
-        </Form.Group>
-      </Form>
+            <Form.Control.Feedback type="invalid">
+              Please enter a valid positive number
+            </Form.Control.Feedback>
+            <Form.Text className="text-muted">
+              Leave empty to skip vacation tracking
+            </Form.Text>
+          </Form.Group>
 
-      <div className="d-flex justify-content-between mt-4">
-        <Button variant="outline-secondary" onClick={prevStep} disabled={isLoading}>
-          <i className="bi bi-arrow-left me-2"></i>
-          Back
-        </Button>
-        <div>
+          <Form.Group controlId="vacationUnit">
+            <Form.Label>Unit</Form.Label>
+            <div className="d-flex gap-3">
+              <Form.Check
+                type="radio"
+                id="unit-days"
+                label="Days"
+                checked={vacationUnit === "days"}
+                onChange={() => setVacationUnit("days")}
+                disabled={isLoading}
+              />
+              <Form.Check
+                type="radio"
+                id="unit-hours"
+                label="Hours"
+                checked={vacationUnit === "hours"}
+                onChange={() => setVacationUnit("hours")}
+                disabled={isLoading}
+              />
+            </div>
+          </Form.Group>
+        </Form>
+
+        <div className="d-flex justify-content-between mt-4">
           <Button
             variant="outline-secondary"
-            onClick={handleVacationSkip}
+            onClick={prevStep}
             disabled={isLoading}
-            className="me-2"
+            ref={currentStep === "vacation-allowance" ? firstButtonRef : undefined}
           >
-            Skip for now
+            <i className="bi bi-arrow-left me-2"></i>
+            Back
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleVacationComplete}
-            disabled={isLoading}
-          >
-            {vacationAmount && parseFloat(vacationAmount) > 0 ? "Save & Complete" : "Complete"}
-            <i className="bi bi-check-lg ms-2"></i>
-          </Button>
+          <div>
+            <Button
+              variant="outline-secondary"
+              onClick={handleVacationSkip}
+              disabled={isLoading}
+              className="me-2"
+            >
+              Skip
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleVacationComplete}
+              disabled={isLoading || isInvalidAmount}
+            >
+              {vacationAmount && parseFloat(vacationAmount) > 0 ? "Save & Complete" : "Complete"}
+              <i className="bi bi-check-lg ms-2"></i>
+            </Button>
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   return (
     <Modal
