@@ -145,8 +145,9 @@ function AppContent() {
   };
 
   const handleWizardDefer = () => {
-    // User clicked "Maybe Later" - just close without marking onboarding as complete
+    // User clicked "Maybe Later" - reset team selection and close without marking onboarding as complete
     // Wizard will show again on next visit
+    setMyTeam(null);
     setShowTeamModal(false);
   };
 

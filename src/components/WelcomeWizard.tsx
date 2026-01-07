@@ -126,22 +126,31 @@ export function WelcomeWizard({
     // Pass vacation allowance data to onHide for atomic update
     const validation = validateVacationAmount(vacationAmount);
     
-    if (validation.isValid && validation.parsedAmount !== null) {
+    if (!validation.isValid || validation.parsedAmount === null) {
+      // No valid vacation data to save
+      onHide();
+      return;
+    }
+
+    if (validation.parsedAmount === 0) {
+      // Explicitly treat 0 as a valid value meaning "no vacation allowance" / disabled tracking
       onHide({
-        amount: validation.parsedAmount,
+        amount: 0,
         unit: vacationUnit,
       });
-    } else {
-      // No vacation data to save
-      onHide();
+      return;
     }
+
+    onHide({
+      amount: validation.parsedAmount,
+      unit: vacationUnit,
+    });
   };
 
   const handleVacationSkip = () => {
     // User chose to skip - no vacation data to save
     onHide();
   };
-
 
 
   const nextStep = () => {

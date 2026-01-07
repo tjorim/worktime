@@ -340,6 +340,38 @@ describe("WelcomeWizard", () => {
       const saveButton = screen.getByRole("button", { name: /Save & Complete/i });
       expect(saveButton).toBeEnabled();
     });
+
+    it("should handle zero amount as valid (disables vacation tracking)", async () => {
+      const user = userEvent.setup();
+      const mockOnHide = vi.fn();
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={mockOnHide}
+          startStep="vacation-allowance"
+        />,
+      );
+
+      const amountInput = screen.getByLabelText(/Annual vacation allowance/i);
+      await user.type(amountInput, "0");
+
+      // Input should not have invalid styling for zero
+      expect(amountInput).not.toHaveClass("is-invalid");
+
+      // Save button should be enabled and show "Save & Complete"
+      const saveButton = screen.getByRole("button", { name: /Save & Complete/i });
+      expect(saveButton).toBeEnabled();
+
+      // Click the save button
+      await user.click(saveButton);
+
+      // Should call onHide with 0 amount (explicitly disabling vacation tracking)
+      expect(mockOnHide).toHaveBeenCalledWith({
+        amount: 0,
+        unit: "days",
+      });
+    });
   });
 
   describe("Integration tests", () => {
