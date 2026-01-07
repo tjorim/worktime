@@ -113,7 +113,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       s.myTeam === undefined
         ? defaultUserState.myTeam
         : typeof s.myTeam === "number" || s.myTeam === null
-          ? (s.myTeam as number | null)
+          ? s.myTeam
           : defaultUserState.myTeam,
     settings: {
       timeFormat,
