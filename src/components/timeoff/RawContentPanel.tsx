@@ -33,8 +33,7 @@ export function RawContentPanel({
           =business, <code>e</code>=weekend, <code>h</code>=birthday, <code>i</code>=ill,{" "}
           <code>k</code>
           =in, <code>s</code>=course, <code>u</code>=other, <code>w</code>=onsite, <code>n</code>=no
-          fly,
-          <code>f</code>=can fly; weekly: <code>d1-d7</code> (Mon-Sun) with flags after (e.g.,
+          fly, <code>f</code>=can fly; weekly: <code>d1-d7</code> (Mon-Sun) with flags after (e.g.,
           <code>d3ab</code> for Wed AM business).
         </p>
         <Form.Group controlId="hdayText" className="mb-3">

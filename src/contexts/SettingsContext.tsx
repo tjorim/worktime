@@ -109,7 +109,12 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
-    myTeam: typeof s.myTeam === "number" || s.myTeam === null ? s.myTeam : defaultUserState.myTeam,
+    myTeam:
+      s.myTeam === undefined
+        ? defaultUserState.myTeam
+        : typeof s.myTeam === "number" || s.myTeam === null
+          ? s.myTeam
+          : defaultUserState.myTeam,
     settings: {
       timeFormat,
       theme,

@@ -112,7 +112,7 @@ describe("VacationStatsPanel", () => {
       await user.clear(amountInput);
       await user.type(amountInput, "-5");
 
-      expect(mockOnUpdateAllowance).not.toHaveBeenCalledWith({ amount: -5 });
+      expect(mockOnUpdateAllowance).not.toHaveBeenCalled();
     });
 
     it("should not update allowance with invalid amount (letters)", async () => {
@@ -140,7 +140,7 @@ describe("VacationStatsPanel", () => {
       await user.clear(hoursInput);
       await user.type(hoursInput, "0.5");
 
-      expect(mockOnUpdateAllowance).not.toHaveBeenCalledWith({ hoursPerDay: 0.5 });
+      expect(mockOnUpdateAllowance).not.toHaveBeenCalled();
     });
 
     it("should render unit options correctly", () => {
