@@ -57,6 +57,12 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
     [allowance.hoursPerDay, events, selectedYear],
   );
 
+  // Memoize filtered types to avoid duplicate filtering
+  const filteredTypes = useMemo(
+    () => stats.byType.filter((type) => type.days > 0 || type.hours > 0),
+    [stats.byType],
+  );
+
   const allowanceDays = getAllowanceDays(allowance);
   const allowanceHours = getAllowanceHours(allowance);
   const usedDays = stats.holidayDays;
@@ -235,22 +241,20 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
               </tr>
             </thead>
             <tbody>
-              {stats.byType.filter((type) => type.days > 0 || type.hours > 0).length === 0 && (
+              {filteredTypes.length === 0 && (
                 <tr>
                   <td colSpan={3} className="text-muted text-center">
                     No time off recorded for {selectedYear}
                   </td>
                 </tr>
               )}
-              {stats.byType
-                .filter((type) => type.days > 0 || type.hours > 0)
-                .map((type) => (
-                  <tr key={type.key}>
-                    <td>{type.label}</td>
-                    <td className="text-end">{formatVacationValue(type.days)}</td>
-                    <td className="text-end">{formatVacationValue(type.hours)}</td>
-                  </tr>
-                ))}
+              {filteredTypes.map((type) => (
+                <tr key={type.key}>
+                  <td>{type.label}</td>
+                  <td className="text-end">{formatVacationValue(type.days)}</td>
+                  <td className="text-end">{formatVacationValue(type.hours)}</td>
+                </tr>
+              ))}
             </tbody>
           </Table>
         </div>
