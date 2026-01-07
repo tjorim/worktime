@@ -12,6 +12,29 @@ import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 
 type WizardStep = "welcome" | "features" | "team-selection" | "vacation-allowance";
 
+/**
+ * Validates vacation amount input.
+ * Returns an object with validation state:
+ * - isValid: true if amount is valid for saving (not empty, not NaN, >= 0)
+ * - isInvalid: true if amount has been entered but is invalid (NaN or < 0)
+ * - parsedAmount: the parsed number, or null if not a valid number
+ */
+function validateVacationAmount(amount: string) {
+  const trimmedAmount = amount.trim();
+  if (trimmedAmount === "") {
+    return { isValid: false, isInvalid: false, parsedAmount: null };
+  }
+  const parsed = parseFloat(trimmedAmount);
+  const isNaN = Number.isNaN(parsed);
+  const isNegative = parsed < 0;
+  
+  return {
+    isValid: !isNaN && parsed >= 0,
+    isInvalid: isNaN || isNegative,
+    parsedAmount: !isNaN ? parsed : null,
+  };
+}
+
 interface WelcomeWizardProps {
   show: boolean;
   onTeamSelect: (team: number) => void;
@@ -119,28 +142,7 @@ export function WelcomeWizard({
     onHide();
   };
 
-  /**
-   * Validates vacation amount input.
-   * Returns an object with validation state:
-   * - isValid: true if amount is valid for saving (not empty, not NaN, > 0)
-   * - isInvalid: true if amount has been entered but is invalid (NaN or < 0)
-   * - parsedAmount: the parsed number, or null if not a valid number
-   */
-  const validateVacationAmount = (amount: string) => {
-    const trimmedAmount = amount.trim();
-    if (trimmedAmount === "") {
-      return { isValid: false, isInvalid: false, parsedAmount: null };
-    }
-    const parsed = parseFloat(trimmedAmount);
-    const isNaN = Number.isNaN(parsed);
-    const isNegative = parsed < 0;
-    
-    return {
-      isValid: !isNaN && parsed > 0,
-      isInvalid: isNaN || isNegative,
-      parsedAmount: !isNaN ? parsed : null,
-    };
-  };
+
 
   const nextStep = () => {
     if (currentStep === "welcome") {
