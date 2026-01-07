@@ -225,12 +225,12 @@ describe("WelcomeWizard", () => {
       // Complete
       await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
 
+      // Verify onHide was called with vacation allowance data
       expect(mockOnHide).toHaveBeenCalledTimes(1);
-
-      // Verify settings were saved to localStorage
-      const saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings.vacationAllowance.amount).toBe(28);
-      expect(saved.settings.vacationAllowance.unit).toBe("hours");
+      expect(mockOnHide).toHaveBeenCalledWith({
+        amount: 28,
+        unit: "hours",
+      });
     });
 
     it("should show 'Complete' button when no amount entered", () => {
@@ -344,25 +344,31 @@ describe("WelcomeWizard", () => {
 
   describe("Integration tests", () => {
     let originalLocalStorage: Storage;
+    let testStorage: Record<string, string>;
 
     beforeEach(() => {
       // Clear localStorage and ensure consistent test state
       vi.clearAllMocks();
 
-      // Mock localStorage to ensure clean state
+      // Create a real storage implementation for testing
+      testStorage = {};
+      
+      // Mock localStorage with a real implementation
       originalLocalStorage = window.localStorage;
       Object.defineProperty(window, "localStorage", {
         value: {
-          clear: vi.fn(),
-          getItem: vi.fn((key) => {
-            // Return null for user state key to trigger WelcomeWizard
-            if (key === "worktime_user_state") {
-              return null;
-            }
-            return null;
+          clear: vi.fn(() => {
+            testStorage = {};
           }),
-          setItem: vi.fn(),
-          removeItem: vi.fn(),
+          getItem: vi.fn((key: string) => {
+            return testStorage[key] || null;
+          }),
+          setItem: vi.fn((key: string, value: string) => {
+            testStorage[key] = value;
+          }),
+          removeItem: vi.fn((key: string) => {
+            delete testStorage[key];
+          }),
           length: 0,
           key: vi.fn(),
         },
@@ -470,9 +476,7 @@ describe("WelcomeWizard", () => {
       expect(screen.getByText(/Step 4 of 4/i)).toBeInTheDocument();
     });
 
-    // TODO: Known issue - vacation allowance doesn't save when browsing all teams
-    // This needs further investigation into state persistence timing
-    it.skip("should save vacation allowance when browsing all teams without selecting one", async () => {
+    it("should save vacation allowance when browsing all teams without selecting one", async () => {
       const user = userEvent.setup();
       render(<App />);
 
