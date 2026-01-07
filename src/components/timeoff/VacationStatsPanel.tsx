@@ -56,7 +56,10 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({ amount: Number.isFinite(value) ? Math.max(0, value) : 0 });
+    if (!Number.isFinite(value) || value < 0) {
+      return;
+    }
+    onUpdateAllowance({ amount: value });
   };
 
   const handleUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -65,9 +68,10 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({
-      hoursPerDay: Number.isFinite(value) && value >= 1 ? value : DEFAULT_HOURS_PER_DAY,
-    });
+    if (!Number.isFinite(value) || value < 1) {
+      return;
+    }
+    onUpdateAllowance({ hoursPerDay: value });
   };
 
   return (

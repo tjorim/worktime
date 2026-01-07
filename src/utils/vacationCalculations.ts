@@ -70,6 +70,7 @@ const getDayWeight = (flags?: EventFlag[]): number => (isHalfDay(flags) ? 0.5 : 
 
 const getEventTypeKey = (flags?: EventFlag[]): EventTypeKey => {
   if (!flags || flags.length === 0) return "holiday";
+  if (flags.includes("holiday")) return "holiday";
   if (flags.includes("business")) return "business";
   if (flags.includes("course")) return "course";
   if (flags.includes("in")) return "in";
