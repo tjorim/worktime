@@ -12,6 +12,7 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
+import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
  * The main application component for team selection and shift management.
@@ -130,7 +131,7 @@ function AppContent() {
 
   const handleTeamModalHide = (vacationAllowance?: {
     amount: number;
-    unit: "days" | "hours";
+    unit: VacationAllowanceUnit;
   }) => {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
