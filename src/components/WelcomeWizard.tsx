@@ -15,7 +15,7 @@ type WizardStep = "welcome" | "features" | "team-selection" | "vacation-allowanc
 /**
  * Validates vacation amount input.
  * Returns an object with validation state:
- * - isValid: true if amount is valid for saving (not empty, not NaN, >= 0)
+ * - isValid: true if amount is valid for saving (not empty, not NaN, >= 0; 0 disables vacation tracking)
  * - isInvalid: true if amount has been entered but is invalid (NaN or < 0)
  * - parsedAmount: the parsed number, or null if not a valid number
  */
