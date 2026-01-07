@@ -92,18 +92,22 @@ const countRangeDaysInYear = (event: HdayEvent, year: number): number => {
   const end = parseHdayDate(event.end ?? event.start);
   if (!start || !end) return 0;
 
-  let current = start.startOf("day");
-  const last = end.startOf("day");
-  let total = 0;
+  const yearStart = dayjs(`${year}-01-01`).startOf("day");
+  const yearEnd = dayjs(`${year}-12-31`).startOf("day");
 
-  while (current.isBefore(last) || current.isSame(last, "day")) {
-    if (current.year() === year) {
-      total += 1;
-    }
-    current = current.add(1, "day");
+  // Clamp the range to the target year boundaries
+  const rangeStart = start.startOf("day");
+  const rangeEnd = end.startOf("day");
+  const clampedStart = rangeStart.isBefore(yearStart) ? yearStart : rangeStart;
+  const clampedEnd = rangeEnd.isAfter(yearEnd) ? yearEnd : rangeEnd;
+
+  // If the range doesn't overlap with the year, return 0
+  if (clampedStart.isAfter(yearEnd) || clampedEnd.isBefore(yearStart)) {
+    return 0;
   }
 
-  return total;
+  // Calculate the difference in days and add 1 to include both start and end dates
+  return clampedEnd.diff(clampedStart, "day") + 1;
 };
 
 const countWeeklyDaysInYear = (weekday: number, year: number): number => {

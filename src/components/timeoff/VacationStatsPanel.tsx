@@ -17,6 +17,8 @@ import {
   getAvailableYears,
 } from "../../utils/vacationCalculations";
 
+const DEFAULT_HOURS_PER_DAY = 8;
+
 interface VacationStatsProps {
   events: HdayEvent[];
   allowance: VacationAllowanceSettings;
@@ -60,7 +62,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
   const handleHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
-    onUpdateAllowance({ hoursPerDay: Number.isFinite(value) ? value : 8 });
+    onUpdateAllowance({ hoursPerDay: Number.isFinite(value) ? value : DEFAULT_HOURS_PER_DAY });
   };
 
   return (

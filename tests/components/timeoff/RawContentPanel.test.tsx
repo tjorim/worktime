@@ -13,13 +13,15 @@ describe("RawContentPanel", () => {
     onReset: vi.fn(),
   };
 
-  it("should render the panel header", () => {
-    render(<RawContentPanel {...defaultProps} />);
+  it("should render the card with header", () => {
+    const { container } = render(<RawContentPanel {...defaultProps} />);
 
-    expect(screen.getAllByText(/Raw \.hday content/i).length).toBeGreaterThan(0);
+    const cardHeader = container.querySelector(".card-header");
+    expect(cardHeader).toBeInTheDocument();
+    expect(cardHeader).toHaveTextContent("Raw .hday content");
   });
 
-  it("should display textarea with correct value", async () => {
+  it("should display textarea with correct value", () => {
     const { rerender } = render(<RawContentPanel {...defaultProps} rawText="2025/01/15 # Test" />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
@@ -69,34 +71,34 @@ describe("RawContentPanel", () => {
     expect(mockOnReset).toHaveBeenCalledTimes(1);
   });
 
-  it("should disable Reset button when not dirty", async () => {
+  it("should disable Reset button when not dirty", () => {
     render(<RawContentPanel {...defaultProps} isDirty={false} />);
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeDisabled();
   });
 
-  it("should enable Reset button when dirty", async () => {
+  it("should enable Reset button when dirty", () => {
     render(<RawContentPanel {...defaultProps} isDirty={true} />);
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeEnabled();
   });
 
-  it("should display error message when error prop is provided", async () => {
+  it("should display error message when error prop is provided", () => {
     render(<RawContentPanel {...defaultProps} error="Invalid .hday format" />);
 
     const errorMessage = screen.getByRole("alert");
     expect(errorMessage).toHaveTextContent("Invalid .hday format");
   });
 
-  it("should not display error message when error prop is undefined", async () => {
+  it("should not display error message when error prop is undefined", () => {
     render(<RawContentPanel {...defaultProps} error={undefined} />);
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("should have proper accessibility attributes", async () => {
+  it("should have proper accessibility attributes", () => {
     render(<RawContentPanel {...defaultProps} error="Parse error" />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
@@ -107,7 +109,7 @@ describe("RawContentPanel", () => {
     expect(errorMessage).toHaveAttribute("id", textarea.getAttribute("aria-describedby"));
   });
 
-  it("should show placeholder text in textarea", async () => {
+  it("should show placeholder text in textarea", () => {
     render(<RawContentPanel {...defaultProps} />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);

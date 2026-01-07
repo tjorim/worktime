@@ -56,11 +56,11 @@ export function RawContentPanel({
         </Form.Group>
         <div className="d-flex flex-wrap gap-2">
           <Button variant="primary" onClick={onApply}>
-            <i className="bi bi-check-circle me-1"></i>
+            <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
             Apply raw content
           </Button>
           <Button variant="outline-secondary" onClick={onReset} disabled={!isDirty}>
-            <i className="bi bi-arrow-counterclockwise me-1"></i>
+            <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
             Reset
           </Button>
         </div>
