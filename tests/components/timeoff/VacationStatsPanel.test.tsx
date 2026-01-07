@@ -64,18 +64,19 @@ describe("VacationStatsPanel", () => {
   });
 
   describe("Allowance Controls", () => {
-    it("should call onUpdateAllowance when amount changes", async () => {
+    it("should call onUpdateAllowance when amount changes with valid value", async () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
       const amountInput = screen.getByLabelText("Annual vacation allowance") as HTMLInputElement;
       
-      // Just verify that interactions with the input call the update function
+      // Typing backspace will reduce 25 to 2, which is valid
       await user.click(amountInput);
       await user.type(amountInput, "{Backspace}");
 
-      // Should be called when value changes
+      // Should be called with valid value (2)
       expect(mockOnUpdateAllowance).toHaveBeenCalled();
+      expect(mockOnUpdateAllowance).toHaveBeenCalledWith({ amount: 2 });
     });
 
     it("should call onUpdateAllowance when unit changes", async () => {
@@ -88,18 +89,19 @@ describe("VacationStatsPanel", () => {
       expect(mockOnUpdateAllowance).toHaveBeenCalledWith({ unit: "hours" });
     });
 
-    it("should call onUpdateAllowance when hours per day changes", async () => {
+    it("should call onUpdateAllowance when hours per day changes with valid value", async () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
       
-      // Type a digit to trigger update (8 becomes 88, which is valid)
+      // Type a digit to append (8 becomes 81, which is valid)
       await user.click(hoursInput);
       await user.type(hoursInput, "1");
 
-      // Should be called when value changes (81 is valid)
+      // Should be called with 81 (8 + typed 1)
       expect(mockOnUpdateAllowance).toHaveBeenCalled();
+      expect(mockOnUpdateAllowance).toHaveBeenCalledWith({ hoursPerDay: 81 });
     });
 
     it("should not update allowance with negative amount", async () => {
@@ -113,23 +115,21 @@ describe("VacationStatsPanel", () => {
       expect(mockOnUpdateAllowance).not.toHaveBeenCalledWith({ amount: -5 });
     });
 
-    it("should not update allowance with invalid amount", async () => {
+    it("should not update allowance with invalid amount (letters)", async () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
       const amountInput = screen.getByLabelText("Annual vacation allowance");
-      await user.clear(amountInput);
       
-      // Clear triggers onChange with empty string which becomes NaN
-      // So we check that no valid update was called after clear
-      const callCountAfterClear = mockOnUpdateAllowance.mock.calls.length;
+      // Focus and try to type letters (which should be ignored by number input)
+      await user.click(amountInput);
+      const callCountBefore = mockOnUpdateAllowance.mock.calls.length;
       
       await user.type(amountInput, "abc");
 
-      // Should not have been called with any valid numeric value after typing abc
-      // The input will still be empty or NaN after typing letters
-      const callCountAfterTyping = mockOnUpdateAllowance.mock.calls.length;
-      expect(callCountAfterTyping).toBe(callCountAfterClear);
+      // The input type="number" prevents letters, so no new calls should happen
+      const callCountAfter = mockOnUpdateAllowance.mock.calls.length;
+      expect(callCountAfter).toBe(callCountBefore);
     });
 
     it("should not update hours per day with value less than 1", async () => {

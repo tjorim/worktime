@@ -37,7 +37,7 @@ describe("vacationCalculations", () => {
       expect(stats.holidayDays).toBe(1);
     });
 
-    it("should prioritize holiday flag over other flags", () => {
+    it("should prioritize holiday flag over other flags and handle half-day modifiers", () => {
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -47,7 +47,7 @@ describe("vacationCalculations", () => {
         },
       ];
       const stats = calculateVacationStats(events, 2025, 8);
-      expect(stats.holidayDays).toBe(0.5); // Half day
+      expect(stats.holidayDays).toBe(0.5); // Half day holiday
     });
 
     it("should correctly classify business trip events", () => {
