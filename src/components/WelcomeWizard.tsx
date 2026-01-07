@@ -133,8 +133,9 @@ export function WelcomeWizard({
     }
 
     // All valid amounts (including 0 which disables vacation tracking) are saved
+    // parsedAmount is guaranteed to be non-null when isValid is true
     onHide({
-      amount: validation.parsedAmount,
+      amount: validation.parsedAmount!,
       unit: vacationUnit,
     });
   };
