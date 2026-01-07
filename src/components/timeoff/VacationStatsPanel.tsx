@@ -20,8 +20,6 @@ import {
   getAvailableYears,
 } from "../../utils/vacationCalculations";
 
-const DEFAULT_HOURS_PER_DAY = 8;
-
 interface VacationStatsProps {
   events: HdayEvent[];
   allowance: VacationAllowanceSettings;
