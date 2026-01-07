@@ -185,7 +185,13 @@ export function WelcomeWizard({
       <div className="d-flex justify-content-between">
         <Button
           variant="outline-secondary"
-          onClick={() => (onDefer || onHide)()}
+          onClick={() => {
+            if (onDefer) {
+              onDefer();
+            } else {
+              onHide(); // No vacation data when deferring
+            }
+          }}
           disabled={isLoading}
           ref={currentStep === "welcome" ? firstButtonRef : undefined}
         >
