@@ -1,4 +1,5 @@
 import type { EventFlag, HdayEvent } from "../lib/hday/types";
+import { parseHdayDate as parseHdayDateString } from "../lib/hday/validation";
 import { dayjs } from "./dateTimeUtils";
 
 export type VacationAllowanceUnit = "days" | "hours";
@@ -82,11 +83,14 @@ const getEventTypeKey = (flags?: EventFlag[]): EventTypeKey => {
   return "holiday";
 };
 
+/**
+ * Parse a date string from an HdayEvent and return a Dayjs object.
+ * Uses the shared parseHdayDate validation function.
+ */
 const parseHdayDate = (value?: string) => {
   if (!value) return null;
-  const normalized = value.replace(/\//g, "-");
-  const parsed = dayjs(normalized);
-  return parsed.isValid() ? parsed : null;
+  const date = parseHdayDateString(value);
+  return date ? dayjs(date) : null;
 };
 
 const countRangeDaysInYear = (event: HdayEvent, year: number): number => {

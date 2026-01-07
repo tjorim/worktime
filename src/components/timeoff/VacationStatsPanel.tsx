@@ -131,7 +131,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                     isInvalid={isAmountInvalid}
                   />
                   <Form.Control.Feedback type="invalid">
-                    Please enter a valid positive number
+                    Please enter a valid number (0 or greater)
                   </Form.Control.Feedback>
                   <Form.Text className="text-muted">
                     Set to 0 to disable vacation tracking
