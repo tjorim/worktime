@@ -189,7 +189,7 @@ export function WelcomeWizard({
             if (onDefer) {
               onDefer();
             } else {
-              onHide(); // Fallback: defer by closing modal without completing onboarding
+              onHide(); // Fallback: close modal and complete onboarding via onHide handler
             }
           }}
           disabled={isLoading}
