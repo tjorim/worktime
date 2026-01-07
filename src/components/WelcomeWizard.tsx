@@ -132,15 +132,7 @@ export function WelcomeWizard({
       return;
     }
 
-    if (validation.parsedAmount === 0) {
-      // Explicitly treat 0 as a valid value meaning "no vacation allowance" / disabled tracking
-      onHide({
-        amount: 0,
-        unit: vacationUnit,
-      });
-      return;
-    }
-
+    // All valid amounts (including 0 which disables vacation tracking) are saved
     onHide({
       amount: validation.parsedAmount,
       unit: vacationUnit,
