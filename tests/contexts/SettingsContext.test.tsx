@@ -19,7 +19,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.theme).toBe("auto");
     expect(result.current.settings.notifications).toBe("off");
     expect(result.current.settings.vacationAllowance).toEqual({
-      amount: 25,
+      amount: 0,
       unit: "days",
       hoursPerDay: 8,
     });
@@ -114,7 +114,7 @@ describe("SettingsContext unified user state", () => {
         theme: "auto",
         notifications: "off",
         vacationAllowance: {
-          amount: 25,
+          amount: 0,
           unit: "days",
           hoursPerDay: 8,
         },

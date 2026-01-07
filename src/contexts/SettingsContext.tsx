@@ -51,7 +51,7 @@ export const defaultSettings: UserSettings = {
   theme: "auto",
   notifications: "off",
   vacationAllowance: {
-    amount: 25,
+    amount: 0,
     unit: "days",
     hoursPerDay: 8,
   },

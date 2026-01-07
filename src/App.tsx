@@ -26,7 +26,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo } = useToast();
-  const { myTeam, setMyTeam, hasCompletedOnboarding, completeOnboardingWithTeam, settings } =
+  const { myTeam, setMyTeam, hasCompletedOnboarding, setHasCompletedOnboarding, completeOnboardingWithTeam, settings } =
     useSettings();
   const { currentDate, setCurrentDate, todayShifts } = useShiftCalculation();
   const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
@@ -113,10 +113,9 @@ function AppContent() {
   }, [settings.theme]);
 
   const handleTeamSelect = (team: number) => {
-    // Use the atomic function to avoid race condition
-    completeOnboardingWithTeam(team);
-    setShowTeamModal(false);
-    showSuccess(`Team ${team} selected! Your shifts are now personalized.`, "🎯");
+    // Save team selection (onboarding will be completed after vacation step)
+    setMyTeam(team);
+    // Don't close modal yet - wizard continues to vacation allowance step
   };
 
   const handleChangeTeam = () => {
@@ -125,15 +124,18 @@ function AppContent() {
   };
 
   const handleSkipTeamSelection = () => {
-    // Complete onboarding without selecting a team
-    completeOnboardingWithTeam(null);
-    setShowTeamModal(false);
-    showInfo("Browsing all teams. Select a team anytime for personalized features!", "👀");
+    // Skip team selection but continue to vacation step
+    // Onboarding will be completed when wizard closes
   };
 
   const handleTeamModalHide = () => {
-    // If user closes modal (Maybe Later), don't mark onboarding as completed
-    // They should see the wizard again on next visit
+    // Complete onboarding when wizard closes (after vacation step)
+    if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
+      setHasCompletedOnboarding(true);
+      if (myTeam !== null) {
+        showSuccess(`Team ${myTeam} selected! Your shifts are now personalized.`, "🎯");
+      }
+    }
     setShowTeamModal(false);
   };
 
