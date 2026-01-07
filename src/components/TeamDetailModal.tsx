@@ -299,7 +299,7 @@ export function TeamDetailModal({
             <div className="d-grid gap-2 d-md-flex">
               <OverlayTrigger
                 placement="top"
-                delay={0}
+                delay={{ show: 0, hide: 0 }}
                 overlay={<Tooltip id={calendarTooltipId}>Live calendar sync coming soon!</Tooltip>}
               >
                 <span className="d-inline-block">
@@ -321,7 +321,7 @@ export function TeamDetailModal({
               {/* View Transfers button with conditional disable and tooltip */}
               <OverlayTrigger
                 placement="top"
-                delay={0}
+                delay={{ show: 0, hide: 0 }}
                 overlay={
                   isViewingOwnTeam ? (
                     <Tooltip id={transfersDisabledTooltipId}>

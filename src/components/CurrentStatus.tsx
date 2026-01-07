@@ -194,7 +194,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
               <div className="text-muted">
                 <OverlayTrigger
                   placement="bottom"
-                  delay={0}
+                  delay={{ show: 0, hide: 0 }}
                   overlay={
                     <Tooltip id={dateTooltipId}>
                       <strong>Date Format: YYWW.D</strong>
@@ -264,7 +264,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                       <div>
                         <OverlayTrigger
                           placement="bottom"
-                          delay={0}
+                          delay={{ show: 0, hide: 0 }}
                           overlay={
                             <Tooltip id={teamTooltipId}>
                               <strong>Your Team Today</strong>

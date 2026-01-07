@@ -138,7 +138,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
         <div className="timeline-team">
           <OverlayTrigger
             placement="bottom"
-            delay={0}
+            delay={{ show: 0, hide: 0 }}
             overlay={
               <Tooltip id={timelineTooltipId}>
                 <strong>Currently Active</strong>
@@ -165,7 +165,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             {currentWorkingTeam.shift.code}
             <OverlayTrigger
               placement="bottom"
-              delay={0}
+              delay={{ show: 0, hide: 0 }}
               overlay={
                 <Tooltip id={`${timelineTooltipId}-live`}>
                   <strong>📡 Live Updates</strong>
