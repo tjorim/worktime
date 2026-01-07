@@ -101,12 +101,11 @@ export function WelcomeWizard({
 
   const handleVacationComplete = () => {
     // Pass vacation allowance data to onHide for atomic update
-    const parsedAmount = parseFloat(vacationAmount);
-    const isValidAmount = vacationAmount !== "" && !Number.isNaN(parsedAmount) && parsedAmount > 0;
+    const validation = validateVacationAmount(vacationAmount);
     
-    if (isValidAmount) {
+    if (validation.isValid) {
       onHide({
-        amount: parsedAmount,
+        amount: parseFloat(vacationAmount),
         unit: vacationUnit,
       });
     } else {
@@ -118,6 +117,27 @@ export function WelcomeWizard({
   const handleVacationSkip = () => {
     // User chose to skip - no vacation data to save
     onHide();
+  };
+
+  /**
+   * Validates vacation amount input.
+   * Returns an object with validation state:
+   * - isValid: true if amount is valid for saving (not empty, not NaN, > 0)
+   * - isInvalid: true if amount has been entered but is invalid (NaN or < 0)
+   */
+  const validateVacationAmount = (amount: string) => {
+    const trimmedAmount = amount.trim();
+    if (trimmedAmount === "") {
+      return { isValid: false, isInvalid: false };
+    }
+    const parsed = parseFloat(trimmedAmount);
+    const isNaN = Number.isNaN(parsed);
+    const isNegative = parsed < 0;
+    
+    return {
+      isValid: !isNaN && parsed > 0,
+      isInvalid: isNaN || isNegative,
+    };
   };
 
   const nextStep = () => {
@@ -331,9 +351,7 @@ export function WelcomeWizard({
   );
 
   const renderVacationAllowanceStep = () => {
-    const isInvalidAmount =
-      vacationAmount !== "" &&
-      (Number.isNaN(parseFloat(vacationAmount)) || parseFloat(vacationAmount) < 0);
+    const validation = validateVacationAmount(vacationAmount);
 
     return (
       <>
@@ -357,7 +375,7 @@ export function WelcomeWizard({
               value={vacationAmount}
               onChange={(e) => setVacationAmount(e.target.value)}
               disabled={isLoading}
-              isInvalid={isInvalidAmount}
+              isInvalid={validation.isInvalid}
             />
             <Form.Control.Feedback type="invalid">
               Please enter a valid positive number
@@ -410,9 +428,9 @@ export function WelcomeWizard({
             <Button
               variant="primary"
               onClick={handleVacationComplete}
-              disabled={isLoading || isInvalidAmount}
+              disabled={isLoading || validation.isInvalid}
             >
-              {!isInvalidAmount && parseFloat(vacationAmount) > 0 ? "Save & Complete" : "Complete"}
+              {validation.isValid ? "Save & Complete" : "Complete"}
               <i className="bi bi-check-lg ms-2"></i>
             </Button>
           </div>
