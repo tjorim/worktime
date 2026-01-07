@@ -244,5 +244,73 @@ describe("useCountdown", () => {
       expect(result.current.totalSeconds).toBe(0); // Rounds down to 0 seconds
       expect(result.current.isExpired).toBe(true);
     });
+
+    it("should handle NaN updateInterval gracefully", () => {
+      const futureDate = dayjs().add(5, "seconds");
+      const { result, unmount } = renderHook(() => useCountdown(futureDate, NaN));
+
+      // Should still work with default interval (1000ms)
+      expect(result.current.totalSeconds).toBe(5);
+      expect(result.current.isExpired).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current.totalSeconds).toBe(4);
+
+      unmount();
+    });
+
+    it("should handle negative updateInterval gracefully", () => {
+      const futureDate = dayjs().add(5, "seconds");
+      const { result, unmount } = renderHook(() => useCountdown(futureDate, -500));
+
+      // Should still work with default interval (1000ms)
+      expect(result.current.totalSeconds).toBe(5);
+      expect(result.current.isExpired).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current.totalSeconds).toBe(4);
+
+      unmount();
+    });
+
+    it("should handle zero updateInterval gracefully", () => {
+      const futureDate = dayjs().add(5, "seconds");
+      const { result, unmount } = renderHook(() => useCountdown(futureDate, 0));
+
+      // Should still work with default interval (1000ms)
+      expect(result.current.totalSeconds).toBe(5);
+      expect(result.current.isExpired).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current.totalSeconds).toBe(4);
+
+      unmount();
+    });
+
+    it("should handle Infinity updateInterval gracefully", () => {
+      const futureDate = dayjs().add(5, "seconds");
+      const { result, unmount } = renderHook(() => useCountdown(futureDate, Number.POSITIVE_INFINITY));
+
+      // Should still work with default interval (1000ms)
+      expect(result.current.totalSeconds).toBe(5);
+      expect(result.current.isExpired).toBe(false);
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(result.current.totalSeconds).toBe(4);
+
+      unmount();
+    });
   });
 });

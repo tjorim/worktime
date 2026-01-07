@@ -118,7 +118,13 @@ export function useCountdown(
       setTimeLeft(calculateTimeLeft(targetDate));
     };
 
-    const interval = setInterval(updateCountdown, updateInterval);
+    // Ensure updateInterval is a valid positive number to avoid NaN warnings
+    // Falls back to 1000ms if invalid (NaN, Infinity, negative, or zero)
+    const validInterval = Number.isFinite(updateInterval) && updateInterval > 0 
+      ? updateInterval 
+      : 1000;
+
+    const interval = setInterval(updateCountdown, validInterval);
 
     return () => clearInterval(interval);
   }, [targetDate, updateInterval]);
