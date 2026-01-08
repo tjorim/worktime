@@ -126,16 +126,15 @@ export function WelcomeWizard({
     // Pass vacation allowance data to onHide for atomic update
     const validation = validateVacationAmount(vacationAmount);
     
-    if (!validation.isValid) {
+    if (!validation.isValid || validation.parsedAmount === null) {
       // No valid vacation data to save
       onHide();
       return;
     }
 
     // All valid amounts (including 0 which disables vacation tracking) are saved
-    // parsedAmount is guaranteed to be non-null when isValid is true
     onHide({
-      amount: validation.parsedAmount!,
+      amount: validation.parsedAmount,
       unit: vacationUnit,
     });
   };
