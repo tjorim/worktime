@@ -14,9 +14,7 @@ import {
 describe("vacationCalculations", () => {
   describe("getEventTypeKey logic", () => {
     it("should return holiday for events with no flags", () => {
-      const events: HdayEvent[] = [
-        { type: "range", start: "2025/01/15", end: "2025/01/15" },
-      ];
+      const events: HdayEvent[] = [{ type: "range", start: "2025/01/15", end: "2025/01/15" }];
       const stats = calculateVacationStats(events, 2025, 8);
       expect(stats.holidayDays).toBe(1);
     });
@@ -270,9 +268,7 @@ describe("vacationCalculations", () => {
     });
 
     it("should handle events spanning multiple years", () => {
-      const events: HdayEvent[] = [
-        { type: "range", start: "2023/12/28", end: "2024/01/05" },
-      ];
+      const events: HdayEvent[] = [{ type: "range", start: "2023/12/28", end: "2024/01/05" }];
       const years = getAvailableYears(events, 2025);
       expect(years).toContain(2023);
       expect(years).toContain(2024);
@@ -302,9 +298,7 @@ describe("vacationCalculations", () => {
     });
 
     it("should handle invalid dates gracefully", () => {
-      const events: HdayEvent[] = [
-        { type: "range", start: "invalid", end: "2024/01/01" },
-      ];
+      const events: HdayEvent[] = [{ type: "range", start: "invalid", end: "2024/01/01" }];
       const years = getAvailableYears(events, 2025);
       expect(years).toEqual([2025]); // Only fallback
     });

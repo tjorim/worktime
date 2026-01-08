@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChangelogModal } from "../../src/components/ChangelogModal";
-import { changelogData } from "../../src/data/changelog";
+import { changelogData, futurePlans } from "../../src/data/changelog";
 
 describe("ChangelogModal", () => {
   const defaultProps = {
@@ -210,17 +210,18 @@ describe("ChangelogModal", () => {
       expect(screen.getByText("Coming Soon")).toBeInTheDocument();
 
       // Dynamically check for all versions in futurePlans
-      expect(screen.getByText(/v4.4.0:/)).toBeInTheDocument();
-      expect(screen.getByText(/v4.5.0:/)).toBeInTheDocument();
-      expect(screen.getByText(/future:/)).toBeInTheDocument();
+      Object.keys(futurePlans).forEach((version) => {
+        expect(screen.getByText(new RegExp(`${version}:`))).toBeInTheDocument();
+      });
 
-      // Check for specific features from the actual futurePlans data
-      expect(
-        screen.getByText(/Vacation statistics dashboard, Time-off allowance tracking/),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Calendar export \(\.ics format\), Enhanced keyboard shortcuts/),
-      ).toBeInTheDocument();
+      // Dynamically check that each version's features are rendered
+      Object.entries(futurePlans).forEach(([_version, plan]) => {
+        // Check that first two features from each plan are shown (features are comma-separated in display)
+        const firstTwoFeatures = plan.features.slice(0, 2).join(", ");
+        expect(
+          screen.getByText(new RegExp(firstTwoFeatures.replace(/[()]/g, "\\$&"))),
+        ).toBeInTheDocument();
+      });
     });
   });
 

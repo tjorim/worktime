@@ -285,17 +285,17 @@ describe("SettingsContext unified user state", () => {
   describe("Atomic onboarding completion", () => {
     it("should atomically complete onboarding with vacation allowance", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      
+
       // Start with default state
       expect(result.current.hasCompletedOnboarding).toBe(false);
       expect(result.current.myTeam).toBe(null);
       expect(result.current.settings.vacationAllowance.amount).toBe(0);
-      
+
       // Complete onboarding with team and vacation allowance in one atomic operation
       await act(async () => {
         result.current.completeOnboardingWithVacation(3, { amount: 35, unit: "days" });
       });
-      
+
       // All values should be updated atomically
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(3);
@@ -305,12 +305,12 @@ describe("SettingsContext unified user state", () => {
 
     it("should atomically complete onboarding without team but with vacation", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      
+
       // Complete onboarding without team (browsing all teams) but with vacation allowance
       await act(async () => {
         result.current.completeOnboardingWithVacation(null, { amount: 28, unit: "hours" });
       });
-      
+
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(null);
       expect(result.current.settings.vacationAllowance.amount).toBe(28);
@@ -319,12 +319,12 @@ describe("SettingsContext unified user state", () => {
 
     it("should complete onboarding without vacation allowance", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      
+
       // Complete onboarding with team but skip vacation allowance
       await act(async () => {
         result.current.completeOnboardingWithVacation(2);
       });
-      
+
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(2);
       expect(result.current.settings.vacationAllowance.amount).toBe(0);
@@ -333,15 +333,15 @@ describe("SettingsContext unified user state", () => {
 
     it("should persist all values to localStorage atomically", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-      
+
       await act(async () => {
         result.current.completeOnboardingWithVacation(4, { amount: 25.5, unit: "days" });
       });
-      
+
       const stored = window.localStorage.getItem("worktime_user_state");
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
-      
+
       expect(parsed.hasCompletedOnboarding).toBe(true);
       expect(parsed.myTeam).toBe(4);
       expect(parsed.settings.vacationAllowance.amount).toBe(25.5);

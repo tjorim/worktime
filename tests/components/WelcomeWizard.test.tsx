@@ -384,7 +384,7 @@ describe("WelcomeWizard", () => {
 
       // Create a real storage implementation for testing
       testStorage = {};
-      
+
       // Mock localStorage with a real implementation
       originalLocalStorage = window.localStorage;
       Object.defineProperty(window, "localStorage", {

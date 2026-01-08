@@ -27,7 +27,7 @@ function validateVacationAmount(amount: string) {
   const parsed = parseFloat(trimmedAmount);
   const isNotANumber = Number.isNaN(parsed);
   const isNegative = parsed < 0;
-  
+
   return {
     isValid: !isNotANumber && parsed >= 0,
     isInvalid: isNotANumber || isNegative,
@@ -125,7 +125,7 @@ export function WelcomeWizard({
   const handleVacationComplete = () => {
     // Pass vacation allowance data to onHide for atomic update
     const validation = validateVacationAmount(vacationAmount);
-    
+
     if (!validation.isValid || validation.parsedAmount === null) {
       // No valid vacation data to save
       onHide();

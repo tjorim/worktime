@@ -69,7 +69,7 @@ describe("VacationStatsPanel", () => {
       render(<VacationStatsPanel {...defaultProps} />);
 
       const amountInput = screen.getByLabelText("Annual vacation allowance") as HTMLInputElement;
-      
+
       // Typing backspace will reduce 25 to 2, which is valid
       await user.click(amountInput);
       await user.type(amountInput, "{Backspace}");
@@ -94,7 +94,7 @@ describe("VacationStatsPanel", () => {
       render(<VacationStatsPanel {...defaultProps} />);
 
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
-      
+
       // Type a digit to append (8 becomes 81, which is valid)
       await user.click(hoursInput);
       await user.type(hoursInput, "1");
@@ -120,11 +120,11 @@ describe("VacationStatsPanel", () => {
       render(<VacationStatsPanel {...defaultProps} />);
 
       const amountInput = screen.getByLabelText("Annual vacation allowance");
-      
+
       // Focus and try to type letters (which should be ignored by number input)
       await user.click(amountInput);
       const callCountBefore = mockOnUpdateAllowance.mock.calls.length;
-      
+
       await user.type(amountInput, "abc");
 
       // The input type="number" prevents letters, so no new calls should happen
@@ -232,7 +232,12 @@ describe("VacationStatsPanel", () => {
           end: `${currentYear}/02/12`,
           flags: ["business"],
         },
-        { type: "range", start: `${currentYear}/03/05`, end: `${currentYear}/03/05`, flags: ["ill"] },
+        {
+          type: "range",
+          start: `${currentYear}/03/05`,
+          end: `${currentYear}/03/05`,
+          flags: ["ill"],
+        },
       ];
       render(<VacationStatsPanel {...defaultProps} events={events} />);
 
