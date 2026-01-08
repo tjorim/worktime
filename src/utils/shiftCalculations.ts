@@ -63,9 +63,10 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { SCHEDULE_OPTIONS, type ScheduleOption, type SchedulePattern } from "../data/rosters";
+import type { ScheduleOption, SchedulePattern } from "../data/rosters";
 import { CONFIG } from "./config";
 import { dayjs, formatYYWWD } from "./dateTimeUtils";
+import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
@@ -154,8 +155,7 @@ const ISO_WEEKDAY_MAP: Record<string, number> = {
 };
 
 const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
-  SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
-  SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+  getScheduleConfig(scheduleOption);
 
 const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getRosterForSchedule(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;

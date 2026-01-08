@@ -9,7 +9,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
   dayjs,
@@ -42,9 +42,7 @@ export function ScheduleView({
 }: ScheduleViewProps) {
   const datePickerId = useId();
   const { settings, scheduleOption } = useSettings();
-  const scheduleConfig =
-    SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
-    SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+  const scheduleConfig = getScheduleConfig(scheduleOption);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;

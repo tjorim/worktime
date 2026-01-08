@@ -8,7 +8,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
+import { getTeamCountForOption } from "../utils/scheduleUtils";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
 import {
@@ -52,10 +52,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   const dateTooltipId = useId();
   const teamTooltipId = useId();
   const { settings, scheduleOption } = useSettings();
-  const scheduleConfig =
-    SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
-    SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
-  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+  const teamCount = getTeamCountForOption(scheduleOption);
 
   // Validate and sanitize myTeam prop
   const validatedTeam =
