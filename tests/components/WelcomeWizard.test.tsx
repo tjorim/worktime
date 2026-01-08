@@ -14,8 +14,32 @@ const defaultProps = {
   isLoading: false,
 };
 
+const defaultUserState = {
+  hasCompletedOnboarding: false,
+  myTeam: null,
+  scheduleOption: "5-shift",
+  settings: {
+    timeFormat: "24h",
+    theme: "auto",
+    notifications: "off",
+    vacationAllowance: {
+      amount: 0,
+      unit: "days",
+      hoursPerDay: 8,
+    },
+  },
+};
+
+const seedScheduleOption = () => {
+  window.localStorage.setItem(
+    "worktime_user_state",
+    JSON.stringify(defaultUserState),
+  );
+};
+
 // Test wrapper with required providers
 function renderWithProviders(ui: React.ReactElement) {
+  seedScheduleOption();
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
 
@@ -413,6 +437,11 @@ describe("WelcomeWizard", () => {
         },
         writable: true,
       });
+
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify(defaultUserState),
+      );
     });
 
     afterEach(() => {
