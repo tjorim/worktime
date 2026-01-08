@@ -67,6 +67,8 @@ import { SCHEDULE_OPTIONS, type ScheduleOption, type SchedulePattern } from "../
 import { CONFIG } from "./config";
 import { dayjs, formatYYWWD } from "./dateTimeUtils";
 
+type NullableScheduleOption = ScheduleOption | null | undefined;
+
 export type ShiftType = "M" | "E" | "N" | "O";
 
 export interface Shift {
@@ -151,14 +153,14 @@ const ISO_WEEKDAY_MAP: Record<string, number> = {
   Sun: 7,
 };
 
-const getRosterForSchedule = (scheduleOption?: ScheduleOption) =>
+const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
   SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
   SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
 
-const getTeamCountForSchedule = (scheduleOption?: ScheduleOption) =>
+const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getRosterForSchedule(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
 
-const getCycleLengthForSchedule = (scheduleOption?: ScheduleOption) =>
+const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getRosterForSchedule(scheduleOption).shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
 
 const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
@@ -188,7 +190,10 @@ const getTeamOffsetUnits = (teamNumber: number, teamCount: number) => {
   return (teamNumber - CONFIG.REFERENCE_TEAM) % teamCount;
 };
 
-const getCycleTeamOffsetDays = (scheduleOption?: ScheduleOption, teamNumber?: number) => {
+const getCycleTeamOffsetDays = (
+  scheduleOption?: NullableScheduleOption,
+  teamNumber?: number,
+) => {
   const roster = getRosterForSchedule(scheduleOption);
   const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
   const cycleLength = roster.shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
@@ -202,7 +207,7 @@ const getShiftForWeeklyRotation = (
   date: Dayjs,
   teamNumber: number,
   schedulePattern: Extract<SchedulePattern, { type: "weekly-rotation" }>,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): Shift => {
   const roster = getRosterForSchedule(scheduleOption);
   const cycleLengthDays = roster.shiftConfig.cycleLengthDays ?? 7;
@@ -294,7 +299,7 @@ export function getShiftByCode(code: string | null | undefined) {
 export function calculateShift(
   date: string | Date | Dayjs,
   teamNumber: number,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): Shift {
   const teamCount = getTeamCountForSchedule(scheduleOption);
   // Validate team number
@@ -407,7 +412,7 @@ export function getCurrentShiftDay(date: string | Date | Dayjs): Dayjs {
 export function getShiftCode(
   date: string | Date | Dayjs,
   teamNumber: number,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): string {
   const shift = calculateShift(date, teamNumber, scheduleOption);
   let codeDate = dayjs(date);
@@ -447,7 +452,7 @@ export function getShiftCode(
 export function getNextShift(
   fromDate: string | Date | Dayjs,
   teamNumber: number,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): UpcomingShiftResult | null {
   // Validate team number range
   const teamCount = getTeamCountForSchedule(scheduleOption);
@@ -496,7 +501,7 @@ export function getNextShift(
  */
 export function getAllTeamsShifts(
   date: string | Date | Dayjs,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): ShiftResult[] {
   const results: ShiftResult[] = [];
   const teamCount = getTeamCountForSchedule(scheduleOption);
@@ -526,7 +531,7 @@ export function getAllTeamsShifts(
 export function getOffDayProgress(
   date: string | Date | Dayjs,
   teamNumber: number,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: NullableScheduleOption,
 ): OffDayProgress | null {
   // Validate team number
   const teamCount = getTeamCountForSchedule(scheduleOption);

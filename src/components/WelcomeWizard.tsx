@@ -99,10 +99,8 @@ export function WelcomeWizard({
   }, [startStep]);
 
   useEffect(() => {
-    if (scheduleOption && scheduleOption !== selectedSchedule) {
-      setSelectedSchedule(scheduleOption);
-    }
-  }, [scheduleOption, selectedSchedule]);
+    setSelectedSchedule(scheduleOption ?? null);
+  }, [scheduleOption]);
 
   useEffect(() => {
     if (currentStep === "team-selection" && selectedSchedule !== "5-shift") {
@@ -116,7 +114,7 @@ export function WelcomeWizard({
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
   const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
-    (scheduleOption) => scheduleOption.value === selectedSchedule,
+    (option) => option.value === selectedSchedule,
   );
   const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
 

@@ -27,7 +27,7 @@ interface TimelineData {
 function computeShiftTimeline(
   today: Dayjs,
   currentWorkingTeam: ShiftResult,
-  scheduleOption?: ScheduleOption,
+  scheduleOption?: ScheduleOption | null,
 ): TimelineData {
   // Get all teams for today to build timeline
   const allTeamsToday = getAllTeamsShifts(today, scheduleOption);
@@ -125,7 +125,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
   const { prevShift, nextShift } = computeShiftTimeline(
     today,
     currentWorkingTeam,
-    scheduleOption ?? undefined,
+    scheduleOption,
   );
 
   return (

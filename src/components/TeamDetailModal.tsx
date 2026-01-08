@@ -56,7 +56,7 @@ export function TeamDetailModal({
     for (let i = 0; i < 7; i++) {
       const date = today.add(i, "day");
       const shiftDay = getCurrentShiftDay(date);
-      const shift = calculateShift(shiftDay, teamNumber, scheduleOption ?? undefined);
+      const shift = calculateShift(shiftDay, teamNumber, scheduleOption);
 
       schedule.push({
         date,

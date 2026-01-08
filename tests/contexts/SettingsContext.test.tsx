@@ -60,6 +60,21 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.hasCompletedOnboarding).toBe(true);
   });
 
+  it("updates schedule option and persists it", async () => {
+    const { result } = renderHook(() => useSettings(), { wrapper });
+
+    await act(async () => {
+      result.current.setScheduleOption("5-shift");
+    });
+
+    expect(result.current.scheduleOption).toBe("5-shift");
+
+    const stored = window.localStorage.getItem("worktime_user_state");
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored || "{}");
+    expect(parsed.scheduleOption).toBe("5-shift");
+  });
+
   it("resets all user state", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     act(() => {

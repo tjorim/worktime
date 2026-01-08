@@ -166,10 +166,10 @@ export function useTransferCalculations({
         break;
       }
 
-      const myTeamShift = calculateShift(scanDate, myTeam, scheduleOption ?? undefined);
-      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleOption ?? undefined);
-      const myTeamNextShift = calculateShift(nextDate, myTeam, scheduleOption ?? undefined);
-      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleOption ?? undefined);
+      const myTeamShift = calculateShift(scanDate, myTeam, scheduleOption);
+      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleOption);
+      const myTeamNextShift = calculateShift(nextDate, myTeam, scheduleOption);
+      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleOption);
 
       // Check for transfer patterns
       const transfers = [

@@ -15,7 +15,7 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
-import type { ScheduleOption } from "../data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
@@ -93,6 +93,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const s = state as Record<string, unknown>;
   const settings = typeof s.settings === "object" && s.settings !== null ? s.settings : {};
   const settingsRecord = settings as Record<string, unknown>;
+  const scheduleOptionValues = new Set(SCHEDULE_OPTIONS.map((option) => option.value));
 
   const timeFormat = ["12h", "24h"].includes(settingsRecord.timeFormat as string)
     ? (settingsRecord.timeFormat as TimeFormat)
@@ -123,8 +124,10 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     scheduleOption:
       s.scheduleOption === undefined
         ? defaultUserState.scheduleOption
-        : typeof s.scheduleOption === "string" || s.scheduleOption === null
-          ? (s.scheduleOption as ScheduleOption | null)
+        : typeof s.scheduleOption === "string" && scheduleOptionValues.has(s.scheduleOption)
+          ? (s.scheduleOption as ScheduleOption)
+          : s.scheduleOption === null
+            ? null
           : defaultUserState.scheduleOption,
     settings: {
       timeFormat,
