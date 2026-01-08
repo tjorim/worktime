@@ -14,9 +14,46 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.4.0",
+    date: "2026-01-08",
+    status: "current",
+    added: [
+      "Vacation Statistics Dashboard: Comprehensive vacation allowance tracking and usage analytics panel",
+      "Vacation Allowance Settings: Configure annual allowance in days or hours with customizable hours-per-day conversion (default: 8)",
+      "VacationStatsPanel Component: Interactive panel with allowance controls, usage progress bar, remaining days/hours display, and event type breakdown table",
+      "Year-Based Statistics: Filter vacation data by year with automatic year detection from time-off events",
+      "Vacation Usage Tracking: Real-time calculation of used vs. remaining vacation days and hours based on Holiday events",
+      "Event Type Breakdown: Detailed breakdown table showing days and hours by Holiday, Business, Course, In-office, Sick Leave, and other event types",
+      "Statistics Tab View: Fourth view mode in Time Off tab (Calendar, Table, Statistics, Raw) for vacation analytics",
+      "Extended Onboarding Wizard: Optional vacation allowance setup step (4-step flow) with amount/unit configuration and validation",
+      "Vacation Allowance Persistence: Settings saved to localStorage with normalization, sanitization, and graceful migration from older versions",
+      "Input Validation: Real-time validation for vacation amount (≥0) and hours-per-day (≥1) with visual feedback",
+      "Allowance Conversion Helpers: Utility functions for converting between days and hours based on configured hours-per-day ratio",
+    ],
+    changed: [
+      "WelcomeWizard: Extended from 3-step to 4-step onboarding flow with vacation allowance configuration (Welcome → Features → Team → Vacation)",
+      "SettingsContext: Added vacationAllowance to UserSettings interface with default (0 days, 8 hours/day) and normalization helpers",
+      "TimeOffView: Added Statistics view mode alongside Calendar, Table, and Raw views with dedicated help text",
+      "RawContentAccordion: Renamed to RawContentPanel for consistent naming convention across components",
+      "App.tsx: Enhanced team selection flow with atomic vacation allowance updates to prevent race conditions",
+      "Wizard Exit Paths: Clarified three exit flows - complete with team+vacation, skip team (browse all), and defer (maybe later)",
+    ],
+    fixed: [
+      "Wizard State Management: Team selection now persists correctly across all wizard steps using atomic update",
+      "Vacation Allowance Validation: Sanitizes invalid values (NaN, negative numbers, missing fields) with Math.max guards and fallback defaults",
+      "Form Input Validation: Added real-time validation feedback for vacation amount and hours-per-day inputs with aria-describedby",
+      "LocalStorage Migration: Gracefully handles missing or corrupted vacation allowance data from older versions via normalizeUserState",
+    ],
+    technicalDetails: {
+      title: "Vacation Statistics Dashboard Implementation",
+      description:
+        "Implemented comprehensive vacation statistics and allowance tracking system completing HdayPlanner feature parity item 4.2. Created VacationStatsPanel component (276 lines) with allowance settings form (amount, unit, hours-per-day), usage progress visualization with ProgressBar, remaining days/hours display, and event type breakdown table filtering by year. Added vacationCalculations utility module (259 lines) with functions for stats calculation (calculateVacationStats), allowance conversion (getAllowanceDays, getAllowanceHours), year extraction from events (getAvailableYears), value sanitization (sanitizeVacationAllowance), and formatting (formatVacationValue). Extended WelcomeWizard component with vacation allowance step including validation helper (validateVacationAmount) and three exit paths (complete, skip team, defer). Updated SettingsContext with vacationAllowance settings (VacationAllowanceSettings type: amount, unit, hoursPerDay) and normalizeUserState function for safe localStorage migration. Added 32 comprehensive tests for VacationStatsPanel covering rendering, form controls, user interactions, validation states, and year filtering. Added 60 tests for vacationCalculations covering event type classification logic (holiday default, explicit flags, half-day handling), date range calculations, weekly event counting, year boundary clamping, and edge cases (zero allowance, NaN, negative values, inverted ranges). All 472 tests passing with excellent coverage. Completes HdayPlanner integration gap - total effort reduced from 7-9h to 2-3h (advanced keyboard nav only).",
+    },
+  },
+  {
     version: "4.3.0",
     date: "2026-01-06",
-    status: "current",
+    status: "released",
     added: [
       "Raw .hday Content Editor Tab: Third tab view for direct text editing alongside Calendar and Table views",
       "Unsaved Changes Indicator: Yellow badge on 'Raw .hday' button when content has unsaved edits",
@@ -362,15 +399,6 @@ export const changelogData: ChangelogVersion[] = [
 ];
 
 export const futurePlans = {
-  "v4.4.0": {
-    title: "Statistics & Analytics",
-    features: [
-      "Vacation statistics dashboard",
-      "Time-off allowance tracking",
-      "Breakdown by event type",
-      "Year-specific analytics",
-    ],
-  },
   "v4.5.0": {
     title: "Advanced Features",
     features: [

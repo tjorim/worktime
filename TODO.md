@@ -90,35 +90,12 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 
 **Integration Status:**
 
-- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0), raw .hday editor (v4.3.0)
-- ❌ **Missing Core UI**: Vacation statistics dashboard
-- 📊 **Total Effort to Achieve Parity**: ~7–9 hours
+- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0), raw .hday editor (v4.3.0), vacation statistics dashboard (v4.4.0)
+- 📊 **Total Effort to Achieve Parity**: ~2–3 hours
 
 ---
 
-**4.2 Vacation Statistics Dashboard** 🌟
-
-- **Component**: Vacation allowance tracking and analytics
-- **Source**: `HdayPlanner/frontend/src/components/StatisticsCard.tsx`
-- **Use Cases**:
-  - Annual vacation allowance configuration (days or hours)
-  - Days used vs. remaining
-  - Breakdown by event type (Holiday, Business, Sick, Training, etc.)
-  - Year-specific statistics
-  - Hours-to-days conversion
-- **Current Worktime**: No statistics tracking
-- **Implementation**: Add StatisticsCard accordion to TimeOffView
-- **Files to Create**:
-  - `src/components/timeoff/VacationStats.tsx` - Statistics component
-  - `src/utils/vacationCalculations.ts` - Allowance calculations
-- **Files to Modify**:
-  - `src/components/TimeOffView.tsx` - Add statistics section
-  - `src/contexts/SettingsContext.tsx` - Add vacation allowance settings
-- **Estimated Effort**: 5–6 hours
-- **Status**: 🔲 Planned (High Priority)
-- **Note**: Consolidated here as the single roadmap entry for vacation/time-off statistics (no separate backlog item).
-
-**4.3 Missing Utility Functions**
+**4.2 Missing Utility Functions**
 
 - **Component**: Helper functions from HdayPlanner
 - **Source**: `HdayPlanner/frontend/src/lib/hday.ts`
@@ -133,7 +110,7 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Planned
 
-**4.4 Enhanced Keyboard Navigation**
+**4.3 Enhanced Keyboard Navigation**
 
 - **Component**: Calendar-specific keyboard shortcuts
 - **Source**: `HdayPlanner/frontend/src/components/MonthGrid.tsx` (roving tabindex)
@@ -153,12 +130,11 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 - ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all flags/types
 - ✅ **Restored in Worktime**: Undo/redo with history tracking, bulk operations (multi-select, bulk delete/duplicate, select all)
 - ✅ **Completed in v4.3.0**: Raw .hday content editor/viewer with dedicated tab view
-- ❌ **Missing Core UI**: Statistics dashboard (vacation allowance tracking)
+- ✅ **Completed in v4.4.0**: Vacation statistics dashboard with allowance tracking and analytics
 - ❌ **Missing UX**: Advanced keyboard nav for calendar
-- 📊 **Total Estimated Effort**: 7–9 hours to achieve feature parity
+- 📊 **Total Estimated Effort**: 2–3 hours to achieve feature parity
 - 🎯 **Priority Order**:
-  1. Statistics dashboard (5-6h) - Vacation tracking
-  2. Advanced keyboard nav (2-3h) - Efficiency improvements
+  1. Advanced keyboard nav (2-3h) - Efficiency improvements
 
 ### 🎯 Medium-Priority Items
 
@@ -369,35 +345,34 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **Vacation Statistics Dashboard** - Vacation allowance tracking and analytics
-2. **Export Schedule Feature** - Calendar export functionality (user-facing)
-3. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
-4. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
+1. **Export Schedule Feature** - Calendar export functionality (user-facing)
+2. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
+3. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
 
 ### 📋 Backlog (Code Quality)
 
-5. **Reusable TeamSelector Component** - Reduce code duplication
+4. **Reusable TeamSelector Component** - Reduce code duplication
 
 ### 📋 Backlog (Features)
 
-6. **Enhanced List Groups** - Better data organization
-7. **TeamDetailModal Enhancement** - Activate disabled features
-8. **Enhanced Error Boundaries** - Better error handling
+5. **Enhanced List Groups** - Better data organization
+6. **TeamDetailModal Enhancement** - Activate disabled features
+7. **Enhanced Error Boundaries** - Better error handling
 
 ### 📋 Backlog (Time-Off Management)
 
-9. **Time-Off Calendar Visual Enhancements** - Color-coded events, auto-load current month, highlight today
-10. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
-11. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
+8. **Time-Off Calendar Visual Enhancements** - Color-coded events, auto-load current month, highlight today
+9. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
+10. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
 
 ### 📋 Backlog (UI/UX)
 
-12. **Mobile Carousel** - Improved mobile navigation
-13. **Transfer History Accordion** - Organized historical data
-14. **Notification System** - Browser notifications for shifts and time-off
-15. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-16. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
-17. **Floating Action Button** - Quick actions overlay
+11. **Mobile Carousel** - Improved mobile navigation
+12. **Transfer History Accordion** - Organized historical data
+13. **Notification System** - Browser notifications for shifts and time-off
+14. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
+15. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
+16. **Floating Action Button** - Quick actions overlay
 
 ## Technical Requirements
 
@@ -524,5 +499,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2026-01-06
-**Next Review**: After v4.4.0 (Statistics Dashboard)
+**Last Updated**: 2026-01-08
+**Next Review**: After v4.5.0 (Export Schedule Feature)
