@@ -178,7 +178,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                         Please enter a value of at least 1
                       </Form.Control.Feedback>
                       <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
-                        For conversion
+                        Used for converting between days and hours
                       </Form.Text>
                     </Form.Group>
                   </Col>
