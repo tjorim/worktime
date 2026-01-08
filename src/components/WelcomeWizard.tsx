@@ -113,14 +113,20 @@ export function WelcomeWizard({
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
+  const isChangeTeamFlow = startStep === "team-selection";
   const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
     (option) => option.value === selectedSchedule,
   );
   const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
+  const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
 
-  const getTotalSteps = () => (shouldShowTeamSelection ? 5 : 4);
+  const getTotalSteps = () => {
+    if (isChangeTeamFlow) return 1;
+    return shouldShowTeamSelection ? 5 : 4;
+  };
 
   const getStepIndex = () => {
+    if (isChangeTeamFlow) return 1;
     switch (currentStep) {
       case "welcome":
         return 1;
@@ -569,7 +575,7 @@ export function WelcomeWizard({
             {currentStep === "welcome" && renderWelcomeStep()}
             {currentStep === "features" && renderFeaturesStep()}
             {currentStep === "schedule-selection" && renderScheduleSelectionStep()}
-            {currentStep === "team-selection" && shouldShowTeamSelection && renderTeamSelectionStep()}
+            {currentStep === "team-selection" && hasTeamSelectionStep && renderTeamSelectionStep()}
             {currentStep === "vacation-allowance" && renderVacationAllowanceStep()}
           </>
         )}
