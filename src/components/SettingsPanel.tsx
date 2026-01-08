@@ -14,6 +14,7 @@ interface SettingsPanelProps {
   show: boolean;
   onHide: () => void;
   onShowAbout?: () => void;
+  onChangeSchedule?: () => void;
 }
 
 /**
@@ -24,7 +25,12 @@ interface SettingsPanelProps {
  * @param onShowAbout - Optional callback invoked to show the About modal
  * @returns The rendered settings panel element
  */
-export function SettingsPanel({ show, onHide, onShowAbout }: SettingsPanelProps) {
+export function SettingsPanel({
+  show,
+  onHide,
+  onShowAbout,
+  onChangeSchedule,
+}: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const toast = useToast();
   const { settings, updateTimeFormat, updateTheme, resetSettings } = useSettings();
@@ -52,6 +58,11 @@ export function SettingsPanel({ show, onHide, onShowAbout }: SettingsPanelProps)
   // Open About modal through callback prop
   const handleAboutHelpClick = () => {
     onShowAbout?.();
+  };
+
+  const handleChangeSchedule = () => {
+    onChangeSchedule?.();
+    onHide();
   };
 
   // Share handlers
@@ -210,6 +221,18 @@ export function SettingsPanel({ show, onHide, onShowAbout }: SettingsPanelProps)
                 Quick Actions
               </h6>
               <ListGroup variant="flush">
+                <ListGroup.Item action onClick={handleChangeSchedule}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">
+                        <i className="bi bi-calendar-week me-2"></i>
+                        Change Schedule
+                      </div>
+                      <small className="text-muted">Pick a different roster</small>
+                    </div>
+                    <i className="bi bi-chevron-right text-muted"></i>
+                  </div>
+                </ListGroup.Item>
                 <ListGroup.Item action disabled>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
