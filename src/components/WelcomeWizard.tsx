@@ -237,10 +237,6 @@ export function WelcomeWizard({
     if (currentStep === "vacation-allowance") {
       setCurrentStep(shouldShowTeamSelection ? "team-selection" : "schedule-selection");
     } else if (currentStep === "team-selection") {
-      if (isChangeScheduleFlow) {
-        setCurrentStep("schedule-selection");
-        return;
-      }
       setCurrentStep("schedule-selection");
     } else if (currentStep === "schedule-selection") {
       if (isChangeScheduleFlow) {
