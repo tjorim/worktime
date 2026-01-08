@@ -186,6 +186,9 @@ export function WelcomeWizard({
     } else if (currentStep === "features") {
       setCurrentStep("schedule-selection");
     } else if (currentStep === "schedule-selection") {
+      if (selectedSchedule && selectedSchedule !== scheduleOption) {
+        onScheduleSelect?.(selectedSchedule);
+      }
       setCurrentStep(shouldShowTeamSelection ? "team-selection" : "vacation-allowance");
     } else if (currentStep === "team-selection") {
       setCurrentStep("vacation-allowance");
@@ -339,7 +342,6 @@ export function WelcomeWizard({
   const renderScheduleSelectionStep = () => {
     const handleScheduleChange = (schedule: ScheduleOption) => {
       setSelectedSchedule(schedule);
-      onScheduleSelect?.(schedule);
     };
 
     return (
