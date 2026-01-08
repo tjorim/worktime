@@ -770,4 +770,73 @@ describe("WelcomeWizard", () => {
       expect(onHide).toHaveBeenCalled();
     });
   });
+
+  describe("Schedule change integration tests", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("should open Change Schedule wizard when Change Schedule button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Complete initial onboarding by manually navigating through wizard
+      await findModalTitle(/Welcome to Worktime/i);
+      
+      // Step 1: Welcome -> Features
+      const getStartedButton = screen.getByRole("button", { name: /Let's Get Started/i });
+      await user.click(getStartedButton);
+      
+      // Step 2: Features -> Schedule Selection
+      await waitFor(() => {
+        expect(screen.getByText(/What can Worktime do\?/i)).toBeInTheDocument();
+      });
+      const chooseScheduleButton = screen.getByRole("button", { name: /Choose a Schedule/i });
+      await user.click(chooseScheduleButton);
+      
+      // Step 3: Schedule Selection -> Team Selection
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+      
+      // Step 4: Team Selection -> Vacation Allowance
+      await waitFor(() => {
+        expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByLabelText(/Select Team 1/i));
+      
+      // Step 5: Vacation Allowance -> Complete
+      await waitFor(() => {
+        expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Complete/i }));
+
+      // Wait for wizard to close
+      await waitFor(() =>
+        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+      );
+
+      // Open Settings panel
+      const settingsButton = screen.getByRole("button", { name: /Settings/i });
+      await user.click(settingsButton);
+
+      // Click Change Schedule button
+      await waitFor(() => {
+        const changeScheduleButton = screen.getByRole("button", { name: /Change Schedule/i });
+        expect(changeScheduleButton).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Change Schedule/i }));
+
+      // Should open wizard in change-schedule mode
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+    });
+  });
 });
