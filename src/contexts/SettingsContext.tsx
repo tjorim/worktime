@@ -124,11 +124,12 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     scheduleOption:
       s.scheduleOption === undefined
         ? defaultUserState.scheduleOption
-        : typeof s.scheduleOption === "string" && scheduleOptionValues.has(s.scheduleOption)
+        : typeof s.scheduleOption === "string" &&
+            scheduleOptionValues.has(s.scheduleOption as ScheduleOption)
           ? (s.scheduleOption as ScheduleOption)
           : s.scheduleOption === null
             ? null
-          : defaultUserState.scheduleOption,
+            : defaultUserState.scheduleOption,
     settings: {
       timeFormat,
       theme,
