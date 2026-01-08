@@ -109,8 +109,6 @@ export function WelcomeWizard({
     }
   }, [currentStep, onScheduleSelect, selectedSchedule]);
 
-  const teams = Array.from({ length: CONFIG.TEAMS_COUNT }, (_, i) => i + 1);
-
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
   const isChangeTeamFlow = startStep === "team-selection";
@@ -119,6 +117,8 @@ export function WelcomeWizard({
   );
   const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
   const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
+  const teamCount = selectedScheduleConfig?.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
   const getTotalSteps = () => {
     if (isChangeTeamFlow) return 1;
