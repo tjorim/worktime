@@ -1,6 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
-import { CONFIG } from "../utils/config";
+import { useSettings } from "../contexts/SettingsContext";
+import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { dayjs } from "../utils/dateTimeUtils";
 import { calculateShift, type ShiftType } from "../utils/shiftCalculations";
 
@@ -112,11 +113,17 @@ export function useTransferCalculations({
   customStartDate,
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
+  const { scheduleOption } = useSettings();
+  const scheduleConfig =
+    SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
+    SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {
-    const allTeams = Array.from({ length: CONFIG.TEAMS_COUNT }, (_, i) => i + 1);
+    const allTeams = Array.from({ length: teamCount }, (_, i) => i + 1);
     return allTeams.filter((team) => team !== myTeam);
-  }, [myTeam]);
+  }, [myTeam, teamCount]);
 
   // State for selected other team to compare with
   const [otherTeam, setOtherTeam] = useState<number>(availableOtherTeams[0] || 1);
@@ -159,10 +166,10 @@ export function useTransferCalculations({
         break;
       }
 
-      const myTeamShift = calculateShift(scanDate, myTeam);
-      const otherTeamShift = calculateShift(scanDate, otherTeam);
-      const myTeamNextShift = calculateShift(nextDate, myTeam);
-      const otherTeamNextShift = calculateShift(nextDate, otherTeam);
+      const myTeamShift = calculateShift(scanDate, myTeam, scheduleOption ?? undefined);
+      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleOption ?? undefined);
+      const myTeamNextShift = calculateShift(nextDate, myTeam, scheduleOption ?? undefined);
+      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleOption ?? undefined);
 
       // Check for transfer patterns
       const transfers = [
@@ -260,7 +267,7 @@ export function useTransferCalculations({
       transfers: foundTransfers,
       hasMoreTransfers,
     };
-  }, [myTeam, otherTeam, limit, customStartDate, customEndDate]);
+  }, [myTeam, otherTeam, limit, customStartDate, customEndDate, scheduleOption]);
 
   return {
     transfers: transfersResult.transfers,

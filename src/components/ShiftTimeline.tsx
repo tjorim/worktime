@@ -6,6 +6,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
+import type { ScheduleOption } from "../data/rosters";
 import { getAllTeamsShifts, getShiftByCode } from "../utils/shiftCalculations";
 
 interface TimelineData {
@@ -23,9 +24,13 @@ interface TimelineData {
  * @param currentWorkingTeam - The team currently active within today's shifts
  * @returns An object with `prevShift` set to the adjacent previous working shift or `null`, `currentShift` equal to `currentWorkingTeam`, and `nextShift` set to the adjacent next working shift or `null`
  */
-function computeShiftTimeline(today: Dayjs, currentWorkingTeam: ShiftResult): TimelineData {
+function computeShiftTimeline(
+  today: Dayjs,
+  currentWorkingTeam: ShiftResult,
+  scheduleOption?: ScheduleOption,
+): TimelineData {
   // Get all teams for today to build timeline
-  const allTeamsToday = getAllTeamsShifts(today);
+  const allTeamsToday = getAllTeamsShifts(today, scheduleOption);
   const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking);
 
   // Sort by shift start time to create timeline
@@ -56,7 +61,7 @@ function computeShiftTimeline(today: Dayjs, currentWorkingTeam: ShiftResult): Ti
   } else {
     // Current shift is the first of the day, look at yesterday's last shift
     const yesterday = today.subtract(1, "day");
-    const allTeamsYesterday = getAllTeamsShifts(yesterday);
+    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleOption);
     const workingTeamsYesterday = allTeamsYesterday.filter((team) => team.shift.isWorking);
 
     if (workingTeamsYesterday.length > 0) {
@@ -78,7 +83,7 @@ function computeShiftTimeline(today: Dayjs, currentWorkingTeam: ShiftResult): Ti
   } else {
     // Current shift is the last of the day, look at tomorrow's first shift
     const tomorrow = today.add(1, "day");
-    const allTeamsTomorrow = getAllTeamsShifts(tomorrow);
+    const allTeamsTomorrow = getAllTeamsShifts(tomorrow, scheduleOption);
     const workingTeamsTomorrow = allTeamsTomorrow.filter((team) => team.shift.isWorking);
 
     if (workingTeamsTomorrow.length > 0) {
@@ -116,8 +121,12 @@ interface ShiftTimelineProps {
 export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps) {
   // Generate unique ID for tooltip to avoid HTML ID conflicts
   const timelineTooltipId = useId();
-  const { settings } = useSettings();
-  const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam);
+  const { settings, scheduleOption } = useSettings();
+  const { prevShift, nextShift } = computeShiftTimeline(
+    today,
+    currentWorkingTeam,
+    scheduleOption ?? undefined,
+  );
 
   return (
     <div className="card-timeline timeline-container">

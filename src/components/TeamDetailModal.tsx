@@ -53,7 +53,7 @@ export function TeamDetailModal({
     for (let i = 0; i < 7; i++) {
       const date = today.add(i, "day");
       const shiftDay = getCurrentShiftDay(date);
-      const shift = calculateShift(shiftDay, teamNumber);
+      const shift = calculateShift(shiftDay, teamNumber, scheduleOption ?? undefined);
 
       schedule.push({
         date,
@@ -64,7 +64,7 @@ export function TeamDetailModal({
     }
 
     return schedule;
-  }, [teamNumber, currentDateKey]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [teamNumber, currentDateKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -88,7 +88,7 @@ export function TeamDetailModal({
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
   const toast = useToast();
-  const { settings, myTeam } = useSettings();
+  const { settings, myTeam, scheduleOption } = useSettings();
 
   // Share handler for this team
   const handleShareSchedule = () => {

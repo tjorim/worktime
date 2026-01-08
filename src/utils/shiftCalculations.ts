@@ -63,6 +63,7 @@
  */
 
 import type { Dayjs } from "dayjs";
+import { SCHEDULE_OPTIONS, type ScheduleOption, type SchedulePattern } from "../data/rosters";
 import { CONFIG } from "./config";
 import { dayjs, formatYYWWD } from "./dateTimeUtils";
 
@@ -140,6 +141,95 @@ export const SHIFTS = Object.freeze({
   }),
 });
 
+const ISO_WEEKDAY_MAP: Record<string, number> = {
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+  Sun: 7,
+};
+
+const getRosterForSchedule = (scheduleOption?: ScheduleOption) =>
+  SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
+  SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+
+const getTeamCountForSchedule = (scheduleOption?: ScheduleOption) =>
+  getRosterForSchedule(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+
+const getCycleLengthForSchedule = (scheduleOption?: ScheduleOption) =>
+  getRosterForSchedule(scheduleOption).shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+
+const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
+  switch (code) {
+    case "M":
+      return SHIFTS.MORNING;
+    case "E":
+      return SHIFTS.EVENING;
+    case "N":
+      return SHIFTS.NIGHT;
+    case "O":
+      return SHIFTS.OFF;
+    case "D":
+      return SHIFTS.MORNING;
+    case "L":
+      return SHIFTS.EVENING;
+    default:
+      return SHIFTS.OFF;
+  }
+};
+
+const mapWeeklyShiftToCode = (shift: "Early" | "Late" | "Day"): ShiftType =>
+  shift === "Late" ? "E" : "M";
+
+const getTeamOffsetUnits = (teamNumber: number, teamCount: number) => {
+  if (teamCount <= 1) return 0;
+  return (teamNumber - CONFIG.REFERENCE_TEAM) % teamCount;
+};
+
+const getCycleTeamOffsetDays = (scheduleOption?: ScheduleOption, teamNumber?: number) => {
+  const roster = getRosterForSchedule(scheduleOption);
+  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const cycleLength = roster.shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+  if (!teamNumber || teamCount <= 1 || cycleLength <= 0) return 0;
+
+  const offsetStep = Math.floor(cycleLength / teamCount);
+  return getTeamOffsetUnits(teamNumber, teamCount) * offsetStep;
+};
+
+const getShiftForWeeklyRotation = (
+  date: Dayjs,
+  teamNumber: number,
+  schedulePattern: Extract<SchedulePattern, { type: "weekly-rotation" }>,
+  scheduleOption?: ScheduleOption,
+): Shift => {
+  const roster = getRosterForSchedule(scheduleOption);
+  const cycleLengthDays = roster.shiftConfig.cycleLengthDays ?? 7;
+  const totalWeeks = Math.max(1, Math.round(cycleLengthDays / 7));
+  const referenceWeekStart = dayjs(CONFIG.REFERENCE_DATE).startOf("isoWeek");
+  const targetWeekStart = date.startOf("isoWeek");
+  const weeksSinceReference = targetWeekStart.diff(referenceWeekStart, "week");
+  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const teamOffsetWeeks = getTeamOffsetUnits(teamNumber, teamCount);
+  const weekIndex =
+    ((weeksSinceReference + teamOffsetWeeks) % totalWeeks + totalWeeks) % totalWeeks + 1;
+  const isoWeekday = date.isoWeekday();
+
+  const matchingShift = schedulePattern.weeks.find(
+    (week) =>
+      week.weekIndex === weekIndex &&
+      week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoWeekday),
+  );
+
+  if (!matchingShift) {
+    return SHIFTS.OFF;
+  }
+
+  const shiftCode = mapWeeklyShiftToCode(matchingShift.shift);
+  return mapShiftCodeToShift(shiftCode);
+};
+
 /**
  * Combine a shift's emoji and name into a single display label.
  *
@@ -201,27 +291,49 @@ export function getShiftByCode(code: string | null | undefined) {
  * calculateShift('2025-01-06', 6)
  * // Throws: Error("Invalid team number: 6. Expected 1-5")
  */
-export function calculateShift(date: string | Date | Dayjs, teamNumber: number): Shift {
+export function calculateShift(
+  date: string | Date | Dayjs,
+  teamNumber: number,
+  scheduleOption?: ScheduleOption,
+): Shift {
+  const teamCount = getTeamCountForSchedule(scheduleOption);
   // Validate team number
-  if (teamNumber < 1 || teamNumber > CONFIG.TEAMS_COUNT) {
-    throw new Error(`Invalid team number: ${teamNumber}. Expected 1-${CONFIG.TEAMS_COUNT}`);
+  if (teamNumber < 1 || teamNumber > teamCount) {
+    throw new Error(`Invalid team number: ${teamNumber}. Expected 1-${teamCount}`);
   }
 
   const targetDate = dayjs(date).startOf("day");
   const referenceDate = dayjs(CONFIG.REFERENCE_DATE).startOf("day");
+  const roster = getRosterForSchedule(scheduleOption);
+  const schedulePattern = roster.shiftConfig.schedulePattern;
 
   // Calculate days since reference
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
-  // Calculate team offset (each team starts 2 days later)
-  const teamOffset = (teamNumber - CONFIG.REFERENCE_TEAM) * 2;
+  if (schedulePattern?.type === "weekly-rotation") {
+    return getShiftForWeeklyRotation(targetDate, teamNumber, schedulePattern, scheduleOption);
+  }
 
-  // Calculate position in 10-day cycle
+  if (schedulePattern?.type === "cycle") {
+    const cycleLength = getCycleLengthForSchedule(scheduleOption);
+    const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
+    const adjustedDays = daysSinceReference - teamOffset;
+    const cyclePosition =
+      ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
+    const dayIndex = cyclePosition + 1;
+    const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
+    if (!matchingDay) {
+      return SHIFTS.OFF;
+    }
+    return mapShiftCodeToShift(matchingDay.shift);
+  }
+
+  // Fallback to legacy 5-shift cycle logic when no roster pattern is configured.
+  const teamOffset = (teamNumber - CONFIG.REFERENCE_TEAM) * 2;
   const adjustedDays = daysSinceReference - teamOffset;
   const cyclePosition =
     ((adjustedDays % CONFIG.SHIFT_CYCLE_DAYS) + CONFIG.SHIFT_CYCLE_DAYS) % CONFIG.SHIFT_CYCLE_DAYS;
 
-  // Determine shift based on cycle position
   if (cyclePosition < 2) {
     return SHIFTS.MORNING;
   }
@@ -292,8 +404,12 @@ export function getCurrentShiftDay(date: string | Date | Dayjs): Dayjs {
  *
  * @see getCurrentShiftDay For how night shifts are mapped to the previous day
  */
-export function getShiftCode(date: string | Date | Dayjs, teamNumber: number): string {
-  const shift = calculateShift(date, teamNumber);
+export function getShiftCode(
+  date: string | Date | Dayjs,
+  teamNumber: number,
+  scheduleOption?: ScheduleOption,
+): string {
+  const shift = calculateShift(date, teamNumber, scheduleOption);
   let codeDate = dayjs(date);
 
   // For night shifts, use the previous day's date code
@@ -331,21 +447,24 @@ export function getShiftCode(date: string | Date | Dayjs, teamNumber: number): s
 export function getNextShift(
   fromDate: string | Date | Dayjs,
   teamNumber: number,
+  scheduleOption?: ScheduleOption,
 ): UpcomingShiftResult | null {
   // Validate team number range
-  if (teamNumber < 1 || teamNumber > CONFIG.TEAMS_COUNT) {
+  const teamCount = getTeamCountForSchedule(scheduleOption);
+  if (teamNumber < 1 || teamNumber > teamCount) {
     return null;
   }
 
   let checkDate = dayjs(fromDate).add(1, "day");
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
 
-  for (let i = 0; i < CONFIG.SHIFT_CYCLE_DAYS; i++) {
-    const shift = calculateShift(checkDate, teamNumber);
+  for (let i = 0; i < cycleLength; i++) {
+    const shift = calculateShift(checkDate, teamNumber, scheduleOption);
     if (shift.isWorking) {
       return {
         date: checkDate,
         shift: shift,
-        code: getShiftCode(checkDate, teamNumber),
+        code: getShiftCode(checkDate, teamNumber, scheduleOption),
       };
     }
     checkDate = checkDate.add(1, "day");
@@ -375,12 +494,16 @@ export function getNextShift(
  *
  * @see calculateShift For individual team shift calculation
  */
-export function getAllTeamsShifts(date: string | Date | Dayjs): ShiftResult[] {
+export function getAllTeamsShifts(
+  date: string | Date | Dayjs,
+  scheduleOption?: ScheduleOption,
+): ShiftResult[] {
   const results: ShiftResult[] = [];
+  const teamCount = getTeamCountForSchedule(scheduleOption);
 
-  for (let teamNumber = 1; teamNumber <= CONFIG.TEAMS_COUNT; teamNumber++) {
-    const shift = calculateShift(date, teamNumber);
-    const code = getShiftCode(date, teamNumber);
+  for (let teamNumber = 1; teamNumber <= teamCount; teamNumber++) {
+    const shift = calculateShift(date, teamNumber, scheduleOption);
+    const code = getShiftCode(date, teamNumber, scheduleOption);
 
     results.push({
       date: dayjs(date),
@@ -403,27 +526,37 @@ export function getAllTeamsShifts(date: string | Date | Dayjs): ShiftResult[] {
 export function getOffDayProgress(
   date: string | Date | Dayjs,
   teamNumber: number,
+  scheduleOption?: ScheduleOption,
 ): OffDayProgress | null {
   // Validate team number
-  if (teamNumber < 1 || teamNumber > CONFIG.TEAMS_COUNT) {
+  const teamCount = getTeamCountForSchedule(scheduleOption);
+  if (teamNumber < 1 || teamNumber > teamCount) {
     return null;
   }
 
-  const currentShift = calculateShift(date, teamNumber);
+  const currentShift = calculateShift(date, teamNumber, scheduleOption);
 
   // Only calculate for teams that are off
   if (currentShift.isWorking) {
     return null;
   }
 
+  const roster = getRosterForSchedule(scheduleOption);
+  const schedulePattern = roster.shiftConfig.schedulePattern;
+  const totalOffDays =
+    schedulePattern?.type === "cycle"
+      ? schedulePattern.days.filter((day) => day.shift === "O").length
+      : null;
+
   // Team is off, calculate which day of their 4-day break
   let dayCount = 0;
   let checkDate = getCurrentShiftDay(dayjs(date));
 
   // Look backwards to find when this off period started
-  for (let i = 0; i < CONFIG.SHIFT_CYCLE_DAYS; i++) {
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  for (let i = 0; i < cycleLength; i++) {
     // Max 10 days to avoid infinite loop
-    const shift = calculateShift(checkDate, teamNumber);
+    const shift = calculateShift(checkDate, teamNumber, scheduleOption);
     if (shift.isWorking) {
       break; // Found the last working day
     }
@@ -431,7 +564,11 @@ export function getOffDayProgress(
     checkDate = checkDate.subtract(1, "day");
   }
 
-  return dayCount > 0 ? { current: dayCount, total: 4 } : null;
+  if (!totalOffDays) {
+    return null;
+  }
+
+  return dayCount > 0 ? { current: dayCount, total: totalOffDays } : null;
 }
 
 /**

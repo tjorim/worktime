@@ -15,6 +15,7 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
+import type { ScheduleOption } from "../data/rosters";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
@@ -40,6 +41,8 @@ interface SettingsContextType {
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
   setMyTeam: (team: number | null) => void;
+  scheduleOption: ScheduleOption | null;
+  setScheduleOption: (schedule: ScheduleOption | null) => void;
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
   // Atomic update for onboarding completion with team selection
@@ -65,12 +68,14 @@ export const defaultSettings: UserSettings = {
 interface WorktimeUserState {
   hasCompletedOnboarding: boolean;
   myTeam: number | null; // The user's team from onboarding
+  scheduleOption: ScheduleOption | null;
   settings: UserSettings;
 }
 
 const defaultUserState: WorktimeUserState = {
   hasCompletedOnboarding: false,
   myTeam: null,
+  scheduleOption: null,
   settings: defaultSettings,
 };
 
@@ -115,6 +120,12 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         : typeof s.myTeam === "number" || s.myTeam === null
           ? s.myTeam
           : defaultUserState.myTeam,
+    scheduleOption:
+      s.scheduleOption === undefined
+        ? defaultUserState.scheduleOption
+        : typeof s.scheduleOption === "string" || s.scheduleOption === null
+          ? (s.scheduleOption as ScheduleOption | null)
+          : defaultUserState.scheduleOption,
     settings: {
       timeFormat,
       theme,
@@ -201,6 +212,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
+  const setScheduleOption = useCallback(
+    (schedule: ScheduleOption | null) => {
+      setUserState((prev) => ({
+        ...prev,
+        scheduleOption: schedule,
+      }));
+    },
+    [setUserState],
+  );
+
   const setHasCompletedOnboarding = useCallback(
     (completed: boolean) => {
       setUserState((prev) => ({
@@ -249,6 +270,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
+      scheduleOption: userState.scheduleOption,
+      setScheduleOption,
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
       completeOnboardingWithTeam,
@@ -262,6 +285,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       resetSettings,
       setMyTeam,
+      setScheduleOption,
       setHasCompletedOnboarding,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,

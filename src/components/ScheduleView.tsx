@@ -9,8 +9,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
+import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { CONFIG } from "../utils/config";
 import {
   dayjs,
   formatYYWWD,
@@ -41,10 +41,15 @@ export function ScheduleView({
   setCurrentDate,
 }: ScheduleViewProps) {
   const datePickerId = useId();
+  const { settings, scheduleOption } = useSettings();
+  const scheduleConfig =
+    SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
+    SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
-  if (typeof myTeam === "number" && (myTeam < 1 || myTeam > CONFIG.TEAMS_COUNT)) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${CONFIG.TEAMS_COUNT}`);
+  if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
+    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
@@ -79,8 +84,6 @@ export function ScheduleView({
     onPrevious: handlePrevious,
     onNext: handleNext,
   });
-
-  const { settings } = useSettings();
 
   return (
     <Card>
@@ -189,7 +192,7 @@ export function ScheduleView({
               </tr>
             </thead>
             <tbody>
-              {Array.from({ length: CONFIG.TEAMS_COUNT }, (_, i) => i + 1).map((teamNumber) => (
+              {Array.from({ length: teamCount }, (_, i) => i + 1).map((teamNumber) => (
                 <tr
                   key={teamNumber}
                   className={isMyTeam(teamNumber)}
@@ -199,7 +202,7 @@ export function ScheduleView({
                     <strong>Team {teamNumber}</strong>
                   </td>
                   {weekDays.map((day) => {
-                    const shift = calculateShift(day, teamNumber);
+                    const shift = calculateShift(day, teamNumber, scheduleOption ?? undefined);
                     const isToday = day.isSame(dayjs(), "day");
 
                     return (

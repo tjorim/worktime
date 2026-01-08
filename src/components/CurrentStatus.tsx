@@ -8,9 +8,9 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
+import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
-import { CONFIG } from "../utils/config";
 import {
   dayjs,
   formatTimeByPreference,
@@ -51,13 +51,18 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   // Generate unique IDs for tooltips to avoid HTML ID conflicts
   const dateTooltipId = useId();
   const teamTooltipId = useId();
+  const { settings, scheduleOption } = useSettings();
+  const scheduleConfig =
+    SCHEDULE_OPTIONS.find((option) => option.value === (scheduleOption ?? "5-shift")) ??
+    SCHEDULE_OPTIONS.find((option) => option.value === "5-shift")!;
+  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
 
   // Validate and sanitize myTeam prop
   const validatedTeam =
-    typeof myTeam === "number" && myTeam >= 1 && myTeam <= CONFIG.TEAMS_COUNT ? myTeam : null;
+    typeof myTeam === "number" && myTeam >= 1 && myTeam <= teamCount ? myTeam : null;
 
   if (myTeam !== null && validatedTeam === null) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${CONFIG.TEAMS_COUNT}`);
+    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
   }
   // Always use today's date for current status
   const today = dayjs();
@@ -69,21 +74,21 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
     if (!validatedTeam) return null;
 
     const shiftDay = getCurrentShiftDay(today);
-    const shift = calculateShift(shiftDay, validatedTeam);
+    const shift = calculateShift(shiftDay, validatedTeam, scheduleOption ?? undefined);
 
     return {
       date: shiftDay,
       shift,
-      code: getShiftCode(shiftDay, validatedTeam),
+      code: getShiftCode(shiftDay, validatedTeam, scheduleOption ?? undefined),
       teamNumber: validatedTeam,
     };
-  }, [validatedTeam, todayMinuteKey]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
+  }, [validatedTeam, todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate next shift from today
   const nextShift = useMemo((): UpcomingShiftResult | null => {
     if (!validatedTeam) return null;
-    return getNextShift(today, validatedTeam);
-  }, [validatedTeam, todayMinuteKey]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
+    return getNextShift(today, validatedTeam, scheduleOption ?? undefined);
+  }, [validatedTeam, todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate next shift change across all teams when no team is selected
   const nextShiftAnyTeam = useMemo((): (UpcomingShiftResult & { teamNumber: number }) | null => {
@@ -96,7 +101,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
     // Check shifts for today and next few days to find the next shift change
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const checkDate = now.add(dayOffset, "day");
-      const allTeamsShifts = getAllTeamsShifts(checkDate);
+      const allTeamsShifts = getAllTeamsShifts(checkDate, scheduleOption ?? undefined);
 
       for (const teamShift of allTeamsShifts) {
         if (!teamShift.shift.isWorking || !teamShift.shift.start) continue;
@@ -122,14 +127,14 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
     }
 
     return earliestShift;
-  }, [validatedTeam, todayMinuteKey]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
+  }, [validatedTeam, todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Find which team is currently working
   const currentWorkingTeam = useMemo((): ShiftResult | null => {
     const now = today;
 
     // Check today's shifts
-    const allTeamsToday = getAllTeamsShifts(today);
+    const allTeamsToday = getAllTeamsShifts(today, scheduleOption ?? undefined);
     const workingToday = allTeamsToday.find((teamShift) => {
       if (!teamShift.shift.isWorking) return false;
       return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
@@ -139,20 +144,20 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
 
     // Also check yesterday's shifts (for night shifts spanning midnight)
     const yesterday = today.subtract(1, "day");
-    const allTeamsYesterday = getAllTeamsShifts(yesterday);
+    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleOption ?? undefined);
     const workingYesterday = allTeamsYesterday.find((teamShift) => {
       if (!teamShift.shift.isWorking) return false;
       return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
     });
 
     return workingYesterday || null;
-  }, [todayMinuteKey]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
+  }, [todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate off-day progress when team is off
   const offDayProgress = useMemo((): OffDayProgress | null => {
     if (!validatedTeam) return null;
-    return getOffDayProgress(today, validatedTeam);
-  }, [validatedTeam, todayMinuteKey]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
+    return getOffDayProgress(today, validatedTeam, scheduleOption ?? undefined);
+  }, [validatedTeam, todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate next shift start time for countdown
   const nextShiftStartTime = useMemo(() => {
@@ -181,8 +186,6 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   const currentShiftDay = useMemo(() => {
     return getCurrentShiftDay(liveTime);
   }, [liveTime]);
-
-  const { settings } = useSettings();
 
   return (
     <Col className="mb-4">

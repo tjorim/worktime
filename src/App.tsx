@@ -9,6 +9,7 @@ import { WelcomeWizard } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
+import type { ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
@@ -32,6 +33,7 @@ function AppContent() {
     setMyTeam,
     hasCompletedOnboarding,
     completeOnboardingWithVacation,
+    setScheduleOption,
     updateVacationAllowance,
     settings,
   } = useSettings();
@@ -125,6 +127,10 @@ function AppContent() {
     // Don't close modal yet - wizard continues to vacation allowance step
   };
 
+  const handleScheduleSelect = (schedule: ScheduleOption) => {
+    setScheduleOption(schedule);
+  };
+
   const handleChangeTeam = () => {
     setTeamModalMode("change-team");
     setShowTeamModal(true);
@@ -188,6 +194,7 @@ function AppContent() {
           <WelcomeWizard
             show={showTeamModal}
             onTeamSelect={handleTeamSelect}
+            onScheduleSelect={handleScheduleSelect}
             onSkip={() => {
               // User chose to browse all teams - clear team selection
               setMyTeam(null);
