@@ -103,7 +103,7 @@ export function WelcomeWizard({
   }, [scheduleOption]);
 
   useEffect(() => {
-    if (currentStep === "team-selection" && selectedSchedule !== "5-shift") {
+    if (currentStep === "team-selection" && selectedSchedule === null) {
       setSelectedSchedule("5-shift");
       onScheduleSelect?.("5-shift");
     }
