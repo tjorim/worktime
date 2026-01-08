@@ -248,7 +248,7 @@ export function WelcomeWizard({
         </p>
         <p className="text-muted">
           Worktime helps you stay on top of your schedule with real-time tracking, countdown
-          timers, and integrated time-off management - all offline-capable.
+          timers, and integrated time-off management - stored locally in your browser.
         </p>
       </div>
       <div className="d-flex justify-content-between">
@@ -294,9 +294,9 @@ export function WelcomeWizard({
             <div className="d-flex align-items-start">
               <i className="bi bi-wifi-off text-info me-3 mt-1" style={{ fontSize: "1.5rem" }}></i>
               <div>
-                <h6 className="mb-1">Works Offline</h6>
+                <h6 className="mb-1">Local-First Data</h6>
                 <small className="text-muted">
-                  No internet? No problem - fully functional offline
+                  Your settings and events are saved in your browser for quick access
                 </small>
               </div>
             </div>
