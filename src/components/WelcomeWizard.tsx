@@ -7,6 +7,7 @@ import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
+import { useSettings } from "../contexts/SettingsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { CONFIG } from "../utils/config";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
@@ -76,6 +77,7 @@ export function WelcomeWizard({
   isLoading = false,
   startStep = "welcome",
 }: WelcomeWizardProps) {
+  const { scheduleOption } = useSettings();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
@@ -84,7 +86,9 @@ export function WelcomeWizard({
   const [vacationAmount, setVacationAmount] = useState<string>("");
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>("days");
 
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(
+    scheduleOption ?? null,
+  );
 
   // Sync currentStep when startStep prop changes
   useEffect(() => {
@@ -93,6 +97,12 @@ export function WelcomeWizard({
       initialStepRef.current = startStep;
     }
   }, [startStep]);
+
+  useEffect(() => {
+    if (scheduleOption && scheduleOption !== selectedSchedule) {
+      setSelectedSchedule(scheduleOption);
+    }
+  }, [scheduleOption, selectedSchedule]);
 
   useEffect(() => {
     if (currentStep === "team-selection" && selectedSchedule !== "5-shift") {

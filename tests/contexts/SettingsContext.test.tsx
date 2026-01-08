@@ -24,6 +24,7 @@ describe("SettingsContext unified user state", () => {
       hoursPerDay: 8,
     });
     expect(result.current.myTeam).toBe(null);
+    expect(result.current.scheduleOption).toBe("5-shift");
     expect(result.current.hasCompletedOnboarding).toBe(false);
   });
 
@@ -69,6 +70,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.myTeam).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
     expect(result.current.settings.timeFormat).toBe("24h");
+    expect(result.current.scheduleOption).toBe("5-shift");
   });
 
   it("validates and falls back to default state if corrupted", () => {
@@ -78,6 +80,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.myTeam).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
     expect(result.current.settings.timeFormat).toBe("24h");
+    expect(result.current.scheduleOption).toBe("5-shift");
   });
 
   it("migrates from old keys to unified state (documented gap)", () => {
@@ -97,6 +100,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.hasCompletedOnboarding).toBe(false);
     expect(result.current.myTeam).toBe(null);
     expect(result.current.settings.timeFormat).toBe("24h");
+    expect(result.current.scheduleOption).toBe("5-shift");
   });
 
   it("resetSettings clears unified key and does not leave old keys", () => {
@@ -117,6 +121,7 @@ describe("SettingsContext unified user state", () => {
     expect(parsedState).toEqual({
       hasCompletedOnboarding: false,
       myTeam: null,
+      scheduleOption: "5-shift",
       settings: {
         timeFormat: "24h",
         theme: "auto",

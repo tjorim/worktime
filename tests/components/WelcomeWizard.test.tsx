@@ -27,7 +27,7 @@ const findModalTitle = async (text: RegExp) => {
   return modalHeading;
 };
 
-const waitForStep = async (stepNumber: number, totalSteps: number = 4, timeout = 3000) => {
+const waitForStep = async (stepNumber: number, totalSteps: number = 5, timeout = 3000) => {
   await waitFor(
     () => {
       expect(
@@ -44,14 +44,19 @@ const navigateToTeamSelection = async (user: ReturnType<typeof userEvent.setup>)
     name: /Let's Get Started/i,
   });
   await user.click(getStartedButton);
-  await waitForStep(2);
+  await waitForStep(2, 5);
 
-  // Step 2 (features) -> Step 3 (team selection)
-  const chooseTeamButton = screen.getByRole("button", {
-    name: /Choose My Team/i,
+  // Step 2 (features) -> Step 3 (schedule selection)
+  const chooseScheduleButton = screen.getByRole("button", {
+    name: /Choose a Schedule/i,
   });
-  await user.click(chooseTeamButton);
-  await waitForStep(3);
+  await user.click(chooseScheduleButton);
+  await waitForStep(3, 5);
+
+  // Step 3 (schedule selection) -> Step 4 (team selection)
+  await user.click(screen.getByRole("button", { name: /5-shift/i }));
+  await user.click(screen.getByRole("button", { name: /Continue/i }));
+  await waitForStep(4, 5);
 };
 
 describe("WelcomeWizard", () => {
@@ -172,7 +177,9 @@ describe("WelcomeWizard", () => {
 
       // Navigate through wizard
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      await user.click(screen.getByRole("button", { name: /Choose My Team/i }));
+      await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
+      await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
 
       // Select a team
       await user.click(screen.getByRole("button", { name: /Select Team 1/i }));
@@ -281,7 +288,7 @@ describe("WelcomeWizard", () => {
       await user.click(screen.getByRole("button", { name: /Back/i }));
 
       // Should go back to team selection
-      expect(screen.getByText(/How would you like to use Worktime?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
     });
 
     it("should show correct progress for vacation allowance step", () => {
@@ -294,7 +301,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      expect(screen.getByText(/Step 4 of 4/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 5 of 5/i)).toBeInTheDocument();
     });
 
     it("should show validation error for negative vacation amount", async () => {
@@ -493,19 +500,24 @@ describe("WelcomeWizard", () => {
 
       // Verify welcome wizard appears with correct initial step
       await findModalTitle(/Welcome to Worktime/i);
-      expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 1 of 5/i)).toBeInTheDocument();
 
       // Navigate to features step
       await user.click(screen.getByText("Let's Get Started!"));
-      expect(screen.getByText(/Step 2 of 4/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 2 of 5/i)).toBeInTheDocument();
 
-      // Navigate to team selection step
-      await user.click(screen.getByText(/Choose My Team/i));
-      expect(screen.getByText(/Step 3 of 4/i)).toBeInTheDocument();
+      // Navigate to schedule selection step
+      await user.click(screen.getByText(/Choose a Schedule/i));
+      expect(screen.getByText(/Step 3 of 5/i)).toBeInTheDocument();
+
+      // Choose 5-shift to reveal team selection
+      await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+      expect(screen.getByText(/Step 4 of 5/i)).toBeInTheDocument();
 
       // Select a team to go to vacation allowance step
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      expect(screen.getByText(/Step 4 of 4/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 5 of 5/i)).toBeInTheDocument();
     });
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
@@ -576,7 +588,7 @@ describe("WelcomeWizard", () => {
 
       // Should show the wizard again
       await waitFor(() =>
-        expect(screen.getByText(/How would you like to use Worktime/i)).toBeInTheDocument(),
+        expect(screen.getByText(/Choose your team/i)).toBeInTheDocument(),
       );
 
       // Navigate to vacation allowance step by selecting a team

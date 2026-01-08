@@ -38,6 +38,9 @@ export function TeamDetailModal({
   teamNumber,
   onViewTransfers,
 }: TeamDetailModalProps) {
+  const { settings, myTeam, scheduleOption } = useSettings();
+  const toast = useToast();
+
   const calendarTooltipId = useId();
   const transfersDisabledTooltipId = useId();
   const transfersTooltipId = useId();
@@ -86,9 +89,6 @@ export function TeamDetailModal({
   // Find current status
   const currentStatus = weekSchedule[0];
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
-
-  const toast = useToast();
-  const { settings, myTeam, scheduleOption } = useSettings();
 
   // Share handler for this team
   const handleShareSchedule = () => {

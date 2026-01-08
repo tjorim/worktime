@@ -411,7 +411,11 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={4} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Team 4: Morning")).toBeInTheDocument();
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 4);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        4,
+        "5-shift",
+      );
     });
   });
 
@@ -461,7 +465,11 @@ describe("CurrentStatus Component", () => {
         <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />,
       );
 
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 1);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        1,
+        "5-shift",
+      );
 
       rerender(
         <ToastProvider>
@@ -471,7 +479,11 @@ describe("CurrentStatus Component", () => {
         </ToastProvider>,
       );
 
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 2);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        2,
+        "5-shift",
+      );
     });
 
     it("should use memoized values correctly", () => {

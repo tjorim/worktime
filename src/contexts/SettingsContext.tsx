@@ -75,7 +75,7 @@ interface WorktimeUserState {
 const defaultUserState: WorktimeUserState = {
   hasCompletedOnboarding: false,
   myTeam: null,
-  scheduleOption: null,
+  scheduleOption: "5-shift",
   settings: defaultSettings,
 };
 

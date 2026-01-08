@@ -1,37 +1,44 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import React, { type ReactNode } from "react";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";
+
+const wrapper = ({ children }: { children: ReactNode }) =>
+  React.createElement(SettingsProvider, null, children);
 
 // All tests use myTeam/otherTeam naming to match the updated API
 
 describe("useTransferCalculations", () => {
   describe("Initial state and team management", () => {
     it("initializes with correct default values", () => {
-      const { result } = renderHook(() => useTransferCalculations({ myTeam: 1 }));
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: 1 }), { wrapper });
       expect(result.current.availableOtherTeams).toEqual([2, 3, 4, 5]);
       expect(result.current.otherTeam).toBe(2); // First available team
       expect(Array.isArray(result.current.transfers)).toBe(true);
     });
 
     it("excludes my team from available teams", () => {
-      const { result } = renderHook(() => useTransferCalculations({ myTeam: 3 }));
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: 3 }), { wrapper });
       expect(result.current.availableOtherTeams).toEqual([1, 2, 4, 5]);
       expect(result.current.otherTeam).toBe(1); // First available team
     });
 
     it("handles null my team", () => {
-      const { result } = renderHook(() => useTransferCalculations({ myTeam: null }));
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: null }), { wrapper });
       expect(result.current.availableOtherTeams).toEqual([1, 2, 3, 4, 5]);
       expect(result.current.transfers).toEqual([]);
     });
 
     it("accepts initial custom date props and allows setting other team", () => {
-      const { result } = renderHook(() =>
-        useTransferCalculations({
-          myTeam: 1,
-          customStartDate: "2025-01-01",
-          customEndDate: "2025-01-31",
-        }),
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            customStartDate: "2025-01-01",
+            customEndDate: "2025-01-31",
+          }),
+        { wrapper },
       );
       act(() => {
         result.current.setOtherTeam(3);
@@ -42,7 +49,7 @@ describe("useTransferCalculations", () => {
 
   describe("State management", () => {
     it("updates other team", () => {
-      const { result } = renderHook(() => useTransferCalculations({ myTeam: 1 }));
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: 1 }), { wrapper });
       act(() => {
         result.current.setOtherTeam(4);
       });
@@ -52,17 +59,19 @@ describe("useTransferCalculations", () => {
 
   describe("Transfer calculations", () => {
     it("returns empty transfers when no my team", () => {
-      const { result } = renderHook(() => useTransferCalculations({ myTeam: null }));
+      const { result } = renderHook(() => useTransferCalculations({ myTeam: null }), { wrapper });
       expect(result.current.transfers).toEqual([]);
     });
 
     it("calculates transfers for valid teams and custom date range", () => {
-      const { result } = renderHook(() =>
-        useTransferCalculations({
-          myTeam: 1,
-          customStartDate: "2025-01-01",
-          customEndDate: "2025-01-02",
-        }),
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            customStartDate: "2025-01-01",
+            customEndDate: "2025-01-02",
+          }),
+        { wrapper },
       );
       act(() => {
         result.current.setOtherTeam(2);
@@ -72,13 +81,15 @@ describe("useTransferCalculations", () => {
     });
 
     it("limits transfers to 20 maximum", () => {
-      const { result } = renderHook(() =>
-        useTransferCalculations({
-          myTeam: 1,
-          customStartDate: "2025-01-01",
-          customEndDate: "2025-12-31",
-          limit: 20,
-        }),
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            customStartDate: "2025-01-01",
+            customEndDate: "2025-12-31",
+            limit: 20,
+          }),
+        { wrapper },
       );
       act(() => {
         result.current.setOtherTeam(2);
@@ -89,9 +100,13 @@ describe("useTransferCalculations", () => {
 
   describe("Team updates and effects", () => {
     it("updates other team when my team changes and other team becomes unavailable", () => {
-      const { result, rerender } = renderHook(({ myTeam }) => useTransferCalculations({ myTeam }), {
-        initialProps: { myTeam: 1 },
-      });
+      const { result, rerender } = renderHook(
+        ({ myTeam }) => useTransferCalculations({ myTeam }),
+        {
+          initialProps: { myTeam: 1 },
+          wrapper,
+        },
+      );
       act(() => {
         result.current.setOtherTeam(3);
       });
@@ -102,9 +117,13 @@ describe("useTransferCalculations", () => {
     });
 
     it("maintains other team when it remains available after my team change", () => {
-      const { result, rerender } = renderHook(({ myTeam }) => useTransferCalculations({ myTeam }), {
-        initialProps: { myTeam: 1 },
-      });
+      const { result, rerender } = renderHook(
+        ({ myTeam }) => useTransferCalculations({ myTeam }),
+        {
+          initialProps: { myTeam: 1 },
+          wrapper,
+        },
+      );
       act(() => {
         result.current.setOtherTeam(4);
       });
@@ -117,12 +136,14 @@ describe("useTransferCalculations", () => {
 
   describe("Transfer info structure", () => {
     it("returns transfers with correct structure", () => {
-      const { result } = renderHook(() =>
-        useTransferCalculations({
-          myTeam: 1,
-          customStartDate: "2025-01-01",
-          customEndDate: "2025-01-07",
-        }),
+      const { result } = renderHook(
+        () =>
+          useTransferCalculations({
+            myTeam: 1,
+            customStartDate: "2025-01-01",
+            customEndDate: "2025-01-07",
+          }),
+        { wrapper },
       );
       act(() => {
         result.current.setOtherTeam(2);
