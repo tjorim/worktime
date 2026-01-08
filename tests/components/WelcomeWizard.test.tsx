@@ -544,5 +544,68 @@ describe("WelcomeWizard", () => {
       expect(saved.hasCompletedOnboarding).toBe(true);
       expect(saved.myTeam).toBeNull(); // No team was selected
     });
+
+    it("should save vacation allowance when updated in change-team mode", async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Complete initial onboarding
+      await findModalTitle(/Welcome to Worktime/i);
+      await navigateToTeamSelection(user);
+      await user.click(screen.getByLabelText(/Select Team 1/i));
+
+      // Set initial vacation allowance
+      const initialAmountInput = screen.getByLabelText(/Annual vacation allowance/i);
+      await user.clear(initialAmountInput);
+      await user.type(initialAmountInput, "25");
+      await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
+
+      // Wait for wizard to close
+      await waitFor(() =>
+        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+      );
+
+      // Verify initial vacation allowance was saved
+      let saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
+      expect(saved.settings?.vacationAllowance?.amount).toBe(25);
+      expect(saved.myTeam).toBe(1);
+
+      // Now open the wizard in change-team mode
+      const changeTeamButton = screen.getByRole("button", { name: /Change Team/i });
+      await user.click(changeTeamButton);
+
+      // Should show the wizard again
+      await waitFor(() =>
+        expect(screen.getByText(/How would you like to use Worktime/i)).toBeInTheDocument(),
+      );
+
+      // Navigate to vacation allowance step by selecting a team
+      await user.click(screen.getByLabelText(/Select Team 2/i));
+      expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
+
+      // Update vacation allowance
+      const updatedAmountInput = screen.getByLabelText(/Annual vacation allowance/i);
+      await user.clear(updatedAmountInput);
+      await user.type(updatedAmountInput, "30");
+
+      // Save the update
+      await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
+
+      // Wait for wizard to close
+      await waitFor(() =>
+        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+      );
+
+      // Verify vacation allowance was updated in change-team mode
+      saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
+      expect(saved.settings?.vacationAllowance?.amount).toBe(30);
+      expect(saved.settings?.vacationAllowance?.unit).toBe("days");
+      expect(saved.myTeam).toBe(2); // Team was changed
+
+      // Verify success toast was shown
+      await waitFor(() => {
+        expect(screen.getByText(/Vacation allowance updated successfully/i)).toBeInTheDocument();
+      });
+    });
   });
 });
