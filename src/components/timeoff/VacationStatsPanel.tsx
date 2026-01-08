@@ -135,11 +135,16 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                     onChange={handleAmountChange}
                     placeholder="e.g., 25"
                     isInvalid={isAmountInvalid}
+                    aria-describedby={
+                      isAmountInvalid
+                        ? "vacationAllowanceAmount-feedback vacationAllowanceAmountHelp"
+                        : "vacationAllowanceAmountHelp"
+                    }
                   />
-                  <Form.Control.Feedback type="invalid">
+                  <Form.Control.Feedback type="invalid" id="vacationAllowanceAmount-feedback">
                     Please enter a valid number (0 or greater)
                   </Form.Control.Feedback>
-                  <Form.Text className="text-muted">
+                  <Form.Text className="text-muted" id="vacationAllowanceAmountHelp">
                     Set to 0 to disable vacation tracking
                   </Form.Text>
                 </Form.Group>
@@ -163,11 +168,18 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                         value={hoursPerDayInput}
                         onChange={handleHoursPerDayChange}
                         isInvalid={isHoursPerDayInvalid}
+                        aria-describedby={
+                          isHoursPerDayInvalid
+                            ? "vacationHoursPerDay-feedback vacationHoursPerDayHelp"
+                            : "vacationHoursPerDayHelp"
+                        }
                       />
-                      <Form.Control.Feedback type="invalid">
+                      <Form.Control.Feedback type="invalid" id="vacationHoursPerDay-feedback">
                         Please enter a value of at least 1
                       </Form.Control.Feedback>
-                      <Form.Text className="text-muted">For conversion</Form.Text>
+                      <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
+                        For conversion
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
