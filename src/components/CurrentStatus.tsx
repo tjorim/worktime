@@ -8,7 +8,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { getTeamCountForOption } from "../utils/scheduleUtils";
+import { getScheduleConfig, getTeamCountForOption } from "../utils/scheduleUtils";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
 import {
@@ -53,6 +53,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   const teamTooltipId = useId();
   const { settings, scheduleOption } = useSettings();
   const teamCount = getTeamCountForOption(scheduleOption);
+  const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
 
   // Validate and sanitize myTeam prop
   const validatedTeam =
@@ -256,7 +257,11 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
               <Card className="h-100">
                 <Card.Body className="d-flex flex-column">
                   <Card.Title as="h6" className="mb-2 text-primary">
-                    {validatedTeam ? "🏷️ Your Team Status" : "👥 Current Status"}
+                    {validatedTeam
+                      ? "🏷️ Your Team Status"
+                      : hasTeams
+                        ? "👥 Current Status"
+                        : "📅 Current Status"}
                   </Card.Title>
                   <div className="flex-grow-1">
                     {validatedTeam && currentShift ? (
@@ -281,7 +286,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                           <Badge
                             className={`shift-code shift-badge-lg cursor-help ${getShiftByCode(currentShift.shift.code).className}`}
                           >
-                            Team {validatedTeam}: {currentShift.shift.name}
+                            {hasTeams
+                              ? `Team ${validatedTeam}: ${currentShift.shift.name}`
+                              : currentShift.shift.name}
                           </Badge>
                         </OverlayTrigger>
                         {currentShift.shift.start && currentShift.shift.end && (
@@ -315,7 +322,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             <Badge
                               className={`shift-code shift-badge-lg ${getShiftByCode(currentWorkingTeam.shift.code).className}`}
                             >
-                              Team {currentWorkingTeam.teamNumber}: {currentWorkingTeam.shift.name}
+                              {hasTeams
+                                ? `Team ${currentWorkingTeam.teamNumber}: ${currentWorkingTeam.shift.name}`
+                                : currentWorkingTeam.shift.name}
                             </Badge>
                             <div className="small text-muted mt-1">
                               {currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
@@ -380,7 +389,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                     ) : nextShiftAnyTeam ? (
                       <div>
                         <div className="fw-semibold">
-                          Team {nextShiftAnyTeam.teamNumber}:{" "}
+                          {hasTeams
+                            ? `Team ${nextShiftAnyTeam.teamNumber}: `
+                            : ""}
                           {nextShiftAnyTeam.date.format("ddd, MMM D")} -{" "}
                           {nextShiftAnyTeam.shift.name}
                         </div>

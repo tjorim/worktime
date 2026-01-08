@@ -8,6 +8,7 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { dayjs, getISOWeekYear2Digit, getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import { getShiftByCode, isCurrentlyWorking } from "../utils/shiftCalculations";
@@ -36,11 +37,13 @@ function TeamCard({
   shiftResult,
   isMyTeam,
   isCurrentlyActive,
+  hasTeams,
   onTeamClick,
 }: {
   shiftResult: ShiftResult;
   isMyTeam: boolean;
   isCurrentlyActive: boolean;
+  hasTeams: boolean;
   onTeamClick?: (teamNumber: number) => void;
 }) {
   const { settings } = useSettings();
@@ -58,7 +61,11 @@ function TeamCard({
           <Badge
             bg="success"
             className="live-badge"
-            aria-label={`Team ${shiftResult.teamNumber} is currently working`}
+            aria-label={
+              hasTeams
+                ? `Team ${shiftResult.teamNumber} is currently working`
+                : "Schedule is currently working"
+            }
           >
             LIVE
           </Badge>
@@ -69,7 +76,9 @@ function TeamCard({
         style={{ position: "relative", zIndex: 2 }}
       >
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">Team {shiftResult.teamNumber}</h6>
+          <h6 className="mb-0">
+            {hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}
+          </h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -130,7 +139,11 @@ function TeamCard({
       <Card
         className={`team-card-interactive w-100${isMyTeam ? " my-team" : ""}`}
         onClick={() => onTeamClick(shiftResult.teamNumber)}
-        title={`View details for Team ${shiftResult.teamNumber}`}
+        title={
+          hasTeams
+            ? `View details for Team ${shiftResult.teamNumber}`
+            : "View schedule details"
+        }
         style={{ cursor: "pointer" }}
         tabIndex={0}
         onKeyDown={(e) => {
@@ -163,6 +176,8 @@ function TeamCard({
  */
 export function TodayView({ todayShifts, myTeam, onTodayClick, onTeamClick }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
+  const { scheduleOption } = useSettings();
+  const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;
@@ -179,7 +194,7 @@ export function TodayView({ todayShifts, myTeam, onTodayClick, onTeamClick }: To
   return (
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center">
-        <h6 className="mb-0">👥 All Teams Today</h6>
+        <h6 className="mb-0">{hasTeams ? "👥 All Teams Today" : "📅 Today's Schedule"}</h6>
         <Button variant="outline-primary" size="sm" onClick={onTodayClick}>
           <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
           Today
@@ -204,6 +219,7 @@ export function TodayView({ todayShifts, myTeam, onTodayClick, onTeamClick }: To
                 shiftResult={shiftResult}
                 isMyTeam={myTeam === shiftResult.teamNumber}
                 isCurrentlyActive={isCurrentlyActive(shiftResult)}
+                hasTeams={hasTeams}
                 onTeamClick={onTeamClick}
               />
             </Col>

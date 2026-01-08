@@ -44,6 +44,7 @@ export function ScheduleView({
   const { settings, scheduleOption } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleOption);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
@@ -138,9 +139,19 @@ export function ScheduleView({
         </div>
       </Card.Header>
       <Card.Body>
-        {myTeam && (
+        {myTeam && hasTeams && (
           <div className="mb-3">
             <strong>👥 Team {myTeam} Schedule:</strong>
+            <div className="text-muted small">
+              Week of {startOfWeek.format("MMM D")} -{" "}
+              {startOfWeek.add(6, "day").format("MMM D, YYYY")}
+            </div>
+          </div>
+        )}
+
+        {!hasTeams && (
+          <div className="mb-3">
+            <strong>📅 Your Schedule:</strong>
             <div className="text-muted small">
               Week of {startOfWeek.format("MMM D")} -{" "}
               {startOfWeek.add(6, "day").format("MMM D, YYYY")}
@@ -155,7 +166,7 @@ export function ScheduleView({
           >
             <thead>
               <tr>
-                <th className="team-header">Team</th>
+                <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
                 {weekDays.map((day) => {
                   const isToday = day.isSame(dayjs(), "day");
                   return (
@@ -194,10 +205,14 @@ export function ScheduleView({
                 <tr
                   key={teamNumber}
                   className={isMyTeam(teamNumber)}
-                  aria-label={`Team ${teamNumber}${myTeam === teamNumber ? " (your team)" : ""}`}
+                  aria-label={
+                    hasTeams
+                      ? `Team ${teamNumber}${myTeam === teamNumber ? " (your team)" : ""}`
+                      : "Schedule"
+                  }
                 >
                   <td className="team-header">
-                    <strong>Team {teamNumber}</strong>
+                    <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
                   </td>
                   {weekDays.map((day) => {
                     const shift = calculateShift(day, teamNumber, scheduleOption ?? undefined);
@@ -207,7 +222,11 @@ export function ScheduleView({
                       <td
                         key={day.format("YYYY-MM-DD")}
                         className={`text-center ${isToday ? "today-column" : ""}`}
-                        aria-label={`Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`}
+                        aria-label={
+                          hasTeams
+                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                        }
                       >
                         {shift.isWorking && (
                           <OverlayTrigger
