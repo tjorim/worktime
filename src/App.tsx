@@ -32,6 +32,7 @@ function AppContent() {
     setMyTeam,
     hasCompletedOnboarding,
     completeOnboardingWithVacation,
+    updateVacationAllowance,
     settings,
   } = useSettings();
   const { currentDate, setCurrentDate, todayShifts } = useShiftCalculation();
@@ -140,6 +141,10 @@ function AppContent() {
       if (myTeam !== null) {
         showSuccess(`Team ${myTeam} selected! Your shifts are now personalized.`, "🎯");
       }
+    } else if (teamModalMode === "change-team" && vacationAllowance) {
+      // Persist vacation allowance changes in change-team mode
+      updateVacationAllowance(vacationAllowance);
+      showSuccess("Vacation allowance updated successfully.", "✅");
     }
     setShowTeamModal(false);
   };
