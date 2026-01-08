@@ -218,9 +218,9 @@ describe("ChangelogModal", () => {
       Object.entries(futurePlans).forEach(([_version, plan]) => {
         // Check that first two features from each plan are shown (features are comma-separated in display)
         const firstTwoFeatures = plan.features.slice(0, 2).join(", ");
-        expect(
-          screen.getByText(new RegExp(firstTwoFeatures.replace(/[()]/g, "\\$&"))),
-        ).toBeInTheDocument();
+        // Escape all regex special characters for safe use in RegExp
+        const escapedFeatures = firstTwoFeatures.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        expect(screen.getByText(new RegExp(escapedFeatures))).toBeInTheDocument();
       });
     });
   });
