@@ -10,6 +10,7 @@ import type { Dayjs } from "dayjs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import { getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
@@ -180,6 +181,13 @@ export function TodayView({ todayShifts, myTeam, currentDate, onPreviousDay, onN
   const { scheduleOption } = useSettings();
   const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onToday: onTodayClick,
+    onPrevious: onPreviousDay,
+    onNext: onNextDay,
+  });
+
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;
     const now = dayjs();
@@ -231,6 +239,7 @@ export function TodayView({ todayShifts, myTeam, currentDate, onPreviousDay, onN
         <div className="text-muted small">
           {displayDate.format("dddd, MMMM D, YYYY")}
           {isToday && <Badge bg="success" className="ms-2">Today</Badge>}
+          <span className="ms-3">⌨️ Keyboard: ← → arrows, Ctrl+H (today)</span>
         </div>
       </Card.Header>
       <Card.Body>

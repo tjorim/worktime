@@ -305,11 +305,15 @@ export function MonthCalendar({
   };
 
   const contextMenuItems = getContextMenuItems();
+  
+  // Check if we're viewing the current month
+  const currentMonth = dayjs().startOf("month");
+  const isCurrentMonth = month.isSame(currentMonth, "month");
 
   return (
     <div className="month-calendar">
       <div className="month-calendar-header d-flex align-items-center justify-content-between mb-3">
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex gap-2">
           <Button
             variant="outline-secondary"
             size="sm"
@@ -319,11 +323,13 @@ export function MonthCalendar({
             <i className="bi bi-chevron-left" aria-hidden="true"></i>
           </Button>
           <Button
-            variant="outline-secondary"
+            variant={isCurrentMonth ? "primary" : "outline-primary"}
             size="sm"
             onClick={() => handleMoveFocus(dayjs())}
+            disabled={isCurrentMonth}
             aria-label="Jump to current month"
           >
+            <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
             Today
           </Button>
           <Button

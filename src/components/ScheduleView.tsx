@@ -2,7 +2,6 @@ import type { Dayjs } from "dayjs";
 import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -76,6 +75,10 @@ export function ScheduleView({
   // Generate Monday-Sunday week containing the current date
   const startOfWeek = currentDate.startOf("isoWeek"); // Monday (ISO week)
   const weekDays = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
+  
+  // Check if we're viewing the current week
+  const currentWeekStart = dayjs().startOf("isoWeek");
+  const isCurrentWeek = startOfWeek.isSame(currentWeekStart, "day");
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -89,20 +92,20 @@ export function ScheduleView({
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h6 className="mb-0">📅 Schedule Overview</h6>
-          <ButtonGroup aria-label="Week navigation">
+          <div className="d-flex gap-2">
             <Button
               variant="outline-secondary"
               size="sm"
               onClick={handlePrevious}
               aria-label="Go to previous week"
             >
-              <i className="bi bi-chevron-left me-1" aria-hidden="true"></i>
-              Previous
+              <i className="bi bi-chevron-left" aria-hidden="true"></i>
             </Button>
             <Button
-              variant="outline-primary"
+              variant={isCurrentWeek ? "primary" : "outline-primary"}
               size="sm"
               onClick={handleCurrent}
+              disabled={isCurrentWeek}
               aria-label="Go to current week"
             >
               <i className="bi bi-house me-1" aria-hidden="true"></i>
@@ -114,10 +117,9 @@ export function ScheduleView({
               onClick={handleNext}
               aria-label="Go to next week"
             >
-              Next
-              <i className="bi bi-chevron-right ms-1" aria-hidden="true"></i>
+              <i className="bi bi-chevron-right" aria-hidden="true"></i>
             </Button>
-          </ButtonGroup>
+          </div>
         </div>
         <div className="d-flex justify-content-between align-items-center gap-3">
           <div className="d-flex align-items-center gap-2">
