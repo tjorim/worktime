@@ -216,6 +216,17 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* Shift color scheme
+ * Colors are chosen to be visually distinct and accessible:
+ * - Morning (blue): High contrast, symbolizes early/dawn
+ * - Late/Evening (orange-red): Warm color, symbolizes sunset
+ * - Day (orange): Bright daytime color, distinct from late shift
+ * - Night (purple): Cool dark color, symbolizes nighttime
+ * - Off (gray): Neutral, symbolizes rest/off-duty
+ * 
+ * All colors meet WCAG AA contrast requirements (4.5:1) against white text.
+ * Color-blind safe: Uses both hue and brightness differences.
+ */
 :root {
   --shift-morning: #1976d2;
   --shift-morning-text: #ffffff;

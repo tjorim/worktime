@@ -15,12 +15,14 @@ export type ShiftDisplayOverrides = {
 };
 
 export type ShiftRosterConfig = {
-  teamCount?: number;
-  cycleLengthDays?: number;
-  shiftsPerDay?: number;
-  schedulePattern?: SchedulePattern;
-  referenceDate?: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
-  referenceTeam?: number; // 1-based team number for reference point
+  // Required fields for shift calculation
+  teamCount: number;
+  cycleLengthDays: number;
+  shiftsPerDay: number;
+  schedulePattern: SchedulePattern;
+  referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
+  referenceTeam: number; // 1-based team number for reference point
+  // Optional fields
   notes?: string;
   shiftDisplayOverrides?: ShiftDisplayOverrides;
 };
@@ -41,6 +43,7 @@ export type ScheduleRoster = {
   title: string;
   description: string;
   showsTeamSelection: boolean;
+  isAvailable: boolean; // Whether this schedule is available for selection
   shiftConfig: ShiftRosterConfig;
 };
 
@@ -50,6 +53,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     title: "9-5",
     description: "Standard weekday schedule with weekends off.",
     showsTeamSelection: false,
+    isAvailable: true,
     shiftConfig: {
       teamCount: 1,
       cycleLengthDays: 7,
@@ -76,6 +80,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     title: "2-shift",
     description: "Alternating early and late shifts each week.",
     showsTeamSelection: false,
+    isAvailable: false, // Coming soon
     shiftConfig: {
       teamCount: 2,
       cycleLengthDays: 28,
@@ -134,6 +139,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     title: "Weekend shift",
     description: "Weekend-only teams rotating early one weekend, late the next.",
     showsTeamSelection: false,
+    isAvailable: false, // Coming soon
     shiftConfig: {
       teamCount: 2,
       cycleLengthDays: 14,
@@ -173,6 +179,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     title: "5-shift",
     description: "Continuous rotating shifts across multiple teams.",
     showsTeamSelection: true,
+    isAvailable: true,
     shiftConfig: {
       teamCount: 5,
       cycleLengthDays: 10,

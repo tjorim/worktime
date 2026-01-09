@@ -412,7 +412,8 @@ export function WelcomeWizard({
               variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
               className="w-100 text-start mb-2"
               onClick={() => handleScheduleChange(schedule.value)}
-              disabled={isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)}
+              disabled={isLoading || !schedule.isAvailable}
+              title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
               ref={
                 currentStep === "schedule-selection" && schedule.value === "9-5"
                   ? firstButtonRef
@@ -421,7 +422,7 @@ export function WelcomeWizard({
             >
               <div className="fw-semibold d-flex align-items-center gap-2">
                 <span>{schedule.title}</span>
-                {["2-shift", "weekend-shift"].includes(schedule.value) && (
+                {!schedule.isAvailable && (
                   <span className="badge bg-secondary">Coming Soon</span>
                 )}
               </div>
