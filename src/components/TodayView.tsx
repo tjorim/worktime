@@ -9,9 +9,9 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
-import { dayjs, getISOWeekYear2Digit, getLocalizedShiftTime } from "../utils/dateTimeUtils";
+import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
-import { getShiftByCode, getShiftDisplay, isCurrentlyWorking } from "../utils/shiftCalculations";
+import { getShiftByCode, getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
 
 interface TodayViewProps {
   todayShifts: ShiftResult[];
@@ -49,10 +49,7 @@ function TeamCard({
   const { settings, scheduleOption } = useSettings();
   const shiftDetails = getShiftByCode(shiftResult.shift.code);
   const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
-  const shiftTimeLabel =
-    shiftResult.shift.start != null && shiftResult.shift.end != null
-      ? getLocalizedShiftTime(shiftResult.shift.start, shiftResult.shift.end, settings.timeFormat)
-      : shiftDisplay.displayHours;
+  const shiftTimeLabel = getFormattedShiftTime(shiftResult.shift, scheduleOption, settings.timeFormat);
 
   const cardContent = (
     <>

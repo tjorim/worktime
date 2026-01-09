@@ -15,9 +15,8 @@ import {
   dayjs,
   formatTimeByPreference,
   formatYYWWD,
-  getLocalizedShiftTime,
 } from "../utils/dateTimeUtils";
-import type { UpcomingShiftResult, OffDayProgress, ShiftResult, ShiftOrUnknown } from "../utils/shiftCalculations";
+import type { UpcomingShiftResult, OffDayProgress, ShiftResult } from "../utils/shiftCalculations";
 import {
   calculateShift,
   getAllTeamsShifts,
@@ -25,8 +24,9 @@ import {
   getNextShift,
   getOffDayProgress,
   getShiftByCode,
-  getShiftCode,
   getShiftDisplay,
+  getShiftCode,
+  getFormattedShiftTime,
   isCurrentlyWorking,
 } from "../utils/shiftCalculations";
 import { ShiftTimeline } from "./ShiftTimeline";
@@ -35,21 +35,6 @@ interface CurrentStatusProps {
   myTeam: number | null; // The user's team from onboarding
   onChangeTeam: () => void;
   onShowWhoIsWorking?: () => void;
-}
-
-/**
- * Helper function to format shift time with roster-specific overrides.
- * Returns localized time if numeric start/end are available, otherwise returns displayHours string.
- */
-function getFormattedShiftTime(
-  shift: ShiftOrUnknown,
-  scheduleOption: ReturnType<typeof useSettings>["scheduleOption"],
-  timeFormat: "12h" | "24h",
-): string {
-  const { displayHours } = getShiftDisplay(shift, scheduleOption);
-  return shift.start != null && shift.end != null
-    ? getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours
-    : displayHours;
 }
 
 /**

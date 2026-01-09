@@ -67,7 +67,7 @@
 
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "../data/rosters";
-import { dayjs, formatYYWWD } from "./dateTimeUtils";
+import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
@@ -277,6 +277,29 @@ export function getShiftDisplay(
     displayHours: override?.displayHours ?? shift.hours,
     displayCode: override?.displayCode ?? shift.code,
   };
+}
+
+/**
+ * Format shift time with localization fallback to display hours.
+ * 
+ * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when shift has valid start/end times,
+ * otherwise returns the display hours from shift display overrides. This ensures consistent
+ * shift time formatting across the app.
+ * 
+ * @param shift - Shift object with code, start, and end times
+ * @param scheduleOption - Schedule option for display overrides
+ * @param timeFormat - Time format preference ("12h" or "24h")
+ * @returns Formatted shift time string
+ */
+export function getFormattedShiftTime(
+  shift: ShiftOrUnknown,
+  scheduleOption: NullableScheduleOption,
+  timeFormat: "12h" | "24h",
+): string {
+  const { displayHours } = getShiftDisplay(shift, scheduleOption);
+  return shift.start != null && shift.end != null
+    ? getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours
+    : displayHours;
 }
 
 /**
