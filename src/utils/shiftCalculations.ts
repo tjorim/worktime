@@ -555,21 +555,21 @@ export function getOffDayProgress(
     totalOffDays = schedulePattern.days.filter((day) => day.shift === "O").length;
   } else if (schedulePattern?.type === "weekly-rotation") {
     // For weekly-rotation, calculate consecutive off days by looking at the pattern
-    // Count consecutive off days in the week (typically weekends for 9-5)
+    // Helper to check if a specific ISO weekday has a shift
+    const dayHasShift = (isoDay: number): boolean => {
+      return schedulePattern.weeks.some((week) =>
+        week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoDay)
+      );
+    };
     
     // Count the max consecutive off days in the weekly pattern
-    // We'll scan through a typical week to find consecutive off days
+    // Scan through a typical week to find consecutive off days
     let maxConsecutiveOff = 0;
     let currentConsecutiveOff = 0;
     
     // Check each day in a week (Mon=1, Sun=7)
     for (let isoDay = 1; isoDay <= 7; isoDay++) {
-      // Check if any week pattern has a shift for this day
-      const hasShiftThisDay = schedulePattern.weeks.some((week) =>
-        week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoDay)
-      );
-      
-      if (!hasShiftThisDay) {
+      if (!dayHasShift(isoDay)) {
         // This day is off
         currentConsecutiveOff++;
         maxConsecutiveOff = Math.max(maxConsecutiveOff, currentConsecutiveOff);
@@ -579,43 +579,32 @@ export function getOffDayProgress(
       }
     }
     
-    // Check wrap-around (if Sunday and Monday are both off)
-    const mondayHasShift = schedulePattern.weeks.some((week) =>
-      week.days.some((day) => ISO_WEEKDAY_MAP[day] === 1)
-    );
-    const sundayHasShift = schedulePattern.weeks.some((week) =>
-      week.days.some((day) => ISO_WEEKDAY_MAP[day] === 7)
-    );
-    
-    if (!mondayHasShift && !sundayHasShift) {
-      // Count from beginning of week forward to find consecutive off days at start
+    // Check wrap-around: if both Sunday and Monday are off, count consecutive days across week boundary
+    if (!dayHasShift(7) && !dayHasShift(1)) {
+      // Count consecutive off days from beginning of week (Monday forward)
       let startConsecutiveOff = 0;
       for (let isoDay = 1; isoDay <= 7; isoDay++) {
-        const hasShiftThisDay = schedulePattern.weeks.some((week) =>
-          week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoDay)
-        );
-        if (!hasShiftThisDay) {
+        if (!dayHasShift(isoDay)) {
           startConsecutiveOff++;
         } else {
-          break;
+          break; // Stop at first working day
         }
       }
       
-      // Count from end of week backward to find consecutive off days at end
+      // Count consecutive off days from end of week (Sunday backward)
       let endConsecutiveOff = 0;
       for (let isoDay = 7; isoDay >= 1; isoDay--) {
-        const hasShiftThisDay = schedulePattern.weeks.some((week) =>
-          week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoDay)
-        );
-        if (!hasShiftThisDay) {
+        if (!dayHasShift(isoDay)) {
           endConsecutiveOff++;
         } else {
-          break;
+          break; // Stop at first working day
         }
       }
       
-      // Wrap-around total
-      maxConsecutiveOff = Math.max(maxConsecutiveOff, startConsecutiveOff + endConsecutiveOff);
+      // Only combine if they don't overlap (i.e., the entire week isn't off)
+      if (startConsecutiveOff + endConsecutiveOff <= 7) {
+        maxConsecutiveOff = Math.max(maxConsecutiveOff, startConsecutiveOff + endConsecutiveOff);
+      }
     }
     
     totalOffDays = maxConsecutiveOff > 0 ? maxConsecutiveOff : null;
