@@ -3,14 +3,15 @@ import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../d
 export function getScheduleConfig(
   scheduleOption: ScheduleOption | null | undefined,
 ): ScheduleRoster {
+  const lookupKey = scheduleOption ?? "5-shift";
   const config = SCHEDULE_OPTIONS.find(
-    (option) => option.value === (scheduleOption ?? "5-shift")
+    (option) => option.value === lookupKey
   );
 
   if (!config) {
     // This error can be reached if scheduleOption is invalid or if the default '5-shift' is missing
     throw new Error(
-      `Schedule configuration not found for option '${scheduleOption ?? "5-shift"}'. ` +
+      `Schedule configuration not found (provided: ${scheduleOption}, lookup: '${lookupKey}'). ` +
       `Available options: ${SCHEDULE_OPTIONS.map(o => o.value).join(", ")}`
     );
   }
