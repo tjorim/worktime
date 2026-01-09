@@ -23,6 +23,7 @@ interface SettingsPanelProps {
  * @param show - Whether the settings panel is visible
  * @param onHide - Callback invoked to hide the settings panel
  * @param onShowAbout - Optional callback invoked to show the About modal
+ * @param onChangeSchedule - Optional callback invoked when the user wants to change the schedule
  * @returns The rendered settings panel element
  */
 export function SettingsPanel({

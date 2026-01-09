@@ -648,5 +648,194 @@ describe("WelcomeWizard", () => {
         expect(screen.getByText(/Vacation allowance updated successfully/i)).toBeInTheDocument();
       });
     });
+
+    it("should navigate directly to schedule selection in change-schedule mode", async () => {
+      const onScheduleSelect = vi.fn();
+      const onHide = vi.fn();
+      
+      renderWithProviders(
+        <WelcomeWizard
+          {...defaultProps}
+          mode="change-schedule"
+          onScheduleSelect={onScheduleSelect}
+          onHide={onHide}
+        />
+      );
+
+      // Should start directly at schedule selection
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+      
+      // Should show step 1 of 2 (schedule selection + team selection if needed)
+      expect(screen.getByText(/Step 1 of/i)).toBeInTheDocument();
+    });
+
+    it("should show Cancel button in change-schedule mode", async () => {
+      const user = userEvent.setup();
+      const onHide = vi.fn();
+      
+      renderWithProviders(
+        <WelcomeWizard
+          {...defaultProps}
+          mode="change-schedule"
+          onHide={onHide}
+        />
+      );
+
+      // Should show Cancel button instead of Skip
+      const cancelButton = screen.getByRole("button", { name: /Cancel/i });
+      expect(cancelButton).toBeInTheDocument();
+      
+      // Cancel should call onHide
+      await user.click(cancelButton);
+      expect(onHide).toHaveBeenCalledTimes(1);
+    });
+
+    it("should show Save Schedule button when selecting schedule without team selection in change-schedule mode", async () => {
+      const user = userEvent.setup();
+      const onScheduleSelect = vi.fn();
+      
+      renderWithProviders(
+        <WelcomeWizard
+          {...defaultProps}
+          mode="change-schedule"
+          onScheduleSelect={onScheduleSelect}
+        />
+      );
+
+      // Wait for schedule selection to render
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+
+      // Select a schedule that doesn't require team selection (9-5)
+      await user.click(screen.getByRole("button", { name: /9-5/i }));
+      
+      // Wait for button to update and show "Save Schedule"
+      await waitFor(() => {
+        const saveButton = screen.getByRole("button", { name: /Save Schedule/i });
+        expect(saveButton).toBeInTheDocument();
+      });
+    });
+
+    it("should navigate to team selection when schedule requires teams in change-schedule mode", async () => {
+      const user = userEvent.setup();
+      const onScheduleSelect = vi.fn();
+      const onTeamSelect = vi.fn();
+      const onHide = vi.fn();
+      
+      renderWithProviders(
+        <WelcomeWizard
+          {...defaultProps}
+          mode="change-schedule"
+          onScheduleSelect={onScheduleSelect}
+          onTeamSelect={onTeamSelect}
+          onHide={onHide}
+        />
+      );
+
+      // Wait for schedule selection to render
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+
+      // Select a schedule that requires team selection (5-shift)
+      await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      
+      // Should show Continue button (not Save Schedule) because team selection is needed
+      await waitFor(() => {
+        const continueButton = screen.getByRole("button", { name: /Continue/i });
+        expect(continueButton).toBeInTheDocument();
+      });
+      
+      // Click Continue to move to team selection
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+      
+      // Should move to team selection
+      await waitFor(() => {
+        expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
+      });
+      
+      // Select a team - this should call onTeamSelect and onHide
+      await user.click(screen.getByLabelText(/Select Team 3/i));
+      
+      // Verify onTeamSelect was called with team 3
+      await waitFor(() => {
+        expect(onTeamSelect).toHaveBeenCalledWith(3);
+      });
+      
+      // Verify onHide was called (wizard closes immediately in change-schedule mode)
+      expect(onHide).toHaveBeenCalled();
+    });
+  });
+
+  describe("Schedule change integration tests", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("should open Change Schedule wizard when Change Schedule button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Complete initial onboarding by manually navigating through wizard
+      await findModalTitle(/Welcome to Worktime/i);
+      
+      // Step 1: Welcome -> Features
+      const getStartedButton = screen.getByRole("button", { name: /Let's Get Started/i });
+      await user.click(getStartedButton);
+      
+      // Step 2: Features -> Schedule Selection
+      await waitFor(() => {
+        expect(screen.getByText(/What can Worktime do\?/i)).toBeInTheDocument();
+      });
+      const chooseScheduleButton = screen.getByRole("button", { name: /Choose a Schedule/i });
+      await user.click(chooseScheduleButton);
+      
+      // Step 3: Schedule Selection -> Team Selection
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /5-shift/i }));
+      await user.click(screen.getByRole("button", { name: /Continue/i }));
+      
+      // Step 4: Team Selection -> Vacation Allowance
+      await waitFor(() => {
+        expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByLabelText(/Select Team 1/i));
+      
+      // Step 5: Vacation Allowance -> Complete
+      await waitFor(() => {
+        expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Complete/i }));
+
+      // Wait for wizard to close
+      await waitFor(() =>
+        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+      );
+
+      // Open Settings panel
+      const settingsButton = screen.getByRole("button", { name: /Settings/i });
+      await user.click(settingsButton);
+
+      // Click Change Schedule button
+      await waitFor(() => {
+        const changeScheduleButton = screen.getByRole("button", { name: /Change Schedule/i });
+        expect(changeScheduleButton).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Change Schedule/i }));
+
+      // Should open wizard in change-schedule mode
+      await waitFor(() => {
+        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+      });
+    });
   });
 });
