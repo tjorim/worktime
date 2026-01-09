@@ -5,15 +5,17 @@ import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
   onShowAbout?: () => void;
+  onChangeSchedule?: () => void;
 }
 
 /**
  * Render the application header showing the title and action buttons for About and Settings.
  *
  * @param onShowAbout - Optional callback invoked when the About button is clicked
+ * @param onChangeSchedule - Optional callback invoked when the work schedule settings are changed
  * @returns The header React element containing the app title and action controls
  */
-export function Header({ onShowAbout }: HeaderProps = {}) {
+export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleShowAbout = () => {
@@ -60,6 +62,7 @@ export function Header({ onShowAbout }: HeaderProps = {}) {
         show={showSettings}
         onHide={() => setShowSettings(false)}
         onShowAbout={onShowAbout}
+        onChangeSchedule={onChangeSchedule}
       />
     </>
   );

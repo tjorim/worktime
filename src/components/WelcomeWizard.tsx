@@ -50,6 +50,7 @@ interface WelcomeWizardProps {
   onHide: (vacationAllowance?: { amount: number; unit: VacationAllowanceUnit }) => void;
   onDefer?: () => void;
   isLoading?: boolean;
+  mode?: "onboarding" | "change-team" | "change-schedule";
   startStep?: WizardStep;
 }
 
@@ -64,6 +65,7 @@ interface WelcomeWizardProps {
  * @param onHide - Called when the wizard is completed with optional vacation allowance data (marks onboarding as done)
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
+ * @param mode - Determines the wizard flow ("onboarding" | "change-team" | "change-schedule")
  * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "vacation-allowance")
  * @returns The WelcomeWizard React element
  */
@@ -75,7 +77,12 @@ export function WelcomeWizard({
   onHide,
   onDefer,
   isLoading = false,
-  startStep = "welcome",
+  mode = "onboarding",
+  startStep = mode === "change-team"
+    ? "team-selection"
+    : mode === "change-schedule"
+      ? "schedule-selection"
+      : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleOption } = useSettings();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
@@ -111,7 +118,8 @@ export function WelcomeWizard({
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
-  const isChangeTeamFlow = startStep === "team-selection";
+  const isChangeTeamFlow = mode === "change-team";
+  const isChangeScheduleFlow = mode === "change-schedule";
   const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
     (option) => option.value === selectedSchedule,
   );
@@ -122,11 +130,15 @@ export function WelcomeWizard({
 
   const getTotalSteps = () => {
     if (isChangeTeamFlow) return 1;
+    if (isChangeScheduleFlow) return shouldShowTeamSelection ? 2 : 1;
     return shouldShowTeamSelection ? 5 : 4;
   };
 
   const getStepIndex = () => {
     if (isChangeTeamFlow) return 1;
+    if (isChangeScheduleFlow) {
+      return currentStep === "team-selection" ? 2 : 1;
+    }
     switch (currentStep) {
       case "welcome":
         return 1;
@@ -156,11 +168,19 @@ export function WelcomeWizard({
 
   const handleTeamSelect = (team: number) => {
     onTeamSelect(team);
+    if (isChangeScheduleFlow) {
+      onHide();
+      return;
+    }
     nextStep(); // Go to vacation allowance step
   };
 
   const handleSkip = () => {
     onSkip?.();
+    if (isChangeScheduleFlow) {
+      onHide();
+      return;
+    }
     nextStep(); // Go to vacation allowance step
   };
 
@@ -195,9 +215,21 @@ export function WelcomeWizard({
       if (selectedSchedule && selectedSchedule !== scheduleOption) {
         onScheduleSelect?.(selectedSchedule);
       }
+      if (isChangeScheduleFlow) {
+        if (shouldShowTeamSelection) {
+          setCurrentStep("team-selection");
+        } else {
+          onHide();
+        }
+        return;
+      }
       setCurrentStep(shouldShowTeamSelection ? "team-selection" : "vacation-allowance");
     } else if (currentStep === "team-selection") {
-      setCurrentStep("vacation-allowance");
+      if (isChangeScheduleFlow) {
+        onHide();
+      } else {
+        setCurrentStep("vacation-allowance");
+      }
     }
   };
 
@@ -207,6 +239,10 @@ export function WelcomeWizard({
     } else if (currentStep === "team-selection") {
       setCurrentStep("schedule-selection");
     } else if (currentStep === "schedule-selection") {
+      if (isChangeScheduleFlow) {
+        onHide();
+        return;
+      }
       setCurrentStep("features");
     } else if (currentStep === "features") {
       setCurrentStep("welcome");
@@ -349,6 +385,18 @@ export function WelcomeWizard({
     const handleScheduleChange = (schedule: ScheduleOption) => {
       setSelectedSchedule(schedule);
     };
+    const handleBackClick = () => {
+      if (isChangeScheduleFlow) {
+        onHide();
+        return;
+      }
+      prevStep();
+    };
+    const continueLabel = isChangeScheduleFlow
+      ? shouldShowTeamSelection
+        ? "Continue"
+        : "Save Schedule"
+      : "Continue";
 
     return (
       <>
@@ -385,11 +433,12 @@ export function WelcomeWizard({
         </div>
 
         <div className="d-flex justify-content-between">
-          <Button variant="outline-secondary" onClick={prevStep} disabled={isLoading}>
-            <i className="bi bi-arrow-left me-1"></i> Back
+          <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading}>
+            <i className={`bi ${isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left"} me-1`}></i>{" "}
+            {isChangeScheduleFlow ? "Cancel" : "Back"}
           </Button>
           <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule}>
-            Continue <i className="bi bi-arrow-right ms-1"></i>
+            {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
           </Button>
         </div>
       </>

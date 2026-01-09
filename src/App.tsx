@@ -13,6 +13,7 @@ import type { ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
+import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
@@ -24,7 +25,9 @@ import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
  */
 function AppContent() {
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [teamModalMode, setTeamModalMode] = useState<"onboarding" | "change-team">("onboarding");
+  const [teamModalMode, setTeamModalMode] = useState<
+    "onboarding" | "change-team" | "change-schedule"
+  >("onboarding");
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo } = useToast();
@@ -33,6 +36,7 @@ function AppContent() {
     setMyTeam,
     hasCompletedOnboarding,
     completeOnboardingWithVacation,
+    scheduleOption,
     setScheduleOption,
     updateVacationAllowance,
     settings,
@@ -128,11 +132,26 @@ function AppContent() {
   };
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
+    const currentScheduleConfig = getScheduleConfig(scheduleOption ?? null);
+    const nextScheduleConfig = getScheduleConfig(schedule);
+    const teamCountChanged =
+      (currentScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT) !==
+      (nextScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT);
+    const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
+
+    if (teamCountChanged || teamsDisabled) {
+      setMyTeam(null);
+    }
     setScheduleOption(schedule);
   };
 
   const handleChangeTeam = () => {
     setTeamModalMode("change-team");
+    setShowTeamModal(true);
+  };
+
+  const handleChangeSchedule = () => {
+    setTeamModalMode("change-schedule");
     setShowTeamModal(true);
   };
 
@@ -173,7 +192,7 @@ function AppContent() {
     <ErrorBoundary>
       <div className="min-vh-100">
         <Container fluid>
-          <Header onShowAbout={() => setShowAbout(true)} />
+          <Header onShowAbout={() => setShowAbout(true)} onChangeSchedule={handleChangeSchedule} />
           <ErrorBoundary>
             <CurrentStatus
               myTeam={myTeam}
@@ -202,7 +221,14 @@ function AppContent() {
             }}
             onHide={handleTeamModalHide}
             onDefer={handleWizardDefer}
-            startStep={teamModalMode === "onboarding" ? "welcome" : "team-selection"}
+            mode={teamModalMode}
+            startStep={
+              teamModalMode === "onboarding"
+                ? "welcome"
+                : teamModalMode === "change-schedule"
+                  ? "schedule-selection"
+                  : "team-selection"
+            }
           />
           <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
         </Container>
