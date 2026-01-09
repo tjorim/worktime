@@ -522,11 +522,15 @@ export function getAllTeamsShifts(
 }
 
 /**
- * Determine which day of a team's four-day off period the given date falls on.
+ * Determine which day of a team's off period the given date falls on.
+ *
+ * For cycle-based schedules (e.g., 5-shift), calculates position within the team's off days (typically 4 days).
+ * For weekly-rotation schedules (e.g., 9-5), calculates position within consecutive off days (e.g., weekends).
  *
  * @param date - Date to evaluate (string | Date | Dayjs)
- * @param teamNumber - 1-based team index; must be between 1 and CONFIG.TEAMS_COUNT
- * @returns `OffDayProgress` with `current` and `total` (`total` is 4) if the team is currently on an off day, `null` if the team is working or `teamNumber` is out of range
+ * @param teamNumber - 1-based team index; must be between 1 and team count for the schedule
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
+ * @returns `OffDayProgress` with `current` (1-indexed day within off period) and `total` (length of off period) if the team is currently on an off day, `null` if the team is working or `teamNumber` is out of range
  */
 export function getOffDayProgress(
   date: string | Date | Dayjs,
@@ -601,9 +605,12 @@ export function getOffDayProgress(
         }
       }
       
-      // Only combine if they don't overlap (i.e., the entire week isn't off)
-      if (startConsecutiveOff + endConsecutiveOff <= 7) {
+      // Only combine if they don't overlap (i.e., not the entire week)
+      if (startConsecutiveOff + endConsecutiveOff < 7) {
         maxConsecutiveOff = Math.max(maxConsecutiveOff, startConsecutiveOff + endConsecutiveOff);
+      } else if (startConsecutiveOff + endConsecutiveOff === 7) {
+        // Entire week is off - main loop already captured this as 7
+        maxConsecutiveOff = Math.max(maxConsecutiveOff, 7);
       }
     }
     
