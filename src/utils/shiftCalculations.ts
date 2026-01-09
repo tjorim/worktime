@@ -198,7 +198,7 @@ const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): n
   return roster.shiftConfig.referenceTeam;
 };
 
-const mapShiftCodeToShift = (code: ShiftType) => {
+const mapShiftCodeToShift = (code: ShiftType): Shift => {
   switch (code) {
     case "M":
       return SHIFTS.MORNING;
@@ -211,10 +211,8 @@ const mapShiftCodeToShift = (code: ShiftType) => {
     case "O":
       return SHIFTS.OFF;
     default: {
-      // Exhaustiveness check: if a new ShiftType is added, this will cause a compile error
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _exhaustiveCheck: never = code;
-      return SHIFTS.OFF;
+      const _exhaustive: never = code;
+      return _exhaustive;
     }
   }
 };
