@@ -605,17 +605,9 @@ export function getOffDayProgress(
   // Calculate which day of the off period we're currently in
   let dayCount = 0;
   if (totalOffDays && periodStartDate) {
-    checkDate = getCurrentShiftDay(dayjs(date));
-
-    // Count backwards from current date to period start
-    for (let i = 0; i < cycleLength; i++) {
-      const shift = calculateShift(checkDate, teamNumber, scheduleOption);
-      if (shift.isWorking) {
-        break; // Found the last working day
-      }
-      dayCount++;
-      checkDate = checkDate.subtract(1, "day");
-    }
+    const currentShiftDay = getCurrentShiftDay(dayjs(date));
+    // Direct calculation is simpler and more performant than a loop
+    dayCount = currentShiftDay.diff(periodStartDate, "day") + 1;
   }
 
   if (!totalOffDays) {
