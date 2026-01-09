@@ -572,8 +572,8 @@ export function getOffDayProgress(
     // Check wrap-around: if both end and start of cycle are off, count consecutive days across boundary
     const lastDay = schedulePattern.days.find((d) => d.dayIndex === cycleLength);
     const firstDay = schedulePattern.days.find((d) => d.dayIndex === 1);
-    const lastIsOff = !lastDay || lastDay.shift === "o";
-    const firstIsOff = !firstDay || firstDay.shift === "o";
+    const lastIsOff = !lastDay || lastDay.shift === "O";
+    const firstIsOff = !firstDay || firstDay.shift === "O";
     
     if (lastIsOff && firstIsOff) {
       // Count consecutive off days from beginning of cycle

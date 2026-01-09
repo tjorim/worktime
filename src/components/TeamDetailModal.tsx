@@ -74,7 +74,7 @@ export function TeamDetailModal({
     const workingDays = weekSchedule.filter((day) => day.shift.code !== "O").length;
     const offDays = 7 - workingDays;
     const morningShifts = weekSchedule.filter((day) => day.shift.code === "M").length;
-    const eveningShifts = weekSchedule.filter((day) => day.shift.code === "E").length;
+    const eveningShifts = weekSchedule.filter((day) => day.shift.code === "L").length;
     const nightShifts = weekSchedule.filter((day) => day.shift.code === "N").length;
 
     return {

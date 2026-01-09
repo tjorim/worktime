@@ -238,7 +238,7 @@ export function ScheduleView({
                                 <strong>Shift: {shift.code}</strong>
                                 <br />
                                 {shift.code === "M" && "Morning shift"}
-                                {shift.code === "E" && "Evening shift"}
+                                {shift.code === "L" && "Evening shift"}
                                 {shift.code === "N" && "Night shift"}
                                 <br />
                                 <em>
