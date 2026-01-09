@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getTeamCountForOption } from "../utils/scheduleUtils";
 import { calculateShift, type ShiftType } from "../utils/shiftCalculations";
 
 export type TransferType = "handover" | "takeover";
@@ -114,8 +114,7 @@ export function useTransferCalculations({
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
   const { scheduleOption } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleOption);
-  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+  const teamCount = getTeamCountForOption(scheduleOption);
 
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {

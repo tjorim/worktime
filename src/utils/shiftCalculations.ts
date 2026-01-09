@@ -329,7 +329,6 @@ export function getShiftByCode(code: string | null | undefined) {
  * // Invalid team number throws error
  * calculateShift('2025-01-06', 6) // For 5-shift schedule
  * // Throws: Error("Invalid team number: 6. Expected 1-5")
- * // Throws: Error("Invalid team number: 6. Expected 1-5")
  */
 export function calculateShift(
   date: string | Date | Dayjs,
@@ -645,19 +644,23 @@ export function getOffDayProgress(
         }
       }
       
-      // Only combine if they don't overlap (i.e., not the entire week)
-      if (startConsecutiveOff + endConsecutiveOff < 7) {
-        maxConsecutiveOff = Math.max(maxConsecutiveOff, startConsecutiveOff + endConsecutiveOff);
-      } else if (startConsecutiveOff + endConsecutiveOff === 7) {
-        // Entire week is off - main loop already captured this as 7
+      // If the entire week is off, startConsecutiveOff will already be 7
+      if (startConsecutiveOff === 7) {
+        // Entire week is off - main loop should also have captured this as 7
         maxConsecutiveOff = Math.max(maxConsecutiveOff, 7);
+      } else {
+        // Combine off days at both ends of the week across the boundary
+        maxConsecutiveOff = Math.max(
+          maxConsecutiveOff,
+          startConsecutiveOff + endConsecutiveOff
+        );
       }
     }
     
     totalOffDays = maxConsecutiveOff > 0 ? maxConsecutiveOff : null;
   }
 
-  // Team is off, calculate which day of their 4-day break
+  // Team is off, calculate which day of their off period
   let dayCount = 0;
   let checkDate = getCurrentShiftDay(dayjs(date));
 
