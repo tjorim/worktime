@@ -219,8 +219,10 @@
 :root {
   --shift-morning: #1976d2;
   --shift-morning-text: #ffffff;
-  --shift-evening: #bf360c;
-  --shift-evening-text: #ffffff;
+  --shift-late: #bf360c;
+  --shift-late-text: #ffffff;
+  --shift-day: #f57c00;
+  --shift-day-text: #ffffff;
   --shift-night: #7b1fa2;
   --shift-night-text: #ffffff;
   --shift-off: #616161;
@@ -235,10 +237,16 @@
   border: 1px solid var(--shift-morning-text);
 }
 
-.shift-evening {
-  background-color: var(--shift-evening);
-  color: var(--shift-evening-text);
-  border: 1px solid var(--shift-evening-text);
+.shift-late {
+  background-color: var(--shift-late);
+  color: var(--shift-late-text);
+  border: 1px solid var(--shift-late-text);
+}
+
+.shift-day {
+  background-color: var(--shift-day);
+  color: var(--shift-day-text);
+  border: 1px solid var(--shift-day-text);
 }
 
 .shift-night {
@@ -600,8 +608,10 @@
 [data-bs-theme="dark"] {
   --shift-morning: #1565c0;
   --shift-morning-text: #e3f2fd;
-  --shift-evening: #8d3200;
-  --shift-evening-text: #ffe0b2;
+  --shift-late: #8d3200;
+  --shift-late-text: #ffe0b2;
+  --shift-day: #d26400;
+  --shift-day-text: #fff3e0;
   --shift-night: #4527a0;
   --shift-night-text: #ede7f6;
   --shift-off: #212121;

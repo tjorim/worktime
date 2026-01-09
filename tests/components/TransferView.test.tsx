@@ -26,15 +26,15 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
         isWorking: true,
         className: "shift-morning",
       },
-      E: {
-        code: "E",
+      L: {
+        code: "L",
         emoji: "🌆",
         name: "Evening",
         hours: "15:00-23:00",
         start: 15,
         end: 23,
         isWorking: true,
-        className: "shift-evening",
+        className: "shift-late",
       },
       N: {
         code: "N",
@@ -50,6 +50,10 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getShiftDisplayName: vi.fn((shift) => `${shift.emoji} ${shift.name}`),
+  getShiftDisplay: vi.fn((shift) => ({
+    displayName: shift.name,
+    displayHours: shift.hours,
+  })),
 }));
 
 vi.mock("../../src/utils/config", () => ({
@@ -228,7 +232,7 @@ describe("TransferView", () => {
           fromTeam: 1,
           toTeam: 2,
           fromShiftType: "M" as const,
-          toShiftType: "E" as const,
+          toShiftType: "L" as const,
           type: "handover",
         },
       ];
@@ -258,20 +262,20 @@ describe("TransferView", () => {
   });
 
   describe("Prop validation", () => {
-    it("handles invalid team selection and shows warning", () => {
+    it("handles invalid team selection without crashing", () => {
+      // Invalid teams are handled by useTransferCalculations hook
       render(<TransferView {...defaultProps} myTeam={999} />);
 
       // Should render without crashing
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
-      // Should have called console.warn
-      expect(mockConsoleWarn).toHaveBeenCalledWith("Invalid user team number: 999. Expected 1-5");
+      // No warnings are logged at this level - validation is in the hook
     });
 
-    it("handles negative team numbers", () => {
+    it("handles negative team numbers without crashing", () => {
       render(<TransferView {...defaultProps} myTeam={-1} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
-      expect(mockConsoleWarn).toHaveBeenCalledWith("Invalid user team number: -1. Expected 1-5");
+      // No warnings are logged at this level - validation is in the hook
     });
 
     it("handles null team selection without warning", () => {
@@ -290,14 +294,14 @@ describe("TransferView", () => {
           fromTeam: 1,
           toTeam: 2,
           fromShiftType: "M" as const,
-          toShiftType: "E" as const,
+          toShiftType: "L" as const,
           type: "handover",
         },
         {
           date: dayjs("2025-01-16"),
           fromTeam: 2,
           toTeam: 1,
-          fromShiftType: "E" as const,
+          fromShiftType: "L" as const,
           toShiftType: "N" as const,
           type: "takeover",
         },
@@ -336,7 +340,7 @@ describe("TransferView", () => {
         fromTeam: 1,
         toTeam: 2,
         fromShiftType: "M" as const,
-        toShiftType: "E" as const,
+        toShiftType: "L" as const,
         type: "handover",
       }));
 

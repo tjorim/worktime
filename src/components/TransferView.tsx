@@ -9,7 +9,6 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
-import { CONFIG } from "../utils/config";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
@@ -23,7 +22,7 @@ interface TransferViewProps {
  *
  * Renders a card containing controls for choosing the other team, optionally filtering by a custom date range, and a paginated table of transfer records (or appropriate empty states).
  *
- * @param inputMyTeam - The user's team number (1..CONFIG.TEAMS_COUNT) or `null`. If a numeric value is outside the valid range, it is treated as `null` and a console warning is emitted.
+ * @param inputMyTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
  * @returns The rendered TransferView element.
  */
@@ -33,12 +32,9 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
   const showPastCheckboxId = useId();
   const startDateId = useId();
   const endDateId = useId();
-  // Validate and sanitize user's team prop
-  let myTeam = inputMyTeam;
-  if (typeof myTeam === "number" && (myTeam < 1 || myTeam > CONFIG.TEAMS_COUNT)) {
-    console.warn(`Invalid user team number: ${myTeam}. Expected 1-${CONFIG.TEAMS_COUNT}`);
-    myTeam = null;
-  }
+
+  // Use team directly - validation is handled by useTransferCalculations hook
+  const myTeam = inputMyTeam;
 
   // Local state
   const [transfersToShow, setTransfersToShow] = useState(10);

@@ -26,12 +26,7 @@ interface SettingsPanelProps {
  * @param onChangeSchedule - Optional callback invoked when the user wants to change the schedule
  * @returns The rendered settings panel element
  */
-export function SettingsPanel({
-  show,
-  onHide,
-  onShowAbout,
-  onChangeSchedule,
-}: SettingsPanelProps) {
+export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const toast = useToast();
   const { settings, updateTimeFormat, updateTheme, resetSettings } = useSettings();

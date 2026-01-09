@@ -75,6 +75,10 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     isWorking: true,
     className: "shift-morning",
   })),
+  getShiftDisplay: vi.fn(() => ({
+    displayName: "Morning",
+    displayHours: "07:00-15:00",
+  })),
 }));
 
 vi.mock("../../src/utils/config", () => ({

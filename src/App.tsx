@@ -11,9 +11,8 @@ import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import type { ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
-import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
-import { getScheduleConfig } from "./utils/scheduleUtils";
+import { getScheduleConfig, getTeamCountForOption } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
@@ -30,7 +29,7 @@ function AppContent() {
   >("onboarding");
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
-  const { showSuccess, showInfo } = useToast();
+  const { showSuccess, showInfo, showError } = useToast();
   const {
     myTeam,
     setMyTeam,
@@ -76,21 +75,30 @@ function AppContent() {
     const { team, date } = pendingDeepLinkRef.current;
 
     if (team) {
-      const teamNumber = parseInt(team, 10);
-      if (teamNumber >= 1 && teamNumber <= CONFIG.TEAMS_COUNT) {
-        setMyTeam(teamNumber);
+      try {
+        const teamNumber = parseInt(team, 10);
+        const teamCount = getTeamCountForOption(scheduleOption);
+        if (teamNumber >= 1 && teamNumber <= teamCount) {
+          setMyTeam(teamNumber);
+        }
+      } catch (error) {
+        console.error("Failed to process deep-link team parameter:", error);
       }
     }
 
     if (date) {
-      const parsedDate = dayjs(date);
-      if (parsedDate.isValid()) {
-        setCurrentDate(parsedDate);
+      try {
+        const parsedDate = dayjs(date);
+        if (parsedDate.isValid()) {
+          setCurrentDate(parsedDate);
+        }
+      } catch (error) {
+        console.error("Failed to process deep-link date parameter:", error);
       }
     }
 
     pendingDeepLinkRef.current = {};
-  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate]);
+  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleOption]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -132,17 +140,20 @@ function AppContent() {
   };
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
-    const currentScheduleConfig = getScheduleConfig(scheduleOption ?? null);
-    const nextScheduleConfig = getScheduleConfig(schedule);
-    const teamCountChanged =
-      (currentScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT) !==
-      (nextScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT);
-    const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
+    try {
+      const nextScheduleConfig = getScheduleConfig(schedule);
+      const teamCountChanged =
+        getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
+      const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
 
-    if (teamCountChanged || teamsDisabled) {
-      setMyTeam(null);
+      if (teamCountChanged || teamsDisabled) {
+        setMyTeam(null);
+      }
+      setScheduleOption(schedule);
+    } catch (error) {
+      console.error("Failed to change schedule:", error);
+      showError("Failed to change schedule. Please try again.", "❌");
     }
-    setScheduleOption(schedule);
   };
 
   const handleChangeTeam = () => {

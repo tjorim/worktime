@@ -9,9 +9,9 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
-import { dayjs, getISOWeekYear2Digit, getLocalizedShiftTime } from "../utils/dateTimeUtils";
+import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
-import { getShiftByCode, isCurrentlyWorking } from "../utils/shiftCalculations";
+import { getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
 
 interface TodayViewProps {
   todayShifts: ShiftResult[];
@@ -46,12 +46,10 @@ function TeamCard({
   hasTeams: boolean;
   onTeamClick?: (teamNumber: number) => void;
 }) {
-  const { settings } = useSettings();
-  const shiftDetails = getShiftByCode(shiftResult.shift.code);
-  const shiftTimeLabel =
-    shiftDetails.start && shiftDetails.end
-      ? getLocalizedShiftTime(shiftDetails.start, shiftDetails.end, settings.timeFormat)
-      : shiftDetails.hours;
+  const { settings, scheduleOption } = useSettings();
+  // Use shiftResult.shift directly - already contains emoji/className/name/hours
+  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
+  const shiftTimeLabel = getFormattedShiftTime(shiftResult.shift, scheduleOption, settings.timeFormat);
 
   const cardContent = (
     <>
@@ -76,9 +74,7 @@ function TeamCard({
         style={{ position: "relative", zIndex: 2 }}
       >
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">
-            {hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}
-          </h6>
+          <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}</h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -87,31 +83,25 @@ function TeamCard({
           placement="top"
           overlay={
             <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Shift Code: {shiftResult.shift.code}</strong>
+              <strong>Shift Code: {shiftDisplay.displayCode}</strong>
               <br />
               <>
-                {shiftDetails.emoji} <em>{shiftDetails.name}</em>
+                {shiftResult.shift.emoji} <em>{shiftDisplay.displayName}</em>
                 <br />
                 {shiftTimeLabel}
               </>
             </Tooltip>
           }
         >
-          <Badge className={`shift-code cursor-help ${shiftDetails.className}`}>
-            {shiftResult.shift.code}
+          <Badge className={`shift-code cursor-help ${shiftResult.shift.className}`}>
+            {shiftDisplay.displayCode}
           </Badge>
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
-        {shiftResult.shift.name}
+        {shiftDisplay.displayName}
         <br />
-        {shiftResult.shift.isWorking
-          ? getLocalizedShiftTime(
-              shiftResult.shift.start,
-              shiftResult.shift.end,
-              settings.timeFormat,
-            )
-          : "Not working today"}
+        {shiftResult.shift.isWorking ? shiftTimeLabel : "Not working today"}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger
@@ -124,7 +114,7 @@ function TeamCard({
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
               Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")},{" "}
-              {shiftResult.shift.name}
+              {shiftDisplay.displayName}
             </Tooltip>
           }
         >
@@ -139,10 +129,14 @@ function TeamCard({
       <Card
         className={`team-card-interactive w-100${isMyTeam ? " my-team" : ""}`}
         onClick={() => onTeamClick(shiftResult.teamNumber)}
-        title={
+        role="button"
+        aria-label={
           hasTeams
             ? `View details for Team ${shiftResult.teamNumber}`
             : "View schedule details"
+        }
+        title={
+          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
         }
         style={{ cursor: "pointer" }}
         tabIndex={0}

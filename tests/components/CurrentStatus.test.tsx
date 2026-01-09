@@ -17,6 +17,14 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getOffDayProgress: vi.fn(),
   getShiftCode: vi.fn(),
   getShiftByCode: vi.fn(),
+  getShiftDisplay: vi.fn(),
+  getFormattedShiftTime: vi.fn((shift) => {
+    // Return formatted time with en-dash based on shift hours
+    if (shift.hours) {
+      return shift.hours.replace("-", "–");
+    }
+    return "";
+  }),
   isCurrentlyWorking: vi.fn(),
 }));
 
@@ -134,6 +142,10 @@ describe("CurrentStatus Component", () => {
       isWorking: true,
       className: "shift-morning",
     });
+    vi.mocked(shiftCalculations.getShiftDisplay).mockImplementation((shift) => ({
+      displayName: shift.name,
+      displayHours: shift.hours,
+    }));
     vi.mocked(shiftCalculations.isCurrentlyWorking).mockReturnValue(true);
     vi.mocked(useCountdownHook.useCountdown).mockReturnValue({
       days: 0,

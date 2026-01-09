@@ -70,7 +70,7 @@ export function useShiftCalculation(): UseShiftCalculationReturn {
     return {
       date: shiftDay,
       shift,
-      code: getShiftCode(shiftDay, myTeam, scheduleOption ?? undefined),
+      code: getShiftCode(currentDate, myTeam, scheduleOption ?? undefined),
       teamNumber: myTeam,
     };
   }, [myTeam, currentDate, scheduleOption]);

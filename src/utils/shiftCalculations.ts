@@ -1,45 +1,48 @@
 /**
- * Shift Calculation Engine for 5-Team Continuous Operations
+ * Shift Calculation Engine for Multiple Schedule Types
  *
- * Core business logic for calculating team shifts in a continuous (24/7)
- * 5-team rotation schedule.
+ * Core business logic for calculating team shifts across different schedule patterns.
  *
- * ## Shift Pattern
+ * ## Supported Schedule Types
  *
+ * ### 5-shift (Continuous 24/7 Rotation)
  * Each team works a repeating 10-day cycle:
  * - 2 mornings (M): 07:00-15:00
- * - 2 evenings (E): 15:00-23:00
+ * - 2 evenings (L): 15:00-23:00
  * - 2 nights (N): 23:00-07:00
  * - 4 days off (O)
  *
  * The 5 teams are staggered by 2 days each, ensuring 24/7 coverage:
  * ```
  * Day:    1  2  3  4  5  6  7  8  9  10 | 11 12 13 ...
- * Team 1: M  M  E  E  N  N  O  O  O  O  | M  M  E  ...
- * Team 2: N  N  O  O  O  O  M  M  E  E  | N  N  O  ...
- * Team 3: O  O  M  M  E  E  N  N  O  O  | O  O  M  ...
- * Team 4: E  E  N  N  O  O  O  O  M  M  | E  E  N  ...
- * Team 5: O  O  O  O  M  M  E  E  N  N  | O  O  O  ...
+ * Team 1: M  M  L  L  N  N  O  O  O  O  | M  M  L  ...
+ * Team 2: N  N  O  O  O  O  M  M  L  L  | N  N  O  ...
+ * Team 3: O  O  M  M  L  L  N  N  O  O  | O  O  M  ...
+ * Team 4: L  L  N  N  O  O  O  O  M  M  | L  L  N  ...
+ * Team 5: O  O  O  O  M  M  L  L  N  N  | O  O  O  ...
  * ```
+ *
+ * ### Weekly Rotation Schedules
+ * - **9-5**: Standard weekday schedule (Mon-Fri work, weekends off)
+ * - **2-shift**: Alternating early/late shifts each week
+ * - **weekend-shift**: Weekend-only teams with early/late rotation
  *
  * ## How It Works
  *
- * Shift calculation is based on a reference date and team:
- * 1. Calculate days since reference date
- * 2. Apply team offset (each team starts 2 days later)
- * 3. Map position in 10-day cycle to shift type:
- *    - Days 0-1: Morning
- *    - Days 2-3: Evening
- *    - Days 4-5: Night
- *    - Days 6-9: Off
+ * Each schedule type is self-contained with its own configuration:
+ * 1. Reference date: When the reference team's pattern starts
+ * 2. Reference team: Which team is at the reference point
+ * 3. Schedule pattern: Cycle-based or weekly-rotation pattern
  *
- * ## Configuration
+ * For cycle-based schedules:
+ * - Calculate days since reference date
+ * - Apply team offset based on cycle length and team count
+ * - Map position in cycle to shift type
  *
- * The shift pattern is anchored to a configurable reference point:
- * - `CONFIG.REFERENCE_DATE`: Date when reference team starts morning shift
- * - `CONFIG.REFERENCE_TEAM`: Which team (1-5) is at the reference point
- *
- * This allows the schedule to be aligned to any organization's actual shift pattern.
+ * For weekly-rotation schedules:
+ * - Calculate weeks since reference date
+ * - Apply team offset in weeks
+ * - Match ISO weekday to pattern
  *
  * ## Date Code Format (YYWW.DX)
  *
@@ -47,7 +50,7 @@
  * - `YY`: 2-digit year (25 = 2025)
  * - `WW`: ISO week number (01-53)
  * - `D`: ISO weekday (1=Monday, 7=Sunday)
- * - `X`: Shift type (M/E/N/O)
+ * - `X`: Shift type (M/L/N/D/O)
  *
  * **Important**: Night shifts use the PREVIOUS day's date code because they start
  * at 23:00 on that day (e.g., Monday night is coded as Monday, not Tuesday).
@@ -63,17 +66,17 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption, SchedulePattern } from "../data/rosters";
-import { CONFIG } from "./config";
-import { dayjs, formatYYWWD } from "./dateTimeUtils";
+import type { ScheduleOption } from "../data/rosters";
+import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
-export type ShiftType = "M" | "E" | "N" | "O";
+export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
 export interface Shift {
   code: ShiftType;
+  emoji: string;
   name: string;
   hours: string;
   start: number | null;
@@ -81,6 +84,12 @@ export interface Shift {
   isWorking: boolean;
   className: string;
 }
+
+/**
+ * Type for shifts that may include unknown/fallback codes.
+ * Used by functions that can return shifts with codes outside the standard ShiftType set.
+ */
+export type ShiftOrUnknown = Omit<Shift, "code"> & { code: string };
 
 export interface ShiftResult {
   date: Dayjs;
@@ -112,15 +121,25 @@ export const SHIFTS = Object.freeze({
     isWorking: true,
     className: "shift-morning",
   }),
-  EVENING: Object.freeze({
-    code: "E",
+  LATE: Object.freeze({
+    code: "L",
     emoji: "🌆",
-    name: "Evening",
+    name: "Late",
     hours: "15:00-23:00",
     start: 15,
     end: 23,
     isWorking: true,
-    className: "shift-evening",
+    className: "shift-late",
+  }),
+  DAY: Object.freeze({
+    code: "D",
+    emoji: "☀️",
+    name: "Day",
+    hours: "09:00-17:00",
+    start: 9,
+    end: 17,
+    isWorking: true,
+    className: "shift-day",
   }),
   NIGHT: Object.freeze({
     code: "N",
@@ -144,95 +163,80 @@ export const SHIFTS = Object.freeze({
   }),
 });
 
-const ISO_WEEKDAY_MAP: Record<string, number> = {
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
-  Fri: 5,
-  Sat: 6,
-  Sun: 7,
-};
-
 const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getScheduleConfig(scheduleOption);
 
-const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) =>
-  getRosterForSchedule(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (roster.shiftConfig.teamCount === undefined) {
+    throw new Error(`teamCount not defined for schedule ${roster.value}`);
+  }
+  return roster.shiftConfig.teamCount;
+};
 
-const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) =>
-  getRosterForSchedule(scheduleOption).shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (roster.shiftConfig.cycleLengthDays === undefined) {
+    throw new Error(`cycleLengthDays not defined for schedule ${roster.value}`);
+  }
+  return roster.shiftConfig.cycleLengthDays;
+};
 
-const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
+const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Dayjs => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (!roster.shiftConfig.referenceDate) {
+    throw new Error(`referenceDate not defined for schedule ${roster.value}`);
+  }
+  const [year, month, day] = roster.shiftConfig.referenceDate.split("-").map(Number);
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Invalid referenceDate format for schedule ${roster.value}: ${roster.shiftConfig.referenceDate}`);
+  }
+  return dayjs().year(year).month(month - 1).date(day).startOf("day");
+};
+
+const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (roster.shiftConfig.referenceTeam === undefined) {
+    throw new Error(`referenceTeam not defined for schedule ${roster.value}`);
+  }
+  return roster.shiftConfig.referenceTeam;
+};
+
+const mapShiftCodeToShift = (code: ShiftType): Shift => {
   switch (code) {
     case "M":
       return SHIFTS.MORNING;
-    case "E":
-      return SHIFTS.EVENING;
+    case "L":
+      return SHIFTS.LATE;
     case "N":
       return SHIFTS.NIGHT;
+    case "D":
+      return SHIFTS.DAY;
     case "O":
       return SHIFTS.OFF;
-    case "D":
-      return SHIFTS.MORNING;
-    case "L":
-      return SHIFTS.EVENING;
-    default:
-      return SHIFTS.OFF;
+    default: {
+      const _exhaustive: never = code;
+      return _exhaustive;
+    }
   }
 };
 
-const mapWeeklyShiftToCode = (shift: "Early" | "Late" | "Day"): ShiftType =>
-  shift === "Late" ? "E" : "M";
-
-const getTeamOffsetUnits = (teamNumber: number, teamCount: number) => {
+const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
   if (teamCount <= 1) return 0;
-  return (teamNumber - CONFIG.REFERENCE_TEAM) % teamCount;
+  // Normalize to [0..teamCount-1] range to handle cases where teamNumber < referenceTeam
+  return ((teamNumber - referenceTeam) % teamCount + teamCount) % teamCount;
 };
 
-const getCycleTeamOffsetDays = (
-  scheduleOption?: NullableScheduleOption,
-  teamNumber?: number,
-) => {
-  const roster = getRosterForSchedule(scheduleOption);
-  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
-  const cycleLength = roster.shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNumber?: number) => {
+  const teamCount = getTeamCountForSchedule(scheduleOption);
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
   if (!teamNumber || teamCount <= 1 || cycleLength <= 0) return 0;
 
-  const offsetStep = Math.floor(cycleLength / teamCount);
-  return getTeamOffsetUnits(teamNumber, teamCount) * offsetStep;
-};
-
-const getShiftForWeeklyRotation = (
-  date: Dayjs,
-  teamNumber: number,
-  schedulePattern: Extract<SchedulePattern, { type: "weekly-rotation" }>,
-  scheduleOption?: NullableScheduleOption,
-): Shift => {
-  const roster = getRosterForSchedule(scheduleOption);
-  const cycleLengthDays = roster.shiftConfig.cycleLengthDays ?? 7;
-  const totalWeeks = Math.max(1, Math.round(cycleLengthDays / 7));
-  const referenceWeekStart = dayjs(CONFIG.REFERENCE_DATE).startOf("isoWeek");
-  const targetWeekStart = date.startOf("isoWeek");
-  const weeksSinceReference = targetWeekStart.diff(referenceWeekStart, "week");
-  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
-  const teamOffsetWeeks = getTeamOffsetUnits(teamNumber, teamCount);
-  const weekIndex =
-    ((weeksSinceReference + teamOffsetWeeks) % totalWeeks + totalWeeks) % totalWeeks + 1;
-  const isoWeekday = date.isoWeekday();
-
-  const matchingShift = schedulePattern.weeks.find(
-    (week) =>
-      week.weekIndex === weekIndex &&
-      week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoWeekday),
-  );
-
-  if (!matchingShift) {
-    return SHIFTS.OFF;
-  }
-
-  const shiftCode = mapWeeklyShiftToCode(matchingShift.shift);
-  return mapShiftCodeToShift(shiftCode);
+  // For weekly rotation schedules (multiples of 7), use week-based offset
+  // to ensure teams are on different weeks, not just different positions in cycle
+  const offsetStep = cycleLength % 7 === 0 ? 7 : Math.floor(cycleLength / teamCount);
+  return getTeamOffsetUnits(teamNumber, teamCount, referenceTeam) * offsetStep;
 };
 
 /**
@@ -241,8 +245,68 @@ const getShiftForWeeklyRotation = (
  * @param shift - The shift object whose emoji and name will be used
  * @returns The display string in the form "`<emoji> <name>`"
  */
-export function getShiftDisplayName(shift: ReturnType<typeof getShiftByCode>): string {
+export function getShiftDisplayName(shift: ShiftOrUnknown): string {
   return `${shift.emoji} ${shift.name}`;
+}
+
+/**
+ * Get roster-specific display properties for a shift.
+ *
+ * Returns the shift's display name and hours, applying roster-specific overrides if configured.
+ * For example, the 5-shift roster displays "Evening" for L shifts, while 2-shift displays "Late".
+ *
+ * @param shift - The shift object to get display properties for
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
+ * @returns Object containing displayName and displayHours (may be overridden by roster config)
+ *
+ * @example
+ * // 5-shift roster: L shift shows as "Evening"
+ * const display = getShiftDisplay(SHIFTS.LATE, "5-shift");
+ * // Returns: { displayName: "Evening", displayHours: "15:00-23:00" }
+ *
+ * @example
+ * // 2-shift roster: M shift shows as "Early"
+ * const display = getShiftDisplay(SHIFTS.MORNING, "2-shift");
+ * // Returns: { displayName: "Early", displayHours: "07:00-15:00" }
+ */
+export function getShiftDisplay(
+  shift: ShiftOrUnknown,
+  scheduleOption?: NullableScheduleOption,
+): { displayName: string; displayHours: string; displayCode: string } {
+  const roster = getRosterForSchedule(scheduleOption);
+  const override =
+    roster.shiftConfig.shiftDisplayOverrides?.[
+      shift.code as keyof typeof roster.shiftConfig.shiftDisplayOverrides
+    ];
+
+  return {
+    displayName: override?.displayName ?? shift.name,
+    displayHours: override?.displayHours ?? shift.hours,
+    displayCode: override?.displayCode ?? shift.code,
+  };
+}
+
+/**
+ * Format shift time with localization fallback to display hours.
+ * 
+ * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when shift has valid start/end times,
+ * otherwise returns the display hours from shift display overrides. This ensures consistent
+ * shift time formatting across the app.
+ * 
+ * @param shift - Shift object with code, start, and end times
+ * @param scheduleOption - Schedule option for display overrides
+ * @param timeFormat - Time format preference ("12h" or "24h")
+ * @returns Formatted shift time string
+ */
+export function getFormattedShiftTime(
+  shift: ShiftOrUnknown,
+  scheduleOption: NullableScheduleOption,
+  timeFormat: "12h" | "24h",
+): string {
+  const { displayHours } = getShiftDisplay(shift, scheduleOption);
+  return shift.start != null && shift.end != null
+    ? getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours
+    : displayHours;
 }
 
 /**
@@ -251,7 +315,7 @@ export function getShiftDisplayName(shift: ReturnType<typeof getShiftByCode>): s
  * @param code - Shift code to look up; may be null or undefined
  * @returns The matching shift object from `SHIFTS`, or a fallback object with code `'U'`, emoji `❓`, name `'Unknown'`, non-working flags and null times when no match exists
  */
-export function getShiftByCode(code: string | null | undefined) {
+export function getShiftByCode(code: string | null | undefined): ShiftOrUnknown {
   const shift = Object.values(SHIFTS).find((s) => s.code === code);
   return (
     shift || {
@@ -272,14 +336,15 @@ export function getShiftByCode(code: string | null | undefined) {
  *
  * Edge cases:
  * - Invalid dates are handled by dayjs (may return Invalid Date)
- * - Team numbers outside 1..CONFIG.TEAMS_COUNT throw an error
+ * - Team numbers outside the valid range (1 to teamCount) throw an error
  * - Date strings, Date objects, and Dayjs instances are all accepted
  * - Times are ignored; only the calendar date matters for shift calculation
  *
  * @param date - Date to evaluate (string, Date or Dayjs)
- * @param teamNumber - Team index starting at 1; must be between 1 and CONFIG.TEAMS_COUNT
+ * @param teamNumber - Team index starting at 1; must be between 1 and the schedule's team count
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The Shift object for that team and date (one of MORNING, EVENING, NIGHT or OFF)
- * @throws {Error} If `teamNumber` is outside the range 1..CONFIG.TEAMS_COUNT
+ * @throws {Error} If `teamNumber` is outside the valid range
  *
  * @example
  * // Get Team 1's shift on a specific date
@@ -293,7 +358,7 @@ export function getShiftByCode(code: string | null | undefined) {
  *
  * @example
  * // Invalid team number throws error
- * calculateShift('2025-01-06', 6)
+ * calculateShift('2025-01-06', 6) // For 5-shift schedule
  * // Throws: Error("Invalid team number: 6. Expected 1-5")
  */
 export function calculateShift(
@@ -308,47 +373,28 @@ export function calculateShift(
   }
 
   const targetDate = dayjs(date).startOf("day");
-  const referenceDate = dayjs(CONFIG.REFERENCE_DATE).startOf("day");
+  const referenceDate = getReferenceDateForSchedule(scheduleOption);
   const roster = getRosterForSchedule(scheduleOption);
   const schedulePattern = roster.shiftConfig.schedulePattern;
 
   // Calculate days since reference
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
-  if (schedulePattern?.type === "weekly-rotation") {
-    return getShiftForWeeklyRotation(targetDate, teamNumber, schedulePattern, scheduleOption);
+  // All rosters use the unified pattern-based structure
+  if (!schedulePattern) {
+    throw new Error(`schedulePattern not defined for roster ${roster.value}`);
   }
 
-  if (schedulePattern?.type === "cycle") {
-    const cycleLength = getCycleLengthForSchedule(scheduleOption);
-    const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
-    const adjustedDays = daysSinceReference - teamOffset;
-    const cyclePosition =
-      ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-    const dayIndex = cyclePosition + 1;
-    const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
-    if (!matchingDay) {
-      return SHIFTS.OFF;
-    }
-    return mapShiftCodeToShift(matchingDay.shift);
-  }
-
-  // Fallback to legacy 5-shift cycle logic when no roster pattern is configured.
-  const teamOffset = (teamNumber - CONFIG.REFERENCE_TEAM) * 2;
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
   const adjustedDays = daysSinceReference - teamOffset;
-  const cyclePosition =
-    ((adjustedDays % CONFIG.SHIFT_CYCLE_DAYS) + CONFIG.SHIFT_CYCLE_DAYS) % CONFIG.SHIFT_CYCLE_DAYS;
-
-  if (cyclePosition < 2) {
-    return SHIFTS.MORNING;
+  const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
+  const dayIndex = cyclePosition + 1;
+  const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
+  if (!matchingDay) {
+    return SHIFTS.OFF;
   }
-  if (cyclePosition < 4) {
-    return SHIFTS.EVENING;
-  }
-  if (cyclePosition < 6) {
-    return SHIFTS.NIGHT;
-  }
-  return SHIFTS.OFF;
+  return mapShiftCodeToShift(matchingDay.shift);
 }
 
 /**
@@ -389,7 +435,7 @@ export function getCurrentShiftDay(date: string | Date | Dayjs): Dayjs {
  * - YY = last two digits of year
  * - WW = ISO week number (01-53)
  * - D = ISO weekday (1=Monday, 7=Sunday)
- * - X = shift type (M/E/N/O)
+ * - X = shift type (M/L/N/O)
  *
  * Night shifts use the previous calendar day for their code (e.g., Monday night shift is coded as Monday, not Tuesday).
  *
@@ -430,11 +476,12 @@ export function getShiftCode(
 /**
  * Locate the next working shift for a team after a given date.
  *
- * Searches up to CONFIG.SHIFT_CYCLE_DAYS (10 days) ahead to find the next working shift.
+ * Searches up to the schedule's cycle length ahead to find the next working shift.
  * Returns null if team number is invalid or no working shift is found in the cycle.
  *
  * @param fromDate - Date to start the search from (exclusive)
- * @param teamNumber - Team identifier; must be between 1 and CONFIG.TEAMS_COUNT
+ * @param teamNumber - Team identifier; must be within the schedule's valid team range
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The upcoming shift result containing `date`, `shift` and `code`, or `null` if no working shift is found within the shift cycle
  *
  * @example
@@ -482,9 +529,10 @@ export function getNextShift(
  * Return the shift assignment for every team on the given date.
  *
  * Useful for displaying the "Today" or "Schedule" view showing all teams at once.
- * Results are ordered by team number (1 to CONFIG.TEAMS_COUNT).
+ * Results are ordered by team number (1 to the schedule's team count).
  *
  * @param date - The reference date (string, Date or Dayjs) for which to compute each team's shift
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns An array of ShiftResult objects where each item contains the provided date as a Dayjs, the team's shift, the shift code and the team number
  *
  * @example
@@ -522,11 +570,15 @@ export function getAllTeamsShifts(
 }
 
 /**
- * Determine which day of a team's four-day off period the given date falls on.
+ * Determine which day of a team's off period the given date falls on.
+ *
+ * For cycle-based schedules (e.g., 5-shift), calculates position within the team's off days (typically 4 days).
+ * For weekly-rotation schedules (e.g., 9-5), calculates position within consecutive off days (e.g., weekends).
  *
  * @param date - Date to evaluate (string | Date | Dayjs)
- * @param teamNumber - 1-based team index; must be between 1 and CONFIG.TEAMS_COUNT
- * @returns `OffDayProgress` with `current` and `total` (`total` is 4) if the team is currently on an off day, `null` if the team is working or `teamNumber` is out of range
+ * @param teamNumber - 1-based team index; must be between 1 and team count for the schedule
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
+ * @returns `OffDayProgress` with `current` (1-indexed day within off period) and `total` (length of off period) if the team is currently on an off day, `null` if the team is working or `teamNumber` is out of range
  */
 export function getOffDayProgress(
   date: string | Date | Dayjs,
@@ -546,27 +598,46 @@ export function getOffDayProgress(
     return null;
   }
 
-  const roster = getRosterForSchedule(scheduleOption);
-  const schedulePattern = roster.shiftConfig.schedulePattern;
-  const totalOffDays =
-    schedulePattern?.type === "cycle"
-      ? schedulePattern.days.filter((day) => day.shift === "O").length
-      : null;
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  let totalOffDays: number | null = null;
 
-  // Team is off, calculate which day of their 4-day break
-  let dayCount = 0;
+  // Find the start of the current off-day period by looking backwards
+  let periodStartDate: Dayjs | null = null;
   let checkDate = getCurrentShiftDay(dayjs(date));
 
-  // Look backwards to find when this off period started
-  const cycleLength = getCycleLengthForSchedule(scheduleOption);
   for (let i = 0; i < cycleLength; i++) {
-    // Max 10 days to avoid infinite loop
-    const shift = calculateShift(checkDate, teamNumber, scheduleOption);
+    const tempDate = checkDate.subtract(i, "day");
+    const shift = calculateShift(tempDate, teamNumber, scheduleOption);
     if (shift.isWorking) {
-      break; // Found the last working day
+      periodStartDate = tempDate.add(1, "day");
+      break;
     }
-    dayCount++;
-    checkDate = checkDate.subtract(1, "day");
+    if (i === cycleLength - 1) {
+      // All days in cycle are off days
+      periodStartDate = tempDate;
+    }
+  }
+
+  if (periodStartDate) {
+    // Count forward from the start of the period to find its length
+    let periodLength = 0;
+    for (let i = 0; i < cycleLength; i++) {
+      const tempDate = periodStartDate.add(i, "day");
+      const shift = calculateShift(tempDate, teamNumber, scheduleOption);
+      if (shift.isWorking) {
+        break;
+      }
+      periodLength++;
+    }
+    totalOffDays = periodLength > 0 ? periodLength : null;
+  }
+
+  // Calculate which day of the off period we're currently in
+  let dayCount = 0;
+  if (totalOffDays && periodStartDate) {
+    const currentShiftDay = getCurrentShiftDay(dayjs(date));
+    // Direct calculation is simpler and more performant than a loop
+    dayCount = currentShiftDay.diff(periodStartDate, "day") + 1;
   }
 
   if (!totalOffDays) {

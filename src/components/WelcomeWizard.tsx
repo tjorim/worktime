@@ -9,7 +9,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "../contexts/SettingsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
-import { CONFIG } from "../utils/config";
+import { getTeamCountForOption } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 
 type WizardStep =
@@ -125,7 +125,7 @@ export function WelcomeWizard({
   );
   const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
   const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
-  const teamCount = selectedScheduleConfig?.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
   const getTotalSteps = () => {
@@ -283,8 +283,8 @@ export function WelcomeWizard({
           Your personal shift tracker and time-off planner, built for flexible schedules
         </p>
         <p className="text-muted">
-          Worktime helps you stay on top of your schedule with real-time tracking, countdown
-          timers, and integrated time-off management - stored locally in your browser.
+          Worktime helps you stay on top of your schedule with real-time tracking, countdown timers,
+          and integrated time-off management - stored locally in your browser.
         </p>
       </div>
       <div className="d-flex justify-content-between">
@@ -412,9 +412,7 @@ export function WelcomeWizard({
               variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
               className="w-100 text-start mb-2"
               onClick={() => handleScheduleChange(schedule.value)}
-              disabled={
-                isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)
-              }
+              disabled={isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)}
               ref={
                 currentStep === "schedule-selection" && schedule.value === "9-5"
                   ? firstButtonRef
