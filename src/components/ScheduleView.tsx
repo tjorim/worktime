@@ -217,6 +217,7 @@ export function ScheduleView({
                   {weekDays.map((day) => {
                     const shift = calculateShift(day, teamNumber, scheduleOption ?? undefined);
                     const isToday = day.isSame(dayjs(), "day");
+                    const shiftDisplay = getShiftDisplay(shift, scheduleOption);
 
                     return (
                       <td
@@ -224,8 +225,8 @@ export function ScheduleView({
                         className={`text-center ${isToday ? "today-column" : ""}`}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, scheduleOption).displayName : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, scheduleOption).displayName : "Off"}`
+                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shiftDisplay.displayName : "Off"}`
+                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shiftDisplay.displayName : "Off"}`
                         }
                       >
                         {shift.isWorking && (
@@ -235,12 +236,12 @@ export function ScheduleView({
                               <Tooltip
                                 id={`schedule-tooltip-${teamNumber}-${day.format("YYYY-MM-DD")}`}
                               >
-                                <strong>Shift: {getShiftDisplay(shift, scheduleOption).displayCode}</strong>
+                                <strong>Shift: {shiftDisplay.displayCode}</strong>
                                 <br />
-                                {getShiftDisplay(shift, scheduleOption).displayName} shift
+                                {shiftDisplay.displayName} shift
                                 <br />
                                 <em>
-                                  {getShiftDisplay(shift, scheduleOption).displayName} -{" "}
+                                  {shiftDisplay.displayName} -{" "}
                                   {getLocalizedShiftTime(
                                     shift.start,
                                     shift.end,
@@ -253,7 +254,7 @@ export function ScheduleView({
                             <Badge
                               className={`shift-code cursor-help ${getShiftByCode(shift.code).className}`}
                             >
-                              {getShiftDisplay(shift, scheduleOption).displayCode}
+                              {shiftDisplay.displayCode}
                             </Badge>
                           </OverlayTrigger>
                         )}

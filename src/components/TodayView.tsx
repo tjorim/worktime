@@ -48,10 +48,11 @@ function TeamCard({
 }) {
   const { settings, scheduleOption } = useSettings();
   const shiftDetails = getShiftByCode(shiftResult.shift.code);
+  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
   const shiftTimeLabel =
-    shiftDetails.start != null && shiftDetails.end != null
-      ? getLocalizedShiftTime(shiftDetails.start, shiftDetails.end, settings.timeFormat)
-      : shiftDetails.hours;
+    shiftResult.shift.start != null && shiftResult.shift.end != null
+      ? getLocalizedShiftTime(shiftResult.shift.start, shiftResult.shift.end, settings.timeFormat)
+      : shiftDisplay.displayHours;
 
   const cardContent = (
     <>
@@ -85,10 +86,10 @@ function TeamCard({
           placement="top"
           overlay={
             <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Shift Code: {getShiftDisplay(shiftResult.shift, scheduleOption).displayCode}</strong>
+              <strong>Shift Code: {shiftDisplay.displayCode}</strong>
               <br />
               <>
-                {shiftDetails.emoji} <em>{shiftDetails.name}</em>
+                {shiftDetails.emoji} <em>{shiftDisplay.displayName}</em>
                 <br />
                 {shiftTimeLabel}
               </>
@@ -96,12 +97,12 @@ function TeamCard({
           }
         >
           <Badge className={`shift-code cursor-help ${shiftDetails.className}`}>
-            {getShiftDisplay(shiftResult.shift, scheduleOption).displayCode}
+            {shiftDisplay.displayCode}
           </Badge>
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
-        {getShiftDisplay(shiftResult.shift, scheduleOption).displayName}
+        {shiftDisplay.displayName}
         <br />
         {shiftResult.shift.isWorking &&
         shiftResult.shift.start != null &&
@@ -126,7 +127,7 @@ function TeamCard({
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
               Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")},{" "}
-              {getShiftDisplay(shiftResult.shift, scheduleOption).displayName}
+              {shiftDisplay.displayName}
             </Tooltip>
           }
         >

@@ -24,7 +24,14 @@ const createMockShiftResult = (
   shift: {
     code: shiftCode,
     emoji: shiftCode === "M" ? "🌅" : shiftCode === "L" ? "🌆" : shiftCode === "N" ? "🌙" : "🏠",
-    name: shiftCode === "M" ? "Morning" : shiftCode === "L" ? "Late" : shiftCode === "N" ? "Night" : "Off",
+    name:
+      shiftCode === "M"
+        ? "Morning"
+        : shiftCode === "L"
+          ? "Late"
+          : shiftCode === "N"
+            ? "Night"
+            : "Off",
     hours:
       shiftCode === "M"
         ? "07:00-15:00"

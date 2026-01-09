@@ -136,7 +136,9 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             <Badge bg="light" text="dark" className="timeline-badge">
               T{prevShift.teamNumber}
             </Badge>
-            <div className="timeline-code">{getShiftDisplay(prevShift.shift, scheduleOption).displayCode}</div>
+            <div className="timeline-code">
+              {getShiftDisplay(prevShift.shift, scheduleOption).displayCode}
+            </div>
           </div>
         )}
         {prevShift && <span className="timeline-arrow">→</span>}
@@ -154,7 +156,8 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
                     currentWorkingTeam.shift,
                     scheduleOption,
                   );
-                  return currentWorkingTeam.shift.start != null && currentWorkingTeam.shift.end != null
+                  return currentWorkingTeam.shift.start != null &&
+                    currentWorkingTeam.shift.end != null
                     ? getLocalizedShiftTime(
                         currentWorkingTeam.shift.start,
                         currentWorkingTeam.shift.end,
@@ -193,7 +196,9 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             <Badge bg="light" text="dark" className="timeline-badge">
               T{nextShift.teamNumber}
             </Badge>
-            <div className="timeline-code">{getShiftDisplay(nextShift.shift, scheduleOption).displayCode}</div>
+            <div className="timeline-code">
+              {getShiftDisplay(nextShift.shift, scheduleOption).displayCode}
+            </div>
           </div>
         )}
       </div>

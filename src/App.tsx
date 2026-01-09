@@ -29,7 +29,7 @@ function AppContent() {
   >("onboarding");
   const [activeTab, setActiveTab] = useState("today");
   const [showAbout, setShowAbout] = useState(false);
-  const { showSuccess, showInfo } = useToast();
+  const { showSuccess, showInfo, showError } = useToast();
   const {
     myTeam,
     setMyTeam,
@@ -75,17 +75,25 @@ function AppContent() {
     const { team, date } = pendingDeepLinkRef.current;
 
     if (team) {
-      const teamNumber = parseInt(team, 10);
-      const teamCount = getTeamCountForOption(scheduleOption);
-      if (teamNumber >= 1 && teamNumber <= teamCount) {
-        setMyTeam(teamNumber);
+      try {
+        const teamNumber = parseInt(team, 10);
+        const teamCount = getTeamCountForOption(scheduleOption);
+        if (teamNumber >= 1 && teamNumber <= teamCount) {
+          setMyTeam(teamNumber);
+        }
+      } catch (error) {
+        console.error("Failed to process deep-link team parameter:", error);
       }
     }
 
     if (date) {
-      const parsedDate = dayjs(date);
-      if (parsedDate.isValid()) {
-        setCurrentDate(parsedDate);
+      try {
+        const parsedDate = dayjs(date);
+        if (parsedDate.isValid()) {
+          setCurrentDate(parsedDate);
+        }
+      } catch (error) {
+        console.error("Failed to process deep-link date parameter:", error);
       }
     }
 
@@ -132,15 +140,20 @@ function AppContent() {
   };
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
-    const nextScheduleConfig = getScheduleConfig(schedule);
-    const teamCountChanged =
-      getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
-    const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
+    try {
+      const nextScheduleConfig = getScheduleConfig(schedule);
+      const teamCountChanged =
+        getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
+      const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
 
-    if (teamCountChanged || teamsDisabled) {
-      setMyTeam(null);
+      if (teamCountChanged || teamsDisabled) {
+        setMyTeam(null);
+      }
+      setScheduleOption(schedule);
+    } catch (error) {
+      console.error("Failed to change schedule:", error);
+      showError("Failed to change schedule. Please try again.", "❌");
     }
-    setScheduleOption(schedule);
   };
 
   const handleChangeTeam = () => {
