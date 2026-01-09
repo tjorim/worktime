@@ -135,8 +135,7 @@ function AppContent() {
     const currentScheduleConfig = getScheduleConfig(scheduleOption ?? null);
     const nextScheduleConfig = getScheduleConfig(schedule);
     const teamCountChanged =
-      (currentScheduleConfig.shiftConfig.teamCount ?? 0) !==
-      (nextScheduleConfig.shiftConfig.teamCount ?? 0);
+      getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
     const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
 
     if (teamCountChanged || teamsDisabled) {

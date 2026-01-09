@@ -546,73 +546,37 @@ export function getOffDayProgress(
   let totalOffDays: number | null = null;
   
   if (schedulePattern) {
-    // For cycle-based patterns, find the maximum consecutive off days
-    // This works for both simple patterns (5-shift with 4 consecutive off days)
-    // and complex patterns (9-5 with weekend pattern, 2-shift with variable weekends)
-    
     const cycleLength = getCycleLengthForSchedule(scheduleOption);
-    let maxConsecutiveOff = 0;
-    let currentConsecutiveOff = 0;
-    
-    // Scan through the entire cycle to find the longest consecutive off period
-    for (let i = 0; i < cycleLength; i++) {
-      const dayIndex = i + 1;
-      const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-      
-      if (!day || day.shift === "O") {
-        // This day is off
-        currentConsecutiveOff++;
-        maxConsecutiveOff = Math.max(maxConsecutiveOff, currentConsecutiveOff);
+
+    // Create a full sequence of shifts for the cycle, treating undefined days as 'O' (off).
+    const shiftSequence: ("O" | string)[] = Array(cycleLength).fill("O");
+    schedulePattern.days.forEach((day) => {
+      // dayIndex is 1-based, array is 0-based.
+      if (day.dayIndex > 0 && day.dayIndex <= cycleLength) {
+        shiftSequence[day.dayIndex - 1] = day.shift;
+      }
+    });
+
+    // To handle wrap-around, we can check a doubled sequence.
+    const doubledSequence = [...shiftSequence, ...shiftSequence];
+    let maxConsecutive = 0;
+    let currentConsecutive = 0;
+
+    for (const shift of doubledSequence) {
+      if (shift === "O") {
+        currentConsecutive++;
       } else {
-        // Reset consecutive count
-        currentConsecutiveOff = 0;
+        maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+        currentConsecutive = 0;
       }
     }
-    
-    // Check wrap-around: if both end and start of cycle are off, count consecutive days across boundary
-    const lastDay = schedulePattern.days.find((d) => d.dayIndex === cycleLength);
-    const firstDay = schedulePattern.days.find((d) => d.dayIndex === 1);
-    const lastIsOff = !lastDay || lastDay.shift === "O";
-    const firstIsOff = !firstDay || firstDay.shift === "O";
-    
-    if (lastIsOff && firstIsOff) {
-      // Count consecutive off days from beginning of cycle
-      let startConsecutiveOff = 0;
-      for (let i = 0; i < cycleLength; i++) {
-        const dayIndex = i + 1;
-        const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "O") {
-          startConsecutiveOff++;
-        } else {
-          break; // Stop at first working day
-        }
-      }
-      
-      // Count consecutive off days from end of cycle (backward)
-      let endConsecutiveOff = 0;
-      for (let i = cycleLength - 1; i >= 0; i--) {
-        const dayIndex = i + 1;
-        const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "O") {
-          endConsecutiveOff++;
-        } else {
-          break; // Stop at first working day
-        }
-      }
-      
-      // If the entire cycle is off, startConsecutiveOff will already equal cycleLength
-      if (startConsecutiveOff === cycleLength) {
-        maxConsecutiveOff = Math.max(maxConsecutiveOff, cycleLength);
-      } else {
-        // Combine off days at both ends of the cycle across the boundary
-        maxConsecutiveOff = Math.max(
-          maxConsecutiveOff,
-          startConsecutiveOff + endConsecutiveOff
-        );
-      }
-    }
-    
-    totalOffDays = maxConsecutiveOff > 0 ? maxConsecutiveOff : null;
+    // Final check in case the sequence ends with off days.
+    maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+
+    // The longest run can't be longer than the cycle itself.
+    const maxOffDays = Math.min(maxConsecutive, cycleLength);
+
+    totalOffDays = maxOffDays > 0 ? maxOffDays : null;
   }
 
   // Team is off, calculate which day of their off period
