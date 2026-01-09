@@ -588,7 +588,7 @@ export function getOffDayProgress(
     );
     
     if (!mondayHasShift && !sundayHasShift) {
-      // Count from end of week backwards to find consecutive off days at start
+      // Count from beginning of week forward to find consecutive off days at start
       let startConsecutiveOff = 0;
       for (let isoDay = 1; isoDay <= 7; isoDay++) {
         const hasShiftThisDay = schedulePattern.weeks.some((week) =>
@@ -601,7 +601,7 @@ export function getOffDayProgress(
         }
       }
       
-      // Count from start of week forwards to find consecutive off days at end
+      // Count from end of week backward to find consecutive off days at end
       let endConsecutiveOff = 0;
       for (let isoDay = 7; isoDay >= 1; isoDay--) {
         const hasShiftThisDay = schedulePattern.weeks.some((week) =>
