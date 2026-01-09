@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption, SchedulePattern } from "../data/rosters";
+import type { ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -146,16 +146,6 @@ export const SHIFTS = Object.freeze({
   }),
 });
 
-const ISO_WEEKDAY_MAP: Record<string, number> = {
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
-  Fri: 5,
-  Sat: 6,
-  Sun: 7,
-};
-
 const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getScheduleConfig(scheduleOption);
 
@@ -210,9 +200,6 @@ const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
   }
 };
 
-const mapWeeklyShiftToCode = (shift: "Early" | "Late" | "Day"): ShiftType =>
-  shift === "Late" ? "E" : "M";
-
 const getTeamOffsetUnits = (
   teamNumber: number,
   teamCount: number,
@@ -233,39 +220,6 @@ const getCycleTeamOffsetDays = (
 
   const offsetStep = Math.floor(cycleLength / teamCount);
   return getTeamOffsetUnits(teamNumber, teamCount, referenceTeam) * offsetStep;
-};
-
-const getShiftForWeeklyRotation = (
-  date: Dayjs,
-  teamNumber: number,
-  schedulePattern: Extract<SchedulePattern, { type: "weekly-rotation" }>,
-  scheduleOption?: NullableScheduleOption,
-): Shift => {
-  const cycleLengthDays = getCycleLengthForSchedule(scheduleOption);
-  const totalWeeks = Math.max(1, Math.round(cycleLengthDays / 7));
-  const referenceDate = getReferenceDateForSchedule(scheduleOption);
-  const referenceWeekStart = dayjs(referenceDate).startOf("isoWeek");
-  const targetWeekStart = date.startOf("isoWeek");
-  const weeksSinceReference = targetWeekStart.diff(referenceWeekStart, "week");
-  const teamCount = getTeamCountForSchedule(scheduleOption);
-  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
-  const teamOffsetWeeks = getTeamOffsetUnits(teamNumber, teamCount, referenceTeam);
-  const weekIndex =
-    ((weeksSinceReference + teamOffsetWeeks) % totalWeeks + totalWeeks) % totalWeeks + 1;
-  const isoWeekday = date.isoWeekday();
-
-  const matchingShift = schedulePattern.weeks.find(
-    (week) =>
-      week.weekIndex === weekIndex &&
-      week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoWeekday),
-  );
-
-  if (!matchingShift) {
-    return SHIFTS.OFF;
-  }
-
-  const shiftCode = mapWeeklyShiftToCode(matchingShift.shift);
-  return mapShiftCodeToShift(shiftCode);
 };
 
 /**
@@ -349,11 +303,8 @@ export function calculateShift(
   // Calculate days since reference
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
-  if (schedulePattern?.type === "weekly-rotation") {
-    return getShiftForWeeklyRotation(targetDate, teamNumber, schedulePattern, scheduleOption);
-  }
-
-  if (schedulePattern?.type === "cycle") {
+  // All patterns now use the unified day-based structure
+  if (schedulePattern) {
     const cycleLength = getCycleLengthForSchedule(scheduleOption);
     const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
     const adjustedDays = daysSinceReference - teamOffset;
@@ -594,25 +545,21 @@ export function getOffDayProgress(
   
   let totalOffDays: number | null = null;
   
-  if (schedulePattern?.type === "cycle") {
-    totalOffDays = schedulePattern.days.filter((day) => day.shift === "O").length;
-  } else if (schedulePattern?.type === "weekly-rotation") {
-    // For weekly-rotation, calculate consecutive off days by looking at the pattern
-    // Helper to check if a specific ISO weekday has a shift
-    const dayHasShift = (isoDay: number): boolean => {
-      return schedulePattern.weeks.some((week) =>
-        week.days.some((day) => ISO_WEEKDAY_MAP[day] === isoDay)
-      );
-    };
+  if (schedulePattern) {
+    // For cycle-based patterns, find the maximum consecutive off days
+    // This works for both simple patterns (5-shift with 4 consecutive off days)
+    // and complex patterns (9-5 with weekend pattern, 2-shift with variable weekends)
     
-    // Count the max consecutive off days in the weekly pattern
-    // Scan through a typical week to find consecutive off days
+    const cycleLength = getCycleLengthForSchedule(scheduleOption);
     let maxConsecutiveOff = 0;
     let currentConsecutiveOff = 0;
     
-    // Check each day in a week (Mon=1, Sun=7)
-    for (let isoDay = 1; isoDay <= 7; isoDay++) {
-      if (!dayHasShift(isoDay)) {
+    // Scan through the entire cycle to find the longest consecutive off period
+    for (let i = 0; i < cycleLength; i++) {
+      const dayIndex = i + 1;
+      const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
+      
+      if (!day || day.shift === "O") {
         // This day is off
         currentConsecutiveOff++;
         maxConsecutiveOff = Math.max(maxConsecutiveOff, currentConsecutiveOff);
@@ -622,34 +569,42 @@ export function getOffDayProgress(
       }
     }
     
-    // Check wrap-around: if both Sunday and Monday are off, count consecutive days across week boundary
-    if (!dayHasShift(7) && !dayHasShift(1)) {
-      // Count consecutive off days from beginning of week (Monday forward)
+    // Check wrap-around: if both end and start of cycle are off, count consecutive days across boundary
+    const lastDay = schedulePattern.days.find((d) => d.dayIndex === cycleLength);
+    const firstDay = schedulePattern.days.find((d) => d.dayIndex === 1);
+    const lastIsOff = !lastDay || lastDay.shift === "O";
+    const firstIsOff = !firstDay || firstDay.shift === "O";
+    
+    if (lastIsOff && firstIsOff) {
+      // Count consecutive off days from beginning of cycle
       let startConsecutiveOff = 0;
-      for (let isoDay = 1; isoDay <= 7; isoDay++) {
-        if (!dayHasShift(isoDay)) {
+      for (let i = 0; i < cycleLength; i++) {
+        const dayIndex = i + 1;
+        const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
+        if (!day || day.shift === "O") {
           startConsecutiveOff++;
         } else {
           break; // Stop at first working day
         }
       }
       
-      // Count consecutive off days from end of week (Sunday backward)
+      // Count consecutive off days from end of cycle (backward)
       let endConsecutiveOff = 0;
-      for (let isoDay = 7; isoDay >= 1; isoDay--) {
-        if (!dayHasShift(isoDay)) {
+      for (let i = cycleLength - 1; i >= 0; i--) {
+        const dayIndex = i + 1;
+        const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
+        if (!day || day.shift === "O") {
           endConsecutiveOff++;
         } else {
           break; // Stop at first working day
         }
       }
       
-      // If the entire week is off, startConsecutiveOff will already be 7
-      if (startConsecutiveOff === 7) {
-        // Entire week is off - main loop should also have captured this as 7
-        maxConsecutiveOff = Math.max(maxConsecutiveOff, 7);
+      // If the entire cycle is off, startConsecutiveOff will already equal cycleLength
+      if (startConsecutiveOff === cycleLength) {
+        maxConsecutiveOff = Math.max(maxConsecutiveOff, cycleLength);
       } else {
-        // Combine off days at both ends of the week across the boundary
+        // Combine off days at both ends of the cycle across the boundary
         maxConsecutiveOff = Math.max(
           maxConsecutiveOff,
           startConsecutiveOff + endConsecutiveOff
