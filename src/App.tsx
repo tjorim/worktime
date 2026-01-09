@@ -132,7 +132,6 @@ function AppContent() {
   };
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
-    const currentScheduleConfig = getScheduleConfig(scheduleOption ?? null);
     const nextScheduleConfig = getScheduleConfig(schedule);
     const teamCountChanged =
       getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
