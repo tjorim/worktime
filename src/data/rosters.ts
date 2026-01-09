@@ -13,8 +13,12 @@ export type ShiftRosterConfig = {
 export type SchedulePattern = {
   days: Array<{
     dayIndex: number;
-    shift: "M" | "E" | "N" | "D" | "L" | "O";
+    shift: "M" | "E" | "N" | "D" | "L" | "O"; // M=Morning, E=Evening, N=Night, D=Day, L=Late, O=Off
   }>;
+  extra?: {
+    weekendAssignment?: string;
+    jumpday?: string;
+  };
 };
 
 export type ScheduleRoster = {
@@ -97,6 +101,10 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           { dayIndex: 27, shift: "O" },  // Saturday
           { dayIndex: 28, shift: "O" },  // Sunday
         ],
+        extra: {
+          weekendAssignment: "One assigned weekend within the 4-week cycle.",
+          jumpday: "Fixed jumpday within the cycle.",
+        },
       },
       notes: "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
     },
