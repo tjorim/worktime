@@ -35,7 +35,7 @@ import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 /**
  * Convert a ShiftResult to a CalendarEvent
  *
- * Off-days (shift code 'X') are converted with null start/end times.
+ * Off-days (shift code 'O') are converted with null start/end times.
  * Each call generates a new UUID for the event.
  *
  * @param shift - The shift result from shift calculations
@@ -61,7 +61,7 @@ import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
  *
  * @example
  * // Off-day shift has null times
- * const offDay = { date: dayjs('2025-01-07'), shift: SHIFTS.OFF, code: '2502.2X', teamNumber: 1 };
+ * const offDay = { date: dayjs('2025-01-07'), shift: SHIFTS.OFF, code: '2502.2O', teamNumber: 1 };
  * shiftToCalendarEvent(offDay).meta.startTime // undefined
  * shiftToCalendarEvent(offDay).meta.endTime   // undefined
  */
@@ -71,7 +71,7 @@ export function shiftToCalendarEvent(shift: ShiftResult): CalendarEvent {
   const meta: ShiftMetadata = {
     type: "shift",
     team: shift.teamNumber,
-    shiftCode: shift.shift.code as "M" | "L" | "N" | "X",
+    shiftCode: shift.shift.code as "M" | "L" | "N" | "O",
     startTime:
       shift.shift.start !== null ? `${String(shift.shift.start).padStart(2, "0")}:00` : undefined,
     endTime:

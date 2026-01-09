@@ -10,16 +10,16 @@
  * - 2 mornings (M): 07:00-15:00
  * - 2 evenings (L): 15:00-23:00
  * - 2 nights (N): 23:00-07:00
- * - 4 days off (o)
+ * - 4 days off (O)
  *
  * The 5 teams are staggered by 2 days each, ensuring 24/7 coverage:
  * ```
  * Day:    1  2  3  4  5  6  7  8  9  10 | 11 12 13 ...
- * Team 1: M  M  L  L  N  N  o  o  o  o  | M  M  L  ...
- * Team 2: N  N  o  o  o  o  M  M  L  L  | N  N  o  ...
- * Team 3: o  o  M  M  L  L  N  N  o  o  | o  o  M  ...
- * Team 4: L  L  N  N  o  o  o  o  M  M  | L  L  N  ...
- * Team 5: o  o  o  o  M  M  L  L  N  N  | o  o  o  ...
+ * Team 1: M  M  L  L  N  N  O  O  O  O  | M  M  L  ...
+ * Team 2: N  N  O  O  O  O  M  M  L  L  | N  N  O  ...
+ * Team 3: O  O  M  M  L  L  N  N  O  O  | O  O  M  ...
+ * Team 4: L  L  N  N  O  O  O  O  M  M  | L  L  N  ...
+ * Team 5: O  O  O  O  M  M  L  L  N  N  | O  O  O  ...
  * ```
  *
  * ### Weekly Rotation Schedules
@@ -72,7 +72,7 @@ import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
-export type ShiftType = "M" | "L" | "N" | "o";
+export type ShiftType = "M" | "L" | "N" | "O";
 
 export interface Shift {
   code: ShiftType;
@@ -135,7 +135,7 @@ export const SHIFTS = Object.freeze({
     className: "shift-night",
   }),
   OFF: Object.freeze({
-    code: "o",
+    code: "O",
     emoji: "🏠",
     name: "Off",
     hours: "Not working",
@@ -377,7 +377,7 @@ export function getCurrentShiftDay(date: string | Date | Dayjs): Dayjs {
  * - YY = last two digits of year
  * - WW = ISO week number (01-53)
  * - D = ISO weekday (1=Monday, 7=Sunday)
- * - X = shift type (M/L/N/o)
+ * - X = shift type (M/L/N/O)
  *
  * Night shifts use the previous calendar day for their code (e.g., Monday night shift is coded as Monday, not Tuesday).
  *
@@ -482,7 +482,7 @@ export function getNextShift(
  * getAllTeamsShifts('2025-01-06')
  * // Returns: [
  * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.MORNING, code: '2502.1M', teamNumber: 1 },
- * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.OFF, code: '2502.1o', teamNumber: 2 },
+ * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.OFF, code: '2502.1O', teamNumber: 2 },
  * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.NIGHT, code: '2501.7N', teamNumber: 3 },
  * //   ...
  * // ]
@@ -559,7 +559,7 @@ export function getOffDayProgress(
       const dayIndex = i + 1;
       const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
       
-      if (!day || day.shift === "o") {
+      if (!day || day.shift === "O") {
         // This day is off
         currentConsecutiveOff++;
         maxConsecutiveOff = Math.max(maxConsecutiveOff, currentConsecutiveOff);
@@ -581,7 +581,7 @@ export function getOffDayProgress(
       for (let i = 0; i < cycleLength; i++) {
         const dayIndex = i + 1;
         const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "o") {
+        if (!day || day.shift === "O") {
           startConsecutiveOff++;
         } else {
           break; // Stop at first working day
@@ -593,7 +593,7 @@ export function getOffDayProgress(
       for (let i = cycleLength - 1; i >= 0; i--) {
         const dayIndex = i + 1;
         const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "o") {
+        if (!day || day.shift === "O") {
           endConsecutiveOff++;
         } else {
           break; // Stop at first working day
