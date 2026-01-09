@@ -72,14 +72,14 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           { dayIndex: 5, shift: "E" },  // Friday
           { dayIndex: 6, shift: "O" },  // Saturday
           { dayIndex: 7, shift: "O" },  // Sunday
-          // Week 2: Late shift Mon-Fri, work weekend (assigned weekend in cycle)
+          // Week 2: Late shift Mon-Fri, off weekend
           { dayIndex: 8, shift: "L" },   // Monday
           { dayIndex: 9, shift: "L" },   // Tuesday
           { dayIndex: 10, shift: "L" },  // Wednesday
           { dayIndex: 11, shift: "L" },  // Thursday
           { dayIndex: 12, shift: "L" },  // Friday
-          { dayIndex: 13, shift: "L" },  // Saturday - working weekend
-          { dayIndex: 14, shift: "L" },  // Sunday - working weekend
+          { dayIndex: 13, shift: "O" },  // Saturday
+          { dayIndex: 14, shift: "O" },  // Sunday
           // Week 3: Early shift Mon-Fri, off weekend
           { dayIndex: 15, shift: "E" },  // Monday
           { dayIndex: 16, shift: "E" },  // Tuesday
@@ -98,7 +98,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           { dayIndex: 28, shift: "O" },  // Sunday
         ],
       },
-      notes: "Early/late rotation by week in 4-week cycle. One working weekend (week 2). Jumpdays are individually configured per user.",
+      notes: "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
     },
   },
   {
