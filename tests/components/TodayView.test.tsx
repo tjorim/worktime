@@ -25,6 +25,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     displayName: shift.name,
     displayHours: shift.hours,
   })),
+  getFormattedShiftTime: vi.fn(() => "07:00-15:00"),
   isCurrentlyWorking: vi.fn(() => false),
 }));
 

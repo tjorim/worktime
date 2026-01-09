@@ -18,6 +18,13 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getShiftCode: vi.fn(),
   getShiftByCode: vi.fn(),
   getShiftDisplay: vi.fn(),
+  getFormattedShiftTime: vi.fn((shift) => {
+    // Return formatted time with en-dash based on shift hours
+    if (shift.hours) {
+      return shift.hours.replace("-", "–");
+    }
+    return "";
+  }),
   isCurrentlyWorking: vi.fn(),
 }));
 
