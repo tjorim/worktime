@@ -50,7 +50,7 @@
  * - `YY`: 2-digit year (25 = 2025)
  * - `WW`: ISO week number (01-53)
  * - `D`: ISO weekday (1=Monday, 7=Sunday)
- * - `X`: Shift type (M/E/N/O)
+ * - `X`: Shift type (M/L/N/D/O)
  *
  * **Important**: Night shifts use the PREVIOUS day's date code because they start
  * at 23:00 on that day (e.g., Monday night is coded as Monday, not Tuesday).
@@ -265,7 +265,7 @@ export function getShiftDisplayName(shift: ShiftOrUnknown): string {
 export function getShiftDisplay(
   shift: ShiftOrUnknown,
   scheduleOption?: NullableScheduleOption,
-): { displayName: string; displayHours: string } {
+): { displayName: string; displayHours: string; displayCode: string } {
   const roster = getRosterForSchedule(scheduleOption);
   const override =
     roster.shiftConfig.shiftDisplayOverrides?.[
@@ -275,6 +275,7 @@ export function getShiftDisplay(
   return {
     displayName: override?.displayName ?? shift.name,
     displayHours: override?.displayHours ?? shift.hours,
+    displayCode: override?.displayCode ?? shift.code,
   };
 }
 

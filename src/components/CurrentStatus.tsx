@@ -177,7 +177,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   const currentTimeShiftCode = useMemo(() => {
     const hour = liveTime.hour();
     if (hour >= 7 && hour < 15) return "M";
-    if (hour >= 15 && hour < 23) return "E";
+    if (hour >= 15 && hour < 23) return "L";
     return "N"; // 23:00-07:00
   }, [liveTime]);
 
@@ -273,7 +273,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             <Tooltip id={teamTooltipId}>
                               <strong>Your Team Today</strong>
                               <br />
-                              Code: <strong>{currentShift.shift.code}</strong>
+                              Code: <strong>{getShiftDisplay(currentShift.shift, scheduleOption).displayCode}</strong>
                               <br />
                               {(() => {
                                 const shift = getShiftByCode(currentShift.shift.code);

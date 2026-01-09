@@ -49,7 +49,7 @@ function TeamCard({
   const { settings, scheduleOption } = useSettings();
   const shiftDetails = getShiftByCode(shiftResult.shift.code);
   const shiftTimeLabel =
-    shiftDetails.start && shiftDetails.end
+    shiftDetails.start != null && shiftDetails.end != null
       ? getLocalizedShiftTime(shiftDetails.start, shiftDetails.end, settings.timeFormat)
       : shiftDetails.hours;
 
@@ -85,7 +85,7 @@ function TeamCard({
           placement="top"
           overlay={
             <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Shift Code: {shiftResult.shift.code}</strong>
+              <strong>Shift Code: {getShiftDisplay(shiftResult.shift, scheduleOption).displayCode}</strong>
               <br />
               <>
                 {shiftDetails.emoji} <em>{shiftDetails.name}</em>
@@ -96,20 +96,24 @@ function TeamCard({
           }
         >
           <Badge className={`shift-code cursor-help ${shiftDetails.className}`}>
-            {shiftResult.shift.code}
+            {getShiftDisplay(shiftResult.shift, scheduleOption).displayCode}
           </Badge>
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
         {getShiftDisplay(shiftResult.shift, scheduleOption).displayName}
         <br />
-        {shiftResult.shift.isWorking
+        {shiftResult.shift.isWorking &&
+        shiftResult.shift.start != null &&
+        shiftResult.shift.end != null
           ? getLocalizedShiftTime(
               shiftResult.shift.start,
               shiftResult.shift.end,
               settings.timeFormat,
             )
-          : "Not working today"}
+          : shiftResult.shift.isWorking
+            ? "Working"
+            : "Not working today"}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger

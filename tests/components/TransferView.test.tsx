@@ -26,15 +26,15 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
         isWorking: true,
         className: "shift-morning",
       },
-      E: {
-        code: "E",
+      L: {
+        code: "L",
         emoji: "🌆",
         name: "Evening",
         hours: "15:00-23:00",
         start: 15,
         end: 23,
         isWorking: true,
-        className: "shift-evening",
+        className: "shift-late",
       },
       N: {
         code: "N",
@@ -232,7 +232,7 @@ describe("TransferView", () => {
           fromTeam: 1,
           toTeam: 2,
           fromShiftType: "M" as const,
-          toShiftType: "E" as const,
+          toShiftType: "L" as const,
           type: "handover",
         },
       ];
@@ -294,14 +294,14 @@ describe("TransferView", () => {
           fromTeam: 1,
           toTeam: 2,
           fromShiftType: "M" as const,
-          toShiftType: "E" as const,
+          toShiftType: "L" as const,
           type: "handover",
         },
         {
           date: dayjs("2025-01-16"),
           fromTeam: 2,
           toTeam: 1,
-          fromShiftType: "E" as const,
+          fromShiftType: "L" as const,
           toShiftType: "N" as const,
           type: "takeover",
         },
@@ -340,7 +340,7 @@ describe("TransferView", () => {
         fromTeam: 1,
         toTeam: 2,
         fromShiftType: "M" as const,
-        toShiftType: "E" as const,
+        toShiftType: "L" as const,
         type: "handover",
       }));
 

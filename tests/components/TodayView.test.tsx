@@ -56,16 +56,16 @@ const mockTodayShifts: ShiftResult[] = [
   {
     teamNumber: 2,
     shift: {
-      code: "E",
+      code: "L",
       name: "🌆 Evening",
       hours: "15:00-23:00",
       start: 15,
       end: 23,
       isWorking: true,
-      className: "shift-evening",
+      className: "shift-late",
     },
     date: dayjs("2025-01-15"),
-    code: "2503.3E",
+    code: "2503.3L",
   },
   {
     teamNumber: 3,

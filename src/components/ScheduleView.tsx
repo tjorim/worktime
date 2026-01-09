@@ -235,7 +235,7 @@ export function ScheduleView({
                               <Tooltip
                                 id={`schedule-tooltip-${teamNumber}-${day.format("YYYY-MM-DD")}`}
                               >
-                                <strong>Shift: {shift.code}</strong>
+                                <strong>Shift: {getShiftDisplay(shift, scheduleOption).displayCode}</strong>
                                 <br />
                                 {getShiftDisplay(shift, scheduleOption).displayName} shift
                                 <br />
@@ -253,7 +253,7 @@ export function ScheduleView({
                             <Badge
                               className={`shift-code cursor-help ${getShiftByCode(shift.code).className}`}
                             >
-                              {shift.code}
+                              {getShiftDisplay(shift, scheduleOption).displayCode}
                             </Badge>
                           </OverlayTrigger>
                         )}

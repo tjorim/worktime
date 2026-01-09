@@ -341,6 +341,26 @@ Advanced features for future development phases.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
+#### 18. Roster-Specific Shift Times for Live Features
+
+- **Component**: Support different actual start/end times per roster for live status calculations
+- **Current Limitation**: `displayHours` in `ShiftDisplayOverride` is display-only (string format). Live features (LIVE badge, countdown timers, "currently working" detection) use global SHIFTS constants (MORNING: 7-15, LATE: 15-23, etc.) which causes incorrect live status for rosters with non-standard hours.
+- **Example Issue**: Weekend roster has Early: 06:00-14:30, Late: 13:30-22:00, Day: 08:00-16:30, but live features use the global 07:00-15:00 and 15:00-23:00 times, resulting in wrong LIVE badges and countdowns.
+- **Use Cases**:
+  - Accurate LIVE badge display for rosters with different shift times
+  - Correct countdown timers for next shift
+  - Proper "currently working" detection across all roster types
+  - Support organizations with multiple roster patterns that have different shift hours
+- **Implementation**: Extend `ShiftDisplayOverride` to include numeric start/end time overrides that apply to both display AND live calculations
+- **Files to Modify**:
+  - `src/data/rosters.ts` - Add start/end time overrides to ShiftDisplayOverride type
+  - `src/utils/shiftCalculations.ts` - Update calculateShift to use roster-specific times
+  - `src/utils/dateTimeUtils.ts` - Update time formatting to handle roster-specific times
+  - `src/components/CurrentStatus.tsx` - Use roster-specific times for live status
+  - `src/hooks/useCountdown.ts` - Use roster-specific times for countdown calculations
+- **Estimated Effort**: 2–3 hours
+- **Status**: 🔲 Future (Low Priority)
+
 ## Current To-do Status
 
 ### 🔲 Next Up

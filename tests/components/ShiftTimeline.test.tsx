@@ -15,7 +15,7 @@ const renderWithProviders = (component: React.ReactElement) => {
 // Mock data for testing
 const createMockShiftResult = (
   teamNumber: number,
-  shiftCode: "M" | "E" | "N" | "O",
+  shiftCode: "M" | "L" | "N" | "O",
   date: Dayjs,
 ): ShiftResult => ({
   teamNumber,
@@ -23,25 +23,27 @@ const createMockShiftResult = (
   code: `${date.format("YYWW.d")}${shiftCode}`,
   shift: {
     code: shiftCode,
-    name:
-      shiftCode === "M"
-        ? "🌅 Morning Shift"
-        : shiftCode === "E"
-          ? "🌆 Evening Shift"
-          : shiftCode === "N"
-            ? "🌙 Night Shift"
-            : "🏠 Off Duty",
+    emoji: shiftCode === "M" ? "🌅" : shiftCode === "L" ? "🌆" : shiftCode === "N" ? "🌙" : "🏠",
+    name: shiftCode === "M" ? "Morning" : shiftCode === "L" ? "Late" : shiftCode === "N" ? "Night" : "Off",
     hours:
       shiftCode === "M"
-        ? "7:00 - 15:00"
-        : shiftCode === "E"
-          ? "15:00 - 23:00"
+        ? "07:00-15:00"
+        : shiftCode === "L"
+          ? "15:00-23:00"
           : shiftCode === "N"
-            ? "23:00 - 7:00"
-            : "",
-    start: shiftCode === "M" ? 7 : shiftCode === "E" ? 15 : shiftCode === "N" ? 23 : null,
-    end: shiftCode === "M" ? 15 : shiftCode === "E" ? 23 : shiftCode === "N" ? 7 : null,
+            ? "23:00-07:00"
+            : "Not working",
+    start: shiftCode === "M" ? 7 : shiftCode === "L" ? 15 : shiftCode === "N" ? 23 : null,
+    end: shiftCode === "M" ? 15 : shiftCode === "L" ? 23 : shiftCode === "N" ? 7 : null,
     isWorking: shiftCode !== "O",
+    className:
+      shiftCode === "M"
+        ? "shift-morning"
+        : shiftCode === "L"
+          ? "shift-late"
+          : shiftCode === "N"
+            ? "shift-night"
+            : "shift-off",
   },
 });
 
@@ -58,7 +60,7 @@ describe("ShiftTimeline", () => {
   });
 
   it("displays current working team with active indicator", () => {
-    const currentWorkingTeam = createMockShiftResult(3, "E", today);
+    const currentWorkingTeam = createMockShiftResult(3, "L", today);
 
     const { container } = renderWithProviders(
       <ShiftTimeline currentWorkingTeam={currentWorkingTeam} today={today} />,
