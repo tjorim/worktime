@@ -168,25 +168,16 @@ const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
 
 const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
   const schedule = getScheduleForOption(scheduleOption);
-  if (schedule.shiftConfig.teamCount === undefined) {
-    throw new Error(`teamCount not defined for schedule ${schedule.value}`);
-  }
   return schedule.shiftConfig.teamCount;
 };
 
 const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
   const schedule = getScheduleForOption(scheduleOption);
-  if (schedule.shiftConfig.cycleLengthDays === undefined) {
-    throw new Error(`cycleLengthDays not defined for schedule ${schedule.value}`);
-  }
   return schedule.shiftConfig.cycleLengthDays;
 };
 
 const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Dayjs => {
   const schedule = getScheduleForOption(scheduleOption);
-  if (!schedule.shiftConfig.referenceDate) {
-    throw new Error(`referenceDate not defined for schedule ${schedule.value}`);
-  }
   const referenceDate = dayjs(schedule.shiftConfig.referenceDate, "YYYY-MM-DD", true);
   if (!referenceDate.isValid()) {
     throw new Error(
@@ -198,9 +189,6 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
   const schedule = getScheduleForOption(scheduleOption);
-  if (schedule.shiftConfig.referenceTeam === undefined) {
-    throw new Error(`referenceTeam not defined for schedule ${schedule.value}`);
-  }
   return schedule.shiftConfig.referenceTeam;
 };
 
@@ -392,10 +380,6 @@ export function calculateShift(
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
   // All schedules use the unified pattern-based structure
-  if (!schedulePattern) {
-    throw new Error(`schedulePattern not defined for schedule ${schedule.value}`);
-  }
-
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
   const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
   const adjustedDays = daysSinceReference - teamOffset;
