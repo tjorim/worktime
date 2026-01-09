@@ -305,7 +305,7 @@ export function MonthCalendar({
   };
 
   const contextMenuItems = getContextMenuItems();
-  
+
   // Check if we're viewing the current month
   const currentMonth = dayjs().startOf("month");
   const isCurrentMonth = month.isSame(currentMonth, "month");

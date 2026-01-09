@@ -37,7 +37,7 @@ function computeShiftTimeline(
   // Use the shift day from currentWorkingTeam instead of calendar day
   // This is crucial for night shifts which use the previous calendar day as their shift day
   const shiftDay = currentWorkingTeam.date;
-  
+
   // Get all teams for the shift day to build timeline
   const allTeamsToday = getAllTeamsShifts(shiftDay, scheduleOption);
   const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking);

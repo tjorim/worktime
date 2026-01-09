@@ -222,7 +222,7 @@ const mapShiftCodeToShift = (code: ShiftType): Shift => {
 const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
   if (teamCount <= 1) return 0;
   // Normalize to [0..teamCount-1] range to handle cases where teamNumber < referenceTeam
-  return ((teamNumber - referenceTeam) % teamCount + teamCount) % teamCount;
+  return (((teamNumber - referenceTeam) % teamCount) + teamCount) % teamCount;
 };
 
 const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNumber?: number) => {
@@ -286,12 +286,12 @@ export function getShiftDisplay(
 
 /**
  * Format shift time with localization, falling back to display hours when localization is unavailable.
- * 
+ *
  * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when the shift has valid start and end
  * times. If the shift start/end are null or invalid, or if localization fails, it falls back to the
  * roster-specific display hours from shift display overrides. This ensures consistent shift time
  * formatting across the app.
- * 
+ *
  * @param shift - Shift object with code, start, and end times
  * @param scheduleOption - Schedule option used to resolve display overrides
  * @param timeFormat - Time format preference ("12h" or "24h")
@@ -304,7 +304,7 @@ export function getFormattedShiftTime(
 ): string {
   const { displayHours } = getShiftDisplay(shift, scheduleOption);
   return shift.start != null && shift.end != null
-    ? getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours
+    ? (getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours)
     : displayHours;
 }
 

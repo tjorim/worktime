@@ -616,9 +616,7 @@ describe("WelcomeWizard", () => {
       await user.click(screen.getByLabelText(/Select Team 2/i));
 
       // Wait for wizard to close
-      await waitFor(() =>
-        expect(screen.queryByText(/Choose your team/i)).not.toBeInTheDocument(),
-      );
+      await waitFor(() => expect(screen.queryByText(/Choose your team/i)).not.toBeInTheDocument());
 
       // Verify team was changed but vacation allowance remains unchanged
       saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
@@ -817,7 +815,7 @@ describe("WelcomeWizard", () => {
     it("should not crash when onScheduleSelect is provided", async () => {
       const user = userEvent.setup();
       const onScheduleSelectMock = vi.fn();
-      
+
       // Test that the component works with onScheduleSelect prop
       renderWithProviders(
         <WelcomeWizard
@@ -843,7 +841,7 @@ describe("WelcomeWizard", () => {
     it("should not allow selection of disabled/unavailable schedules", async () => {
       const user = userEvent.setup();
       const onScheduleSelectMock = vi.fn();
-      
+
       renderWithProviders(
         <WelcomeWizard
           {...defaultProps}
@@ -868,16 +866,14 @@ describe("WelcomeWizard", () => {
       // Attempting to click should not select them
       await user.click(twoShiftButton);
       await user.click(weekendShiftButton);
-      
+
       // Button should remain disabled even if clicked
       expect(twoShiftButton).toBeDisabled();
       expect(weekendShiftButton).toBeDisabled();
     });
 
     it("should show tooltip on disabled schedule options", async () => {
-      renderWithProviders(
-        <WelcomeWizard {...defaultProps} mode="change-schedule" />,
-      );
+      renderWithProviders(<WelcomeWizard {...defaultProps} mode="change-schedule" />);
 
       // Navigate to schedule selection
       await waitFor(() => {
@@ -893,7 +889,7 @@ describe("WelcomeWizard", () => {
 
     it("should handle schedule selection in onboarding flow", async () => {
       const user = userEvent.setup();
-      
+
       renderWithProviders(<WelcomeWizard {...defaultProps} />);
 
       // Navigate through the wizard
@@ -915,7 +911,7 @@ describe("WelcomeWizard", () => {
 
       // Verify button is now highlighted/selected
       expect(fiveShiftButton).toHaveClass("btn-primary");
-      
+
       // Continue button should be enabled
       const continueButton = screen.getByRole("button", { name: /Continue/i });
       expect(continueButton).not.toBeDisabled();
@@ -923,14 +919,14 @@ describe("WelcomeWizard", () => {
 
     it("should not proceed without schedule selection", async () => {
       const user = userEvent.setup();
-      
+
       // Clear any pre-selected schedule
       const emptyUserState = {
         ...defaultUserState,
         scheduleOption: null,
       };
       window.localStorage.setItem("worktime_user_state", JSON.stringify(emptyUserState));
-      
+
       renderWithProviders(<WelcomeWizard {...defaultProps} />);
 
       // Navigate to schedule selection
@@ -950,7 +946,7 @@ describe("WelcomeWizard", () => {
       // Note: The component might auto-select "5-shift" as fallback, so we need to check actual state
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });
       const continueButton = continueButtons[continueButtons.length - 1];
-      
+
       // If no schedule is selected, button should be disabled
       // However, if the component has a default schedule, it might be enabled
       // So we just verify the button exists and the component doesn't crash

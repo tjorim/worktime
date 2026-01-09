@@ -75,7 +75,7 @@ export function ScheduleView({
   // Generate Monday-Sunday week containing the current date
   const startOfWeek = currentDate.startOf("isoWeek"); // Monday (ISO week)
   const weekDays = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
-  
+
   // Check if we're viewing the current week
   const currentWeekStart = dayjs().startOf("isoWeek");
   const isCurrentWeek = startOfWeek.isSame(currentWeekStart, "day");

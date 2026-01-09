@@ -427,9 +427,7 @@ export function WelcomeWizard({
             >
               <div className="fw-semibold d-flex align-items-center gap-2">
                 <span>{schedule.title}</span>
-                {!schedule.isAvailable && (
-                  <span className="badge bg-secondary">Coming Soon</span>
-                )}
+                {!schedule.isAvailable && <span className="badge bg-secondary">Coming Soon</span>}
               </div>
               <small className="d-block text-muted">{schedule.description}</small>
             </Button>

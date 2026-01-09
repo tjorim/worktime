@@ -11,11 +11,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig, getTeamCountForOption } from "../utils/scheduleUtils";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
-import {
-  dayjs,
-  formatTimeByPreference,
-  formatYYWWD,
-} from "../utils/dateTimeUtils";
+import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
 import type { UpcomingShiftResult, OffDayProgress, ShiftResult } from "../utils/shiftCalculations";
 import {
   calculateShift,
@@ -50,7 +46,12 @@ interface CurrentStatusProps {
  * @param onShowWhoIsWorking - Optional callback to show who is currently working; the corresponding control is disabled if omitted.
  * @returns A React element containing the Current Status card with status, timeline and next-shift information.
  */
-export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule, onShowWhoIsWorking }: CurrentStatusProps) {
+export function CurrentStatus({
+  myTeam,
+  onChangeTeam,
+  onChangeSchedule,
+  onShowWhoIsWorking,
+}: CurrentStatusProps) {
   // Generate unique IDs for tooltips to avoid HTML ID conflicts
   const dateTooltipId = useId();
   const teamTooltipId = useId();
@@ -241,7 +242,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule, onShowWh
                   size="sm"
                   onClick={onChangeTeam}
                 >
-                  <i className={`bi ${validatedTeam ? "bi-person-gear" : "bi-person-plus"} me-1`}></i>
+                  <i
+                    className={`bi ${validatedTeam ? "bi-person-gear" : "bi-person-plus"} me-1`}
+                  ></i>
                   {validatedTeam ? "Change Team" : "Select Team"}
                 </Button>
               ) : (

@@ -13,7 +13,11 @@ import { getScheduleConfig } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
-import { getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
+import {
+  getShiftDisplay,
+  getFormattedShiftTime,
+  isCurrentlyWorking,
+} from "../utils/shiftCalculations";
 
 interface TodayViewProps {
   todayShifts: ShiftResult[];
@@ -54,7 +58,11 @@ function TeamCard({
   const { settings, scheduleOption } = useSettings();
   // Use shiftResult.shift directly - already contains emoji/className/name/hours
   const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
-  const shiftTimeLabel = getFormattedShiftTime(shiftResult.shift, scheduleOption, settings.timeFormat);
+  const shiftTimeLabel = getFormattedShiftTime(
+    shiftResult.shift,
+    scheduleOption,
+    settings.timeFormat,
+  );
 
   const cardContent = (
     <>
@@ -136,9 +144,7 @@ function TeamCard({
         onClick={() => onTeamClick(shiftResult.teamNumber)}
         role="button"
         aria-label={
-          hasTeams
-            ? `View details for Team ${shiftResult.teamNumber}`
-            : "View schedule details"
+          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
         }
         title={
           hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
@@ -176,7 +182,15 @@ function TeamCard({
  * @param onTeamClick - Optional handler invoked with a team number when a team card is activated (click or keyboard).
  * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
  */
-export function TodayView({ todayShifts, myTeam, currentDate, onPreviousDay, onNextDay, onTodayClick, onTeamClick }: TodayViewProps) {
+export function TodayView({
+  todayShifts,
+  myTeam,
+  currentDate,
+  onPreviousDay,
+  onNextDay,
+  onTodayClick,
+  onTeamClick,
+}: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const { scheduleOption } = useSettings();
   const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
@@ -239,7 +253,11 @@ export function TodayView({ todayShifts, myTeam, currentDate, onPreviousDay, onN
         <div className="d-flex justify-content-between align-items-center gap-3">
           <div className="text-muted small">
             {displayDate.format("dddd, MMMM D, YYYY")}
-            {isToday && <Badge bg="success" className="ms-2">Today</Badge>}
+            {isToday && (
+              <Badge bg="success" className="ms-2">
+                Today
+              </Badge>
+            )}
           </div>
           <div className="small text-muted text-end" style={{ minWidth: "180px" }}>
             ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
