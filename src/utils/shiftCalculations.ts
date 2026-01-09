@@ -163,45 +163,45 @@ export const SHIFTS = Object.freeze({
   }),
 });
 
-const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
+const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
   getScheduleConfig(scheduleOption);
 
 const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
-  const roster = getRosterForSchedule(scheduleOption);
-  if (roster.shiftConfig.teamCount === undefined) {
-    throw new Error(`teamCount not defined for schedule ${roster.value}`);
+  const schedule = getScheduleForOption(scheduleOption);
+  if (schedule.shiftConfig.teamCount === undefined) {
+    throw new Error(`teamCount not defined for schedule ${schedule.value}`);
   }
-  return roster.shiftConfig.teamCount;
+  return schedule.shiftConfig.teamCount;
 };
 
 const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
-  const roster = getRosterForSchedule(scheduleOption);
-  if (roster.shiftConfig.cycleLengthDays === undefined) {
-    throw new Error(`cycleLengthDays not defined for schedule ${roster.value}`);
+  const schedule = getScheduleForOption(scheduleOption);
+  if (schedule.shiftConfig.cycleLengthDays === undefined) {
+    throw new Error(`cycleLengthDays not defined for schedule ${schedule.value}`);
   }
-  return roster.shiftConfig.cycleLengthDays;
+  return schedule.shiftConfig.cycleLengthDays;
 };
 
 const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Dayjs => {
-  const roster = getRosterForSchedule(scheduleOption);
-  if (!roster.shiftConfig.referenceDate) {
-    throw new Error(`referenceDate not defined for schedule ${roster.value}`);
+  const schedule = getScheduleForOption(scheduleOption);
+  if (!schedule.shiftConfig.referenceDate) {
+    throw new Error(`referenceDate not defined for schedule ${schedule.value}`);
   }
-  const referenceDate = dayjs(roster.shiftConfig.referenceDate, "YYYY-MM-DD", true);
+  const referenceDate = dayjs(schedule.shiftConfig.referenceDate, "YYYY-MM-DD", true);
   if (!referenceDate.isValid()) {
     throw new Error(
-      `Invalid referenceDate format for schedule ${roster.value}: ${roster.shiftConfig.referenceDate}`,
+      `Invalid referenceDate format for schedule ${schedule.value}: ${schedule.shiftConfig.referenceDate}`,
     );
   }
   return referenceDate.startOf("day");
 };
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
-  const roster = getRosterForSchedule(scheduleOption);
-  if (roster.shiftConfig.referenceTeam === undefined) {
-    throw new Error(`referenceTeam not defined for schedule ${roster.value}`);
+  const schedule = getScheduleForOption(scheduleOption);
+  if (schedule.shiftConfig.referenceTeam === undefined) {
+    throw new Error(`referenceTeam not defined for schedule ${schedule.value}`);
   }
-  return roster.shiftConfig.referenceTeam;
+  return schedule.shiftConfig.referenceTeam;
 };
 
 const mapShiftCodeToShift = (code: ShiftType): Shift => {
@@ -283,10 +283,10 @@ export function getShiftDisplay(
   shift: ShiftOrUnknown,
   scheduleOption?: NullableScheduleOption,
 ): { displayName: string; displayHours: string; displayCode: string } {
-  const roster = getRosterForSchedule(scheduleOption);
+  const schedule = getScheduleForOption(scheduleOption);
   const override =
-    roster.shiftConfig.shiftDisplayOverrides?.[
-      shift.code as keyof typeof roster.shiftConfig.shiftDisplayOverrides
+    schedule.shiftConfig.shiftDisplayOverrides?.[
+      shift.code as keyof typeof schedule.shiftConfig.shiftDisplayOverrides
     ];
 
   return {
@@ -385,15 +385,15 @@ export function calculateShift(
 
   const targetDate = dayjs(date).startOf("day");
   const referenceDate = getReferenceDateForSchedule(scheduleOption);
-  const roster = getRosterForSchedule(scheduleOption);
-  const schedulePattern = roster.shiftConfig.schedulePattern;
+  const schedule = getScheduleForOption(scheduleOption);
+  const schedulePattern = schedule.shiftConfig.schedulePattern;
 
   // Calculate days since reference
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
-  // All rosters use the unified pattern-based structure
+  // All schedules use the unified pattern-based structure
   if (!schedulePattern) {
-    throw new Error(`schedulePattern not defined for roster ${roster.value}`);
+    throw new Error(`schedulePattern not defined for schedule ${schedule.value}`);
   }
 
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
@@ -407,7 +407,7 @@ export function calculateShift(
     // an entry for the computed dayIndex. We keep the existing behavior of
     // returning SHIFTS.OFF but emit a warning to aid diagnosis.
     console.warn(
-      `[shiftCalculations] Missing schedulePattern day for dayIndex=${dayIndex} (cyclePosition=${cyclePosition}, cycleLength=${cycleLength}, teamNumber=${teamNumber}, roster=${roster.value}). Falling back to SHIFTS.OFF.`,
+      `[shiftCalculations] Missing schedulePattern day for dayIndex=${dayIndex} (cyclePosition=${cyclePosition}, cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to SHIFTS.OFF.`,
     );
     return SHIFTS.OFF;
   }
