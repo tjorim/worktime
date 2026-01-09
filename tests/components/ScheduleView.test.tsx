@@ -113,9 +113,9 @@ describe("ScheduleView", () => {
     it("displays navigation buttons", () => {
       renderWithProviders(<ScheduleView {...defaultProps} />);
 
-      expect(screen.getByText("Previous")).toBeInTheDocument();
+      expect(screen.getByLabelText("Go to previous week")).toBeInTheDocument();
       expect(screen.getByText("This Week")).toBeInTheDocument();
-      expect(screen.getByText("Next")).toBeInTheDocument();
+      expect(screen.getByLabelText("Go to next week")).toBeInTheDocument();
     });
 
     it("shows date picker", () => {

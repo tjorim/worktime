@@ -361,9 +361,15 @@ describe("Roster Configuration Integration Tests", () => {
 
 describe("Error Handling and Robustness", () => {
   it("should handle NaN dates gracefully", () => {
+    // Suppress console warnings for expected invalid input tests
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const nanDate = new Date(NaN);
     expect(() => calculateShift(nanDate, 1)).not.toThrow();
     expect(() => getCurrentShiftDay(nanDate)).not.toThrow();
+
+    // Restore console.warn
+    consoleWarnSpy.mockRestore();
   });
 
   it("should validate team numbers and throw errors for invalid values", () => {
@@ -394,12 +400,18 @@ describe("Error Handling and Robustness", () => {
   });
 
   it("should handle malformed date strings", () => {
+    // Suppress console warnings for expected invalid input tests
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const malformedDates = ["invalid", "2025-13-01", "2025-02-30", ""];
 
     malformedDates.forEach((dateStr) => {
       expect(() => calculateShift(dateStr, 1)).not.toThrow();
       expect(() => getCurrentShiftDay(dateStr)).not.toThrow();
     });
+
+    // Restore console.warn
+    consoleWarnSpy.mockRestore();
   });
 });
 
@@ -643,6 +655,9 @@ describe("getOffDayProgress Function Tests", () => {
   });
 
   it("should handle edge cases gracefully", () => {
+    // Suppress console warnings for expected invalid input tests
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     // Test with malformed dates
     const malformedDates = ["invalid", "2025-13-01", ""];
     malformedDates.forEach((dateStr) => {
@@ -652,6 +667,9 @@ describe("getOffDayProgress Function Tests", () => {
     // Test with NaN date
     const nanDate = new Date(NaN);
     expect(() => getOffDayProgress(nanDate, 1)).not.toThrow();
+
+    // Restore console.warn
+    consoleWarnSpy.mockRestore();
   });
 
   describe("Weekly-rotation schedule off-day progress", () => {
