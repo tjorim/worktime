@@ -188,6 +188,9 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
     throw new Error(`referenceDate not defined for schedule ${roster.value}`);
   }
   const [year, month, day] = roster.shiftConfig.referenceDate.split("-").map(Number);
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Invalid referenceDate format for schedule ${roster.value}: ${roster.shiftConfig.referenceDate}`);
+  }
   return dayjs().year(year).month(month - 1).date(day).startOf("day");
 };
 
