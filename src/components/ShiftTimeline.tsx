@@ -4,10 +4,14 @@ import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
-import { getAllTeamsShifts, getShiftByCode, getShiftDisplay } from "../utils/shiftCalculations";
+import {
+  getAllTeamsShifts,
+  getShiftByCode,
+  getShiftDisplay,
+  getFormattedShiftTime,
+} from "../utils/shiftCalculations";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -151,20 +155,11 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
                 <br />
                 {getShiftDisplay(currentWorkingTeam.shift, scheduleOption).displayName}
                 <br />
-                {(() => {
-                  const { displayHours } = getShiftDisplay(
-                    currentWorkingTeam.shift,
-                    scheduleOption,
-                  );
-                  return currentWorkingTeam.shift.start != null &&
-                    currentWorkingTeam.shift.end != null
-                    ? getLocalizedShiftTime(
-                        currentWorkingTeam.shift.start,
-                        currentWorkingTeam.shift.end,
-                        settings.timeFormat,
-                      )
-                    : displayHours;
-                })()}
+                {getFormattedShiftTime(
+                  currentWorkingTeam.shift,
+                  scheduleOption,
+                  settings.timeFormat,
+                )}
               </Tooltip>
             }
           >
