@@ -157,11 +157,39 @@ const ISO_WEEKDAY_MAP: Record<string, number> = {
 const getRosterForSchedule = (scheduleOption?: NullableScheduleOption) =>
   getScheduleConfig(scheduleOption);
 
-const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) =>
-  getRosterForSchedule(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (roster.shiftConfig.teamCount === undefined) {
+    throw new Error(`teamCount not defined for schedule ${roster.value}`);
+  }
+  return roster.shiftConfig.teamCount;
+};
 
-const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) =>
-  getRosterForSchedule(scheduleOption).shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
+  const roster = getRosterForSchedule(scheduleOption);
+  if (roster.shiftConfig.cycleLengthDays === undefined) {
+    throw new Error(`cycleLengthDays not defined for schedule ${roster.value}`);
+  }
+  return roster.shiftConfig.cycleLengthDays;
+};
+
+const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Date => {
+  const roster = getRosterForSchedule(scheduleOption);
+  // If roster has a reference date, use it; otherwise fall back to CONFIG for backward compatibility
+  if (roster.shiftConfig.referenceDate) {
+    return new Date(`${roster.shiftConfig.referenceDate}T00:00:00.000Z`);
+  }
+  return CONFIG.REFERENCE_DATE;
+};
+
+const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
+  const roster = getRosterForSchedule(scheduleOption);
+  // If roster has a reference team, use it; otherwise fall back to CONFIG for backward compatibility
+  if (roster.shiftConfig.referenceTeam !== undefined) {
+    return roster.shiftConfig.referenceTeam;
+  }
+  return CONFIG.REFERENCE_TEAM;
+};
 
 const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
   switch (code) {
@@ -185,22 +213,26 @@ const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
 const mapWeeklyShiftToCode = (shift: "Early" | "Late" | "Day"): ShiftType =>
   shift === "Late" ? "E" : "M";
 
-const getTeamOffsetUnits = (teamNumber: number, teamCount: number) => {
+const getTeamOffsetUnits = (
+  teamNumber: number,
+  teamCount: number,
+  referenceTeam: number,
+) => {
   if (teamCount <= 1) return 0;
-  return (teamNumber - CONFIG.REFERENCE_TEAM) % teamCount;
+  return (teamNumber - referenceTeam) % teamCount;
 };
 
 const getCycleTeamOffsetDays = (
   scheduleOption?: NullableScheduleOption,
   teamNumber?: number,
 ) => {
-  const roster = getRosterForSchedule(scheduleOption);
-  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
-  const cycleLength = roster.shiftConfig.cycleLengthDays ?? CONFIG.SHIFT_CYCLE_DAYS;
+  const teamCount = getTeamCountForSchedule(scheduleOption);
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
   if (!teamNumber || teamCount <= 1 || cycleLength <= 0) return 0;
 
   const offsetStep = Math.floor(cycleLength / teamCount);
-  return getTeamOffsetUnits(teamNumber, teamCount) * offsetStep;
+  return getTeamOffsetUnits(teamNumber, teamCount, referenceTeam) * offsetStep;
 };
 
 const getShiftForWeeklyRotation = (
@@ -209,14 +241,15 @@ const getShiftForWeeklyRotation = (
   schedulePattern: Extract<SchedulePattern, { type: "weekly-rotation" }>,
   scheduleOption?: NullableScheduleOption,
 ): Shift => {
-  const roster = getRosterForSchedule(scheduleOption);
-  const cycleLengthDays = roster.shiftConfig.cycleLengthDays ?? 7;
+  const cycleLengthDays = getCycleLengthForSchedule(scheduleOption);
   const totalWeeks = Math.max(1, Math.round(cycleLengthDays / 7));
-  const referenceWeekStart = dayjs(CONFIG.REFERENCE_DATE).startOf("isoWeek");
+  const referenceDate = getReferenceDateForSchedule(scheduleOption);
+  const referenceWeekStart = dayjs(referenceDate).startOf("isoWeek");
   const targetWeekStart = date.startOf("isoWeek");
   const weeksSinceReference = targetWeekStart.diff(referenceWeekStart, "week");
-  const teamCount = roster.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
-  const teamOffsetWeeks = getTeamOffsetUnits(teamNumber, teamCount);
+  const teamCount = getTeamCountForSchedule(scheduleOption);
+  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
+  const teamOffsetWeeks = getTeamOffsetUnits(teamNumber, teamCount, referenceTeam);
   const weekIndex =
     ((weeksSinceReference + teamOffsetWeeks) % totalWeeks + totalWeeks) % totalWeeks + 1;
   const isoWeekday = date.isoWeekday();
@@ -308,7 +341,7 @@ export function calculateShift(
   }
 
   const targetDate = dayjs(date).startOf("day");
-  const referenceDate = dayjs(CONFIG.REFERENCE_DATE).startOf("day");
+  const referenceDate = dayjs(getReferenceDateForSchedule(scheduleOption)).startOf("day");
   const roster = getRosterForSchedule(scheduleOption);
   const schedulePattern = roster.shiftConfig.schedulePattern;
 
@@ -334,10 +367,13 @@ export function calculateShift(
   }
 
   // Fallback to legacy 5-shift cycle logic when no roster pattern is configured.
-  const teamOffset = (teamNumber - CONFIG.REFERENCE_TEAM) * 2;
+  // This should not be reached now that all rosters have patterns, but kept for safety.
+  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
+  const teamOffset = (teamNumber - referenceTeam) * 2;
   const adjustedDays = daysSinceReference - teamOffset;
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
   const cyclePosition =
-    ((adjustedDays % CONFIG.SHIFT_CYCLE_DAYS) + CONFIG.SHIFT_CYCLE_DAYS) % CONFIG.SHIFT_CYCLE_DAYS;
+    ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
 
   if (cyclePosition < 2) {
     return SHIFTS.MORNING;

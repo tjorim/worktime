@@ -1,5 +1,4 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
-import { CONFIG } from "./config";
 
 export function getScheduleConfig(
   scheduleOption: ScheduleOption | null | undefined,
@@ -17,5 +16,9 @@ export function getScheduleConfig(
 }
 
 export function getTeamCountForOption(scheduleOption: ScheduleOption | null | undefined): number {
-  return getScheduleConfig(scheduleOption).shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const config = getScheduleConfig(scheduleOption);
+  if (config.shiftConfig.teamCount === undefined) {
+    throw new Error(`teamCount not defined for schedule ${config.value}`);
+  }
+  return config.shiftConfig.teamCount;
 }

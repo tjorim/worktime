@@ -5,6 +5,8 @@ export type ShiftRosterConfig = {
   cycleLengthDays?: number;
   shiftsPerDay?: number;
   schedulePattern?: SchedulePattern;
+  referenceDate?: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
+  referenceTeam?: number; // 1-based team number for reference point
   notes?: string;
 };
 
@@ -47,6 +49,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 1,
       cycleLengthDays: 7,
       shiftsPerDay: 1,
+      referenceDate: "2025-01-06", // Monday of week 1, 2025
+      referenceTeam: 1,
       schedulePattern: {
         type: "weekly-rotation",
         weeks: [
@@ -69,6 +73,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
+      referenceDate: "2025-01-06", // Monday of week 1, 2025
+      referenceTeam: 1,
       schedulePattern: {
         type: "weekly-rotation",
         weeks: [
@@ -110,6 +116,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 14,
       shiftsPerDay: 2,
+      referenceDate: "2025-01-06", // Monday of week 1, 2025
+      referenceTeam: 1,
       schedulePattern: {
         type: "weekly-rotation",
         weeks: [
@@ -147,6 +155,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 5,
       cycleLengthDays: 10,
       shiftsPerDay: 3,
+      referenceDate: "2025-07-16", // Reference date from CONFIG
+      referenceTeam: 1, // Reference team from CONFIG
       schedulePattern: {
         type: "cycle",
         days: [
