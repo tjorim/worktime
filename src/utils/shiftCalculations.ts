@@ -1,11 +1,11 @@
 /**
- * Shift Calculation Engine for 5-Team Continuous Operations
+ * Shift Calculation Engine for Multiple Schedule Types
  *
- * Core business logic for calculating team shifts in a continuous (24/7)
- * 5-team rotation schedule.
+ * Core business logic for calculating team shifts across different schedule patterns.
  *
- * ## Shift Pattern
+ * ## Supported Schedule Types
  *
+ * ### 5-shift (Continuous 24/7 Rotation)
  * Each team works a repeating 10-day cycle:
  * - 2 mornings (M): 07:00-15:00
  * - 2 evenings (E): 15:00-23:00
@@ -22,24 +22,27 @@
  * Team 5: O  O  O  O  M  M  E  E  N  N  | O  O  O  ...
  * ```
  *
+ * ### Weekly Rotation Schedules
+ * - **9-5**: Standard weekday schedule (Mon-Fri work, weekends off)
+ * - **2-shift**: Alternating early/late shifts each week
+ * - **weekend-shift**: Weekend-only teams with early/late rotation
+ *
  * ## How It Works
  *
- * Shift calculation is based on a reference date and team:
- * 1. Calculate days since reference date
- * 2. Apply team offset (each team starts 2 days later)
- * 3. Map position in 10-day cycle to shift type:
- *    - Days 0-1: Morning
- *    - Days 2-3: Evening
- *    - Days 4-5: Night
- *    - Days 6-9: Off
+ * Each schedule type is self-contained with its own configuration:
+ * 1. Reference date: When the reference team's pattern starts
+ * 2. Reference team: Which team is at the reference point
+ * 3. Schedule pattern: Cycle-based or weekly-rotation pattern
  *
- * ## Configuration
+ * For cycle-based schedules:
+ * - Calculate days since reference date
+ * - Apply team offset based on cycle length and team count
+ * - Map position in cycle to shift type
  *
- * The shift pattern is anchored to a configurable reference point:
- * - `CONFIG.REFERENCE_DATE`: Date when reference team starts morning shift
- * - `CONFIG.REFERENCE_TEAM`: Which team (1-5) is at the reference point
- *
- * This allows the schedule to be aligned to any organization's actual shift pattern.
+ * For weekly-rotation schedules:
+ * - Calculate weeks since reference date
+ * - Apply team offset in weeks
+ * - Match ISO weekday to pattern
  *
  * ## Date Code Format (YYWW.DX)
  *
@@ -64,7 +67,6 @@
 
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption, SchedulePattern } from "../data/rosters";
-import { CONFIG } from "./config";
 import { dayjs, formatYYWWD } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -175,20 +177,18 @@ const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
 
 const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Date => {
   const roster = getRosterForSchedule(scheduleOption);
-  // If roster has a reference date, use it; otherwise fall back to CONFIG for backward compatibility
-  if (roster.shiftConfig.referenceDate) {
-    return new Date(`${roster.shiftConfig.referenceDate}T00:00:00.000Z`);
+  if (!roster.shiftConfig.referenceDate) {
+    throw new Error(`referenceDate not defined for schedule ${roster.value}`);
   }
-  return CONFIG.REFERENCE_DATE;
+  return new Date(`${roster.shiftConfig.referenceDate}T00:00:00.000Z`);
 };
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
   const roster = getRosterForSchedule(scheduleOption);
-  // If roster has a reference team, use it; otherwise fall back to CONFIG for backward compatibility
-  if (roster.shiftConfig.referenceTeam !== undefined) {
-    return roster.shiftConfig.referenceTeam;
+  if (roster.shiftConfig.referenceTeam === undefined) {
+    throw new Error(`referenceTeam not defined for schedule ${roster.value}`);
   }
-  return CONFIG.REFERENCE_TEAM;
+  return roster.shiftConfig.referenceTeam;
 };
 
 const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
@@ -305,14 +305,15 @@ export function getShiftByCode(code: string | null | undefined) {
  *
  * Edge cases:
  * - Invalid dates are handled by dayjs (may return Invalid Date)
- * - Team numbers outside 1..CONFIG.TEAMS_COUNT throw an error
+ * - Team numbers outside the valid range (1 to teamCount) throw an error
  * - Date strings, Date objects, and Dayjs instances are all accepted
  * - Times are ignored; only the calendar date matters for shift calculation
  *
  * @param date - Date to evaluate (string, Date or Dayjs)
- * @param teamNumber - Team index starting at 1; must be between 1 and CONFIG.TEAMS_COUNT
+ * @param teamNumber - Team index starting at 1; must be between 1 and the schedule's team count
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The Shift object for that team and date (one of MORNING, EVENING, NIGHT or OFF)
- * @throws {Error} If `teamNumber` is outside the range 1..CONFIG.TEAMS_COUNT
+ * @throws {Error} If `teamNumber` is outside the valid range
  *
  * @example
  * // Get Team 1's shift on a specific date
@@ -326,7 +327,8 @@ export function getShiftByCode(code: string | null | undefined) {
  *
  * @example
  * // Invalid team number throws error
- * calculateShift('2025-01-06', 6)
+ * calculateShift('2025-01-06', 6) // For 5-shift schedule
+ * // Throws: Error("Invalid team number: 6. Expected 1-5")
  * // Throws: Error("Invalid team number: 6. Expected 1-5")
  */
 export function calculateShift(
@@ -466,11 +468,12 @@ export function getShiftCode(
 /**
  * Locate the next working shift for a team after a given date.
  *
- * Searches up to CONFIG.SHIFT_CYCLE_DAYS (10 days) ahead to find the next working shift.
+ * Searches up to the schedule's cycle length ahead to find the next working shift.
  * Returns null if team number is invalid or no working shift is found in the cycle.
  *
  * @param fromDate - Date to start the search from (exclusive)
- * @param teamNumber - Team identifier; must be between 1 and CONFIG.TEAMS_COUNT
+ * @param teamNumber - Team identifier; must be within the schedule's valid team range
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The upcoming shift result containing `date`, `shift` and `code`, or `null` if no working shift is found within the shift cycle
  *
  * @example
@@ -518,9 +521,10 @@ export function getNextShift(
  * Return the shift assignment for every team on the given date.
  *
  * Useful for displaying the "Today" or "Schedule" view showing all teams at once.
- * Results are ordered by team number (1 to CONFIG.TEAMS_COUNT).
+ * Results are ordered by team number (1 to the schedule's team count).
  *
  * @param date - The reference date (string, Date or Dayjs) for which to compute each team's shift
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns An array of ShiftResult objects where each item contains the provided date as a Dayjs, the team's shift, the shift code and the team number
  *
  * @example

@@ -258,20 +258,20 @@ describe("TransferView", () => {
   });
 
   describe("Prop validation", () => {
-    it("handles invalid team selection and shows warning", () => {
+    it("handles invalid team selection without crashing", () => {
+      // Invalid teams are handled by useTransferCalculations hook
       render(<TransferView {...defaultProps} myTeam={999} />);
 
       // Should render without crashing
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
-      // Should have called console.warn
-      expect(mockConsoleWarn).toHaveBeenCalledWith("Invalid user team number: 999. Expected 1-5");
+      // No warnings are logged at this level - validation is in the hook
     });
 
-    it("handles negative team numbers", () => {
+    it("handles negative team numbers without crashing", () => {
       render(<TransferView {...defaultProps} myTeam={-1} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
-      expect(mockConsoleWarn).toHaveBeenCalledWith("Invalid user team number: -1. Expected 1-5");
+      // No warnings are logged at this level - validation is in the hook
     });
 
     it("handles null team selection without warning", () => {

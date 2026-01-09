@@ -11,9 +11,8 @@ import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import type { ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
-import { CONFIG } from "./utils/config";
 import { dayjs } from "./utils/dateTimeUtils";
-import { getScheduleConfig } from "./utils/scheduleUtils";
+import { getScheduleConfig, getTeamCountForOption } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
@@ -77,7 +76,8 @@ function AppContent() {
 
     if (team) {
       const teamNumber = parseInt(team, 10);
-      if (teamNumber >= 1 && teamNumber <= CONFIG.TEAMS_COUNT) {
+      const teamCount = getTeamCountForOption(scheduleOption);
+      if (teamNumber >= 1 && teamNumber <= teamCount) {
         setMyTeam(teamNumber);
       }
     }
@@ -90,7 +90,7 @@ function AppContent() {
     }
 
     pendingDeepLinkRef.current = {};
-  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate]);
+  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleOption]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -135,8 +135,8 @@ function AppContent() {
     const currentScheduleConfig = getScheduleConfig(scheduleOption ?? null);
     const nextScheduleConfig = getScheduleConfig(schedule);
     const teamCountChanged =
-      (currentScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT) !==
-      (nextScheduleConfig.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT);
+      (currentScheduleConfig.shiftConfig.teamCount ?? 0) !==
+      (nextScheduleConfig.shiftConfig.teamCount ?? 0);
     const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
 
     if (teamCountChanged || teamsDisabled) {

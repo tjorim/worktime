@@ -9,7 +9,6 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "../contexts/SettingsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
-import { CONFIG } from "../utils/config";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 
 type WizardStep =
@@ -125,7 +124,7 @@ export function WelcomeWizard({
   );
   const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
   const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
-  const teamCount = selectedScheduleConfig?.shiftConfig.teamCount ?? CONFIG.TEAMS_COUNT;
+  const teamCount = selectedScheduleConfig?.shiftConfig.teamCount ?? 1;
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
   const getTotalSteps = () => {
