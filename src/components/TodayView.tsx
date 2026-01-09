@@ -236,10 +236,14 @@ export function TodayView({ todayShifts, myTeam, currentDate, onPreviousDay, onN
             </Button>
           </div>
         </div>
-        <div className="text-muted small">
-          {displayDate.format("dddd, MMMM D, YYYY")}
-          {isToday && <Badge bg="success" className="ms-2">Today</Badge>}
-          <span className="ms-3">⌨️ Keyboard: ← → arrows, Ctrl+H (today)</span>
+        <div className="d-flex justify-content-between align-items-center gap-3">
+          <div className="text-muted small">
+            {displayDate.format("dddd, MMMM D, YYYY")}
+            {isToday && <Badge bg="success" className="ms-2">Today</Badge>}
+          </div>
+          <div className="small text-muted text-end" style={{ minWidth: "180px" }}>
+            ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
+          </div>
         </div>
       </Card.Header>
       <Card.Body>

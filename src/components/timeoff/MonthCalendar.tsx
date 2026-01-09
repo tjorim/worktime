@@ -313,6 +313,9 @@ export function MonthCalendar({
   return (
     <div className="month-calendar">
       <div className="month-calendar-header d-flex align-items-center justify-content-between mb-3">
+        <div className="month-calendar-title" data-testid="month-title" aria-live="polite">
+          <span>{month.format("MMMM YYYY")}</span>
+        </div>
         <div className="d-flex gap-2">
           <Button
             variant="outline-secondary"
@@ -329,8 +332,8 @@ export function MonthCalendar({
             disabled={isCurrentMonth}
             aria-label="Jump to current month"
           >
-            <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-            Today
+            <i className="bi bi-house me-1" aria-hidden="true"></i>
+            This Month
           </Button>
           <Button
             variant="outline-secondary"
@@ -340,9 +343,6 @@ export function MonthCalendar({
           >
             <i className="bi bi-chevron-right" aria-hidden="true"></i>
           </Button>
-        </div>
-        <div className="month-calendar-title" data-testid="month-title" aria-live="polite">
-          <span>{month.format("MMMM YYYY")}</span>
         </div>
       </div>
 
