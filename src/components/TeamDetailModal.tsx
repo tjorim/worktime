@@ -13,7 +13,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { dayjs, getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import { shareTeamSchedule } from "../utils/share";
-import { calculateShift, getCurrentShiftDay, getShiftByCode } from "../utils/shiftCalculations";
+import { calculateShift, getCurrentShiftDay, getShiftByCode, getShiftDisplay } from "../utils/shiftCalculations";
 
 interface TeamDetailModalProps {
   show: boolean;
@@ -132,7 +132,7 @@ export function TeamDetailModal({
                   ) : (
                     <Badge className={getShiftByCode(currentStatus?.shift.code).className} pill>
                       <i className="bi bi-briefcase me-1"></i>
-                      {currentStatus?.shift.name || "Unknown"}
+                      {currentStatus?.shift ? getShiftDisplay(currentStatus.shift, settings.scheduleOption).displayName : "Unknown"}
                     </Badge>
                   )}
                   <small className="text-muted">
@@ -144,7 +144,7 @@ export function TeamDetailModal({
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
                   <Badge className={getShiftByCode(nextShift.shift.code).className} pill>
-                    {nextShift.shift.name}
+                    {getShiftDisplay(nextShift.shift, settings.scheduleOption).displayName}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -197,7 +197,7 @@ export function TeamDetailModal({
                         </Badge>
                       ) : (
                         <Badge className={getShiftByCode(day.shift.code).className} pill>
-                          {day.shift.name}
+                          {getShiftDisplay(day.shift, settings.scheduleOption).displayName}
                         </Badge>
                       )}
                     </td>

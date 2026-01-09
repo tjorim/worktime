@@ -50,6 +50,10 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getShiftDisplayName: vi.fn((shift) => `${shift.emoji} ${shift.name}`),
+  getShiftDisplay: vi.fn((shift) => ({
+    displayName: shift.name,
+    displayHours: shift.hours,
+  })),
 }));
 
 vi.mock("../../src/utils/config", () => ({

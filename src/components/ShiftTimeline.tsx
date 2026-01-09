@@ -7,7 +7,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
-import { getAllTeamsShifts, getShiftByCode } from "../utils/shiftCalculations";
+import { getAllTeamsShifts, getShiftByCode, getShiftDisplay } from "../utils/shiftCalculations";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -151,15 +151,18 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               <Tooltip id={timelineTooltipId}>
                 <strong>Currently Active</strong>
                 <br />
-                {currentWorkingTeam.shift.name}
+                {getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption).displayName}
                 <br />
-                {currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
-                  ? getLocalizedShiftTime(
-                      currentWorkingTeam.shift.start,
-                      currentWorkingTeam.shift.end,
-                      settings.timeFormat,
-                    )
-                  : currentWorkingTeam.shift.hours}
+                {(() => {
+                  const { displayHours } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
+                  return currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
+                    ? getLocalizedShiftTime(
+                        currentWorkingTeam.shift.start,
+                        currentWorkingTeam.shift.end,
+                        settings.timeFormat,
+                      )
+                    : displayHours;
+                })()}
               </Tooltip>
             }
           >

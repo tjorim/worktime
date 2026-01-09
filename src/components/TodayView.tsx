@@ -11,7 +11,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
 import { dayjs, getISOWeekYear2Digit, getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
-import { getShiftByCode, isCurrentlyWorking } from "../utils/shiftCalculations";
+import { getShiftByCode, getShiftDisplay, isCurrentlyWorking } from "../utils/shiftCalculations";
 
 interface TodayViewProps {
   todayShifts: ShiftResult[];
@@ -103,7 +103,7 @@ function TeamCard({
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
-        {shiftResult.shift.name}
+        {getShiftDisplay(shiftResult.shift, settings.scheduleOption).displayName}
         <br />
         {shiftResult.shift.isWorking
           ? getLocalizedShiftTime(
@@ -124,7 +124,7 @@ function TeamCard({
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
               Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")},{" "}
-              {shiftResult.shift.name}
+              {getShiftDisplay(shiftResult.shift, settings.scheduleOption).displayName}
             </Tooltip>
           }
         >

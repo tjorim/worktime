@@ -17,7 +17,7 @@ import {
   getISOWeekYear2Digit,
   getLocalizedShiftTime,
 } from "../utils/dateTimeUtils";
-import { calculateShift, getShiftByCode } from "../utils/shiftCalculations";
+import { calculateShift, getShiftByCode, getShiftDisplay } from "../utils/shiftCalculations";
 
 interface ScheduleViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -224,8 +224,8 @@ export function ScheduleView({
                         className={`text-center ${isToday ? "today-column" : ""}`}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, settings.scheduleOption).displayName : "Off"}`
+                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, settings.scheduleOption).displayName : "Off"}`
                         }
                       >
                         {shift.isWorking && (
@@ -237,12 +237,10 @@ export function ScheduleView({
                               >
                                 <strong>Shift: {shift.code}</strong>
                                 <br />
-                                {shift.code === "M" && "Morning shift"}
-                                {shift.code === "L" && "Evening shift"}
-                                {shift.code === "N" && "Night shift"}
+                                {getShiftDisplay(shift, settings.scheduleOption).displayName} shift
                                 <br />
                                 <em>
-                                  {shift.name} -{" "}
+                                  {getShiftDisplay(shift, settings.scheduleOption).displayName} -{" "}
                                   {getLocalizedShiftTime(
                                     shift.start,
                                     shift.end,

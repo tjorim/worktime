@@ -26,6 +26,7 @@ import {
   getOffDayProgress,
   getShiftByCode,
   getShiftCode,
+  getShiftDisplay,
   isCurrentlyWorking,
 } from "../utils/shiftCalculations";
 import { ShiftTimeline } from "./ShiftTimeline";
@@ -276,7 +277,8 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                               <br />
                               {(() => {
                                 const shift = getShiftByCode(currentShift.shift.code);
-                                return `${shift.emoji} ${shift.name} shift (${shift.start && shift.end ? getLocalizedShiftTime(shift.start, shift.end, settings.timeFormat) : shift.hours})`;
+                                const { displayName, displayHours } = getShiftDisplay(shift, settings.scheduleOption);
+                                return `${shift.emoji} ${displayName} shift (${shift.start && shift.end ? getLocalizedShiftTime(shift.start, shift.end, settings.timeFormat) : displayHours})`;
                               })()}
                               <br />
                               <em>Full code: {currentShift.code}</em>
@@ -286,9 +288,12 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                           <Badge
                             className={`shift-code shift-badge-lg cursor-help ${getShiftByCode(currentShift.shift.code).className}`}
                           >
-                            {hasTeams
-                              ? `Team ${validatedTeam}: ${currentShift.shift.name}`
-                              : currentShift.shift.name}
+                            {(() => {
+                              const { displayName } = getShiftDisplay(currentShift.shift, settings.scheduleOption);
+                              return hasTeams
+                                ? `Team ${validatedTeam}: ${displayName}`
+                                : displayName;
+                            })()}
                           </Badge>
                         </OverlayTrigger>
                         {currentShift.shift.start && currentShift.shift.end && (
@@ -322,18 +327,24 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             <Badge
                               className={`shift-code shift-badge-lg ${getShiftByCode(currentWorkingTeam.shift.code).className}`}
                             >
-                              {hasTeams
-                                ? `Team ${currentWorkingTeam.teamNumber}: ${currentWorkingTeam.shift.name}`
-                                : currentWorkingTeam.shift.name}
+                              {(() => {
+                                const { displayName } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
+                                return hasTeams
+                                  ? `Team ${currentWorkingTeam.teamNumber}: ${displayName}`
+                                  : displayName;
+                              })()}
                             </Badge>
                             <div className="small text-muted mt-1">
-                              {currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
-                                ? getLocalizedShiftTime(
-                                    currentWorkingTeam.shift.start,
-                                    currentWorkingTeam.shift.end,
-                                    settings.timeFormat,
-                                  )
-                                : currentWorkingTeam.shift.hours}
+                              {(() => {
+                                const { displayHours } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
+                                return currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
+                                  ? getLocalizedShiftTime(
+                                      currentWorkingTeam.shift.start,
+                                      currentWorkingTeam.shift.end,
+                                      settings.timeFormat,
+                                    )
+                                  : displayHours;
+                              })()}
                             </div>
                             <div className="small text-success mt-2">✅ Currently working</div>
                           </div>
@@ -367,16 +378,19 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                     {validatedTeam && nextShift ? (
                       <div>
                         <div className="fw-semibold">
-                          {nextShift.date.format("ddd, MMM D")} - {nextShift.shift.name}
+                          {nextShift.date.format("ddd, MMM D")} - {getShiftDisplay(nextShift.shift, settings.scheduleOption).displayName}
                         </div>
                         <div className="small text-muted">
-                          {nextShift.shift.start && nextShift.shift.end
-                            ? getLocalizedShiftTime(
-                                nextShift.shift.start,
-                                nextShift.shift.end,
-                                settings.timeFormat,
-                              )
-                            : nextShift.shift.hours}
+                          {(() => {
+                            const { displayHours } = getShiftDisplay(nextShift.shift, settings.scheduleOption);
+                            return nextShift.shift.start && nextShift.shift.end
+                              ? getLocalizedShiftTime(
+                                  nextShift.shift.start,
+                                  nextShift.shift.end,
+                                  settings.timeFormat,
+                                )
+                              : displayHours;
+                          })()}
                         </div>
                         {countdown && !countdown.isExpired && nextShiftStartTime && (
                           <Badge bg="info" className="mt-2">
@@ -393,16 +407,19 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             ? `Team ${nextShiftAnyTeam.teamNumber}: `
                             : ""}
                           {nextShiftAnyTeam.date.format("ddd, MMM D")} -{" "}
-                          {nextShiftAnyTeam.shift.name}
+                          {getShiftDisplay(nextShiftAnyTeam.shift, settings.scheduleOption).displayName}
                         </div>
                         <div className="small text-muted">
-                          {nextShiftAnyTeam.shift.start && nextShiftAnyTeam.shift.end
-                            ? getLocalizedShiftTime(
-                                nextShiftAnyTeam.shift.start,
-                                nextShiftAnyTeam.shift.end,
-                                settings.timeFormat,
-                              )
-                            : nextShiftAnyTeam.shift.hours}
+                          {(() => {
+                            const { displayHours } = getShiftDisplay(nextShiftAnyTeam.shift, settings.scheduleOption);
+                            return nextShiftAnyTeam.shift.start && nextShiftAnyTeam.shift.end
+                              ? getLocalizedShiftTime(
+                                  nextShiftAnyTeam.shift.start,
+                                  nextShiftAnyTeam.shift.end,
+                                  settings.timeFormat,
+                                )
+                              : displayHours;
+                          })()}
                         </div>
                         {countdown && !countdown.isExpired && nextShiftStartTime && (
                           <Badge bg="info" className="mt-2">

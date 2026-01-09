@@ -243,6 +243,39 @@ export function getShiftDisplayName(shift: ReturnType<typeof getShiftByCode>): s
 }
 
 /**
+ * Get roster-specific display properties for a shift.
+ *
+ * Returns the shift's display name and hours, applying roster-specific overrides if configured.
+ * For example, the 5-shift roster displays "Evening" for L shifts, while 2-shift displays "Late".
+ *
+ * @param shift - The shift object to get display properties for
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
+ * @returns Object containing displayName and displayHours (may be overridden by roster config)
+ *
+ * @example
+ * // 5-shift roster: L shift shows as "Evening"
+ * const display = getShiftDisplay(SHIFTS.LATE, "5-shift");
+ * // Returns: { displayName: "Evening", displayHours: "15:00-23:00" }
+ *
+ * @example
+ * // 2-shift roster: M shift shows as "Early"
+ * const display = getShiftDisplay(SHIFTS.MORNING, "2-shift");
+ * // Returns: { displayName: "Early", displayHours: "07:00-15:00" }
+ */
+export function getShiftDisplay(
+  shift: Shift,
+  scheduleOption?: NullableScheduleOption,
+): { displayName: string; displayHours: string } {
+  const roster = getRosterForSchedule(scheduleOption);
+  const override = roster.shiftConfig.shiftDisplayOverrides?.[shift.code as keyof typeof roster.shiftConfig.shiftDisplayOverrides];
+
+  return {
+    displayName: override?.displayName ?? shift.name,
+    displayHours: override?.displayHours ?? shift.hours,
+  };
+}
+
+/**
  * Retrieve a shift definition for a given shift code, returning an 'Unknown' shift object when no match is found.
  *
  * @param code - Shift code to look up; may be null or undefined

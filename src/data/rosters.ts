@@ -1,5 +1,18 @@
 export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift";
 
+export type ShiftDisplayOverride = {
+  displayName?: string;
+  displayHours?: string;
+};
+
+export type ShiftDisplayOverrides = {
+  M?: ShiftDisplayOverride;
+  L?: ShiftDisplayOverride;
+  N?: ShiftDisplayOverride;
+  D?: ShiftDisplayOverride;
+  O?: ShiftDisplayOverride;
+};
+
 export type ShiftRosterConfig = {
   teamCount?: number;
   cycleLengthDays?: number;
@@ -8,6 +21,7 @@ export type ShiftRosterConfig = {
   referenceDate?: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam?: number; // 1-based team number for reference point
   notes?: string;
+  shiftDisplayOverrides?: ShiftDisplayOverrides;
 };
 
 export type SchedulePattern = {
@@ -53,6 +67,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         ],
       },
       notes: "Weekday-only coverage.",
+      // 9-5 uses "Day" shift - no overrides needed
     },
   },
   {
@@ -107,6 +122,9 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         },
       },
       notes: "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
+      shiftDisplayOverrides: {
+        M: { displayName: "Early" },
+      },
     },
   },
   {
@@ -141,6 +159,9 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         ],
       },
       notes: "Weekend-only coverage with early/late rotation.",
+      shiftDisplayOverrides: {
+        M: { displayName: "Early" },
+      },
     },
   },
   {
@@ -169,6 +190,9 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         ],
       },
       notes: "Continuous multi-team rotation.",
+      shiftDisplayOverrides: {
+        L: { displayName: "Evening" },
+      },
     },
   },
 ];
