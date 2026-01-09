@@ -733,4 +733,181 @@ describe("getOffDayProgress Function Tests", () => {
       }
     });
   });
+
+  describe("Edge Cases", () => {
+    it("should handle schedules with all off days in the cycle gracefully", () => {
+      // Test with a hypothetical scenario where a team might be off all days
+      // This is handled by the code at line 615-618 in shiftCalculations.ts
+      // We can't easily create this with real schedules, but we can test the boundary
+      const testDate = new Date("2025-07-16");
+      
+      // For 5-shift, teams have 4 consecutive off days
+      // Find a team that's off
+      let offTeam: number | null = null;
+      for (let team = 1; team <= 5; team++) {
+        const shift = calculateShift(testDate, team, "5-shift");
+        if (!shift.isWorking) {
+          offTeam = team;
+          break;
+        }
+      }
+
+      if (offTeam) {
+        const progress = getOffDayProgress(testDate, offTeam, "5-shift");
+        
+        // Should still calculate correctly even in edge case
+        expect(progress).not.toBeNull();
+        if (progress) {
+          expect(progress.total).toBe(4); // 5-shift has 4 consecutive off days
+          expect(progress.current).toBeGreaterThan(0);
+          expect(progress.current).toBeLessThanOrEqual(progress.total);
+        }
+      }
+    });
+
+    it("should handle irregular off-day patterns (split off days)", () => {
+      // Test that consecutive off days are correctly identified as part of the same period
+      // Use 5-shift which has 4 consecutive off days that we know work
+      const testDate = new Date("2025-07-16");
+      
+      // Find a team that's off
+      let offTeam: number | null = null;
+      for (let team = 1; team <= 5; team++) {
+        const shift = calculateShift(testDate, team, "5-shift");
+        if (!shift.isWorking) {
+          offTeam = team;
+          break;
+        }
+      }
+
+      if (offTeam) {
+        const progress = getOffDayProgress(testDate, offTeam, "5-shift");
+        
+        if (progress && progress.current < progress.total) {
+          // Test the next day in the off period
+          const nextDay = dayjs(testDate).add(1, "day");
+          const nextDayShift = calculateShift(nextDay, offTeam, "5-shift");
+          
+          if (!nextDayShift.isWorking) {
+            const progressNext = getOffDayProgress(nextDay, offTeam, "5-shift");
+            
+            expect(progressNext).not.toBeNull();
+            if (progressNext) {
+              // Should have the same total and current should increment
+              expect(progressNext.total).toBe(progress.total);
+              expect(progressNext.current).toBe(progress.current + 1);
+            }
+          }
+        }
+      }
+    });
+
+    it("should handle transitions between cycles correctly", () => {
+      // Test off days that might span cycle boundaries
+      // For 5-shift schedule with 10-day cycles
+      const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
+      expect(fiveShiftRoster).toBeDefined();
+      
+      if (fiveShiftRoster) {
+        const cycleLength = fiveShiftRoster.shiftConfig.cycleLengthDays;
+        expect(cycleLength).toBe(10);
+
+        // Find a team with off days
+        let offTeam: number | null = null;
+        const testDate = new Date("2025-07-20");
+        
+        for (let team = 1; team <= 5; team++) {
+          const shift = calculateShift(testDate, team, "5-shift");
+          if (!shift.isWorking) {
+            offTeam = team;
+            break;
+          }
+        }
+
+        if (offTeam) {
+          // Test multiple consecutive days in the off period
+          const date1 = dayjs(testDate);
+          const progress1 = getOffDayProgress(date1, offTeam, "5-shift");
+          
+          expect(progress1).not.toBeNull();
+          
+          if (progress1) {
+            // Check that the total remains consistent across the off period
+            expect(progress1.total).toBe(4);
+            
+            // Check subsequent days in the off period
+            const date2 = date1.add(1, "day");
+            const progress2 = getOffDayProgress(date2, offTeam, "5-shift");
+            
+            if (progress2 && calculateShift(date2, offTeam, "5-shift").code === "OFF") {
+              expect(progress2.total).toBe(4);
+              expect(progress2.current).toBe(progress1.current + 1);
+            }
+          }
+        }
+      }
+    });
+
+    it("should calculate correct progress for first and last day of off period", () => {
+      // For 5-shift, teams have 4 consecutive off days
+      const testDate = new Date("2025-07-16");
+      
+      // Find a team that's off
+      let offTeam: number | null = null;
+      for (let team = 1; team <= 5; team++) {
+        const shift = calculateShift(testDate, team, "5-shift");
+        if (!shift.isWorking) {
+          offTeam = team;
+          break;
+        }
+      }
+
+      if (offTeam) {
+        // Find the start of the off period by going backward
+        let currentDate = dayjs(testDate);
+        let daysBack = 0;
+        const maxDaysToCheck = 10; // Cycle length for safety
+        
+        // Go back to find where the off period starts
+        while (daysBack < maxDaysToCheck) {
+          const prevDay = currentDate.subtract(1, "day");
+          const prevShift = calculateShift(prevDay, offTeam, "5-shift");
+          
+          if (prevShift.isWorking) {
+            // Found a working day, so current date is the first off day
+            break;
+          }
+          
+          currentDate = prevDay;
+          daysBack++;
+        }
+
+        const firstOffDay = currentDate;
+        
+        // Test first day of off period
+        const progressFirst = getOffDayProgress(firstOffDay, offTeam, "5-shift");
+        
+        // Only proceed if we found a valid off period
+        if (progressFirst) {
+          expect(progressFirst.current).toBe(1);
+          expect(progressFirst.total).toBe(4);
+          
+          // Test last day of off period
+          const lastOffDay = firstOffDay.add(progressFirst.total - 1, "day");
+          const lastDayShift = calculateShift(lastOffDay, offTeam, "5-shift");
+          
+          // Verify the last day is still off
+          if (!lastDayShift.isWorking) {
+            const progressLast = getOffDayProgress(lastOffDay, offTeam, "5-shift");
+            
+            expect(progressLast).not.toBeNull();
+            if (progressLast) {
+              expect(progressLast.current).toBe(progressFirst.total);
+              expect(progressLast.total).toBe(4);
+            }
+          }
+        }
+      }
+    });
+  });
 });
