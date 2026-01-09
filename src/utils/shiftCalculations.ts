@@ -187,7 +187,7 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
   if (!roster.shiftConfig.referenceDate) {
     throw new Error(`referenceDate not defined for schedule ${roster.value}`);
   }
-  return new Date(`${roster.shiftConfig.referenceDate}T00:00:00.000Z`);
+  return dayjs(roster.shiftConfig.referenceDate).startOf('day').toDate();
 };
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
