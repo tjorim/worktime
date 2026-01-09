@@ -549,7 +549,7 @@ export function getOffDayProgress(
     const cycleLength = getCycleLengthForSchedule(scheduleOption);
 
     // Create a full sequence of shifts for the cycle, treating undefined days as 'O' (off).
-    const shiftSequence: ("O" | string)[] = Array(cycleLength).fill("O");
+    const shiftSequence: ("M" | "L" | "N" | "D" | "O")[] = Array(cycleLength).fill("O");
     schedulePattern.days.forEach((day) => {
       // dayIndex is 1-based, array is 0-based.
       if (day.dayIndex > 0 && day.dayIndex <= cycleLength) {
@@ -573,10 +573,10 @@ export function getOffDayProgress(
     // Final check in case the sequence ends with off days.
     maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
 
-    // The longest run can't be longer than the cycle itself.
-    const maxOffDays = Math.min(maxConsecutive, cycleLength);
-
-    totalOffDays = maxOffDays > 0 ? maxOffDays : null;
+    // Since we doubled the sequence, the maximum consecutive can't exceed the cycle length.
+    // This handles both normal runs and wrap-around scenarios correctly.
+    totalOffDays = Math.min(maxConsecutive, cycleLength);
+    if (totalOffDays === 0) totalOffDays = null;
   }
 
   // Team is off, calculate which day of their off period
