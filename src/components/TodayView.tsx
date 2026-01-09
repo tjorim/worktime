@@ -27,6 +27,7 @@ interface TodayViewProps {
   onNextDay: () => void;
   onTodayClick: () => void;
   onTeamClick?: (teamNumber: number) => void;
+  isActive?: boolean;
 }
 
 /**
@@ -190,17 +191,22 @@ export function TodayView({
   onNextDay,
   onTodayClick,
   onTeamClick,
+  isActive = true,
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const { scheduleOption } = useSettings();
   const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
 
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onToday: onTodayClick,
-    onPrevious: onPreviousDay,
-    onNext: onNextDay,
-  });
+  // Keyboard shortcuts (only active when this tab is visible)
+  useKeyboardShortcuts(
+    isActive
+      ? {
+          onToday: onTodayClick,
+          onPrevious: onPreviousDay,
+          onNext: onNextDay,
+        }
+      : {},
+  );
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;

@@ -100,6 +100,7 @@ export function MainTabs({
             onNextDay={handleNextDay}
             onTodayClick={handleTodayClick}
             onTeamClick={handleTeamClick}
+            isActive={activeKey === "today"}
           />
         </Tab>
 
@@ -112,7 +113,12 @@ export function MainTabs({
             </>
           }
         >
-          <ScheduleView myTeam={myTeam} currentDate={currentDate} setCurrentDate={setCurrentDate} />
+          <ScheduleView
+            myTeam={myTeam}
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            isActive={activeKey === "schedule"}
+          />
         </Tab>
 
         <Tab

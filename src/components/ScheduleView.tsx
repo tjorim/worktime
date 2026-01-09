@@ -22,6 +22,7 @@ interface ScheduleViewProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
+  isActive?: boolean;
 }
 
 /**
@@ -38,6 +39,7 @@ export function ScheduleView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
+  isActive = true,
 }: ScheduleViewProps) {
   const datePickerId = useId();
   const { settings, scheduleOption } = useSettings();
@@ -80,12 +82,16 @@ export function ScheduleView({
   const currentWeekStart = dayjs().startOf("isoWeek");
   const isCurrentWeek = startOfWeek.isSame(currentWeekStart, "day");
 
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onToday: handleCurrent,
-    onPrevious: handlePrevious,
-    onNext: handleNext,
-  });
+  // Keyboard shortcuts (only active when this tab is visible)
+  useKeyboardShortcuts(
+    isActive
+      ? {
+          onToday: handleCurrent,
+          onPrevious: handlePrevious,
+          onNext: handleNext,
+        }
+      : {},
+  );
 
   return (
     <Card>

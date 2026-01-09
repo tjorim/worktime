@@ -306,8 +306,8 @@ export function MonthCalendar({
 
   const contextMenuItems = getContextMenuItems();
 
-  // Check if we're viewing the current month
-  const currentMonth = dayjs().startOf("month");
+  // Check if we're viewing the current month (reuse today for consistency)
+  const currentMonth = today.startOf("month");
   const isCurrentMonth = month.isSame(currentMonth, "month");
 
   return (
@@ -328,7 +328,7 @@ export function MonthCalendar({
           <Button
             variant={isCurrentMonth ? "primary" : "outline-primary"}
             size="sm"
-            onClick={() => handleMoveFocus(dayjs())}
+            onClick={() => handleMoveFocus(today)}
             disabled={isCurrentMonth}
             aria-label="Jump to current month"
           >
