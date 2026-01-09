@@ -87,6 +87,9 @@ const mockTodayShifts: ShiftResult[] = [
 const defaultProps = {
   todayShifts: mockTodayShifts,
   myTeam: 1,
+  currentDate: dayjs("2025-01-15"),
+  onPreviousDay: vi.fn(),
+  onNextDay: vi.fn(),
   onTodayClick: vi.fn(),
 };
 
