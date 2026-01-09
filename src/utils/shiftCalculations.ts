@@ -72,7 +72,7 @@ import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
-export type ShiftType = "M" | "L" | "N" | "O";
+export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
 export interface Shift {
   code: ShiftType;
@@ -114,15 +114,25 @@ export const SHIFTS = Object.freeze({
     isWorking: true,
     className: "shift-morning",
   }),
-  EVENING: Object.freeze({
+  LATE: Object.freeze({
     code: "L",
     emoji: "🌆",
-    name: "Evening",
+    name: "Late",
     hours: "15:00-23:00",
     start: 15,
     end: 23,
     isWorking: true,
-    className: "shift-evening",
+    className: "shift-late",
+  }),
+  DAY: Object.freeze({
+    code: "D",
+    emoji: "☀️",
+    name: "Day",
+    hours: "09:00-17:00",
+    start: 9,
+    end: 17,
+    isWorking: true,
+    className: "shift-day",
   }),
   NIGHT: Object.freeze({
     code: "N",
@@ -181,20 +191,18 @@ const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): n
   return roster.shiftConfig.referenceTeam;
 };
 
-const mapShiftCodeToShift = (code: "M" | "E" | "N" | "O" | "D" | "L") => {
+const mapShiftCodeToShift = (code: "M" | "L" | "N" | "D" | "O") => {
   switch (code) {
     case "M":
       return SHIFTS.MORNING;
-    case "E":
-      return SHIFTS.EVENING;
+    case "L":
+      return SHIFTS.LATE;
     case "N":
       return SHIFTS.NIGHT;
+    case "D":
+      return SHIFTS.DAY;
     case "O":
       return SHIFTS.OFF;
-    case "D":
-      return SHIFTS.MORNING;
-    case "L":
-      return SHIFTS.EVENING;
     default:
       return SHIFTS.OFF;
   }
@@ -333,7 +341,7 @@ export function calculateShift(
     return SHIFTS.MORNING;
   }
   if (cyclePosition < 4) {
-    return SHIFTS.EVENING;
+    return SHIFTS.LATE;
   }
   if (cyclePosition < 6) {
     return SHIFTS.NIGHT;

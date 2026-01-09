@@ -235,14 +235,14 @@ describe("SHIFTS Constant Validation", () => {
     expect(SHIFTS.MORNING.isWorking).toBe(true);
     expect(SHIFTS.MORNING.className).toBe("shift-morning");
 
-    expect(SHIFTS.EVENING.code).toBe("L");
-    expect(SHIFTS.EVENING.emoji).toBe("🌆");
-    expect(SHIFTS.EVENING.name).toBe("Evening");
-    expect(SHIFTS.EVENING.hours).toBe("15:00-23:00");
-    expect(SHIFTS.EVENING.start).toBe(15);
-    expect(SHIFTS.EVENING.end).toBe(23);
-    expect(SHIFTS.EVENING.isWorking).toBe(true);
-    expect(SHIFTS.EVENING.className).toBe("shift-evening");
+    expect(SHIFTS.LATE.code).toBe("L");
+    expect(SHIFTS.LATE.emoji).toBe("🌆");
+    expect(SHIFTS.LATE.name).toBe("Late");
+    expect(SHIFTS.LATE.hours).toBe("15:00-23:00");
+    expect(SHIFTS.LATE.start).toBe(15);
+    expect(SHIFTS.LATE.end).toBe(23);
+    expect(SHIFTS.LATE.isWorking).toBe(true);
+    expect(SHIFTS.LATE.className).toBe("shift-late");
 
     expect(SHIFTS.NIGHT.code).toBe("N");
     expect(SHIFTS.NIGHT.emoji).toBe("🌙");
