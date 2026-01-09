@@ -198,7 +198,7 @@ const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): n
   return roster.shiftConfig.referenceTeam;
 };
 
-const mapShiftCodeToShift = (code: "M" | "L" | "N" | "D" | "O") => {
+const mapShiftCodeToShift = (code: ShiftType) => {
   switch (code) {
     case "M":
       return SHIFTS.MORNING;
@@ -210,8 +210,11 @@ const mapShiftCodeToShift = (code: "M" | "L" | "N" | "D" | "O") => {
       return SHIFTS.DAY;
     case "O":
       return SHIFTS.OFF;
-    default:
+    default: {
+      // Exhaustiveness check: if a new ShiftType is added, this will cause a compile error
+      const _exhaustiveCheck: never = code;
       return SHIFTS.OFF;
+    }
   }
 };
 

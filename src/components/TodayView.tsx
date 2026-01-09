@@ -9,7 +9,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
-import { dayjs, getISOWeekYear2Digit, getLocalizedShiftTime } from "../utils/dateTimeUtils";
+import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import { getShiftByCode, getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
 
@@ -101,17 +101,13 @@ function TeamCard({
       <div className="text-muted small">
         {shiftDisplay.displayName}
         <br />
-        {shiftResult.shift.isWorking &&
-        shiftResult.shift.start != null &&
-        shiftResult.shift.end != null
-          ? getLocalizedShiftTime(
-              shiftResult.shift.start,
-              shiftResult.shift.end,
+        {shiftResult.shift.isWorking
+          ? getFormattedShiftTime(
+              shiftResult.shift,
+              settings.scheduleOption,
               settings.timeFormat,
             )
-          : shiftResult.shift.isWorking
-            ? "Working"
-            : "Not working today"}
+          : "Not working today"}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger

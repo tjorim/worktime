@@ -8,8 +8,11 @@ export function getScheduleConfig(
   );
 
   if (!config) {
-    // This should be a critical failure, as the default is missing.
-    throw new Error("Default '5-shift' schedule configuration is missing.");
+    // This error can be reached if scheduleOption is invalid or if the default '5-shift' is missing
+    throw new Error(
+      `Schedule configuration not found for option '${scheduleOption ?? "5-shift"}'. ` +
+      `Available options: ${SCHEDULE_OPTIONS.map(o => o.value).join(", ")}`
+    );
   }
 
   return config;
