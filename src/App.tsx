@@ -148,6 +148,11 @@ function AppContent() {
 
       if (teamCountChanged || teamsDisabled) {
         setMyTeam(null);
+        // Notify user that their team selection was reset
+        showInfo(
+          "Your team selection was reset because the new schedule has a different team configuration.",
+          "ℹ️",
+        );
       }
       setScheduleOption(schedule);
     } catch (error) {

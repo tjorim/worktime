@@ -187,11 +187,13 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
   if (!roster.shiftConfig.referenceDate) {
     throw new Error(`referenceDate not defined for schedule ${roster.value}`);
   }
-  const [year, month, day] = roster.shiftConfig.referenceDate.split("-").map(Number);
-  if (year === undefined || month === undefined || day === undefined) {
-    throw new Error(`Invalid referenceDate format for schedule ${roster.value}: ${roster.shiftConfig.referenceDate}`);
+  const referenceDate = dayjs(roster.shiftConfig.referenceDate, "YYYY-MM-DD", true);
+  if (!referenceDate.isValid()) {
+    throw new Error(
+      `Invalid referenceDate format for schedule ${roster.value}: ${roster.shiftConfig.referenceDate}`,
+    );
   }
-  return dayjs().year(year).month(month - 1).date(day).startOf("day");
+  return referenceDate.startOf("day");
 };
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
@@ -221,6 +223,14 @@ const mapShiftCodeToShift = (code: ShiftType): Shift => {
   }
 };
 
+/**
+ * Calculate the team offset index from a reference team.
+ * Returns the number of units (days or weeks depending on pattern) this team is offset from the reference team.
+ * @param teamNumber - The team number to calculate the offset for
+ * @param teamCount - Total number of teams in the schedule
+ * @param referenceTeam - The reference team number (1-indexed)
+ * @returns The offset index (0 to teamCount-1)
+ */
 const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
   if (teamCount <= 1) return 0;
   // Normalize to [0..teamCount-1] range to handle cases where teamNumber < referenceTeam
@@ -287,14 +297,15 @@ export function getShiftDisplay(
 }
 
 /**
- * Format shift time with localization fallback to display hours.
+ * Format shift time with localization, falling back to display hours when localization is unavailable.
  * 
- * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when shift has valid start/end times,
- * otherwise returns the display hours from shift display overrides. This ensures consistent
- * shift time formatting across the app.
+ * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when the shift has valid start and end
+ * times. If the shift start/end are null or invalid, or if localization fails, it falls back to the
+ * roster-specific display hours from shift display overrides. This ensures consistent shift time
+ * formatting across the app.
  * 
  * @param shift - Shift object with code, start, and end times
- * @param scheduleOption - Schedule option for display overrides
+ * @param scheduleOption - Schedule option used to resolve display overrides
  * @param timeFormat - Time format preference ("12h" or "24h")
  * @returns Formatted shift time string
  */
@@ -392,6 +403,12 @@ export function calculateShift(
   const dayIndex = cyclePosition + 1;
   const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
   if (!matchingDay) {
+    // This indicates a likely configuration error: the schedulePattern is missing
+    // an entry for the computed dayIndex. We keep the existing behavior of
+    // returning SHIFTS.OFF but emit a warning to aid diagnosis.
+    console.warn(
+      `[shiftCalculations] Missing schedulePattern day for dayIndex=${dayIndex} (cyclePosition=${cyclePosition}, cycleLength=${cycleLength}, teamNumber=${teamNumber}, roster=${roster.value}). Falling back to SHIFTS.OFF.`,
+    );
     return SHIFTS.OFF;
   }
   return mapShiftCodeToShift(matchingDay.shift);
