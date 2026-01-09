@@ -47,7 +47,7 @@ function TeamCard({
   onTeamClick?: (teamNumber: number) => void;
 }) {
   const { settings, scheduleOption } = useSettings();
-  const shiftDetails = getShiftByCode(shiftResult.shift.code);
+  // Use shiftResult.shift directly - already contains emoji/className/name/hours
   const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
   const shiftTimeLabel = getFormattedShiftTime(shiftResult.shift, scheduleOption, settings.timeFormat);
 
@@ -86,14 +86,14 @@ function TeamCard({
               <strong>Shift Code: {shiftDisplay.displayCode}</strong>
               <br />
               <>
-                {shiftDetails.emoji} <em>{shiftDisplay.displayName}</em>
+                {shiftResult.shift.emoji} <em>{shiftDisplay.displayName}</em>
                 <br />
                 {shiftTimeLabel}
               </>
             </Tooltip>
           }
         >
-          <Badge className={`shift-code cursor-help ${shiftDetails.className}`}>
+          <Badge className={`shift-code cursor-help ${shiftResult.shift.className}`}>
             {shiftDisplay.displayCode}
           </Badge>
         </OverlayTrigger>
@@ -101,13 +101,7 @@ function TeamCard({
       <div className="text-muted small">
         {shiftDisplay.displayName}
         <br />
-        {shiftResult.shift.isWorking
-          ? getFormattedShiftTime(
-              shiftResult.shift,
-              scheduleOption,
-              settings.timeFormat,
-            )
-          : "Not working today"}
+        {shiftResult.shift.isWorking ? shiftTimeLabel : "Not working today"}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger
@@ -135,6 +129,12 @@ function TeamCard({
       <Card
         className={`team-card-interactive w-100${isMyTeam ? " my-team" : ""}`}
         onClick={() => onTeamClick(shiftResult.teamNumber)}
+        role="button"
+        aria-label={
+          hasTeams
+            ? `View details for Team ${shiftResult.teamNumber}`
+            : "View schedule details"
+        }
         title={
           hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
         }

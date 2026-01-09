@@ -61,7 +61,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   const validatedTeam =
     typeof myTeam === "number" && myTeam >= 1 && myTeam <= teamCount ? myTeam : null;
 
-  if (myTeam !== null && validatedTeam === null) {
+  if (myTeam !== null && validatedTeam === null && process.env.NODE_ENV !== "production") {
     console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
   }
   // Always use today's date for current status
@@ -304,9 +304,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                         </OverlayTrigger>
                         {currentShift.shift.start && currentShift.shift.end && (
                           <div className="small text-muted mt-1">
-                            {getLocalizedShiftTime(
-                              currentShift.shift.start,
-                              currentShift.shift.end,
+                            {getFormattedShiftTime(
+                              currentShift.shift,
+                              scheduleOption,
                               settings.timeFormat,
                             )}
                           </div>

@@ -220,7 +220,8 @@ const mapShiftCodeToShift = (code: ShiftType): Shift => {
 
 const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
   if (teamCount <= 1) return 0;
-  return (teamNumber - referenceTeam) % teamCount;
+  // Normalize to [0..teamCount-1] range to handle cases where teamNumber < referenceTeam
+  return ((teamNumber - referenceTeam) % teamCount + teamCount) % teamCount;
 };
 
 const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNumber?: number) => {
