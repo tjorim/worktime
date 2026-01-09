@@ -350,38 +350,21 @@ export function calculateShift(
   // Calculate days since reference
   const daysSinceReference = targetDate.diff(referenceDate, "day");
 
-  // All patterns now use the unified day-based structure
-  if (schedulePattern) {
-    const cycleLength = getCycleLengthForSchedule(scheduleOption);
-    const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
-    const adjustedDays = daysSinceReference - teamOffset;
-    const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-    const dayIndex = cyclePosition + 1;
-    const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
-    if (!matchingDay) {
-      return SHIFTS.OFF;
-    }
-    return mapShiftCodeToShift(matchingDay.shift);
+  // All rosters use the unified pattern-based structure
+  if (!schedulePattern) {
+    throw new Error(`schedulePattern not defined for roster ${roster.value}`);
   }
 
-  // Fallback to legacy 5-shift cycle logic when no roster pattern is configured.
-  // This should not be reached now that all rosters have patterns, but kept for safety.
-  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
-  const teamOffset = (teamNumber - referenceTeam) * 2;
-  const adjustedDays = daysSinceReference - teamOffset;
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
+  const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
+  const adjustedDays = daysSinceReference - teamOffset;
   const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-
-  if (cyclePosition < 2) {
-    return SHIFTS.MORNING;
+  const dayIndex = cyclePosition + 1;
+  const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
+  if (!matchingDay) {
+    return SHIFTS.OFF;
   }
-  if (cyclePosition < 4) {
-    return SHIFTS.LATE;
-  }
-  if (cyclePosition < 6) {
-    return SHIFTS.NIGHT;
-  }
-  return SHIFTS.OFF;
+  return mapShiftCodeToShift(matchingDay.shift);
 }
 
 /**
