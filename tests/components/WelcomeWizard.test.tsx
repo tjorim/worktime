@@ -650,7 +650,6 @@ describe("WelcomeWizard", () => {
     });
 
     it("should navigate directly to schedule selection in change-schedule mode", async () => {
-      const user = userEvent.setup();
       const onScheduleSelect = vi.fn();
       const onHide = vi.fn();
       
