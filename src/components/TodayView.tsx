@@ -46,7 +46,7 @@ function TeamCard({
   hasTeams: boolean;
   onTeamClick?: (teamNumber: number) => void;
 }) {
-  const { settings } = useSettings();
+  const { settings, scheduleOption } = useSettings();
   const shiftDetails = getShiftByCode(shiftResult.shift.code);
   const shiftTimeLabel =
     shiftDetails.start && shiftDetails.end
@@ -76,9 +76,7 @@ function TeamCard({
         style={{ position: "relative", zIndex: 2 }}
       >
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">
-            {hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}
-          </h6>
+          <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}</h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -103,7 +101,7 @@ function TeamCard({
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
-        {getShiftDisplay(shiftResult.shift, settings.scheduleOption).displayName}
+        {getShiftDisplay(shiftResult.shift, scheduleOption).displayName}
         <br />
         {shiftResult.shift.isWorking
           ? getLocalizedShiftTime(
@@ -124,7 +122,7 @@ function TeamCard({
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
               Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")},{" "}
-              {getShiftDisplay(shiftResult.shift, settings.scheduleOption).displayName}
+              {getShiftDisplay(shiftResult.shift, scheduleOption).displayName}
             </Tooltip>
           }
         >
@@ -140,9 +138,7 @@ function TeamCard({
         className={`team-card-interactive w-100${isMyTeam ? " my-team" : ""}`}
         onClick={() => onTeamClick(shiftResult.teamNumber)}
         title={
-          hasTeams
-            ? `View details for Team ${shiftResult.teamNumber}`
-            : "View schedule details"
+          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
         }
         style={{ cursor: "pointer" }}
         tabIndex={0}

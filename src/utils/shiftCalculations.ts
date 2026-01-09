@@ -76,6 +76,7 @@ export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
 export interface Shift {
   code: ShiftType;
+  emoji: string;
   name: string;
   hours: string;
   start: number | null;
@@ -83,6 +84,12 @@ export interface Shift {
   isWorking: boolean;
   className: string;
 }
+
+/**
+ * Type for shifts that may include unknown/fallback codes.
+ * Used by functions that can return shifts with codes outside the standard ShiftType set.
+ */
+export type ShiftOrUnknown = Omit<Shift, "code"> & { code: string };
 
 export interface ShiftResult {
   date: Dayjs;
@@ -208,19 +215,12 @@ const mapShiftCodeToShift = (code: "M" | "L" | "N" | "D" | "O") => {
   }
 };
 
-const getTeamOffsetUnits = (
-  teamNumber: number,
-  teamCount: number,
-  referenceTeam: number,
-) => {
+const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
   if (teamCount <= 1) return 0;
   return (teamNumber - referenceTeam) % teamCount;
 };
 
-const getCycleTeamOffsetDays = (
-  scheduleOption?: NullableScheduleOption,
-  teamNumber?: number,
-) => {
+const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNumber?: number) => {
   const teamCount = getTeamCountForSchedule(scheduleOption);
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
   const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
@@ -238,7 +238,7 @@ const getCycleTeamOffsetDays = (
  * @param shift - The shift object whose emoji and name will be used
  * @returns The display string in the form "`<emoji> <name>`"
  */
-export function getShiftDisplayName(shift: ReturnType<typeof getShiftByCode>): string {
+export function getShiftDisplayName(shift: ShiftOrUnknown): string {
   return `${shift.emoji} ${shift.name}`;
 }
 
@@ -263,11 +263,14 @@ export function getShiftDisplayName(shift: ReturnType<typeof getShiftByCode>): s
  * // Returns: { displayName: "Early", displayHours: "07:00-15:00" }
  */
 export function getShiftDisplay(
-  shift: Shift,
+  shift: ShiftOrUnknown,
   scheduleOption?: NullableScheduleOption,
 ): { displayName: string; displayHours: string } {
   const roster = getRosterForSchedule(scheduleOption);
-  const override = roster.shiftConfig.shiftDisplayOverrides?.[shift.code as keyof typeof roster.shiftConfig.shiftDisplayOverrides];
+  const override =
+    roster.shiftConfig.shiftDisplayOverrides?.[
+      shift.code as keyof typeof roster.shiftConfig.shiftDisplayOverrides
+    ];
 
   return {
     displayName: override?.displayName ?? shift.name,
@@ -281,7 +284,7 @@ export function getShiftDisplay(
  * @param code - Shift code to look up; may be null or undefined
  * @returns The matching shift object from `SHIFTS`, or a fallback object with code `'U'`, emoji `❓`, name `'Unknown'`, non-working flags and null times when no match exists
  */
-export function getShiftByCode(code: string | null | undefined) {
+export function getShiftByCode(code: string | null | undefined): ShiftOrUnknown {
   const shift = Object.values(SHIFTS).find((s) => s.code === code);
   return (
     shift || {
@@ -351,8 +354,7 @@ export function calculateShift(
     const cycleLength = getCycleLengthForSchedule(scheduleOption);
     const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
     const adjustedDays = daysSinceReference - teamOffset;
-    const cyclePosition =
-      ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
+    const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
     const dayIndex = cyclePosition + 1;
     const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
     if (!matchingDay) {
@@ -367,8 +369,7 @@ export function calculateShift(
   const teamOffset = (teamNumber - referenceTeam) * 2;
   const adjustedDays = daysSinceReference - teamOffset;
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
-  const cyclePosition =
-    ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
+  const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
 
   if (cyclePosition < 2) {
     return SHIFTS.MORNING;
@@ -583,59 +584,54 @@ export function getOffDayProgress(
     return null;
   }
 
-  const roster = getRosterForSchedule(scheduleOption);
-  const schedulePattern = roster.shiftConfig.schedulePattern;
-  
+  const cycleLength = getCycleLengthForSchedule(scheduleOption);
   let totalOffDays: number | null = null;
-  
-  if (schedulePattern) {
-    const cycleLength = getCycleLengthForSchedule(scheduleOption);
 
-    // Create a full sequence of shifts for the cycle, treating undefined days as 'O' (off).
-    const shiftSequence: ("M" | "L" | "N" | "D" | "O")[] = Array(cycleLength).fill("O");
-    schedulePattern.days.forEach((day) => {
-      // dayIndex is 1-based, array is 0-based.
-      if (day.dayIndex > 0 && day.dayIndex <= cycleLength) {
-        shiftSequence[day.dayIndex - 1] = day.shift;
-      }
-    });
-
-    // To handle wrap-around, we can check a doubled sequence.
-    const doubledSequence = [...shiftSequence, ...shiftSequence];
-    let maxConsecutive = 0;
-    let currentConsecutive = 0;
-
-    for (const shift of doubledSequence) {
-      if (shift === "O") {
-        currentConsecutive++;
-      } else {
-        maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
-        currentConsecutive = 0;
-      }
-    }
-    // Final check in case the sequence ends with off days.
-    maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
-
-    // Since we doubled the sequence, the maximum consecutive can't exceed the cycle length.
-    // This handles both normal runs and wrap-around scenarios correctly.
-    totalOffDays = Math.min(maxConsecutive, cycleLength);
-    if (totalOffDays === 0) totalOffDays = null;
-  }
-
-  // Team is off, calculate which day of their off period
-  let dayCount = 0;
+  // Find the start of the current off-day period by looking backwards
+  let periodStartDate: Dayjs | null = null;
   let checkDate = getCurrentShiftDay(dayjs(date));
 
-  // Look backwards to find when this off period started
-  const cycleLength = getCycleLengthForSchedule(scheduleOption);
   for (let i = 0; i < cycleLength; i++) {
-    // Max 10 days to avoid infinite loop
-    const shift = calculateShift(checkDate, teamNumber, scheduleOption);
+    const tempDate = checkDate.subtract(i, "day");
+    const shift = calculateShift(tempDate, teamNumber, scheduleOption);
     if (shift.isWorking) {
-      break; // Found the last working day
+      periodStartDate = tempDate.add(1, "day");
+      break;
     }
-    dayCount++;
-    checkDate = checkDate.subtract(1, "day");
+    if (i === cycleLength - 1) {
+      // All days in cycle are off days
+      periodStartDate = tempDate;
+    }
+  }
+
+  if (periodStartDate) {
+    // Count forward from the start of the period to find its length
+    let periodLength = 0;
+    for (let i = 0; i < cycleLength; i++) {
+      const tempDate = periodStartDate.add(i, "day");
+      const shift = calculateShift(tempDate, teamNumber, scheduleOption);
+      if (shift.isWorking) {
+        break;
+      }
+      periodLength++;
+    }
+    totalOffDays = periodLength > 0 ? periodLength : null;
+  }
+
+  // Calculate which day of the off period we're currently in
+  let dayCount = 0;
+  if (totalOffDays && periodStartDate) {
+    checkDate = getCurrentShiftDay(dayjs(date));
+
+    // Count backwards from current date to period start
+    for (let i = 0; i < cycleLength; i++) {
+      const shift = calculateShift(checkDate, teamNumber, scheduleOption);
+      if (shift.isWorking) {
+        break; // Found the last working day
+      }
+      dayCount++;
+      checkDate = checkDate.subtract(1, "day");
+    }
   }
 
   if (!totalOffDays) {

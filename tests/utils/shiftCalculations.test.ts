@@ -50,7 +50,7 @@ describe("Shift Calculations", () => {
     it("should use correct default reference date for 5-shift schedule", () => {
       // Test that the 5-shift schedule uses July 16, 2025 as the reference date
       // This ensures Team 1's cycle aligns with August 1, 2022 historic start
-      const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+      const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
       const referenceDate = new Date(`${fiveShiftRoster?.shiftConfig.referenceDate}T00:00:00.000Z`);
 
       // Convert to comparable format
@@ -160,7 +160,7 @@ describe("getAllTeamsShifts Function Tests", () => {
   it("should return shifts for all teams on a given date", () => {
     const testDate = new Date("2025-07-16");
     const allShifts = getAllTeamsShifts(testDate, "5-shift");
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const teamCount = fiveShiftRoster?.shiftConfig.teamCount ?? 5;
 
     expect(allShifts).toHaveLength(teamCount);
@@ -209,7 +209,7 @@ describe("getAllTeamsShifts Function Tests", () => {
       new Date("2025-01-01"), // Year start
       new Date("2025-07-16"), // Reference date
     ];
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const teamCount = fiveShiftRoster?.shiftConfig.teamCount ?? 5;
 
     edgeDates.forEach((date) => {
@@ -327,10 +327,10 @@ describe("Roster Configuration Integration Tests", () => {
 
   it("should use roster-specific reference date and team", () => {
     // Test that 5-shift reference team has expected shift on reference date
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const referenceDate = new Date(`${fiveShiftRoster?.shiftConfig.referenceDate}T00:00:00.000Z`);
     const referenceTeam = fiveShiftRoster?.shiftConfig.referenceTeam ?? 1;
-    
+
     const referenceShift = calculateShift(referenceDate, referenceTeam, "5-shift");
     expect(referenceShift).toBe(SHIFTS.MORNING);
   });
@@ -338,7 +338,7 @@ describe("Roster Configuration Integration Tests", () => {
   it("should respect roster-specific cycle length", () => {
     const baseDate = new Date("2025-07-16");
     const team = 1;
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const cycleLength = fiveShiftRoster?.shiftConfig.cycleLengthDays ?? 10;
 
     // Test that pattern repeats after cycle length
@@ -515,7 +515,7 @@ describe("Type Safety and Interface Compliance", () => {
 describe("getOffDayProgress Function Tests", () => {
   it("should return null for teams that are working", () => {
     const testDate = new Date("2025-07-16");
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const teamCount = fiveShiftRoster?.shiftConfig.teamCount ?? 5;
 
     // Find a team that's working on this date
@@ -537,7 +537,7 @@ describe("getOffDayProgress Function Tests", () => {
 
   it("should calculate correct off-day progress for teams that are off", () => {
     const testDate = new Date("2025-07-16");
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const teamCount = fiveShiftRoster?.shiftConfig.teamCount ?? 5;
 
     // Find a team that's off on this date
@@ -577,7 +577,7 @@ describe("getOffDayProgress Function Tests", () => {
     // Find a team that's off
     let offTeam: number | null = null;
     const testDate = new Date("2025-07-20"); // Different test date
-    const fiveShiftRoster = SCHEDULE_OPTIONS.find(s => s.value === "5-shift");
+    const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const teamCount = fiveShiftRoster?.shiftConfig.teamCount ?? 5;
 
     for (let team = 1; team <= teamCount; team++) {
@@ -658,12 +658,12 @@ describe("getOffDayProgress Function Tests", () => {
     it("should calculate off-day progress for 9-5 schedule on Sunday", () => {
       // Test Sunday - should be off for 9-5 schedule
       const sunday = new Date("2025-01-12"); // Sunday
-      
+
       // First verify the team is actually off on this day
       const shift = calculateShift(sunday, 1, "9-5");
       if (!shift.isWorking) {
         const progress = getOffDayProgress(sunday, 1, "9-5");
-        
+
         expect(progress).not.toBeNull();
         if (progress) {
           expect(progress.total).toBe(2); // Weekend is 2 days
@@ -680,7 +680,7 @@ describe("getOffDayProgress Function Tests", () => {
       // Test Monday - should be working
       const monday = new Date("2025-01-13"); // Monday
       const shift = calculateShift(monday, 1, "9-5");
-      
+
       if (shift.isWorking) {
         const progress = getOffDayProgress(monday, 1, "9-5");
         expect(progress).toBeNull();
@@ -691,7 +691,7 @@ describe("getOffDayProgress Function Tests", () => {
       // For weekly-rotation schedules, verify that off days are detected correctly
       // Using Sunday as a reliable off-day test case
       const sunday = new Date("2025-01-12");
-      
+
       // Test 9-5 schedule
       const nineFiveShift = calculateShift(sunday, 1, "9-5");
       if (!nineFiveShift.isWorking) {
@@ -702,7 +702,7 @@ describe("getOffDayProgress Function Tests", () => {
           expect(progress.current).toBeGreaterThan(0);
         }
       }
-      
+
       // Test 2-shift schedule
       const twoShiftShift = calculateShift(sunday, 1, "2-shift");
       if (!twoShiftShift.isWorking) {
@@ -719,10 +719,10 @@ describe("getOffDayProgress Function Tests", () => {
       // The logic should correctly identify consecutive weekend days
       const sunday = new Date("2025-01-12");
       const shift = calculateShift(sunday, 1, "9-5");
-      
+
       if (!shift.isWorking) {
         const progress = getOffDayProgress(sunday, 1, "9-5");
-        
+
         expect(progress).not.toBeNull();
         if (progress) {
           // Weekend should be 2 consecutive days

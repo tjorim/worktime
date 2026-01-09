@@ -100,13 +100,10 @@ describe("useTransferCalculations", () => {
 
   describe("Team updates and effects", () => {
     it("updates other team when my team changes and other team becomes unavailable", () => {
-      const { result, rerender } = renderHook(
-        ({ myTeam }) => useTransferCalculations({ myTeam }),
-        {
-          initialProps: { myTeam: 1 },
-          wrapper,
-        },
-      );
+      const { result, rerender } = renderHook(({ myTeam }) => useTransferCalculations({ myTeam }), {
+        initialProps: { myTeam: 1 },
+        wrapper,
+      });
       act(() => {
         result.current.setOtherTeam(3);
       });
@@ -117,13 +114,10 @@ describe("useTransferCalculations", () => {
     });
 
     it("maintains other team when it remains available after my team change", () => {
-      const { result, rerender } = renderHook(
-        ({ myTeam }) => useTransferCalculations({ myTeam }),
-        {
-          initialProps: { myTeam: 1 },
-          wrapper,
-        },
-      );
+      const { result, rerender } = renderHook(({ myTeam }) => useTransferCalculations({ myTeam }), {
+        initialProps: { myTeam: 1 },
+        wrapper,
+      });
       act(() => {
         result.current.setOtherTeam(4);
       });

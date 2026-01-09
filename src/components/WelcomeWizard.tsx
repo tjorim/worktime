@@ -283,8 +283,8 @@ export function WelcomeWizard({
           Your personal shift tracker and time-off planner, built for flexible schedules
         </p>
         <p className="text-muted">
-          Worktime helps you stay on top of your schedule with real-time tracking, countdown
-          timers, and integrated time-off management - stored locally in your browser.
+          Worktime helps you stay on top of your schedule with real-time tracking, countdown timers,
+          and integrated time-off management - stored locally in your browser.
         </p>
       </div>
       <div className="d-flex justify-content-between">
@@ -412,9 +412,7 @@ export function WelcomeWizard({
               variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
               className="w-100 text-start mb-2"
               onClick={() => handleScheduleChange(schedule.value)}
-              disabled={
-                isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)
-              }
+              disabled={isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)}
               ref={
                 currentStep === "schedule-selection" && schedule.value === "9-5"
                   ? firstButtonRef

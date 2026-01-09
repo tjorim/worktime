@@ -84,44 +84,45 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       schedulePattern: {
         days: [
           // Week 1: Early shift Mon-Fri, off weekend
-          { dayIndex: 1, shift: "M" },  // Monday
-          { dayIndex: 2, shift: "M" },  // Tuesday
-          { dayIndex: 3, shift: "M" },  // Wednesday
-          { dayIndex: 4, shift: "M" },  // Thursday
-          { dayIndex: 5, shift: "M" },  // Friday
-          { dayIndex: 6, shift: "O" },  // Saturday
-          { dayIndex: 7, shift: "O" },  // Sunday
+          { dayIndex: 1, shift: "M" }, // Monday
+          { dayIndex: 2, shift: "M" }, // Tuesday
+          { dayIndex: 3, shift: "M" }, // Wednesday
+          { dayIndex: 4, shift: "M" }, // Thursday
+          { dayIndex: 5, shift: "M" }, // Friday
+          { dayIndex: 6, shift: "O" }, // Saturday
+          { dayIndex: 7, shift: "O" }, // Sunday
           // Week 2: Late shift Mon-Fri, off weekend
-          { dayIndex: 8, shift: "L" },   // Monday
-          { dayIndex: 9, shift: "L" },   // Tuesday
-          { dayIndex: 10, shift: "L" },  // Wednesday
-          { dayIndex: 11, shift: "L" },  // Thursday
-          { dayIndex: 12, shift: "L" },  // Friday
-          { dayIndex: 13, shift: "O" },  // Saturday
-          { dayIndex: 14, shift: "O" },  // Sunday
+          { dayIndex: 8, shift: "L" }, // Monday
+          { dayIndex: 9, shift: "L" }, // Tuesday
+          { dayIndex: 10, shift: "L" }, // Wednesday
+          { dayIndex: 11, shift: "L" }, // Thursday
+          { dayIndex: 12, shift: "L" }, // Friday
+          { dayIndex: 13, shift: "O" }, // Saturday
+          { dayIndex: 14, shift: "O" }, // Sunday
           // Week 3: Early shift Mon-Fri, off weekend
-          { dayIndex: 15, shift: "M" },  // Monday
-          { dayIndex: 16, shift: "M" },  // Tuesday
-          { dayIndex: 17, shift: "M" },  // Wednesday
-          { dayIndex: 18, shift: "M" },  // Thursday
-          { dayIndex: 19, shift: "M" },  // Friday
-          { dayIndex: 20, shift: "O" },  // Saturday
-          { dayIndex: 21, shift: "O" },  // Sunday
+          { dayIndex: 15, shift: "M" }, // Monday
+          { dayIndex: 16, shift: "M" }, // Tuesday
+          { dayIndex: 17, shift: "M" }, // Wednesday
+          { dayIndex: 18, shift: "M" }, // Thursday
+          { dayIndex: 19, shift: "M" }, // Friday
+          { dayIndex: 20, shift: "O" }, // Saturday
+          { dayIndex: 21, shift: "O" }, // Sunday
           // Week 4: Late shift Mon-Fri, off weekend
-          { dayIndex: 22, shift: "L" },  // Monday
-          { dayIndex: 23, shift: "L" },  // Tuesday
-          { dayIndex: 24, shift: "L" },  // Wednesday
-          { dayIndex: 25, shift: "L" },  // Thursday
-          { dayIndex: 26, shift: "L" },  // Friday
-          { dayIndex: 27, shift: "O" },  // Saturday
-          { dayIndex: 28, shift: "O" },  // Sunday
+          { dayIndex: 22, shift: "L" }, // Monday
+          { dayIndex: 23, shift: "L" }, // Tuesday
+          { dayIndex: 24, shift: "L" }, // Wednesday
+          { dayIndex: 25, shift: "L" }, // Thursday
+          { dayIndex: 26, shift: "L" }, // Friday
+          { dayIndex: 27, shift: "O" }, // Saturday
+          { dayIndex: 28, shift: "O" }, // Sunday
         ],
         extra: {
           weekendAssignment: "One assigned weekend within the 4-week cycle.",
           jumpday: "Fixed jumpday within the cycle.",
         },
       },
-      notes: "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
+      notes:
+        "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
       shiftDisplayOverrides: {
         M: { displayName: "Early" },
       },

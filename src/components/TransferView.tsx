@@ -32,7 +32,7 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
   const showPastCheckboxId = useId();
   const startDateId = useId();
   const endDateId = useId();
-  
+
   // Use team directly - validation is handled by useTransferCalculations hook
   const myTeam = inputMyTeam;
 

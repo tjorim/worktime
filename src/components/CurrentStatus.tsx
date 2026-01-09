@@ -277,7 +277,10 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                               <br />
                               {(() => {
                                 const shift = getShiftByCode(currentShift.shift.code);
-                                const { displayName, displayHours } = getShiftDisplay(shift, settings.scheduleOption);
+                                const { displayName, displayHours } = getShiftDisplay(
+                                  shift,
+                                  scheduleOption,
+                                );
                                 return `${shift.emoji} ${displayName} shift (${shift.start && shift.end ? getLocalizedShiftTime(shift.start, shift.end, settings.timeFormat) : displayHours})`;
                               })()}
                               <br />
@@ -289,7 +292,10 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             className={`shift-code shift-badge-lg cursor-help ${getShiftByCode(currentShift.shift.code).className}`}
                           >
                             {(() => {
-                              const { displayName } = getShiftDisplay(currentShift.shift, settings.scheduleOption);
+                              const { displayName } = getShiftDisplay(
+                                currentShift.shift,
+                                scheduleOption,
+                              );
                               return hasTeams
                                 ? `Team ${validatedTeam}: ${displayName}`
                                 : displayName;
@@ -328,7 +334,10 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                               className={`shift-code shift-badge-lg ${getShiftByCode(currentWorkingTeam.shift.code).className}`}
                             >
                               {(() => {
-                                const { displayName } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
+                                const { displayName } = getShiftDisplay(
+                                  currentWorkingTeam.shift,
+                                  scheduleOption,
+                                );
                                 return hasTeams
                                   ? `Team ${currentWorkingTeam.teamNumber}: ${displayName}`
                                   : displayName;
@@ -336,8 +345,12 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                             </Badge>
                             <div className="small text-muted mt-1">
                               {(() => {
-                                const { displayHours } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
-                                return currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
+                                const { displayHours } = getShiftDisplay(
+                                  currentWorkingTeam.shift,
+                                  scheduleOption,
+                                );
+                                return currentWorkingTeam.shift.start &&
+                                  currentWorkingTeam.shift.end
                                   ? getLocalizedShiftTime(
                                       currentWorkingTeam.shift.start,
                                       currentWorkingTeam.shift.end,
@@ -378,11 +391,15 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                     {validatedTeam && nextShift ? (
                       <div>
                         <div className="fw-semibold">
-                          {nextShift.date.format("ddd, MMM D")} - {getShiftDisplay(nextShift.shift, settings.scheduleOption).displayName}
+                          {nextShift.date.format("ddd, MMM D")} -{" "}
+                          {getShiftDisplay(nextShift.shift, scheduleOption).displayName}
                         </div>
                         <div className="small text-muted">
                           {(() => {
-                            const { displayHours } = getShiftDisplay(nextShift.shift, settings.scheduleOption);
+                            const { displayHours } = getShiftDisplay(
+                              nextShift.shift,
+                              scheduleOption,
+                            );
                             return nextShift.shift.start && nextShift.shift.end
                               ? getLocalizedShiftTime(
                                   nextShift.shift.start,
@@ -403,15 +420,16 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                     ) : nextShiftAnyTeam ? (
                       <div>
                         <div className="fw-semibold">
-                          {hasTeams
-                            ? `Team ${nextShiftAnyTeam.teamNumber}: `
-                            : ""}
+                          {hasTeams ? `Team ${nextShiftAnyTeam.teamNumber}: ` : ""}
                           {nextShiftAnyTeam.date.format("ddd, MMM D")} -{" "}
-                          {getShiftDisplay(nextShiftAnyTeam.shift, settings.scheduleOption).displayName}
+                          {getShiftDisplay(nextShiftAnyTeam.shift, scheduleOption).displayName}
                         </div>
                         <div className="small text-muted">
                           {(() => {
-                            const { displayHours } = getShiftDisplay(nextShiftAnyTeam.shift, settings.scheduleOption);
+                            const { displayHours } = getShiftDisplay(
+                              nextShiftAnyTeam.shift,
+                              scheduleOption,
+                            );
                             return nextShiftAnyTeam.shift.start && nextShiftAnyTeam.shift.end
                               ? getLocalizedShiftTime(
                                   nextShiftAnyTeam.shift.start,

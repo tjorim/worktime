@@ -122,11 +122,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
   // Generate unique ID for tooltip to avoid HTML ID conflicts
   const timelineTooltipId = useId();
   const { settings, scheduleOption } = useSettings();
-  const { prevShift, nextShift } = computeShiftTimeline(
-    today,
-    currentWorkingTeam,
-    scheduleOption,
-  );
+  const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam, scheduleOption);
 
   return (
     <div className="card-timeline timeline-container">
@@ -151,10 +147,13 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               <Tooltip id={timelineTooltipId}>
                 <strong>Currently Active</strong>
                 <br />
-                {getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption).displayName}
+                {getShiftDisplay(currentWorkingTeam.shift, scheduleOption).displayName}
                 <br />
                 {(() => {
-                  const { displayHours } = getShiftDisplay(currentWorkingTeam.shift, settings.scheduleOption);
+                  const { displayHours } = getShiftDisplay(
+                    currentWorkingTeam.shift,
+                    scheduleOption,
+                  );
                   return currentWorkingTeam.shift.start && currentWorkingTeam.shift.end
                     ? getLocalizedShiftTime(
                         currentWorkingTeam.shift.start,

@@ -224,8 +224,8 @@ export function ScheduleView({
                         className={`text-center ${isToday ? "today-column" : ""}`}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, settings.scheduleOption).displayName : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, settings.scheduleOption).displayName : "Off"}`
+                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, scheduleOption).displayName : "Off"}`
+                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? getShiftDisplay(shift, scheduleOption).displayName : "Off"}`
                         }
                       >
                         {shift.isWorking && (
@@ -237,10 +237,10 @@ export function ScheduleView({
                               >
                                 <strong>Shift: {shift.code}</strong>
                                 <br />
-                                {getShiftDisplay(shift, settings.scheduleOption).displayName} shift
+                                {getShiftDisplay(shift, scheduleOption).displayName} shift
                                 <br />
                                 <em>
-                                  {getShiftDisplay(shift, settings.scheduleOption).displayName} -{" "}
+                                  {getShiftDisplay(shift, scheduleOption).displayName} -{" "}
                                   {getLocalizedShiftTime(
                                     shift.start,
                                     shift.end,
