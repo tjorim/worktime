@@ -63,9 +63,6 @@ export function CurrentStatus({
   const validatedTeam =
     typeof myTeam === "number" && myTeam >= 1 && myTeam <= teamCount ? myTeam : null;
 
-  if (myTeam !== null && validatedTeam === null) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
-  }
   // Always use today's date for current status
   const today = dayjs();
   const liveTime = useLiveTime();
