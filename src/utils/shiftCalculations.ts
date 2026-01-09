@@ -182,12 +182,13 @@ const getCycleLengthForSchedule = (scheduleOption?: NullableScheduleOption) => {
   return roster.shiftConfig.cycleLengthDays;
 };
 
-const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Date => {
+const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): Dayjs => {
   const roster = getRosterForSchedule(scheduleOption);
   if (!roster.shiftConfig.referenceDate) {
     throw new Error(`referenceDate not defined for schedule ${roster.value}`);
   }
-  return dayjs(roster.shiftConfig.referenceDate).startOf('day').toDate();
+  const [year, month, day] = roster.shiftConfig.referenceDate.split("-").map(Number);
+  return dayjs().year(year).month(month - 1).date(day).startOf("day");
 };
 
 const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
@@ -368,7 +369,7 @@ export function calculateShift(
   }
 
   const targetDate = dayjs(date).startOf("day");
-  const referenceDate = dayjs(getReferenceDateForSchedule(scheduleOption)).startOf("day");
+  const referenceDate = getReferenceDateForSchedule(scheduleOption);
   const roster = getRosterForSchedule(scheduleOption);
   const schedulePattern = roster.shiftConfig.schedulePattern;
 
