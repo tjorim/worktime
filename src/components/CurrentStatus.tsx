@@ -34,6 +34,7 @@ import { ShiftTimeline } from "./ShiftTimeline";
 interface CurrentStatusProps {
   myTeam: number | null; // The user's team from onboarding
   onChangeTeam: () => void;
+  onChangeSchedule?: () => void;
   onShowWhoIsWorking?: () => void;
 }
 
@@ -45,10 +46,11 @@ interface CurrentStatusProps {
  *
  * @param myTeam - The user's team number from onboarding, or `null` to show a generic view.
  * @param onChangeTeam - Callback invoked when the user requests to select or change their team.
+ * @param onChangeSchedule - Optional callback invoked when the user requests to change their schedule.
  * @param onShowWhoIsWorking - Optional callback to show who is currently working; the corresponding control is disabled if omitted.
  * @returns A React element containing the Current Status card with status, timeline and next-shift information.
  */
-export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: CurrentStatusProps) {
+export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule, onShowWhoIsWorking }: CurrentStatusProps) {
   // Generate unique IDs for tooltips to avoid HTML ID conflicts
   const dateTooltipId = useId();
   const teamTooltipId = useId();
@@ -232,14 +234,29 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                 <i className="bi bi-people me-1"></i>
                 Who's On?
               </Button>
-              <Button
-                variant={validatedTeam ? "outline-secondary" : "primary"}
-                size="sm"
-                onClick={onChangeTeam}
-              >
-                <i className={`bi ${validatedTeam ? "bi-person-gear" : "bi-person-plus"} me-1`}></i>
-                {validatedTeam ? "Change Team" : "Select Team"}
-              </Button>
+              {/* Show team selection button for multi-team schedules, or schedule change button for single-team schedules */}
+              {hasTeams && teamCount > 1 ? (
+                <Button
+                  variant={validatedTeam ? "outline-secondary" : "primary"}
+                  size="sm"
+                  onClick={onChangeTeam}
+                >
+                  <i className={`bi ${validatedTeam ? "bi-person-gear" : "bi-person-plus"} me-1`}></i>
+                  {validatedTeam ? "Change Team" : "Select Team"}
+                </Button>
+              ) : (
+                onChangeSchedule && (
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={onChangeSchedule}
+                    title="Change your work schedule"
+                  >
+                    <i className="bi bi-calendar-week me-1"></i>
+                    Change Schedule
+                  </Button>
+                )
+              )}
             </div>
           </div>
 
@@ -355,10 +372,12 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                           </div>
                         )}
                         <hr className="my-3" />
-                        <div className="small text-muted">
-                          💡 Select your team above for personalized shift tracking and countdown
-                          timers
-                        </div>
+                        {hasTeams && teamCount > 1 && (
+                          <div className="small text-muted">
+                            💡 Select your team above for personalized shift tracking and countdown
+                            timers
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </div>
@@ -414,9 +433,11 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
                           </Badge>
                         )}
                         <hr className="my-3" />
-                        <div className="small text-muted">
-                          💡 Select your team above for personalized shift tracking
-                        </div>
+                        {hasTeams && teamCount > 1 && (
+                          <div className="small text-muted">
+                            💡 Select your team above for personalized shift tracking
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>

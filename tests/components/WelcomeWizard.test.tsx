@@ -612,33 +612,19 @@ describe("WelcomeWizard", () => {
       // Should show the wizard again
       await waitFor(() => expect(screen.getByText(/Choose your team/i)).toBeInTheDocument());
 
-      // Navigate to vacation allowance step by selecting a team
+      // In change-team mode, selecting a team should close the wizard immediately (no vacation step)
       await user.click(screen.getByLabelText(/Select Team 2/i));
-      expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
-
-      // Update vacation allowance
-      const updatedAmountInput = screen.getByLabelText(/Annual vacation allowance/i);
-      await user.clear(updatedAmountInput);
-      await user.type(updatedAmountInput, "30");
-
-      // Save the update
-      await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+        expect(screen.queryByText(/Choose your team/i)).not.toBeInTheDocument(),
       );
 
-      // Verify vacation allowance was updated in change-team mode
+      // Verify team was changed but vacation allowance remains unchanged
       saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.amount).toBe(30);
+      expect(saved.settings?.vacationAllowance?.amount).toBe(25); // Unchanged from onboarding
       expect(saved.settings?.vacationAllowance?.unit).toBe("days");
       expect(saved.myTeam).toBe(2); // Team was changed
-
-      // Verify success toast was shown
-      await waitFor(() => {
-        expect(screen.getByText(/Vacation allowance updated successfully/i)).toBeInTheDocument();
-      });
     });
 
     it("should navigate directly to schedule selection in change-schedule mode", async () => {

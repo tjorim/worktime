@@ -213,6 +213,7 @@ function AppContent() {
             <CurrentStatus
               myTeam={myTeam}
               onChangeTeam={handleChangeTeam}
+              onChangeSchedule={handleChangeSchedule}
               onShowWhoIsWorking={handleShowWhoIsWorking}
             />
           </ErrorBoundary>
