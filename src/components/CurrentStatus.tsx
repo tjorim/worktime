@@ -79,7 +79,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
     return {
       date: shiftDay,
       shift,
-      code: getShiftCode(shiftDay, validatedTeam, scheduleOption ?? undefined),
+      code: getShiftCode(today, validatedTeam, scheduleOption ?? undefined),
       teamNumber: validatedTeam,
     };
   }, [validatedTeam, todayMinuteKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
@@ -174,13 +174,13 @@ export function CurrentStatus({ myTeam, onChangeTeam, onShowWhoIsWorking }: Curr
   // Countdown to next shift
   const countdown = useCountdown(nextShiftStartTime);
 
-  // Get current time's shift code for live display
+  // Get current time's shift code for live display (roster-aware)
   const currentTimeShiftCode = useMemo(() => {
-    const hour = liveTime.hour();
-    if (hour >= 7 && hour < 15) return "M";
-    if (hour >= 15 && hour < 23) return "L";
-    return "N"; // 23:00-07:00
-  }, [liveTime]);
+    if (!validatedTeam) return null;
+    const shiftDay = getCurrentShiftDay(liveTime);
+    const shift = calculateShift(shiftDay, validatedTeam, scheduleOption ?? undefined);
+    return shift.code;
+  }, [liveTime, validatedTeam, scheduleOption]);
 
   // Get the proper shift day for date code display (previous day for night shifts)
   const currentShiftDay = useMemo(() => {
