@@ -116,11 +116,21 @@ export function useTransferCalculations({
   const { scheduleOption } = useSettings();
   const teamCount = getTeamCountForOption(scheduleOption);
 
+  // Validate myTeam is within valid range
+  const validatedMyTeam = useMemo(() => {
+    if (myTeam === null) return null;
+    if (myTeam < 1 || myTeam > teamCount) {
+      console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
+      return null;
+    }
+    return myTeam;
+  }, [myTeam, teamCount]);
+
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {
     const allTeams = Array.from({ length: teamCount }, (_, i) => i + 1);
-    return allTeams.filter((team) => team !== myTeam);
-  }, [myTeam, teamCount]);
+    return allTeams.filter((team) => team !== validatedMyTeam);
+  }, [validatedMyTeam, teamCount]);
 
   // State for selected other team to compare with
   const [otherTeam, setOtherTeam] = useState<number>(availableOtherTeams[0] || 1);
@@ -134,7 +144,7 @@ export function useTransferCalculations({
 
   // Calculate transfers based on current parameters
   const transfersResult = useMemo(() => {
-    if (!myTeam) return { transfers: [], hasMoreTransfers: false };
+    if (!validatedMyTeam) return { transfers: [], hasMoreTransfers: false };
 
     const foundTransfers: TransferInfo[] = [];
 
@@ -163,9 +173,9 @@ export function useTransferCalculations({
         break;
       }
 
-      const myTeamShift = calculateShift(scanDate, myTeam, scheduleOption);
+      const myTeamShift = calculateShift(scanDate, validatedMyTeam, scheduleOption);
       const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleOption);
-      const myTeamNextShift = calculateShift(nextDate, myTeam, scheduleOption);
+      const myTeamNextShift = calculateShift(nextDate, validatedMyTeam, scheduleOption);
       const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleOption);
 
       // Check for transfer patterns
@@ -177,7 +187,7 @@ export function useTransferCalculations({
           "M",
           "L",
           scanDate,
-          myTeam,
+          validatedMyTeam,
           otherTeam,
           "handover",
         ),
@@ -187,7 +197,7 @@ export function useTransferCalculations({
           "L",
           "N",
           scanDate,
-          myTeam,
+          validatedMyTeam,
           otherTeam,
           "handover",
         ),
@@ -200,7 +210,7 @@ export function useTransferCalculations({
               "N",
               "M",
               nextDate,
-              myTeam,
+              validatedMyTeam,
               otherTeam,
               "handover",
             )
@@ -214,7 +224,7 @@ export function useTransferCalculations({
           "L",
           scanDate,
           otherTeam,
-          myTeam,
+          validatedMyTeam,
           "takeover",
         ),
         checkTransfer(
@@ -224,7 +234,7 @@ export function useTransferCalculations({
           "N",
           scanDate,
           otherTeam,
-          myTeam,
+          validatedMyTeam,
           "takeover",
         ),
 
@@ -237,7 +247,7 @@ export function useTransferCalculations({
               "M",
               nextDate,
               otherTeam,
-              myTeam,
+              validatedMyTeam,
               "takeover",
             )
           : null,
@@ -264,7 +274,7 @@ export function useTransferCalculations({
       transfers: foundTransfers,
       hasMoreTransfers,
     };
-  }, [myTeam, otherTeam, limit, customStartDate, customEndDate, scheduleOption]);
+  }, [validatedMyTeam, otherTeam, limit, customStartDate, customEndDate, scheduleOption]);
 
   return {
     transfers: transfersResult.transfers,

@@ -218,7 +218,9 @@ const getCycleTeamOffsetDays = (
   const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
   if (!teamNumber || teamCount <= 1 || cycleLength <= 0) return 0;
 
-  const offsetStep = Math.floor(cycleLength / teamCount);
+  // For weekly rotation schedules (multiples of 7), use week-based offset
+  // to ensure teams are on different weeks, not just different positions in cycle
+  const offsetStep = cycleLength % 7 === 0 ? 7 : Math.floor(cycleLength / teamCount);
   return getTeamOffsetUnits(teamNumber, teamCount, referenceTeam) * offsetStep;
 };
 
