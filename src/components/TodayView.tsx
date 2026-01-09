@@ -104,7 +104,7 @@ function TeamCard({
         {shiftResult.shift.isWorking
           ? getFormattedShiftTime(
               shiftResult.shift,
-              settings.scheduleOption,
+              scheduleOption,
               settings.timeFormat,
             )
           : "Not working today"}
