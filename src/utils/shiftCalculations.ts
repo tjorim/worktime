@@ -8,18 +8,18 @@
  * ### 5-shift (Continuous 24/7 Rotation)
  * Each team works a repeating 10-day cycle:
  * - 2 mornings (M): 07:00-15:00
- * - 2 evenings (E): 15:00-23:00
+ * - 2 evenings (L): 15:00-23:00
  * - 2 nights (N): 23:00-07:00
- * - 4 days off (O)
+ * - 4 days off (o)
  *
  * The 5 teams are staggered by 2 days each, ensuring 24/7 coverage:
  * ```
  * Day:    1  2  3  4  5  6  7  8  9  10 | 11 12 13 ...
- * Team 1: M  M  E  E  N  N  O  O  O  O  | M  M  E  ...
- * Team 2: N  N  O  O  O  O  M  M  E  E  | N  N  O  ...
- * Team 3: O  O  M  M  E  E  N  N  O  O  | O  O  M  ...
- * Team 4: E  E  N  N  O  O  O  O  M  M  | E  E  N  ...
- * Team 5: O  O  O  O  M  M  E  E  N  N  | O  O  O  ...
+ * Team 1: M  M  L  L  N  N  o  o  o  o  | M  M  L  ...
+ * Team 2: N  N  o  o  o  o  M  M  L  L  | N  N  o  ...
+ * Team 3: o  o  M  M  L  L  N  N  o  o  | o  o  M  ...
+ * Team 4: L  L  N  N  o  o  o  o  M  M  | L  L  N  ...
+ * Team 5: o  o  o  o  M  M  L  L  N  N  | o  o  o  ...
  * ```
  *
  * ### Weekly Rotation Schedules
@@ -72,7 +72,7 @@ import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
-export type ShiftType = "M" | "E" | "N" | "O";
+export type ShiftType = "M" | "L" | "N" | "o";
 
 export interface Shift {
   code: ShiftType;
@@ -115,7 +115,7 @@ export const SHIFTS = Object.freeze({
     className: "shift-morning",
   }),
   EVENING: Object.freeze({
-    code: "E",
+    code: "L",
     emoji: "🌆",
     name: "Evening",
     hours: "15:00-23:00",
@@ -135,7 +135,7 @@ export const SHIFTS = Object.freeze({
     className: "shift-night",
   }),
   OFF: Object.freeze({
-    code: "O",
+    code: "o",
     emoji: "🏠",
     name: "Off",
     hours: "Not working",
@@ -377,7 +377,7 @@ export function getCurrentShiftDay(date: string | Date | Dayjs): Dayjs {
  * - YY = last two digits of year
  * - WW = ISO week number (01-53)
  * - D = ISO weekday (1=Monday, 7=Sunday)
- * - X = shift type (M/E/N/O)
+ * - X = shift type (M/L/N/o)
  *
  * Night shifts use the previous calendar day for their code (e.g., Monday night shift is coded as Monday, not Tuesday).
  *
@@ -482,7 +482,7 @@ export function getNextShift(
  * getAllTeamsShifts('2025-01-06')
  * // Returns: [
  * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.MORNING, code: '2502.1M', teamNumber: 1 },
- * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.OFF, code: '2502.1O', teamNumber: 2 },
+ * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.OFF, code: '2502.1o', teamNumber: 2 },
  * //   { date: Dayjs('2025-01-06'), shift: SHIFTS.NIGHT, code: '2501.7N', teamNumber: 3 },
  * //   ...
  * // ]
@@ -559,7 +559,7 @@ export function getOffDayProgress(
       const dayIndex = i + 1;
       const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
       
-      if (!day || day.shift === "O") {
+      if (!day || day.shift === "o") {
         // This day is off
         currentConsecutiveOff++;
         maxConsecutiveOff = Math.max(maxConsecutiveOff, currentConsecutiveOff);
@@ -572,8 +572,8 @@ export function getOffDayProgress(
     // Check wrap-around: if both end and start of cycle are off, count consecutive days across boundary
     const lastDay = schedulePattern.days.find((d) => d.dayIndex === cycleLength);
     const firstDay = schedulePattern.days.find((d) => d.dayIndex === 1);
-    const lastIsOff = !lastDay || lastDay.shift === "O";
-    const firstIsOff = !firstDay || firstDay.shift === "O";
+    const lastIsOff = !lastDay || lastDay.shift === "o";
+    const firstIsOff = !firstDay || firstDay.shift === "o";
     
     if (lastIsOff && firstIsOff) {
       // Count consecutive off days from beginning of cycle
@@ -581,7 +581,7 @@ export function getOffDayProgress(
       for (let i = 0; i < cycleLength; i++) {
         const dayIndex = i + 1;
         const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "O") {
+        if (!day || day.shift === "o") {
           startConsecutiveOff++;
         } else {
           break; // Stop at first working day
@@ -593,7 +593,7 @@ export function getOffDayProgress(
       for (let i = cycleLength - 1; i >= 0; i--) {
         const dayIndex = i + 1;
         const day = schedulePattern.days.find((d) => d.dayIndex === dayIndex);
-        if (!day || day.shift === "O") {
+        if (!day || day.shift === "o") {
           endConsecutiveOff++;
         } else {
           break; // Stop at first working day

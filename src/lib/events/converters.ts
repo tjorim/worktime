@@ -71,7 +71,7 @@ export function shiftToCalendarEvent(shift: ShiftResult): CalendarEvent {
   const meta: ShiftMetadata = {
     type: "shift",
     team: shift.teamNumber,
-    shiftCode: shift.shift.code as "M" | "E" | "N" | "X",
+    shiftCode: shift.shift.code as "M" | "L" | "N" | "X",
     startTime:
       shift.shift.start !== null ? `${String(shift.shift.start).padStart(2, "0")}:00` : undefined,
     endTime:

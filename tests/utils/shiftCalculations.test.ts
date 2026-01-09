@@ -43,7 +43,7 @@ describe("Shift Calculations", () => {
       }
 
       // Should see pattern: M, M, E, E, N, N, O, O, O, O
-      expect(shifts.slice(0, 6)).toEqual(["M", "M", "E", "E", "N", "N"]);
+      expect(shifts.slice(0, 6)).toEqual(["M", "M", "L", "L", "N", "N"]);
       expect(shifts.slice(6)).toEqual(["O", "O", "O", "O"]);
     });
 
@@ -171,8 +171,8 @@ describe("getAllTeamsShifts Function Tests", () => {
       expect(result.shift).toBeDefined();
       expect(result.code).toBeDefined();
       expect(result.date).toBeDefined();
-      expect(result.shift.code).toMatch(/^[MENO]$/);
-      expect(result.code).toMatch(/^\d{4}\.\d[MENO]$/);
+      expect(result.shift.code).toMatch(/^[MLNo]$/);
+      expect(result.code).toMatch(/^\d{4}\.\d[MLNo]$/);
     });
   });
 
@@ -235,7 +235,7 @@ describe("SHIFTS Constant Validation", () => {
     expect(SHIFTS.MORNING.isWorking).toBe(true);
     expect(SHIFTS.MORNING.className).toBe("shift-morning");
 
-    expect(SHIFTS.EVENING.code).toBe("E");
+    expect(SHIFTS.EVENING.code).toBe("L");
     expect(SHIFTS.EVENING.emoji).toBe("🌆");
     expect(SHIFTS.EVENING.name).toBe("Evening");
     expect(SHIFTS.EVENING.hours).toBe("15:00-23:00");
@@ -253,7 +253,7 @@ describe("SHIFTS Constant Validation", () => {
     expect(SHIFTS.NIGHT.isWorking).toBe(true);
     expect(SHIFTS.NIGHT.className).toBe("shift-night");
 
-    expect(SHIFTS.OFF.code).toBe("O");
+    expect(SHIFTS.OFF.code).toBe("o");
     expect(SHIFTS.OFF.emoji).toBe("🏠");
     expect(SHIFTS.OFF.name).toBe("Off");
     expect(SHIFTS.OFF.hours).toBe("Not working");
@@ -284,14 +284,14 @@ describe("Input Type Flexibility Tests", () => {
     const stringDate = "2025-07-16";
     const shift = calculateShift(stringDate, 1);
     expect(shift).toBeDefined();
-    expect(shift.code).toMatch(/^[MENO]$/);
+    expect(shift.code).toMatch(/^[MLNo]$/);
   });
 
   it("should accept dayjs objects in calculateShift", () => {
     const dayjsDate = dayjs("2025-07-16");
     const shift = calculateShift(dayjsDate, 1);
     expect(shift).toBeDefined();
-    expect(shift.code).toMatch(/^[MENO]$/);
+    expect(shift.code).toMatch(/^[MLNo]$/);
   });
 
   it("should accept different date formats in getCurrentShiftDay", () => {
@@ -421,7 +421,7 @@ describe("Real-world Scenario Tests", () => {
 
     // Shift code generation
     const shiftCode = getShiftCode(today, team);
-    expect(shiftCode).toMatch(/^\d{4}\.\d[MENO]$/);
+    expect(shiftCode).toMatch(/^\d{4}\.\d[MLNo]$/);
   });
 
   it("should handle week boundaries correctly in shift calculations", () => {
@@ -439,8 +439,8 @@ describe("Real-world Scenario Tests", () => {
     const sundayCode = getShiftCode(sunday, 1);
     const mondayCode = getShiftCode(monday, 1);
 
-    expect(sundayCode).toMatch(/^\d{4}\.\d[MENO]$/);
-    expect(mondayCode).toMatch(/^\d{4}\.\d[MENO]$/);
+    expect(sundayCode).toMatch(/^\d{4}\.\d[MLNo]$/);
+    expect(mondayCode).toMatch(/^\d{4}\.\d[MLNo]$/);
   });
 
   it("should maintain shift consistency during night shift transitions", () => {
