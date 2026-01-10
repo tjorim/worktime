@@ -84,14 +84,19 @@ export function WelcomeWizard({
       ? "schedule-selection"
       : "welcome",
 }: WelcomeWizardProps) {
-  const { scheduleOption } = useSettings();
+  const { scheduleOption, settings } = useSettings();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Vacation allowance form state
-  const [vacationAmount, setVacationAmount] = useState<string>("");
-  const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>("days");
+  // Vacation allowance form state - initialize from settings
+  const [vacationAmount, setVacationAmount] = useState<string>(() => {
+    const amount = settings.vacationAllowance?.amount ?? 0;
+    return amount > 0 ? amount.toString() : "";
+  });
+  const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
+    settings.vacationAllowance?.unit ?? "days",
+  );
 
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(
     scheduleOption ?? null,
@@ -168,7 +173,7 @@ export function WelcomeWizard({
 
   const handleTeamSelect = (team: number) => {
     onTeamSelect(team);
-    if (isChangeScheduleFlow) {
+    if (isChangeScheduleFlow || isChangeTeamFlow) {
       onHide();
       return;
     }
@@ -177,7 +182,7 @@ export function WelcomeWizard({
 
   const handleSkip = () => {
     onSkip?.();
-    if (isChangeScheduleFlow) {
+    if (isChangeScheduleFlow || isChangeTeamFlow) {
       onHide();
       return;
     }
@@ -412,7 +417,8 @@ export function WelcomeWizard({
               variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
               className="w-100 text-start mb-2"
               onClick={() => handleScheduleChange(schedule.value)}
-              disabled={isLoading || ["2-shift", "weekend-shift"].includes(schedule.value)}
+              disabled={isLoading || !schedule.isAvailable}
+              title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
               ref={
                 currentStep === "schedule-selection" && schedule.value === "9-5"
                   ? firstButtonRef
@@ -421,9 +427,7 @@ export function WelcomeWizard({
             >
               <div className="fw-semibold d-flex align-items-center gap-2">
                 <span>{schedule.title}</span>
-                {["2-shift", "weekend-shift"].includes(schedule.value) && (
-                  <span className="badge bg-secondary">Coming Soon</span>
-                )}
+                {!schedule.isAvailable && <span className="badge bg-secondary">Coming Soon</span>}
               </div>
               <small className="d-block text-muted">{schedule.description}</small>
             </Button>
@@ -473,18 +477,23 @@ export function WelcomeWizard({
         </Row>
       </div>
 
-      <hr />
+      {/* Only show Browse All Teams option if there are multiple teams */}
+      {teamCount > 1 && (
+        <>
+          <hr />
 
-      <div className="text-center">
-        <h6 className="mb-2">Option 2: Browse All Teams</h6>
-        <p className="small text-muted mb-3">
-          View shift information for all teams without personalization.
-        </p>
-        <Button variant="outline-secondary" onClick={handleSkip} disabled={isLoading}>
-          <i className="bi bi-eye me-1"></i>
-          Browse All Teams
-        </Button>
-      </div>
+          <div className="text-center">
+            <h6 className="mb-2">Option 2: Browse All Teams</h6>
+            <p className="small text-muted mb-3">
+              View shift information for all teams without personalization.
+            </p>
+            <Button variant="outline-secondary" onClick={handleSkip} disabled={isLoading}>
+              <i className="bi bi-eye me-1"></i>
+              Browse All Teams
+            </Button>
+          </div>
+        </>
+      )}
 
       <div className="d-flex justify-content-start mt-3">
         <Button variant="outline-secondary" size="sm" onClick={prevStep} disabled={isLoading}>

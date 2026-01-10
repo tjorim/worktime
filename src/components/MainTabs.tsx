@@ -55,6 +55,14 @@ export function MainTabs({
     setCurrentDate(dayjs());
   };
 
+  const handlePreviousDay = () => {
+    setCurrentDate(currentDate.subtract(1, "day"));
+  };
+
+  const handleNextDay = () => {
+    setCurrentDate(currentDate.add(1, "day"));
+  };
+
   const handleTeamClick = (teamNumber: number) => {
     setSelectedTeamForDetail(teamNumber);
     setShowTeamDetail(true);
@@ -87,8 +95,12 @@ export function MainTabs({
           <TodayView
             todayShifts={todayShifts}
             myTeam={myTeam}
+            currentDate={currentDate}
+            onPreviousDay={handlePreviousDay}
+            onNextDay={handleNextDay}
             onTodayClick={handleTodayClick}
             onTeamClick={handleTeamClick}
+            isActive={activeKey === "today"}
           />
         </Tab>
 
@@ -101,7 +113,12 @@ export function MainTabs({
             </>
           }
         >
-          <ScheduleView myTeam={myTeam} currentDate={currentDate} setCurrentDate={setCurrentDate} />
+          <ScheduleView
+            myTeam={myTeam}
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            isActive={activeKey === "schedule"}
+          />
         </Tab>
 
         <Tab

@@ -121,15 +121,25 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         : typeof s.myTeam === "number" || s.myTeam === null
           ? s.myTeam
           : defaultUserState.myTeam,
-    scheduleOption:
-      s.scheduleOption === undefined
-        ? defaultUserState.scheduleOption
-        : typeof s.scheduleOption === "string" &&
-            scheduleOptionValues.has(s.scheduleOption as ScheduleOption)
-          ? (s.scheduleOption as ScheduleOption)
-          : s.scheduleOption === null
-            ? null
-            : defaultUserState.scheduleOption,
+    scheduleOption: (() => {
+      if (s.scheduleOption === undefined) {
+        return defaultUserState.scheduleOption;
+      }
+      if (s.scheduleOption === null) {
+        return null;
+      }
+      if (
+        typeof s.scheduleOption === "string" &&
+        scheduleOptionValues.has(s.scheduleOption as ScheduleOption)
+      ) {
+        return s.scheduleOption as ScheduleOption;
+      }
+      // Invalid schedule option detected - log warning and fall back to default
+      console.warn(
+        `Invalid schedule option "${s.scheduleOption}" found in localStorage. Falling back to default.`,
+      );
+      return defaultUserState.scheduleOption;
+    })(),
     settings: {
       timeFormat,
       theme,

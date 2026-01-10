@@ -142,12 +142,20 @@ function AppContent() {
   const handleScheduleSelect = (schedule: ScheduleOption) => {
     try {
       const nextScheduleConfig = getScheduleConfig(schedule);
-      const teamCountChanged =
-        getTeamCountForOption(scheduleOption ?? null) !== getTeamCountForOption(schedule);
+      const nextTeamCount = getTeamCountForOption(schedule);
+      const currentTeamCount = getTeamCountForOption(scheduleOption ?? null);
+      const teamCountChanged = currentTeamCount !== nextTeamCount;
       const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
+      const teamInvalidForNewSchedule = myTeam !== null && myTeam > nextTeamCount;
 
-      if (teamCountChanged || teamsDisabled) {
+      // Reset team if schedule change makes current team invalid
+      if (teamCountChanged || teamsDisabled || teamInvalidForNewSchedule) {
         setMyTeam(null);
+        // Notify user that their team selection was reset
+        showInfo(
+          "Your team selection was reset because the new schedule has a different team configuration.",
+          "ℹ️",
+        );
       }
       setScheduleOption(schedule);
     } catch (error) {
@@ -208,6 +216,7 @@ function AppContent() {
             <CurrentStatus
               myTeam={myTeam}
               onChangeTeam={handleChangeTeam}
+              onChangeSchedule={handleChangeSchedule}
               onShowWhoIsWorking={handleShowWhoIsWorking}
             />
           </ErrorBoundary>

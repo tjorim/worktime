@@ -6,18 +6,28 @@ import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
+import type { Dayjs } from "dayjs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
-import { getShiftDisplay, getFormattedShiftTime, isCurrentlyWorking } from "../utils/shiftCalculations";
+import {
+  getShiftDisplay,
+  getFormattedShiftTime,
+  isCurrentlyWorking,
+} from "../utils/shiftCalculations";
 
 interface TodayViewProps {
   todayShifts: ShiftResult[];
   myTeam: number | null; // The user's team from onboarding
+  currentDate: Dayjs;
+  onPreviousDay: () => void;
+  onNextDay: () => void;
   onTodayClick: () => void;
   onTeamClick?: (teamNumber: number) => void;
+  isActive?: boolean;
 }
 
 /**
@@ -49,7 +59,11 @@ function TeamCard({
   const { settings, scheduleOption } = useSettings();
   // Use shiftResult.shift directly - already contains emoji/className/name/hours
   const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
-  const shiftTimeLabel = getFormattedShiftTime(shiftResult.shift, scheduleOption, settings.timeFormat);
+  const shiftTimeLabel = getFormattedShiftTime(
+    shiftResult.shift,
+    scheduleOption,
+    settings.timeFormat,
+  );
 
   const cardContent = (
     <>
@@ -131,9 +145,7 @@ function TeamCard({
         onClick={() => onTeamClick(shiftResult.teamNumber)}
         role="button"
         aria-label={
-          hasTeams
-            ? `View details for Team ${shiftResult.teamNumber}`
-            : "View schedule details"
+          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
         }
         title={
           hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
@@ -160,18 +172,41 @@ function TeamCard({
 }
 
 /**
- * Render a card listing all teams scheduled for today, with an optional Today action and per-team interactivity.
+ * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
  *
- * @param todayShifts - Array of shift results for today; each item represents a team's scheduled shift and metadata.
+ * @param todayShifts - Array of shift results for the current date; each item represents a team's scheduled shift and metadata.
  * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
+ * @param currentDate - The date being displayed
+ * @param onPreviousDay - Handler invoked when the "Previous" button is pressed
+ * @param onNextDay - Handler invoked when the "Next" button is pressed
  * @param onTodayClick - Handler invoked when the "Today" button is pressed.
  * @param onTeamClick - Optional handler invoked with a team number when a team card is activated (click or keyboard).
  * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
  */
-export function TodayView({ todayShifts, myTeam, onTodayClick, onTeamClick }: TodayViewProps) {
+export function TodayView({
+  todayShifts,
+  myTeam,
+  currentDate,
+  onPreviousDay,
+  onNextDay,
+  onTodayClick,
+  onTeamClick,
+  isActive = true,
+}: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const { scheduleOption } = useSettings();
   const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
+
+  // Keyboard shortcuts (only active when this tab is visible)
+  useKeyboardShortcuts(
+    isActive
+      ? {
+          onToday: onTodayClick,
+          onPrevious: onPreviousDay,
+          onNext: onNextDay,
+        }
+      : {},
+  );
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;
@@ -179,20 +214,61 @@ export function TodayView({ todayShifts, myTeam, onTodayClick, onTeamClick }: To
     return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now);
   };
 
-  // Get events for today
+  // Get events for the current date
   const today = dayjs();
-  const todayStart = today.toDate();
-  const todayEnd = today.toDate();
+  const displayDate = currentDate;
+  const isToday = displayDate.isSame(today, "day");
+  const todayStart = displayDate.toDate();
+  const todayEnd = displayDate.toDate();
   const todayEvents = getEventsInRange(todayStart, todayEnd);
 
   return (
     <Card>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <h6 className="mb-0">{hasTeams ? "👥 All Teams Today" : "📅 Today's Schedule"}</h6>
-        <Button variant="outline-primary" size="sm" onClick={onTodayClick}>
-          <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-          Today
-        </Button>
+      <Card.Header>
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h6 className="mb-0">{hasTeams ? "👥 All Teams" : "📅 Schedule"}</h6>
+          <div className="d-flex gap-2">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={onPreviousDay}
+              aria-label="Go to previous day"
+            >
+              <i className="bi bi-chevron-left" aria-hidden="true"></i>
+            </Button>
+            <Button
+              variant={isToday ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={onTodayClick}
+              disabled={isToday}
+              aria-label="Go to today"
+            >
+              <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
+              Today
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={onNextDay}
+              aria-label="Go to next day"
+            >
+              <i className="bi bi-chevron-right" aria-hidden="true"></i>
+            </Button>
+          </div>
+        </div>
+        <div className="d-flex justify-content-between align-items-center gap-3">
+          <div className="text-muted small">
+            {displayDate.format("dddd, MMMM D, YYYY")}
+            {isToday && (
+              <Badge bg="success" className="ms-2">
+                Today
+              </Badge>
+            )}
+          </div>
+          <div className="small text-muted text-end" style={{ minWidth: "180px" }}>
+            ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
+          </div>
+        </div>
       </Card.Header>
       <Card.Body>
         {todayEvents.length > 0 && (

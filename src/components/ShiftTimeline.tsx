@@ -24,17 +24,22 @@ interface TimelineData {
  *
  * If the current team is the first working shift of the day, the previous shift (if any) is taken from the last working shift of the previous day. If the current team is the last working shift of the day, the next shift (if any) is taken from the first working shift of the following day.
  *
- * @param today - The reference date for which to build the timeline
+ * @param _today - The reference date (calendar day) - not used; shift day is derived from currentWorkingTeam.date
  * @param currentWorkingTeam - The team currently active within today's shifts
+ * @param scheduleOption - The schedule configuration to use
  * @returns An object with `prevShift` set to the adjacent previous working shift or `null`, `currentShift` equal to `currentWorkingTeam`, and `nextShift` set to the adjacent next working shift or `null`
  */
 function computeShiftTimeline(
-  today: Dayjs,
+  _today: Dayjs,
   currentWorkingTeam: ShiftResult,
   scheduleOption?: ScheduleOption | null,
 ): TimelineData {
-  // Get all teams for today to build timeline
-  const allTeamsToday = getAllTeamsShifts(today, scheduleOption);
+  // Use the shift day from currentWorkingTeam instead of calendar day
+  // This is crucial for night shifts which use the previous calendar day as their shift day
+  const shiftDay = currentWorkingTeam.date;
+
+  // Get all teams for the shift day to build timeline
+  const allTeamsToday = getAllTeamsShifts(shiftDay, scheduleOption);
   const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking);
 
   // Sort by shift start time to create timeline
@@ -64,7 +69,7 @@ function computeShiftTimeline(
     prevShift = timeline[currentIndex - 1] ?? null;
   } else {
     // Current shift is the first of the day, look at yesterday's last shift
-    const yesterday = today.subtract(1, "day");
+    const yesterday = shiftDay.subtract(1, "day");
     const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleOption);
     const workingTeamsYesterday = allTeamsYesterday.filter((team) => team.shift.isWorking);
 
@@ -86,7 +91,7 @@ function computeShiftTimeline(
     nextShift = timeline[currentIndex + 1] ?? null;
   } else {
     // Current shift is the last of the day, look at tomorrow's first shift
-    const tomorrow = today.add(1, "day");
+    const tomorrow = shiftDay.add(1, "day");
     const allTeamsTomorrow = getAllTeamsShifts(tomorrow, scheduleOption);
     const workingTeamsTomorrow = allTeamsTomorrow.filter((team) => team.shift.isWorking);
 
