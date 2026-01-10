@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getEffectiveTeam } from "../utils/scheduleUtils";
 import {
   calculateShift,
   getAllTeamsShifts,
@@ -58,26 +58,15 @@ export interface UseShiftCalculationReturn {
 export function useShiftCalculation(): UseShiftCalculationReturn {
   // Use unified user state from SettingsContext
   const { myTeam, setMyTeam, scheduleOption } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleOption);
-  const teamCount = scheduleConfig.shiftConfig.teamCount;
-  const showsTeamSelection = scheduleConfig.showsTeamSelection;
 
   // Current date for calculations
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
 
-  // Validate myTeam is within valid range for current schedule
-  const validatedMyTeam = useMemo(() => {
-    // For single-user schedules (e.g., 9-5), the user is always effectively "team 1"
-    if (!showsTeamSelection) {
-      return 1;
-    }
-    if (myTeam === null) return null;
-    if (myTeam < 1 || myTeam > teamCount) {
-      console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
-      return null;
-    }
-    return myTeam;
-  }, [myTeam, teamCount, showsTeamSelection]);
+  // Get effective team - for single-user schedules, this returns 1 when myTeam is null
+  const validatedMyTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleOption),
+    [myTeam, scheduleOption],
+  );
 
   // Calculate current shift for user's team
   const currentShift = useMemo((): ShiftResult | null => {
