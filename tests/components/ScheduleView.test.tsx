@@ -81,12 +81,6 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   })),
 }));
 
-vi.mock("../../src/utils/config", () => ({
-  CONFIG: {
-    TEAMS_COUNT: 5,
-  },
-}));
-
 const defaultProps = {
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
