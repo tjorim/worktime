@@ -50,11 +50,21 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getShiftDisplayName: vi.fn((shift) => `${shift.emoji} ${shift.name}`),
-  getShiftDisplay: vi.fn((shift) => ({
-    displayName: shift.name,
-    displayHours: shift.hours,
-    displayCode: shift.code,
-  })),
+  getShiftDisplay: vi.fn((shift) => {
+    // Apply 5-shift roster display overrides
+    if (shift.code === "L") {
+      return {
+        displayName: "Evening",
+        displayHours: shift.hours,
+        displayCode: "E",
+      };
+    }
+    return {
+      displayName: shift.name,
+      displayHours: shift.hours,
+      displayCode: shift.code,
+    };
+  }),
 }));
 
 vi.mock("../../src/utils/config", () => ({

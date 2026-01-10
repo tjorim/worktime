@@ -9,6 +9,7 @@ This file provides guidance for AI coding agents working with this repository.
 Worktime is a Team Shift Tracker and Time-Off Manager supporting multiple roster patterns including continuous 24/7 rotations, standard weekday schedules, and custom shift patterns. This lightweight web application combines shift tracking with integrated time-off management (.hday format), allowing users to select their schedule type, check which teams are working on any given day, see when their team's next shift is, manage vacation/time-off events, and identify transfer/handover points between teams.
 
 **Supported Schedule Types**:
+
 - **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
 - **9-5**: Standard weekday schedule (Mon-Fri, single user)
 - **2-shift**: Alternating early/late shifts (coming soon)
@@ -214,6 +215,7 @@ schedulePattern: {
 ```
 
 **Shift Codes**:
+
 - `M` - Morning/Early shift
 - `L` - Late/Evening shift
 - `N` - Night shift
@@ -229,6 +231,7 @@ Each schedule uses a **reference date** and **reference team** to anchor shift c
 - All shift calculations work forward/backward from this anchor point
 
 **Example** (5-shift):
+
 ```typescript
 referenceDate: "2025-07-16",  // Wednesday
 referenceTeam: 1,             // Team 1 is on day 1 of cycle (Morning shift)
@@ -362,6 +365,7 @@ Uses weeknumber.weekday format (YYWW.D):
 **Note**: Reference dates and teams are now defined per-schedule in `src/data/rosters.ts`. The old environment variable system is maintained for backward compatibility but should not be used for new schedules.
 
 Legacy environment variables (for 5-shift schedule only):
+
 - `VITE_REFERENCE_DATE` - Defaults to schedule-specific reference date
 - `VITE_REFERENCE_TEAM` - Defaults to schedule-specific reference team
 

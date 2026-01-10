@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -40,13 +40,19 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
   const [customEndDate, setCustomEndDate] = useState("");
 
   // Use the transfer calculations hook - it validates the team number
-  const { transfers, availableOtherTeams, otherTeam, setOtherTeam, hasMoreTransfers, validatedMyTeam } =
-    useTransferCalculations({
-      myTeam: inputMyTeam,
-      limit: transfersToShow,
-      customStartDate: useCustomRange ? customStartDate : undefined,
-      customEndDate: useCustomRange ? customEndDate : undefined,
-    });
+  const {
+    transfers,
+    availableOtherTeams,
+    otherTeam,
+    setOtherTeam,
+    hasMoreTransfers,
+    validatedMyTeam,
+  } = useTransferCalculations({
+    myTeam: inputMyTeam,
+    limit: transfersToShow,
+    customStartDate: useCustomRange ? customStartDate : undefined,
+    customEndDate: useCustomRange ? customEndDate : undefined,
+  });
 
   // Use validated team for display
   const myTeam = validatedMyTeam;
@@ -57,11 +63,17 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
   }, [otherTeam, useCustomRange, customStartDate, customEndDate]);
 
   // Set initial other team if provided (e.g., when coming from Team Detail Modal)
+  const initialSetRef = useRef(false);
   useEffect(() => {
-    if (initialOtherTeam && initialOtherTeam !== otherTeam && availableOtherTeams.includes(initialOtherTeam)) {
+    if (
+      !initialSetRef.current &&
+      initialOtherTeam &&
+      availableOtherTeams.includes(initialOtherTeam)
+    ) {
       setOtherTeam(initialOtherTeam);
+      initialSetRef.current = true;
     }
-  }, [initialOtherTeam, setOtherTeam, availableOtherTeams]); // oxlint-disable-line react/exhaustive-deps -- Intentionally omitting otherTeam to prevent infinite loop when user changes selection
+  }, [initialOtherTeam, availableOtherTeams, setOtherTeam]);
 
   // Clear dates when custom range is disabled
   useEffect(() => {

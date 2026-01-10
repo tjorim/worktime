@@ -93,22 +93,22 @@ function createIcon(size: number) {
   ctx.lineWidth = size * RATIOS.clockHandStroke;
 
   // Hour hand (pointing to 10) - 300 degrees from 12 o'clock
-  const hourAngle = (-Math.PI / 2) + (10 / 12) * 2 * Math.PI;
+  const hourAngle = -Math.PI / 2 + (10 / 12) * 2 * Math.PI;
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
   ctx.lineTo(
     centerX + Math.cos(hourAngle) * size * RATIOS.hourHandLength,
-    centerY + Math.sin(hourAngle) * size * RATIOS.hourHandLength
+    centerY + Math.sin(hourAngle) * size * RATIOS.hourHandLength,
   );
   ctx.stroke();
 
   // Minute hand (pointing to 2) - 60 degrees from 12 o'clock
-  const minuteAngle = (-Math.PI / 2) + (10 / 60) * 2 * Math.PI;
+  const minuteAngle = -Math.PI / 2 + (10 / 60) * 2 * Math.PI;
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
   ctx.lineTo(
     centerX + Math.cos(minuteAngle) * size * RATIOS.minuteHandLength,
-    centerY + Math.sin(minuteAngle) * size * RATIOS.minuteHandLength
+    centerY + Math.sin(minuteAngle) * size * RATIOS.minuteHandLength,
   );
   ctx.stroke();
 

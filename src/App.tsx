@@ -151,10 +151,18 @@ function AppContent() {
         // Only show notification if user had a team selected
         if (myTeam !== null) {
           setMyTeam(null);
-          showInfo(
-            "Your team selection has been reset because you changed schedules. Please select your team again.",
-            "ℹ️",
-          );
+          // Provide appropriate message based on the reason for reset
+          if (scheduleChanged) {
+            showInfo(
+              "Your team selection has been reset because you changed schedules. Please select your team again.",
+              "ℹ️",
+            );
+          } else {
+            showInfo(
+              "Your team selection has been reset because the selected schedule does not use team assignments.",
+              "ℹ️",
+            );
+          }
         }
       }
       setScheduleOption(schedule);

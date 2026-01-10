@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SCHEDULE_OPTIONS } from "../../src/data/rosters";
 import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
 import {
@@ -171,8 +171,8 @@ describe("getAllTeamsShifts Function Tests", () => {
       expect(result.shift).toBeDefined();
       expect(result.code).toBeDefined();
       expect(result.date).toBeDefined();
-      expect(result.shift.code).toMatch(/^[MLNO]$/);
-      expect(result.code).toMatch(/^\d{4}\.\d[MLNO]$/);
+      expect(result.shift.code).toMatch(/^[MLNDO]$/);
+      expect(result.code).toMatch(/^\d{4}\.\d[MLNDO]$/);
     });
   });
 

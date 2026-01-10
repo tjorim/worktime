@@ -647,6 +647,9 @@ export function WelcomeWizard({
             {currentStep === "features" && renderFeaturesStep()}
             {currentStep === "schedule-selection" && renderScheduleSelectionStep()}
             {currentStep === "team-selection" && hasTeamSelectionStep && renderTeamSelectionStep()}
+            {currentStep === "team-selection" &&
+              !hasTeamSelectionStep &&
+              renderScheduleSelectionStep()}
             {currentStep === "vacation-allowance" && renderVacationAllowanceStep()}
           </>
         )}

@@ -21,10 +21,21 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     isWorking: true,
     className: "shift-morning",
   })),
-  getShiftDisplay: vi.fn((shift) => ({
-    displayName: shift.name,
-    displayHours: shift.hours,
-  })),
+  getShiftDisplay: vi.fn((shift) => {
+    // Apply 5-shift roster display overrides
+    if (shift.code === "L") {
+      return {
+        displayName: "Evening",
+        displayHours: shift.hours,
+        displayCode: "E",
+      };
+    }
+    return {
+      displayName: shift.name,
+      displayHours: shift.hours,
+      displayCode: shift.code,
+    };
+  }),
   getFormattedShiftTime: vi.fn(() => "07:00-15:00"),
   isCurrentlyWorking: vi.fn(() => false),
 }));
@@ -44,6 +55,7 @@ const mockTodayShifts: ShiftResult[] = [
     teamNumber: 1,
     shift: {
       code: "M",
+      emoji: "🌅",
       name: "🌅 Morning",
       hours: "07:00-15:00",
       start: 7,
@@ -58,6 +70,7 @@ const mockTodayShifts: ShiftResult[] = [
     teamNumber: 2,
     shift: {
       code: "L",
+      emoji: "🌆",
       name: "🌆 Evening",
       hours: "15:00-23:00",
       start: 15,
@@ -72,6 +85,7 @@ const mockTodayShifts: ShiftResult[] = [
     teamNumber: 3,
     shift: {
       code: "O",
+      emoji: "🏠",
       name: "🏠 Off",
       hours: "",
       start: null,
@@ -107,9 +121,9 @@ describe("TodayView", () => {
     it("displays shift information for working teams", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
-      expect(screen.getByText(/🌅 Morning/)).toBeInTheDocument();
-      expect(screen.getByText(/🌆 Evening/)).toBeInTheDocument();
-      expect(screen.getByText(/🏠 Off/)).toBeInTheDocument();
+      expect(screen.getByText(/Morning/)).toBeInTheDocument();
+      expect(screen.getByText(/Evening/)).toBeInTheDocument();
+      expect(screen.getByText(/Off/)).toBeInTheDocument();
       expect(screen.getByText(/Not working today/)).toBeInTheDocument();
     });
 
@@ -164,8 +178,8 @@ describe("TodayView", () => {
       renderWithProviders(<TodayView {...defaultProps} />);
 
       // Should show shift names
-      expect(screen.getByText(/🌅 Morning/)).toBeInTheDocument();
-      expect(screen.getByText(/🌆 Evening/)).toBeInTheDocument();
+      expect(screen.getByText(/Morning/)).toBeInTheDocument();
+      expect(screen.getByText(/Evening/)).toBeInTheDocument();
     });
 
     it("shows off status for non-working teams", () => {

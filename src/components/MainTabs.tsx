@@ -1,5 +1,4 @@
 import type { Dayjs } from "dayjs";
-import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
@@ -14,7 +13,7 @@ import { TransferView } from "./TransferView";
 interface MainTabsProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
-  setCurrentDate: Dispatch<SetStateAction<Dayjs>>;
+  setCurrentDate: (date: Dayjs) => void;
   todayShifts: ShiftResult[];
   activeTab?: string;
   onTabChange?: (tab: string) => void;
@@ -57,11 +56,11 @@ export function MainTabs({
   };
 
   const handlePreviousDay = () => {
-    setCurrentDate((prev) => prev.subtract(1, "day"));
+    setCurrentDate(currentDate.subtract(1, "day"));
   };
 
   const handleNextDay = () => {
-    setCurrentDate((prev) => prev.add(1, "day"));
+    setCurrentDate(currentDate.add(1, "day"));
   };
 
   const handleTeamClick = (teamNumber: number) => {

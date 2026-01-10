@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { getEffectiveTeam, getScheduleConfig, getTeamCountForOption } from "../../src/utils/scheduleUtils";
+import {
+  getEffectiveTeam,
+  getScheduleConfig,
+  getTeamCountForOption,
+} from "../../src/utils/scheduleUtils";
 
 describe("scheduleUtils", () => {
   describe("getScheduleConfig", () => {
@@ -113,13 +117,13 @@ describe("scheduleUtils", () => {
 
       it("should log a warning for invalid team numbers", () => {
         const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-        
+
         getEffectiveTeam(999, "5-shift");
-        
+
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           "Invalid team number 999 (expected 1-5). Treating as null.",
         );
-        
+
         consoleWarnSpy.mockRestore();
       });
     });
@@ -127,7 +131,7 @@ describe("scheduleUtils", () => {
     describe("multi-team schedules with hidden selection (showsTeamSelection: false)", () => {
       // These schedules have multiple teams but don't show team selection UI
       // Examples: "2-shift" and "weekend-shift" with teamCount: 2
-      
+
       it("should return null when myTeam is null for 2-shift", () => {
         const result = getEffectiveTeam(null, "2-shift");
         expect(result).toBe(null);
@@ -170,13 +174,13 @@ describe("scheduleUtils", () => {
 
       it("should log a warning for invalid team number in hidden selection schedule", () => {
         const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-        
+
         getEffectiveTeam(5, "2-shift");
-        
+
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           "Invalid team number 5 (expected 1-2). Treating as null.",
         );
-        
+
         consoleWarnSpy.mockRestore();
       });
     });

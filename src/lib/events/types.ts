@@ -53,7 +53,7 @@ export interface ShiftMetadata {
   /** Team number (1-5) */
   team: number;
 
-  /** Shift code: M, L, N, D, or O (off day) */
+  /** Shift code: M (Morning), L (Late), N (Night), D (Day), O (Off day). */
   shiftCode: "M" | "L" | "N" | "D" | "O";
 
   /** Start time in HH:mm format (e.g., "07:00", "15:00", "23:00") */

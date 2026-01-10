@@ -119,14 +119,15 @@ describe("CurrentStatus Component", () => {
     vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
       date: dayjs("2024-01-16"),
       shift: {
-        code: "E",
+        code: "L",
+        emoji: "🌆",
         name: "Evening",
         hours: "15:00-23:00",
         start: 15,
         end: 23,
         isWorking: true,
       },
-      code: "2404.2E",
+      code: "2404.2L",
     });
     vi.mocked(shiftCalculations.getOffDayProgress).mockReturnValue({
       current: 2,
