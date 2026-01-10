@@ -24,3 +24,44 @@ export function getTeamCountForOption(scheduleOption: ScheduleOption | null | un
   }
   return config.shiftConfig.teamCount;
 }
+
+/**
+ * Get the effective team number for the user, handling single-user schedules.
+ *
+ * For schedules where `showsTeamSelection` is false (single-user schedules like '9-5'),
+ * returns 1 when myTeam is null, since the user is the only person on the schedule.
+ * For multi-team schedules, validates the team number is within the valid range.
+ *
+ * @param myTeam - The user's selected team number or null
+ * @param scheduleOption - The selected schedule option
+ * @returns The effective team number (1 for single-user schedules, validated team for multi-team), or null if invalid
+ */
+export function getEffectiveTeam(
+  myTeam: number | null,
+  scheduleOption: ScheduleOption | null | undefined,
+): number | null {
+  const config = getScheduleConfig(scheduleOption);
+  const showsTeamSelection = config.showsTeamSelection ?? true;
+  const teamCount = config.shiftConfig.teamCount;
+
+  if (teamCount === undefined) {
+    throw new Error(`teamCount not defined for schedule ${config.value}`);
+  }
+
+  // For single-user schedules, always return team 1
+  if (!showsTeamSelection) {
+    return 1;
+  }
+
+  // For multi-team schedules, validate the team number
+  if (myTeam === null) {
+    return null;
+  }
+
+  if (typeof myTeam !== "number" || myTeam < 1 || myTeam > teamCount) {
+    console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
+    return null;
+  }
+
+  return myTeam;
+}

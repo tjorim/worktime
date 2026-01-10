@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
-import { getTeamCountForOption } from "../utils/scheduleUtils";
+import { getEffectiveTeam, getTeamCountForOption } from "../utils/scheduleUtils";
 import { calculateShift, type ShiftType } from "../utils/shiftCalculations";
 
 export type TransferType = "handover" | "takeover";
@@ -117,15 +117,8 @@ export function useTransferCalculations({
   const { scheduleOption } = useSettings();
   const teamCount = getTeamCountForOption(scheduleOption);
 
-  // Validate myTeam is within valid range
-  const validatedMyTeam = useMemo(() => {
-    if (myTeam === null) return null;
-    if (myTeam < 1 || myTeam > teamCount) {
-      console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
-      return null;
-    }
-    return myTeam;
-  }, [myTeam, teamCount]);
+  // Get effective team - for single-user schedules, this returns 1 when myTeam is null
+  const validatedMyTeam = getEffectiveTeam(myTeam, scheduleOption);
 
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {
