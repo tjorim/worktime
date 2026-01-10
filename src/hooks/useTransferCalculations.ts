@@ -118,7 +118,10 @@ export function useTransferCalculations({
   const teamCount = getTeamCountForOption(scheduleOption);
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
-  const validatedMyTeam = getEffectiveTeam(myTeam, scheduleOption);
+  const validatedMyTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleOption),
+    [myTeam, scheduleOption],
+  );
 
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {

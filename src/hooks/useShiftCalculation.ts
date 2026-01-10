@@ -63,7 +63,10 @@ export function useShiftCalculation(): UseShiftCalculationReturn {
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
-  const validatedMyTeam = getEffectiveTeam(myTeam, scheduleOption);
+  const validatedMyTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleOption),
+    [myTeam, scheduleOption],
+  );
 
   // Calculate current shift for user's team
   const currentShift = useMemo((): ShiftResult | null => {

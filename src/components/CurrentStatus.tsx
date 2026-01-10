@@ -58,7 +58,11 @@ export function CurrentStatus({
   const { settings, scheduleOption } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleOption);
   const hasTeams = scheduleConfig.showsTeamSelection ?? true;
-  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+  const rawTeamCount = scheduleConfig.shiftConfig.teamCount;
+  if (rawTeamCount == null) {
+    throw new Error("scheduleConfig.shiftConfig.teamCount is undefined; schedule configuration is invalid.");
+  }
+  const teamCount = rawTeamCount;
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const validatedTeam = getEffectiveTeam(myTeam, scheduleOption);

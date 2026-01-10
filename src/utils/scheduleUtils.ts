@@ -29,12 +29,13 @@ export function getTeamCountForOption(scheduleOption: ScheduleOption | null | un
  * Get the effective team number for the user, handling single-user schedules.
  *
  * For schedules where `showsTeamSelection` is false (single-user schedules like '9-5'),
- * returns 1 when myTeam is null, since the user is the only person on the schedule.
+ * always returns 1, since the user is the only person on the schedule and team selection
+ * is not shown or used.
  * For multi-team schedules, validates the team number is within the valid range.
  *
  * @param myTeam - The user's selected team number or null
  * @param scheduleOption - The selected schedule option
- * @returns The effective team number (1 for single-user schedules, validated team for multi-team), or null if invalid
+ * @returns The effective team number (always 1 for single-user schedules; for multi-team schedules, the validated team number or null if invalid)
  */
 export function getEffectiveTeam(
   myTeam: number | null,
