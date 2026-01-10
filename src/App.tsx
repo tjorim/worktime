@@ -197,7 +197,16 @@ function AppContent() {
       const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
         (option) => option.value === scheduleType
       );
-      const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? false;
+      if (!selectedScheduleConfig) {
+        // Fail fast if the selected schedule type does not match any known configuration.
+        // This prevents silently completing onboarding with inconsistent schedule data.
+        showError(
+          "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
+          "⚠️"
+        );
+        return;
+      }
+      const requiresTeam = selectedScheduleConfig.showsTeamSelection;
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
       if (teamForCompletion !== null) {
