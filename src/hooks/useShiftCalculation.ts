@@ -1,4 +1,5 @@
 import type { Dayjs } from "dayjs";
+import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
@@ -17,7 +18,7 @@ export interface UseShiftCalculationReturn {
   myTeam: number | null; // The user's team from onboarding
   setMyTeam: (team: number | null) => void;
   currentDate: Dayjs;
-  setCurrentDate: (date: Dayjs) => void;
+  setCurrentDate: Dispatch<SetStateAction<Dayjs>>;
   currentShift: ShiftResult | null;
   nextShift: UpcomingShiftResult | null;
   todayShifts: ShiftResult[];

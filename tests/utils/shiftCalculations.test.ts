@@ -67,7 +67,7 @@ describe("Shift Calculations", () => {
     it("should generate correct shift codes", () => {
       const testDate = new Date("2025-07-16");
       const code = getShiftCode(testDate, 1);
-      expect(code).toMatch(/^\d{4}\.\d[MEN]$/); // Format: YYWW.DX
+      expect(code).toMatch(/^\d{4}\.\d[MLNDO]$/); // Format: YYWW.DX (M=Morning, L=Late, N=Night, D=Day, O=Off)
     });
 
     it("should adjust date for night shifts", () => {
