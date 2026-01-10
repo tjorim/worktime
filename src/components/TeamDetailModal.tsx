@@ -287,10 +287,10 @@ export function TeamDetailModal({
                   </ListGroup.Item>
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                     <span>
-                      <i className="bi bi-brightness-high me-1 text-warning"></i>
+                      <i className="bi bi-brightness-high me-1 text-dark"></i>
                       Day Shifts
                     </span>
-                    <Badge bg="warning">{stats.dayShifts}</Badge>
+                    <Badge bg="light" text="dark">{stats.dayShifts}</Badge>
                   </ListGroup.Item>
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                     <span>
