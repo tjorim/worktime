@@ -309,6 +309,8 @@ export function MonthCalendar({
   // Check if we're viewing the current month (reuse today for consistency)
   const currentMonth = today.startOf("month");
   const isCurrentMonth = month.isSame(currentMonth, "month");
+  const todayKey = today.format(DAY_FORMAT);
+  const isDisabled = isCurrentMonth && focusedDateKey === todayKey;
 
   return (
     <div className="month-calendar">
@@ -329,7 +331,7 @@ export function MonthCalendar({
             variant={isCurrentMonth ? "primary" : "outline-primary"}
             size="sm"
             onClick={() => handleMoveFocus(today)}
-            disabled={isCurrentMonth}
+            disabled={isDisabled}
             aria-label="Jump to current month"
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>

@@ -220,14 +220,19 @@
  * Colors are chosen to be visually distinct and accessible:
  * - Morning (blue): High contrast, symbolizes early/dawn
  * - Late/Evening (orange-red): Warm color, symbolizes sunset
- * - Day (orange): Bright daytime color, distinct from late shift (uses dark text for accessibility)
+ * - Day (orange): Bright daytime color, distinct from late shift
  * - Night (purple): Cool dark color, symbolizes nighttime
  * - Off (gray): Neutral, symbolizes rest/off-duty
  * 
+ * Text colors adapt to theme:
+ * - Light theme: Day shift uses dark text (#111111) for accessibility on light orange background
+ * - Dark theme: All shifts use light text for accessibility on dark backgrounds
+ * 
  * Contrast ratios (WCAG AA requirement: 4.5:1 for normal text):
+ * Light theme:
  * - Morning: #1976d2 / #ffffff = 4.60:1 ✓
  * - Late: #bf360c / #ffffff = 8.57:1 ✓
- * - Day: #f57c00 / #111111 = 6.98:1 ✓ (uses dark text)
+ * - Day: #f57c00 / #111111 = 6.98:1 ✓
  * - Night: #7b1fa2 / #ffffff = 7.29:1 ✓
  * - Off: #616161 / #ffffff = 4.54:1 ✓
  * 
