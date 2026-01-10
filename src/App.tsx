@@ -192,7 +192,7 @@ function AppContent() {
       const selectedScheduleConfig = scheduleType
         ? SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)
         : null;
-      const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? true;
+      const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? false;
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
       if (teamForCompletion !== null) {
