@@ -28,10 +28,10 @@ export function getTeamCountForOption(scheduleOption: ScheduleOption | null | un
 /**
  * Get the effective team number for the user, handling single-user schedules.
  *
- * For schedules where `showsTeamSelection` is false (single-user schedules like '9-5'),
- * always returns 1, since the user is the only person on the schedule and team selection
- * is not shown or used.
- * For multi-team schedules, validates the team number is within the valid range.
+ * For schedules with teamCount === 1 (single-user schedules like '9-5'),
+ * always returns 1, since there's only one person on the schedule.
+ * For multi-team schedules (including those with hidden team selection like '2-shift'),
+ * validates the team number is within the valid range.
  *
  * @param myTeam - The user's selected team number or null
  * @param scheduleOption - The selected schedule option
@@ -42,19 +42,20 @@ export function getEffectiveTeam(
   scheduleOption: ScheduleOption | null | undefined,
 ): number | null {
   const config = getScheduleConfig(scheduleOption);
-  const showsTeamSelection = config.showsTeamSelection ?? true;
   const teamCount = config.shiftConfig.teamCount;
 
   if (teamCount === undefined) {
     throw new Error(`teamCount not defined for schedule ${config.value}`);
   }
 
-  // For single-user schedules, always return team 1
-  if (!showsTeamSelection) {
+  // For single-user schedules (teamCount === 1), always return team 1
+  // This handles schedules like "9-5" where there's only one person
+  if (teamCount === 1) {
     return 1;
   }
 
   // For multi-team schedules, validate the team number
+  // This includes schedules with hidden team selection (e.g., "2-shift", "weekend-shift")
   if (myTeam === null) {
     return null;
   }

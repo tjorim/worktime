@@ -124,6 +124,63 @@ describe("scheduleUtils", () => {
       });
     });
 
+    describe("multi-team schedules with hidden selection (showsTeamSelection: false)", () => {
+      // These schedules have multiple teams but don't show team selection UI
+      // Examples: "2-shift" and "weekend-shift" with teamCount: 2
+      
+      it("should return null when myTeam is null for 2-shift", () => {
+        const result = getEffectiveTeam(null, "2-shift");
+        expect(result).toBe(null);
+      });
+
+      it("should return team 1 when valid for 2-shift", () => {
+        const result = getEffectiveTeam(1, "2-shift");
+        expect(result).toBe(1);
+      });
+
+      it("should return team 2 when valid for 2-shift", () => {
+        const result = getEffectiveTeam(2, "2-shift");
+        expect(result).toBe(2);
+      });
+
+      it("should return null for team number above valid range for 2-shift", () => {
+        const result = getEffectiveTeam(3, "2-shift");
+        expect(result).toBe(null);
+      });
+
+      it("should return null when myTeam is null for weekend-shift", () => {
+        const result = getEffectiveTeam(null, "weekend-shift");
+        expect(result).toBe(null);
+      });
+
+      it("should return team 1 when valid for weekend-shift", () => {
+        const result = getEffectiveTeam(1, "weekend-shift");
+        expect(result).toBe(1);
+      });
+
+      it("should return team 2 when valid for weekend-shift", () => {
+        const result = getEffectiveTeam(2, "weekend-shift");
+        expect(result).toBe(2);
+      });
+
+      it("should return null for team number above valid range for weekend-shift", () => {
+        const result = getEffectiveTeam(3, "weekend-shift");
+        expect(result).toBe(null);
+      });
+
+      it("should log a warning for invalid team number in hidden selection schedule", () => {
+        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        
+        getEffectiveTeam(5, "2-shift");
+        
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          "Invalid team number 5 (expected 1-2). Treating as null.",
+        );
+        
+        consoleWarnSpy.mockRestore();
+      });
+    });
+
     describe("edge cases", () => {
       it("should handle null scheduleOption by using default", () => {
         const result = getEffectiveTeam(1, null);
