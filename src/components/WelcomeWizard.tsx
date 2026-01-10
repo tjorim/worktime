@@ -114,13 +114,6 @@ export function WelcomeWizard({
     setSelectedSchedule(scheduleOption ?? null);
   }, [scheduleOption]);
 
-  useEffect(() => {
-    if (currentStep === "team-selection" && selectedSchedule === null) {
-      setSelectedSchedule("5-shift");
-      onScheduleSelect?.("5-shift");
-    }
-  }, [currentStep, onScheduleSelect, selectedSchedule]);
-
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
   const isChangeTeamFlow = mode === "change-team";
@@ -133,12 +126,32 @@ export function WelcomeWizard({
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
+  /**
+   * Calculate total number of steps in the wizard based on mode and schedule configuration.
+   *
+   * Step count varies by mode:
+   * - change-team: 1 step (team selection only)
+   * - change-schedule: 1 step (schedule) + optional team selection = 1-2 steps
+   * - onboarding: 5 steps (welcome, features, schedule, optional team, vacation)
+   *
+   * Team selection step is included when:
+   * - In change-team mode (always shown)
+   * - Schedule has showsTeamSelection=true (multi-team schedules)
+   */
   const getTotalSteps = () => {
     if (isChangeTeamFlow) return 1;
     if (isChangeScheduleFlow) return shouldShowTeamSelection ? 2 : 1;
     return shouldShowTeamSelection ? 5 : 4;
   };
 
+  /**
+   * Get current step index (1-based) for progress tracking.
+   *
+   * Maps step names to step numbers accounting for conditional team selection:
+   * - Onboarding: welcome(1), features(2), schedule(3), [team(4)], vacation(4 or 5)
+   * - Change-schedule: schedule(1), [team(2)]
+   * - Change-team: team(1)
+   */
   const getStepIndex = () => {
     if (isChangeTeamFlow) return 1;
     if (isChangeScheduleFlow) {

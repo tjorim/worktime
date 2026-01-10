@@ -23,7 +23,7 @@ export type ShiftRosterConfig = {
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
   // Optional fields
-  notes?: string;
+  notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
   shiftDisplayOverrides?: ShiftDisplayOverrides;
 };
 
@@ -47,6 +47,47 @@ export type ScheduleRoster = {
   shiftConfig: ShiftRosterConfig;
 };
 
+/**
+ * Validates a schedule pattern configuration for internal consistency.
+ * Throws an error if validation fails.
+ */
+function validateSchedulePattern(config: ShiftRosterConfig): void {
+  const { schedulePattern, cycleLengthDays } = config;
+
+  // Validation 1: Pattern length matches cycle length
+  if (schedulePattern.days.length !== cycleLengthDays) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Pattern has ${schedulePattern.days.length} days but cycleLengthDays is ${cycleLengthDays}`,
+    );
+  }
+
+  // Validation 2: Day indices are sequential starting from 1
+  const expectedIndices = Array.from({ length: cycleLengthDays }, (_, i) => i + 1);
+  const actualIndices = schedulePattern.days.map((d) => d.dayIndex);
+  const indicesMismatch = expectedIndices.some((expected, i) => expected !== actualIndices[i]);
+
+  if (indicesMismatch) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Day indices must be sequential from 1 to ${cycleLengthDays}. ` +
+        `Got: [${actualIndices.join(", ")}]`,
+    );
+  }
+
+  // Validation 3: Shift codes are valid
+  const validShiftCodes = new Set(["M", "L", "N", "D", "O"]);
+  const invalidShifts = schedulePattern.days.filter((d) => !validShiftCodes.has(d.shift));
+
+  if (invalidShifts.length > 0) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Invalid shift codes found: ${invalidShifts.map((d) => `${d.shift} at day ${d.dayIndex}`).join(", ")}. ` +
+        `Valid codes: M, L, N, D, O`,
+    );
+  }
+}
+
 export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   {
     value: "9-5",
@@ -59,7 +100,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       cycleLengthDays: 7,
       shiftsPerDay: 1,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1,
+      referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: {
         days: [
           { dayIndex: 1, shift: "D" }, // Monday
@@ -86,7 +127,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       cycleLengthDays: 28,
       shiftsPerDay: 2,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1,
+      referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
       schedulePattern: {
         days: [
           // Week 1: Early shift Mon-Fri, off weekend
@@ -145,7 +186,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       cycleLengthDays: 14,
       shiftsPerDay: 2,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1,
+      referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
       schedulePattern: {
         days: [
           // Week 1: Off Mon-Thu, Day Friday, Early Sat-Sun
@@ -184,8 +225,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 5,
       cycleLengthDays: 10,
       shiftsPerDay: 3,
-      referenceDate: "2025-07-16", // Reference date from CONFIG
-      referenceTeam: 1, // Reference team from CONFIG
+      referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
+      referenceTeam: 1, // Reference team is on evening shift (day 3 of cycle) on the reference date
       schedulePattern: {
         days: [
           { dayIndex: 1, shift: "M" },
@@ -207,3 +248,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     },
   },
 ];
+
+// Validate all schedule configurations at module load time
+SCHEDULE_OPTIONS.forEach((option) => {
+  validateSchedulePattern(option.shiftConfig);
+});

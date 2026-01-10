@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 
 const defaultProps = {
   show: true,
@@ -927,30 +928,76 @@ describe("WelcomeWizard", () => {
       };
       window.localStorage.setItem("worktime_user_state", JSON.stringify(emptyUserState));
 
-      renderWithProviders(<WelcomeWizard {...defaultProps} />);
+      // Render without seedScheduleOption() to preserve the null scheduleOption
+      render(
+        <SettingsProvider>
+          <ToastProvider>
+            <WelcomeWizard {...defaultProps} />
+          </ToastProvider>
+        </SettingsProvider>,
+      );
 
       // Navigate to schedule selection
       const getStartedButton = screen.getByRole("button", {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 5);
+      await waitForStep(2, 4); // 4 steps total when no schedule selected (no team selection)
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 5);
+      await waitForStep(3, 4); // 4 steps total when no schedule selected (no team selection)
 
       // Without selecting a schedule, the continue button should be disabled
-      // Note: The component might auto-select "5-shift" as fallback, so we need to check actual state
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });
       const continueButton = continueButtons[continueButtons.length - 1];
 
-      // If no schedule is selected, button should be disabled
-      // However, if the component has a default schedule, it might be enabled
-      // So we just verify the button exists and the component doesn't crash
-      expect(continueButton).toBeInTheDocument();
+      // Button should be disabled without explicit schedule selection
+      expect(continueButton).toBeDisabled();
+    });
+
+    it("should not implicitly default to 5-shift when navigating to schedule selection", async () => {
+      const onScheduleSelect = vi.fn();
+      const user = userEvent.setup();
+
+      // Clear any pre-selected schedule
+      const emptyUserState = {
+        ...defaultUserState,
+        scheduleOption: null,
+      };
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(emptyUserState));
+
+      // Render without seedScheduleOption() to preserve the null scheduleOption
+      render(
+        <SettingsProvider>
+          <ToastProvider>
+            <WelcomeWizard {...defaultProps} onScheduleSelect={onScheduleSelect} />
+          </ToastProvider>
+        </SettingsProvider>,
+      );
+
+      // Navigate to schedule selection
+      const getStartedButton = screen.getByRole("button", {
+        name: /Let's Get Started/i,
+      });
+      await user.click(getStartedButton);
+      await waitForStep(2, 4); // 4 steps total when no schedule selected (no team selection)
+
+      const chooseScheduleButton = screen.getByRole("button", {
+        name: /Choose a Schedule/i,
+      });
+      await user.click(chooseScheduleButton);
+      await waitForStep(3, 4); // 4 steps total when no schedule selected (no team selection)
+
+      // Verify onScheduleSelect was not called implicitly
+      expect(onScheduleSelect).not.toHaveBeenCalled();
+
+      // Verify continue button is disabled without explicit selection
+      const continueButtons = screen.getAllByRole("button", { name: /Continue/i });
+      const continueButton = continueButtons[continueButtons.length - 1];
+      expect(continueButton).toBeDisabled();
     });
   });
 });

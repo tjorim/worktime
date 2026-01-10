@@ -142,20 +142,20 @@ function AppContent() {
   const handleScheduleSelect = (schedule: ScheduleOption) => {
     try {
       const nextScheduleConfig = getScheduleConfig(schedule);
-      const nextTeamCount = getTeamCountForOption(schedule);
-      const currentTeamCount = getTeamCountForOption(scheduleOption ?? null);
-      const teamCountChanged = currentTeamCount !== nextTeamCount;
+      // Always reset team when changing schedules, regardless of team count
+      // Teams in different schedules represent different rosters
+      const scheduleChanged = schedule !== scheduleOption;
       const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
-      const teamInvalidForNewSchedule = myTeam !== null && myTeam > nextTeamCount;
 
-      // Reset team if schedule change makes current team invalid
-      if (teamCountChanged || teamsDisabled || teamInvalidForNewSchedule) {
-        setMyTeam(null);
-        // Notify user that their team selection was reset
-        showInfo(
-          "Your team selection was reset because the new schedule has a different team configuration.",
-          "ℹ️",
-        );
+      if (scheduleChanged || teamsDisabled) {
+        // Only show notification if user had a team selected
+        if (myTeam !== null) {
+          setMyTeam(null);
+          showInfo(
+            "Your team selection has been reset because you changed schedules. Please select your team again.",
+            "ℹ️",
+          );
+        }
       }
       setScheduleOption(schedule);
     } catch (error) {
