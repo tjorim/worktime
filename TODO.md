@@ -1,6 +1,6 @@
 # Worktime Development Roadmap
 
-**Current Version**: 4.3.0
+**Current Version**: 4.4.1
 **Branch**: `main`
 **Status**: Active Development
 
@@ -519,5 +519,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2026-01-08
+**Last Updated**: 2026-01-10
 **Next Review**: After v4.5.0 (Export Schedule Feature)
