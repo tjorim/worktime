@@ -18,7 +18,7 @@ const defaultProps = {
 const defaultUserState = {
   hasCompletedOnboarding: false,
   myTeam: null,
-  scheduleOption: "5-shift",
+  scheduleType: "5-shift",
   settings: {
     timeFormat: "24h",
     theme: "auto",
@@ -924,11 +924,11 @@ describe("WelcomeWizard", () => {
       // Clear any pre-selected schedule
       const emptyUserState = {
         ...defaultUserState,
-        scheduleOption: null,
+        scheduleType: null,
       };
       window.localStorage.setItem("worktime_user_state", JSON.stringify(emptyUserState));
 
-      // Render without seedScheduleOption() to preserve the null scheduleOption
+      // Render without seedScheduleOption() to preserve the null scheduleType
       render(
         <SettingsProvider>
           <ToastProvider>
@@ -965,11 +965,11 @@ describe("WelcomeWizard", () => {
       // Clear any pre-selected schedule
       const emptyUserState = {
         ...defaultUserState,
-        scheduleOption: null,
+        scheduleType: null,
       };
       window.localStorage.setItem("worktime_user_state", JSON.stringify(emptyUserState));
 
-      // Render without seedScheduleOption() to preserve the null scheduleOption
+      // Render without seedScheduleOption() to preserve the null scheduleType
       render(
         <SettingsProvider>
           <ToastProvider>

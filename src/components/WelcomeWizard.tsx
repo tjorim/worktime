@@ -84,7 +84,7 @@ export function WelcomeWizard({
       ? "schedule-selection"
       : "welcome",
 }: WelcomeWizardProps) {
-  const { scheduleOption, settings } = useSettings();
+  const { scheduleType, settings } = useSettings();
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
@@ -99,7 +99,7 @@ export function WelcomeWizard({
   );
 
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(
-    scheduleOption ?? null,
+    scheduleType ?? null,
   );
 
   // Sync currentStep when startStep prop changes
@@ -111,8 +111,8 @@ export function WelcomeWizard({
   }, [startStep]);
 
   useEffect(() => {
-    setSelectedSchedule(scheduleOption ?? null);
-  }, [scheduleOption]);
+    setSelectedSchedule(scheduleType ?? null);
+  }, [scheduleType]);
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
@@ -230,7 +230,7 @@ export function WelcomeWizard({
     } else if (currentStep === "features") {
       setCurrentStep("schedule-selection");
     } else if (currentStep === "schedule-selection") {
-      if (selectedSchedule && selectedSchedule !== scheduleOption) {
+      if (selectedSchedule && selectedSchedule !== scheduleType) {
         onScheduleSelect?.(selectedSchedule);
       }
       if (isChangeScheduleFlow || isChangeTeamFlow) {

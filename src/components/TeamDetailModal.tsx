@@ -43,7 +43,7 @@ export function TeamDetailModal({
   teamNumber,
   onViewTransfers,
 }: TeamDetailModalProps) {
-  const { settings, myTeam, scheduleOption } = useSettings();
+  const { settings, myTeam, scheduleType } = useSettings();
   const toast = useToast();
 
   const calendarTooltipId = useId();
@@ -61,7 +61,7 @@ export function TeamDetailModal({
     for (let i = 0; i < 7; i++) {
       const date = today.add(i, "day");
       const shiftDay = getCurrentShiftDay(date);
-      const shift = calculateShift(shiftDay, teamNumber, scheduleOption);
+      const shift = calculateShift(shiftDay, teamNumber, scheduleType);
 
       schedule.push({
         date,
@@ -72,7 +72,7 @@ export function TeamDetailModal({
     }
 
     return schedule;
-  }, [teamNumber, currentDateKey, scheduleOption]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [teamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -140,7 +140,7 @@ export function TeamDetailModal({
                     <Badge className={getShiftByCode(currentStatus?.shift.code).className} pill>
                       <i className="bi bi-briefcase me-1"></i>
                       {currentStatus?.shift
-                        ? getShiftDisplay(currentStatus.shift, scheduleOption).displayName
+                        ? getShiftDisplay(currentStatus.shift, scheduleType).displayName
                         : "Unknown"}
                     </Badge>
                   )}
@@ -153,7 +153,7 @@ export function TeamDetailModal({
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
                   <Badge className={getShiftByCode(nextShift.shift.code).className} pill>
-                    {getShiftDisplay(nextShift.shift, scheduleOption).displayName}
+                    {getShiftDisplay(nextShift.shift, scheduleType).displayName}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -206,7 +206,7 @@ export function TeamDetailModal({
                         </Badge>
                       ) : (
                         <Badge className={getShiftByCode(day.shift.code).className} pill>
-                          {getShiftDisplay(day.shift, scheduleOption).displayName}
+                          {getShiftDisplay(day.shift, scheduleType).displayName}
                         </Badge>
                       )}
                     </td>

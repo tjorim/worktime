@@ -42,8 +42,8 @@ export function ScheduleView({
   isActive = true,
 }: ScheduleViewProps) {
   const datePickerId = useId();
-  const { settings, scheduleOption } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleOption);
+  const { settings, scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
   const hasTeams = scheduleConfig.showsTeamSelection ?? true;
   // Validate and sanitize myTeam prop
@@ -223,9 +223,9 @@ export function ScheduleView({
                     <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
                   </td>
                   {weekDays.map((day) => {
-                    const shift = calculateShift(day, teamNumber, scheduleOption ?? undefined);
+                    const shift = calculateShift(day, teamNumber, scheduleType ?? undefined);
                     const isToday = day.isSame(dayjs(), "day");
-                    const shiftDisplay = getShiftDisplay(shift, scheduleOption);
+                    const shiftDisplay = getShiftDisplay(shift, scheduleType);
 
                     return (
                       <td

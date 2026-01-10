@@ -56,12 +56,12 @@ function TeamCard({
   hasTeams: boolean;
   onTeamClick?: (teamNumber: number) => void;
 }) {
-  const { settings, scheduleOption } = useSettings();
+  const { settings, scheduleType } = useSettings();
   // Use shiftResult.shift directly - already contains emoji/className/name/hours
-  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleOption);
+  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleType);
   const shiftTimeLabel = getFormattedShiftTime(
     shiftResult.shift,
-    scheduleOption,
+    scheduleType,
     settings.timeFormat,
   );
 
@@ -194,8 +194,8 @@ export function TodayView({
   isActive = true,
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
-  const { scheduleOption } = useSettings();
-  const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
+  const { scheduleType } = useSettings();
+  const hasTeams = getScheduleConfig(scheduleType).showsTeamSelection ?? true;
 
   // Keyboard shortcuts (only active when this tab is visible)
   useKeyboardShortcuts(

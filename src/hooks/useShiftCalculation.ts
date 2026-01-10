@@ -57,15 +57,15 @@ export interface UseShiftCalculationReturn {
  */
 export function useShiftCalculation(): UseShiftCalculationReturn {
   // Use unified user state from SettingsContext
-  const { myTeam, setMyTeam, scheduleOption } = useSettings();
+  const { myTeam, setMyTeam, scheduleType } = useSettings();
 
   // Current date for calculations
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const validatedMyTeam = useMemo(
-    () => getEffectiveTeam(myTeam, scheduleOption),
-    [myTeam, scheduleOption],
+    () => getEffectiveTeam(myTeam, scheduleType),
+    [myTeam, scheduleType],
   );
 
   // Calculate current shift for user's team
@@ -73,27 +73,27 @@ export function useShiftCalculation(): UseShiftCalculationReturn {
     if (!validatedMyTeam) return null;
 
     const shiftDay = getCurrentShiftDay(currentDate);
-    const shift = calculateShift(shiftDay, validatedMyTeam, scheduleOption ?? undefined);
+    const shift = calculateShift(shiftDay, validatedMyTeam, scheduleType ?? undefined);
 
     return {
       date: shiftDay,
       shift,
-      code: getShiftCode(currentDate, validatedMyTeam, scheduleOption ?? undefined),
+      code: getShiftCode(currentDate, validatedMyTeam, scheduleType ?? undefined),
       teamNumber: validatedMyTeam,
     };
-  }, [validatedMyTeam, currentDate, scheduleOption]);
+  }, [validatedMyTeam, currentDate, scheduleType]);
 
   // Calculate next shift for user's team
   const nextShift = useMemo((): UpcomingShiftResult | null => {
     if (!validatedMyTeam) return null;
 
-    return getNextShift(currentDate, validatedMyTeam, scheduleOption ?? undefined);
-  }, [validatedMyTeam, currentDate, scheduleOption]);
+    return getNextShift(currentDate, validatedMyTeam, scheduleType ?? undefined);
+  }, [validatedMyTeam, currentDate, scheduleType]);
 
   // Get all teams' shifts for current date
   const todayShifts = useMemo((): ShiftResult[] => {
-    return getAllTeamsShifts(currentDate, scheduleOption ?? undefined);
-  }, [currentDate, scheduleOption]);
+    return getAllTeamsShifts(currentDate, scheduleType ?? undefined);
+  }, [currentDate, scheduleType]);
 
   // Calculate current shift day (handles pre-7AM night shift logic)
   const currentShiftDay = useMemo((): Dayjs => {

@@ -9,7 +9,7 @@ import { WelcomeWizard } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
-import type { ScheduleOption } from "./data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { dayjs } from "./utils/dateTimeUtils";
 import { getScheduleConfig, getTeamCountForOption } from "./utils/scheduleUtils";
@@ -34,9 +34,9 @@ function AppContent() {
     myTeam,
     setMyTeam,
     hasCompletedOnboarding,
-    completeOnboardingWithVacation,
-    scheduleOption,
-    setScheduleOption,
+    completeOnboardingWithSchedule,
+    scheduleType,
+    setScheduleType,
     updateVacationAllowance,
     settings,
   } = useSettings();
@@ -77,7 +77,7 @@ function AppContent() {
     if (team) {
       try {
         const teamNumber = parseInt(team, 10);
-        const teamCount = getTeamCountForOption(scheduleOption);
+        const teamCount = getTeamCountForOption(scheduleType);
         if (teamNumber >= 1 && teamNumber <= teamCount) {
           setMyTeam(teamNumber);
         }
@@ -98,7 +98,7 @@ function AppContent() {
     }
 
     pendingDeepLinkRef.current = {};
-  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleOption]);
+  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleType]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -144,7 +144,7 @@ function AppContent() {
       const nextScheduleConfig = getScheduleConfig(schedule);
       // Always reset team when changing schedules, regardless of team count
       // Teams in different schedules represent different rosters
-      const scheduleChanged = schedule !== scheduleOption;
+      const scheduleChanged = schedule !== scheduleType;
       const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
 
       if (scheduleChanged || teamsDisabled) {
@@ -165,7 +165,7 @@ function AppContent() {
           }
         }
       }
-      setScheduleOption(schedule);
+      setScheduleType(schedule);
     } catch (error) {
       console.error("Failed to change schedule:", error);
       showError("Failed to change schedule. Please try again.", "❌");
@@ -189,9 +189,14 @@ function AppContent() {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
-      completeOnboardingWithVacation(myTeam, vacationAllowance);
-      if (myTeam !== null) {
-        showSuccess(`Team ${myTeam} selected! Your shifts are now personalized.`, "🎯");
+      const selectedScheduleConfig = scheduleType
+        ? SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)
+        : null;
+      const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? true;
+      const teamForCompletion = requiresTeam ? myTeam : null;
+      completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
+      if (teamForCompletion !== null) {
+        showSuccess(`Team ${teamForCompletion} selected! Your shifts are now personalized.`, "🎯");
       }
     } else if (teamModalMode === "change-team" && vacationAllowance) {
       // Persist vacation allowance changes in change-team mode

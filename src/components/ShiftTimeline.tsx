@@ -130,8 +130,8 @@ interface ShiftTimelineProps {
 export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps) {
   // Generate unique ID for tooltip to avoid HTML ID conflicts
   const timelineTooltipId = useId();
-  const { settings, scheduleOption } = useSettings();
-  const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam, scheduleOption);
+  const { settings, scheduleType } = useSettings();
+  const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam, scheduleType);
 
   return (
     <div className="card-timeline timeline-container">
@@ -146,7 +146,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               T{prevShift.teamNumber}
             </Badge>
             <div className="timeline-code">
-              {getShiftDisplay(prevShift.shift, scheduleOption).displayCode}
+              {getShiftDisplay(prevShift.shift, scheduleType).displayCode}
             </div>
           </div>
         )}
@@ -158,11 +158,11 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               <Tooltip id={timelineTooltipId}>
                 <strong>Currently Active</strong>
                 <br />
-                {getShiftDisplay(currentWorkingTeam.shift, scheduleOption).displayName}
+                {getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayName}
                 <br />
                 {getFormattedShiftTime(
                   currentWorkingTeam.shift,
-                  scheduleOption,
+                  scheduleType,
                   settings.timeFormat,
                 )}
               </Tooltip>
@@ -175,7 +175,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             </Badge>
           </OverlayTrigger>
           <div className="timeline-code">
-            {getShiftDisplay(currentWorkingTeam.shift, scheduleOption).displayCode}
+            {getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayCode}
             <OverlayTrigger
               placement="bottom"
               overlay={
@@ -197,7 +197,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               T{nextShift.teamNumber}
             </Badge>
             <div className="timeline-code">
-              {getShiftDisplay(nextShift.shift, scheduleOption).displayCode}
+              {getShiftDisplay(nextShift.shift, scheduleType).displayCode}
             </div>
           </div>
         )}

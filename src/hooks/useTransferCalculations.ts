@@ -114,13 +114,13 @@ export function useTransferCalculations({
   customStartDate,
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
-  const { scheduleOption } = useSettings();
-  const teamCount = getTeamCountForOption(scheduleOption);
+  const { scheduleType } = useSettings();
+  const teamCount = getTeamCountForOption(scheduleType);
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const validatedMyTeam = useMemo(
-    () => getEffectiveTeam(myTeam, scheduleOption),
-    [myTeam, scheduleOption],
+    () => getEffectiveTeam(myTeam, scheduleType),
+    [myTeam, scheduleType],
   );
 
   // Get available other teams (excludes user's team)
@@ -170,10 +170,10 @@ export function useTransferCalculations({
         break;
       }
 
-      const myTeamShift = calculateShift(scanDate, validatedMyTeam, scheduleOption);
-      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleOption);
-      const myTeamNextShift = calculateShift(nextDate, validatedMyTeam, scheduleOption);
-      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleOption);
+      const myTeamShift = calculateShift(scanDate, validatedMyTeam, scheduleType);
+      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleType);
+      const myTeamNextShift = calculateShift(nextDate, validatedMyTeam, scheduleType);
+      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleType);
 
       // Check for transfer patterns
       const transfers = [
@@ -271,7 +271,7 @@ export function useTransferCalculations({
       transfers: foundTransfers,
       hasMoreTransfers,
     };
-  }, [validatedMyTeam, otherTeam, limit, customStartDate, customEndDate, scheduleOption]);
+  }, [validatedMyTeam, otherTeam, limit, customStartDate, customEndDate, scheduleType]);
 
   return {
     transfers: transfersResult.transfers,
