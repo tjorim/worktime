@@ -189,9 +189,14 @@ function AppContent() {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
-      const selectedScheduleConfig = scheduleType
-        ? SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)
-        : null;
+      // Ensure a schedule has been selected before completing onboarding
+      if (!scheduleType) {
+        showError("Please select a schedule before completing setup.", "⚠️");
+        return;
+      }
+      const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
+        (option) => option.value === scheduleType
+      );
       const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? false;
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
