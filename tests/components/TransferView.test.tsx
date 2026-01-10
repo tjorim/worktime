@@ -71,6 +71,7 @@ const defaultHookReturn = {
   availableOtherTeams: [2, 3, 4, 5],
   otherTeam: 2,
   setOtherTeam: vi.fn(),
+  validatedMyTeam: 1, // Add validated team
 };
 
 const defaultProps = {
@@ -103,6 +104,7 @@ describe("TransferView", () => {
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         transfers: [],
+        validatedMyTeam: null, // Set validated team to null
       });
 
       render(<TransferView {...defaultProps} myTeam={null} />);
@@ -255,6 +257,11 @@ describe("TransferView", () => {
     });
 
     it("shows team selection prompt when no team selected", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        validatedMyTeam: null, // Set validated team to null
+      });
+
       render(<TransferView {...defaultProps} myTeam={null} />);
 
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
@@ -263,22 +270,39 @@ describe("TransferView", () => {
 
   describe("Prop validation", () => {
     it("handles invalid team selection without crashing", () => {
-      // Invalid teams are handled by useTransferCalculations hook
+      // Invalid teams are handled by useTransferCalculations hook - mock returns null
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        validatedMyTeam: null, // Hook validates to null
+      });
+
       render(<TransferView {...defaultProps} myTeam={999} />);
 
-      // Should render without crashing
+      // Should render without crashing - shows team selection prompt
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
+      expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
       // No warnings are logged at this level - validation is in the hook
     });
 
     it("handles negative team numbers without crashing", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        validatedMyTeam: null, // Hook validates to null
+      });
+
       render(<TransferView {...defaultProps} myTeam={-1} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
+      expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
       // No warnings are logged at this level - validation is in the hook
     });
 
     it("handles null team selection without warning", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        validatedMyTeam: null, // Set validated team to null
+      });
+
       render(<TransferView {...defaultProps} myTeam={null} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();

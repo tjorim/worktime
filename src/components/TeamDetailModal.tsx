@@ -81,6 +81,7 @@ export function TeamDetailModal({
     const morningShifts = weekSchedule.filter((day) => day.shift.code === "M").length;
     const eveningShifts = weekSchedule.filter((day) => day.shift.code === "L").length;
     const nightShifts = weekSchedule.filter((day) => day.shift.code === "N").length;
+    const dayShifts = weekSchedule.filter((day) => day.shift.code === "D").length;
 
     return {
       workingDays,
@@ -88,6 +89,7 @@ export function TeamDetailModal({
       morningShifts,
       eveningShifts,
       nightShifts,
+      dayShifts,
     };
   }, [weekSchedule]);
 
@@ -282,6 +284,13 @@ export function TeamDetailModal({
                       Evening Shifts
                     </span>
                     <Badge bg="info">{stats.eveningShifts}</Badge>
+                  </ListGroup.Item>
+                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
+                    <span>
+                      <i className="bi bi-brightness-high me-1 text-warning"></i>
+                      Day Shifts
+                    </span>
+                    <Badge bg="warning">{stats.dayShifts}</Badge>
                   </ListGroup.Item>
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                     <span>

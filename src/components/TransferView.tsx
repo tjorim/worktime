@@ -33,23 +33,23 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
   const startDateId = useId();
   const endDateId = useId();
 
-  // Use team directly - validation is handled by useTransferCalculations hook
-  const myTeam = inputMyTeam;
-
   // Local state
   const [transfersToShow, setTransfersToShow] = useState(10);
   const [useCustomRange, setUseCustomRange] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
 
-  // Use the transfer calculations hook
-  const { transfers, availableOtherTeams, otherTeam, setOtherTeam, hasMoreTransfers } =
+  // Use the transfer calculations hook - it validates the team number
+  const { transfers, availableOtherTeams, otherTeam, setOtherTeam, hasMoreTransfers, validatedMyTeam } =
     useTransferCalculations({
-      myTeam,
+      myTeam: inputMyTeam,
       limit: transfersToShow,
       customStartDate: useCustomRange ? customStartDate : undefined,
       customEndDate: useCustomRange ? customEndDate : undefined,
     });
+
+  // Use validated team for display
+  const myTeam = validatedMyTeam;
 
   // Reset pagination when filters change
   useEffect(() => {

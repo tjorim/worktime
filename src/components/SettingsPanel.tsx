@@ -217,18 +217,20 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                 Quick Actions
               </h6>
               <ListGroup variant="flush">
-                <ListGroup.Item action onClick={handleChangeSchedule}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-calendar-week me-2"></i>
-                        Change Schedule
+                {onChangeSchedule && (
+                  <ListGroup.Item action onClick={handleChangeSchedule}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-calendar-week me-2"></i>
+                          Change Schedule
+                        </div>
+                        <small className="text-muted">Pick a different roster</small>
                       </div>
-                      <small className="text-muted">Pick a different roster</small>
+                      <i className="bi bi-chevron-right text-muted"></i>
                     </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
+                  </ListGroup.Item>
+                )}
                 <ListGroup.Item action disabled>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>

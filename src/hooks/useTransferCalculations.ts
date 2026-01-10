@@ -29,6 +29,7 @@ interface UseTransferCalculationsReturn {
   availableOtherTeams: number[]; // Teams available to compare with (excludes user's team)
   otherTeam: number; // Currently selected other team
   setOtherTeam: (team: number) => void;
+  validatedMyTeam: number | null; // Validated user team (null if invalid or not set)
 }
 
 /**
@@ -282,5 +283,6 @@ export function useTransferCalculations({
     availableOtherTeams,
     otherTeam,
     setOtherTeam,
+    validatedMyTeam,
   };
 }
