@@ -57,8 +57,9 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
   };
 
   const handleChangeSchedule = () => {
-    onChangeSchedule?.();
+    // Close first to avoid stacked overlays if the callback opens another UI surface
     onHide();
+    onChangeSchedule?.();
   };
 
   // Share handlers

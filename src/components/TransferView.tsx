@@ -58,10 +58,10 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
 
   // Set initial other team if provided (e.g., when coming from Team Detail Modal)
   useEffect(() => {
-    if (initialOtherTeam && initialOtherTeam !== otherTeam) {
+    if (initialOtherTeam && initialOtherTeam !== otherTeam && availableOtherTeams.includes(initialOtherTeam)) {
       setOtherTeam(initialOtherTeam);
     }
-  }, [initialOtherTeam, setOtherTeam]); // oxlint-disable-line react/exhaustive-deps -- Intentionally omitting otherTeam to prevent infinite loop when user changes selection
+  }, [initialOtherTeam, setOtherTeam, availableOtherTeams]); // oxlint-disable-line react/exhaustive-deps -- Intentionally omitting otherTeam to prevent infinite loop when user changes selection
 
   // Clear dates when custom range is disabled
   useEffect(() => {
