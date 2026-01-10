@@ -8,7 +8,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, getTeamCountForOption } from "../utils/scheduleUtils";
+import { getScheduleConfig, getEffectiveTeam } from "../utils/scheduleUtils";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
@@ -56,12 +56,15 @@ export function CurrentStatus({
   const dateTooltipId = useId();
   const teamTooltipId = useId();
   const { settings, scheduleOption } = useSettings();
-  const teamCount = getTeamCountForOption(scheduleOption);
-  const hasTeams = getScheduleConfig(scheduleOption).showsTeamSelection ?? true;
+  const scheduleConfig = getScheduleConfig(scheduleOption);
+  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
+  const teamCount = scheduleConfig.shiftConfig.teamCount;
 
-  // Validate and sanitize myTeam prop
-  const validatedTeam =
-    typeof myTeam === "number" && myTeam >= 1 && myTeam <= teamCount ? myTeam : null;
+  // Get effective team - for single-user schedules, this returns 1 when myTeam is null
+  const validatedTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleOption),
+    [myTeam, scheduleOption],
+  );
 
   // Always use today's date for current status
   const today = dayjs();
