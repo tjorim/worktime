@@ -60,7 +60,7 @@ export function CurrentStatus({
   const hasTeams = scheduleConfig.showsTeamSelection ?? true;
   const rawTeamCount = scheduleConfig.shiftConfig.teamCount;
   if (rawTeamCount == null) {
-    throw new Error("scheduleConfig.shiftConfig.teamCount is undefined; schedule configuration is invalid.");
+    throw new Error("scheduleConfig.shiftConfig.teamCount is null or undefined; schedule configuration is invalid.");
   }
   const teamCount = rawTeamCount;
 
