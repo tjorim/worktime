@@ -233,7 +233,7 @@ export function WelcomeWizard({
       if (selectedSchedule && selectedSchedule !== scheduleOption) {
         onScheduleSelect?.(selectedSchedule);
       }
-      if (isChangeScheduleFlow) {
+      if (isChangeScheduleFlow || isChangeTeamFlow) {
         if (shouldShowTeamSelection) {
           setCurrentStep("team-selection");
         } else {
@@ -243,7 +243,7 @@ export function WelcomeWizard({
       }
       setCurrentStep(shouldShowTeamSelection ? "team-selection" : "vacation-allowance");
     } else if (currentStep === "team-selection") {
-      if (isChangeScheduleFlow) {
+      if (isChangeScheduleFlow || isChangeTeamFlow) {
         onHide();
       } else {
         setCurrentStep("vacation-allowance");
@@ -255,9 +255,11 @@ export function WelcomeWizard({
     if (currentStep === "vacation-allowance") {
       setCurrentStep(shouldShowTeamSelection ? "team-selection" : "schedule-selection");
     } else if (currentStep === "team-selection") {
+      // In change-team mode, allow going back to schedule-selection to change schedule
       setCurrentStep("schedule-selection");
     } else if (currentStep === "schedule-selection") {
-      if (isChangeScheduleFlow) {
+      if (isChangeScheduleFlow || isChangeTeamFlow) {
+        // When going back from schedule-selection in change mode, close the wizard
         onHide();
         return;
       }

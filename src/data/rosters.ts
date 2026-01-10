@@ -226,7 +226,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       cycleLengthDays: 10,
       shiftsPerDay: 3,
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
-      referenceTeam: 1, // Reference team is on evening shift (day 3 of cycle) on the reference date
+      referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: {
         days: [
           { dayIndex: 1, shift: "M" },
