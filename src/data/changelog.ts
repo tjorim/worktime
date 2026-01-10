@@ -14,9 +14,37 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.4.1",
+    date: "2026-01-10",
+    status: "current",
+    added: [
+      "Schedule Pattern Validation: Runtime validation ensures schedule configurations are correct at module load time",
+      "Comprehensive Roster Tests: 14 new tests validating schedule patterns, shift codes, and reference dates",
+      "Reference Date Documentation: Clear comments documenting reference team states for all schedules",
+      "Progress Calculation Documentation: JSDoc comments explaining wizard step calculation logic",
+    ],
+    changed: [
+      "Team Reset Logic: Always resets team selection when changing schedules (teams in different schedules are different rosters)",
+      "Schedule Selection Flow: Removed implicit defaulting to '5-shift', users must explicitly choose schedule during onboarding",
+      "Wizard Navigation: Fixed navigation in change-team and change-schedule modes to prevent vacation step appearing incorrectly",
+    ],
+    fixed: [
+      "Team Reset Bug: Team selection now properly resets when switching between schedules with matching team counts",
+      "Implicit Schedule Default: Removed side-effect that auto-selected '5-shift' during wizard navigation",
+      "Wizard Flow: Vacation allowance step no longer appears when changing team or schedule settings",
+      "Change-Team Navigation: Users can now navigate back from team selection to change schedule without wizard closing",
+      "Schedule Pattern Integrity: Validation catches configuration errors (wrong cycle length, invalid shift codes, non-sequential days)",
+    ],
+    technicalDetails: {
+      title: "Code Review Fixes and Schedule Validation",
+      description:
+        "Addressed critical and major issues from PR #47 code review. Added validateSchedulePattern() function with three validations: pattern length matches cycleLengthDays, day indices are sequential from 1, and shift codes are valid (M/L/N/D/O only). Simplified team reset logic in App.tsx to always reset when changing schedules regardless of team count. Removed implicit schedule defaulting useEffect from WelcomeWizard that was creating side-effects during navigation. Fixed wizard navigation to properly handle change-team and change-schedule modes without showing vacation step. Added JSDoc documentation to getTotalSteps() and getStepIndex() functions. Updated reference date comments for all four schedule types. Created tests/data/rosters.test.ts with 14 comprehensive validation tests. Updated WelcomeWizard tests to verify no implicit defaulting occurs. All 685 tests passing with zero linting errors.",
+    },
+  },
+  {
     version: "4.4.0",
     date: "2026-01-08",
-    status: "current",
+    status: "released",
     added: [
       "Vacation Statistics Dashboard: Comprehensive vacation allowance tracking and usage analytics panel",
       "Vacation Allowance Settings: Configure annual allowance in days or hours with customizable hours-per-day conversion (default: 8)",

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * NextShift Icon Generator
- * Generates PWA and favicon icons for the NextShift application
+ * Worktime Icon Generator
+ * Generates PWA and favicon icons for the Worktime application
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -27,8 +27,8 @@ const RATIOS = {
   hourHandLength: 0.15,
   minuteHandLength: 0.2,
   centerDotRadius: 0.02,
-  textOffset: 0.45,
-  textSize: 0.15,
+  textOffset: 0.25, // Positioned in bottom half of clock face
+  textSize: 0.13, // Slightly smaller to fit better
 } as const;
 
 interface IconConfig {
@@ -43,7 +43,7 @@ if (!existsSync(ICONS_DIR)) {
 }
 
 /**
- * Create a NextShift icon with clock design
+ * Create a Worktime icon with clock design
  * @param size - Icon size in pixels
  * @returns Canvas with the icon
  */
@@ -88,20 +88,28 @@ function createIcon(size: number) {
     ctx.stroke();
   }
 
-  // Clock hands showing 3:00 (shift change time)
+  // Clock hands showing 10:10 (classic watch marketing position)
   ctx.strokeStyle = COLORS.foreground;
   ctx.lineWidth = size * RATIOS.clockHandStroke;
 
-  // Hour hand (pointing to 3)
+  // Hour hand (pointing to 10) - 300 degrees from 12 o'clock
+  const hourAngle = (-Math.PI / 2) + (10 / 12) * 2 * Math.PI;
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
-  ctx.lineTo(centerX + size * RATIOS.hourHandLength, centerY);
+  ctx.lineTo(
+    centerX + Math.cos(hourAngle) * size * RATIOS.hourHandLength,
+    centerY + Math.sin(hourAngle) * size * RATIOS.hourHandLength
+  );
   ctx.stroke();
 
-  // Minute hand (pointing to 12)
+  // Minute hand (pointing to 2) - 60 degrees from 12 o'clock
+  const minuteAngle = (-Math.PI / 2) + (10 / 60) * 2 * Math.PI;
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
-  ctx.lineTo(centerX, centerY - size * RATIOS.minuteHandLength);
+  ctx.lineTo(
+    centerX + Math.cos(minuteAngle) * size * RATIOS.minuteHandLength,
+    centerY + Math.sin(minuteAngle) * size * RATIOS.minuteHandLength
+  );
   ctx.stroke();
 
   // Center dot
@@ -110,12 +118,12 @@ function createIcon(size: number) {
   ctx.arc(centerX, centerY, size * RATIOS.centerDotRadius, 0, 2 * Math.PI);
   ctx.fill();
 
-  // Add text "NS" for NextShift (only for larger icons)
+  // Add text "WT" for Worktime (only for larger icons)
   if (size >= 48) {
     ctx.fillStyle = COLORS.foreground;
     ctx.font = `bold ${size * RATIOS.textSize}px Arial`;
     ctx.textAlign = "center";
-    ctx.fillText("NS", centerX, centerY + size * RATIOS.textOffset);
+    ctx.fillText("WT", centerX, centerY + size * RATIOS.textOffset);
   }
 
   return canvas;
@@ -137,7 +145,7 @@ function generateIcons(): void {
     { size: 512, filename: "icon-512.png", name: "512x512 PWA Icon" },
   ];
 
-  console.log("🎨 Generating NextShift icons...\n");
+  console.log("🎨 Generating Worktime icons...\n");
 
   icons.forEach(({ size, filename, name }) => {
     try {

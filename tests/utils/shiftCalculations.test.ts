@@ -857,7 +857,7 @@ describe("getOffDayProgress Function Tests", () => {
             const date2 = date1.add(1, "day");
             const progress2 = getOffDayProgress(date2, offTeam, "5-shift");
 
-            if (progress2 && calculateShift(date2, offTeam, "5-shift").code === "OFF") {
+            if (progress2 && calculateShift(date2, offTeam, "5-shift").code === "O") {
               expect(progress2.total).toBe(4);
               expect(progress2.current).toBe(progress1.current + 1);
             }

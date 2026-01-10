@@ -53,6 +53,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getShiftDisplay: vi.fn((shift) => ({
     displayName: shift.name,
     displayHours: shift.hours,
+    displayCode: shift.code,
   })),
 }));
 
