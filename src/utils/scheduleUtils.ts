@@ -1,8 +1,30 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
 
+/**
+ * Get the roster configuration for a given schedule option.
+ *
+ * **Default Behavior**: Falls back to "5-shift" when scheduleOption is null/undefined.
+ * This fallback exists for backward compatibility with existing user data from before
+ * the schedule selection feature was introduced. New users are required to explicitly
+ * select a schedule during onboarding, but existing users may have null in localStorage.
+ *
+ * @param scheduleOption - The schedule option to look up, or null/undefined to use the default
+ * @returns The roster configuration for the schedule
+ * @throws {Error} If the schedule option is not found in SCHEDULE_OPTIONS
+ *
+ * @example
+ * // Explicit schedule lookup
+ * const config = getScheduleConfig("9-5");
+ *
+ * @example
+ * // Fallback to default for backward compatibility
+ * const config = getScheduleConfig(null); // Returns "5-shift" config
+ */
 export function getScheduleConfig(
   scheduleOption: ScheduleOption | null | undefined,
 ): ScheduleRoster {
+  // Fallback to "5-shift" for backward compatibility with pre-schedule-selection user data.
+  // New users must explicitly select a schedule during onboarding (see WelcomeWizard).
   const lookupKey = scheduleOption ?? "5-shift";
   const config = SCHEDULE_OPTIONS.find((option) => option.value === lookupKey);
 

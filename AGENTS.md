@@ -6,9 +6,15 @@ This file provides guidance for AI coding agents working with this repository.
 
 **Worktime** - Created by **[Jorim Tielemans](https://github.com/tjorim)**
 
-Worktime is a Team Shift Tracker and Time-Off Manager for continuous (24/7) 5-team shift schedules. This lightweight web application combines shift tracking with integrated time-off management (.hday format), allowing users to quickly check which teams are working on any given day, see when their team's next shift is, manage vacation/time-off events, and identify transfer/handover points between teams.
+Worktime is a Team Shift Tracker and Time-Off Manager supporting multiple roster patterns including continuous 24/7 rotations, standard weekday schedules, and custom shift patterns. This lightweight web application combines shift tracking with integrated time-off management (.hday format), allowing users to select their schedule type, check which teams are working on any given day, see when their team's next shift is, manage vacation/time-off events, and identify transfer/handover points between teams.
 
-**Note**: Previously known as NextShift. Rebranded to Worktime with v4.0.0 after merging HdayPlanner's time-off management capabilities.
+**Supported Schedule Types**:
+- **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
+- **9-5**: Standard weekday schedule (Mon-Fri, single user)
+- **2-shift**: Alternating early/late shifts (coming soon)
+- **Weekend shift**: Weekend-only rotation (coming soon)
+
+**Note**: Previously known as NextShift. Rebranded to Worktime with v4.0.0 after merging HdayPlanner's time-off management capabilities. Schedule selection and multi-roster support added in v4.4.0.
 
 ## Setup Commands
 
@@ -84,6 +90,7 @@ npm test -- --coverage      # Run with coverage report
 
 - `tests/components/` - Component tests
 - `tests/hooks/` - Hook tests
+- `tests/data/rosters.test.ts` - Roster configuration validation tests (14 test cases)
 - `tests/lib/hday.test.ts` - .hday parser tests (139 test cases)
 - `tests/contexts/EventStoreContext.test.tsx` - Event store tests
 - `tests/shiftCalculations.test.ts` - Business logic tests
@@ -113,7 +120,8 @@ Worktime/
 │   │   ├── SettingsContext.tsx      # User settings (team, time format, etc.)
 │   │   └── ToastContext.tsx         # Global toast notification system
 │   ├── data/              # Static data and configurations
-│   │   └── changelog.ts            # Changelog data structure for in-app viewer
+│   │   ├── changelog.ts            # Changelog data structure for in-app viewer
+│   │   └── rosters.ts              # Schedule roster configurations and patterns (IMPORTANT)
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useCountdown.ts         # Countdown timer hook for next shift timing
 │   │   ├── useFocusTrap.ts         # Focus trap for modals
@@ -154,21 +162,191 @@ Worktime/
 └── tsconfig.test.json     # TypeScript test configuration
 ```
 
+## Roster System Architecture
+
+**Location**: `src/data/rosters.ts`
+
+Worktime uses a structured, machine-readable roster configuration system that centralizes all schedule patterns and shift definitions. This architecture enables the app to support multiple schedule types while maintaining consistent shift calculations across the codebase.
+
+### Schedule Configuration Structure
+
+Each schedule is defined by a `ScheduleRoster` object containing:
+
+```typescript
+type ScheduleRoster = {
+  value: ScheduleOption;           // "5-shift" | "9-5" | "2-shift" | "weekend-shift"
+  title: string;                   // Display name for schedule selection
+  description: string;             // User-facing description
+  showsTeamSelection: boolean;     // Whether to show team selection in wizard
+  isAvailable: boolean;            // Whether schedule is ready for use
+  shiftConfig: ShiftRosterConfig;  // Detailed shift configuration
+};
+
+type ShiftRosterConfig = {
+  teamCount: number;               // Number of teams (1 for single-user)
+  cycleLengthDays: number;         // Length of repeating cycle
+  shiftsPerDay: number;            // How many shifts per 24h period
+  schedulePattern: SchedulePattern; // Day-by-day shift assignments
+  referenceDate: string;           // ISO date anchoring calculations
+  referenceTeam: number;           // Team number at reference point
+  notes?: string;                  // Developer documentation
+  shiftDisplayOverrides?: { ... }; // Custom display names/codes
+};
+```
+
+### Schedule Pattern Format
+
+Patterns define the repeating cycle of shifts:
+
+```typescript
+schedulePattern: {
+  days: [
+    { dayIndex: 1, shift: "M" },  // Day 1: Morning
+    { dayIndex: 2, shift: "M" },  // Day 2: Morning
+    { dayIndex: 3, shift: "L" },  // Day 3: Late
+    // ... continues for full cycle
+  ],
+  extra?: {
+    weekendAssignment?: string,    // Weekend rotation details
+    jumpday?: string,              // Jump day information
+  }
+}
+```
+
+**Shift Codes**:
+- `M` - Morning/Early shift
+- `L` - Late/Evening shift
+- `N` - Night shift
+- `D` - Day shift (standard 9-5 hours)
+- `O` - Off day
+
+### Reference Date System
+
+Each schedule uses a **reference date** and **reference team** to anchor shift calculations:
+
+- **Reference Date**: A specific ISO date (YYYY-MM-DD) when the reference team is at a known point in their cycle
+- **Reference Team**: Which team number is at the reference point on the reference date
+- All shift calculations work forward/backward from this anchor point
+
+**Example** (5-shift):
+```typescript
+referenceDate: "2025-07-16",  // Wednesday
+referenceTeam: 1,             // Team 1 is on day 1 of cycle (Morning shift)
+```
+
+This means on July 16, 2025, Team 1 is working their first morning shift of the cycle. All other dates and teams are calculated relative to this anchor.
+
+### Adding a New Schedule
+
+To add a new roster pattern:
+
+1. **Define the schedule configuration** in `SCHEDULE_OPTIONS` array in `src/data/rosters.ts`:
+
+```typescript
+{
+  value: "my-schedule",
+  title: "My Schedule",
+  description: "Description for users",
+  showsTeamSelection: true,  // false for single-user schedules
+  isAvailable: true,         // false while in development
+  shiftConfig: {
+    teamCount: 3,
+    cycleLengthDays: 21,
+    shiftsPerDay: 2,
+    referenceDate: "2025-01-06",  // Pick a Monday for consistency
+    referenceTeam: 1,
+    schedulePattern: {
+      days: [
+        { dayIndex: 1, shift: "M" },
+        // ... define all days in cycle
+      ],
+    },
+    notes: "Internal documentation about this schedule",
+  },
+}
+```
+
+2. **Add the option to the type** in `src/data/rosters.ts`:
+
+```typescript
+export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift" | "my-schedule";
+```
+
+3. **Validation runs automatically** at module load - if your configuration is invalid, the app will throw an error on startup with details about what's wrong
+
+4. **Add tests** in `tests/data/rosters.test.ts` to verify your pattern
+
+5. **Test shift calculations** to ensure the reference date/team anchoring works correctly
+
+### Display Overrides
+
+Customize how shifts appear to users without changing internal logic:
+
+```typescript
+shiftDisplayOverrides: {
+  M: {
+    displayName: "Early",           // Show "Early" instead of "Morning"
+    displayCode: "E",               // Show "E" instead of "M"
+    displayHours: "06:00-14:30",   // Custom hours display
+  },
+}
+```
+
+**Note**: Display codes are context-dependent. "E" can mean "Early" in one schedule and "Evening" in another - users only see one schedule at a time, so there's no collision.
+
+### Validation
+
+The system validates all configurations at module load time (`validateSchedulePattern` function):
+
+1. Pattern length matches `cycleLengthDays`
+2. Day indices are sequential (1, 2, 3, ...)
+3. Shift codes are valid (M, L, N, D, O)
+4. Reference date is valid ISO format and parseable
+5. Reference team is within valid range (1 to `teamCount`)
+6. Cycle length is reasonable (1-365 days)
+7. Team count is positive
+8. At least one working shift exists (not all off days)
+
+If validation fails, the error message will indicate exactly what's wrong.
+
+### How Shift Calculations Work
+
+All shift calculation functions in `src/utils/shiftCalculations.ts` now accept an optional `scheduleOption` parameter:
+
+```typescript
+// Get shift for a specific date, team, and schedule
+const shift = calculateShift(date, teamNumber, scheduleOption);
+
+// Calculate next shift for a team
+const nextShift = getNextShift(date, teamNumber, scheduleOption);
+
+// Get shift code in YYWW.D format
+const code = getShiftCode(date, teamNumber, scheduleOption);
+```
+
+When `scheduleOption` is null/undefined, the system falls back to "5-shift" for backward compatibility with existing user data.
+
 ## Core Logic & Architecture
 
-### Shift Pattern
+### 5-Shift Pattern (Default/Legacy)
 
-Each team works a repeating cycle:
+The original 5-shift continuous rotation - each team works a repeating 10-day cycle:
 
 - 2 mornings (7h-15h) - Code: M
-- 2 evenings (15h-23h) - Code: E
+- 2 evenings (15h-23h) - Code: L (displays as "E" for Evening)
 - 2 nights (23h-7h) - Code: N
-- 4 days off
-  Total cycle: 10 days per team
+- 4 days off - Code: O
 
-### Team Numbers
+Teams are numbered 1-5, with each team offset by 2 days in the schedule cycle, ensuring 24/7 coverage.
 
-Teams are numbered 1-5, with each team offset in the schedule cycle.
+### 9-5 Pattern
+
+Standard weekday schedule - single user, 7-day cycle:
+
+- Monday-Friday: Day shift (9h-17h) - Code: D
+- Saturday-Sunday: Off - Code: O
+
+No team selection needed (teamCount = 1).
 
 ### Date Format
 
@@ -179,55 +357,28 @@ Uses weeknumber.weekday format (YYWW.D):
 - Night shifts use previous day (2520.1N for night starting Monday 23h)
 - Full shift codes: **2520.2M**, **2520.2E**, **2520.1N**
 
-### Reference Variables (Configurable)
+### Legacy Reference Variables (Deprecated)
 
-The app supports configurable reference values for shift calculations:
+**Note**: Reference dates and teams are now defined per-schedule in `src/data/rosters.ts`. The old environment variable system is maintained for backward compatibility but should not be used for new schedules.
 
-**Environment Variables (Build-time):**
+Legacy environment variables (for 5-shift schedule only):
+- `VITE_REFERENCE_DATE` - Defaults to schedule-specific reference date
+- `VITE_REFERENCE_TEAM` - Defaults to schedule-specific reference team
 
-```bash
-# Set in .env file or build environment
-VITE_REFERENCE_DATE=2025-01-06
-VITE_REFERENCE_TEAM=1
-```
-
-**Runtime Configuration:**
-
-```javascript
-// Add to index.html before main script
-window.WORKTIME_CONFIG = {
-    REFERENCE_DATE: '2025-01-06',
-    REFERENCE_TEAM: 1
-};
-```
-
-**Deployment Examples:**
-
-```bash
-# Development
-echo "VITE_REFERENCE_DATE=2025-01-06" > .env
-echo "VITE_REFERENCE_TEAM=1" >> .env
-
-# Production build
-VITE_REFERENCE_DATE=2025-01-13 VITE_REFERENCE_TEAM=3 npm run build
-
-# Docker
-ENV VITE_REFERENCE_DATE=2025-01-06
-ENV VITE_REFERENCE_TEAM=1
-```
-
-These variables anchor all shift calculations. If not configured, defaults to `2025-01-06` and team `1`.
+For new schedules, configure `referenceDate` and `referenceTeam` directly in the roster configuration.
 
 ## Key Features
 
-- **Team Shift View**: Show all 5 teams and their shifts for any selected date
-- **My Team Selection**: User selects their team on first visit (stored in localStorage)
+- **Schedule Selection**: Users choose their roster type during onboarding (5-shift, 9-5, etc.)
+- **Team Shift View**: Show all teams and their shifts for any selected date (for multi-team schedules)
+- **My Team Selection**: User selects their team on first visit for multi-team schedules (stored in localStorage)
 - **Next Shift Lookup**: See when any team's next shift is scheduled
 - **My Team Next Shift**: Quickly see when user's team works next
 - **Transfer/Handover View**: See when user's team transfers with any other team (works before/after)
 - **Time Off Management**: Import/export .hday files for vacation and time-off tracking with event overlays on schedule
 - **Date Navigation**: Today button, date picker, previous/next day
 - **Date Format**: Display in YYWW.D format (e.g., 2520.2M = year 2025, week 20, Tuesday Morning)
+- **Live Status**: Real-time shift status with countdown to next shift and off-day progress tracking
 
 ## Time Off Management (.hday Integration)
 
@@ -303,28 +454,30 @@ d1i # Every Monday in office
 - **Code Quality**: oxlint and oxfmt (OXC tools) for ultra-fast linting and formatting
 - **Testing**: Vitest with React Testing Library for component and unit testing
 
-## Recent Improvements (v3.1+)
+## Recent Improvements
 
-### Component Architecture Enhancements
+### v4.4 - Multi-Roster Support (Current)
+
+- **Structured Roster System**: Machine-readable schedule configurations in `src/data/rosters.ts`
+- **Schedule Selection**: Onboarding wizard now includes schedule selection step
+- **Multiple Schedule Types**: Support for 5-shift, 9-5, 2-shift (coming soon), weekend-shift (coming soon)
+- **Runtime Validation**: Comprehensive validation of roster configurations at module load
+- **Reference Date System**: Per-schedule reference dates and teams for accurate calculations
+- **Display Overrides**: Customize shift names, codes, and hours per schedule
+- **Schedule-Aware Components**: All shift calculations now support multiple roster patterns
+- **Backward Compatibility**: Existing 5-shift users continue working without migration
+
+### v3.1+ - Component Architecture & Performance
 
 - **ShiftTimeline Component**: Extracted timeline logic from CurrentStatus into dedicated component for better separation of concerns
 - **Enhanced CurrentStatus**: Optimized layout with datetime moved to header area and improved timeline display
 - **Cross-day Timeline**: Fixed timeline to show next shift from tomorrow when current shift is last of day (e.g., T1 M after T4 N)
-
-### Performance Optimizations
-
 - **useLiveTime Hook**: Configurable update frequency with minute-level default (60x fewer re-renders)
 - **Precision Control**: Second-level updates available when needed for precise timing
 - **Memoized Calculations**: Better performance for shift day computations
-
-### Date Code Accuracy
-
 - **Night Shift Fix**: Date codes now correctly use shift day instead of calendar day (2530.5N instead of 2530.6N)
 - **Enhanced Display**: Current status shows combined format "2530.5N • Saturday, Jul 26 • 02:24"
 - **Tooltip Context**: Shows both calendar day and shift day for user clarity
-
-### User Experience
-
 - **Interactive Changelog**: In-app changelog viewer with accordion interface
 - **Toast Notifications**: Global notification system with React Context
 - **Error Boundaries**: Graceful error handling and recovery

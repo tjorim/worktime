@@ -52,7 +52,7 @@ export type ScheduleRoster = {
  * Throws an error if validation fails.
  */
 function validateSchedulePattern(config: ShiftRosterConfig): void {
-  const { schedulePattern, cycleLengthDays } = config;
+  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam } = config;
 
   // Validation 1: Pattern length matches cycle length
   if (schedulePattern.days.length !== cycleLengthDays) {
@@ -84,6 +84,55 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
       `Schedule pattern validation failed: ` +
         `Invalid shift codes found: ${invalidShifts.map((d) => `${d.shift} at day ${d.dayIndex}`).join(", ")}. ` +
         `Valid codes: M, L, N, D, O`,
+    );
+  }
+
+  // Validation 4: Reference date is valid ISO format and parseable
+  const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoDatePattern.test(referenceDate)) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Reference date "${referenceDate}" is not in ISO format (YYYY-MM-DD)`,
+    );
+  }
+
+  const refDate = new Date(referenceDate);
+  if (Number.isNaN(refDate.getTime())) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Reference date "${referenceDate}" is not a valid date`,
+    );
+  }
+
+  // Validation 5: Reference team is within valid range
+  if (referenceTeam < 1 || referenceTeam > teamCount) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Reference team ${referenceTeam} is outside valid range (1-${teamCount})`,
+    );
+  }
+
+  // Validation 6: Cycle length is reasonable (1-365 days)
+  if (cycleLengthDays < 1 || cycleLengthDays > 365) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Cycle length ${cycleLengthDays} is outside reasonable range (1-365 days)`,
+    );
+  }
+
+  // Validation 7: Team count is positive
+  if (teamCount < 1) {
+    throw new Error(
+      `Schedule pattern validation failed: ` + `Team count ${teamCount} must be at least 1`,
+    );
+  }
+
+  // Validation 8: At least one working shift exists (not all off days)
+  const hasWorkingShift = schedulePattern.days.some((d) => d.shift !== "O");
+  if (!hasWorkingShift) {
+    throw new Error(
+      `Schedule pattern validation failed: ` +
+        `Pattern must contain at least one working shift (all days are marked as "O" - off)`,
     );
   }
 }
