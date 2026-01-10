@@ -223,7 +223,7 @@ export function ScheduleView({
                     <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
                   </td>
                   {weekDays.map((day) => {
-                    const shift = calculateShift(day, teamNumber, scheduleType ?? undefined);
+                    const shift = calculateShift(day, teamNumber, scheduleType);
                     const isToday = day.isSame(dayjs(), "day");
                     const shiftDisplay = getShiftDisplay(shift, scheduleType);
 

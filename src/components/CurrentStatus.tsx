@@ -76,12 +76,12 @@ export function CurrentStatus({
     if (!validatedTeam) return null;
 
     const shiftDay = getCurrentShiftDay(today);
-    const shift = calculateShift(shiftDay, validatedTeam, scheduleType ?? undefined);
+    const shift = calculateShift(shiftDay, validatedTeam, scheduleType);
 
     return {
       date: shiftDay,
       shift,
-      code: getShiftCode(today, validatedTeam, scheduleType ?? undefined),
+      code: getShiftCode(today, validatedTeam, scheduleType),
       teamNumber: validatedTeam,
     };
   }, [validatedTeam, todayMinuteKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
@@ -89,7 +89,7 @@ export function CurrentStatus({
   // Calculate next shift from today
   const nextShift = useMemo((): UpcomingShiftResult | null => {
     if (!validatedTeam) return null;
-    return getNextShift(today, validatedTeam, scheduleType ?? undefined);
+    return getNextShift(today, validatedTeam, scheduleType);
   }, [validatedTeam, todayMinuteKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate next shift change across all teams when no team is selected
@@ -103,7 +103,7 @@ export function CurrentStatus({
     // Check shifts for today and next few days to find the next shift change
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const checkDate = now.add(dayOffset, "day");
-      const allTeamsShifts = getAllTeamsShifts(checkDate, scheduleType ?? undefined);
+      const allTeamsShifts = getAllTeamsShifts(checkDate, scheduleType);
 
       for (const teamShift of allTeamsShifts) {
         if (!teamShift.shift.isWorking || !teamShift.shift.start) continue;
@@ -136,7 +136,7 @@ export function CurrentStatus({
     const now = today;
 
     // Check today's shifts
-    const allTeamsToday = getAllTeamsShifts(today, scheduleType ?? undefined);
+    const allTeamsToday = getAllTeamsShifts(today, scheduleType);
     const workingToday = allTeamsToday.find((teamShift) => {
       if (!teamShift.shift.isWorking) return false;
       return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
@@ -146,7 +146,7 @@ export function CurrentStatus({
 
     // Also check yesterday's shifts (for night shifts spanning midnight)
     const yesterday = today.subtract(1, "day");
-    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleType ?? undefined);
+    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleType);
     const workingYesterday = allTeamsYesterday.find((teamShift) => {
       if (!teamShift.shift.isWorking) return false;
       return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
@@ -158,7 +158,7 @@ export function CurrentStatus({
   // Calculate off-day progress when team is off
   const offDayProgress = useMemo((): OffDayProgress | null => {
     if (!validatedTeam) return null;
-    return getOffDayProgress(today, validatedTeam, scheduleType ?? undefined);
+    return getOffDayProgress(today, validatedTeam, scheduleType);
   }, [validatedTeam, todayMinuteKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- Using minute-based ISO string to limit recalculation to once per minute instead of every render
 
   // Calculate next shift start time for countdown
@@ -180,7 +180,7 @@ export function CurrentStatus({
   const currentTimeShiftCode = useMemo(() => {
     if (!validatedTeam) return null;
     const shiftDay = getCurrentShiftDay(liveTime);
-    const shift = calculateShift(shiftDay, validatedTeam, scheduleType ?? undefined);
+    const shift = calculateShift(shiftDay, validatedTeam, scheduleType);
     return shift.code;
   }, [liveTime, validatedTeam, scheduleType]);
 
