@@ -61,7 +61,10 @@ export function CurrentStatus({
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
-  const validatedTeam = getEffectiveTeam(myTeam, scheduleOption);
+  const validatedTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleOption),
+    [myTeam, scheduleOption],
+  );
 
   // Always use today's date for current status
   const today = dayjs();
