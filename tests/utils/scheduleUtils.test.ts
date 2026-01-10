@@ -112,7 +112,7 @@ describe("scheduleUtils", () => {
       });
 
       it("should log a warning for invalid team numbers", () => {
-        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
         
         getEffectiveTeam(999, "5-shift");
         

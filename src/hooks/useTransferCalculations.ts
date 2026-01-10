@@ -126,7 +126,7 @@ export function useTransferCalculations({
       return 1;
     }
     if (myTeam === null) return null;
-    if (typeof myTeam !== "number" || myTeam < 1 || myTeam > teamCount) {
+    if (myTeam < 1 || myTeam > teamCount) {
       console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
       return null;
     }
