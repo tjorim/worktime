@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
-import { getEffectiveTeam, getTeamCountForOption } from "../utils/scheduleUtils";
+import { getScheduleConfig, getTeamCountForOption } from "../utils/scheduleUtils";
 import { calculateShift, type ShiftType } from "../utils/shiftCalculations";
 
 export type TransferType = "handover" | "takeover";
@@ -115,13 +115,23 @@ export function useTransferCalculations({
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
   const { scheduleOption } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleOption);
   const teamCount = getTeamCountForOption(scheduleOption);
+  const showsTeamSelection = scheduleConfig.showsTeamSelection;
 
-  // Get effective team - for single-user schedules, this returns 1 when myTeam is null
-  const validatedMyTeam = useMemo(
-    () => getEffectiveTeam(myTeam, scheduleOption),
-    [myTeam, scheduleOption],
-  );
+  // Validate myTeam is within valid range for current schedule
+  const validatedMyTeam = useMemo(() => {
+    // For single-user schedules (e.g., 9-5), the user is always effectively "team 1"
+    if (!showsTeamSelection) {
+      return 1;
+    }
+    if (myTeam === null) return null;
+    if (typeof myTeam !== "number" || myTeam < 1 || myTeam > teamCount) {
+      console.warn(`Invalid team number ${myTeam} (expected 1-${teamCount}). Treating as null.`);
+      return null;
+    }
+    return myTeam;
+  }, [myTeam, teamCount, showsTeamSelection]);
 
   // Get available other teams (excludes user's team)
   const availableOtherTeams = useMemo(() => {
