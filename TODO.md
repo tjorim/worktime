@@ -140,7 +140,26 @@ Track the Phase 1–3 extraction and integration work from `WORKTIME_PLAN.md` so
 
 Features that enhance functionality with moderate development effort.
 
-#### 4. Reusable TeamSelector Component
+#### 4. Cross-Schedule Transfer View Enhancement
+
+- **Component**: TransferView with cross-schedule coordination
+- **Use Cases**:
+  - View when user's schedule overlaps with teams on different schedules
+  - 9-5 user can see when their working hours overlap with 5-shift teams
+  - Cross-schedule coordination and handover visibility
+  - Enables meeting scheduling across different roster patterns
+- **Implementation**:
+  - Add schedule selector to TransferView (similar to ScheduleView/TodayView)
+  - Calculate overlapping work periods between different schedules
+  - Define what "transfer" means across different schedule types
+  - Show overlap hours/periods instead of traditional handover moments
+- **Files to Modify**:
+  - `src/components/TransferView.tsx` - Add cross-schedule viewing and overlap calculation
+  - `src/utils/shiftCalculations.ts` - Add cross-schedule overlap detection utilities
+- **Estimated Effort**: 4-5 hours
+- **Status**: 🔲 Planned (enables cross-roster coordination)
+
+#### 5. Reusable TeamSelector Component
 
 - **Component**: Extract common team selection logic
 - **Use Cases**:
@@ -155,7 +174,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Planned
 
-#### 5. Enhanced List Groups
+#### 6. Enhanced List Groups
 
 - **Component**: `react-bootstrap/ListGroup`
 - **Use Cases**:
@@ -166,7 +185,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 6. TeamDetailModal Enhancement
+#### 7. TeamDetailModal Enhancement
 
 - **Component**: Improve existing team detail modal
 - **Use Cases**:
@@ -177,7 +196,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Future
 
-#### 7. Enhanced Error Boundaries
+#### 8. Enhanced Error Boundaries
 
 - **Component**: More granular error handling
 - **Use Cases**:
@@ -188,7 +207,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 8. CurrentStatus Component Refactoring ⭐️
+#### 9. CurrentStatus Component Refactoring ⭐️
 
 - **Component**: Simplify complex conditional rendering in CurrentStatus
 - **Priority**: Elevated due to code review feedback
@@ -219,7 +238,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Planned (High Priority)
 
-#### 9. Time-Off Calendar Visual Enhancements
+#### 10. Time-Off Calendar Visual Enhancements
 
 - **Component**: TimeOffView calendar display improvements
 - **Use Cases**:
@@ -232,7 +251,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 10. Time-Off Bulk Operations
+#### 11. Time-Off Bulk Operations
 
 - **Component**: Multi-event management
 - **Use Cases**:
@@ -243,7 +262,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 11. Calendar Export Formats
+#### 12. Calendar Export Formats
 
 - **Component**: Multi-format export functionality
 - **Use Cases**:
@@ -263,7 +282,7 @@ Features that enhance functionality with moderate development effort.
 
 Advanced features for future development phases.
 
-#### 12. Carousel for Mobile Team View
+#### 13. Carousel for Mobile Team View
 
 - **Component**: `react-bootstrap/Carousel`
 - **Use Cases**:
@@ -273,7 +292,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Future
 
-#### 13. Accordion for Transfer History
+#### 14. Accordion for Transfer History
 
 - **Component**: `react-bootstrap/Accordion`
 - **Use Cases**:
@@ -283,7 +302,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 14. Notification System Implementation
+#### 15. Notification System Implementation
 
 - **Component**: Browser notification functionality
 - **Use Cases**:
@@ -294,7 +313,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 15. Advanced Accessibility Features
+#### 16. Advanced Accessibility Features
 
 - **Component**: Enhanced accessibility support
 - **Use Cases**:
@@ -306,7 +325,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 16. Multi-Roster Pattern Support
+#### 17. Multi-Roster Pattern Support
 
 - **Component**: Configurable shift patterns beyond 5-team 2-2-2-4 cycle
 - **Use Cases**:
@@ -329,7 +348,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 8–12 hours (Major feature)
 - **Status**: 🔲 Future
 
-#### 17. Floating Action Button
+#### 18. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -341,7 +360,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 18. Roster-Specific Shift Times for Live Features
+#### 19. Roster-Specific Shift Times for Live Features
 
 - **Component**: Support different actual start/end times per roster for live status calculations
 - **Current Limitation**: `displayHours` in `ShiftDisplayOverride` is display-only (string format). Live features (LIVE badge, countdown timers, "currently working" detection) use global SHIFTS constants (MORNING: 7-15, LATE: 15-23, etc.) which causes incorrect live status for rosters with non-standard hours.
@@ -367,7 +386,7 @@ Advanced features for future development phases.
 
 1. **Export Schedule Feature** - Calendar export functionality (user-facing)
 2. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
-3. **CurrentStatus Component Refactoring** ⭐️ - Elevated priority due to code review feedback
+3. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
 
 ### 📋 Backlog (Code Quality)
 

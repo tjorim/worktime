@@ -9,48 +9,8 @@ import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
 
-// Mock shift calculation utilities
-vi.mock("../../src/utils/shiftCalculations", () => ({
-  getShiftByCode: vi.fn(() => ({
-    code: "M",
-    emoji: "🌅",
-    name: "Morning",
-    hours: "07:00-15:00",
-    start: 7,
-    end: 15,
-    isWorking: true,
-    className: "shift-morning",
-  })),
-  getShiftDisplay: vi.fn((shift) => {
-    // Apply 5-shift roster display overrides
-    if (shift.code === "L") {
-      return {
-        displayName: "Evening",
-        displayHours: shift.hours,
-        displayCode: "E",
-      };
-    }
-    return {
-      displayName: shift.name,
-      displayHours: shift.hours,
-      displayCode: shift.code,
-    };
-  }),
-  getFormattedShiftTime: vi.fn(() => "07:00-15:00"),
-  isCurrentlyWorking: vi.fn(() => false),
-}));
-
-function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <ToastProvider>
-      <SettingsProvider>
-        <EventStoreProvider>{ui}</EventStoreProvider>
-      </SettingsProvider>
-    </ToastProvider>,
-  );
-}
-
-const mockTodayShifts: ShiftResult[] = [
+// Mock today shifts data
+const mockTodayShiftsData: ShiftResult[] = [
   {
     teamNumber: 1,
     shift: {
@@ -97,6 +57,50 @@ const mockTodayShifts: ShiftResult[] = [
     code: "2503.3O",
   },
 ];
+
+// Mock shift calculation utilities
+vi.mock("../../src/utils/shiftCalculations", () => ({
+  getAllTeamsShifts: vi.fn(() => mockTodayShiftsData),
+  getShiftByCode: vi.fn(() => ({
+    code: "M",
+    emoji: "🌅",
+    name: "Morning",
+    hours: "07:00-15:00",
+    start: 7,
+    end: 15,
+    isWorking: true,
+    className: "shift-morning",
+  })),
+  getShiftDisplay: vi.fn((shift) => {
+    // Apply 5-shift roster display overrides
+    if (shift.code === "L") {
+      return {
+        displayName: "Evening",
+        displayHours: shift.hours,
+        displayCode: "E",
+      };
+    }
+    return {
+      displayName: shift.name,
+      displayHours: shift.hours,
+      displayCode: shift.code,
+    };
+  }),
+  getFormattedShiftTime: vi.fn(() => "07:00-15:00"),
+  isCurrentlyWorking: vi.fn(() => false),
+}));
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <ToastProvider>
+      <SettingsProvider>
+        <EventStoreProvider>{ui}</EventStoreProvider>
+      </SettingsProvider>
+    </ToastProvider>,
+  );
+}
+
+const mockTodayShifts = mockTodayShiftsData;
 
 const defaultProps = {
   todayShifts: mockTodayShifts,

@@ -14,9 +14,34 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.5.0",
+    date: "2026-01-11",
+    status: "current",
+    added: [
+      "Cross-Schedule Viewing: Schedule and Today views now include schedule selector dropdown allowing users to view any schedule type (9-5, 5-shift, 2-shift, weekend-shift)",
+      "Shared Component Library: Created reusable ShiftBadge, ShiftTimeDisplay, and CountdownBadge components for consistent shift display across the app",
+      "PersonalizedStatus Component: Extracted personalized team status view with countdown timers, off-day progress, and shift timeline",
+      "GenericStatus Component: Extracted generic status view for users without team selection, showing currently working team and next shift across all teams",
+      "ScheduleDetailModal: Renamed from TeamDetailModal and adapted for both multi-team and single-user schedules",
+    ],
+    changed: [
+      "CurrentStatus Architecture: Refactored from 486-line monolithic component to clean 40-line router delegating to PersonalizedStatus and GenericStatus (following NextShift PR #34 pattern)",
+      "Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without *FiveShift wrapper functions",
+      "Component Organization: Created status/ and shared/ subdirectories for better code organization and discoverability",
+      "Transfer Tab Visibility: Transfer tab now always visible to enable future cross-schedule coordination features",
+      "TodayView Shift Calculations: Moved from MainTabs into component for cross-schedule viewing support",
+    ],
+    fixed: [],
+    technicalDetails: {
+      title: "Schedule-Generic Component Refactoring",
+      description:
+        "Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed *FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use scheduleConfig.showsTeamSelection to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.",
+    },
+  },
+  {
     version: "4.4.1",
     date: "2026-01-10",
-    status: "current",
+    status: "released",
     added: [
       "Schedule Pattern Validation: Runtime validation ensures schedule configurations are correct at module load time",
       "Comprehensive Roster Tests: 14 new tests validating schedule patterns, shift codes, and reference dates",
