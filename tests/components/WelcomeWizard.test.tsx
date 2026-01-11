@@ -1137,7 +1137,6 @@ describe("WelcomeWizard", () => {
         JSON.stringify(userStateWithInvalidSchedule),
       );
 
-      const user = userEvent.setup();
       render(<App />);
 
       await findModalTitle(/Welcome to Worktime/i);
