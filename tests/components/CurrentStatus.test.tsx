@@ -427,7 +427,7 @@ describe("CurrentStatus Component", () => {
       expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
         expect.any(Object),
         4,
-        undefined,
+        null,
       );
     });
   });
@@ -481,7 +481,7 @@ describe("CurrentStatus Component", () => {
       expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
         expect.any(Object),
         1,
-        undefined,
+        null,
       );
 
       rerender(
@@ -495,7 +495,7 @@ describe("CurrentStatus Component", () => {
       expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
         expect.any(Object),
         2,
-        undefined,
+        null,
       );
     });
 
