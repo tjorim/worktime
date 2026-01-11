@@ -22,7 +22,7 @@ interface AboutModalProps {
 export function AboutModal({ show, onHide }: AboutModalProps) {
   const { scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const isFiveShift = scheduleType === "5-shift";
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>

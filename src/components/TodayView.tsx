@@ -303,8 +303,9 @@ function TodayViewFiveShift({
 export function TodayView(props: TodayViewProps) {
   const { scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
-  if (scheduleType !== "5-shift") {
+  if (!isFiveShift) {
     return (
       <Card>
         <Card.Header>

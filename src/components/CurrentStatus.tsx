@@ -464,8 +464,9 @@ function CurrentStatusFiveShift({
 export function CurrentStatus(props: CurrentStatusProps) {
   const { scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
-  if (scheduleType !== "5-shift") {
+  if (!isFiveShift) {
     return (
       <Col className="mb-4">
         <Card>
