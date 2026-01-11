@@ -339,10 +339,10 @@ function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: Transf
 
 export function TransferView(props: TransferViewProps) {
   const { scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const isFiveShift = scheduleConfig.value === "5-shift";
+  const isFiveShift = getScheduleConfig(scheduleType).value === "5-shift";
 
   if (!isFiveShift) {
+    const scheduleConfig = getScheduleConfig(scheduleType);
     return (
       <Card>
         <Card.Header className="d-flex justify-content-between align-items-center">
