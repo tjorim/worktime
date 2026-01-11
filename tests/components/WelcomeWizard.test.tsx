@@ -1112,7 +1112,6 @@ describe("WelcomeWizard", () => {
         JSON.stringify(userStateWithInvalidSchedule),
       );
 
-      const user = userEvent.setup();
       render(<App />);
 
       // The app should still render without crashing
