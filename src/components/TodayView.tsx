@@ -195,7 +195,7 @@ function TodayViewFiveShift({
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const { scheduleType } = useSettings();
-  const hasTeams = getScheduleConfig(scheduleType).showsTeamSelection ?? true;
+  const hasTeams = getScheduleConfig(scheduleType).showsTeamSelection;
 
   // Keyboard shortcuts (only active when this tab is visible)
   useKeyboardShortcuts(
