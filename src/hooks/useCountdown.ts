@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { dayjs } from "../utils/dateTimeUtils";
 
-interface CountdownResult {
+export interface CountdownResult {
   days: number;
   hours: number;
   minutes: number;
