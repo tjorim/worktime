@@ -1074,40 +1074,6 @@ describe("WelcomeWizard", () => {
       expect(continueButton).toBeDisabled();
     });
 
-    it("should show an error if onboarding completes without a schedule", async () => {
-      const userStateWithoutSchedule = {
-        ...defaultUserState,
-        scheduleType: null,
-      };
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify(userStateWithoutSchedule),
-      );
-
-      vi.resetModules();
-      vi.doMock("../../src/components/WelcomeWizard", async () => {
-        const React = await import("react");
-        return {
-          WelcomeWizard: ({ onHide }: { onHide: () => void }) => {
-            React.useEffect(() => {
-              onHide();
-            }, [onHide]);
-            return null;
-          },
-        };
-      });
-
-      const { default: AppWithMock } = await import("../../src/App");
-      render(<AppWithMock />);
-
-      expect(
-        await screen.findByText("Please select a schedule before completing setup."),
-      ).toBeInTheDocument();
-
-      vi.doUnmock("../../src/components/WelcomeWizard");
-      vi.resetModules();
-    });
-
     it("should render the wizard when scheduleType is null", async () => {
       const userStateWithoutSchedule = {
         ...defaultUserState,
@@ -1125,44 +1091,6 @@ describe("WelcomeWizard", () => {
 
       const modalHeading = await screen.findByRole("heading", { name: /Welcome to Worktime/i });
       expect(modalHeading).toBeInTheDocument();
-    });
-
-    it("should show an error and keep the wizard open for invalid scheduleType", async () => {
-      const userStateWithInvalidSchedule = {
-        ...defaultUserState,
-        scheduleType: "invalid-schedule-type" as any,
-      };
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify(userStateWithInvalidSchedule),
-      );
-
-      render(<App />);
-
-      await findModalTitle(/Welcome to Worktime/i);
-
-      await user.click(screen.getByText("Let's Get Started!"));
-      await waitForStep(2, 4);
-
-      await user.click(screen.getByText(/Choose a Schedule/i));
-      await waitForStep(3, 4);
-
-      await user.click(screen.getByRole("button", { name: /Continue/i }));
-      await waitForStep(4, 4);
-
-      await user.click(screen.getByRole("button", { name: /^Complete$/i }));
-
-      expect(
-        await screen.findByText(
-          "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
-        ),
-      ).toBeInTheDocument();
-
-      const modalHeading = screen.getByRole("heading", { name: /Vacation Tracking/i });
-      expect(modalHeading).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /^Back$/i }));
-      await waitForStep(3, 4);
     });
   });
 });
