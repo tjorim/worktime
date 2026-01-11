@@ -58,6 +58,12 @@ export function getScheduleConfig(
   return config;
 }
 
+export function isFiveShiftSchedule(
+  scheduleOption: ScheduleOption | null | undefined,
+): boolean {
+  return getScheduleConfig(scheduleOption).value === "5-shift";
+}
+
 export function getTeamCountForOption(scheduleOption: ScheduleOption | null | undefined): number {
   const config = getScheduleConfig(scheduleOption);
   if (config.shiftConfig.teamCount === undefined) {

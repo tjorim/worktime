@@ -11,7 +11,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getScheduleConfig, isFiveShiftSchedule } from "../utils/scheduleUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
 interface TransferViewProps {
@@ -339,7 +339,7 @@ function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: Transf
 
 export function TransferView(props: TransferViewProps) {
   const { scheduleType } = useSettings();
-  const isFiveShift = getScheduleConfig(scheduleType).value === "5-shift";
+  const isFiveShift = isFiveShiftSchedule(scheduleType);
 
   if (!isFiveShift) {
     const scheduleConfig = getScheduleConfig(scheduleType);

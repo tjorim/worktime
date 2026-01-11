@@ -9,7 +9,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import type { Dayjs } from "dayjs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getScheduleConfig, isFiveShiftSchedule } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
@@ -302,7 +302,7 @@ function TodayViewFiveShift({
 
 export function TodayView(props: TodayViewProps) {
   const { scheduleType } = useSettings();
-  const isFiveShift = getScheduleConfig(scheduleType).value === "5-shift";
+  const isFiveShift = isFiveShiftSchedule(scheduleType);
 
   if (!isFiveShift) {
     const scheduleConfig = getScheduleConfig(scheduleType);
