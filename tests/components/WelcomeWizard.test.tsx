@@ -527,11 +527,11 @@ describe("WelcomeWizard", () => {
       expect(screen.getByText(/Step 1 of 5/i)).toBeInTheDocument();
 
       // Navigate to features step
-      await user.click(screen.getByText("Let's Get Started!"));
+      await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
       expect(screen.getByText(/Step 2 of 5/i)).toBeInTheDocument();
 
       // Navigate to schedule selection step
-      await user.click(screen.getByText(/Choose a Schedule/i));
+      await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
       expect(screen.getByText(/Step 3 of 5/i)).toBeInTheDocument();
 
       // Choose 5-shift to reveal team selection
@@ -1059,11 +1059,11 @@ describe("WelcomeWizard", () => {
       await findModalTitle(/Welcome to Worktime/i);
 
       // Navigate to features step
-      await user.click(screen.getByText("Let's Get Started!"));
+      await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
       await waitForStep(2, 4); // 4 steps when no schedule (no team selection)
 
       // Navigate to schedule selection step
-      await user.click(screen.getByText(/Choose a Schedule/i));
+      await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
       await waitForStep(3, 4);
 
       // Try to continue without selecting a schedule
