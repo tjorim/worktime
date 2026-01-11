@@ -70,21 +70,21 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
             <i className="bi bi-star me-2 text-warning"></i>Key Features
           </h6>
           <Row className="g-2">
-            {isFiveShift ? (
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
-                  <i className="bi bi-people text-primary me-2"></i>
-                  <span>5-team shift tracking</span>
-                </div>
-              </Col>
-            ) : (
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
-                  <i className="bi bi-calendar2-week text-primary me-2"></i>
-                  <span>Schedule type: {scheduleConfig.title}</span>
-                </div>
-              </Col>
-            )}
+            <Col xs={6}>
+              <div className="d-flex align-items-center small">
+                {isFiveShift ? (
+                  <>
+                    <i className="bi bi-people text-primary me-2"></i>
+                    <span>5-team shift tracking</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-calendar2-week text-primary me-2"></i>
+                    <span>Schedule type: {scheduleConfig.title}</span>
+                  </>
+                )}
+              </div>
+            </Col>
             <Col xs={6}>
               <div className="d-flex align-items-center small">
                 <i className="bi bi-file-earmark-text text-success me-2"></i>
