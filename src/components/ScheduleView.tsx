@@ -50,7 +50,9 @@ function ScheduleViewFiveShift({
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
+    if (import.meta.env?.DEV) {
+      console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
+    }
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
