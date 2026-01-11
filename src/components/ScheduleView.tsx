@@ -8,7 +8,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, isFiveShiftSchedule } from "../utils/scheduleUtils";
+import { getScheduleConfig } from "../utils/scheduleUtils";
+import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
   dayjs,
@@ -280,11 +281,9 @@ function ScheduleViewFiveShift({
 }
 
 export function ScheduleView(props: ScheduleViewProps) {
-  const { scheduleType } = useSettings();
-  const isFiveShift = isFiveShiftSchedule(scheduleType);
+  const { scheduleConfig, isFiveShift } = useScheduleConfig();
 
   if (!isFiveShift) {
-    const scheduleConfig = getScheduleConfig(scheduleType);
     return (
       <Card>
         <Card.Header>

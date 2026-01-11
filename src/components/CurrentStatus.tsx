@@ -8,7 +8,8 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, getEffectiveTeam, isFiveShiftSchedule } from "../utils/scheduleUtils";
+import { getScheduleConfig, getEffectiveTeam } from "../utils/scheduleUtils";
+import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
@@ -462,11 +463,9 @@ function CurrentStatusFiveShift({
 }
 
 export function CurrentStatus(props: CurrentStatusProps) {
-  const { scheduleType } = useSettings();
-  const isFiveShift = isFiveShiftSchedule(scheduleType);
+  const { scheduleConfig, isFiveShift } = useScheduleConfig();
 
   if (!isFiveShift) {
-    const scheduleConfig = getScheduleConfig(scheduleType);
     return (
       <Col className="mb-4">
         <Card>

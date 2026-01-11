@@ -10,8 +10,7 @@ import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
-import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, isFiveShiftSchedule } from "../utils/scheduleUtils";
+import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
 interface TransferViewProps {
@@ -338,11 +337,9 @@ function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: Transf
 }
 
 export function TransferView(props: TransferViewProps) {
-  const { scheduleType } = useSettings();
-  const isFiveShift = isFiveShiftSchedule(scheduleType);
+  const { scheduleConfig, isFiveShift } = useScheduleConfig();
 
   if (!isFiveShift) {
-    const scheduleConfig = getScheduleConfig(scheduleType);
     return (
       <Card>
         <Card.Header className="d-flex justify-content-between align-items-center">
