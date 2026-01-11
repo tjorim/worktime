@@ -314,20 +314,22 @@ If validation fails, the error message will indicate exactly what's wrong.
 
 ### How Shift Calculations Work
 
-All shift calculation functions in `src/utils/shiftCalculations.ts` now accept an optional `scheduleOption` parameter:
+All shift calculation functions in `src/utils/shiftCalculations.ts` now accept an optional `scheduleType` parameter:
 
 ```typescript
 // Get shift for a specific date, team, and schedule
-const shift = calculateShift(date, teamNumber, scheduleOption);
+const shift = calculateShift(date, teamNumber, scheduleType);
 
 // Calculate next shift for a team
-const nextShift = getNextShift(date, teamNumber, scheduleOption);
+const nextShift = getNextShift(date, teamNumber, scheduleType);
 
 // Get shift code in YYWW.D format
-const code = getShiftCode(date, teamNumber, scheduleOption);
+const code = getShiftCode(date, teamNumber, scheduleType);
 ```
 
-When `scheduleOption` is null/undefined, the system falls back to "5-shift" for backward compatibility with existing user data.
+When `scheduleType` is null/undefined, the system falls back to "5-shift" for backward compatibility with existing user data.
+
+**Note**: The `scheduleType` comes from the SettingsContext and represents the user's selected schedule (e.g., "5-shift", "9-5"). Use the `isValidScheduleType()` type guard from `src/utils/scheduleUtils.ts` for runtime validation of user input.
 
 ## Core Logic & Architecture
 

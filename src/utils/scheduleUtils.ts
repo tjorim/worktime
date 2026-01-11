@@ -1,6 +1,25 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
 
 /**
+ * Type guard to check if a value is a valid ScheduleOption.
+ * Useful for runtime validation of user input or localStorage data.
+ *
+ * @param value - The value to check
+ * @returns True if the value is a valid ScheduleOption
+ *
+ * @example
+ * const userInput = localStorage.getItem("schedule");
+ * if (isValidScheduleType(userInput)) {
+ *   // TypeScript now knows userInput is ScheduleOption
+ *   const config = getScheduleConfig(userInput);
+ * }
+ */
+export function isValidScheduleType(value: unknown): value is ScheduleOption {
+  if (typeof value !== "string") return false;
+  return SCHEDULE_OPTIONS.some((option) => option.value === value);
+}
+
+/**
  * Get the roster configuration for a given schedule option.
  *
  * **Default Behavior**: Falls back to "5-shift" when scheduleOption is null/undefined.

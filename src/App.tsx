@@ -198,8 +198,10 @@ function AppContent() {
         (option) => option.value === scheduleType
       );
       if (!selectedScheduleConfig) {
-        // Fail fast if the selected schedule type does not match any known configuration.
-        // This prevents silently completing onboarding with inconsistent schedule data.
+        // Defensive validation: Despite TypeScript guarantees that scheduleType is a valid
+        // ScheduleOption, this runtime check protects against data corruption, invalid
+        // localStorage state, or future refactoring issues. This prevents silently completing
+        // onboarding with inconsistent schedule data.
         showError(
           "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
           "⚠️"
