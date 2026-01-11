@@ -2,9 +2,10 @@ import type { ReactElement } from "react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScheduleView } from "../../src/components/ScheduleView";
 import { dayjs } from "../../src/utils/dateTimeUtils";
+import type { UserStateOverrides } from "../testUtils/renderWithProviders";
 import { renderWithProviders } from "../testUtils/renderWithProviders";
 
 // Mock the dependencies
@@ -86,10 +87,21 @@ const defaultProps = {
   setCurrentDate: vi.fn(),
 };
 
-const renderScheduleView = (ui: ReactElement) =>
-  renderWithProviders(ui, { withEventStore: true, withToast: true });
+const renderScheduleView = (
+  ui: ReactElement,
+  userStateOverrides: UserStateOverrides = {},
+) =>
+  renderWithProviders(ui, {
+    withEventStore: true,
+    withToast: true,
+    userStateOverrides,
+  });
 
 describe("ScheduleView", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("worktime_user_state");
+  });
+
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
       renderScheduleView(<ScheduleView {...defaultProps} />);
@@ -203,5 +215,14 @@ describe("ScheduleView", () => {
       expect(screen.getByText(/Week of/)).toBeInTheDocument();
       expect(screen.getByText(/Jan 13/)).toBeInTheDocument();
     });
+  });
+
+  it("renders fallback card for non-5-shift schedules", () => {
+    renderScheduleView(<ScheduleView {...defaultProps} />, { scheduleType: "9-5" });
+
+    expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
+    expect(screen.getByText(/Schedule type selected: 9-5\./)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Go to previous week")).not.toBeInTheDocument();
+    expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
   });
 });
