@@ -46,7 +46,7 @@ interface CurrentStatusProps {
  * @param onShowWhoIsWorking - Optional callback to show who is currently working; the corresponding control is disabled if omitted.
  * @returns A React element containing the Current Status card with status, timeline and next-shift information.
  */
-export function CurrentStatus({
+function CurrentStatusFiveShift({
   myTeam,
   onChangeTeam,
   onChangeSchedule,
@@ -459,4 +459,27 @@ export function CurrentStatus({
       </Card>
     </Col>
   );
+}
+
+export function CurrentStatus(props: CurrentStatusProps) {
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+
+  if (scheduleType !== "5-shift") {
+    return (
+      <Col className="mb-4">
+        <Card>
+          <Card.Body>
+            <Card.Title className="mb-2">Current Status</Card.Title>
+            <p className="text-muted mb-0">
+              Schedule type selected: {scheduleConfig.title}. Team status details are available for
+              5-shift schedules.
+            </p>
+          </Card.Body>
+        </Card>
+      </Col>
+    );
+  }
+
+  return <CurrentStatusFiveShift {...props} />;
 }

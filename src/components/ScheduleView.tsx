@@ -35,7 +35,7 @@ interface ScheduleViewProps {
  * @param setCurrentDate - Callback to update the displayed date
  * @returns The rendered schedule overview component
  */
-export function ScheduleView({
+function ScheduleViewFiveShift({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
@@ -277,4 +277,29 @@ export function ScheduleView({
       </Card.Body>
     </Card>
   );
+}
+
+export function ScheduleView(props: ScheduleViewProps) {
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+
+  if (scheduleType !== "5-shift") {
+    return (
+      <Card>
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h6 className="mb-0">📅 Schedule Overview</h6>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <p className="text-muted mb-0">
+            Schedule type selected: {scheduleConfig.title}. Weekly team schedules are available for
+            5-shift schedules.
+          </p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  return <ScheduleViewFiveShift {...props} />;
 }

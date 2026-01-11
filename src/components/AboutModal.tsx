@@ -3,7 +3,9 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
+import { useSettings } from "../contexts/SettingsContext";
 import { CONFIG } from "../utils/config";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 
 interface AboutModalProps {
   show: boolean;
@@ -18,6 +20,10 @@ interface AboutModalProps {
  * @returns The React element for the About modal
  */
 export function AboutModal({ show, onHide }: AboutModalProps) {
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleType === "5-shift";
+
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>
       <Modal.Header closeButton>
@@ -64,30 +70,49 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
             <i className="bi bi-star me-2 text-warning"></i>Key Features
           </h6>
           <Row className="g-2">
-            <Col xs={6}>
-              <div className="d-flex align-items-center small">
-                <i className="bi bi-people text-primary me-2"></i>
-                <span>5-team shift tracking</span>
-              </div>
-            </Col>
+            {isFiveShift ? (
+              <Col xs={6}>
+                <div className="d-flex align-items-center small">
+                  <i className="bi bi-people text-primary me-2"></i>
+                  <span>5-team shift tracking</span>
+                </div>
+              </Col>
+            ) : (
+              <Col xs={6}>
+                <div className="d-flex align-items-center small">
+                  <i className="bi bi-calendar2-week text-primary me-2"></i>
+                  <span>Schedule type: {scheduleConfig.title}</span>
+                </div>
+              </Col>
+            )}
             <Col xs={6}>
               <div className="d-flex align-items-center small">
                 <i className="bi bi-file-earmark-text text-success me-2"></i>
                 <span>.hday time-off files</span>
               </div>
             </Col>
-            <Col xs={6}>
-              <div className="d-flex align-items-center small">
-                <i className="bi bi-arrow-left-right text-info me-2"></i>
-                <span>Transfer detection</span>
-              </div>
-            </Col>
+            {isFiveShift && (
+              <Col xs={6}>
+                <div className="d-flex align-items-center small">
+                  <i className="bi bi-arrow-left-right text-info me-2"></i>
+                  <span>Transfer detection</span>
+                </div>
+              </Col>
+            )}
             <Col xs={6}>
               <div className="d-flex align-items-center small">
                 <i className="bi bi-calendar-date text-secondary me-2"></i>
                 <span>YYWW.D date format</span>
               </div>
             </Col>
+            {!isFiveShift && (
+              <Col xs={6}>
+                <div className="d-flex align-items-center small">
+                  <i className="bi bi-clock-history text-info me-2"></i>
+                  <span>More schedule views coming soon</span>
+                </div>
+              </Col>
+            )}
           </Row>
         </div>
 

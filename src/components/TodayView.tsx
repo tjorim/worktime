@@ -183,7 +183,7 @@ function TeamCard({
  * @param onTeamClick - Optional handler invoked with a team number when a team card is activated (click or keyboard).
  * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
  */
-export function TodayView({
+function TodayViewFiveShift({
   todayShifts,
   myTeam,
   currentDate,
@@ -298,4 +298,29 @@ export function TodayView({
       </Card.Body>
     </Card>
   );
+}
+
+export function TodayView(props: TodayViewProps) {
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+
+  if (scheduleType !== "5-shift") {
+    return (
+      <Card>
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h6 className="mb-0">📅 Today</h6>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <p className="text-muted mb-0">
+            Schedule type selected: {scheduleConfig.title}. Daily team coverage is available for
+            5-shift schedules.
+          </p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  return <TodayViewFiveShift {...props} />;
 }

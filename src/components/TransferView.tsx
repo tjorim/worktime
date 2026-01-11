@@ -10,6 +10,8 @@ import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
+import { useSettings } from "../contexts/SettingsContext";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
 interface TransferViewProps {
@@ -26,7 +28,7 @@ interface TransferViewProps {
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
  * @returns The rendered TransferView element.
  */
-export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: TransferViewProps) {
+function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: TransferViewProps) {
   // Generate unique IDs for form elements
   const otherTeamSelectId = useId();
   const showPastCheckboxId = useId();
@@ -333,4 +335,30 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
       </Card.Body>
     </Card>
   );
+}
+
+export function TransferView(props: TransferViewProps) {
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+
+  if (scheduleType !== "5-shift") {
+    return (
+      <Card>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+          <h6 className="mb-0">
+            <i className="bi bi-arrow-left-right me-2"></i>
+            Transfers
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          <p className="text-muted mb-0">
+            Schedule type selected: {scheduleConfig.title}. Team transfer analysis is available for
+            5-shift schedules.
+          </p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  return <TransferViewFiveShift {...props} />;
 }
