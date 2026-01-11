@@ -1,12 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ScheduleView } from "../../src/components/ScheduleView";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
+import { renderWithProviders } from "../testUtils/renderWithProviders";
 
 // Mock the dependencies
 vi.mock("../../src/hooks/useKeyboardShortcuts", () => ({
@@ -87,44 +86,18 @@ const defaultProps = {
   setCurrentDate: vi.fn(),
 };
 
-function renderWithProviders(ui: React.ReactElement) {
-  window.localStorage.setItem(
-    "worktime_user_state",
-    JSON.stringify({
-      hasCompletedOnboarding: true,
-      myTeam: null,
-      scheduleType: "5-shift",
-      settings: {
-        timeFormat: "24h",
-        theme: "auto",
-        notifications: "off",
-        vacationAllowance: {
-          amount: 0,
-          unit: "days",
-          hoursPerDay: 8,
-        },
-      },
-    }),
-  );
-
-  return render(
-    <ToastProvider>
-      <SettingsProvider>
-        <EventStoreProvider>{ui}</EventStoreProvider>
-      </SettingsProvider>
-    </ToastProvider>,
-  );
-}
+const renderScheduleView = (ui: ReactElement) =>
+  renderWithProviders(ui, { withEventStore: true, withToast: true });
 
 describe("ScheduleView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
       expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
 
       expect(screen.getByLabelText("Go to previous week")).toBeInTheDocument();
       expect(screen.getByText("This Week")).toBeInTheDocument();
@@ -132,14 +105,14 @@ describe("ScheduleView", () => {
     });
 
     it("shows date picker", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
 
       const dateInput = screen.getByDisplayValue("2025-01-15");
       expect(dateInput).toBeInTheDocument();
     });
 
     it("displays team headers", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
 
       expect(screen.getByText("Team 1")).toBeInTheDocument();
       expect(screen.getByText("Team 2")).toBeInTheDocument();
@@ -154,7 +127,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const prevButton = screen.getByLabelText("Go to previous week");
       await user.click(prevButton);
@@ -166,7 +139,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const nextButton = screen.getByLabelText("Go to next week");
       await user.click(nextButton);
@@ -178,7 +151,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const thisWeekButton = screen.getByLabelText("Go to current week");
       await user.click(thisWeekButton);
@@ -189,14 +162,14 @@ describe("ScheduleView", () => {
 
   describe("Schedule table", () => {
     it("displays schedule table", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
 
       const table = screen.getByRole("table");
       expect(table).toBeInTheDocument();
     });
 
     it("shows day codes", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderScheduleView(<ScheduleView {...defaultProps} />);
 
       // Should show formatted date codes
       const dateCodes = screen.getAllByText("2503.1");
@@ -206,7 +179,7 @@ describe("ScheduleView", () => {
 
   describe("Team highlighting", () => {
     it("highlights my team when provided", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} myTeam={2} />);
+      renderScheduleView(<ScheduleView {...defaultProps} myTeam={2} />);
 
       // The my team row should have my-team class
       const team2Element = screen.getByText("Team 2");
@@ -215,7 +188,7 @@ describe("ScheduleView", () => {
     });
 
     it("handles no my team", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} myTeam={null} />);
+      renderScheduleView(<ScheduleView {...defaultProps} myTeam={null} />);
 
       // Should render without errors
       expect(screen.getByText("Team 1")).toBeInTheDocument();
@@ -224,7 +197,7 @@ describe("ScheduleView", () => {
 
   describe("Week display", () => {
     it("shows week information", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
+      renderScheduleView(<ScheduleView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
 
       // Should show week range (Jan 15 is in the week of Jan 13-19)
       expect(screen.getByText(/Week of/)).toBeInTheDocument();

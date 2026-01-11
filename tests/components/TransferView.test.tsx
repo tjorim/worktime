@@ -1,11 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "../../src/components/TransferView";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";
 import { dayjs } from "../../src/utils/dateTimeUtils";
+import { renderWithProviders } from "../testUtils/renderWithProviders";
 
 // Mock the useTransferCalculations hook
 vi.mock("../../src/hooks/useTransferCalculations", () => ({
@@ -90,28 +91,7 @@ const defaultProps = {
   myTeam: 1,
 };
 
-function renderWithProviders(ui: React.ReactElement) {
-  window.localStorage.setItem(
-    "worktime_user_state",
-    JSON.stringify({
-      hasCompletedOnboarding: true,
-      myTeam: null,
-      scheduleType: "5-shift",
-      settings: {
-        timeFormat: "24h",
-        theme: "auto",
-        notifications: "off",
-        vacationAllowance: {
-          amount: 0,
-          unit: "days",
-          hoursPerDay: 8,
-        },
-      },
-    }),
-  );
-
-  return render(<SettingsProvider>{ui}</SettingsProvider>);
-}
+const renderTransferView = (ui: ReactElement) => renderWithProviders(ui);
 
 describe("TransferView", () => {
   beforeEach(() => {
@@ -125,12 +105,12 @@ describe("TransferView", () => {
 
   describe("Basic rendering", () => {
     it("renders transfer view header", () => {
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
     });
 
     it("shows team comparison controls when team is selected", () => {
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={1} />);
       expect(screen.getByText(/View transfers with Team/i)).toBeInTheDocument();
       expect(screen.getByText(/Filter by custom date range/i)).toBeInTheDocument();
     });
@@ -142,14 +122,14 @@ describe("TransferView", () => {
         validatedMyTeam: null, // Set validated team to null
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={null} />);
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
   });
 
   describe("Team comparison UI", () => {
     it("displays team comparison dropdown with available teams", () => {
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       const otherTeamSelect = screen.getByLabelText(/View transfers with Team/i);
       expect(otherTeamSelect).toBeInTheDocument();
@@ -170,7 +150,7 @@ describe("TransferView", () => {
       });
 
       const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       const otherTeamSelect = screen.getByLabelText("View transfers with Team:");
       await user.selectOptions(otherTeamSelect, "3");
@@ -181,7 +161,7 @@ describe("TransferView", () => {
 
   describe("Date range selection UI", () => {
     it("displays date range dropdown with options", () => {
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
       expect(filterCheckbox).toBeInTheDocument();
@@ -190,7 +170,7 @@ describe("TransferView", () => {
 
     it("toggles custom date range when checkbox is clicked", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
 
@@ -208,7 +188,7 @@ describe("TransferView", () => {
 
     it("updates date inputs when user changes custom dates", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       // Enable custom range
       const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
@@ -227,7 +207,7 @@ describe("TransferView", () => {
 
     it("clears date inputs when clear button is clicked", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       // Enable custom range
       const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
@@ -257,7 +237,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={1} />);
 
       expect(screen.getByText(/No transfers found between Team 1 and Team 2/)).toBeInTheDocument();
     });
@@ -280,7 +260,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badges and icons for team direction
       expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
@@ -297,7 +277,7 @@ describe("TransferView", () => {
         validatedMyTeam: null, // Set validated team to null
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={null} />);
 
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
@@ -311,7 +291,7 @@ describe("TransferView", () => {
         validatedMyTeam: null, // Hook validates to null
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={999} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={999} />);
 
       // Should render without crashing - shows team selection prompt
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
@@ -325,7 +305,7 @@ describe("TransferView", () => {
         validatedMyTeam: null, // Hook validates to null
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={-1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={-1} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
@@ -338,7 +318,7 @@ describe("TransferView", () => {
         validatedMyTeam: null, // Set validated team to null
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={null} />);
 
       expect(screen.getByText("Team Transfers")).toBeInTheDocument();
       expect(mockConsoleWarn).not.toHaveBeenCalled();
@@ -372,7 +352,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check that both transfers are displayed
       expect(screen.getByText(/Wed, Jan 15/)).toBeInTheDocument();
@@ -409,7 +389,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderTransferView(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badge-based section header
       expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
@@ -426,7 +406,7 @@ describe("TransferView", () => {
       });
 
       const user = userEvent.setup();
-      renderWithProviders(<TransferView {...defaultProps} />);
+      renderTransferView(<TransferView {...defaultProps} />);
 
       const otherTeamSelect = screen.getByLabelText("View transfers with Team:");
 

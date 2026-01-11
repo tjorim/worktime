@@ -1,34 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AboutModal } from "../../src/components/AboutModal";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { renderWithSettings } from "../testUtils/renderWithProviders";
 
 function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
-  window.localStorage.setItem(
-    "worktime_user_state",
-    JSON.stringify({
-      hasCompletedOnboarding: true,
-      myTeam: null,
-      scheduleType,
-      settings: {
-        timeFormat: "24h",
-        theme: "auto",
-        notifications: "off",
-        vacationAllowance: {
-          amount: 0,
-          unit: "days",
-          hoursPerDay: 8,
-        },
-      },
-    }),
-  );
-
-  return render(
-    <SettingsProvider>
-      <AboutModal show onHide={vi.fn()} />
-    </SettingsProvider>,
-  );
+  return renderWithSettings(<AboutModal show onHide={vi.fn()} />, { scheduleType });
 }
 
 describe("AboutModal", () => {
