@@ -41,6 +41,25 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
+  window.localStorage.setItem(
+    "worktime_user_state",
+    JSON.stringify({
+      hasCompletedOnboarding: true,
+      myTeam: null,
+      scheduleType: "5-shift",
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: {
+          amount: 0,
+          unit: "days",
+          hoursPerDay: 8,
+        },
+      },
+    }),
+  );
+
   return render(
     <ToastProvider>
       <SettingsProvider>
