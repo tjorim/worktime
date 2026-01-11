@@ -9,7 +9,6 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig, getEffectiveTeam } from "../utils/scheduleUtils";
-import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { useCountdown } from "../hooks/useCountdown";
 import { useLiveTime } from "../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
@@ -463,7 +462,9 @@ function CurrentStatusFiveShift({
 }
 
 export function CurrentStatus(props: CurrentStatusProps) {
-  const { scheduleConfig, isFiveShift } = useScheduleConfig();
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   if (!isFiveShift) {
     return (

@@ -9,7 +9,6 @@ import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
-import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
   dayjs,
@@ -50,9 +49,7 @@ function ScheduleViewFiveShift({
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
-    if (import.meta.env?.DEV) {
-      console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
-    }
+    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
     myTeam = null;
   }
   const isMyTeam = (teamNumber: number) => {
@@ -283,7 +280,9 @@ function ScheduleViewFiveShift({
 }
 
 export function ScheduleView(props: ScheduleViewProps) {
-  const { scheduleConfig, isFiveShift } = useScheduleConfig();
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   if (!isFiveShift) {
     return (

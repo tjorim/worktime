@@ -10,7 +10,6 @@ import type { Dayjs } from "dayjs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
-import { useScheduleConfig } from "../hooks/useScheduleConfig";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
@@ -302,7 +301,9 @@ function TodayViewFiveShift({
 }
 
 export function TodayView(props: TodayViewProps) {
-  const { scheduleConfig, isFiveShift } = useScheduleConfig();
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   if (!isFiveShift) {
     return (

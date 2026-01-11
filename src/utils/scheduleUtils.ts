@@ -58,9 +58,7 @@ export function getScheduleConfig(
   return config;
 }
 
-export function isFiveShiftSchedule(
-  scheduleOption: ScheduleOption | null | undefined,
-): boolean {
+export function isFiveShiftSchedule(scheduleOption: ScheduleOption | null | undefined): boolean {
   return getScheduleConfig(scheduleOption).value === "5-shift";
 }
 

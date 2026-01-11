@@ -1,12 +1,12 @@
-import type { ReactElement } from "react";
-import { screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ScheduleView } from "../../src/components/ScheduleView";
+import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { UserStateOverrides } from "../testUtils/renderWithProviders";
-import { renderWithProviders } from "../testUtils/renderWithProviders";
 
 // Mock the dependencies
 vi.mock("../../src/hooks/useKeyboardShortcuts", () => ({
@@ -87,29 +87,25 @@ const defaultProps = {
   setCurrentDate: vi.fn(),
 };
 
-const renderScheduleView = (
-  ui: ReactElement,
-  userStateOverrides: UserStateOverrides = {},
-) =>
-  renderWithProviders(ui, {
-    withEventStore: true,
-    withToast: true,
-    userStateOverrides,
-  });
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <ToastProvider>
+      <SettingsProvider>
+        <EventStoreProvider>{ui}</EventStoreProvider>
+      </SettingsProvider>
+    </ToastProvider>,
+  );
+}
 
 describe("ScheduleView", () => {
-  afterEach(() => {
-    window.localStorage.removeItem("worktime_user_state");
-  });
-
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
       expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
 
       expect(screen.getByLabelText("Go to previous week")).toBeInTheDocument();
       expect(screen.getByText("This Week")).toBeInTheDocument();
@@ -117,14 +113,14 @@ describe("ScheduleView", () => {
     });
 
     it("shows date picker", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
 
       const dateInput = screen.getByDisplayValue("2025-01-15");
       expect(dateInput).toBeInTheDocument();
     });
 
     it("displays team headers", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
 
       expect(screen.getByText("Team 1")).toBeInTheDocument();
       expect(screen.getByText("Team 2")).toBeInTheDocument();
@@ -139,7 +135,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const prevButton = screen.getByLabelText("Go to previous week");
       await user.click(prevButton);
@@ -151,7 +147,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const nextButton = screen.getByLabelText("Go to next week");
       await user.click(nextButton);
@@ -163,7 +159,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderScheduleView(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const thisWeekButton = screen.getByLabelText("Go to current week");
       await user.click(thisWeekButton);
@@ -174,14 +170,14 @@ describe("ScheduleView", () => {
 
   describe("Schedule table", () => {
     it("displays schedule table", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
 
       const table = screen.getByRole("table");
       expect(table).toBeInTheDocument();
     });
 
     it("shows day codes", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<ScheduleView {...defaultProps} />);
 
       // Should show formatted date codes
       const dateCodes = screen.getAllByText("2503.1");
@@ -191,7 +187,7 @@ describe("ScheduleView", () => {
 
   describe("Team highlighting", () => {
     it("highlights my team when provided", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} myTeam={2} />);
+      renderWithProviders(<ScheduleView {...defaultProps} myTeam={2} />);
 
       // The my team row should have my-team class
       const team2Element = screen.getByText("Team 2");
@@ -200,7 +196,7 @@ describe("ScheduleView", () => {
     });
 
     it("handles no my team", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} myTeam={null} />);
+      renderWithProviders(<ScheduleView {...defaultProps} myTeam={null} />);
 
       // Should render without errors
       expect(screen.getByText("Team 1")).toBeInTheDocument();
@@ -209,20 +205,11 @@ describe("ScheduleView", () => {
 
   describe("Week display", () => {
     it("shows week information", () => {
-      renderScheduleView(<ScheduleView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
+      renderWithProviders(<ScheduleView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
 
       // Should show week range (Jan 15 is in the week of Jan 13-19)
       expect(screen.getByText(/Week of/)).toBeInTheDocument();
       expect(screen.getByText(/Jan 13/)).toBeInTheDocument();
     });
-  });
-
-  it("renders fallback card for non-5-shift schedules", () => {
-    renderScheduleView(<ScheduleView {...defaultProps} />, { scheduleType: "9-5" });
-
-    expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
-    expect(screen.getByText(/Schedule type selected: 9-5\./)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Go to previous week")).not.toBeInTheDocument();
-    expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
   });
 });

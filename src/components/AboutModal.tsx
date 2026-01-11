@@ -3,8 +3,9 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
+import { useSettings } from "../contexts/SettingsContext";
 import { CONFIG } from "../utils/config";
-import { useScheduleConfig } from "../hooks/useScheduleConfig";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 
 interface AboutModalProps {
   show: boolean;
@@ -19,7 +20,9 @@ interface AboutModalProps {
  * @returns The React element for the About modal
  */
 export function AboutModal({ show, onHide }: AboutModalProps) {
-  const { scheduleConfig, isFiveShift } = useScheduleConfig();
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>

@@ -8,9 +8,10 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
+import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
-import { useScheduleConfig } from "../hooks/useScheduleConfig";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
 interface TransferViewProps {
@@ -337,7 +338,9 @@ function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: Transf
 }
 
 export function TransferView(props: TransferViewProps) {
-  const { scheduleConfig, isFiveShift } = useScheduleConfig();
+  const { scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const isFiveShift = scheduleConfig.value === "5-shift";
 
   if (!isFiveShift) {
     return (

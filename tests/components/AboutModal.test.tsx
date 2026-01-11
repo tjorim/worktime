@@ -1,14 +1,42 @@
-import { screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AboutModal } from "../../src/components/AboutModal";
-import { renderWithSettings } from "../testUtils/renderWithProviders";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
 
 function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
-  return renderWithSettings(<AboutModal show onHide={vi.fn()} />, { scheduleType });
+  // Seed localStorage with the schedule type
+  window.localStorage.setItem(
+    "worktime_user_state",
+    JSON.stringify({
+      hasCompletedOnboarding: true,
+      myTeam: null,
+      scheduleType,
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: {
+          amount: 0,
+          unit: "days",
+          hoursPerDay: 8,
+        },
+      },
+    }),
+  );
+
+  return render(
+    <SettingsProvider>
+      <AboutModal show onHide={vi.fn()} />
+    </SettingsProvider>,
+  );
 }
 
 describe("AboutModal", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("worktime_user_state");
+  });
+
   it("shows 5-shift features when scheduleType is 5-shift", () => {
     renderWithScheduleType("5-shift");
 

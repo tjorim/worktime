@@ -160,11 +160,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
                 <br />
                 {getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayName}
                 <br />
-                {getFormattedShiftTime(
-                  currentWorkingTeam.shift,
-                  scheduleType,
-                  settings.timeFormat,
-                )}
+                {getFormattedShiftTime(currentWorkingTeam.shift, scheduleType, settings.timeFormat)}
               </Tooltip>
             }
           >

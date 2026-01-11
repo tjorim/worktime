@@ -1,12 +1,13 @@
-import type { ReactElement } from "react";
-import { screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { TodayView } from "../../src/components/TodayView";
+import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
-import { renderWithProviders } from "../testUtils/renderWithProviders";
 
 // Mock shift calculation utilities
 vi.mock("../../src/utils/shiftCalculations", () => ({
@@ -39,8 +40,15 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   isCurrentlyWorking: vi.fn(() => false),
 }));
 
-const renderTodayView = (ui: ReactElement) =>
-  renderWithProviders(ui, { withEventStore: true, withToast: true });
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <ToastProvider>
+      <SettingsProvider>
+        <EventStoreProvider>{ui}</EventStoreProvider>
+      </SettingsProvider>
+    </ToastProvider>,
+  );
+}
 
 const mockTodayShifts: ShiftResult[] = [
   {
@@ -102,7 +110,7 @@ const defaultProps = {
 describe("TodayView", () => {
   describe("Basic rendering", () => {
     it("renders today view with shifts", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
 
       expect(screen.getByText("Today")).toBeInTheDocument();
       expect(screen.getByText("Team 1")).toBeInTheDocument();
@@ -111,7 +119,7 @@ describe("TodayView", () => {
     });
 
     it("displays shift information for working teams", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
 
       expect(screen.getByText(/Morning/)).toBeInTheDocument();
       expect(screen.getByText(/Evening/)).toBeInTheDocument();
@@ -120,14 +128,14 @@ describe("TodayView", () => {
     });
 
     it("shows Today button", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
       expect(screen.getByText("Today")).toBeInTheDocument();
     });
   });
 
   describe("Team highlighting", () => {
     it("highlights my team", () => {
-      renderTodayView(<TodayView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TodayView {...defaultProps} myTeam={1} />);
 
       // The my team should have my-team class on the div element
       const team1Element = screen.getByText("Team 1").closest(".my-team");
@@ -135,7 +143,7 @@ describe("TodayView", () => {
     });
 
     it("handles no my team", () => {
-      renderTodayView(<TodayView {...defaultProps} myTeam={null} />);
+      renderWithProviders(<TodayView {...defaultProps} myTeam={null} />);
 
       // Should render without errors
       expect(screen.getByText("Team 1")).toBeInTheDocument();
@@ -147,7 +155,7 @@ describe("TodayView", () => {
       const user = userEvent.setup();
       const mockOnTodayClick = vi.fn();
 
-      renderTodayView(<TodayView {...defaultProps} onTodayClick={mockOnTodayClick} />);
+      renderWithProviders(<TodayView {...defaultProps} onTodayClick={mockOnTodayClick} />);
 
       const todayButton = screen.getByRole("button", { name: /today/i });
       await user.click(todayButton);
@@ -158,7 +166,7 @@ describe("TodayView", () => {
 
   describe("Empty state", () => {
     it("handles empty shifts array", () => {
-      renderTodayView(<TodayView {...defaultProps} todayShifts={[]} />);
+      renderWithProviders(<TodayView {...defaultProps} todayShifts={[]} />);
 
       // Should still render the Today header
       expect(screen.getByText("Today")).toBeInTheDocument();
@@ -167,7 +175,7 @@ describe("TodayView", () => {
 
   describe("Shift display", () => {
     it("shows shift names for working shifts", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
 
       // Should show shift names
       expect(screen.getByText(/Morning/)).toBeInTheDocument();
@@ -175,7 +183,7 @@ describe("TodayView", () => {
     });
 
     it("shows off status for non-working teams", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
 
       expect(screen.getByText(/🏠 Off/)).toBeInTheDocument();
       expect(screen.getByText(/Not working today/)).toBeInTheDocument();
@@ -186,7 +194,7 @@ describe("TodayView", () => {
     // Testing this would require mocking dayjs() calls throughout the component
 
     it("does not show active badge for off shifts", () => {
-      renderTodayView(<TodayView {...defaultProps} />);
+      renderWithProviders(<TodayView {...defaultProps} />);
 
       // Team 3 is off, so should never show active badge
       const offTeamBadges = screen.getAllByText(/🏠 Off/);

@@ -195,7 +195,7 @@ function AppContent() {
         return;
       }
       const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
-        (option) => option.value === scheduleType
+        (option) => option.value === scheduleType,
       );
       if (!selectedScheduleConfig) {
         // Defensive validation: Despite TypeScript guarantees that scheduleType is a valid
@@ -204,7 +204,7 @@ function AppContent() {
         // onboarding with inconsistent schedule data.
         showError(
           "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
-          "⚠️"
+          "⚠️",
         );
         return;
       }

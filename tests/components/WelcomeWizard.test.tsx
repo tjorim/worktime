@@ -1047,10 +1047,7 @@ describe("WelcomeWizard", () => {
         ...defaultUserState,
         scheduleType: null,
       };
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify(userStateWithoutSchedule),
-      );
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(userStateWithoutSchedule));
 
       const user = userEvent.setup();
       render(<App />);
@@ -1079,10 +1076,7 @@ describe("WelcomeWizard", () => {
         ...defaultUserState,
         scheduleType: null,
       };
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify(userStateWithoutSchedule),
-      );
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(userStateWithoutSchedule));
 
       render(<App />);
 
