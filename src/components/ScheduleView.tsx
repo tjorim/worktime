@@ -28,6 +28,7 @@ interface ScheduleViewProps {
 /**
  * Render the weekly schedule overview for all teams, with navigation, date jump and keyboard shortcuts.
  *
+ * Works with any schedule type - automatically adapts to single-user or multi-team schedules.
  * Validates the provided `myTeam` and treats out-of-range team numbers as no team selected.
  *
  * @param myTeam - The user's team number from onboarding, or `null` if none is set
@@ -35,7 +36,7 @@ interface ScheduleViewProps {
  * @param setCurrentDate - Callback to update the displayed date
  * @returns The rendered schedule overview component
  */
-function ScheduleViewFiveShift({
+export function ScheduleView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
@@ -277,30 +278,4 @@ function ScheduleViewFiveShift({
       </Card.Body>
     </Card>
   );
-}
-
-export function ScheduleView(props: ScheduleViewProps) {
-  const { scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const isFiveShift = scheduleConfig.value === "5-shift";
-
-  if (!isFiveShift) {
-    return (
-      <Card>
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h6 className="mb-0">📅 Schedule Overview</h6>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <p className="text-muted mb-0">
-            Schedule type selected: {scheduleConfig.title}. Weekly team schedules are available for
-            5-shift schedules.
-          </p>
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  return <ScheduleViewFiveShift {...props} />;
 }

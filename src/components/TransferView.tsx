@@ -8,10 +8,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
-import { getScheduleConfig } from "../utils/scheduleUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
 
 interface TransferViewProps {
@@ -22,13 +20,16 @@ interface TransferViewProps {
 /**
  * Display transfer events between the user's team and a selected other team.
  *
+ * Works with any multi-team schedule. For single-user schedules, this component should
+ * not be rendered (MainTabs hides the Transfer tab via scheduleConfig.showsTeamSelection).
+ *
  * Renders a card containing controls for choosing the other team, optionally filtering by a custom date range, and a paginated table of transfer records (or appropriate empty states).
  *
  * @param inputMyTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
  * @returns The rendered TransferView element.
  */
-function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: TransferViewProps) {
+export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: TransferViewProps) {
   // Generate unique IDs for form elements
   const otherTeamSelectId = useId();
   const showPastCheckboxId = useId();
@@ -335,31 +336,4 @@ function TransferViewFiveShift({ myTeam: inputMyTeam, initialOtherTeam }: Transf
       </Card.Body>
     </Card>
   );
-}
-
-export function TransferView(props: TransferViewProps) {
-  const { scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const isFiveShift = scheduleConfig.value === "5-shift";
-
-  if (!isFiveShift) {
-    return (
-      <Card>
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h6 className="mb-0">
-            <i className="bi bi-arrow-left-right me-2"></i>
-            Transfers
-          </h6>
-        </Card.Header>
-        <Card.Body>
-          <p className="text-muted mb-0">
-            Schedule type selected: {scheduleConfig.title}. Team transfer analysis is available for
-            5-shift schedules.
-          </p>
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  return <TransferViewFiveShift {...props} />;
 }

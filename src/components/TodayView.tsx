@@ -174,6 +174,8 @@ function TeamCard({
 /**
  * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
  *
+ * Works with any schedule type - automatically adapts to single-user or multi-team schedules.
+ *
  * @param todayShifts - Array of shift results for the current date; each item represents a team's scheduled shift and metadata.
  * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
  * @param currentDate - The date being displayed
@@ -183,7 +185,7 @@ function TeamCard({
  * @param onTeamClick - Optional handler invoked with a team number when a team card is activated (click or keyboard).
  * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
  */
-function TodayViewFiveShift({
+export function TodayView({
   todayShifts,
   myTeam,
   currentDate,
@@ -298,30 +300,4 @@ function TodayViewFiveShift({
       </Card.Body>
     </Card>
   );
-}
-
-export function TodayView(props: TodayViewProps) {
-  const { scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const isFiveShift = scheduleConfig.value === "5-shift";
-
-  if (!isFiveShift) {
-    return (
-      <Card>
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h6 className="mb-0">📅 Today</h6>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <p className="text-muted mb-0">
-            Schedule type selected: {scheduleConfig.title}. Daily team coverage is available for
-            5-shift schedules.
-          </p>
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  return <TodayViewFiveShift {...props} />;
 }

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { TeamDetailModal } from "../../src/components/TeamDetailModal";
+import { ScheduleDetailModal } from "../../src/components/ScheduleDetailModal";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
@@ -14,7 +14,7 @@ function renderWithSettings(ui: React.ReactElement) {
   );
 }
 
-describe("TeamDetailModal", () => {
+describe("ScheduleDetailModal", () => {
   beforeEach(() => {
     // Set user state with the unified storage structure
     window.localStorage.setItem(
@@ -37,7 +37,7 @@ describe("TeamDetailModal", () => {
 
   it("disables View Transfers button and shows tooltip when viewing own team", async () => {
     renderWithSettings(
-      <TeamDetailModal show={true} onHide={() => {}} teamNumber={2} onViewTransfers={vi.fn()} />,
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={2} onViewTransfers={vi.fn()} />,
     );
 
     // Simulate user is on team 2 (default selectedTeam is null, so we need to set it)
@@ -57,7 +57,7 @@ describe("TeamDetailModal", () => {
 
   it("enables View Transfers button for other teams", () => {
     renderWithSettings(
-      <TeamDetailModal show={true} onHide={() => {}} teamNumber={3} onViewTransfers={vi.fn()} />,
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={3} onViewTransfers={vi.fn()} />,
     );
     // The button should be enabled (unless there are no transfers, but we are not testing that here)
     const button = screen.getByRole("button", { name: /view transfers/i });

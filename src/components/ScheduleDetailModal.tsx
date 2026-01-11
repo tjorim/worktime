@@ -11,6 +11,7 @@ import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import { shareTeamSchedule } from "../utils/share";
 import {
@@ -20,7 +21,7 @@ import {
   getShiftDisplay,
 } from "../utils/shiftCalculations";
 
-interface TeamDetailModalProps {
+interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
   teamNumber: number;
@@ -28,22 +29,25 @@ interface TeamDetailModalProps {
 }
 
 /**
- * Render a modal showing a team's seven-day schedule, current status, statistics and quick actions.
+ * Render a modal showing schedule details - team schedule for multi-team schedules, or user schedule for single-user schedules.
  *
- * Displays the selected team's current shift and next shift, a day-by-day schedule with shift times,
+ * Works with any schedule type - automatically adapts to single-user or multi-team schedules.
+ * Displays the current shift and next shift, a day-by-day schedule with shift times,
  * weekly statistics (working/rest days and shift distribution), and quick actions including share and view transfers.
  *
- * @param teamNumber - Team number to display (1–5)
- * @param onViewTransfers - Optional callback invoked with the team number when "View Transfers" is activated
- * @returns The modal element for the specified team
+ * @param teamNumber - Team number to display (for multi-team schedules) or 1 (for single-user schedules)
+ * @param onViewTransfers - Optional callback invoked with the team number when "View Transfers" is activated (multi-team only)
+ * @returns The modal element for the specified team or schedule
  */
-export function TeamDetailModal({
+export function ScheduleDetailModal({
   show,
   onHide,
   teamNumber,
   onViewTransfers,
-}: TeamDetailModalProps) {
+}: ScheduleDetailModalProps) {
   const { settings, myTeam, scheduleType } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
   const toast = useToast();
 
   const calendarTooltipId = useId();
@@ -116,8 +120,8 @@ export function TeamDetailModal({
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          <i className="bi bi-people me-2 text-primary"></i>
-          Team {teamNumber} Details
+          <i className={`bi ${hasTeams ? "bi-people" : "bi-calendar-week"} me-2 text-primary`}></i>
+          {hasTeams ? `Team ${teamNumber} Details` : "My Schedule Details"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -335,34 +339,36 @@ export function TeamDetailModal({
                 <i className="bi bi-share me-1"></i>
                 Share Schedule
               </Button>
-              {/* View Transfers button with conditional disable and tooltip */}
-              <OverlayTrigger
-                placement="top"
-                overlay={
-                  isViewingOwnTeam ? (
-                    <Tooltip id={transfersDisabledTooltipId}>
-                      You are viewing your own team. Transfers are only shown for other teams.
-                    </Tooltip>
-                  ) : (
-                    <Tooltip id={transfersTooltipId}>
-                      View transfers between your team and this team
-                    </Tooltip>
-                  )
-                }
-              >
-                <span className="d-inline-block">
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    onClick={() => onViewTransfers?.(teamNumber)}
-                    disabled={!canViewTransfers}
-                    style={isViewingOwnTeam ? { pointerEvents: "none" } : {}}
-                  >
-                    <i className="bi bi-arrow-left-right me-1"></i>
-                    View Transfers
-                  </Button>
-                </span>
-              </OverlayTrigger>
+              {/* View Transfers button - only for multi-team schedules */}
+              {hasTeams && (
+                <OverlayTrigger
+                  placement="top"
+                  overlay={
+                    isViewingOwnTeam ? (
+                      <Tooltip id={transfersDisabledTooltipId}>
+                        You are viewing your own team. Transfers are only shown for other teams.
+                      </Tooltip>
+                    ) : (
+                      <Tooltip id={transfersTooltipId}>
+                        View transfers between your team and this team
+                      </Tooltip>
+                    )
+                  }
+                >
+                  <span className="d-inline-block">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => onViewTransfers?.(teamNumber)}
+                      disabled={!canViewTransfers}
+                      style={isViewingOwnTeam ? { pointerEvents: "none" } : {}}
+                    >
+                      <i className="bi bi-arrow-left-right me-1"></i>
+                      View Transfers
+                    </Button>
+                  </span>
+                </OverlayTrigger>
+              )}
             </div>
           </Card.Body>
         </Card>

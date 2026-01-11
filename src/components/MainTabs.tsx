@@ -5,7 +5,7 @@ import Tabs from "react-bootstrap/Tabs";
 import { dayjs } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import { ScheduleView } from "./ScheduleView";
-import { TeamDetailModal } from "./TeamDetailModal";
+import { ScheduleDetailModal } from "./ScheduleDetailModal";
 import { TimeOffView } from "./TimeOffView";
 import { TodayView } from "./TodayView";
 import { TransferView } from "./TransferView";
@@ -146,12 +146,12 @@ export function MainTabs({
         </Tab>
       </Tabs>
 
-      {/* Team Detail Modal */}
-      <TeamDetailModal
+      {/* Schedule Detail Modal */}
+      <ScheduleDetailModal
         show={showTeamDetail}
         onHide={handleCloseTeamDetail}
         teamNumber={selectedTeamForDetail}
-        onViewTransfers={(team) => {
+        onViewTransfers={(team: number) => {
           setActiveKey("transfer");
           onTabChange?.("transfer");
           // Only set initial other team if it's different from user's team
