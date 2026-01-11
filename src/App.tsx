@@ -189,10 +189,24 @@ function AppContent() {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
-      const selectedScheduleConfig = scheduleType
-        ? SCHEDULE_OPTIONS.find((option) => option.value === scheduleType)
-        : null;
-      const requiresTeam = selectedScheduleConfig?.showsTeamSelection ?? false;
+      // Ensure a schedule has been selected before completing onboarding
+      if (!scheduleType) {
+        showError("Please select a schedule before completing setup.", "⚠️");
+        return;
+      }
+      const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
+        (option) => option.value === scheduleType
+      );
+      if (!selectedScheduleConfig) {
+        // Fail fast if the selected schedule type does not match any known configuration.
+        // This prevents silently completing onboarding with inconsistent schedule data.
+        showError(
+          "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
+          "⚠️"
+        );
+        return;
+      }
+      const requiresTeam = selectedScheduleConfig.showsTeamSelection;
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
       if (teamForCompletion !== null) {
