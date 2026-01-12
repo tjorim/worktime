@@ -372,6 +372,7 @@ export function MonthCalendar({
               paydayInfo={paydayMap.get(dayKey)}
               events={cellEvents}
               onViewEvent={handleViewEventWrapper}
+              onDayClick={handleAddEventWrapper}
               onKeyDown={handleKeyDown}
               buttonRef={(node) => {
                 dayRefs.current.set(key, node);

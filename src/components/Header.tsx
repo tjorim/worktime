@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
@@ -21,6 +22,14 @@ export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
   const handleShowAbout = () => {
     onShowAbout?.();
   };
+
+  const handleToggleSettings = () => {
+    setShowSettings((prev) => !prev);
+  };
+
+  useKeyboardShortcuts({
+    onToggleSettings: handleToggleSettings,
+  });
 
   return (
     <>

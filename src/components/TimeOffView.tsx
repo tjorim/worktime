@@ -264,6 +264,18 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setModalMode("edit");
   };
 
+  const handleCancelEditMode = () => {
+    if (editIndex < 0) {
+      return;
+    }
+    const event = events[editIndex];
+    if (!event) {
+      return;
+    }
+    prefillFormFromEvent(event);
+    setModalMode("view");
+  };
+
   const handleSubmitEvent = () => {
     if (!validateForm()) {
       toast.showError("Please fix validation errors before saving");
@@ -451,6 +463,22 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         return;
       }
 
+      if (event.key === "Escape") {
+        if (showEventModal && modalMode === "edit" && editIndex >= 0) {
+          event.preventDefault();
+          handleCancelEditMode();
+        }
+        return;
+      }
+
+      if (event.key === "Delete") {
+        if (viewMode === "table" && selectedIndices.length > 0) {
+          event.preventDefault();
+          setShowBulkDeleteConfirm(true);
+        }
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey) {
         const key = event.key.toLowerCase();
         if (key === "z") {
@@ -465,6 +493,14 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
           event.preventDefault();
           handleRedo();
         }
+        if (key === "s") {
+          event.preventDefault();
+          handleExport();
+        }
+        if (key === "n") {
+          event.preventDefault();
+          handleOpenAddModal();
+        }
       }
     };
 
@@ -473,7 +509,19 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleRedo, handleUndo, isActive]);
+  }, [
+    editIndex,
+    handleCancelEditMode,
+    handleExport,
+    handleOpenAddModal,
+    handleRedo,
+    handleUndo,
+    isActive,
+    modalMode,
+    selectedIndices.length,
+    showEventModal,
+    viewMode,
+  ]);
 
   const currentYear = calendarMonth.year();
   const paydayMapForYear = useMemo<Map<string, PaydayInfo>>(

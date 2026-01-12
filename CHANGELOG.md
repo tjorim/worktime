@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PersonalizedStatus Component: Extracted personalized team status view with countdown timers, off-day progress, and shift timeline
 - GenericStatus Component: Extracted generic status view for users without team selection, showing currently working team and next shift across all teams
 - ScheduleDetailModal: Renamed from TeamDetailModal and adapted for both multi-team and single-user schedules
+- Keyboard Shortcuts: Added tab switching (T/S/R), settings toggle (Ctrl+,), and time-off shortcuts for add/export/delete/edit flows
+- Calendar Day Activation: Month calendar days now open the add-event flow on click or keyboard activation
 
 ### Changed
 

@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { dayjs } from "../utils/dateTimeUtils";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { ScheduleView } from "./ScheduleView";
 import { ScheduleDetailModal } from "./ScheduleDetailModal";
 import { TimeOffView } from "./TimeOffView";
@@ -42,6 +43,11 @@ export function MainTabs({
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
 
+  const setActiveTab = (nextKey: string) => {
+    setActiveKey(nextKey);
+    onTabChange?.(nextKey);
+  };
+
   // Sync with external tab changes
   useEffect(() => {
     setActiveKey(activeTab);
@@ -68,14 +74,19 @@ export function MainTabs({
     setShowTeamDetail(false);
   };
 
+  useKeyboardShortcuts({
+    onTabToday: () => setActiveTab("today"),
+    onTabSchedule: () => setActiveTab("schedule"),
+    onTabTransfer: () => setActiveTab("transfer"),
+  });
+
   return (
     <>
       <Tabs
         activeKey={activeKey}
         onSelect={(k) => {
           const newKey = k || "today";
-          setActiveKey(newKey);
-          onTabChange?.(newKey);
+          setActiveTab(newKey);
         }}
         id={tabsId}
       >

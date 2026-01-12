@@ -22,6 +22,7 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   onViewEvent: (index: number) => void;
+  onDayClick: (date: dayjs.Dayjs) => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => void;
   buttonRef: (node: HTMLButtonElement | null) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number) => void;
@@ -127,6 +128,7 @@ const getIndicatorDetails = (
  * @param props.schoolHoliday - School holiday info if this day is a school holiday
  * @param props.events - Array of events occurring on this day
  * @param props.onViewEvent - Callback when user clicks to view an event
+ * @param props.onDayClick - Callback when user activates a day cell to add an event
  * @param props.onKeyDown - Callback for keyboard navigation
  * @param props.buttonRef - Ref callback for focus management
  * @param props.onDayContextMenu - Optional callback for day cell right-click context menu
@@ -143,6 +145,7 @@ export function DayCell({
   schoolHoliday,
   events,
   onViewEvent,
+  onDayClick,
   onKeyDown,
   buttonRef,
   onDayContextMenu,
@@ -189,6 +192,7 @@ export function DayCell({
       <button
         type="button"
         className="month-calendar-day-button"
+        onClick={() => onDayClick(date)}
         onKeyDown={(event) => onKeyDown(event, date)}
         ref={buttonRef}
         tabIndex={isFocused ? 0 : -1}

@@ -5,6 +5,10 @@ interface KeyboardShortcuts {
   onPrevious?: () => void;
   onNext?: () => void;
   onTeamSelect?: () => void;
+  onTabToday?: () => void;
+  onTabSchedule?: () => void;
+  onTabTransfer?: () => void;
+  onToggleSettings?: () => void;
 }
 
 /**
@@ -41,6 +45,14 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       // Handle key combinations
       if (event.ctrlKey || event.metaKey) {
         switch (event.key.toLowerCase()) {
+          case ",":
+            event.preventDefault?.();
+            try {
+              shortcuts.onToggleSettings?.();
+            } catch (error) {
+              console.error("Error in onToggleSettings callback:", error);
+            }
+            break;
           case "h":
             event.preventDefault?.();
             try {
@@ -95,6 +107,42 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
               shortcuts.onNext?.();
             } catch (error) {
               console.error("Error in onNext callback:", error);
+            }
+          }
+          break;
+        default:
+          if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+            switch (event.key.toLowerCase()) {
+              case "t":
+                if (shortcuts.onTabToday) {
+                  event.preventDefault?.();
+                  try {
+                    shortcuts.onTabToday();
+                  } catch (error) {
+                    console.error("Error in onTabToday callback:", error);
+                  }
+                }
+                break;
+              case "s":
+                if (shortcuts.onTabSchedule) {
+                  event.preventDefault?.();
+                  try {
+                    shortcuts.onTabSchedule();
+                  } catch (error) {
+                    console.error("Error in onTabSchedule callback:", error);
+                  }
+                }
+                break;
+              case "r":
+                if (shortcuts.onTabTransfer) {
+                  event.preventDefault?.();
+                  try {
+                    shortcuts.onTabTransfer();
+                  } catch (error) {
+                    console.error("Error in onTabTransfer callback:", error);
+                  }
+                }
+                break;
             }
           }
           break;
