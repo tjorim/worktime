@@ -3,7 +3,6 @@ import { useEffect, useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { dayjs } from "../utils/dateTimeUtils";
-import type { ShiftResult } from "../utils/shiftCalculations";
 import { ScheduleView } from "./ScheduleView";
 import { ScheduleDetailModal } from "./ScheduleDetailModal";
 import { TimeOffView } from "./TimeOffView";
@@ -14,7 +13,6 @@ interface MainTabsProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  todayShifts: ShiftResult[];
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
@@ -27,7 +25,6 @@ interface MainTabsProps {
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
  * @param setCurrentDate - Function to update the current date
- * @param todayShifts - Array of shift results for today
  * @param activeTab - The currently active tab (defaults to 'today')
  * @param onTabChange - Callback invoked when the active tab changes
  * @returns The rendered tabbed interface component.
@@ -36,7 +33,6 @@ export function MainTabs({
   myTeam,
   currentDate,
   setCurrentDate,
-  todayShifts,
   activeTab = "today",
   onTabChange,
 }: MainTabsProps) {
@@ -93,7 +89,6 @@ export function MainTabs({
           }
         >
           <TodayView
-            todayShifts={todayShifts}
             myTeam={myTeam}
             currentDate={currentDate}
             onPreviousDay={handlePreviousDay}

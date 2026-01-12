@@ -25,7 +25,6 @@ import {
 } from "../utils/shiftCalculations";
 
 interface TodayViewProps {
-  todayShifts: ShiftResult[];
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   onPreviousDay: () => void;
@@ -179,9 +178,9 @@ function TeamCard({
 /**
  * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
  *
- * Works with any schedule type - automatically adapts to single-user or multi-team schedules.
+ * Works with any schedule type - automatically adapts to single-user or multi-team schedules. Shifts are calculated
+ * internally based on the selected viewing schedule, supporting cross-schedule viewing functionality.
  *
- * @param todayShifts - Array of shift results for the current date; each item represents a team's scheduled shift and metadata.
  * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
  * @param currentDate - The date being displayed
  * @param onPreviousDay - Handler invoked when the "Previous" button is pressed
@@ -191,7 +190,6 @@ function TeamCard({
  * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
  */
 export function TodayView({
-  todayShifts: _todayShifts, // Unused - we calculate based on viewing schedule
   myTeam,
   currentDate,
   onPreviousDay,

@@ -25,7 +25,7 @@ interface TransferViewProps {
  *
  * Renders a card containing controls for choosing the other team, optionally filtering by a custom date range, and a paginated table of transfer records (or appropriate empty states).
  *
- * @param inputMyTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
+ * @param myTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
  * @returns The rendered TransferView element.
  */

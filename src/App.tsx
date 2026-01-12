@@ -40,7 +40,7 @@ function AppContent() {
     updateVacationAllowance,
     settings,
   } = useSettings();
-  const { currentDate, setCurrentDate, todayShifts } = useShiftCalculation();
+  const { currentDate, setCurrentDate } = useShiftCalculation();
   const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
 
   // Handle URL parameters for deep linking
@@ -254,7 +254,6 @@ function AppContent() {
               myTeam={myTeam}
               currentDate={currentDate}
               setCurrentDate={setCurrentDate}
-              todayShifts={todayShifts}
               activeTab={activeTab}
               onTabChange={setActiveTab}
             />

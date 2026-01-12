@@ -41,10 +41,28 @@ export function ShiftBadge({
   const shiftDisplay = getShiftDisplay(shift, scheduleType);
 
   // Determine size class
-  const sizeClass = size === "lg" ? "shift-badge-lg" : size === "sm" ? "shift-badge-sm" : "";
+  const getSizeClass = () => {
+    if (size === "lg") {
+      return "shift-badge-lg";
+    }
+    if (size === "sm") {
+      return "shift-badge-sm";
+    }
+    return "";
+  };
+  const sizeClass = getSizeClass();
 
   // Determine content based on variant
-  const content = variant === "name" ? shiftDisplay.displayName : variant === "both" ? `${shiftDisplay.displayCode} ${shiftDisplay.displayName}` : shiftDisplay.displayCode;
+  const getContent = () => {
+    if (variant === "name") {
+      return shiftDisplay.displayName;
+    }
+    if (variant === "both") {
+      return `${shiftDisplay.displayCode} ${shiftDisplay.displayName}`;
+    }
+    return shiftDisplay.displayCode;
+  };
+  const content = getContent();
 
   const badge = (
     <Badge
