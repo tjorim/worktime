@@ -163,7 +163,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEventType("range");
     setEventWeekday(DEFAULT_WEEKDAY);
     setEventStart("");
@@ -172,7 +172,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setEventFlags([]);
     setStartDateError("");
     setEndDateError("");
-  };
+  }, []);
 
   const validateForm = (): boolean => {
     let valid = true;
@@ -204,12 +204,12 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     return valid;
   };
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = useCallback(() => {
     resetForm();
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
-  };
+  }, [resetForm]);
 
   const handleAddEventForDate = (date: dayjs.Dayjs) => {
     resetForm();
@@ -388,7 +388,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const hdayContent = exportHday();
 
     if (!hdayContent.trim()) {
@@ -407,7 +407,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     URL.revokeObjectURL(url);
 
     toast.showSuccess("Exported timeoff.hday", "📤");
-  };
+  }, [exportHday, toast]);
 
   const handleRawEditorChange = useCallback((value: string) => {
     setRawEditorText(value);
