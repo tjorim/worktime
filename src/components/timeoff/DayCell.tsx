@@ -22,7 +22,6 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   onViewEvent: (index: number) => void;
-  onDayClick?: (date: dayjs.Dayjs) => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => void;
   buttonRef: (node: HTMLButtonElement | null) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number) => void;
