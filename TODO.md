@@ -207,38 +207,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 9. CurrentStatus Component Refactoring ⭐️
-
-- **Component**: Simplify complex conditional rendering in CurrentStatus
-- **Priority**: Elevated due to code review feedback
-- **Code Review Feedback**: "This component has grown quite complex with the introduction of the generic view for when no team is selected. The conditional rendering logic, especially within the Your Team Status and Your Next Shift cards, makes it a bit hard to follow." - _Gemini Code Assistant_
-- **Use Cases**:
-  - Improved code readability and maintainability
-  - Easier testing of individual status display logic
-  - Better separation of concerns
-  - Cleaner component architecture with single responsibility
-- **Recommended Implementation**:
-  - Extract into `PersonalizedStatus` and `GenericStatus` components
-  - Make CurrentStatus a simple router component that decides which view to render
-  - Example structure:
-    ```tsx
-    export function CurrentStatus({ myTeam, currentDate, todayShifts, onTodayClick }) {
-      return myTeam ? (
-        <PersonalizedStatus myTeam={myTeam} currentDate={currentDate} todayShifts={todayShifts} />
-      ) : (
-        <GenericStatus currentDate={currentDate} todayShifts={todayShifts} onTodayClick={onTodayClick} />
-      );
-    }
-    ```
-- **Files to Modify**:
-  - `src/components/CurrentStatus.tsx` - Simplify to router component
-  - Create `src/components/status/PersonalizedStatus.tsx` - Handles user's team view
-  - Create `src/components/status/GenericStatus.tsx` - Handles no-team-selected view
-  - Update tests to cover new component structure
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Planned (High Priority)
-
-#### 10. Time-Off Calendar Visual Enhancements
+#### 9. Time-Off Calendar Visual Enhancements
 
 - **Component**: TimeOffView calendar display improvements
 - **Use Cases**:
@@ -251,7 +220,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 11. Time-Off Bulk Operations
+#### 10. Time-Off Bulk Operations
 
 - **Component**: Multi-event management
 - **Use Cases**:
@@ -262,7 +231,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 12. Calendar Export Formats
+#### 11. Calendar Export Formats
 
 - **Component**: Multi-format export functionality
 - **Use Cases**:
@@ -282,7 +251,7 @@ Features that enhance functionality with moderate development effort.
 
 Advanced features for future development phases.
 
-#### 13. Carousel for Mobile Team View
+#### 12. Carousel for Mobile Team View
 
 - **Component**: `react-bootstrap/Carousel`
 - **Use Cases**:
@@ -292,7 +261,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Future
 
-#### 14. Accordion for Transfer History
+#### 13. Accordion for Transfer History
 
 - **Component**: `react-bootstrap/Accordion`
 - **Use Cases**:
@@ -302,7 +271,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 15. Notification System Implementation
+#### 14. Notification System Implementation
 
 - **Component**: Browser notification functionality
 - **Use Cases**:
@@ -313,7 +282,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 16. Advanced Accessibility Features
+#### 15. Advanced Accessibility Features
 
 - **Component**: Enhanced accessibility support
 - **Use Cases**:
@@ -325,7 +294,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 17. Multi-Roster Pattern Support
+#### 16. Multi-Roster Pattern Support
 
 - **Component**: Configurable shift patterns beyond 5-team 2-2-2-4 cycle
 - **Use Cases**:
@@ -348,7 +317,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 8–12 hours (Major feature)
 - **Status**: 🔲 Future
 
-#### 18. Floating Action Button
+#### 17. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -360,7 +329,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 19. Roster-Specific Shift Times for Live Features
+#### 18. Roster-Specific Shift Times for Live Features
 
 - **Component**: Support different actual start/end times per roster for live status calculations
 - **Current Limitation**: `displayHours` in `ShiftDisplayOverride` is display-only (string format). Live features (LIVE badge, countdown timers, "currently working" detection) use global SHIFTS constants (MORNING: 7-15, LATE: 15-23, etc.) which causes incorrect live status for rosters with non-standard hours.
@@ -538,5 +507,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2026-01-10
+**Last Updated**: 2026-01-11
 **Next Review**: After v4.5.0 (Export Schedule Feature)
