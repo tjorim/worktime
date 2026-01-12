@@ -8,6 +8,24 @@ import type { ScheduleOption } from "../../data/rosters";
 import { getShiftDisplay } from "../../utils/shiftCalculations";
 import { useSettings } from "../../contexts/SettingsContext";
 
+// Helper: Determine size class
+const getSizeClass = (size: "sm" | "md" | "lg"): string => {
+  if (size === "lg") return "shift-badge-lg";
+  if (size === "sm") return "shift-badge-sm";
+  return "";
+};
+
+// Helper: Determine badge content based on variant
+const getBadgeContent = (
+  variant: "code" | "name" | "both",
+  displayCode: string,
+  displayName: string,
+): string => {
+  if (variant === "name") return displayName;
+  if (variant === "both") return `${displayCode} ${displayName}`;
+  return displayCode;
+};
+
 interface ShiftBadgeProps {
   shift: ShiftResult["shift"];
   scheduleType?: ScheduleOption | null;
@@ -44,29 +62,8 @@ export function ShiftBadge({
   const effectiveScheduleType = scheduleType ?? userScheduleType;
   const shiftDisplay = getShiftDisplay(shift, effectiveScheduleType);
 
-  // Determine size class
-  const getSizeClass = () => {
-    if (size === "lg") {
-      return "shift-badge-lg";
-    }
-    if (size === "sm") {
-      return "shift-badge-sm";
-    }
-    return "";
-  };
-  const sizeClass = getSizeClass();
-
-  // Determine content based on variant
-  const getContent = () => {
-    if (variant === "name") {
-      return shiftDisplay.displayName;
-    }
-    if (variant === "both") {
-      return `${shiftDisplay.displayCode} ${shiftDisplay.displayName}`;
-    }
-    return shiftDisplay.displayCode;
-  };
-  const content = getContent();
+  const sizeClass = getSizeClass(size);
+  const content = getBadgeContent(variant, shiftDisplay.displayCode, shiftDisplay.displayName);
 
   const badge = (
     <Badge

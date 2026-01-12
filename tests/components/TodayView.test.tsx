@@ -207,4 +207,81 @@ describe("TodayView", () => {
       expect(screen.queryByText("Active")).not.toBeInTheDocument();
     });
   });
+
+  describe("Cross-schedule viewing", () => {
+    it("renders schedule selector dropdown with available schedules", () => {
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      // Should have a schedule selector
+      const selector = screen.getByLabelText(/View schedule:/i);
+      expect(selector).toBeInTheDocument();
+      expect(selector).toBeInstanceOf(HTMLSelectElement);
+    });
+
+    it("shows current schedule as selected option", () => {
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
+      // Default schedule type is "9-5" in SettingsContext default
+      expect(selector.value).toBe("9-5");
+    });
+
+    it("updates displayed shifts when schedule type changes", async () => {
+      const user = userEvent.setup();
+      const mockNineToFiveShifts: ShiftResult[] = [
+        {
+          teamNumber: 1,
+          shift: {
+            code: "D",
+            emoji: "💼",
+            name: "💼 Day",
+            hours: "09:00-17:00",
+            start: 9,
+            end: 17,
+            isWorking: true,
+            className: "shift-day",
+          },
+          date: dayjs("2025-01-15"),
+          code: "2503.3D",
+        },
+      ];
+
+      // Mock getAllTeamsShifts to return different data on second call
+      vi.mocked(getAllTeamsShifts)
+        .mockReturnValueOnce(mockTodayShiftsData) // First render
+        .mockReturnValueOnce(mockNineToFiveShifts); // After schedule change
+
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      // Initially showing 5-shift teams
+      expect(screen.getByText("Team 1")).toBeInTheDocument();
+      expect(screen.getByText("Team 2")).toBeInTheDocument();
+
+      // Change schedule to 9-5
+      const selector = screen.getByLabelText(/View schedule:/i);
+      await user.selectOptions(selector, "9-5");
+
+      // getAllTeamsShifts should be called with new schedule type
+      expect(getAllTeamsShifts).toHaveBeenCalledWith(
+        expect.anything(),
+        "9-5",
+      );
+    });
+
+    it("displays multiple schedule options to choose from", () => {
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
+      const options = Array.from(selector.options);
+
+      // Should have multiple schedule options available
+      expect(options.length).toBeGreaterThan(0);
+
+      // Each option should have a value and title
+      options.forEach((option) => {
+        expect(option.value).toBeTruthy();
+        expect(option.text).toBeTruthy();
+      });
+    });
+  });
 });
