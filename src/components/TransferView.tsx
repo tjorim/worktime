@@ -243,14 +243,11 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
                           <td>
                             <div className="d-flex align-items-center">
                               <i
-                                className={classNames(
-                                  "bi",
-                                  transfer.type === "handover"
-                                    ? "bi-arrow-right-circle"
-                                    : "bi-arrow-left-circle",
-                                  transfer.type === "handover" ? "text-success" : "text-info",
-                                  "me-2",
-                                )}
+                                className={classNames("bi", "me-2", {
+                                  "bi-arrow-right-circle text-success":
+                                    transfer.type === "handover",
+                                  "bi-arrow-left-circle text-info": transfer.type !== "handover",
+                                })}
                               ></i>
                               <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
                             </div>

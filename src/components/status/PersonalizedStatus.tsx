@@ -122,6 +122,15 @@ export function PersonalizedStatus({
     return getCurrentShiftDay(liveTime);
   }, [liveTime]);
 
+  // Tooltip details for current shift badge
+  const shiftTooltipDetails = useMemo(() => {
+    if (!currentShift) return null;
+    const shift = getShiftByCode(currentShift.shift.code);
+    const { displayName } = getShiftDisplay(shift, scheduleType);
+    const formattedTime = getFormattedShiftTime(shift, scheduleType, settings.timeFormat);
+    return `${shift.emoji} ${displayName} shift (${formattedTime})`;
+  }, [currentShift, scheduleType, settings.timeFormat]);
+
   return (
     <Col className="mb-4">
       <Card>
@@ -220,16 +229,7 @@ export function PersonalizedStatus({
                                 {getShiftDisplay(currentShift.shift, scheduleType).displayCode}
                               </strong>
                               <br />
-                              {(() => {
-                                const shift = getShiftByCode(currentShift.shift.code);
-                                const { displayName } = getShiftDisplay(shift, scheduleType);
-                                const formattedTime = getFormattedShiftTime(
-                                  shift,
-                                  scheduleType,
-                                  settings.timeFormat,
-                                );
-                                return `${shift.emoji} ${displayName} shift (${formattedTime})`;
-                              })()}
+                              {shiftTooltipDetails}
                               <br />
                               <em>Full code: {currentShift.code}</em>
                             </Tooltip>
