@@ -112,37 +112,21 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
           break;
         default:
           if (!event.ctrlKey && !event.metaKey && !event.altKey) {
-            switch (event.key.toLowerCase()) {
-              case "t":
-                if (shortcuts.onTabToday) {
-                  event.preventDefault?.();
-                  try {
-                    shortcuts.onTabToday();
-                  } catch (error) {
-                    console.error("Error in onTabToday callback:", error);
-                  }
-                }
-                break;
-              case "s":
-                if (shortcuts.onTabSchedule) {
-                  event.preventDefault?.();
-                  try {
-                    shortcuts.onTabSchedule();
-                  } catch (error) {
-                    console.error("Error in onTabSchedule callback:", error);
-                  }
-                }
-                break;
-              case "r":
-                if (shortcuts.onTabTransfer) {
-                  event.preventDefault?.();
-                  try {
-                    shortcuts.onTabTransfer();
-                  } catch (error) {
-                    console.error("Error in onTabTransfer callback:", error);
-                  }
-                }
-                break;
+            const key = event.key.toLowerCase();
+            const shortcutMap: Record<string, { cb?: () => void; name: string }> = {
+              t: { cb: shortcuts.onTabToday, name: "onTabToday" },
+              s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
+              r: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
+            };
+
+            const shortcut = shortcutMap[key];
+            if (shortcut?.cb) {
+              event.preventDefault?.();
+              try {
+                shortcut.cb();
+              } catch (error) {
+                console.error(`Error in ${shortcut.name} callback:`, error);
+              }
             }
           }
           break;
