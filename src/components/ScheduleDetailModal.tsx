@@ -48,7 +48,7 @@ export function ScheduleDetailModal({
 }: ScheduleDetailModalProps) {
   const { settings, myTeam, scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
+  const hasTeams = scheduleConfig.showsTeamSelection;
   const toast = useToast();
 
   const calendarTooltipId = useId();

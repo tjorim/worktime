@@ -58,7 +58,7 @@ export function ScheduleView({
   const scheduleType = viewingScheduleType || userScheduleType;
   const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
-  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
+  const hasTeams = scheduleConfig.showsTeamSelection;
 
   // Get available schedules for the selector
   const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);

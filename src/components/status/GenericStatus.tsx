@@ -44,7 +44,7 @@ export function GenericStatus({
   const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
+  const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount;
 
   const today = dayjs();

@@ -56,7 +56,7 @@ export function PersonalizedStatus({
   const teamTooltipId = useId();
   const { settings, scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection ?? true;
+  const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount;
 
   // Get effective team - for single-user schedules, this returns 1
