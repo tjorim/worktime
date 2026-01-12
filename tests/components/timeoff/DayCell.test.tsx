@@ -7,6 +7,7 @@ import { dayjs } from "../../../src/utils/dateTimeUtils";
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
   const mockOnKeyDown = vi.fn();
+  const mockOnDayClick = vi.fn();
   const mockButtonRef = vi.fn();
 
   const defaultProps = {
@@ -17,6 +18,7 @@ describe("DayCell", () => {
     isFocused: false,
     events: [] as DayEvent[],
     onViewEvent: mockOnViewEvent,
+    onDayClick: mockOnDayClick,
     onKeyDown: mockOnKeyDown,
     buttonRef: mockButtonRef,
   };

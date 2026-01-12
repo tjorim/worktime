@@ -221,7 +221,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setShowEventModal(true);
   };
 
-  const prefillFormFromEvent = (event: HdayEvent) => {
+  const prefillFormFromEvent = useCallback((event: HdayEvent) => {
     if (event.type === "range") {
       setEventType("range");
       setEventStart(event.start || "");
@@ -238,7 +238,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setEventFlags(event.flags || []);
     setStartDateError("");
     setEndDateError("");
-  };
+  }, []);
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
@@ -264,7 +264,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     setModalMode("edit");
   };
 
-  const handleCancelEditMode = () => {
+  const handleCancelEditMode = useCallback(() => {
     if (editIndex < 0) {
       return;
     }
@@ -274,7 +274,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     }
     prefillFormFromEvent(event);
     setModalMode("view");
-  };
+  }, [editIndex, events, prefillFormFromEvent]);
 
   const handleSubmitEvent = () => {
     if (!validateForm()) {
@@ -447,6 +447,24 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     toast.showSuccess("Redo successful", "↪️");
   }, [canRedo, redo, toast]);
 
+  const handlersRef = useRef({
+    handleCancelEditMode,
+    handleExport,
+    handleOpenAddModal,
+    handleRedo,
+    handleUndo,
+  });
+
+  useEffect(() => {
+    handlersRef.current = {
+      handleCancelEditMode,
+      handleExport,
+      handleOpenAddModal,
+      handleRedo,
+      handleUndo,
+    };
+  }, [handleCancelEditMode, handleExport, handleOpenAddModal, handleRedo, handleUndo]);
+
   useEffect(() => {
     if (!isActive) {
       return;
@@ -466,7 +484,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
       if (event.key === "Escape") {
         if (showEventModal && modalMode === "edit" && editIndex >= 0) {
           event.preventDefault();
-          handleCancelEditMode();
+          handlersRef.current.handleCancelEditMode();
         }
         return;
       }
@@ -484,22 +502,22 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
         if (key === "z") {
           event.preventDefault();
           if (event.shiftKey) {
-            handleRedo();
+            handlersRef.current.handleRedo();
           } else {
-            handleUndo();
+            handlersRef.current.handleUndo();
           }
         }
         if (key === "y") {
           event.preventDefault();
-          handleRedo();
+          handlersRef.current.handleRedo();
         }
         if (key === "s") {
           event.preventDefault();
-          handleExport();
+          handlersRef.current.handleExport();
         }
         if (key === "n") {
           event.preventDefault();
-          handleOpenAddModal();
+          handlersRef.current.handleOpenAddModal();
         }
       }
     };
@@ -509,19 +527,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [
-    editIndex,
-    handleCancelEditMode,
-    handleExport,
-    handleOpenAddModal,
-    handleRedo,
-    handleUndo,
-    isActive,
-    modalMode,
-    selectedIndices.length,
-    showEventModal,
-    viewMode,
-  ]);
+  }, [editIndex, isActive, modalMode, selectedIndices.length, showEventModal, viewMode]);
 
   const currentYear = calendarMonth.year();
   const paydayMapForYear = useMemo<Map<string, PaydayInfo>>(
