@@ -7,15 +7,19 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig, getEffectiveTeam } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../../utils/dateTimeUtils";
-import type { UpcomingShiftResult, OffDayProgress, ShiftResult } from "../../utils/shiftCalculations";
+import type {
+  UpcomingShiftResult,
+  OffDayProgress,
+  ShiftResult,
+} from "../../utils/shiftCalculations";
 import {
   calculateShift,
-  getAllTeamsShifts,
   getCurrentShiftDay,
   getNextShift,
   getOffDayProgress,
@@ -23,7 +27,7 @@ import {
   getShiftDisplay,
   getShiftCode,
   getFormattedShiftTime,
-  isCurrentlyWorking,
+  getCurrentWorkingTeam,
 } from "../../utils/shiftCalculations";
 import { ShiftTimeline } from "../ShiftTimeline";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
@@ -88,23 +92,7 @@ export function PersonalizedStatus({
 
   // Find which team is currently working
   const currentWorkingTeam = useMemo((): ShiftResult | null => {
-    const now = today;
-    const allTeamsToday = getAllTeamsShifts(today, scheduleType);
-    const workingToday = allTeamsToday.find((teamShift) => {
-      if (!teamShift.shift.isWorking) return false;
-      return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
-    });
-
-    if (workingToday) return workingToday;
-
-    const yesterday = today.subtract(1, "day");
-    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleType);
-    const workingYesterday = allTeamsYesterday.find((teamShift) => {
-      if (!teamShift.shift.isWorking) return false;
-      return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
-    });
-
-    return workingYesterday || null;
+    return getCurrentWorkingTeam(today, scheduleType);
   }, [todayMinuteKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps
 
   // Calculate off-day progress when team is off
@@ -151,8 +139,7 @@ export function PersonalizedStatus({
                       YY = Year (2-digit)
                       <br />
                       WW = Week number
-                      <br />
-                      D = Weekday (1=Mon, 7=Sun)
+                      <br />D = Weekday (1=Mon, 7=Sun)
                       <br />
                       <em>
                         Today: {formatYYWWD(today)}
@@ -249,7 +236,12 @@ export function PersonalizedStatus({
                           }
                         >
                           <Badge
-                            className={`shift-code shift-badge-lg cursor-help ${getShiftByCode(currentShift.shift.code).className}`}
+                            className={classNames(
+                              "shift-code",
+                              "shift-badge-lg",
+                              "cursor-help",
+                              getShiftByCode(currentShift.shift.code).className,
+                            )}
                           >
                             {hasTeams
                               ? `Team ${validatedTeam}: ${getShiftDisplay(currentShift.shift, scheduleType).displayName}`
@@ -302,10 +294,7 @@ export function PersonalizedStatus({
                           scheduleType={scheduleType}
                           className="small text-muted"
                         />
-                        <CountdownBadge
-                          countdown={countdown}
-                          startTime={nextShiftStartTime}
-                        />
+                        <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
                       </div>
                     ) : (
                       <div>Next shift information not available</div>

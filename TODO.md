@@ -24,7 +24,7 @@ Critical features and improvements that significantly impact user experience.
 - **Implementation**: Add calendar generation utility and activate export buttons
 - **Files to Modify**:
   - `src/components/SettingsPanel.tsx` - Remove "Coming Soon" badge and enable button
-  - `src/components/TeamDetailModal.tsx` - Enable export button
+  - `src/components/ScheduleDetailModal.tsx` - Enable export button
   - `src/utils/exportCalendar.ts` – Add calendar export utility
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Planned
@@ -140,13 +140,13 @@ Features that enhance functionality with moderate development effort.
 
 - **Component**: Extract common team selection logic
 - **Use Cases**:
-  - Reduce code duplication across TransferView, TeamDetailModal, etc.
+  - Reduce code duplication across TransferView, ScheduleDetailModal, etc.
   - Consistent team selection UI/UX
   - Easier maintenance and updates
 - **Implementation**: Create `components/common/TeamSelector.tsx` with standardized props
 - **Files to Modify**:
   - `src/components/TransferView.tsx` - Replace dropdown with TeamSelector
-  - `src/components/TeamDetailModal.tsx` - Use common component
+  - `src/components/ScheduleDetailModal.tsx` - Use common component
   - Create `src/components/common/TeamSelector.tsx`
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Planned
@@ -162,13 +162,13 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 7. TeamDetailModal Enhancement
+#### 7. ScheduleDetailModal Enhancement
 
-- **Component**: Improve existing team detail modal
+- **Component**: Improve existing schedule detail modal
 - **Use Cases**:
   - Enable export functionality in modal
-  - Enhanced 7-day schedule view
-  - Better team information display
+  - Enhanced schedule view for all schedule types
+  - Better schedule information display
 - **Implementation**: Activate disabled features and improve UX
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Future
@@ -364,7 +364,7 @@ Advanced features for future development phases.
     - Most development effort
 - **Technical Components**:
   1. **REST API** (Phase 1 - Basic CRUD)
-     ```
+     ```http
      GET  /api/teams/:teamId/events?start=X&end=Y
      POST /api/teams/:teamId/events
      PUT  /api/teams/:teamId/events/:id
@@ -381,7 +381,8 @@ Advanced features for future development phases.
      - Role-based access (member, manager, admin)
      - Network auth integration (AD/LDAP) or OAuth
   4. **File Format Extension** (User Attribution)
-     ```
+
+     ```text
      # Option A: Comments (backward compatible)
      2025/01/15-2025/01/20 # John's vacation
 
@@ -391,6 +392,7 @@ Advanced features for future development phases.
      # Option C: Separate files per user
      \\server\share\team1\john.hday
      ```
+
 - **Migration Path**:
   - **Phase 1**: Backend + manual sync (keep localStorage, add "Sync to team" button)
   - **Phase 2**: Real-time sync (WebSocket, auto-sync, read-only team events)
@@ -454,7 +456,7 @@ Advanced features for future development phases.
 ### 📋 Backlog (Features)
 
 5. **Enhanced List Groups** - Better data organization
-6. **TeamDetailModal Enhancement** - Activate disabled features
+6. **ScheduleDetailModal Enhancement** - Activate disabled features
 7. **Enhanced Error Boundaries** - Better error handling
 
 ### 📋 Backlog (Time-Off Management)

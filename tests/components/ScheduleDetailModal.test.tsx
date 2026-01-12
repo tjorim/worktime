@@ -37,7 +37,12 @@ describe("ScheduleDetailModal", () => {
 
   it("disables View Transfers button and shows tooltip when viewing own team", async () => {
     renderWithSettings(
-      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={2} onViewTransfers={vi.fn()} />,
+      <ScheduleDetailModal
+        show={true}
+        onHide={() => {}}
+        teamNumber={2}
+        onViewTransfers={vi.fn()}
+      />,
     );
 
     // Simulate user is on team 2 (default selectedTeam is null, so we need to set it)
@@ -57,7 +62,12 @@ describe("ScheduleDetailModal", () => {
 
   it("enables View Transfers button for other teams", () => {
     renderWithSettings(
-      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={3} onViewTransfers={vi.fn()} />,
+      <ScheduleDetailModal
+        show={true}
+        onHide={() => {}}
+        teamNumber={3}
+        onViewTransfers={vi.fn()}
+      />,
     );
     // The button should be enabled (unless there are no transfers, but we are not testing that here)
     const button = screen.getByRole("button", { name: /view transfers/i });

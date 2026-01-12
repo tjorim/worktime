@@ -7,10 +7,11 @@ import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getScheduleConfig, isValidScheduleType } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
   dayjs,
@@ -151,7 +152,10 @@ export function ScheduleView({
               id={scheduleSelectId}
               size="sm"
               value={viewingScheduleType || ""}
-              onChange={(e) => setViewingScheduleType((e.target.value as ScheduleOption) || null)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setViewingScheduleType(isValidScheduleType(value) ? value : null);
+              }}
               style={{ width: "auto" }}
             >
               {availableSchedules.map((schedule) => (
@@ -214,7 +218,7 @@ export function ScheduleView({
                   return (
                     <th
                       key={day.format("YYYY-MM-DD")}
-                      className={`text-center ${isToday ? "today-column" : ""}`}
+                      className={classNames("text-center", isToday && "today-column")}
                       aria-label={`${day.format("dddd, MMM D")}${isToday ? " (today)" : ""}`}
                     >
                       <div className="fw-semibold">{day.format("ddd")}</div>
@@ -264,7 +268,7 @@ export function ScheduleView({
                     return (
                       <td
                         key={day.format("YYYY-MM-DD")}
-                        className={`text-center ${isToday ? "today-column" : ""}`}
+                        className={classNames("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams
                             ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shiftDisplay.displayName : "Off"}`
@@ -294,7 +298,11 @@ export function ScheduleView({
                             }
                           >
                             <Badge
-                              className={`shift-code cursor-help ${getShiftByCode(shift.code).className}`}
+                              className={classNames(
+                                "shift-code",
+                                "cursor-help",
+                                getShiftByCode(shift.code).className,
+                              )}
                             >
                               {shiftDisplay.displayCode}
                             </Badge>

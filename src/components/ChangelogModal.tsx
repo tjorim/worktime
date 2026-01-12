@@ -4,6 +4,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Modal from "react-bootstrap/Modal";
+import classNames from "classnames";
 import { type ChangelogVersion, changelogData, futurePlans } from "../data/changelog";
 
 interface ChangelogModalProps {
@@ -40,7 +41,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     return (
       <div className="mb-3">
         <h6 className={`text-${variant} mb-2`}>
-          <i className={`bi bi-${getIconForSection(title)} me-2`}></i>
+          <i className={classNames("bi", `bi-${getIconForSection(title)}`, "me-2")}></i>
           {title}
         </h6>
         <ul className="list-unstyled">

@@ -676,3 +676,46 @@ export function isCurrentlyWorking(
 
   return hour >= shift.start && hour < shift.end;
 }
+
+/**
+ * Find which team is currently working right now.
+ *
+ * Checks today first, then falls back to yesterday to handle night shifts
+ * that span midnight (e.g., a night shift starting at 23:00 yesterday is
+ * still working until 07:00 today).
+ *
+ * @param currentTime - The current time to check against
+ * @param scheduleType - The schedule type (defaults to 5-shift if not provided)
+ * @returns The shift result for the currently working team, or null if no team is working
+ *
+ * @example
+ * const currentTeam = getCurrentWorkingTeam(dayjs(), "5-shift");
+ * if (currentTeam) {
+ *   console.log(`Team ${currentTeam.teamNumber} is working ${currentTeam.shift.name}`);
+ * }
+ */
+export function getCurrentWorkingTeam(
+  currentTime: Dayjs,
+  scheduleType?: ScheduleOption | null | undefined,
+): ShiftResult | null {
+  const today = currentTime.startOf("day");
+
+  // Check today first
+  const allTeamsToday = getAllTeamsShifts(today, scheduleType);
+  const workingToday = allTeamsToday.find((teamShift) => {
+    if (!teamShift.shift.isWorking) return false;
+    return isCurrentlyWorking(teamShift.shift, teamShift.date, currentTime);
+  });
+
+  if (workingToday) return workingToday;
+
+  // Fall back to yesterday for night shifts spanning midnight
+  const yesterday = today.subtract(1, "day");
+  const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleType);
+  const workingYesterday = allTeamsYesterday.find((teamShift) => {
+    if (!teamShift.shift.isWorking) return false;
+    return isCurrentlyWorking(teamShift.shift, teamShift.date, currentTime);
+  });
+
+  return workingYesterday || null;
+}

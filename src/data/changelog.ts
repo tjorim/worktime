@@ -452,7 +452,7 @@ export const changelogData: ChangelogVersion[] = [
 ];
 
 export const futurePlans = {
-  "v4.5.0": {
+  "v4.6.0": {
     title: "Advanced Features",
     features: [
       "Calendar export (.ics format)",

@@ -25,9 +25,10 @@ export function ShiftTimeDisplay({
   timeFormat,
   className = "small text-muted",
 }: ShiftTimeDisplayProps) {
-  const { settings } = useSettings();
-  const effectiveTimeFormat = timeFormat || settings.timeFormat;
-  const formattedTime = getFormattedShiftTime(shift, scheduleType, effectiveTimeFormat);
+  const { settings, scheduleType: userScheduleType } = useSettings();
+  const effectiveTimeFormat = timeFormat ?? settings.timeFormat;
+  const effectiveScheduleType = scheduleType ?? userScheduleType;
+  const formattedTime = getFormattedShiftTime(shift, effectiveScheduleType, effectiveTimeFormat);
 
   return <div className={className}>{formattedTime}</div>;
 }

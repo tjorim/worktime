@@ -8,6 +8,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
@@ -242,11 +243,14 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
                           <td>
                             <div className="d-flex align-items-center">
                               <i
-                                className={`bi ${
+                                className={classNames(
+                                  "bi",
                                   transfer.type === "handover"
-                                    ? "bi-arrow-right-circle text-success"
-                                    : "bi-arrow-left-circle text-info"
-                                } me-2`}
+                                    ? "bi-arrow-right-circle"
+                                    : "bi-arrow-left-circle",
+                                  transfer.type === "handover" ? "text-success" : "text-info",
+                                  "me-2",
+                                )}
                               ></i>
                               <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
                             </div>

@@ -26,6 +26,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return "";
   }),
   isCurrentlyWorking: vi.fn(),
+  getCurrentWorkingTeam: vi.fn(),
 }));
 
 // getShiftClassName is now part of shiftCalculations mock
@@ -81,11 +82,13 @@ describe("CurrentStatus Component", () => {
     vi.mocked(shiftCalculations.getCurrentShiftDay).mockReturnValue(dayjs("2024-01-15"));
     vi.mocked(shiftCalculations.calculateShift).mockReturnValue({
       code: "M",
+      emoji: "🌅",
       name: "Morning",
       hours: "07:00-15:00",
       start: 7,
       end: 15,
       isWorking: true,
+      className: "shift-morning",
     });
     vi.mocked(shiftCalculations.getShiftCode).mockReturnValue("D1");
     vi.mocked(shiftCalculations.getAllTeamsShifts).mockReturnValue([
@@ -93,11 +96,13 @@ describe("CurrentStatus Component", () => {
         teamNumber: 1,
         shift: {
           code: "M",
+          emoji: "🌅",
           name: "Morning",
           hours: "07:00-15:00",
           start: 7,
           end: 15,
           isWorking: true,
+          className: "shift-morning",
         },
         date: dayjs("2024-01-15"),
         code: "D1M",
@@ -106,16 +111,33 @@ describe("CurrentStatus Component", () => {
         teamNumber: 2,
         shift: {
           code: "O",
+          emoji: "☀️",
           name: "Off",
           hours: "",
           start: null,
           end: null,
           isWorking: false,
+          className: "shift-off",
         },
         date: dayjs("2024-01-15"),
         code: "D1O",
       },
     ]);
+    vi.mocked(shiftCalculations.getCurrentWorkingTeam).mockReturnValue({
+      teamNumber: 1,
+      shift: {
+        code: "M",
+        emoji: "🌅",
+        name: "Morning",
+        hours: "07:00-15:00",
+        start: 7,
+        end: 15,
+        isWorking: true,
+        className: "shift-morning",
+      },
+      date: dayjs("2024-01-15"),
+      code: "D1M",
+    });
     vi.mocked(shiftCalculations.getNextShift).mockReturnValue({
       date: dayjs("2024-01-16"),
       shift: {
@@ -126,6 +148,7 @@ describe("CurrentStatus Component", () => {
         start: 15,
         end: 23,
         isWorking: true,
+        className: "shift-evening",
       },
       code: "2404.2L",
     });
@@ -256,11 +279,13 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "M",
+          emoji: "🌅",
           name: "Morning",
           hours: "07:00-15:00",
           start: 7,
           end: 15,
           isWorking: true,
+          className: "shift-morning",
         },
         code: "2404.2M",
       });
@@ -275,11 +300,13 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "N",
+          emoji: "🌙",
           name: "Night",
           hours: "23:00-07:00",
           start: 23,
           end: 7,
           isWorking: true,
+          className: "shift-night",
         },
         code: "2404.2N",
       });
@@ -311,11 +338,13 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "O",
+          emoji: "☀️",
           name: "Off",
           hours: "",
           start: null,
           end: null,
           isWorking: false,
+          className: "shift-off",
         },
         code: "2404.2O",
       });
@@ -405,11 +434,13 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "O",
+          emoji: "☀️",
           name: "Off",
           hours: "",
           start: null,
           end: null,
           isWorking: false,
+          className: "shift-off",
         },
         code: "2404.2O",
       });

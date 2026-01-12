@@ -2,9 +2,11 @@ import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useId } from "react";
+import classNames from "classnames";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 import type { ScheduleOption } from "../../data/rosters";
 import { getShiftDisplay } from "../../utils/shiftCalculations";
+import { useSettings } from "../../contexts/SettingsContext";
 
 interface ShiftBadgeProps {
   shift: ShiftResult["shift"];
@@ -38,7 +40,9 @@ export function ShiftBadge({
   showTooltip = variant === "code",
 }: ShiftBadgeProps) {
   const tooltipId = useId();
-  const shiftDisplay = getShiftDisplay(shift, scheduleType);
+  const { scheduleType: userScheduleType } = useSettings();
+  const effectiveScheduleType = scheduleType ?? userScheduleType;
+  const shiftDisplay = getShiftDisplay(shift, effectiveScheduleType);
 
   // Determine size class
   const getSizeClass = () => {
@@ -66,7 +70,13 @@ export function ShiftBadge({
 
   const badge = (
     <Badge
-      className={`shift-code ${sizeClass} ${showTooltip ? "cursor-help" : ""} ${shift.className} ${className}`.trim()}
+      className={classNames(
+        "shift-code",
+        sizeClass,
+        showTooltip && "cursor-help",
+        shift.className,
+        className,
+      )}
       pill={pill}
     >
       {content}

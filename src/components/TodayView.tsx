@@ -8,12 +8,13 @@ import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { getScheduleConfig, isValidScheduleType } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
@@ -111,7 +112,7 @@ function TeamCard({
             </Tooltip>
           }
         >
-          <Badge className={`shift-code cursor-help ${shiftResult.shift.className}`}>
+          <Badge className={classNames("shift-code", "cursor-help", shiftResult.shift.className)}>
             {shiftDisplay.displayCode}
           </Badge>
         </OverlayTrigger>
@@ -145,7 +146,7 @@ function TeamCard({
   if (onTeamClick) {
     return (
       <Card
-        className={`team-card-interactive w-100${isMyTeam ? " my-team" : ""}`}
+        className={classNames("team-card-interactive", "w-100", isMyTeam && "my-team")}
         onClick={() => onTeamClick(shiftResult.teamNumber)}
         role="button"
         aria-label={
@@ -287,7 +288,10 @@ export function TodayView({
               id={scheduleSelectId}
               size="sm"
               value={viewingScheduleType || ""}
-              onChange={(e) => setViewingScheduleType((e.target.value as ScheduleOption) || null)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setViewingScheduleType(isValidScheduleType(value) ? value : null);
+              }}
               style={{ width: "auto" }}
             >
               {availableSchedules.map((schedule) => (

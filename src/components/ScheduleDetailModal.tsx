@@ -9,6 +9,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
@@ -120,7 +121,14 @@ export function ScheduleDetailModal({
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          <i className={`bi ${hasTeams ? "bi-people" : "bi-calendar-week"} me-2 text-primary`}></i>
+          <i
+            className={classNames(
+              "bi",
+              hasTeams ? "bi-people" : "bi-calendar-week",
+              "me-2",
+              "text-primary",
+            )}
+          ></i>
           {hasTeams ? `Team ${teamNumber} Details` : "My Schedule Details"}
         </Modal.Title>
       </Modal.Header>

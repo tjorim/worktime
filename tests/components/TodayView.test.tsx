@@ -8,6 +8,7 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
+import { getAllTeamsShifts } from "../../src/utils/shiftCalculations";
 
 // Mock today shifts data
 const mockTodayShiftsData: ShiftResult[] = [
@@ -100,10 +101,7 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
-const mockTodayShifts = mockTodayShiftsData;
-
 const defaultProps = {
-  todayShifts: mockTodayShifts,
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
   onPreviousDay: vi.fn(),
@@ -170,10 +168,13 @@ describe("TodayView", () => {
 
   describe("Empty state", () => {
     it("handles empty shifts array", () => {
-      renderWithProviders(<TodayView {...defaultProps} todayShifts={[]} />);
+      // Override the mock to return empty array for this test
+      vi.mocked(getAllTeamsShifts).mockReturnValueOnce([]);
 
-      // Should still render the Today header
-      expect(screen.getByText("Today")).toBeInTheDocument();
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      // Should still render the header
+      expect(screen.getByText(/All Teams|Schedule/)).toBeInTheDocument();
     });
   });
 

@@ -7,6 +7,7 @@ import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
+import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { getTeamCountForOption } from "../utils/scheduleUtils";
@@ -451,7 +452,13 @@ export function WelcomeWizard({
 
         <div className="d-flex justify-content-between">
           <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading}>
-            <i className={`bi ${isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left"} me-1`}></i>{" "}
+            <i
+              className={classNames(
+                "bi",
+                isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left",
+                "me-1",
+              )}
+            ></i>{" "}
             {isChangeScheduleFlow ? "Cancel" : "Back"}
           </Button>
           <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule}>

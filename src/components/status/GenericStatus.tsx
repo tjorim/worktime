@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
+import classNames from "classnames";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
@@ -17,7 +18,7 @@ import {
   getCurrentShiftDay,
   getShiftByCode,
   getShiftDisplay,
-  isCurrentlyWorking,
+  getCurrentWorkingTeam,
 } from "../../utils/shiftCalculations";
 import { ShiftTimeline } from "../ShiftTimeline";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
@@ -52,23 +53,7 @@ export function GenericStatus({
 
   // Find which team is currently working
   const currentWorkingTeam = useMemo((): ShiftResult | null => {
-    const now = today;
-    const allTeamsToday = getAllTeamsShifts(today, scheduleType);
-    const workingToday = allTeamsToday.find((teamShift) => {
-      if (!teamShift.shift.isWorking) return false;
-      return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
-    });
-
-    if (workingToday) return workingToday;
-
-    const yesterday = today.subtract(1, "day");
-    const allTeamsYesterday = getAllTeamsShifts(yesterday, scheduleType);
-    const workingYesterday = allTeamsYesterday.find((teamShift) => {
-      if (!teamShift.shift.isWorking) return false;
-      return isCurrentlyWorking(teamShift.shift, teamShift.date, now);
-    });
-
-    return workingYesterday || null;
+    return getCurrentWorkingTeam(today, scheduleType);
   }, [todayMinuteKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps
 
   // Calculate next shift change across all teams
@@ -136,8 +121,7 @@ export function GenericStatus({
                       YY = Year (2-digit)
                       <br />
                       WW = Week number
-                      <br />
-                      D = Weekday (1=Mon, 7=Sun)
+                      <br />D = Weekday (1=Mon, 7=Sun)
                       <br />
                       <em>
                         Today: {formatYYWWD(today)}
@@ -207,7 +191,11 @@ export function GenericStatus({
                     {currentWorkingTeam ? (
                       <div>
                         <Badge
-                          className={`shift-code shift-badge-lg ${getShiftByCode(currentWorkingTeam.shift.code).className}`}
+                          className={classNames(
+                            "shift-code",
+                            "shift-badge-lg",
+                            getShiftByCode(currentWorkingTeam.shift.code).className,
+                          )}
                         >
                           {hasTeams
                             ? `Team ${currentWorkingTeam.teamNumber}: ${getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayName}`
