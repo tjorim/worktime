@@ -532,34 +532,36 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   return (
     <div className="time-off-view py-3">
       <Card>
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">
-            <i className="bi bi-calendar-check me-2"></i>
-            Time Off Management
-          </h5>
-          <div>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleUndo}
-              className="me-2"
-              disabled={!canUndo}
-              aria-label="Undo last change"
-            >
-              <i className="bi bi-arrow-counterclockwise me-1"></i>
-              Undo
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleRedo}
-              className="me-2"
-              disabled={!canRedo}
-              aria-label="Redo last change"
-            >
-              <i className="bi bi-arrow-clockwise me-1"></i>
-              Redo
-            </Button>
+        <Card.Header>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
+            <h5 className="mb-0">
+              <i className="bi bi-calendar-check me-2"></i>
+              Time Off Management
+            </h5>
+            <div className="d-flex flex-wrap gap-2">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                aria-label="Undo last change"
+              >
+                <i className="bi bi-arrow-counterclockwise me-1"></i>
+                Undo
+              </Button>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                aria-label="Redo last change"
+              >
+                <i className="bi bi-arrow-clockwise me-1"></i>
+                Redo
+              </Button>
+            </div>
+          </div>
+          <div className="d-flex flex-wrap gap-2">
             <Button
               variant="outline-danger"
               size="sm"
@@ -569,7 +571,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 }
                 setShowBulkDeleteConfirm(true);
               }}
-              className="me-2"
               disabled={selectedIndices.length === 0}
               aria-label="Delete selected events"
             >
@@ -580,7 +581,6 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
               variant="outline-secondary"
               size="sm"
               onClick={handleSelectAll}
-              className="me-2"
               disabled={events.length === 0 || selectedIndices.length === events.length}
             >
               Select All
@@ -589,16 +589,15 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
               variant="outline-secondary"
               size="sm"
               onClick={handleClearSelection}
-              className="me-2"
               disabled={selectedIndices.length === 0}
             >
               Clear Selection
             </Button>
-            <Button variant="outline-primary" size="sm" onClick={handleImport} className="me-2">
+            <Button variant="outline-primary" size="sm" onClick={handleImport}>
               <i className="bi bi-download me-1"></i>
               Import
             </Button>
-            <Button variant="outline-primary" size="sm" onClick={handleExport} className="me-2">
+            <Button variant="outline-primary" size="sm" onClick={handleExport}>
               <i className="bi bi-upload me-1"></i>
               Export
             </Button>

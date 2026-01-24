@@ -143,8 +143,8 @@ export function ScheduleView({
             </Button>
           </div>
         </div>
-        <div className="d-flex justify-content-between align-items-center gap-3">
-          <div className="d-flex align-items-center gap-2">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
             <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
               📋 View schedule:
             </Form.Label>
@@ -166,21 +166,23 @@ export function ScheduleView({
               ))}
             </Form.Select>
           </div>
-          <div className="d-flex align-items-center gap-2">
-            <Form.Label htmlFor={datePickerId} className="mb-0 small text-muted">
-              🎯 Jump to date:
-            </Form.Label>
-            <Form.Control
-              type="date"
-              id={datePickerId}
-              size="sm"
-              value={currentDate.format("YYYY-MM-DD")}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="date-picker-auto"
-            />
-          </div>
-          <div className="small text-muted text-end" style={{ minWidth: "180px" }}>
-            ⌨️ Keyboard: ← → arrows, Ctrl+H (this week)
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <div className="d-flex align-items-center gap-2">
+              <Form.Label htmlFor={datePickerId} className="mb-0 small text-muted">
+                🎯 Jump to date:
+              </Form.Label>
+              <Form.Control
+                type="date"
+                id={datePickerId}
+                size="sm"
+                value={currentDate.format("YYYY-MM-DD")}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="date-picker-auto"
+              />
+            </div>
+            <div className="small text-muted d-none d-lg-block">
+              ⌨️ Keyboard: ← → arrows, Ctrl+H (this week)
+            </div>
           </div>
         </div>
       </Card.Header>
