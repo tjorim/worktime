@@ -320,11 +320,6 @@ html, body {
     font-size: 0.75rem;
   }
 
-  /* Prevent horizontal overflow */
-  body {
-    overflow-x: hidden;
-  }
-
   /* Ensure modals fit on small screens */
   .modal-dialog {
     margin: 0.5rem;
