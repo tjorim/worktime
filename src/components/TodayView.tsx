@@ -279,8 +279,8 @@ export function TodayView({
             </Button>
           </div>
         </div>
-        <div className="d-flex justify-content-between align-items-center gap-3">
-          <div className="d-flex align-items-center gap-2">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
             <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
               📋 View schedule:
             </Form.Label>
@@ -302,16 +302,18 @@ export function TodayView({
               ))}
             </Form.Select>
           </div>
-          <div className="text-muted small">
-            {displayDate.format("dddd, MMMM D, YYYY")}
-            {isToday && (
-              <Badge bg="success" className="ms-2">
-                Today
-              </Badge>
-            )}
-          </div>
-          <div className="small text-muted text-end" style={{ minWidth: "180px" }}>
-            ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <div className="text-muted small">
+              {displayDate.format("dddd, MMMM D, YYYY")}
+              {isToday && (
+                <Badge bg="success" className="ms-2">
+                  Today
+                </Badge>
+              )}
+            </div>
+            <div className="small text-muted d-none d-lg-block">
+              ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
+            </div>
           </div>
         </div>
       </Card.Header>

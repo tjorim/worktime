@@ -308,7 +308,7 @@ export function WelcomeWizard({
           and integrated time-off management - stored locally in your browser.
         </p>
       </div>
-      <div className="d-flex justify-content-between">
+      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
         <Button
           variant="outline-secondary"
           onClick={() => {
@@ -320,10 +320,11 @@ export function WelcomeWizard({
           }}
           disabled={isLoading}
           ref={currentStep === "welcome" ? firstButtonRef : undefined}
+          className="order-2 order-sm-1"
         >
           Maybe Later
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading}>
+        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
           Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -386,16 +387,17 @@ export function WelcomeWizard({
           <b>{SETTINGS_LOCATION_TEXT}</b>.
         </Alert>
       </div>
-      <div className="d-flex justify-content-between">
+      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
         <Button
           variant="outline-secondary"
           onClick={prevStep}
           disabled={isLoading}
           ref={currentStep === "features" ? firstButtonRef : undefined}
+          className="order-2 order-sm-1"
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading}>
+        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
           Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -450,8 +452,8 @@ export function WelcomeWizard({
           ))}
         </div>
 
-        <div className="d-flex justify-content-between">
-          <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading}>
+        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
+          <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading} className="order-2 order-sm-1">
             <i
               className={classNames(
                 "bi",
@@ -461,7 +463,7 @@ export function WelcomeWizard({
             ></i>{" "}
             {isChangeScheduleFlow ? "Cancel" : "Back"}
           </Button>
-          <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule}>
+          <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule} className="order-1 order-sm-2">
             {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
           </Button>
         </div>
@@ -581,22 +583,23 @@ export function WelcomeWizard({
           </Form.Group>
         </Form>
 
-        <div className="d-flex justify-content-between mt-4">
+        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
           <Button
             variant="outline-secondary"
             onClick={prevStep}
             disabled={isLoading}
             ref={currentStep === "vacation-allowance" ? firstButtonRef : undefined}
+            className="order-3 order-sm-1"
           >
             <i className="bi bi-arrow-left me-2"></i>
             Back
           </Button>
-          <div>
+          <div className="d-flex gap-2 order-1 order-sm-2">
             <Button
               variant="outline-secondary"
               onClick={handleVacationSkip}
               disabled={isLoading}
-              className="me-2"
+              className="flex-fill flex-sm-grow-0"
             >
               Skip
             </Button>
@@ -604,6 +607,7 @@ export function WelcomeWizard({
               variant="primary"
               onClick={handleVacationComplete}
               disabled={isLoading || validation.isInvalid}
+              className="flex-fill flex-sm-grow-0"
             >
               {validation.isValid ? "Save & Complete" : "Complete"}
               <i className="bi bi-check-lg ms-2"></i>
