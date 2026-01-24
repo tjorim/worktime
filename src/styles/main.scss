@@ -4,13 +4,9 @@
 /* Worktime Custom Styles */
 
 /* Prevent horizontal scroll on mobile */
-html, body {
+html {
   overflow-x: hidden;
-  max-width: 100vw;
-}
-
-#root {
-  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Month calendar CSS variables */
