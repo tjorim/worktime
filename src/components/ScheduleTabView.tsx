@@ -42,9 +42,8 @@ export function ScheduleTabView({
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
-  // Default to "week" view since this is the canonical schedule view
-  // (matches the behavior when Schedule was a separate tab)
-  const [viewMode, setViewMode] = useState<"today" | "week">("week");
+  // Default to "today" view as it's more immediately relevant to users
+  const [viewMode, setViewMode] = useState<"today" | "week">("today");
 
   // Cross-schedule viewing: allow viewing other schedule types
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(

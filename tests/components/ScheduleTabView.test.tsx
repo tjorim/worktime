@@ -52,56 +52,54 @@ describe("ScheduleTabView", () => {
       expect(screen.getByRole("button", { name: /Week/i })).toBeInTheDocument();
     });
 
-    it("shows Week view by default", () => {
+    it("shows Today view by default", () => {
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
-      expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
     });
   });
 
   describe("View mode switching", () => {
-    it("switches to Today view when Today button is clicked", async () => {
+    it("switches to Week view when Week button is clicked", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      const todayButton = screen.getByRole("button", { name: /Today/i });
-      await user.click(todayButton);
+      const weekButton = screen.getByRole("button", { name: /Week/i });
+      await user.click(weekButton);
 
-      expect(screen.getByTestId("today-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+      expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
     });
 
-    it("switches back to Week view when Week button is clicked", async () => {
+    it("switches back to Today view when Today button is clicked", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      // First switch to Today view
-      const todayButton = screen.getByRole("button", { name: /Today/i });
-      await user.click(todayButton);
-      expect(screen.getByTestId("today-view")).toBeInTheDocument();
-
-      // Then switch back to Week view
+      // First switch to Week view
       const weekButton = screen.getByRole("button", { name: /Week/i });
       await user.click(weekButton);
       expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
+
+      // Then switch back to Today view
+      const todayButton = screen.getByRole("button", { name: /Today/i });
+      await user.click(todayButton);
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
     });
   });
 
   describe("Props passing", () => {
-    it("passes myTeam prop to TodayView", async () => {
-      const user = userEvent.setup();
+    it("passes myTeam prop to TodayView", () => {
       renderWithProviders(<ScheduleTabView {...defaultProps} myTeam={3} />);
-      
-      // Switch to Today view first
-      const todayButton = screen.getByRole("button", { name: /Today/i });
-      await user.click(todayButton);
-      
       expect(screen.getByTestId("today-view")).toHaveTextContent("Team 3");
     });
 
-    it("passes myTeam prop to ScheduleView", () => {
+    it("passes myTeam prop to ScheduleView", async () => {
+      const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} myTeam={3} />);
-      // Week view is shown by default
+
+      const weekButton = screen.getByRole("button", { name: /Week/i });
+      await user.click(weekButton);
+
       expect(screen.getByTestId("schedule-view")).toHaveTextContent("Team 3");
     });
   });
@@ -144,11 +142,8 @@ describe("ScheduleTabView", () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      // Switch to Today view first (default is Week view now)
-      const todayButton = screen.getByRole("button", { name: /Today/i });
-      await user.click(todayButton);
-
       // Initially should show user's default schedule (9-5)
+      // The mock will show the value passed as viewingScheduleType prop
       const todayView = screen.getByTestId("today-view");
       expect(todayView).toBeInTheDocument();
 
@@ -164,7 +159,11 @@ describe("ScheduleTabView", () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      // Week view is shown by default
+      // Switch to Week view
+      const weekButton = screen.getByRole("button", { name: /Week/i });
+      await user.click(weekButton);
+
+      // ScheduleView should be visible
       const scheduleView = screen.getByTestId("schedule-view");
       expect(scheduleView).toBeInTheDocument();
 
@@ -180,24 +179,24 @@ describe("ScheduleTabView", () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
-      // Start in Week view (default), change schedule to 5-shift
+      // Change schedule to 5-shift in Today view
       const selector = screen.getByLabelText(/View schedule:/i);
       await user.selectOptions(selector, "5-shift");
-      expect(screen.getByTestId("schedule-view")).toHaveTextContent("Schedule: 5-shift");
-
-      // Switch to Today view
-      const todayButton = screen.getByRole("button", { name: /Today/i });
-      await user.click(todayButton);
-
-      // Today view should also show 5-shift
       expect(screen.getByTestId("today-view")).toHaveTextContent("Schedule: 5-shift");
 
-      // Switch back to Week view
+      // Switch to Week view
       const weekButton = screen.getByRole("button", { name: /Week/i });
       await user.click(weekButton);
 
-      // Week view should still show 5-shift
+      // Week view should also show 5-shift
       expect(screen.getByTestId("schedule-view")).toHaveTextContent("Schedule: 5-shift");
+
+      // Switch back to Today view
+      const todayButton = screen.getByRole("button", { name: /Today/i });
+      await user.click(todayButton);
+
+      // Today view should still show 5-shift
+      expect(screen.getByTestId("today-view")).toHaveTextContent("Schedule: 5-shift");
     });
 
     it("syncs dropdown with user schedule after onboarding", async () => {
@@ -240,9 +239,9 @@ describe("ScheduleTabView", () => {
 
       const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
 
-      // Initial state: schedule is "9-5", default view is Week
+      // Initial state: schedule is "9-5", default view is Today
       expect(selector.value).toBe("9-5");
-      expect(screen.getByTestId("schedule-view")).toHaveTextContent("Schedule: 9-5");
+      expect(screen.getByTestId("today-view")).toHaveTextContent("Schedule: 9-5");
 
       // Simulate onboarding completion by changing the schedule while component is mounted
       await act(async () => {
@@ -251,7 +250,7 @@ describe("ScheduleTabView", () => {
 
       // The dropdown should now show "5-shift" to match the user's schedule
       expect(selector.value).toBe("5-shift");
-      expect(screen.getByTestId("schedule-view")).toHaveTextContent("Schedule: 5-shift");
+      expect(screen.getByTestId("today-view")).toHaveTextContent("Schedule: 5-shift");
 
       // Cleanup
       window.localStorage.removeItem("worktime_user_state");
