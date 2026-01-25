@@ -56,6 +56,30 @@ describe("ScheduleTabView", () => {
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
       expect(screen.getByTestId("today-view")).toBeInTheDocument();
     });
+
+    it("shows Today view when initialView is 'today'", () => {
+      renderWithProviders(<ScheduleTabView {...defaultProps} initialView="today" />);
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+    });
+
+    it("shows Week view when initialView is 'week'", () => {
+      renderWithProviders(<ScheduleTabView {...defaultProps} initialView="week" />);
+      expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
+    });
+
+    it("defaults to Today view when initialView is undefined", () => {
+      renderWithProviders(<ScheduleTabView {...defaultProps} initialView={undefined} />);
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+    });
+
+    it("defaults to Today view when initialView is invalid", () => {
+      renderWithProviders(<ScheduleTabView {...defaultProps} initialView="invalid" as any />);
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+    });
   });
 
   describe("View mode switching", () => {
