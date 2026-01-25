@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -207,6 +207,11 @@ export function TodayView({
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
     userScheduleType,
   );
+
+  // Sync viewing schedule with user schedule when it changes (e.g., after onboarding)
+  useEffect(() => {
+    setViewingScheduleType(userScheduleType);
+  }, [userScheduleType]);
 
   // Use viewing schedule for calculations
   const scheduleType = viewingScheduleType || userScheduleType;

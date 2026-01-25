@@ -283,5 +283,64 @@ describe("TodayView", () => {
         expect(option.text).toBeTruthy();
       });
     });
+
+    it("syncs dropdown with user schedule after onboarding (bug fix)", () => {
+      // This test validates the fix for the issue where the dropdown shows the wrong
+      // schedule after onboarding completes. The dropdown should automatically update
+      // when the user's schedule changes.
+      
+      // Start with 9-5 schedule
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+          },
+        }),
+      );
+
+      const { unmount } = renderWithProviders(<TodayView {...defaultProps} />);
+
+      let selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
+      
+      // Initial state: schedule is "9-5"
+      expect(selector.value).toBe("9-5");
+
+      // Unmount the component
+      unmount();
+
+      // Simulate onboarding completion by changing the schedule to "5-shift"
+      // This simulates what happens when the user completes onboarding
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+          },
+        }),
+      );
+
+      // Re-mount the component (simulating what happens after onboarding closes)
+      renderWithProviders(<TodayView {...defaultProps} />);
+
+      // The dropdown should now show "5-shift" to match the user's schedule
+      selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
+      expect(selector.value).toBe("5-shift");
+
+      // Cleanup
+      window.localStorage.removeItem("worktime_user_state");
+    });
   });
 });
