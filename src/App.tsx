@@ -41,7 +41,7 @@ function AppContent() {
     settings,
   } = useSettings();
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
+  const pendingDeepLinkRef = useRef<{ team?: string; date?: string; view?: string }>({});
 
   // Handle URL parameters for deep linking
   useEffect(() => {
@@ -49,6 +49,7 @@ function AppContent() {
     const tabParam = urlParams.get("tab");
     const teamParam = urlParams.get("team");
     const dateParam = urlParams.get("date");
+    const viewParam = urlParams.get("view");
 
     // Set active tab from URL
     if (tabParam && ["schedule", "transfer", "timeoff"].includes(tabParam)) {
@@ -63,16 +64,23 @@ function AppContent() {
       pendingDeepLinkRef.current.date = dateParam;
     }
 
+    if (viewParam) {
+      pendingDeepLinkRef.current.view = viewParam;
+    }
+
     // Clear URL parameters after processing to keep URL clean
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
+  // Store the view parameter separately since it's used by components
+  const [initialView, setInitialView] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     if (!hasCompletedOnboarding) return;
 
-    const { team, date } = pendingDeepLinkRef.current;
+    const { team, date, view } = pendingDeepLinkRef.current;
 
     if (team) {
       try {
@@ -95,6 +103,10 @@ function AppContent() {
       } catch (error) {
         console.error("Failed to process deep-link date parameter:", error);
       }
+    }
+
+    if (view) {
+      setInitialView(view);
     }
 
     pendingDeepLinkRef.current = {};
@@ -256,6 +268,7 @@ function AppContent() {
               setCurrentDate={setCurrentDate}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              initialView={initialView}
             />
           </ErrorBoundary>
           <WelcomeWizard

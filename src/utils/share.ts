@@ -117,12 +117,14 @@ export function shareAppWithContext(
  * @param onSuccess - Optional callback invoked when sharing or copying completes successfully
  * @param onError - Optional callback invoked with an error if all sharing methods fail
  * @param date - Optional ISO date string to deep-link to a specific date's schedule
+ * @param view - Optional view mode to deep-link to ("today" or "week")
  */
 export function shareTeamSchedule(
   teamNumber: number,
   onSuccess?: () => void,
   onError?: (err: unknown) => void,
   date?: string,
+  view?: "today" | "week",
 ) {
   const queryParams: Record<string, string> = {
     tab: "schedule",
@@ -131,6 +133,10 @@ export function shareTeamSchedule(
 
   if (date) {
     queryParams.date = date;
+  }
+
+  if (view) {
+    queryParams.view = view;
   }
 
   shareAppWithContext(
@@ -143,11 +149,23 @@ export function shareTeamSchedule(
 
 /**
  * Shares today's view with all teams
+ *
+ * @param onSuccess - Optional callback invoked after a successful share or copy
+ * @param onError - Optional callback invoked with an error if sharing fails
+ * @param view - Optional view mode to deep-link to ("today" or "week")
  */
-export function shareTodayView(onSuccess?: () => void, onError?: (err: unknown) => void) {
-  shareAppWithContext("Today's shift schedule - see who's working now", onSuccess, onError, {
-    tab: "schedule",
-  });
+export function shareTodayView(
+  onSuccess?: () => void,
+  onError?: (err: unknown) => void,
+  view?: "today" | "week",
+) {
+  const queryParams: Record<string, string> = { tab: "schedule" };
+  
+  if (view) {
+    queryParams.view = view;
+  }
+
+  shareAppWithContext("Today's shift schedule - see who's working now", onSuccess, onError, queryParams);
 }
 
 /**

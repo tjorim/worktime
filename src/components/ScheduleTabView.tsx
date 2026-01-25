@@ -17,6 +17,7 @@ interface ScheduleTabViewProps {
   setCurrentDate: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number) => void;
   isActive?: boolean;
+  initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
 
 /**
@@ -31,6 +32,7 @@ interface ScheduleTabViewProps {
  * @param setCurrentDate - Function to update the current date
  * @param onTeamClick - Optional callback for when a team is clicked in Today view
  * @param isActive - Whether this tab is currently active (for keyboard shortcuts)
+ * @param initialView - Initial view mode from URL parameter ("today" or "week")
  * @returns The rendered schedule tab view component.
  */
 export function ScheduleTabView({
@@ -39,11 +41,21 @@ export function ScheduleTabView({
   setCurrentDate,
   onTeamClick,
   isActive = true,
+  initialView,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
-  // Default to "today" view as it's more immediately relevant to users
-  const [viewMode, setViewMode] = useState<"today" | "week">("today");
+  
+  // Determine initial view mode from URL parameter or default to "today"
+  const getInitialViewMode = (): "today" | "week" => {
+    if (initialView === "week" || initialView === "today") {
+      return initialView;
+    }
+    // Default to "today" view as it's more immediately relevant to users
+    return "today";
+  };
+  
+  const [viewMode, setViewMode] = useState<"today" | "week">(getInitialViewMode());
 
   // Cross-schedule viewing: allow viewing other schedule types
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(

@@ -106,9 +106,10 @@ function EmptyState({ mode }: { mode: "calendar" | "table" }) {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
+  initialView?: string; // Initial view mode from URL parameter ("calendar", "table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = true }: TimeOffViewProps) {
+export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -126,7 +127,22 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const { settings, updateVacationAllowance } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">("table");
+  // Determine initial view mode from URL parameter or default to "table"
+  const getInitialViewMode = (): "calendar" | "table" | "stats" | "raw" => {
+    if (
+      initialView === "calendar" ||
+      initialView === "table" ||
+      initialView === "stats" ||
+      initialView === "raw"
+    ) {
+      return initialView;
+    }
+    return "table";
+  };
+
+  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">(
+    getInitialViewMode(),
+  );
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
   const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());
