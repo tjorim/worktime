@@ -289,8 +289,6 @@ describe("TodayView", () => {
       // schedule after onboarding completes. The dropdown should automatically update
       // when the user's schedule changes while the component remains mounted.
       
-      const user = userEvent.setup();
-      
       // Start with 9-5 schedule in localStorage
       window.localStorage.setItem(
         "worktime_user_state",
@@ -310,7 +308,7 @@ describe("TodayView", () => {
       // Create a test component that allows us to trigger schedule changes
       let triggerScheduleChange: (() => void) | null = null;
       function TestWrapper() {
-        const { scheduleType, setScheduleType } = useSettings();
+        const { setScheduleType } = useSettings();
         triggerScheduleChange = () => setScheduleType("5-shift");
         return <TodayView {...defaultProps} />;
       }
