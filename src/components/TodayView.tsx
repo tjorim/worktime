@@ -53,19 +53,24 @@ function TeamCard({
   isCurrentlyActive,
   hasTeams,
   onTeamClick,
+  scheduleType,
 }: {
   shiftResult: ShiftResult;
   isMyTeam: boolean;
   isCurrentlyActive: boolean;
   hasTeams: boolean;
   onTeamClick?: (teamNumber: number) => void;
+  scheduleType: ScheduleOption | null;
 }) {
-  const { settings, scheduleType } = useSettings();
+  const { settings, scheduleType: fallbackScheduleType } = useSettings();
+  // Use the provided scheduleType, or fall back to user's default if null
+  const effectiveScheduleType = scheduleType || fallbackScheduleType;
+  
   // Use shiftResult.shift directly - already contains emoji/className/name/hours
-  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleType);
+  const shiftDisplay = getShiftDisplay(shiftResult.shift, effectiveScheduleType);
   const shiftTimeLabel = getFormattedShiftTime(
     shiftResult.shift,
-    scheduleType,
+    effectiveScheduleType,
     settings.timeFormat,
   );
 
@@ -307,6 +312,7 @@ export function TodayView({
                 isCurrentlyActive={isCurrentlyActive(shiftResult)}
                 hasTeams={hasTeams}
                 onTeamClick={onTeamClick}
+                scheduleType={scheduleType}
               />
             </Col>
           ))}
