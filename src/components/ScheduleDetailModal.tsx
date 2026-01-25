@@ -104,12 +104,9 @@ export function ScheduleDetailModal({
 
   // Share handler for this team
   const handleShareSchedule = () => {
-    const today = dayjs().format("YYYY-MM-DD");
     shareTeamSchedule(
-      teamNumber,
       () => toast?.showSuccess("Share dialog opened or link copied!"),
       () => toast?.showError("Could not share. Try copying the link manually."),
-      today,
     );
   };
 

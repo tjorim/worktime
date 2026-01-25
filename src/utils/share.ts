@@ -111,36 +111,27 @@ export function shareAppWithContext(
 }
 
 /**
- * Initiates sharing of a team's schedule by building a deep link and delegating to the share flow.
+ * Shares a link to the schedule view
  *
- * @param teamNumber - Numeric identifier of the team to include in the deep link
  * @param onSuccess - Optional callback invoked when sharing or copying completes successfully
  * @param onError - Optional callback invoked with an error if all sharing methods fail
- * @param date - Optional ISO date string to deep-link to a specific date's schedule
  * @param view - Optional view mode to deep-link to ("today" or "week")
  */
 export function shareTeamSchedule(
-  teamNumber: number,
   onSuccess?: () => void,
   onError?: (err: unknown) => void,
-  date?: string,
   view?: "today" | "week",
 ) {
   const queryParams: Record<string, string> = {
     tab: "schedule",
-    team: teamNumber.toString(),
   };
-
-  if (date) {
-    queryParams.date = date;
-  }
 
   if (view) {
     queryParams.view = view;
   }
 
   shareAppWithContext(
-    `Team ${teamNumber} schedule${date ? ` for ${date}` : ""}`,
+    "Schedule",
     onSuccess,
     onError,
     queryParams,

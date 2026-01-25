@@ -47,38 +47,11 @@ function AppContent() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
-    const teamParam = urlParams.get("team");
-    const dateParam = urlParams.get("date");
     const viewParam = urlParams.get("view");
 
     // Set active tab from URL
     if (tabParam && ["schedule", "transfer", "timeoff"].includes(tabParam)) {
       setActiveTab(tabParam);
-    }
-
-    // Set team from URL (only if user has completed onboarding)
-    if (teamParam && hasCompletedOnboarding) {
-      try {
-        const teamNumber = parseInt(teamParam, 10);
-        const teamCount = getTeamCountForOption(scheduleType);
-        if (teamNumber >= 1 && teamNumber <= teamCount) {
-          setMyTeam(teamNumber);
-        }
-      } catch (error) {
-        console.error("Failed to process team parameter:", error);
-      }
-    }
-
-    // Set date from URL
-    if (dateParam) {
-      try {
-        const parsedDate = dayjs(dateParam);
-        if (parsedDate.isValid()) {
-          setCurrentDate(parsedDate);
-        }
-      } catch (error) {
-        console.error("Failed to process date parameter:", error);
-      }
     }
 
     // Set initial view from URL
@@ -90,7 +63,7 @@ function AppContent() {
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [hasCompletedOnboarding, scheduleType, setMyTeam, setCurrentDate]);
+  }, []);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
