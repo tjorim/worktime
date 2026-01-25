@@ -136,6 +136,19 @@ export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) 
       "table",
     ),
   );
+
+  // Update view mode when initialView prop changes (for URL parameter deep-linking)
+  useEffect(() => {
+    if (initialView) {
+      const validatedView = getInitialView(
+        initialView,
+        ["calendar", "table", "stats", "raw"] as const,
+        "table",
+      );
+      setViewMode(validatedView);
+    }
+  }, [initialView]);
+
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
   const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());

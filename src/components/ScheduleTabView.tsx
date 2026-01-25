@@ -52,6 +52,14 @@ export function ScheduleTabView({
     getInitialView(initialView, ["today", "week"] as const, "today"),
   );
 
+  // Update view mode when initialView prop changes (for URL parameter deep-linking)
+  useEffect(() => {
+    if (initialView) {
+      const validatedView = getInitialView(initialView, ["today", "week"] as const, "today");
+      setViewMode(validatedView);
+    }
+  }, [initialView]);
+
   // Cross-schedule viewing: allow viewing other schedule types
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
     userScheduleType,
