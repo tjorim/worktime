@@ -2,6 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { dayjs } from "../utils/dateTimeUtils";
 import { ScheduleView } from "./ScheduleView";
 import { TodayView } from "./TodayView";
 
@@ -45,7 +46,7 @@ export function ScheduleTabView({
   };
 
   const handleTodayClick = () => {
-    setCurrentDate(currentDate.startOf("day").hour(12)); // Normalize to noon
+    setCurrentDate(dayjs());
   };
 
   return (
