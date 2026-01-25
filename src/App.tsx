@@ -12,7 +12,7 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { dayjs } from "./utils/dateTimeUtils";
-import { getScheduleConfig, getTeamCountForOption } from "./utils/scheduleUtils";
+import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**

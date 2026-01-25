@@ -11,10 +11,9 @@ import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
-import { useToast } from "../contexts/ToastContext";
 import { getScheduleConfig } from "../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../utils/dateTimeUtils";
-import { shareTeamSchedule } from "../utils/share";
+
 import {
   calculateShift,
   getCurrentShiftDay,
@@ -49,7 +48,6 @@ export function ScheduleDetailModal({
   const { settings, myTeam, scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
-  const toast = useToast();
 
   const calendarTooltipId = useId();
   const transfersDisabledTooltipId = useId();
@@ -102,13 +100,7 @@ export function ScheduleDetailModal({
   const currentStatus = weekSchedule[0];
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
-  // Share handler for this team
-  const handleShareSchedule = () => {
-    shareTeamSchedule(
-      () => toast?.showSuccess("Share dialog opened or link copied!"),
-      () => toast?.showError("Could not share. Try copying the link manually."),
-    );
-  };
+
 
   // Button state logic - only allow viewing transfers for other teams, not your own
   const isViewingOwnTeam = teamNumber === myTeam;
@@ -340,10 +332,7 @@ export function ScheduleDetailModal({
                   </Button>
                 </span>
               </OverlayTrigger>
-              <Button variant="outline-info" size="sm" onClick={handleShareSchedule}>
-                <i className="bi bi-share me-1"></i>
-                Share Schedule
-              </Button>
+
               {/* View Transfers button - only for multi-team schedules */}
               {hasTeams && (
                 <OverlayTrigger

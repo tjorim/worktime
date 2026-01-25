@@ -7,7 +7,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { CONFIG } from "../utils/config";
-import { shareApp, shareTodayView } from "../utils/share";
+import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 
 interface SettingsPanelProps {
@@ -62,15 +62,9 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
     onChangeSchedule?.();
   };
 
-  // Share handlers
+  // Share handler
   const handleShareApp = () => {
     shareApp(
-      () => toast?.showSuccess("Share dialog opened or link copied!"),
-      () => toast?.showError("Could not share. Try copying the link manually."),
-    );
-  };
-  const handleShareWithContext = () => {
-    shareTodayView(
       () => toast?.showSuccess("Share dialog opened or link copied!"),
       () => toast?.showError("Could not share. Try copying the link manually."),
     );
@@ -254,21 +248,9 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                         <i className="bi bi-share me-2"></i>
                         Share App
                       </div>
-                      <small className="text-muted">Send Worktime to colleagues</small>
+                      <small className="text-muted">Promote Worktime to new users</small>
                     </div>
                     <i className="bi bi-share text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={handleShareWithContext}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-link-45deg me-2"></i>
-                        Share This View
-                      </div>
-                      <small className="text-muted">Share with current context</small>
-                    </div>
-                    <i className="bi bi-share-fill text-muted"></i>
                   </div>
                 </ListGroup.Item>
                 <ListGroup.Item action onClick={handleClearData} className="text-danger">
