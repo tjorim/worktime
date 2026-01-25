@@ -15,6 +15,12 @@ import { TodayView } from "./schedule/TodayView";
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
+/**
+ * Valid view modes for the Schedule tab.
+ * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ */
+const SCHEDULE_VIEWS = ["today", "week"] as const;
+
 interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
@@ -49,7 +55,7 @@ export function ScheduleTabView({
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
-  const [viewMode, setViewMode] = useViewMode(initialView, ["today", "week"] as const, "today");
+  const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
   const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
 
   const handlePreviousDay = () => {

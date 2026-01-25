@@ -56,6 +56,12 @@ const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_F
 ).filter((f) => f !== "none") as EventFlag[];
 
 /**
+ * Valid view modes for the Time Off tab.
+ * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ */
+const TIMEOFF_VIEWS = ["calendar", "table", "stats", "raw"] as const;
+
+/**
  * Default weekday value for weekly events (1 = Monday).
  */
 const DEFAULT_WEEKDAY = 1;
@@ -128,11 +134,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const { settings, updateVacationAllowance } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useViewMode(
-    initialView,
-    ["calendar", "table", "stats", "raw"] as const,
-    "table",
-  );
+  const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
 
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
