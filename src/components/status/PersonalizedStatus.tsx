@@ -70,14 +70,16 @@ export function PersonalizedStatus({
   const todayMinuteKey = today.startOf("minute").toISOString();
 
   // Calculate current shift for today
+  // This represents the shift scheduled for TODAY (calendar day), not the shift currently being worked
+  // (e.g., at 2 AM on Monday, this shows Monday's shift, not Sunday night's shift)
   const currentShift = useMemo((): ShiftResult | null => {
     if (!validatedTeam) return null;
 
-    const shiftDay = getCurrentShiftDay(today);
-    const shift = calculateShift(shiftDay, validatedTeam, scheduleType);
+    // Use calendar day directly for schedule display
+    const shift = calculateShift(today, validatedTeam, scheduleType);
 
     return {
-      date: shiftDay,
+      date: today,
       shift,
       code: getShiftCode(today, validatedTeam, scheduleType),
       teamNumber: validatedTeam,

@@ -69,14 +69,15 @@ export function useShiftCalculation(): UseShiftCalculationReturn {
   );
 
   // Calculate current shift for user's team
+  // This represents the shift scheduled for the current date, not the shift currently being worked
   const currentShift = useMemo((): ShiftResult | null => {
     if (!validatedMyTeam) return null;
 
-    const shiftDay = getCurrentShiftDay(currentDate);
-    const shift = calculateShift(shiftDay, validatedMyTeam, scheduleType ?? undefined);
+    // Use calendar date directly for schedule display
+    const shift = calculateShift(currentDate, validatedMyTeam, scheduleType ?? undefined);
 
     return {
-      date: shiftDay,
+      date: currentDate,
       shift,
       code: getShiftCode(currentDate, validatedMyTeam, scheduleType ?? undefined),
       teamNumber: validatedMyTeam,

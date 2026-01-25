@@ -154,6 +154,48 @@ describe("Shift Calculations", () => {
       }
     });
   });
+
+  describe("Pre-7AM Schedule Display (Issue #xxx)", () => {
+    it("should show calendar day shift, not shift day, for schedule display at 00:20", () => {
+      // Regression test for: "Wrong shift calculations" issue
+      // At Monday Jan 26, 2026 00:20, the app should show Monday's schedule, not Sunday's
+      
+      const mondayMorning = dayjs("2026-01-26 00:20"); // Monday 00:20 (before 7 AM)
+      const monday = mondayMorning.startOf("day"); // Monday calendar day
+      
+      // Team 2 on Monday Jan 26: should be Late/Evening (L)
+      const team2Monday = calculateShift(monday, 2, "5-shift");
+      expect(team2Monday.code).toBe("L"); // Evening shift on Monday
+      
+      // Using getCurrentShiftDay would incorrectly give Sunday's shift
+      const shiftDay = getCurrentShiftDay(mondayMorning); // Returns Sunday
+      const team2ShiftDay = calculateShift(shiftDay, 2, "5-shift");
+      expect(team2ShiftDay.code).toBe("M"); // Sunday's Morning shift (WRONG for schedule display)
+      
+      // The fix: Always use calendar day for schedule display
+      expect(team2Monday.code).not.toBe(team2ShiftDay.code);
+    });
+    
+    it("should correctly show Off day after night shift ends, even before 7 AM", () => {
+      // At Friday Jan 30, 2026 00:30, Team 2's Thursday night shift has ended
+      // Team 2 is now off, even though it's before 7 AM
+      
+      const fridayMorning = dayjs("2026-01-30 00:30"); // Friday 00:30
+      const friday = fridayMorning.startOf("day"); // Friday calendar day
+      
+      // Team 2 on Friday Jan 30: should be Off (O)
+      const team2Friday = calculateShift(friday, 2, "5-shift");
+      expect(team2Friday.code).toBe("O"); // Off on Friday
+      
+      // Using shift day would incorrectly show Thursday's night shift
+      const shiftDay = getCurrentShiftDay(fridayMorning); // Returns Thursday
+      const team2ShiftDay = calculateShift(shiftDay, 2, "5-shift");
+      expect(team2ShiftDay.code).toBe("N"); // Thursday's Night shift (WRONG - shift already ended!)
+      
+      // The fix ensures we show the correct day's schedule
+      expect(team2Friday.code).not.toBe(team2ShiftDay.code);
+    });
+  });
 });
 
 describe("getAllTeamsShifts Function Tests", () => {
