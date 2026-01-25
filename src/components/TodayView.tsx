@@ -1,20 +1,18 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "../data/rosters";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, isValidScheduleType } from "../utils/scheduleUtils";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
 import type { ShiftResult } from "../utils/shiftCalculations";
@@ -33,6 +31,7 @@ interface TodayViewProps {
   onTodayClick: () => void;
   onTeamClick?: (teamNumber: number) => void;
   isActive?: boolean;
+  viewingScheduleType?: ScheduleOption | null;
 }
 
 /**
@@ -198,27 +197,14 @@ export function TodayView({
   onTodayClick,
   onTeamClick,
   isActive = true,
+  viewingScheduleType: propViewingScheduleType,
 }: TodayViewProps) {
-  const scheduleSelectId = useId();
   const { getEventsInRange } = useEventStore();
   const { scheduleType: userScheduleType } = useSettings();
 
-  // Cross-schedule viewing: allow viewing other schedule types
-  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
-    userScheduleType,
-  );
-
-  // Sync viewing schedule with user schedule when it changes (e.g., after onboarding)
-  useEffect(() => {
-    setViewingScheduleType(userScheduleType);
-  }, [userScheduleType]);
-
-  // Use viewing schedule for calculations
-  const scheduleType = viewingScheduleType || userScheduleType;
+  // Use prop if provided, otherwise fall back to user's schedule type
+  const scheduleType = propViewingScheduleType || userScheduleType;
   const hasTeams = getScheduleConfig(scheduleType).showsTeamSelection;
-
-  // Get available schedules for the selector
-  const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
   // Calculate shifts for the viewing schedule
   const todayShifts = useMemo(() => {
@@ -286,28 +272,6 @@ export function TodayView({
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
-            <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-              📋 View schedule:
-            </Form.Label>
-            <Form.Select
-              id={scheduleSelectId}
-              size="sm"
-              value={viewingScheduleType || ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                setViewingScheduleType(isValidScheduleType(value) ? value : null);
-              }}
-              style={{ width: "auto" }}
-            >
-              {availableSchedules.map((schedule) => (
-                <option key={schedule.value} value={schedule.value}>
-                  {schedule.title}
-                  {schedule.value === userScheduleType ? " (Your schedule)" : ""}
-                </option>
-              ))}
-            </Form.Select>
-          </div>
-          <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="text-muted small">
               {displayDate.format("dddd, MMMM D, YYYY")}
               {isToday && (
@@ -316,9 +280,9 @@ export function TodayView({
                 </Badge>
               )}
             </div>
-            <div className="small text-muted d-none d-lg-block">
-              ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
-            </div>
+          </div>
+          <div className="small text-muted d-none d-lg-block">
+            ⌨️ Keyboard: ← → arrows, Ctrl+H (today)
           </div>
         </div>
       </Card.Header>

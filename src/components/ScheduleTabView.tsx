@@ -1,7 +1,12 @@
 import type { Dayjs } from "dayjs";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
+import type { ScheduleOption } from "../data/rosters";
+import { SCHEDULE_OPTIONS } from "../data/rosters";
+import { useSettings } from "../contexts/SettingsContext";
+import { isValidScheduleType } from "../utils/scheduleUtils";
 import { dayjs } from "../utils/dateTimeUtils";
 import { ScheduleView } from "./ScheduleView";
 import { TodayView } from "./TodayView";
@@ -35,7 +40,22 @@ export function ScheduleTabView({
   onTeamClick,
   isActive = true,
 }: ScheduleTabViewProps) {
+  const scheduleSelectId = useId();
+  const { scheduleType: userScheduleType } = useSettings();
   const [viewMode, setViewMode] = useState<"today" | "week">("today");
+
+  // Cross-schedule viewing: allow viewing other schedule types
+  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
+    userScheduleType,
+  );
+
+  // Sync viewing schedule with user schedule when it changes (e.g., after onboarding)
+  useEffect(() => {
+    setViewingScheduleType(userScheduleType);
+  }, [userScheduleType]);
+
+  // Get available schedules for the selector
+  const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));
@@ -51,7 +71,7 @@ export function ScheduleTabView({
 
   return (
     <div className="schedule-tab-view py-3">
-      <div className="d-flex justify-content-start mb-3">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
         <ButtonGroup aria-label="Toggle schedule view">
           <Button
             variant={viewMode === "today" ? "primary" : "outline-primary"}
@@ -70,6 +90,29 @@ export function ScheduleTabView({
             Week
           </Button>
         </ButtonGroup>
+
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
+            📋 View schedule:
+          </Form.Label>
+          <Form.Select
+            id={scheduleSelectId}
+            size="sm"
+            value={viewingScheduleType || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setViewingScheduleType(isValidScheduleType(value) ? value : null);
+            }}
+            style={{ width: "auto" }}
+          >
+            {availableSchedules.map((schedule) => (
+              <option key={schedule.value} value={schedule.value}>
+                {schedule.title}
+                {schedule.value === userScheduleType ? " (Your schedule)" : ""}
+              </option>
+            ))}
+          </Form.Select>
+        </div>
       </div>
 
       {viewMode === "today" && (
@@ -81,6 +124,7 @@ export function ScheduleTabView({
           onTodayClick={handleTodayClick}
           onTeamClick={onTeamClick}
           isActive={isActive}
+          viewingScheduleType={viewingScheduleType}
         />
       )}
 
@@ -90,6 +134,7 @@ export function ScheduleTabView({
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
           isActive={isActive}
+          viewingScheduleType={viewingScheduleType}
         />
       )}
     </div>
