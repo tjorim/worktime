@@ -2,11 +2,9 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
-import { dayjs } from "../utils/dateTimeUtils";
-import { ScheduleView } from "./ScheduleView";
 import { ScheduleDetailModal } from "./ScheduleDetailModal";
+import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
-import { TodayView } from "./TodayView";
 import { TransferView } from "./TransferView";
 
 interface MainTabsProps {
@@ -18,14 +16,16 @@ interface MainTabsProps {
 }
 
 /**
- * Displays a tabbed interface for viewing today's shifts, the team schedule, or transfer information.
+ * Displays a tabbed interface for viewing schedules, transfers, or time off.
  *
- * Supports both internal and external control of the active tab, and notifies when the tab changes. Each tab presents a different view relevant to the user's team and date.
+ * Supports both internal and external control of the active tab, and notifies when the tab changes.
+ * The Schedule tab groups Today and Week views together. Each tab presents different views relevant
+ * to the user's team and date.
  *
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
  * @param setCurrentDate - Function to update the current date
- * @param activeTab - The currently active tab (defaults to 'today')
+ * @param activeTab - The currently active tab (defaults to 'schedule')
  * @param onTabChange - Callback invoked when the active tab changes
  * @returns The rendered tabbed interface component.
  */
@@ -33,7 +33,7 @@ export function MainTabs({
   myTeam,
   currentDate,
   setCurrentDate,
-  activeTab = "today",
+  activeTab = "schedule",
   onTabChange,
 }: MainTabsProps) {
   const tabsId = useId();
@@ -46,18 +46,6 @@ export function MainTabs({
   useEffect(() => {
     setActiveKey(activeTab);
   }, [activeTab]);
-
-  const handleTodayClick = () => {
-    setCurrentDate(dayjs());
-  };
-
-  const handlePreviousDay = () => {
-    setCurrentDate(currentDate.subtract(1, "day"));
-  };
-
-  const handleNextDay = () => {
-    setCurrentDate(currentDate.add(1, "day"));
-  };
 
   const handleTeamClick = (teamNumber: number) => {
     setSelectedTeamForDetail(teamNumber);
@@ -73,32 +61,12 @@ export function MainTabs({
       <Tabs
         activeKey={activeKey}
         onSelect={(k) => {
-          const newKey = k || "today";
+          const newKey = k || "schedule";
           setActiveKey(newKey);
           onTabChange?.(newKey);
         }}
         id={tabsId}
       >
-        <Tab
-          eventKey="today"
-          title={
-            <>
-              <i className="bi bi-calendar-day me-1" aria-hidden="true"></i>
-              Today
-            </>
-          }
-        >
-          <TodayView
-            myTeam={myTeam}
-            currentDate={currentDate}
-            onPreviousDay={handlePreviousDay}
-            onNextDay={handleNextDay}
-            onTodayClick={handleTodayClick}
-            onTeamClick={handleTeamClick}
-            isActive={activeKey === "today"}
-          />
-        </Tab>
-
         <Tab
           eventKey="schedule"
           title={
@@ -108,10 +76,11 @@ export function MainTabs({
             </>
           }
         >
-          <ScheduleView
+          <ScheduleTabView
             myTeam={myTeam}
             currentDate={currentDate}
             setCurrentDate={setCurrentDate}
+            onTeamClick={handleTeamClick}
             isActive={activeKey === "schedule"}
           />
         </Tab>

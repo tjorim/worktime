@@ -9,15 +9,9 @@ import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 
 // Mock the child components
-vi.mock("../../src/components/TodayView", () => ({
-  TodayView: ({ myTeam }: { myTeam: number | null }) => (
-    <div data-testid="today-view">TodayView - Team {myTeam}</div>
-  ),
-}));
-
-vi.mock("../../src/components/ScheduleView", () => ({
-  ScheduleView: ({ myTeam }: { myTeam: number | null }) => (
-    <div data-testid="schedule-view">ScheduleView - Team {myTeam}</div>
+vi.mock("../../src/components/ScheduleTabView", () => ({
+  ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => (
+    <div data-testid="schedule-tab-view">ScheduleTabView - Team {myTeam}</div>
   ),
 }));
 
@@ -31,8 +25,7 @@ const defaultProps = {
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
   setCurrentDate: vi.fn(),
-  todayShifts: [],
-  activeTab: "today",
+  activeTab: "schedule",
   onTabChange: vi.fn(),
 };
 
@@ -55,36 +48,23 @@ describe("MainTabs", () => {
     it("renders all tab buttons", () => {
       renderWithProviders(<MainTabs {...defaultProps} />);
 
-      expect(screen.getByRole("tab", { name: "Today" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Schedule" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Transfers" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Time Off" })).toBeInTheDocument();
     });
 
-    it("shows Today tab content by default", () => {
+    it("shows Schedule tab content by default", () => {
       renderWithProviders(<MainTabs {...defaultProps} />);
-      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
     });
 
     it("shows correct tab content based on activeTab prop", () => {
-      renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
-      expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
+      renderWithProviders(<MainTabs {...defaultProps} activeTab="transfer" />);
+      expect(screen.getByTestId("transfer-view")).toBeInTheDocument();
     });
   });
 
   describe("Tab navigation", () => {
-    it("switches to Schedule tab when clicked", async () => {
-      const user = userEvent.setup();
-      const mockOnTabChange = vi.fn();
-
-      renderWithProviders(<MainTabs {...defaultProps} onTabChange={mockOnTabChange} />);
-
-      const scheduleTab = screen.getByRole("tab", { name: "Schedule" });
-      await user.click(scheduleTab);
-
-      expect(mockOnTabChange).toHaveBeenCalledWith("schedule");
-    });
-
     it("switches to Transfers tab when clicked", async () => {
       const user = userEvent.setup();
       const mockOnTabChange = vi.fn();
@@ -96,12 +76,26 @@ describe("MainTabs", () => {
 
       expect(mockOnTabChange).toHaveBeenCalledWith("transfer");
     });
+
+    it("switches to Time Off tab when clicked", async () => {
+      const user = userEvent.setup();
+      const mockOnTabChange = vi.fn();
+
+      renderWithProviders(<MainTabs {...defaultProps} onTabChange={mockOnTabChange} />);
+
+      const timeOffTab = screen.getByRole("tab", { name: "Time Off" });
+      await user.click(timeOffTab);
+
+      expect(mockOnTabChange).toHaveBeenCalledWith("timeoff");
+    });
   });
 
   describe("Props synchronization", () => {
     it("updates active tab when activeTab prop changes", () => {
-      const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="today" />);
-      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      const { rerender } = renderWithProviders(
+        <MainTabs {...defaultProps} activeTab="schedule" />,
+      );
+      expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
 
       rerender(wrapWithProviders(<MainTabs {...defaultProps} activeTab="transfer" />));
       expect(screen.getByTestId("transfer-view")).toBeInTheDocument();

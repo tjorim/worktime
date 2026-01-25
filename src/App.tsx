@@ -27,7 +27,7 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
-  const [activeTab, setActiveTab] = useState("today");
+  const [activeTab, setActiveTab] = useState("schedule");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo, showError } = useToast();
   const {
@@ -51,7 +51,7 @@ function AppContent() {
     const dateParam = urlParams.get("date");
 
     // Set active tab from URL
-    if (tabParam && ["today", "schedule", "transfer", "timeoff"].includes(tabParam)) {
+    if (tabParam && ["schedule", "transfer", "timeoff"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
 
@@ -230,10 +230,10 @@ function AppContent() {
   };
 
   const handleShowWhoIsWorking = () => {
-    // Switch to Today tab to show who's working
-    setActiveTab("today");
+    // Switch to Schedule tab to show who's working
+    setActiveTab("schedule");
     setCurrentDate(dayjs());
-    showInfo("Switched to Today view to see who's working", "👥");
+    showInfo("Switched to Schedule view to see who's working", "👥");
   };
 
   return (
