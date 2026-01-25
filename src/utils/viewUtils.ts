@@ -12,8 +12,6 @@ export function getInitialView<T extends string>(
   validViews: readonly T[],
   defaultView: T,
 ): T {
-  if (initialView && (validViews as readonly string[]).includes(initialView)) {
-    return initialView as T;
-  }
-  return defaultView;
+  const foundView = validViews.find((v) => v === initialView);
+  return foundView ?? defaultView;
 }
