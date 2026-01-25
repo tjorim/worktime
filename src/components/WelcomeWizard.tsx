@@ -292,7 +292,7 @@ export function WelcomeWizard({
     <>
       <div className="text-center mb-4">
         <div className="mb-3">
-          <i className="bi bi-clock-history text-primary" style={{ fontSize: "3rem" }}></i>
+          <i className="bi bi-clock-history text-primary icon-display"></i>
         </div>
         <h4 className="text-primary mb-3">Welcome to Worktime!</h4>
         <p className="lead mb-3">
@@ -338,10 +338,7 @@ export function WelcomeWizard({
         <Row className="g-3">
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i
-                className="bi bi-stopwatch text-success me-3 mt-1"
-                style={{ fontSize: "1.5rem" }}
-              ></i>
+              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Live Countdown Timers</h6>
                 <small className="text-muted">Know exactly when your next shift starts</small>
@@ -350,7 +347,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-wifi-off text-info me-3 mt-1" style={{ fontSize: "1.5rem" }}></i>
+              <i className="bi bi-wifi-off text-info me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Local-First Data</h6>
                 <small className="text-muted">
@@ -361,7 +358,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-people text-warning me-3 mt-1" style={{ fontSize: "1.5rem" }}></i>
+              <i className="bi bi-people text-warning me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Team Overview</h6>
                 <small className="text-muted">See who is working across your schedule</small>
@@ -370,10 +367,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i
-                className="bi bi-calendar-check text-primary me-3 mt-1"
-                style={{ fontSize: "1.5rem" }}
-              ></i>
+              <i className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Time-Off Planning</h6>
                 <small className="text-muted">Track vacation and time-off with .hday files</small>

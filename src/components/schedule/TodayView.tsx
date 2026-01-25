@@ -92,10 +92,7 @@ function TeamCard({
           </Badge>
         </>
       )}
-      <div
-        className="d-flex justify-content-between align-items-center mb-2"
-        style={{ position: "relative", zIndex: 2 }}
-      >
+      <div className="team-card-header d-flex justify-content-between align-items-center mb-2">
         <div className="d-flex align-items-center gap-2">
           <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}</h6>
           {onTeamClick && (
@@ -201,7 +198,7 @@ export function TodayView({
   onNextDay,
   onTodayClick,
   onTeamClick,
-  isActive = true,
+  isActive = false,
   viewingScheduleType: propViewingScheduleType,
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();

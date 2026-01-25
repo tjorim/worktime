@@ -447,6 +447,30 @@ export function getEventColor(flags?: EventFlag[]): string {
 }
 
 /**
+ * Get CSS class name for event color based on flags.
+ * Returns a class name that maps to styles in main.scss.
+ *
+ * @param flags - Optional list of event flags
+ * @returns CSS class name (e.g., "event-holiday-full", "event-business-half")
+ */
+export function getEventColorClass(flags?: EventFlag[]): string {
+  if (!flags || flags.length === 0) return "event-holiday-full";
+
+  const hasHalfDay = flags.includes("half_am") !== flags.includes("half_pm");
+  const suffix = hasHalfDay ? "half" : "full";
+
+  if (flags.includes("business")) return `event-business-${suffix}`;
+  if (flags.includes("weekend")) return `event-weekend-${suffix}`;
+  if (flags.includes("birthday")) return `event-birthday-${suffix}`;
+  if (flags.includes("ill")) return `event-ill-${suffix}`;
+  if (flags.includes("course")) return `event-course-${suffix}`;
+  if (flags.includes("in")) return `event-in-${suffix}`;
+  if (flags.includes("other")) return `event-other-${suffix}`;
+
+  return `event-holiday-${suffix}`;
+}
+
+/**
  * Get a single-character symbol that represents time or location from event flags.
  *
  * @param flags - Optional array of event flags to inspect

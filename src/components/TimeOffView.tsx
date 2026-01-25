@@ -6,7 +6,7 @@ import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import {
   buildPreviewLine,
-  getEventColor,
+  getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
   normalizeEventFlags,
@@ -110,7 +110,7 @@ interface TimeOffViewProps {
   initialView?: string; // Initial view mode from URL parameter ("calendar", "table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) {
+export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -700,8 +700,10 @@ export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) 
                 </thead>
                 <tbody>
                   {events.map((event, index) => {
-                    const eventColor =
-                      event.type !== "unknown" ? getEventColor(event.flags) : "#ccc";
+                    const eventColorClass =
+                      event.type !== "unknown"
+                        ? getEventColorClass(event.flags)
+                        : "event-unknown";
                     const eventLabel =
                       event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
                     const symbol =
@@ -724,10 +726,7 @@ export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) 
                           />
                         </td>
                         <td>
-                          <span
-                            className="badge event-type-badge"
-                            style={{ backgroundColor: eventColor }}
-                          >
+                          <span className={`badge event-type-badge ${eventColorClass}`}>
                             {symbol && `${symbol} `}
                             {eventLabel}
                           </span>

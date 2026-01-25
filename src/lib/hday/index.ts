@@ -13,6 +13,7 @@ export {
   EVENT_COLORS,
   getEventClass,
   getEventColor,
+  getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
   normalizeEventFlags,

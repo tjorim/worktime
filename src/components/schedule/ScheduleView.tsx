@@ -43,7 +43,7 @@ export function ScheduleView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
-  isActive = true,
+  isActive = false,
   viewingScheduleType: propViewingScheduleType,
 }: ScheduleViewProps) {
   const datePickerId = useId();

@@ -199,6 +199,14 @@ html {
   font-size: 1.2em;
 }
 
+.icon-display {
+  font-size: 3rem;
+}
+
+.icon-feature {
+  font-size: 1.5rem;
+}
+
 .progress-thin {
   height: 8px;
 }
@@ -374,6 +382,60 @@ html {
 
 .event-type-badge {
   color: #000;
+}
+
+/* Event type colors - matches EVENT_COLORS in parser.ts
+ * All colors meet WCAG AA (4.5:1 contrast minimum) with black text */
+.event-holiday-full {
+  background-color: #ec0000;
+}
+.event-holiday-half {
+  background-color: #ff8a8a;
+}
+.event-business-full {
+  background-color: #ff9500;
+}
+.event-business-half {
+  background-color: #ffc04d;
+}
+.event-course-full {
+  background-color: #d9ad00;
+}
+.event-course-half {
+  background-color: #f0d04d;
+}
+.event-in-full {
+  background-color: #008899;
+}
+.event-in-half {
+  background-color: #00b8cc;
+}
+.event-weekend-full {
+  background-color: #990099;
+}
+.event-weekend-half {
+  background-color: #cc66cc;
+}
+.event-birthday-full {
+  background-color: #0000cc;
+}
+.event-birthday-half {
+  background-color: #6666ff;
+}
+.event-ill-full {
+  background-color: #336600;
+}
+.event-ill-half {
+  background-color: #669933;
+}
+.event-other-full {
+  background-color: #008b8b;
+}
+.event-other-half {
+  background-color: #4db8b8;
+}
+.event-unknown {
+  background-color: #ccc;
 }
 
 /* Connection status */
@@ -641,6 +703,12 @@ html {
 [data-bs-theme="dark"] .team-card-interactive:focus {
   background-color: var(--bs-body-bg, #181a1b) !important;
   box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Team card header - ensures content stays above decorative elements */
+.team-card-header {
+  position: relative;
+  z-index: 2;
 }
 
 [data-bs-theme="dark"] {

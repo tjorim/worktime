@@ -44,7 +44,7 @@ export function ScheduleTabView({
   currentDate,
   setCurrentDate,
   onTeamClick,
-  isActive = true,
+  isActive = false,
   initialView,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
