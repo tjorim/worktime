@@ -146,7 +146,7 @@ export function shareTeamSchedule(
  */
 export function shareTodayView(onSuccess?: () => void, onError?: (err: unknown) => void) {
   shareAppWithContext("Today's shift schedule - see who's working now", onSuccess, onError, {
-    tab: "today",
+    tab: "schedule",
   });
 }
 
