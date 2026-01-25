@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -41,9 +41,9 @@ function AppContent() {
     settings,
   } = useSettings();
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const pendingDeepLinkRef = useRef<{ team?: string; date?: string; view?: string }>({});
+  const [initialView, setInitialView] = useState<string | undefined>(undefined);
 
-  // Handle URL parameters for deep linking
+  // Handle URL parameters for deep linking - process on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
@@ -56,61 +56,41 @@ function AppContent() {
       setActiveTab(tabParam);
     }
 
-    if (teamParam) {
-      pendingDeepLinkRef.current.team = teamParam;
+    // Set team from URL (only if user has completed onboarding)
+    if (teamParam && hasCompletedOnboarding) {
+      try {
+        const teamNumber = parseInt(teamParam, 10);
+        const teamCount = getTeamCountForOption(scheduleType);
+        if (teamNumber >= 1 && teamNumber <= teamCount) {
+          setMyTeam(teamNumber);
+        }
+      } catch (error) {
+        console.error("Failed to process team parameter:", error);
+      }
     }
 
+    // Set date from URL
     if (dateParam) {
-      pendingDeepLinkRef.current.date = dateParam;
+      try {
+        const parsedDate = dayjs(dateParam);
+        if (parsedDate.isValid()) {
+          setCurrentDate(parsedDate);
+        }
+      } catch (error) {
+        console.error("Failed to process date parameter:", error);
+      }
     }
 
+    // Set initial view from URL
     if (viewParam) {
-      pendingDeepLinkRef.current.view = viewParam;
+      setInitialView(viewParam);
     }
 
     // Clear URL parameters after processing to keep URL clean
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
-
-  // Store the view parameter separately since it's used by components
-  const [initialView, setInitialView] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!hasCompletedOnboarding) return;
-
-    const { team, date, view } = pendingDeepLinkRef.current;
-
-    if (team) {
-      try {
-        const teamNumber = parseInt(team, 10);
-        const teamCount = getTeamCountForOption(scheduleType);
-        if (teamNumber >= 1 && teamNumber <= teamCount) {
-          setMyTeam(teamNumber);
-        }
-      } catch (error) {
-        console.error("Failed to process deep-link team parameter:", error);
-      }
-    }
-
-    if (date) {
-      try {
-        const parsedDate = dayjs(date);
-        if (parsedDate.isValid()) {
-          setCurrentDate(parsedDate);
-        }
-      } catch (error) {
-        console.error("Failed to process deep-link date parameter:", error);
-      }
-    }
-
-    if (view) {
-      setInitialView(view);
-    }
-
-    pendingDeepLinkRef.current = {};
-  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleType]);
+  }, [hasCompletedOnboarding, scheduleType, setMyTeam, setCurrentDate]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
