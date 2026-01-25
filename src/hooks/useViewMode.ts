@@ -9,6 +9,9 @@ import { getInitialView } from "../utils/viewUtils";
  * 2. initialView updates asynchronously after mount
  * 3. View mode needs to sync when initialView changes
  *
+ * Initializes view mode from initialView to avoid a first-render mismatch
+ * when the prop is already available (e.g., from synchronous URL parsing).
+ *
  * @param initialView - The view parameter from URL (may be undefined initially)
  * @param validViews - Array of valid view values
  * @param defaultView - The default view to use
@@ -19,7 +22,10 @@ export function useViewMode<T extends string>(
   validViews: readonly T[],
   defaultView: T,
 ): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [viewMode, setViewMode] = useState<T>(defaultView);
+  // Initialize with validated initialView if available, otherwise use defaultView
+  const [viewMode, setViewMode] = useState<T>(() =>
+    getInitialView(initialView, validViews, defaultView),
+  );
 
   useEffect(() => {
     if (initialView) {
