@@ -11,7 +11,13 @@ import type { ScheduleOption } from "../../src/data/rosters";
 
 // Mock the child components with schedule type support
 vi.mock("../../src/components/schedule/TodayView", () => ({
-  TodayView: ({ myTeam, viewingScheduleType }: { myTeam: number | null; viewingScheduleType?: ScheduleOption | null }) => (
+  TodayView: ({
+    myTeam,
+    viewingScheduleType,
+  }: {
+    myTeam: number | null;
+    viewingScheduleType?: ScheduleOption | null;
+  }) => (
     <div data-testid="today-view">
       TodayView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}
     </div>
@@ -19,7 +25,13 @@ vi.mock("../../src/components/schedule/TodayView", () => ({
 }));
 
 vi.mock("../../src/components/schedule/ScheduleView", () => ({
-  ScheduleView: ({ myTeam, viewingScheduleType }: { myTeam: number | null; viewingScheduleType?: ScheduleOption | null }) => (
+  ScheduleView: ({
+    myTeam,
+    viewingScheduleType,
+  }: {
+    myTeam: number | null;
+    viewingScheduleType?: ScheduleOption | null;
+  }) => (
     <div data-testid="schedule-view">
       ScheduleView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}
     </div>
@@ -79,6 +91,36 @@ describe("ScheduleTabView", () => {
       renderWithProviders(<ScheduleTabView {...defaultProps} initialView="invalid" as any />);
       expect(screen.getByTestId("today-view")).toBeInTheDocument();
       expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+    });
+
+    it("updates view when initialView prop changes from undefined to valid value (async URL param scenario)", () => {
+      // This tests the real-world scenario where:
+      // 1. Component mounts with initialView={undefined} (App's useEffect hasn't run yet)
+      // 2. App's useEffect reads URL params and sets initialView
+      // 3. Component re-renders with the new initialView value
+      // 4. The useEffect in ScheduleTabView catches this and updates viewMode
+
+      function Wrapper({ initialView }: { initialView?: string }) {
+        return (
+          <ToastProvider>
+            <SettingsProvider>
+              <EventStoreProvider>
+                <ScheduleTabView {...defaultProps} initialView={initialView} />
+              </EventStoreProvider>
+            </SettingsProvider>
+          </ToastProvider>
+        );
+      }
+
+      // Initial render with undefined (simulates first render before App's useEffect)
+      const { rerender } = render(<Wrapper initialView={undefined} />);
+      expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+
+      // Rerender with "week" (simulates App's useEffect setting the value from URL)
+      rerender(<Wrapper initialView="week" />);
+      expect(screen.getByTestId("schedule-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
     });
   });
 

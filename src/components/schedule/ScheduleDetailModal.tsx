@@ -100,8 +100,6 @@ export function ScheduleDetailModal({
   const currentStatus = weekSchedule[0];
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
-
-
   // Button state logic - only allow viewing transfers for other teams, not your own
   const isViewingOwnTeam = teamNumber === myTeam;
   const canViewTransfers = !isViewingOwnTeam;

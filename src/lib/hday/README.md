@@ -73,7 +73,7 @@ Only the **first** time/location flag is kept if multiple are present:
 ### Parsing
 
 ```typescript
-import { parseHday } from './parser';
+import { parseHday } from "./parser";
 
 const hdayText = `
 2025/01/15 # Vacation day
@@ -88,14 +88,14 @@ const events = parseHday(hdayText);
 ### Serializing
 
 ```typescript
-import { toLine } from './parser';
+import { toLine } from "./parser";
 
 const event = {
-  type: 'range',
-  start: '2025/01/15',
-  end: '2025/01/17',
-  flags: ['holiday'],
-  title: 'Vacation'
+  type: "range",
+  start: "2025/01/15",
+  end: "2025/01/17",
+  flags: ["holiday"],
+  title: "Vacation",
 };
 
 const line = toLine(event);
@@ -107,10 +107,10 @@ const line = toLine(event);
 The parser preserves unknown/malformed lines in the `raw` field:
 
 ```typescript
-parseHday("malformed line")
+parseHday("malformed line");
 // Returns: [{ type: 'unknown', raw: 'malformed line', flags: ['holiday'] }]
 
-toLine({ type: 'unknown', raw: 'malformed line' })
+toLine({ type: "unknown", raw: "malformed line" });
 // Returns: "malformed line" (exact original)
 ```
 

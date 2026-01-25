@@ -372,7 +372,7 @@ Advanced features for future development phases.
      ```
   2. **WebSocket** (Phase 2 - Real-Time)
      ```typescript
-     socket.on('events:updated', ({ teamId, events }) => {
+     socket.on("events:updated", ({ teamId, events }) => {
        unifiedStore.updateTeamEvents(teamId, events);
      });
      ```

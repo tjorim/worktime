@@ -1,16 +1,19 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useId, useState } from "react";
+import { useId } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
-import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
+import { useSyncedState } from "../hooks/useSyncedState";
+import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
-import { getInitialView } from "../utils/viewUtils";
 import { ScheduleView } from "./schedule/ScheduleView";
 import { TodayView } from "./schedule/TodayView";
+
+// Pre-compute available schedules since SCHEDULE_OPTIONS is static
+const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
 interface ScheduleTabViewProps {
   myTeam: number | null;
@@ -46,32 +49,8 @@ export function ScheduleTabView({
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
-  
-  // Determine initial view mode from URL parameter or default to "today"
-  const [viewMode, setViewMode] = useState<"today" | "week">(() =>
-    getInitialView(initialView, ["today", "week"] as const, "today"),
-  );
-
-  // Update view mode when initialView prop changes (for URL parameter deep-linking)
-  useEffect(() => {
-    if (initialView) {
-      const validatedView = getInitialView(initialView, ["today", "week"] as const, "today");
-      setViewMode(validatedView);
-    }
-  }, [initialView]);
-
-  // Cross-schedule viewing: allow viewing other schedule types
-  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
-    userScheduleType,
-  );
-
-  // Sync viewing schedule with user schedule when it changes (e.g., after onboarding)
-  useEffect(() => {
-    setViewingScheduleType(userScheduleType);
-  }, [userScheduleType]);
-
-  // Get available schedules for the selector
-  const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
+  const [viewMode, setViewMode] = useViewMode(initialView, ["today", "week"] as const, "today");
+  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));

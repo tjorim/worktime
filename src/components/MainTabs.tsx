@@ -1,7 +1,8 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
+import { useSyncedState } from "../hooks/useSyncedState";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
@@ -40,15 +41,10 @@ export function MainTabs({
   initialView,
 }: MainTabsProps) {
   const tabsId = useId();
-  const [activeKey, setActiveKey] = useState<string>(activeTab);
+  const [activeKey, setActiveKey] = useSyncedState(activeTab);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
-
-  // Sync with external tab changes
-  useEffect(() => {
-    setActiveKey(activeTab);
-  }, [activeTab]);
 
   const handleTeamClick = (teamNumber: number) => {
     setSelectedTeamForDetail(teamNumber);

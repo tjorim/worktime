@@ -73,5 +73,3 @@ export function shareApp(onSuccess?: () => void, onError?: (err: unknown) => voi
     onError,
   );
 }
-
-

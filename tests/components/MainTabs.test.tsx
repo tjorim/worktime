@@ -92,9 +92,7 @@ describe("MainTabs", () => {
 
   describe("Props synchronization", () => {
     it("updates active tab when activeTab prop changes", () => {
-      const { rerender } = renderWithProviders(
-        <MainTabs {...defaultProps} activeTab="schedule" />,
-      );
+      const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
       expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
 
       rerender(wrapWithProviders(<MainTabs {...defaultProps} activeTab="transfer" />));

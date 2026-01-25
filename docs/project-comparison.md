@@ -42,7 +42,7 @@ This document tracks the differences between HdayPlanner and NextShift, along wi
 
 ```yaml
 - Install dependencies
-- Lint code          # ✓ Added
+- Lint code # ✓ Added
 - Run tests
 - Build
 - Deploy

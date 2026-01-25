@@ -9,6 +9,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
+import { useSyncedState } from "../hooks/useSyncedState";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { getTeamCountForOption } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
@@ -99,21 +100,15 @@ export function WelcomeWizard({
     settings.vacationAllowance?.unit ?? "days",
   );
 
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(
-    scheduleType ?? null,
-  );
+  const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 
-  // Sync currentStep when startStep prop changes
+  // Sync currentStep when startStep prop changes (uses ref to avoid sync on initial render)
   useEffect(() => {
     if (startStep !== initialStepRef.current) {
       setCurrentStep(startStep);
       initialStepRef.current = startStep;
     }
   }, [startStep]);
-
-  useEffect(() => {
-    setSelectedSchedule(scheduleType ?? null);
-  }, [scheduleType]);
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
@@ -324,7 +319,12 @@ export function WelcomeWizard({
         >
           Maybe Later
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
+        <Button
+          variant="primary"
+          onClick={nextStep}
+          disabled={isLoading}
+          className="order-1 order-sm-2"
+        >
           Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -397,7 +397,12 @@ export function WelcomeWizard({
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
+        <Button
+          variant="primary"
+          onClick={nextStep}
+          disabled={isLoading}
+          className="order-1 order-sm-2"
+        >
           Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -453,7 +458,12 @@ export function WelcomeWizard({
         </div>
 
         <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-          <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading} className="order-2 order-sm-1">
+          <Button
+            variant="outline-secondary"
+            onClick={handleBackClick}
+            disabled={isLoading}
+            className="order-2 order-sm-1"
+          >
             <i
               className={classNames(
                 "bi",
@@ -463,7 +473,12 @@ export function WelcomeWizard({
             ></i>{" "}
             {isChangeScheduleFlow ? "Cancel" : "Back"}
           </Button>
-          <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule} className="order-1 order-sm-2">
+          <Button
+            variant="primary"
+            onClick={nextStep}
+            disabled={isLoading || !selectedSchedule}
+            className="order-1 order-sm-2"
+          >
             {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
           </Button>
         </div>

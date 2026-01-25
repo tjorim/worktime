@@ -152,8 +152,8 @@ Alternatively, configure at runtime by adding to your HTML before the main scrip
 
 ```javascript
 window.WORKTIME_CONFIG = {
-    REFERENCE_DATE: '2025-01-06',
-    REFERENCE_TEAM: 1
+  REFERENCE_DATE: "2025-01-06",
+  REFERENCE_TEAM: 1,
 };
 ```
 

@@ -15,8 +15,8 @@ import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
-import { getInitialView } from "../utils/viewUtils";
 import type { PaydayInfo } from "../types/paydays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
@@ -128,26 +128,11 @@ export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) 
   const { settings, updateVacationAllowance } = useSettings();
   const toast = useToast();
 
-  // Determine initial view mode from URL parameter or default to "table"
-  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">(() =>
-    getInitialView(
-      initialView,
-      ["calendar", "table", "stats", "raw"] as const,
-      "table",
-    ),
+  const [viewMode, setViewMode] = useViewMode(
+    initialView,
+    ["calendar", "table", "stats", "raw"] as const,
+    "table",
   );
-
-  // Update view mode when initialView prop changes (for URL parameter deep-linking)
-  useEffect(() => {
-    if (initialView) {
-      const validatedView = getInitialView(
-        initialView,
-        ["calendar", "table", "stats", "raw"] as const,
-        "table",
-      );
-      setViewMode(validatedView);
-    }
-  }, [initialView]);
 
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());

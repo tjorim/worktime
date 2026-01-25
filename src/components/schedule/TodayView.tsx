@@ -65,7 +65,7 @@ function TeamCard({
   const { settings, scheduleType: fallbackScheduleType } = useSettings();
   // Use the provided scheduleType, or fall back to user's default if null
   const effectiveScheduleType = scheduleType || fallbackScheduleType;
-  
+
   // Use shiftResult.shift directly - already contains emoji/className/name/hours
   const shiftDisplay = getShiftDisplay(shiftResult.shift, effectiveScheduleType);
   const shiftTimeLabel = getFormattedShiftTime(
