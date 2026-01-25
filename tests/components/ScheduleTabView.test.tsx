@@ -184,8 +184,12 @@ describe("ScheduleTabView", () => {
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
       const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
-      // Default schedule type is "9-5" in SettingsContext default
-      expect(selector.value).toBe("9-5");
+      // Default schedule type is null before onboarding, so placeholder is shown
+      expect(selector.value).toBe("");
+      // Verify placeholder option exists
+      const placeholderOption = Array.from(selector.options).find((opt) => opt.value === "");
+      expect(placeholderOption).toBeDefined();
+      expect(placeholderOption?.disabled).toBe(true);
     });
 
     it("displays multiple schedule options to choose from", () => {
@@ -194,11 +198,15 @@ describe("ScheduleTabView", () => {
       const selector = screen.getByLabelText(/View schedule:/i) as HTMLSelectElement;
       const options = Array.from(selector.options);
 
-      // Should have multiple schedule options available
-      expect(options.length).toBeGreaterThan(0);
+      // Should have multiple schedule options available (including placeholder)
+      expect(options.length).toBeGreaterThan(1);
 
-      // Each option should have a value and title
-      options.forEach((option) => {
+      // Filter out the placeholder option for validation
+      const scheduleOptions = options.filter((opt) => opt.value !== "");
+      expect(scheduleOptions.length).toBeGreaterThan(0);
+
+      // Each schedule option should have a value and title
+      scheduleOptions.forEach((option) => {
         expect(option.value).toBeTruthy();
         expect(option.text).toBeTruthy();
       });

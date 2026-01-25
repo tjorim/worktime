@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Hook for state that syncs from a prop but can be locally modified.
@@ -16,9 +16,14 @@ import { useEffect, useState } from "react";
  */
 export function useSyncedState<T>(propValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(propValue);
+  const prevPropRef = useRef<T>(propValue);
 
   useEffect(() => {
-    setValue(propValue);
+    // Only update if prop actually changed (skip initial mount sync)
+    if (prevPropRef.current !== propValue) {
+      setValue(propValue);
+      prevPropRef.current = propValue;
+    }
   }, [propValue]);
 
   return [value, setValue];
