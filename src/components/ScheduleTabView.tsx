@@ -100,6 +100,9 @@ export function ScheduleTabView({
             }}
             style={{ width: "auto" }}
           >
+            <option value="" disabled>
+              Select schedule...
+            </option>
             {availableSchedules.map((schedule) => (
               <option key={schedule.value} value={schedule.value}>
                 {schedule.title}
