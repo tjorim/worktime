@@ -155,7 +155,7 @@ describe("Shift Calculations", () => {
     });
   });
 
-  describe("Pre-7AM Schedule Display (Issue #xxx)", () => {
+  describe("Pre-7AM Schedule Display", () => {
     it("should show calendar day shift, not shift day, for schedule display at 00:20", () => {
       // Regression test for: "Wrong shift calculations" issue
       // At Monday Jan 26, 2026 00:20, the app should show Monday's schedule, not Sunday's
@@ -176,9 +176,10 @@ describe("Shift Calculations", () => {
       expect(team2Monday.code).not.toBe(team2ShiftDay.code);
     });
     
-    it("should correctly show Off day after night shift ends, even before 7 AM", () => {
-      // At Friday Jan 30, 2026 00:30, Team 2's Thursday night shift has ended
-      // Team 2 is now off, even though it's before 7 AM
+    it("should show calendar day schedule even when before 7 AM (after night shift)", () => {
+      // At Friday Jan 30, 2026 00:30 (after midnight), we're still before 7 AM
+      // Team 2's schedule for Friday is Off (O), not Thursday's Night shift
+      // This ensures the schedule display shows Friday's schedule, not Thursday's
       
       const fridayMorning = dayjs("2026-01-30 00:30"); // Friday 00:30
       const friday = fridayMorning.startOf("day"); // Friday calendar day
@@ -187,12 +188,12 @@ describe("Shift Calculations", () => {
       const team2Friday = calculateShift(friday, 2, "5-shift");
       expect(team2Friday.code).toBe("O"); // Off on Friday
       
-      // Using shift day would incorrectly show Thursday's night shift
+      // Using shift day would incorrectly show Thursday's schedule
       const shiftDay = getCurrentShiftDay(fridayMorning); // Returns Thursday
       const team2ShiftDay = calculateShift(shiftDay, 2, "5-shift");
-      expect(team2ShiftDay.code).toBe("N"); // Thursday's Night shift (WRONG - shift already ended!)
+      expect(team2ShiftDay.code).toBe("N"); // Thursday's Night shift (WRONG for schedule display)
       
-      // The fix ensures we show the correct day's schedule
+      // The fix ensures we show Friday's schedule, not Thursday's
       expect(team2Friday.code).not.toBe(team2ShiftDay.code);
     });
   });

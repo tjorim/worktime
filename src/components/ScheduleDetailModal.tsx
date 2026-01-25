@@ -17,7 +17,6 @@ import { dayjs, getLocalizedShiftTime } from "../utils/dateTimeUtils";
 import { shareTeamSchedule } from "../utils/share";
 import {
   calculateShift,
-  getCurrentShiftDay,
   getShiftByCode,
   getShiftDisplay,
 } from "../utils/shiftCalculations";
