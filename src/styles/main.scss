@@ -385,7 +385,7 @@ html {
 }
 
 /* Event type colors - matches EVENT_COLORS in parser.ts
- * All colors meet WCAG AA (4.5:1 contrast minimum) with black text */
+ * Used for visual indicator dots in calendar events */
 .event-holiday-full {
   background-color: #ec0000;
 }

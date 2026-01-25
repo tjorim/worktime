@@ -45,6 +45,8 @@ const defaultProps = {
   isActive: true,
 };
 
+// Helper to render with all required providers
+// Note: SettingsProvider defaults scheduleType to null (before onboarding)
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <ToastProvider>
