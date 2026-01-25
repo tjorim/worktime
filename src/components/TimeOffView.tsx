@@ -16,6 +16,7 @@ import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { dayjs } from "../utils/dateTimeUtils";
+import { getInitialView } from "../utils/viewUtils";
 import type { PaydayInfo } from "../types/paydays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
@@ -128,20 +129,12 @@ export function TimeOffView({ isActive = true, initialView }: TimeOffViewProps) 
   const toast = useToast();
 
   // Determine initial view mode from URL parameter or default to "table"
-  const getInitialViewMode = (): "calendar" | "table" | "stats" | "raw" => {
-    if (
-      initialView === "calendar" ||
-      initialView === "table" ||
-      initialView === "stats" ||
-      initialView === "raw"
-    ) {
-      return initialView;
-    }
-    return "table";
-  };
-
-  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">(
-    getInitialViewMode(),
+  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">(() =>
+    getInitialView(
+      initialView,
+      ["calendar", "table", "stats", "raw"] as const,
+      "table",
+    ),
   );
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());

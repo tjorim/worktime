@@ -6,8 +6,9 @@ import Form from "react-bootstrap/Form";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { isValidScheduleType } from "../utils/scheduleUtils";
 import { dayjs } from "../utils/dateTimeUtils";
+import { isValidScheduleType } from "../utils/scheduleUtils";
+import { getInitialView } from "../utils/viewUtils";
 import { ScheduleView } from "./ScheduleView";
 import { TodayView } from "./TodayView";
 
@@ -47,15 +48,9 @@ export function ScheduleTabView({
   const { scheduleType: userScheduleType } = useSettings();
   
   // Determine initial view mode from URL parameter or default to "today"
-  const getInitialViewMode = (): "today" | "week" => {
-    if (initialView === "week" || initialView === "today") {
-      return initialView;
-    }
-    // Default to "today" view as it's more immediately relevant to users
-    return "today";
-  };
-  
-  const [viewMode, setViewMode] = useState<"today" | "week">(getInitialViewMode());
+  const [viewMode, setViewMode] = useState<"today" | "week">(() =>
+    getInitialView(initialView, ["today", "week"] as const, "today"),
+  );
 
   // Cross-schedule viewing: allow viewing other schedule types
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
