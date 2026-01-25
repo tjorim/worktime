@@ -9,19 +9,19 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption } from "../data/rosters";
-import { useEventStore } from "../contexts/EventStoreContext";
-import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { dayjs, getISOWeekYear2Digit } from "../utils/dateTimeUtils";
-import type { ShiftResult } from "../utils/shiftCalculations";
+import type { ScheduleOption } from "../../data/rosters";
+import { useEventStore } from "../../contexts/EventStoreContext";
+import { useSettings } from "../../contexts/SettingsContext";
+import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
+import type { ShiftResult } from "../../utils/shiftCalculations";
 import {
   getAllTeamsShifts,
   getShiftDisplay,
   getFormattedShiftTime,
   isCurrentlyWorking,
-} from "../utils/shiftCalculations";
+} from "../../utils/shiftCalculations";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding

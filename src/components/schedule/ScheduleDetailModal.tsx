@@ -10,16 +10,16 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
-import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
-import { dayjs, getLocalizedShiftTime } from "../utils/dateTimeUtils";
+import { useSettings } from "../../contexts/SettingsContext";
+import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
 import {
   calculateShift,
   getCurrentShiftDay,
   getShiftByCode,
   getShiftDisplay,
-} from "../utils/shiftCalculations";
+} from "../../utils/shiftCalculations";
 
 interface ScheduleDetailModalProps {
   show: boolean;

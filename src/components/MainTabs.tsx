@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
-import { ScheduleDetailModal } from "./ScheduleDetailModal";
+import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
 import { TransferView } from "./TransferView";

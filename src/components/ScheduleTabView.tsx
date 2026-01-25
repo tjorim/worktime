@@ -9,8 +9,8 @@ import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
 import { getInitialView } from "../utils/viewUtils";
-import { ScheduleView } from "./ScheduleView";
-import { TodayView } from "./TodayView";
+import { ScheduleView } from "./schedule/ScheduleView";
+import { TodayView } from "./schedule/TodayView";
 
 interface ScheduleTabViewProps {
   myTeam: number | null;

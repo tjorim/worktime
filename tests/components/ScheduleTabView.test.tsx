@@ -10,7 +10,7 @@ import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ScheduleOption } from "../../src/data/rosters";
 
 // Mock the child components with schedule type support
-vi.mock("../../src/components/TodayView", () => ({
+vi.mock("../../src/components/schedule/TodayView", () => ({
   TodayView: ({ myTeam, viewingScheduleType }: { myTeam: number | null; viewingScheduleType?: ScheduleOption | null }) => (
     <div data-testid="today-view">
       TodayView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}
@@ -18,7 +18,7 @@ vi.mock("../../src/components/TodayView", () => ({
   ),
 }));
 
-vi.mock("../../src/components/ScheduleView", () => ({
+vi.mock("../../src/components/schedule/ScheduleView", () => ({
   ScheduleView: ({ myTeam, viewingScheduleType }: { myTeam: number | null; viewingScheduleType?: ScheduleOption | null }) => (
     <div data-testid="schedule-view">
       ScheduleView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ScheduleView } from "../../src/components/ScheduleView";
+import { ScheduleView } from "../../src/components/schedule/ScheduleView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
