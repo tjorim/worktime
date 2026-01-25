@@ -248,7 +248,7 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                         <i className="bi bi-share me-2"></i>
                         Share App
                       </div>
-                      <small className="text-muted">Promote Worktime to new users</small>
+                      <small className="text-muted">Send Worktime to colleagues</small>
                     </div>
                     <i className="bi bi-share text-muted"></i>
                   </div>
