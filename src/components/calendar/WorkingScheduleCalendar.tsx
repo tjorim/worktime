@@ -25,6 +25,18 @@ interface WorkingScheduleCalendarProps {
 const DAY_FORMAT = "YYYY-MM-DD";
 
 /**
+ * Checks if a date is within the given month.
+ */
+const isDateInMonth = (date: dayjs.Dayjs, month: dayjs.Dayjs): boolean => {
+  const monthStart = month.startOf("month").format(DAY_FORMAT);
+  const monthEnd = month.endOf("month").format(DAY_FORMAT);
+  return (
+    (date.isAfter(monthStart) || date.isSame(monthStart, "day")) &&
+    (date.isBefore(monthEnd) || date.isSame(monthEnd, "day"))
+  );
+};
+
+/**
  * Builds a complete calendar grid for the given month.
  * Includes days from adjacent months to fill complete weeks (Sunday to Saturday).
  */
@@ -81,24 +93,18 @@ export function WorkingScheduleCalendar({
   const [focusedDateKey, setFocusedDateKey] = useState<string>(() => {
     const todayKey = today.format(DAY_FORMAT);
     const monthStart = month.startOf("month").format(DAY_FORMAT);
-    const monthEnd = month.endOf("month").format(DAY_FORMAT);
     // Focus today if in current month, otherwise first day of month
-    const todayInRange = (today.isAfter(monthStart) || today.isSame(monthStart, "day")) &&
-                         (today.isBefore(monthEnd) || today.isSame(monthEnd, "day"));
-    return todayInRange ? todayKey : monthStart;
+    return isDateInMonth(today, month) ? todayKey : monthStart;
   });
   const calendarRef = useRef<HTMLDivElement>(null);
 
   // Update focused date when month changes
   useEffect(() => {
     const monthStart = month.startOf("month").format(DAY_FORMAT);
-    const monthEnd = month.endOf("month").format(DAY_FORMAT);
     const todayKey = today.format(DAY_FORMAT);
 
     // If today is in the new month, focus it; otherwise focus first day of month
-    const todayInRange = (today.isAfter(monthStart) || today.isSame(monthStart, "day")) &&
-                         (today.isBefore(monthEnd) || today.isSame(monthEnd, "day"));
-    if (todayInRange) {
+    if (isDateInMonth(today, month)) {
       setFocusedDateKey(todayKey);
     } else {
       setFocusedDateKey(monthStart);
@@ -255,7 +261,7 @@ export function WorkingScheduleCalendar({
                         publicHolidays,
                       );
                     }
-                  } catch (error) {
+                  } catch {
                     // Error calculating shift - will show as non-working
                   }
 

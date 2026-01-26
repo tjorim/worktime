@@ -69,6 +69,11 @@ export function hasTimeOffEvent(date: Dayjs, events: HdayEvent[]): boolean {
  *
  * For night shifts (N), checks if the NEXT day is a public holiday,
  * since 7 out of 8 hours of the night shift fall on the next day.
+ * Night shifts run 23:00-07:00 (8 hours total):
+ * - 1 hour on the start day (23:00-00:00)
+ * - 7 hours on the next day (00:00-07:00)
+ * Therefore, if the next day is a public holiday, the night shift
+ * starting the previous day should be marked as off.
  *
  * @param date - The date to check
  * @param teamNumber - The team number (1-based)
@@ -98,7 +103,7 @@ export function isPublicHolidayForShift(
 
     // For all other shifts (M, L, D, O), check the same day
     return publicHolidays.has(formatHdayDate(date));
-  } catch (error) {
+  } catch {
     // Invalid team number or other calculation error
     return false;
   }
@@ -149,7 +154,7 @@ export function isWorkingDay(
     }
 
     return true;
-  } catch (error) {
+  } catch {
     // If calculation fails (e.g., invalid team number), treat as non-working
     return false;
   }
@@ -196,7 +201,7 @@ export function getNonWorkingReason(
     }
 
     return null; // It's a working day
-  } catch (error) {
+  } catch {
     return "Unable to determine";
   }
 }

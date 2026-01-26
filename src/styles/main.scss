@@ -826,6 +826,14 @@ html {
 }
 
 /* Working Calendar Styles */
+:root {
+  --calendar-time-off-bg: rgba(255, 193, 7, 0.1);
+}
+
+[data-bs-theme="dark"] {
+  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+}
+
 .working-schedule-calendar .calendar-grid {
   margin-bottom: 0;
 }
@@ -858,7 +866,7 @@ html {
 }
 
 .calendar-day-cell.time-off-cell {
-  background-color: rgba(255, 193, 7, 0.1);
+  background-color: var(--calendar-time-off-bg);
 }
 
 .calendar-day-cell.text-muted {

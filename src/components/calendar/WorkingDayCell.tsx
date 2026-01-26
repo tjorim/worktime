@@ -6,6 +6,34 @@ import type { PaydayInfo } from "../../types/paydays";
 import type { Shift } from "../../utils/shiftCalculations";
 import { hasTimeOffEvent } from "../../utils/workingDayUtils";
 
+/**
+ * Builds an accessible aria-label for a calendar day cell.
+ */
+const buildDayCellAriaLabel = (
+  date: Dayjs,
+  isWorking: boolean,
+  shift: Shift | null,
+  publicHoliday?: PublicHolidayInfo,
+): string => {
+  const parts: string[] = [date.format("MMMM D, YYYY")];
+
+  if (isWorking) {
+    parts.push("Working day");
+  } else {
+    parts.push("Non-working day");
+  }
+
+  if (shift) {
+    parts.push(`${shift.name} shift`);
+  }
+
+  if (publicHoliday) {
+    parts.push(publicHoliday.name);
+  }
+
+  return parts.join(" - ");
+};
+
 interface WorkingDayCellProps {
   date: Dayjs;
   isCurrentMonth: boolean;
@@ -107,7 +135,7 @@ export function WorkingDayCell({
       className={cellClasses}
       tabIndex={isFocused ? 0 : -1}
       onFocus={onFocus}
-      aria-label={`${date.format("MMMM D, YYYY")}${isWorking ? " - Working day" : " - Non-working day"}${shift ? ` - ${shift.name} shift` : ""}${publicHoliday ? ` - ${publicHoliday.name}` : ""}`}
+      aria-label={buildDayCellAriaLabel(date, isWorking, shift, publicHoliday)}
     >
       <div className="d-flex flex-column" style={{ minHeight: "80px" }}>
         {/* Day number */}
