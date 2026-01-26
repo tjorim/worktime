@@ -110,7 +110,7 @@ export function TransferView({
       <Card.Body>
         {!myTeam ? (
           <div className="text-center py-4">
-            <i className="bi bi-person-plus-fill text-muted mb-3" style={{ fontSize: "2rem" }}></i>
+            <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg"></i>
             <p className="text-muted mb-0">Please select your team to see transfer information.</p>
             {onOpenSettings && (
               <div className="mt-3">
@@ -123,7 +123,7 @@ export function TransferView({
           </div>
         ) : availableOtherTeams.length === 0 ? (
           <div className="text-center py-4">
-            <i className="bi bi-people text-muted mb-3" style={{ fontSize: "2rem" }}></i>
+            <i className="bi bi-people text-muted mb-3 icon-lg"></i>
             <h6 className="text-muted">No Other Teams Available</h6>
             <p className="text-muted mb-0">No other teams available for transfer analysis.</p>
           </div>
@@ -140,6 +140,7 @@ export function TransferView({
                   id={otherTeamSelectId}
                   value={otherTeam}
                   onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
+                  aria-label="Select team to view transfers with"
                 >
                   {availableOtherTeams.map((teamNumber) => (
                     <option key={teamNumber} value={teamNumber}>
@@ -220,7 +221,7 @@ export function TransferView({
             {/* Transfer Results */}
             {transfers.length === 0 ? (
               <div className="text-center py-4">
-                <i className="bi bi-calendar-x text-muted mb-3" style={{ fontSize: "2rem" }}></i>
+                <i className="bi bi-calendar-x text-muted mb-3 icon-lg"></i>
                 <h6 className="text-muted">No Transfers Found</h6>
                 <p className="text-muted mb-0">
                   No transfers found between Team {myTeam} and Team {otherTeam}

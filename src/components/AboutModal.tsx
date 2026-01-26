@@ -36,7 +36,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         {/* App Title & Version */}
         <div className="text-center mb-4">
           <div className="mb-2">
-            <i className="bi bi-clock-history text-primary" style={{ fontSize: "2rem" }}></i>
+            <i className="bi bi-clock-history text-primary icon-lg"></i>
           </div>
           <h5 className="mb-2">Worktime - Shift Tracker & Time Off</h5>
           <div className="mb-2">

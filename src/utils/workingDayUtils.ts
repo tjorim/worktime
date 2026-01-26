@@ -103,8 +103,9 @@ export function isPublicHolidayForShift(
 
     // For all other shifts (M, L, D, O), check the same day
     return publicHolidays.has(formatHdayDate(date));
-  } catch {
+  } catch (error) {
     // Invalid team number or other calculation error
+    console.warn("isPublicHolidayForShift error:", error);
     return false;
   }
 }
@@ -154,8 +155,9 @@ export function isWorkingDay(
     }
 
     return true;
-  } catch {
+  } catch (error) {
     // If calculation fails (e.g., invalid team number), treat as non-working
+    console.warn("isWorkingDay error:", error);
     return false;
   }
 }
@@ -201,7 +203,8 @@ export function getNonWorkingReason(
     }
 
     return null; // It's a working day
-  } catch {
+  } catch (error) {
+    console.warn("getNonWorkingReason error:", error);
     return "Unable to determine";
   }
 }
