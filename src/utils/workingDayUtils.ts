@@ -1,0 +1,202 @@
+/**
+ * Working Day Calculation Utilities
+ *
+ * Determines whether specific days are working days for a user based on:
+ * 1. Their roster schedule (shift pattern)
+ * 2. Time-off events (holidays, sick leave, etc.)
+ * 3. Public holidays with shift-specific logic
+ *
+ * ## Public Holiday Logic for Shifts
+ *
+ * For shift workers, whether a public holiday is a day off depends on when
+ * the majority of working hours fall:
+ *
+ * - **Day shifts (D)**: Holiday on that day = day off
+ * - **Morning/Early shifts (M)**: Holiday on that day = day off
+ * - **Evening/Late shifts (L)**: Holiday on that day = day off
+ * - **Night shifts (N)**: Holiday affects the PREVIOUS day
+ *   - Night shift runs 23:00-07:00 (8 hours)
+ *   - 7 out of 8 hours fall on the holiday date
+ *   - So if May 5 is a holiday, night shift starting May 4 at 23:00 is OFF
+ *
+ * @module utils/workingDayUtils
+ */
+
+import type { Dayjs } from "dayjs";
+import type { HdayEvent } from "../lib/hday/types";
+import type { ScheduleOption } from "../data/rosters";
+import type { PublicHolidayInfo } from "../types/publicHolidays";
+import { calculateShift } from "./shiftCalculations";
+import { dayjs, formatHdayDate } from "./dateTimeUtils";
+
+/**
+ * Checks if a date matches any time-off event.
+ *
+ * @param date - The date to check
+ * @param events - Array of time-off events
+ * @returns True if the date has a time-off event, false otherwise
+ */
+export function hasTimeOffEvent(date: Dayjs, events: HdayEvent[]): boolean {
+  for (const event of events) {
+    // Check range events
+    if (event.type === "range" && event.start && event.end) {
+      const start = dayjs(event.start.replace(/\//g, "-"));
+      const end = dayjs(event.end.replace(/\//g, "-"));
+      if (
+        (date.isAfter(start, "day") || date.isSame(start, "day")) &&
+        (date.isBefore(end, "day") || date.isSame(end, "day"))
+      ) {
+        return true;
+      }
+    }
+
+    // Check weekly recurring events
+    if (event.type === "weekly" && event.weekday) {
+      // weekday is 1-7 (Monday-Sunday), dayjs.day() is 0-6 (Sunday-Saturday)
+      // Convert: event.weekday 1=Mon → dayjs 1, event.weekday 7=Sun → dayjs 0
+      const targetDayOfWeek = event.weekday === 7 ? 0 : event.weekday;
+      if (date.day() === targetDayOfWeek) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks if a date is a public holiday for a specific team and shift.
+ *
+ * For night shifts (N), checks if the NEXT day is a public holiday,
+ * since 7 out of 8 hours of the night shift fall on the next day.
+ *
+ * @param date - The date to check
+ * @param teamNumber - The team number (1-based)
+ * @param scheduleType - The schedule type
+ * @param publicHolidays - Map of public holidays by date string (YYYY/MM/DD format)
+ * @returns True if this is a public holiday for this team's shift, false otherwise
+ */
+export function isPublicHolidayForShift(
+  date: Dayjs,
+  teamNumber: number | null,
+  scheduleType: ScheduleOption | null | undefined,
+  publicHolidays: Map<string, PublicHolidayInfo>,
+): boolean {
+  if (!teamNumber || publicHolidays.size === 0) {
+    return false;
+  }
+
+  try {
+    const shift = calculateShift(date, teamNumber, scheduleType);
+
+    // For night shifts (23:00-07:00), check if the NEXT day is a holiday
+    // because 7 out of 8 hours fall on the next day
+    if (shift.code === "N") {
+      const nextDay = date.add(1, "day");
+      return publicHolidays.has(formatHdayDate(nextDay));
+    }
+
+    // For all other shifts (M, L, D, O), check the same day
+    return publicHolidays.has(formatHdayDate(date));
+  } catch (error) {
+    // Invalid team number or other calculation error
+    return false;
+  }
+}
+
+/**
+ * Determines if a date is a working day for a user.
+ *
+ * A day is NOT a working day if:
+ * 1. The shift schedule shows OFF (O) for that day
+ * 2. There's a time-off event on that day
+ * 3. It's a public holiday (with shift-specific logic for night shifts)
+ *
+ * @param date - The date to check
+ * @param teamNumber - The user's team number (1-based), or null if not selected
+ * @param scheduleType - The user's schedule type
+ * @param events - Array of time-off events
+ * @param publicHolidays - Map of public holidays by date string (YYYY/MM/DD format)
+ * @returns True if this is a working day, false otherwise
+ */
+export function isWorkingDay(
+  date: Dayjs,
+  teamNumber: number | null,
+  scheduleType: ScheduleOption | null | undefined,
+  events: HdayEvent[],
+  publicHolidays: Map<string, PublicHolidayInfo>,
+): boolean {
+  // If no team selected, we can't determine working days
+  if (!teamNumber) {
+    return false;
+  }
+
+  try {
+    // Check if scheduled shift is OFF
+    const shift = calculateShift(date, teamNumber, scheduleType);
+    if (!shift.isWorking) {
+      return false;
+    }
+
+    // Check for time-off events
+    if (hasTimeOffEvent(date, events)) {
+      return false;
+    }
+
+    // Check for public holidays (with shift-specific logic)
+    if (isPublicHolidayForShift(date, teamNumber, scheduleType, publicHolidays)) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    // If calculation fails (e.g., invalid team number), treat as non-working
+    return false;
+  }
+}
+
+/**
+ * Gets a reason why a day is not working.
+ *
+ * @param date - The date to check
+ * @param teamNumber - The user's team number (1-based), or null if not selected
+ * @param scheduleType - The user's schedule type
+ * @param events - Array of time-off events
+ * @param publicHolidays - Map of public holidays by date string (YYYY/MM/DD format)
+ * @returns A reason string, or null if it's a working day
+ */
+export function getNonWorkingReason(
+  date: Dayjs,
+  teamNumber: number | null,
+  scheduleType: ScheduleOption | null | undefined,
+  events: HdayEvent[],
+  publicHolidays: Map<string, PublicHolidayInfo>,
+): string | null {
+  if (!teamNumber) {
+    return "No team selected";
+  }
+
+  try {
+    // Check shift schedule first
+    const shift = calculateShift(date, teamNumber, scheduleType);
+    if (!shift.isWorking) {
+      return "Scheduled off day";
+    }
+
+    // Check for time-off events
+    if (hasTimeOffEvent(date, events)) {
+      return "Time off";
+    }
+
+    // Check for public holidays
+    if (isPublicHolidayForShift(date, teamNumber, scheduleType, publicHolidays)) {
+      const holidayDate = shift.code === "N" ? date.add(1, "day") : date;
+      const holiday = publicHolidays.get(formatHdayDate(holidayDate));
+      return holiday ? `Public holiday: ${holiday.name}` : "Public holiday";
+    }
+
+    return null; // It's a working day
+  } catch (error) {
+    return "Unable to determine";
+  }
+}

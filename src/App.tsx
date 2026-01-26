@@ -27,7 +27,7 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
-  const [activeTab, setActiveTab] = useState("schedule");
+  const [activeTab, setActiveTab] = useState("calendar");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo, showError } = useToast();
   const {
@@ -50,7 +50,7 @@ function AppContent() {
     const viewParam = urlParams.get("view");
 
     // Set active tab from URL
-    if (tabParam && ["schedule", "transfer", "timeoff"].includes(tabParam)) {
+    if (tabParam && ["calendar", "schedule", "transfer", "timeoff"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
 

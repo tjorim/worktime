@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { useSyncedState } from "../hooks/useSyncedState";
+import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
@@ -18,16 +19,17 @@ interface MainTabsProps {
 }
 
 /**
- * Displays a tabbed interface for viewing schedules, transfers, or time off.
+ * Displays a tabbed interface for viewing calendar, schedules, transfers, or time off.
  *
  * Supports both internal and external control of the active tab, and notifies when the tab changes.
+ * The Calendar tab shows the user's working schedule integrated with time-off and public holidays.
  * The Schedule tab groups Today and Week views together. Each tab presents different views relevant
  * to the user's team and date.
  *
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
  * @param setCurrentDate - Function to update the current date
- * @param activeTab - The currently active tab (defaults to 'schedule')
+ * @param activeTab - The currently active tab (defaults to 'calendar')
  * @param onTabChange - Callback invoked when the active tab changes
  * @param initialView - Initial view mode for sub-tabs from URL parameter
  * @returns The rendered tabbed interface component.
@@ -36,7 +38,7 @@ export function MainTabs({
   myTeam,
   currentDate,
   setCurrentDate,
-  activeTab = "schedule",
+  activeTab = "calendar",
   onTabChange,
   initialView,
 }: MainTabsProps) {
@@ -60,12 +62,24 @@ export function MainTabs({
       <Tabs
         activeKey={activeKey}
         onSelect={(k) => {
-          const newKey = k || "schedule";
+          const newKey = k || "calendar";
           setActiveKey(newKey);
           onTabChange?.(newKey);
         }}
         id={tabsId}
       >
+        <Tab
+          eventKey="calendar"
+          title={
+            <>
+              <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
+              Calendar
+            </>
+          }
+        >
+          <CalendarView myTeam={myTeam} isActive={activeKey === "calendar"} />
+        </Tab>
+
         <Tab
           eventKey="schedule"
           title={

@@ -824,3 +824,48 @@ html {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
 }
+
+/* Working Calendar Styles */
+.working-schedule-calendar .calendar-grid {
+  margin-bottom: 0;
+}
+
+.calendar-day-cell {
+  vertical-align: top;
+  position: relative;
+  min-height: 80px;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.calendar-day-cell.today-cell {
+  background-color: var(--month-calendar-today-bg);
+  border: 2px solid var(--month-calendar-today-border) !important;
+  box-shadow: 0 0 0 1px var(--month-calendar-today-shadow);
+}
+
+.calendar-day-cell.focused-cell {
+  outline: 2px solid var(--month-calendar-focus-outline);
+  outline-offset: -2px;
+}
+
+.calendar-day-cell.weekend-cell {
+  background-color: var(--month-calendar-day-weekend);
+}
+
+.calendar-day-cell.public-holiday-cell {
+  background-color: var(--month-calendar-public-holiday-bg);
+  border-left: 3px solid var(--month-calendar-public-holiday-border) !important;
+}
+
+.calendar-day-cell.time-off-cell {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.calendar-day-cell.text-muted {
+  opacity: 0.5;
+}
+
+.calendar-legend .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
