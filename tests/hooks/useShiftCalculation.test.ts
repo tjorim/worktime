@@ -14,10 +14,7 @@ function wrapper({ children }: { children: ReactNode }) {
 /**
  * Creates a wrapper with a specific scheduleType and team pre-configured via localStorage.
  */
-function createWrapperWithSettings(
-  scheduleType: "5-shift" | "9-5",
-  myTeam: number | null = null,
-) {
+function createWrapperWithSettings(scheduleType: "5-shift" | "9-5", myTeam: number | null = null) {
   window.localStorage.setItem(
     "worktime_user_state",
     JSON.stringify({
@@ -181,11 +178,7 @@ describe("useShiftCalculation", () => {
       expect(result.current.currentShift?.teamNumber).toBe(2);
 
       // Verify the shift matches direct calculation
-      const directShift = calculateShift(
-        result.current.currentDate,
-        2,
-        "5-shift",
-      );
+      const directShift = calculateShift(result.current.currentDate, 2, "5-shift");
       expect(result.current.currentShift?.shift.code).toBe(directShift.code);
     });
 
@@ -201,11 +194,7 @@ describe("useShiftCalculation", () => {
       expect(result.current.currentShift?.teamNumber).toBe(1);
 
       // Verify shift matches direct calculation for 9-5
-      const directShift = calculateShift(
-        result.current.currentDate,
-        1,
-        "9-5",
-      );
+      const directShift = calculateShift(result.current.currentDate, 1, "9-5");
       expect(result.current.currentShift?.shift.code).toBe(directShift.code);
     });
 
@@ -262,7 +251,9 @@ describe("useShiftCalculation", () => {
       expect(result.current.currentShift?.shift.code).toBe(calendarDayShift.code);
 
       // Shift day would give Sunday's shift (incorrect for display)
-      expect(result.current.currentShiftDay.isSame(mondayPreSeven.subtract(1, "day"), "day")).toBe(true);
+      expect(result.current.currentShiftDay.isSame(mondayPreSeven.subtract(1, "day"), "day")).toBe(
+        true,
+      );
     });
 
     it("currentShift.code matches getShiftCode for pre-7AM times", () => {

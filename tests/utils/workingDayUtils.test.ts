@@ -285,7 +285,7 @@ describe("workingDayUtils", () => {
 
     it("returns false when there is a public holiday", () => {
       const holidays = new Map<string, PublicHolidayInfo>();
-      holidays.set("2025/07/16", { date: "2025/07/16", name: "Test Holiday", country: "BE" });
+      holidays.set("2025/07/16", { name: "Test Holiday", localName: "Test Holiday" });
 
       expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", emptyEvents, holidays)).toBe(false);
     });
@@ -293,7 +293,7 @@ describe("workingDayUtils", () => {
     it("returns false for night shift when next day is a holiday", () => {
       // Team 1 on 2025-07-20 has Night shift
       const holidays = new Map<string, PublicHolidayInfo>();
-      holidays.set("2025/07/21", { date: "2025/07/21", name: "Test Holiday", country: "BE" });
+      holidays.set("2025/07/21", { name: "Test Holiday", localName: "Test Holiday" });
 
       expect(isWorkingDay(dayjs("2025-07-20"), 1, "5-shift", emptyEvents, holidays)).toBe(false);
     });
@@ -318,9 +318,9 @@ describe("workingDayUtils", () => {
     const emptyEvents: HdayEvent[] = [];
 
     it("returns 'No team selected' when teamNumber is null", () => {
-      expect(getNonWorkingReason(dayjs("2026-01-26"), null, "5-shift", emptyEvents, emptyHolidays)).toBe(
-        "No team selected",
-      );
+      expect(
+        getNonWorkingReason(dayjs("2026-01-26"), null, "5-shift", emptyEvents, emptyHolidays),
+      ).toBe("No team selected");
     });
 
     it("returns 'Scheduled off day' when shift is OFF", () => {
@@ -346,7 +346,7 @@ describe("workingDayUtils", () => {
 
     it("returns public holiday name when there is a holiday", () => {
       const holidays = new Map<string, PublicHolidayInfo>();
-      holidays.set("2025/07/16", { date: "2025/07/16", name: "National Day", country: "BE" });
+      holidays.set("2025/07/16", { name: "National Day", localName: "National Day" });
 
       expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", emptyEvents, holidays)).toBe(
         "Public holiday: National Day",
@@ -356,7 +356,7 @@ describe("workingDayUtils", () => {
     it("returns correct holiday name for night shift (checks next day)", () => {
       // Team 1 on 2025-07-20 has Night shift, holiday on 2025-07-21
       const holidays = new Map<string, PublicHolidayInfo>();
-      holidays.set("2025/07/21", { date: "2025/07/21", name: "Liberation Day", country: "BE" });
+      holidays.set("2025/07/21", { name: "Liberation Day", localName: "Liberation Day" });
 
       expect(getNonWorkingReason(dayjs("2025-07-20"), 1, "5-shift", emptyEvents, holidays)).toBe(
         "Public holiday: Liberation Day",
@@ -395,7 +395,7 @@ describe("workingDayUtils", () => {
         },
       ];
       const holidays = new Map<string, PublicHolidayInfo>();
-      holidays.set("2025/07/16", { date: "2025/07/16", name: "National Day", country: "BE" });
+      holidays.set("2025/07/16", { name: "National Day", localName: "National Day" });
 
       expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", events, holidays)).toBe(
         "Time off",

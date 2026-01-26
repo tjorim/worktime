@@ -14,11 +14,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
-import {
-  calculateShift,
-  getShiftByCode,
-  getShiftDisplay,
-} from "../../utils/shiftCalculations";
+import { calculateShift, getShiftByCode, getShiftDisplay } from "../../utils/shiftCalculations";
 
 interface ScheduleDetailModalProps {
   show: boolean;

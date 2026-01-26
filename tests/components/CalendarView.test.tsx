@@ -30,9 +30,7 @@ describe("CalendarView", () => {
 
       expect(screen.getByText(/Welcome to Your Working Calendar/i)).toBeInTheDocument();
       expect(screen.getByText(/select your work schedule/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/explore the Today and Week schedule views/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/explore the Today and Week schedule views/i)).toBeInTheDocument();
     });
 
     it("should render calendar title", () => {
@@ -52,7 +50,9 @@ describe("CalendarView", () => {
         </AllProviders>,
       );
 
-      expect(screen.getByText(/Select your schedule to see your working calendar/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Select your schedule to see your working calendar/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -80,55 +80,28 @@ describe("CalendarView", () => {
     });
   });
 
-  describe("getEffectiveTeam Integration", () => {
-    it("should use getEffectiveTeam to handle single-user schedules", () => {
-      // When CalendarView is rendered, it should use getEffectiveTeam internally
-      // This test verifies the component doesn't crash with null team
-      const { container } = render(
-        <AllProviders>
-          <CalendarView myTeam={null} />
-        </AllProviders>,
+  describe("Working Day Integration", () => {
+    it("should display shift badges when team is selected and schedule configured", () => {
+      // Setup: configure user state with a 5-shift schedule and team
+      localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "5-shift",
+          settings: { timeFormat: "24h", theme: "system" },
+        }),
       );
 
-      // Should render without errors
-      expect(container.querySelector(".calendar-view")).toBeInTheDocument();
-      
-      // The getEffectiveTeam logic is tested in scheduleUtils.test.ts
-      // This test just verifies CalendarView integrates with it correctly
-    });
-  });
-
-  describe("Working Day Integration", () => {
-    it("should integrate with working day utilities", () => {
-      // CalendarView should use isWorkingDay, hasTimeOffEvent, and isPublicHolidayForShift
-      // These utilities are tested in workingDayUtils.test.ts
-      // This test verifies CalendarView compiles and runs with these imports
-      
-      const { container } = render(
+      render(
         <AllProviders>
           <CalendarView myTeam={1} />
         </AllProviders>,
       );
 
-      // Should render without TypeScript/runtime errors
-      expect(container.querySelector(".calendar-view")).toBeInTheDocument();
-    });
-  });
-
-  describe("Date Validation Integration", () => {
-    it("should import and use isValidDate from validation module", () => {
-      // CalendarView should use isValidDate for date validation
-      // The validation logic is tested in the validation module
-      // This test verifies CalendarView imports it correctly
-      
-      const { container } = render(
-        <AllProviders>
-          <CalendarView myTeam={null} />
-        </AllProviders>,
-      );
-
-      // Should render without import errors
-      expect(container.querySelector(".calendar-view")).toBeInTheDocument();
+      // Assert: shift badges should be visible in the calendar with valid shift codes
+      // M=Morning, L=Late, N=Night, D=Day, O=Off
+      expect(screen.getAllByText(/^[MLNDO]$/).length).toBeGreaterThan(0);
     });
   });
 });

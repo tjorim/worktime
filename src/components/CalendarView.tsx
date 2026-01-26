@@ -76,24 +76,21 @@ interface CalendarViewProps {
  * @param props.onOpenSettings - Optional callback to open settings dialog
  * @param props.onOpenScheduleTab - Optional callback to open Schedule tab
  */
-export function CalendarView({
-  myTeam,
-  onOpenSettings,
-  onOpenScheduleTab,
-}: CalendarViewProps) {
+export function CalendarView({ myTeam, onOpenSettings, onOpenScheduleTab }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
   const { scheduleType } = useSettings();
   const toast = useToast();
 
   // Fetch holidays for the current month's year
-  const { publicHolidayMap } = usePublicHolidays(currentMonth.year());
-  const { schoolHolidayMap } = useSchoolHolidays(currentMonth.year());
+  const currentYear = currentMonth.year();
+  const { publicHolidayMap } = usePublicHolidays(currentYear);
+  const { schoolHolidayMap } = useSchoolHolidays(currentYear);
 
   // Get payday information for the year
   const paydayMapForYear = useMemo(
-    () => getMonthlyPaydayMap(currentMonth.year(), publicHolidayMap),
-    [currentMonth, publicHolidayMap],
+    () => getMonthlyPaydayMap(currentYear, publicHolidayMap),
+    [currentYear, publicHolidayMap],
   );
 
   // Modal state
@@ -315,7 +312,13 @@ export function CalendarView({
       const shiftConfig = roster.shiftConfig.shiftDisplayOverrides?.[shift.code];
 
       // Determine if this is actually a working day
-      const actuallyWorking = isWorkingDay(date, effectiveTeam, scheduleType, events, publicHolidayMap);
+      const actuallyWorking = isWorkingDay(
+        date,
+        effectiveTeam,
+        scheduleType,
+        events,
+        publicHolidayMap,
+      );
 
       // Additional context for display
       let displayLabel = shiftConfig?.displayName || shift.name;
@@ -448,7 +451,7 @@ export function CalendarView({
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         title="Delete Event"
-        message="Are you sure you want to delete this event? This action can be undone."
+        message="Are you sure you want to delete this event? Press Ctrl+Z to undo, or use the Time Off tab."
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"

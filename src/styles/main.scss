@@ -297,6 +297,32 @@ html {
   border: 1px solid var(--shift-off-text);
 }
 
+/* Higher specificity for shift badges to override Bootstrap defaults */
+.badge.shift-morning {
+  background-color: var(--shift-morning);
+  color: var(--shift-morning-text);
+}
+
+.badge.shift-late {
+  background-color: var(--shift-late);
+  color: var(--shift-late-text);
+}
+
+.badge.shift-day {
+  background-color: var(--shift-day);
+  color: var(--shift-day-text);
+}
+
+.badge.shift-night {
+  background-color: var(--shift-night);
+  color: var(--shift-night-text);
+}
+
+.badge.shift-off {
+  background-color: var(--shift-off);
+  color: var(--shift-off-text);
+}
+
 /* Team highlight for user's team */
 .my-team {
   border: 2px solid var(--primary-color) !important;

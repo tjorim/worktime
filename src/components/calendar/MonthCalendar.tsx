@@ -21,7 +21,9 @@ interface MonthCalendarProps {
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
   // Optional: Provide shift calculation function to show working schedule
-  getShiftForDate?: (date: dayjs.Dayjs) => { code: string; label: string; isWorking: boolean } | undefined;
+  getShiftForDate?: (
+    date: dayjs.Dayjs,
+  ) => { code: string; label: string; isWorking: boolean } | undefined;
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";

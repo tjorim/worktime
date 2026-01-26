@@ -136,11 +136,7 @@ describe("TransferView", () => {
       });
 
       renderWithProviders(
-        <TransferView
-          {...defaultProps}
-          myTeam={null}
-          onOpenSettings={handleOpenSettings}
-        />,
+        <TransferView {...defaultProps} myTeam={null} onOpenSettings={handleOpenSettings} />,
       );
 
       const button = screen.getByRole("button", { name: /Choose Schedule/i });

@@ -487,7 +487,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   };
 
   const viewModeHelpText = {
-    calendar: "Click a day to add events, or select an event to edit.",
     table: "Select events from the table to edit or delete.",
     stats: "Review allowance usage and vacation breakdowns by year.",
     raw: "Edit raw .hday content directly. Click Apply to save changes.",
@@ -635,9 +634,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 <tbody>
                   {events.map((event, index) => {
                     const eventColorClass =
-                      event.type !== "unknown"
-                        ? getEventColorClass(event.flags)
-                        : "event-unknown";
+                      event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
                     const eventLabel =
                       event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
                     const symbol =
@@ -793,7 +790,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         title="Delete Event"
-        message="Are you sure you want to delete this event? This action can be undone."
+        message="Are you sure you want to delete this event? You can undo this with the Undo button or Ctrl+Z."
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"
@@ -804,7 +801,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       <ConfirmationDialog
         isOpen={showBulkDeleteConfirm}
         title="Delete Selected Events"
-        message={`Are you sure you want to delete ${selectedIndices.length} selected events? This action can be undone.`}
+        message={`Are you sure you want to delete ${selectedIndices.length} selected events? You can undo this with the Undo button or Ctrl+Z.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"

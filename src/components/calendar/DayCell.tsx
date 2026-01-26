@@ -4,7 +4,11 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { getEventColorClass, getEventTypeLabel, getTimeLocationSymbol } from "../../lib/hday/parser";
+import {
+  getEventColorClass,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "../../lib/hday/parser";
 
 export type DayEvent = {
   event: HdayEvent;
