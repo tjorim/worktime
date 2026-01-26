@@ -2,22 +2,21 @@ import { useMemo, useState } from "react";
 import Card from "react-bootstrap/Card";
 import type { Dayjs } from "dayjs";
 import { useEventStore } from "../contexts/EventStoreContext";
-import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
-import { WorkingScheduleCalendar } from "./calendar/WorkingScheduleCalendar";
+import { MonthCalendar } from "./timeoff/MonthCalendar";
 
 interface CalendarViewProps {
   myTeam: number | null;
-  isActive?: boolean;
 }
 
 /**
  * CalendarView displays a monthly calendar showing the user's working schedule.
  *
- * This view integrates:
+ * This view reuses the existing MonthCalendar component from the timeoff directory,
+ * integrating:
  * - User's roster schedule (shift pattern)
  * - Time-off events from event store
  * - Public holidays (with shift-specific logic)
@@ -26,22 +25,14 @@ interface CalendarViewProps {
  *
  * Key Features:
  * - Shows working vs. non-working days based on schedule
- * - Indicates shift types for working days
- * - Marks time-off events and public holidays
- * - For night shifts: uses "majority of hours" rule for public holidays
- *
- * Accessibility:
- * - ARIA labels for navigation and interactive elements
- * - Keyboard navigation support
- * - Screen reader friendly calendar structure
+ * - Reuses existing MonthCalendar component for consistency
+ * - Displays shift information and time-off events together
  *
  * @param props.myTeam - The user's team number from onboarding or null
- * @param props.isActive - Whether this tab is currently active
  */
 export function CalendarView({ myTeam }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { events } = useEventStore();
-  const { scheduleType } = useSettings();
 
   // Fetch holidays for the current month's year
   const { publicHolidayMap } = usePublicHolidays(currentMonth.year());
@@ -52,6 +43,11 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
     () => getMonthlyPaydayMap(currentMonth.year(), publicHolidayMap),
     [currentMonth, publicHolidayMap],
   );
+
+  // No-op handlers since we're in view-only mode (not adding/editing events from calendar tab)
+  const handleAddEvent = () => {};
+  const handleViewEvent = () => {};
+  const handleEditEvent = () => {};
 
   return (
     <div className="calendar-view py-3">
@@ -80,15 +76,16 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
               </p>
             </div>
           ) : (
-            <WorkingScheduleCalendar
-              myTeam={myTeam}
-              scheduleType={scheduleType}
-              month={currentMonth}
-              onMonthChange={setCurrentMonth}
+            <MonthCalendar
               events={events}
+              month={currentMonth}
               publicHolidays={publicHolidayMap}
               schoolHolidays={schoolHolidayMap}
               paydayMap={paydayMapForYear}
+              onMonthChange={setCurrentMonth}
+              onAddEvent={handleAddEvent}
+              onViewEvent={handleViewEvent}
+              onEditEvent={handleEditEvent}
             />
           )}
         </Card.Body>

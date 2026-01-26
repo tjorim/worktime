@@ -77,7 +77,7 @@ export function MainTabs({
             </>
           }
         >
-          <CalendarView myTeam={myTeam} isActive={activeKey === "calendar"} />
+          <CalendarView myTeam={myTeam} />
         </Tab>
 
         <Tab
