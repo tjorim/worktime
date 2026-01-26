@@ -60,6 +60,11 @@ export function MainTabs({
     setShowTeamDetail(false);
   };
 
+  const handleOpenScheduleTab = () => {
+    setActiveKey("schedule");
+    onTabChange?.("schedule");
+  };
+
   return (
     <>
       <Tabs
@@ -80,7 +85,11 @@ export function MainTabs({
             </>
           }
         >
-          <CalendarView myTeam={myTeam} onOpenSettings={onOpenSettings} />
+          <CalendarView
+            myTeam={myTeam}
+            onOpenSettings={onOpenSettings}
+            onOpenScheduleTab={handleOpenScheduleTab}
+          />
         </Tab>
 
         <Tab
