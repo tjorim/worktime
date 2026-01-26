@@ -21,15 +21,18 @@ describe("CalendarView", () => {
   });
 
   describe("Empty State", () => {
-    it("should show 'No schedule selected' when myTeam is null and no schedule", () => {
+    it("should show empty-state guidance when myTeam is null and no schedule", () => {
       render(
         <AllProviders>
           <CalendarView myTeam={null} />
         </AllProviders>,
       );
 
-      expect(screen.getByText(/No schedule selected/i)).toBeInTheDocument();
-      expect(screen.getByText(/complete the onboarding wizard/i)).toBeInTheDocument();
+      expect(screen.getByText(/Welcome to Your Working Calendar/i)).toBeInTheDocument();
+      expect(screen.getByText(/select your work schedule/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/explore the Today and Week schedule views/i),
+      ).toBeInTheDocument();
     });
 
     it("should render calendar title", () => {
