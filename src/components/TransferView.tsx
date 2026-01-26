@@ -114,7 +114,7 @@ export function TransferView({
             <p className="text-muted mb-0">Please select your team to see transfer information.</p>
             {onOpenSettings && (
               <div className="mt-3">
-                <Button variant="primary" onClick={onOpenSettings}>
+                <Button variant="primary" size="sm" onClick={onOpenSettings}>
                   <i className="bi bi-gear me-2" aria-hidden="true"></i>
                   Choose Schedule
                 </Button>
