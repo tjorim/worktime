@@ -8,7 +8,8 @@ import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { calculateShift } from "../utils/shiftCalculations";
-import { getScheduleRoster } from "../data/rosters";
+import { SCHEDULE_OPTIONS } from "../data/rosters";
+import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 
 interface CalendarViewProps {
@@ -49,23 +50,43 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
   );
 
   // Get shift calculation function for the user's team and schedule
+  // This shows the actual working schedule and accounts for:
+  // 1. Time-off events (holidays registered in time-off management)
+  // 2. Public holidays with shift-specific rules (night shifts check next day)
   const getShiftForDate = useMemo(() => {
     if (!myTeam || !scheduleType) return undefined;
     
-    const roster = getScheduleRoster(scheduleType);
+    const roster = SCHEDULE_OPTIONS.find(opt => opt.value === scheduleType);
     if (!roster) return undefined;
 
     return (date: Dayjs) => {
       const shift = calculateShift(date, myTeam, scheduleType);
       const shiftConfig = roster.shiftConfig.shiftDisplayOverrides?.[shift.code];
       
+      // Determine if this is actually a working day by checking:
+      // 1. Scheduled shift is not OFF (O)
+      // 2. No time-off event on this day
+      // 3. Not a public holiday (with shift-specific logic for night shifts)
+      const actuallyWorking = isWorkingDay(date, myTeam, scheduleType, events, publicHolidayMap);
+      
+      // Additional context for display
+      let displayLabel = shiftConfig?.displayName || shift.name;
+      if (!actuallyWorking && shift.code !== "O") {
+        // Working shift but day off due to time-off or public holiday
+        if (hasTimeOffEvent(date, events)) {
+          displayLabel = "Time Off";
+        } else if (isPublicHolidayForShift(date, myTeam, scheduleType, publicHolidayMap)) {
+          displayLabel = "Public Holiday";
+        }
+      }
+      
       return {
         code: shiftConfig?.displayCode || shift.code,
-        label: shiftConfig?.displayName || shift.label,
-        isWorking: shift.code !== "O", // O = Off day
+        label: displayLabel,
+        isWorking: actuallyWorking,
       };
     };
-  }, [myTeam, scheduleType]);
+  }, [myTeam, scheduleType, events, publicHolidayMap]);
 
   // No-op handlers since we're in view-only mode (not adding/editing events from calendar tab)
   const handleAddEvent = () => {};
