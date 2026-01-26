@@ -374,6 +374,9 @@ export function CalendarView({
               <p className="mb-4">
                 To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings.
               </p>
+              <p className="text-muted">
+                You can still explore the Today and Week schedule views before making a selection.
+              </p>
               <div className="d-flex gap-2 justify-content-center flex-wrap">
                 {onOpenSettings && (
                   <Button variant="primary" size="lg" onClick={onOpenSettings}>
