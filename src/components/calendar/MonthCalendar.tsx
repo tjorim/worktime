@@ -110,6 +110,7 @@ export function MonthCalendar({
   });
 
   const dayRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const hasKeyboardInteraction = useRef(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -132,6 +133,10 @@ export function MonthCalendar({
   }, [days, month]);
 
   useEffect(() => {
+    // Only focus after user has started keyboard navigation
+    // This prevents unwanted page scroll on initial render
+    if (!hasKeyboardInteraction.current) return;
+
     const ref = dayRefs.current.get(focusedDateKey);
     if (ref && ref.isConnected) {
       ref.focus();
@@ -216,6 +221,13 @@ export function MonthCalendar({
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => {
+    // Enable focus management once user starts keyboard navigation
+    if (
+      ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
+    ) {
+      hasKeyboardInteraction.current = true;
+    }
+
     switch (event.key) {
       case "ArrowLeft":
         event.preventDefault();

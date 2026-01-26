@@ -242,14 +242,20 @@ describe("MonthCalendar", () => {
       const user = userEvent.setup();
       render(<MonthCalendar {...defaultProps} />);
 
-      // Navigate to January 15 using arrow keys
-      // Initial focus is on January 1, so press ArrowRight 14 times to reach January 15
+      // First focus January 1 explicitly (no auto-focus on mount)
+      const dayButtons = screen.getAllByRole("button");
+      const jan1Button = dayButtons.find((btn) =>
+        btn.getAttribute("aria-label")?.includes("Wednesday, January 1, 2025"),
+      );
+      expect(jan1Button).toBeDefined();
+      jan1Button!.focus();
+
+      // Navigate to January 15 using arrow keys (14 presses from Jan 1)
       for (let i = 0; i < 14; i++) {
         await user.keyboard("{ArrowRight}");
       }
 
       // Verify we're on January 15
-      const dayButtons = screen.getAllByRole("button");
       const jan15Button = dayButtons.find((btn) =>
         btn.getAttribute("aria-label")?.includes("Wednesday, January 15, 2025"),
       );
