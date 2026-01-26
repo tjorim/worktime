@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import type { Dayjs } from "dayjs";
+import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
+import { useToast } from "../contexts/ToastContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
@@ -11,33 +14,66 @@ import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { MonthCalendar } from "./calendar/MonthCalendar";
+import { EventModal } from "./EventModal";
+import { ConfirmationDialog } from "./ConfirmationDialog";
+
+const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
+  ["none", "Holiday (default)"],
+  ["business", "Business trip"],
+  ["course", "Training/Course"],
+  ["in", "In office"],
+  ["weekend", "Weekend"],
+  ["birthday", "Birthday"],
+  ["ill", "Sick leave"],
+  ["other", "Other"],
+];
+
+const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", string]> = [
+  ["none", "Full day"],
+  ["half_am", "AM (half day)"],
+  ["half_pm", "PM (half day)"],
+  ["onsite", "Onsite"],
+  ["no_fly", "No fly"],
+  ["can_fly", "Can fly"],
+];
+
+const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.map(
+  ([flag]) => flag,
+).filter((f) => f !== "none") as EventFlag[];
+
+const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_FLAG_OPTIONS.map(
+  ([flag]) => flag,
+).filter((f) => f !== "none") as EventFlag[];
+
+const DEFAULT_WEEKDAY = 1;
 
 interface CalendarViewProps {
   myTeam: number | null;
 }
 
 /**
- * CalendarView displays a monthly calendar showing the user's working schedule.
+ * CalendarView displays a monthly calendar showing the user's working schedule
+ * with full event management capabilities.
  *
- * This view reuses the existing MonthCalendar component from the timeoff directory,
- * integrating:
+ * This view integrates:
  * - User's roster schedule (shift pattern)
- * - Time-off events from event store
+ * - Time-off events from event store with add/edit/delete
  * - Public holidays (with shift-specific logic)
  * - School holidays
  * - Paydays
  *
  * Key Features:
  * - Shows working vs. non-working days based on schedule
- * - Reuses existing MonthCalendar component for consistency
+ * - Full event management (click to add, view, edit, delete)
  * - Displays shift information and time-off events together
  *
  * @param props.myTeam - The user's team number from onboarding or null
  */
 export function CalendarView({ myTeam }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
-  const { events } = useEventStore();
+  const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
   const { scheduleType } = useSettings();
+  const toast = useToast();
 
   // Fetch holidays for the current month's year
   const { publicHolidayMap } = usePublicHolidays(currentMonth.year());
@@ -49,37 +85,211 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
     [currentMonth, publicHolidayMap],
   );
 
+  // Modal state
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editIndex, setEditIndex] = useState(-1);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+
+  // Event form state
+  const [eventType, setEventType] = useState<"range" | "weekly">("range");
+  const [eventWeekday, setEventWeekday] = useState(DEFAULT_WEEKDAY);
+  const [eventStart, setEventStart] = useState("");
+  const [eventEnd, setEventEnd] = useState("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventFlags, setEventFlags] = useState<EventFlag[]>([]);
+
+  // Validation errors
+  const [startDateError, setStartDateError] = useState("");
+  const [endDateError, setEndDateError] = useState("");
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState(-1);
+
+  // Refs
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const resetForm = () => {
+    setEventType("range");
+    setEventWeekday(DEFAULT_WEEKDAY);
+    setEventStart("");
+    setEventEnd("");
+    setEventTitle("");
+    setEventFlags([]);
+    setStartDateError("");
+    setEndDateError("");
+  };
+
+  const prefillFormFromEvent = (event: HdayEvent) => {
+    if (event.type === "range") {
+      setEventType("range");
+      setEventStart(event.start || "");
+      setEventEnd(event.end || "");
+      setEventWeekday(DEFAULT_WEEKDAY);
+    } else if (event.type === "weekly") {
+      setEventType("weekly");
+      setEventWeekday(event.weekday || DEFAULT_WEEKDAY);
+      setEventStart("");
+      setEventEnd("");
+    }
+    setEventTitle(event.title || "");
+    setEventFlags(event.flags || []);
+    setStartDateError("");
+    setEndDateError("");
+  };
+
+  const handleAddEventForDate = (date: Dayjs) => {
+    resetForm();
+    setEditIndex(-1);
+    setModalMode("add");
+    setEventType("range");
+    setEventStart(date.format("YYYY/MM/DD"));
+    setEventEnd(date.format("YYYY/MM/DD"));
+    setShowEventModal(true);
+  };
+
+  const handleOpenViewModal = (index: number) => {
+    const event = events[index];
+    if (!event) return;
+
+    setEditIndex(index);
+    prefillFormFromEvent(event);
+    setModalMode("view");
+    setShowEventModal(true);
+  };
+
+  const handleOpenEditModal = (index: number) => {
+    const event = events[index];
+    if (!event) return;
+
+    setEditIndex(index);
+    prefillFormFromEvent(event);
+    setModalMode("edit");
+    setShowEventModal(true);
+  };
+
+  const handleSwitchToEdit = () => {
+    setModalMode("edit");
+  };
+
+  const handleTypeFlagChange = (flag: TypeFlag | "none") => {
+    if (flag === "none") {
+      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f)));
+    } else {
+      setEventFlags((prev) => {
+        const filtered = prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f));
+        return [...filtered, flag];
+      });
+    }
+  };
+
+  const handleTimeFlagChange = (flag: TimeLocationFlag | "none") => {
+    if (flag === "none") {
+      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f)));
+    } else {
+      setEventFlags((prev) => {
+        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f));
+        return [...filtered, flag];
+      });
+    }
+  };
+
+  const handleSubmitEvent = () => {
+    // Basic validation
+    let hasErrors = false;
+    if (eventType === "range" && !eventStart) {
+      setStartDateError("Start date is required");
+      hasErrors = true;
+    }
+    if (hasErrors) {
+      toast.showError("Please fix validation errors before saving");
+      return;
+    }
+
+    const normalizedFlags = normalizeEventFlags(eventFlags);
+
+    const newEvent: HdayEvent =
+      eventType === "range"
+        ? {
+            type: "range",
+            start: eventStart,
+            end: eventEnd || eventStart,
+            title: eventTitle || undefined,
+            flags: normalizedFlags.length > 0 ? normalizedFlags : undefined,
+            raw: buildPreviewLine({
+              eventType,
+              start: eventStart,
+              end: eventEnd,
+              title: eventTitle,
+              flags: normalizedFlags,
+              weekday: eventWeekday,
+            }),
+          }
+        : {
+            type: "weekly",
+            weekday: eventWeekday,
+            title: eventTitle || undefined,
+            flags: normalizedFlags.length > 0 ? normalizedFlags : undefined,
+            raw: buildPreviewLine({
+              eventType,
+              start: eventStart,
+              end: eventEnd,
+              title: eventTitle,
+              flags: normalizedFlags,
+              weekday: eventWeekday,
+            }),
+          };
+
+    if (modalMode === "edit" && editIndex >= 0) {
+      updateEvent(editIndex, newEvent);
+      toast.showSuccess("Event updated successfully", "✏️");
+    } else {
+      addEvent(newEvent);
+      toast.showSuccess("Event added successfully", "✅");
+    }
+
+    setShowEventModal(false);
+    resetForm();
+  };
+
+  const handleDeleteClick = (index: number) => {
+    setDeleteIndex(index);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteIndex >= 0) {
+      deleteEvent(deleteIndex);
+      toast.showSuccess("Event deleted successfully", "🗑️");
+    }
+    setShowDeleteConfirm(false);
+    setDeleteIndex(-1);
+  };
+
   // Get shift calculation function for the user's team and schedule
-  // This shows the actual working schedule and accounts for:
-  // 1. Time-off events (holidays registered in time-off management)
-  // 2. Public holidays with shift-specific rules (night shifts check next day)
   const getShiftForDate = useMemo(() => {
     if (!myTeam || !scheduleType) return undefined;
-    
-    const roster = SCHEDULE_OPTIONS.find(opt => opt.value === scheduleType);
+
+    const roster = SCHEDULE_OPTIONS.find((opt) => opt.value === scheduleType);
     if (!roster) return undefined;
 
     return (date: Dayjs) => {
       const shift = calculateShift(date, myTeam, scheduleType);
       const shiftConfig = roster.shiftConfig.shiftDisplayOverrides?.[shift.code];
-      
-      // Determine if this is actually a working day by checking:
-      // 1. Scheduled shift is not OFF (O)
-      // 2. No time-off event on this day
-      // 3. Not a public holiday (with shift-specific logic for night shifts)
+
+      // Determine if this is actually a working day
       const actuallyWorking = isWorkingDay(date, myTeam, scheduleType, events, publicHolidayMap);
-      
+
       // Additional context for display
       let displayLabel = shiftConfig?.displayName || shift.name;
       if (!actuallyWorking && shift.code !== "O") {
-        // Working shift but day off due to time-off or public holiday
         if (hasTimeOffEvent(date, events)) {
           displayLabel = "Time Off";
         } else if (isPublicHolidayForShift(date, myTeam, scheduleType, publicHolidayMap)) {
           displayLabel = "Public Holiday";
         }
       }
-      
+
       return {
         code: shiftConfig?.displayCode || shift.code,
         label: displayLabel,
@@ -88,10 +298,14 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
     };
   }, [myTeam, scheduleType, events, publicHolidayMap]);
 
-  // No-op handlers since we're in view-only mode (not adding/editing events from calendar tab)
-  const handleAddEvent = () => {};
-  const handleViewEvent = () => {};
-  const handleEditEvent = () => {};
+  const previewLine = buildPreviewLine({
+    eventType,
+    start: eventStart,
+    end: eventEnd,
+    title: eventTitle,
+    flags: eventFlags,
+    weekday: eventWeekday,
+  });
 
   return (
     <div className="calendar-view py-3">
@@ -127,14 +341,59 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
               schoolHolidays={schoolHolidayMap}
               paydayMap={paydayMapForYear}
               onMonthChange={setCurrentMonth}
-              onAddEvent={handleAddEvent}
-              onViewEvent={handleViewEvent}
-              onEditEvent={handleEditEvent}
+              onAddEvent={handleAddEventForDate}
+              onViewEvent={handleOpenViewModal}
+              onEditEvent={handleOpenEditModal}
+              onDeleteEvent={handleDeleteClick}
               getShiftForDate={getShiftForDate}
             />
           )}
         </Card.Body>
       </Card>
+
+      {/* Event Modal for Add/Edit/View */}
+      <EventModal
+        show={showEventModal}
+        mode={modalMode}
+        formRef={formRef}
+        eventType={eventType}
+        eventWeekday={eventWeekday}
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventTitle={eventTitle}
+        eventFlags={eventFlags}
+        startDateError={startDateError}
+        endDateError={endDateError}
+        previewLine={previewLine}
+        typeFlagOptions={TYPE_FLAG_OPTIONS}
+        timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
+        typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
+        timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
+        onHide={() => setShowEventModal(false)}
+        onEntered={() => formRef.current?.focus()}
+        onEventTypeChange={setEventType}
+        onEventTitleChange={setEventTitle}
+        onEventWeekdayChange={setEventWeekday}
+        onStartDateChange={setEventStart}
+        onEndDateChange={setEventEnd}
+        onTypeFlagChange={handleTypeFlagChange}
+        onTimeFlagChange={handleTimeFlagChange}
+        onResetForm={resetForm}
+        onSubmit={handleSubmitEvent}
+        onSwitchToEdit={handleSwitchToEdit}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This action can be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
