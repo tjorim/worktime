@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DayCell, type DayEvent } from "../../../src/components/timeoff/DayCell";
+import { DayCell, type DayEvent } from "../../../src/components/calendar/DayCell";
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 describe("DayCell", () => {
