@@ -377,25 +377,21 @@ export function CalendarView({
               <p className="text-muted mb-4">
                 You can still explore the Today and Week schedule views before making a selection.
               </p>
+              {onOpenScheduleTab && (
+                <div className="mb-3">
+                  <Button variant="outline-secondary" onClick={onOpenScheduleTab}>
+                    <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
+                    View Schedule
+                  </Button>
+                </div>
+              )}
               <div className="d-flex gap-2 justify-content-center flex-wrap">
                 {onOpenSettings && (
-                  <Button variant="primary" size="lg" onClick={onOpenSettings}>
+                  <Button variant="primary" onClick={onOpenSettings}>
                     <i className="bi bi-gear me-2" aria-hidden="true"></i>
                     Open Settings
                   </Button>
                 )}
-                {onOpenScheduleTab && (
-                  <Button variant="outline-secondary" size="lg" onClick={onOpenScheduleTab}>
-                    <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
-                    View Schedule
-                  </Button>
-                )}
-              </div>
-              <div className="mt-4 text-muted small">
-                <p className="mb-1">
-                  <strong>Tip:</strong> You can also check the Schedule and Transfers tabs to
-                  explore shift patterns before selecting your team.
-                </p>
               </div>
             </div>
           ) : (
