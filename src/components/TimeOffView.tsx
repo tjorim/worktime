@@ -12,6 +12,7 @@ import {
   normalizeEventFlags,
 } from "../lib/hday/parser";
 import { isValidDate } from "../lib/hday/validation";
+import { dayjs } from "../utils/dateTimeUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -183,7 +184,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       if (eventEnd && !isValidDate(eventEnd)) {
         setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
         valid = false;
-      } else if (eventEnd && eventStart && eventEnd < eventStart) {
+      } else if (eventEnd && eventStart && dayjs(eventEnd).isBefore(dayjs(eventStart))) {
         setEndDateError("End date must be after start date");
         valid = false;
       } else {

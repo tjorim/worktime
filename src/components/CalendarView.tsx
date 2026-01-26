@@ -451,7 +451,7 @@ export function CalendarView({ myTeam, onOpenSettings, onOpenScheduleTab }: Cale
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
         title="Delete Event"
-        message="Are you sure you want to delete this event? Press Ctrl+Z to undo, or use the Time Off tab."
+        message="Are you sure you want to delete this event? You can undo this from the Time Off tab."
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"
