@@ -167,7 +167,7 @@ describe("workingDayUtils", () => {
     const createHolidayMap = (dates: string[]): Map<string, PublicHolidayInfo> => {
       const map = new Map<string, PublicHolidayInfo>();
       dates.forEach((date) => {
-        map.set(date, { date, name: "Test Holiday", country: "BE" });
+        map.set(date, { name: "Test Holiday", localName: "Test Holiday" });
       });
       return map;
     };

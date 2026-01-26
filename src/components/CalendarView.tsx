@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import type { Dayjs } from "dayjs";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
+import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -13,6 +14,7 @@ import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
+import { getEffectiveTeam } from "../utils/scheduleUtils";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
@@ -195,13 +197,34 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
   };
 
   const handleSubmitEvent = () => {
-    // Basic validation
-    let hasErrors = false;
-    if (eventType === "range" && !eventStart) {
-      setStartDateError("Start date is required");
-      hasErrors = true;
+    // Validate dates with same logic as TimeOffView
+    let valid = true;
+
+    if (eventType === "range") {
+      // Validate start date
+      if (!eventStart) {
+        setStartDateError("Start date is required");
+        valid = false;
+      } else if (!isValidDate(eventStart)) {
+        setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
+        valid = false;
+      } else {
+        setStartDateError("");
+      }
+
+      // Validate end date
+      if (eventEnd && !isValidDate(eventEnd)) {
+        setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
+        valid = false;
+      } else if (eventEnd && eventStart && eventEnd < eventStart) {
+        setEndDateError("End date must be after start date");
+        valid = false;
+      } else {
+        setEndDateError("");
+      }
     }
-    if (hasErrors) {
+
+    if (!valid) {
       toast.showError("Please fix validation errors before saving");
       return;
     }
@@ -267,25 +290,30 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
   };
 
   // Get shift calculation function for the user's team and schedule
+  // Uses getEffectiveTeam to handle single-user schedules (like "9-5")
   const getShiftForDate = useMemo(() => {
-    if (!myTeam || !scheduleType) return undefined;
+    if (!scheduleType) return undefined;
+
+    // Get effective team - handles single-user schedules where myTeam is null
+    const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
+    if (!effectiveTeam) return undefined;
 
     const roster = SCHEDULE_OPTIONS.find((opt) => opt.value === scheduleType);
     if (!roster) return undefined;
 
     return (date: Dayjs) => {
-      const shift = calculateShift(date, myTeam, scheduleType);
+      const shift = calculateShift(date, effectiveTeam, scheduleType);
       const shiftConfig = roster.shiftConfig.shiftDisplayOverrides?.[shift.code];
 
       // Determine if this is actually a working day
-      const actuallyWorking = isWorkingDay(date, myTeam, scheduleType, events, publicHolidayMap);
+      const actuallyWorking = isWorkingDay(date, effectiveTeam, scheduleType, events, publicHolidayMap);
 
       // Additional context for display
       let displayLabel = shiftConfig?.displayName || shift.name;
       if (!actuallyWorking && shift.code !== "O") {
         if (hasTimeOffEvent(date, events)) {
           displayLabel = "Time Off";
-        } else if (isPublicHolidayForShift(date, myTeam, scheduleType, publicHolidayMap)) {
+        } else if (isPublicHolidayForShift(date, effectiveTeam, scheduleType, publicHolidayMap)) {
           displayLabel = "Public Holiday";
         }
       }
@@ -316,21 +344,21 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
               <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
               My Working Calendar
             </Card.Title>
-            {!myTeam && (
+            {!getShiftForDate && (
               <small className="text-muted">
                 <i className="bi bi-info-circle me-1"></i>
-                Select a team to see your working schedule
+                Select your schedule to see your working calendar
               </small>
             )}
           </div>
 
-          {!myTeam ? (
+          {!getShiftForDate ? (
             <div className="text-center text-muted py-5">
               <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
-              <p>No team selected</p>
+              <p>No schedule selected</p>
               <p className="small">
-                Please complete the onboarding wizard to select your team and see your working
-                schedule.
+                Please complete the onboarding wizard to select your schedule and see your working
+                calendar.
               </p>
             </div>
           ) : (
