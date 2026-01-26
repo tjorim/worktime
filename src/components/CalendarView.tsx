@@ -375,8 +375,8 @@ export function CalendarView({
                 To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings.
               </p>
               {onOpenSettings && (
-                <div className="mb-4">
-                  <Button variant="primary" size="sm" onClick={onOpenSettings}>
+                <div className="mb-3">
+                  <Button variant="primary" onClick={onOpenSettings}>
                     <i className="bi bi-gear me-2" aria-hidden="true"></i>
                     Choose Schedule
                   </Button>
@@ -387,7 +387,7 @@ export function CalendarView({
               </p>
               {onOpenScheduleTab && (
                 <div>
-                  <Button variant="outline-secondary" size="sm" onClick={onOpenScheduleTab}>
+                  <Button variant="outline-secondary" onClick={onOpenScheduleTab}>
                     <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
                     View Schedule
                   </Button>
