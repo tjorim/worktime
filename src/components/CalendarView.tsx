@@ -216,7 +216,7 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
       if (eventEnd && !isValidDate(eventEnd)) {
         setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
         valid = false;
-      } else if (eventEnd && eventStart && eventEnd < eventStart) {
+      } else if (eventEnd && eventStart && dayjs(eventEnd).isBefore(dayjs(eventStart))) {
         setEndDateError("End date must be after start date");
         valid = false;
       } else {
