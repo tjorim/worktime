@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
@@ -16,14 +16,8 @@ import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { useViewMode } from "../hooks/useViewMode";
-import { dayjs } from "../utils/dateTimeUtils";
-import type { PaydayInfo } from "../types/paydays";
-import { getMonthlyPaydayMap } from "../utils/paydayUtils";
-import { usePublicHolidays } from "../hooks/usePublicHolidays";
-import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { MonthCalendar } from "./timeoff/MonthCalendar";
 import { RawContentPanel } from "./timeoff/RawContentPanel";
 import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
 
@@ -58,8 +52,9 @@ const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_F
 /**
  * Valid view modes for the Time Off tab.
  * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ * Note: Calendar view has been moved to its own main tab.
  */
-const TIMEOFF_VIEWS = ["calendar", "table", "stats", "raw"] as const;
+const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
 
 /**
  * Default weekday value for weekly events (1 = Monday).
@@ -70,23 +65,13 @@ const DEFAULT_WEEKDAY = 1;
  * Empty state component for when no time-off events exist.
  * Adapts styling and messaging based on the current view mode.
  */
-function EmptyState({ mode }: { mode: "calendar" | "table" }) {
-  const isCalendar = mode === "calendar";
-  const containerClasses = isCalendar
-    ? "text-center text-muted mt-4"
-    : "text-center text-muted py-5";
-  const iconClasses = isCalendar
-    ? "bi bi-calendar-x display-6 d-block mb-2"
-    : "bi bi-calendar-x display-4 d-block mb-3";
-
+function EmptyState() {
   return (
-    <div className={containerClasses}>
-      <i className={iconClasses}></i>
-      <p className={isCalendar ? "mb-0" : ""}>No time-off events yet.</p>
+    <div className="text-center text-muted py-5">
+      <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
+      <p>No time-off events yet.</p>
       <p className="small">
-        {isCalendar
-          ? 'Click a day to add your first event, or use "Import" to load a .hday file.'
-          : 'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'}
+        Click "Add Event" to create your first event, or "Import" to load an existing .hday file.
       </p>
     </div>
   );
@@ -135,10 +120,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const toast = useToast();
 
   const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
-
-  const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
-  const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
-  const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
@@ -220,16 +201,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     setShowEventModal(true);
   };
 
-  const handleAddEventForDate = (date: dayjs.Dayjs) => {
-    resetForm();
-    setEditIndex(-1);
-    setModalMode("add");
-    setEventType("range");
-    setEventStart(date.format("YYYY/MM/DD"));
-    setEventEnd(date.format("YYYY/MM/DD"));
-    setShowEventModal(true);
-  };
-
   const prefillFormFromEvent = (event: HdayEvent) => {
     if (event.type === "range") {
       setEventType("range");
@@ -256,16 +227,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     setEditIndex(index);
     prefillFormFromEvent(event);
     setModalMode("edit");
-    setShowEventModal(true);
-  };
-
-  const handleOpenViewModal = (index: number) => {
-    const event = events[index];
-    if (!event) return;
-
-    setEditIndex(index);
-    prefillFormFromEvent(event);
-    setModalMode("view");
     setShowEventModal(true);
   };
 
@@ -484,12 +445,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     };
   }, [handleRedo, handleUndo, isActive]);
 
-  const currentYear = calendarMonth.year();
-  const paydayMapForYear = useMemo<Map<string, PaydayInfo>>(
-    () => getMonthlyPaydayMap(currentYear, publicHolidayMap),
-    [currentYear, publicHolidayMap],
-  );
-
   const previewLine = buildPreviewLine({
     eventType,
     start: eventStart,
@@ -620,17 +575,11 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
             <ButtonGroup aria-label="Toggle time off view">
               <Button
-                variant={viewMode === "calendar" ? "primary" : "outline-primary"}
-                size="sm"
-                onClick={() => setViewMode("calendar")}
-              >
-                Calendar
-              </Button>
-              <Button
                 variant={viewMode === "table" ? "primary" : "outline-primary"}
                 size="sm"
                 onClick={() => setViewMode("table")}
               >
+                <i className="bi bi-table me-1" aria-hidden="true"></i>
                 Table
               </Button>
               <Button
@@ -638,6 +587,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 size="sm"
                 onClick={() => setViewMode("stats")}
               >
+                <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
                 Statistics
               </Button>
               <Button
@@ -654,27 +604,9 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
             <span className="text-muted small">{viewModeHelpText[viewMode]}</span>
           </div>
 
-          {viewMode === "calendar" && (
-            <div role="region" aria-label="Time off calendar view">
-              <MonthCalendar
-                events={events}
-                month={calendarMonth}
-                publicHolidays={publicHolidayMap}
-                schoolHolidays={schoolHolidayMap}
-                paydayMap={paydayMapForYear}
-                onMonthChange={setCalendarMonth}
-                onAddEvent={handleAddEventForDate}
-                onViewEvent={handleOpenViewModal}
-                onEditEvent={handleOpenEditModal}
-                onDeleteEvent={handleDeleteClick}
-              />
-              {events.length === 0 && <EmptyState mode="calendar" />}
-            </div>
-          )}
-
           {viewMode === "table" &&
             (events.length === 0 ? (
-              <EmptyState mode="table" />
+              <EmptyState />
             ) : (
               <Table responsive hover>
                 <thead>
