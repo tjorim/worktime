@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useId, useState } from "react";
+import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -8,24 +8,24 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
-import type { ScheduleOption } from "../data/rosters";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
-import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, isValidScheduleType } from "../utils/scheduleUtils";
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import type { ScheduleOption } from "../../data/rosters";
+import { useSettings } from "../../contexts/SettingsContext";
+import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import {
   dayjs,
   formatYYWWD,
   getISOWeekYear2Digit,
   getLocalizedShiftTime,
-} from "../utils/dateTimeUtils";
-import { calculateShift, getShiftByCode, getShiftDisplay } from "../utils/shiftCalculations";
+} from "../../utils/dateTimeUtils";
+import { calculateShift, getShiftByCode, getShiftDisplay } from "../../utils/shiftCalculations";
 
 interface ScheduleViewProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
   isActive?: boolean;
+  viewingScheduleType?: ScheduleOption | null;
 }
 
 /**
@@ -43,25 +43,17 @@ export function ScheduleView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
-  isActive = true,
+  isActive = false,
+  viewingScheduleType: propViewingScheduleType,
 }: ScheduleViewProps) {
   const datePickerId = useId();
-  const scheduleSelectId = useId();
   const { settings, scheduleType: userScheduleType } = useSettings();
 
-  // Cross-schedule viewing: allow viewing other schedule types
-  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
-    userScheduleType,
-  );
-
-  // Use viewing schedule for calculations
-  const scheduleType = viewingScheduleType || userScheduleType;
+  // Use prop if provided, otherwise fall back to user's schedule type
+  const scheduleType = propViewingScheduleType || userScheduleType;
   const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
   const hasTeams = scheduleConfig.showsTeamSelection;
-
-  // Get available schedules for the selector
-  const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
@@ -145,28 +137,6 @@ export function ScheduleView({
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
-            <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-              📋 View schedule:
-            </Form.Label>
-            <Form.Select
-              id={scheduleSelectId}
-              size="sm"
-              value={viewingScheduleType || ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                setViewingScheduleType(isValidScheduleType(value) ? value : null);
-              }}
-              style={{ width: "auto" }}
-            >
-              {availableSchedules.map((schedule) => (
-                <option key={schedule.value} value={schedule.value}>
-                  {schedule.title}
-                  {schedule.value === userScheduleType ? " (Your schedule)" : ""}
-                </option>
-              ))}
-            </Form.Select>
-          </div>
-          <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="d-flex align-items-center gap-2">
               <Form.Label htmlFor={datePickerId} className="mb-0 small text-muted">
                 🎯 Jump to date:
@@ -180,9 +150,9 @@ export function ScheduleView({
                 className="date-picker-auto"
               />
             </div>
-            <div className="small text-muted d-none d-lg-block">
-              ⌨️ Keyboard: ← → arrows, Ctrl+H (this week)
-            </div>
+          </div>
+          <div className="small text-muted d-none d-lg-block">
+            ⌨️ Keyboard: ← → arrows, Ctrl+H (this week)
           </div>
         </div>
       </Card.Header>

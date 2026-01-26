@@ -4,7 +4,7 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "../../lib/hday/parser";
+import { getEventColorClass, getEventTypeLabel, getTimeLocationSymbol } from "../../lib/hday/parser";
 
 export type DayEvent = {
   event: HdayEvent;
@@ -214,7 +214,7 @@ export function DayCell({
       </button>
       <div className="month-calendar-events">
         {visibleEvents.map(({ event, index }) => {
-          const color = getEventColor(event.flags);
+          const colorClass = getEventColorClass(event.flags);
           const label = event.title || getEventTypeLabel(event.flags);
           const symbol = getTimeLocationSymbol(event.flags);
 
@@ -236,7 +236,7 @@ export function DayCell({
               }}
               aria-label={`View ${label}`}
             >
-              <span className="month-calendar-event-color" style={{ backgroundColor: color }} />
+              <span className={`month-calendar-event-color ${colorClass}`} />
               <span className="month-calendar-event-label">
                 {symbol && (
                   <span

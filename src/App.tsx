@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -12,7 +12,7 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { dayjs } from "./utils/dateTimeUtils";
-import { getScheduleConfig, getTeamCountForOption } from "./utils/scheduleUtils";
+import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
@@ -27,7 +27,7 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
-  const [activeTab, setActiveTab] = useState("today");
+  const [activeTab, setActiveTab] = useState("schedule");
   const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo, showError } = useToast();
   const {
@@ -41,26 +41,22 @@ function AppContent() {
     settings,
   } = useSettings();
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const pendingDeepLinkRef = useRef<{ team?: string; date?: string }>({});
+  const [initialView, setInitialView] = useState<string | undefined>(undefined);
 
-  // Handle URL parameters for deep linking
+  // Handle URL parameters for deep linking - process on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
-    const teamParam = urlParams.get("team");
-    const dateParam = urlParams.get("date");
+    const viewParam = urlParams.get("view");
 
     // Set active tab from URL
-    if (tabParam && ["today", "schedule", "transfer", "timeoff"].includes(tabParam)) {
+    if (tabParam && ["schedule", "transfer", "timeoff"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
 
-    if (teamParam) {
-      pendingDeepLinkRef.current.team = teamParam;
-    }
-
-    if (dateParam) {
-      pendingDeepLinkRef.current.date = dateParam;
+    // Set initial view from URL
+    if (viewParam) {
+      setInitialView(viewParam);
     }
 
     // Clear URL parameters after processing to keep URL clean
@@ -68,37 +64,6 @@ function AppContent() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
-
-  useEffect(() => {
-    if (!hasCompletedOnboarding) return;
-
-    const { team, date } = pendingDeepLinkRef.current;
-
-    if (team) {
-      try {
-        const teamNumber = parseInt(team, 10);
-        const teamCount = getTeamCountForOption(scheduleType);
-        if (teamNumber >= 1 && teamNumber <= teamCount) {
-          setMyTeam(teamNumber);
-        }
-      } catch (error) {
-        console.error("Failed to process deep-link team parameter:", error);
-      }
-    }
-
-    if (date) {
-      try {
-        const parsedDate = dayjs(date);
-        if (parsedDate.isValid()) {
-          setCurrentDate(parsedDate);
-        }
-      } catch (error) {
-        console.error("Failed to process deep-link date parameter:", error);
-      }
-    }
-
-    pendingDeepLinkRef.current = {};
-  }, [hasCompletedOnboarding, setMyTeam, setCurrentDate, scheduleType]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -230,10 +195,10 @@ function AppContent() {
   };
 
   const handleShowWhoIsWorking = () => {
-    // Switch to Today tab to show who's working
-    setActiveTab("today");
+    // Switch to Schedule tab to show who's working
+    setActiveTab("schedule");
     setCurrentDate(dayjs());
-    showInfo("Switched to Today view to see who's working", "👥");
+    showInfo("Switched to Schedule view to see who's working", "👥");
   };
 
   return (
@@ -256,6 +221,7 @@ function AppContent() {
               setCurrentDate={setCurrentDate}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              initialView={initialView}
             />
           </ErrorBoundary>
           <WelcomeWizard

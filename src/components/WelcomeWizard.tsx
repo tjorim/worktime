@@ -9,6 +9,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
+import { useSyncedState } from "../hooks/useSyncedState";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { getTeamCountForOption } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
@@ -99,21 +100,15 @@ export function WelcomeWizard({
     settings.vacationAllowance?.unit ?? "days",
   );
 
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleOption | null>(
-    scheduleType ?? null,
-  );
+  const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 
-  // Sync currentStep when startStep prop changes
+  // Sync currentStep when startStep prop changes (uses ref to avoid sync on initial render)
   useEffect(() => {
     if (startStep !== initialStepRef.current) {
       setCurrentStep(startStep);
       initialStepRef.current = startStep;
     }
   }, [startStep]);
-
-  useEffect(() => {
-    setSelectedSchedule(scheduleType ?? null);
-  }, [scheduleType]);
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
@@ -297,7 +292,7 @@ export function WelcomeWizard({
     <>
       <div className="text-center mb-4">
         <div className="mb-3">
-          <i className="bi bi-clock-history text-primary" style={{ fontSize: "3rem" }}></i>
+          <i className="bi bi-clock-history text-primary icon-display"></i>
         </div>
         <h4 className="text-primary mb-3">Welcome to Worktime!</h4>
         <p className="lead mb-3">
@@ -324,7 +319,12 @@ export function WelcomeWizard({
         >
           Maybe Later
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
+        <Button
+          variant="primary"
+          onClick={nextStep}
+          disabled={isLoading}
+          className="order-1 order-sm-2"
+        >
           Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -338,10 +338,7 @@ export function WelcomeWizard({
         <Row className="g-3">
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i
-                className="bi bi-stopwatch text-success me-3 mt-1"
-                style={{ fontSize: "1.5rem" }}
-              ></i>
+              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Live Countdown Timers</h6>
                 <small className="text-muted">Know exactly when your next shift starts</small>
@@ -350,7 +347,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-wifi-off text-info me-3 mt-1" style={{ fontSize: "1.5rem" }}></i>
+              <i className="bi bi-wifi-off text-info me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Local-First Data</h6>
                 <small className="text-muted">
@@ -361,7 +358,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-people text-warning me-3 mt-1" style={{ fontSize: "1.5rem" }}></i>
+              <i className="bi bi-people text-warning me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Team Overview</h6>
                 <small className="text-muted">See who is working across your schedule</small>
@@ -370,10 +367,7 @@ export function WelcomeWizard({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i
-                className="bi bi-calendar-check text-primary me-3 mt-1"
-                style={{ fontSize: "1.5rem" }}
-              ></i>
+              <i className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Time-Off Planning</h6>
                 <small className="text-muted">Track vacation and time-off with .hday files</small>
@@ -397,7 +391,12 @@ export function WelcomeWizard({
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button variant="primary" onClick={nextStep} disabled={isLoading} className="order-1 order-sm-2">
+        <Button
+          variant="primary"
+          onClick={nextStep}
+          disabled={isLoading}
+          className="order-1 order-sm-2"
+        >
           Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
@@ -453,7 +452,12 @@ export function WelcomeWizard({
         </div>
 
         <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-          <Button variant="outline-secondary" onClick={handleBackClick} disabled={isLoading} className="order-2 order-sm-1">
+          <Button
+            variant="outline-secondary"
+            onClick={handleBackClick}
+            disabled={isLoading}
+            className="order-2 order-sm-1"
+          >
             <i
               className={classNames(
                 "bi",
@@ -463,7 +467,12 @@ export function WelcomeWizard({
             ></i>{" "}
             {isChangeScheduleFlow ? "Cancel" : "Back"}
           </Button>
-          <Button variant="primary" onClick={nextStep} disabled={isLoading || !selectedSchedule} className="order-1 order-sm-2">
+          <Button
+            variant="primary"
+            onClick={nextStep}
+            disabled={isLoading || !selectedSchedule}
+            className="order-1 order-sm-2"
+          >
             {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
           </Button>
         </div>

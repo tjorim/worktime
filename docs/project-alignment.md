@@ -44,7 +44,7 @@ This document compares HdayPlanner and NextShift projects to identify what each 
 
 ```typescript
 // In API client
-const USE_BACKEND = import.meta.env.VITE_USE_BACKEND === 'true';
+const USE_BACKEND = import.meta.env.VITE_USE_BACKEND === "true";
 
 async function loadData(username: string) {
   if (USE_BACKEND) {
@@ -117,12 +117,10 @@ d1 # Every Monday off
 function useFocusTrap(ref: RefObject<HTMLElement>) {
   useEffect(() => {
     const focusableElements = ref.current?.querySelectorAll(
-      'button:not([disabled]), [href], input:not([disabled]), ...'
+      "button:not([disabled]), [href], input:not([disabled]), ...",
     );
     // Filter out hidden elements
-    const visible = Array.from(focusableElements).filter(el =>
-      el.offsetParent !== null
-    );
+    const visible = Array.from(focusableElements).filter((el) => el.offsetParent !== null);
     // Handle Tab/Shift+Tab with wrapping
   }, [ref]);
 }
@@ -170,7 +168,13 @@ backend/app/
 **Audit Log Example:**
 
 ```json
-{"ts":"2025-12-19T20:10:00.123Z","user":"alice","target":"bob.hday","action":"write","details":"Updated 2 events"}
+{
+  "ts": "2025-12-19T20:10:00.123Z",
+  "user": "alice",
+  "target": "bob.hday",
+  "action": "write",
+  "details": "Updated 2 events"
+}
 ```
 
 **Why This Matters:**

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { ScheduleDetailModal } from "../../src/components/ScheduleDetailModal";
+import { ScheduleDetailModal } from "../../src/components/schedule/ScheduleDetailModal";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 

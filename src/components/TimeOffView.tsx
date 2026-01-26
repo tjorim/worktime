@@ -6,7 +6,7 @@ import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import {
   buildPreviewLine,
-  getEventColor,
+  getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
   normalizeEventFlags,
@@ -15,6 +15,7 @@ import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
 import type { PaydayInfo } from "../types/paydays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
@@ -53,6 +54,12 @@ const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.map(
 const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_FLAG_OPTIONS.map(
   ([flag]) => flag,
 ).filter((f) => f !== "none") as EventFlag[];
+
+/**
+ * Valid view modes for the Time Off tab.
+ * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ */
+const TIMEOFF_VIEWS = ["calendar", "table", "stats", "raw"] as const;
 
 /**
  * Default weekday value for weekly events (1 = Monday).
@@ -106,9 +113,10 @@ function EmptyState({ mode }: { mode: "calendar" | "table" }) {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
+  initialView?: string; // Initial view mode from URL parameter ("calendar", "table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = true }: TimeOffViewProps) {
+export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -126,7 +134,8 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
   const { settings, updateVacationAllowance } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState<"calendar" | "table" | "stats" | "raw">("table");
+  const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
+
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs());
   const { publicHolidayMap } = usePublicHolidays(calendarMonth.year());
   const { schoolHolidayMap } = useSchoolHolidays(calendarMonth.year());
@@ -693,8 +702,10 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                 </thead>
                 <tbody>
                   {events.map((event, index) => {
-                    const eventColor =
-                      event.type !== "unknown" ? getEventColor(event.flags) : "#ccc";
+                    const eventColorClass =
+                      event.type !== "unknown"
+                        ? getEventColorClass(event.flags)
+                        : "event-unknown";
                     const eventLabel =
                       event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
                     const symbol =
@@ -717,10 +728,7 @@ export function TimeOffView({ isActive = true }: TimeOffViewProps) {
                           />
                         </td>
                         <td>
-                          <span
-                            className="badge event-type-badge"
-                            style={{ backgroundColor: eventColor }}
-                          >
+                          <span className={`badge event-type-badge ${eventColorClass}`}>
                             {symbol && `${symbol} `}
                             {eventLabel}
                           </span>
