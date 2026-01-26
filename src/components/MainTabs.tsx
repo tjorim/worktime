@@ -16,6 +16,7 @@ interface MainTabsProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   initialView?: string; // Initial view mode for sub-tabs (e.g., "today", "week", "stats")
+  onOpenSettings?: () => void; // Callback to open settings dialog
 }
 
 /**
@@ -32,6 +33,7 @@ interface MainTabsProps {
  * @param activeTab - The currently active tab (defaults to 'calendar')
  * @param onTabChange - Callback invoked when the active tab changes
  * @param initialView - Initial view mode for sub-tabs from URL parameter
+ * @param onOpenSettings - Callback to open settings dialog
  * @returns The rendered tabbed interface component.
  */
 export function MainTabs({
@@ -41,6 +43,7 @@ export function MainTabs({
   activeTab = "calendar",
   onTabChange,
   initialView,
+  onOpenSettings,
 }: MainTabsProps) {
   const tabsId = useId();
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
@@ -77,7 +80,7 @@ export function MainTabs({
             </>
           }
         >
-          <CalendarView myTeam={myTeam} />
+          <CalendarView myTeam={myTeam} onOpenSettings={onOpenSettings} />
         </Tab>
 
         <Tab

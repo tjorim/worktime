@@ -222,6 +222,7 @@ function AppContent() {
               activeTab={activeTab}
               onTabChange={setActiveTab}
               initialView={initialView}
+              onOpenSettings={handleChangeSchedule}
             />
           </ErrorBoundary>
           <WelcomeWizard

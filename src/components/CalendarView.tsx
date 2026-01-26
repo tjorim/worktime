@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
+import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
@@ -51,6 +52,7 @@ const DEFAULT_WEEKDAY = 1;
 
 interface CalendarViewProps {
   myTeam: number | null;
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -70,8 +72,9 @@ interface CalendarViewProps {
  * - Displays shift information and time-off events together
  *
  * @param props.myTeam - The user's team number from onboarding or null
+ * @param props.onOpenSettings - Optional callback to open settings dialog
  */
-export function CalendarView({ myTeam }: CalendarViewProps) {
+export function CalendarView({ myTeam, onOpenSettings }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
   const { scheduleType } = useSettings();
@@ -353,13 +356,51 @@ export function CalendarView({ myTeam }: CalendarViewProps) {
           </div>
 
           {!getShiftForDate ? (
-            <div className="text-center text-muted py-5">
-              <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
-              <p>No schedule selected</p>
-              <p className="small">
-                Please complete the onboarding wizard to select your schedule and see your working
-                calendar.
+            <div className="text-center py-5">
+              <div className="mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="64"
+                  height="64"
+                  fill="currentColor"
+                  className="text-muted mb-3"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" />
+                </svg>
+              </div>
+              <h4>Welcome to Your Working Calendar!</h4>
+              <p className="text-muted mb-4">
+                This calendar shows your working schedule with shift patterns, time-off events, and
+                public holidays all in one place.
               </p>
+              <p className="mb-4">
+                To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings.
+              </p>
+              <div className="d-flex gap-2 justify-content-center">
+                {onOpenSettings && (
+                  <Button variant="primary" size="lg" onClick={onOpenSettings}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      className="me-2"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
+                      <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
+                    </svg>
+                    Open Settings
+                  </Button>
+                )}
+              </div>
+              <div className="mt-4 text-muted small">
+                <p className="mb-1">
+                  <strong>Tip:</strong> You can also check the Schedule and Transfers tabs to
+                  explore shift patterns before selecting your team.
+                </p>
+              </div>
             </div>
           ) : (
             <MonthCalendar
