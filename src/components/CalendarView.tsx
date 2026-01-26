@@ -389,7 +389,7 @@ export function CalendarView({
                 {onOpenSettings && (
                   <Button variant="primary" onClick={onOpenSettings}>
                     <i className="bi bi-gear me-2" aria-hidden="true"></i>
-                    Open Settings
+                    Choose Schedule
                   </Button>
                 )}
               </div>

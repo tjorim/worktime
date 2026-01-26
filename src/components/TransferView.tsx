@@ -116,7 +116,7 @@ export function TransferView({
               <div className="mt-3">
                 <Button variant="primary" onClick={onOpenSettings}>
                   <i className="bi bi-gear me-2" aria-hidden="true"></i>
-                  Open Settings
+                  Choose Schedule
                 </Button>
               </div>
             )}

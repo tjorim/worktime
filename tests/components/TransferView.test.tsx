@@ -143,7 +143,7 @@ describe("TransferView", () => {
         />,
       );
 
-      const button = screen.getByRole("button", { name: /Open Settings/i });
+      const button = screen.getByRole("button", { name: /Choose Schedule/i });
       expect(button).toBeInTheDocument();
     });
   });
