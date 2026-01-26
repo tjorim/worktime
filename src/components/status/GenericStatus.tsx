@@ -149,7 +149,17 @@ export function GenericStatus({
                 <i className="bi bi-people me-1"></i>
                 Who's On?
               </Button>
-              {hasTeams && teamCount > 1 ? (
+              {!scheduleType && onChangeSchedule ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onChangeSchedule}
+                  title="Select your work schedule"
+                >
+                  <i className="bi bi-calendar-week me-1"></i>
+                  Select Schedule
+                </Button>
+              ) : hasTeams && teamCount > 1 ? (
                 <Button variant="primary" size="sm" onClick={onChangeTeam}>
                   <i className="bi bi-person-plus me-1"></i>
                   Select Team
