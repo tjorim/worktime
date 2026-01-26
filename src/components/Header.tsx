@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
@@ -22,9 +23,17 @@ export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
     onShowAbout?.();
   };
 
+  const handleToggleSettings = () => {
+    setShowSettings((prev) => !prev);
+  };
+
+  useKeyboardShortcuts({
+    onToggleSettings: handleToggleSettings,
+  });
+
   return (
     <>
-      <header className="sticky-top bg-primary text-white py-2 mb-3 shadow-sm">
+      <header className="fixed-top bg-primary text-white py-2 mb-3 shadow-sm">
         <Container fluid>
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center">

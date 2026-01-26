@@ -1,5 +1,4 @@
-import type { KeyboardEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import { dayjs, formatHdayDate, getWeekdayName } from "../../utils/dateTimeUtils";
 import type { HdayEvent } from "../../lib/hday/types";
@@ -65,7 +64,6 @@ const buildCalendarDays = (month: dayjs.Dayjs) => {
  * Features:
  * - Visual month overview with event chips on each day
  * - Maps both range events (spanning multiple days) and weekly recurring events
- * - Keyboard navigation with arrow keys, Home, and End
  * - Highlights weekends, today, and public/school holidays
  * - Visual indicators for courses, holidays, and paydays
  * - Click-to-add events on any day, click-to-edit existing events
@@ -73,7 +71,6 @@ const buildCalendarDays = (month: dayjs.Dayjs) => {
  *
  * Accessibility:
  * - ARIA labels for all interactive elements
- * - Focus management with keyboard navigation
  * - Screen reader announcements for month changes
  * - Semantic calendar grid structure
  *
@@ -102,15 +99,6 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
-  const [focusedDateKey, setFocusedDateKey] = useState<string>(() => {
-    const todayKey = today.format(DAY_FORMAT);
-    return days.some((day) => day.format(DAY_FORMAT) === todayKey)
-      ? todayKey
-      : month.startOf("month").format(DAY_FORMAT);
-  });
-
-  const dayRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
-  const hasKeyboardInteraction = useRef(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -120,28 +108,6 @@ export function MonthCalendar({
     date?: dayjs.Dayjs;
     eventIndex?: number;
   } | null>(null);
-
-  useEffect(() => {
-    const monthKey = month.startOf("month").format(DAY_FORMAT);
-    setFocusedDateKey((prev) => {
-      const hasPrev = days.some((day) => day.format(DAY_FORMAT) === prev);
-      if (hasPrev) {
-        return prev;
-      }
-      return monthKey;
-    });
-  }, [days, month]);
-
-  useEffect(() => {
-    // Only focus after user has started keyboard navigation
-    // This prevents unwanted page scroll on initial render
-    if (!hasKeyboardInteraction.current) return;
-
-    const ref = dayRefs.current.get(focusedDateKey);
-    if (ref && ref.isConnected) {
-      ref.focus();
-    }
-  }, [focusedDateKey]);
 
   const dayEvents = useMemo(() => {
     const map = new Map<string, DayEvent[]>();
@@ -208,55 +174,6 @@ export function MonthCalendar({
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
     [],
   );
-
-  const handleMoveFocus = (nextDate: dayjs.Dayjs) => {
-    const nextKey = nextDate.format(DAY_FORMAT);
-    const nextMonth = nextDate.startOf("month");
-
-    if (!nextMonth.isSame(month, "month")) {
-      onMonthChange(nextMonth);
-    }
-
-    setFocusedDateKey(nextKey);
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => {
-    // Enable focus management once user starts keyboard navigation
-    if (
-      ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
-    ) {
-      hasKeyboardInteraction.current = true;
-    }
-
-    switch (event.key) {
-      case "ArrowLeft":
-        event.preventDefault();
-        handleMoveFocus(date.subtract(1, "day"));
-        break;
-      case "ArrowRight":
-        event.preventDefault();
-        handleMoveFocus(date.add(1, "day"));
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        handleMoveFocus(date.subtract(7, "day"));
-        break;
-      case "ArrowDown":
-        event.preventDefault();
-        handleMoveFocus(date.add(7, "day"));
-        break;
-      case "Home":
-        event.preventDefault();
-        handleMoveFocus(month.startOf("month"));
-        break;
-      case "End":
-        event.preventDefault();
-        handleMoveFocus(month.endOf("month"));
-        break;
-      default:
-        break;
-    }
-  };
 
   // Context menu handlers
   const handleDayContextMenu = (date: dayjs.Dayjs, x: number, y: number) => {
@@ -326,8 +243,6 @@ export function MonthCalendar({
   // Check if we're viewing the current month (reuse today for consistency)
   const currentMonth = today.startOf("month");
   const isCurrentMonth = month.isSame(currentMonth, "month");
-  const todayKey = today.format(DAY_FORMAT);
-  const isDisabled = isCurrentMonth && focusedDateKey === todayKey;
 
   return (
     <div className="month-calendar">
@@ -347,8 +262,8 @@ export function MonthCalendar({
           <Button
             variant={isCurrentMonth ? "primary" : "outline-primary"}
             size="sm"
-            onClick={() => handleMoveFocus(today)}
-            disabled={isDisabled}
+            onClick={() => onMonthChange(today.startOf("month"))}
+            disabled={isCurrentMonth}
             aria-label="Jump to current month"
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
@@ -383,17 +298,12 @@ export function MonthCalendar({
               isCurrentMonth={day.isSame(month, "month")}
               isToday={day.isSame(today, "day")}
               isWeekend={day.isoWeekday() >= 6}
-              isFocused={focusedDateKey === key}
               publicHoliday={publicHolidays.get(dayKey)}
               schoolHoliday={schoolHolidays.get(dayKey)}
               paydayInfo={paydayMap.get(dayKey)}
               events={cellEvents}
               shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
               onViewEvent={handleViewEventWrapper}
-              onKeyDown={handleKeyDown}
-              buttonRef={(node) => {
-                dayRefs.current.set(key, node);
-              }}
               onDayContextMenu={handleDayContextMenu}
               onEventContextMenu={handleEventContextMenu}
             />

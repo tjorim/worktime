@@ -154,7 +154,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEventType("range");
     setEventWeekday(DEFAULT_WEEKDAY);
     setEventStart("");
@@ -163,7 +163,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     setEventFlags([]);
     setStartDateError("");
     setEndDateError("");
-  };
+  }, []);
 
   const validateForm = (): boolean => {
     let valid = true;
@@ -195,14 +195,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     return valid;
   };
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = useCallback(() => {
     resetForm();
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
-  };
+  }, [resetForm]);
 
-  const prefillFormFromEvent = (event: HdayEvent) => {
+  const prefillFormFromEvent = useCallback((event: HdayEvent) => {
     if (event.type === "range") {
       setEventType("range");
       setEventStart(event.start || "");
@@ -219,7 +219,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     setEventFlags(event.flags || []);
     setStartDateError("");
     setEndDateError("");
-  };
+  }, []);
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
@@ -234,6 +234,18 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const handleSwitchToEdit = () => {
     setModalMode("edit");
   };
+
+  const handleCancelEditMode = useCallback(() => {
+    if (editIndex < 0) {
+      return;
+    }
+    const event = events[editIndex];
+    if (!event) {
+      return;
+    }
+    prefillFormFromEvent(event);
+    setModalMode("view");
+  }, [editIndex, events, prefillFormFromEvent]);
 
   const handleSubmitEvent = () => {
     if (!validateForm()) {
@@ -347,7 +359,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     }
   };
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const hdayContent = exportHday();
 
     if (!hdayContent.trim()) {
@@ -366,7 +378,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     URL.revokeObjectURL(url);
 
     toast.showSuccess("Exported timeoff.hday", "📤");
-  };
+  }, [exportHday, toast]);
 
   const handleRawEditorChange = useCallback((value: string) => {
     setRawEditorText(value);
@@ -406,6 +418,25 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     toast.showSuccess("Redo successful", "↪️");
   }, [canRedo, redo, toast]);
 
+  // Ref to hold latest handlers to avoid stale closures in keyboard event listener
+  const handlersRef = useRef({
+    handleCancelEditMode,
+    handleExport,
+    handleOpenAddModal,
+    handleRedo,
+    handleUndo,
+  });
+
+  useEffect(() => {
+    handlersRef.current = {
+      handleCancelEditMode,
+      handleExport,
+      handleOpenAddModal,
+      handleRedo,
+      handleUndo,
+    };
+  }, [handleCancelEditMode, handleExport, handleOpenAddModal, handleRedo, handleUndo]);
+
   useEffect(() => {
     if (!isActive) {
       return;
@@ -422,19 +453,45 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
         return;
       }
 
+      // Handle Escape key for cancel edit mode
+      if (event.key === "Escape") {
+        if (showEventModal && modalMode === "edit" && editIndex >= 0) {
+          event.preventDefault();
+          handlersRef.current.handleCancelEditMode();
+        }
+        return;
+      }
+
+      // Handle Delete key for bulk delete
+      if (event.key === "Delete") {
+        if (viewMode === "table" && selectedIndices.length > 0) {
+          event.preventDefault();
+          setShowBulkDeleteConfirm(true);
+        }
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey) {
         const key = event.key.toLowerCase();
         if (key === "z") {
           event.preventDefault();
           if (event.shiftKey) {
-            handleRedo();
+            handlersRef.current.handleRedo();
           } else {
-            handleUndo();
+            handlersRef.current.handleUndo();
           }
         }
         if (key === "y") {
           event.preventDefault();
-          handleRedo();
+          handlersRef.current.handleRedo();
+        }
+        if (key === "s") {
+          event.preventDefault();
+          handlersRef.current.handleExport();
+        }
+        if (key === "n") {
+          event.preventDefault();
+          handlersRef.current.handleOpenAddModal();
         }
       }
     };
@@ -444,7 +501,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleRedo, handleUndo, isActive]);
+  }, [editIndex, isActive, modalMode, selectedIndices.length, showEventModal, viewMode]);
 
   const previewLine = buildPreviewLine({
     eventType,

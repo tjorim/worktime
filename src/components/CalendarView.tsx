@@ -17,6 +17,7 @@ import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
 import { MonthCalendar } from "./calendar/MonthCalendar";
+import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 
@@ -356,11 +357,13 @@ export function CalendarView({ myTeam, onOpenSettings, onOpenScheduleTab }: Cale
               <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
               My Working Calendar
             </Card.Title>
-            {!getShiftForDate && (
+            {!getShiftForDate ? (
               <small className="text-muted">
                 <i className="bi bi-info-circle me-1"></i>
                 Select your schedule to see your working calendar
               </small>
+            ) : (
+              <CalendarLegend />
             )}
           </div>
 

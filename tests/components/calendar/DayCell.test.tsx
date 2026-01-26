@@ -6,19 +6,14 @@ import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
-  const mockOnKeyDown = vi.fn();
-  const mockButtonRef = vi.fn();
 
   const defaultProps = {
     date: dayjs("2025-01-15"),
     isCurrentMonth: true,
     isToday: false,
     isWeekend: false,
-    isFocused: false,
     events: [] as DayEvent[],
     onViewEvent: mockOnViewEvent,
-    onKeyDown: mockOnKeyDown,
-    buttonRef: mockButtonRef,
   };
 
   beforeEach(() => {
@@ -33,13 +28,8 @@ describe("DayCell", () => {
 
     it("should have accessible aria-label with full date", () => {
       render(<DayCell {...defaultProps} />);
-      const button = screen.getByRole("button", { name: /Wednesday, January 15, 2025/i });
-      expect(button).toBeInTheDocument();
-    });
-
-    it("should show empty state indicator when no events", () => {
-      render(<DayCell {...defaultProps} />);
-      expect(screen.getByText("—")).toBeInTheDocument();
+      const header = screen.getByLabelText(/Wednesday, January 15, 2025/i);
+      expect(header).toBeInTheDocument();
     });
 
     it("should apply is-other-month class when not current month", () => {
@@ -62,8 +52,8 @@ describe("DayCell", () => {
 
     it("should include Today in aria-label when isToday", () => {
       render(<DayCell {...defaultProps} isToday={true} />);
-      const button = screen.getByRole("button", { name: /Today/i });
-      expect(button).toBeInTheDocument();
+      const header = screen.getByLabelText(/Today/i);
+      expect(header).toBeInTheDocument();
     });
   });
 
@@ -132,8 +122,6 @@ describe("DayCell", () => {
       render(<DayCell {...defaultProps} events={events} />);
 
       // Both events should render as separate DOM elements
-      // Note: React keys are internal and not testable via DOM queries.
-      // Key conflicts would produce console warnings during development.
       const eventButtons = screen.getAllByRole("button", { name: "View Same Event" });
       expect(eventButtons).toHaveLength(2);
 
@@ -174,30 +162,6 @@ describe("DayCell", () => {
       // Clicking stops propagation (tested by interaction working correctly)
       expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
     });
-
-    it("should call onKeyDown when pressing keys on day button", async () => {
-      const user = userEvent.setup();
-      render(<DayCell {...defaultProps} />);
-
-      const dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
-      dayButton.focus();
-
-      await user.keyboard("{ArrowRight}");
-
-      expect(mockOnKeyDown).toHaveBeenCalledTimes(1);
-    });
-
-    it("should set correct tabIndex based on isFocused", () => {
-      const { rerender } = render(<DayCell {...defaultProps} isFocused={false} />);
-
-      let dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
-      expect(dayButton).toHaveAttribute("tabIndex", "-1");
-
-      rerender(<DayCell {...defaultProps} isFocused={true} />);
-
-      dayButton = screen.getByRole("button", { name: /Wednesday, January 15/i });
-      expect(dayButton).toHaveAttribute("tabIndex", "0");
-    });
   });
 
   describe("Visual Indicators", () => {
@@ -219,12 +183,6 @@ describe("DayCell", () => {
       const publicHoliday = {
         name: "New Year",
         localName: "New Year's Day",
-        date: "2025-01-15",
-        countryCode: "BE",
-        fixed: true,
-        global: true,
-        launchYear: 2000,
-        type: "Public" as const,
       };
 
       render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
@@ -233,15 +191,14 @@ describe("DayCell", () => {
       expect(screen.getByText("🎉")).toBeInTheDocument();
 
       // Check aria-label includes holiday name
-      const button = screen.getByRole("button", { name: /New Year/i });
-      expect(button).toBeInTheDocument();
+      const header = screen.getByLabelText(/New Year/i);
+      expect(header).toBeInTheDocument();
     });
 
     it("should show school holiday indicator", () => {
       const schoolHoliday = {
         name: "Winter Break",
-        startDate: "2025-01-15",
-        endDate: "2025-01-20",
+        localName: "Winter Break",
       };
 
       render(<DayCell {...defaultProps} schoolHoliday={schoolHoliday} />);
@@ -250,8 +207,8 @@ describe("DayCell", () => {
       expect(screen.getByText("🏫")).toBeInTheDocument();
 
       // Check aria-label includes school holiday
-      const button = screen.getByRole("button", { name: /School Holiday: Winter Break/i });
-      expect(button).toBeInTheDocument();
+      const header = screen.getByLabelText(/School Holiday: Winter Break/i);
+      expect(header).toBeInTheDocument();
     });
 
     it("should show payday indicator", () => {
@@ -266,20 +223,14 @@ describe("DayCell", () => {
       expect(screen.getByText("💶")).toBeInTheDocument();
 
       // Check aria-label includes payday
-      const button = screen.getByRole("button", { name: /Payday/i });
-      expect(button).toBeInTheDocument();
+      const header = screen.getByLabelText(/Payday/i);
+      expect(header).toBeInTheDocument();
     });
 
     it("should apply holiday CSS classes", () => {
       const publicHoliday = {
         name: "Holiday",
         localName: "Holiday",
-        date: "2025-01-15",
-        countryCode: "BE",
-        fixed: true,
-        global: true,
-        launchYear: 2000,
-        type: "Public" as const,
       };
 
       const { container } = render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
@@ -308,20 +259,12 @@ describe("DayCell", () => {
     });
   });
 
-  describe("Focus Management", () => {
-    it("should call buttonRef with the button element", () => {
-      render(<DayCell {...defaultProps} />);
-
-      expect(mockButtonRef).toHaveBeenCalledTimes(1);
-      expect(mockButtonRef.mock.calls[0][0]).toBeInstanceOf(HTMLButtonElement);
-    });
-
-    it("should render day button with correct CSS class", () => {
+  describe("Day Header", () => {
+    it("should render day header with correct CSS class", () => {
       const { container } = render(<DayCell {...defaultProps} />);
 
-      const dayButton = container.querySelector(".month-calendar-day-button");
-      expect(dayButton).toBeInTheDocument();
-      expect(dayButton).toHaveClass("month-calendar-day-button");
+      const dayHeader = container.querySelector(".month-calendar-day-header");
+      expect(dayHeader).toBeInTheDocument();
     });
   });
 });

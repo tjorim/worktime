@@ -2,6 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useId, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
@@ -64,6 +65,18 @@ export function MainTabs({
     setActiveKey("schedule");
     onTabChange?.("schedule");
   };
+
+  const setActiveTab = (tab: string) => {
+    setActiveKey(tab);
+    onTabChange?.(tab);
+  };
+
+  useKeyboardShortcuts({
+    onTabCalendar: () => setActiveTab("calendar"),
+    onTabSchedule: () => setActiveTab("schedule"),
+    onTabTransfer: () => setActiveTab("transfer"),
+    onTabTimeOff: () => setActiveTab("timeoff"),
+  });
 
   return (
     <>

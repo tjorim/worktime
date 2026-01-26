@@ -9,6 +9,16 @@ html {
   max-width: 100%;
 }
 
+/* Account for fixed navbar height */
+body {
+  padding-top: 60px;
+}
+
+/* Calendar legend popover - below fixed navbar (1030) */
+#calendar-legend-popover {
+  z-index: 1020;
+}
+
 /* Month calendar CSS variables */
 :root {
   --month-calendar-bg: #fff;
@@ -601,7 +611,7 @@ html {
   box-shadow: 0 0 0 3px var(--month-calendar-today-shadow);
 }
 
-.month-calendar-day-button {
+.month-calendar-day-header {
   border: none;
   background: transparent;
   padding: 0.35rem 0.4rem;
@@ -612,11 +622,6 @@ html {
   width: 100%;
   font-weight: 600;
   color: inherit;
-}
-
-.month-calendar-day-button:focus-visible {
-  outline: 2px solid var(--month-calendar-focus-outline);
-  outline-offset: 2px;
 }
 
 .month-calendar-day-number {

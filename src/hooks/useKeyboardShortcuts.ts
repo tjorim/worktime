@@ -5,6 +5,11 @@ interface KeyboardShortcuts {
   onPrevious?: () => void;
   onNext?: () => void;
   onTeamSelect?: () => void;
+  onTabCalendar?: () => void;
+  onTabSchedule?: () => void;
+  onTabTransfer?: () => void;
+  onTabTimeOff?: () => void;
+  onToggleSettings?: () => void;
 }
 
 /**
@@ -41,6 +46,14 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       // Handle key combinations
       if (event.ctrlKey || event.metaKey) {
         switch (event.key.toLowerCase()) {
+          case ",":
+            event.preventDefault?.();
+            try {
+              shortcuts.onToggleSettings?.();
+            } catch (error) {
+              console.error("Error in onToggleSettings callback:", error);
+            }
+            break;
           case "h":
             event.preventDefault?.();
             try {
@@ -95,6 +108,28 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
               shortcuts.onNext?.();
             } catch (error) {
               console.error("Error in onNext callback:", error);
+            }
+          }
+          break;
+        default:
+          // Tab switching shortcuts (single keys without modifiers)
+          if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+            const key = event.key.toLowerCase();
+            const tabShortcuts: Record<string, { cb?: () => void; name: string }> = {
+              c: { cb: shortcuts.onTabCalendar, name: "onTabCalendar" },
+              s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
+              r: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
+              t: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
+            };
+
+            const shortcut = tabShortcuts[key];
+            if (shortcut?.cb) {
+              event.preventDefault?.();
+              try {
+                shortcut.cb();
+              } catch (error) {
+                console.error(`Error in ${shortcut.name} callback:`, error);
+              }
             }
           }
           break;
