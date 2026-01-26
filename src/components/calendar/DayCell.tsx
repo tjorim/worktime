@@ -21,6 +21,7 @@ interface DayCellProps {
   paydayInfo?: PaydayInfo;
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
+  shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   onViewEvent: (index: number) => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, date: dayjs.Dayjs) => void;
   buttonRef: (node: HTMLButtonElement | null) => void;
@@ -142,6 +143,7 @@ export function DayCell({
   paydayInfo,
   schoolHoliday,
   events,
+  shiftBadge,
   onViewEvent,
   onKeyDown,
   buttonRef,
@@ -155,6 +157,9 @@ export function DayCell({
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
+  }
+  if (shiftBadge) {
+    ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
   }
   if (publicHoliday) {
     ariaLabelParts.push(publicHoliday.name);
@@ -213,6 +218,15 @@ export function DayCell({
         </span>
       </button>
       <div className="month-calendar-events">
+        {/* Shift badge - shows working schedule when provided */}
+        {shiftBadge && (
+          <div
+            className={`month-calendar-shift-badge ${shiftBadge.isWorking ? "bg-success" : "bg-secondary"}`}
+            title={shiftBadge.label}
+          >
+            {shiftBadge.code}
+          </div>
+        )}
         {visibleEvents.map(({ event, index }) => {
           const colorClass = getEventColorClass(event.flags);
           const label = event.title || getEventTypeLabel(event.flags);

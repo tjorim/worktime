@@ -20,6 +20,8 @@ interface MonthCalendarProps {
   onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
+  // Optional: Provide shift calculation function to show working schedule
+  getShiftForDate?: (date: dayjs.Dayjs) => { code: string; label: string; isWorking: boolean } | null;
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";
@@ -94,6 +96,7 @@ export function MonthCalendar({
   onViewEvent,
   onEditEvent,
   onDeleteEvent,
+  getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
@@ -371,6 +374,7 @@ export function MonthCalendar({
               schoolHoliday={schoolHolidays.get(dayKey)}
               paydayInfo={paydayMap.get(dayKey)}
               events={cellEvents}
+              shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
               onViewEvent={handleViewEventWrapper}
               onKeyDown={handleKeyDown}
               buttonRef={(node) => {

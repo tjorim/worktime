@@ -877,3 +877,18 @@ html {
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
 }
+
+/* Shift badge in calendar cells */
+.month-calendar-shift-badge {
+  display: inline-block;
+  padding: 0.125rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+}
