@@ -16,6 +16,7 @@ import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations"
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
   initialOtherTeam?: number | null; // Initial other team (e.g., from Team Detail Modal)
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -28,9 +29,14 @@ interface TransferViewProps {
  *
  * @param myTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
+ * @param onOpenSettings - Optional callback to open settings dialog.
  * @returns The rendered TransferView element.
  */
-export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: TransferViewProps) {
+export function TransferView({
+  myTeam: inputMyTeam,
+  initialOtherTeam,
+  onOpenSettings,
+}: TransferViewProps) {
   // Generate unique IDs for form elements
   const otherTeamSelectId = useId();
   const showPastCheckboxId = useId();
@@ -106,6 +112,14 @@ export function TransferView({ myTeam: inputMyTeam, initialOtherTeam }: Transfer
           <div className="text-center py-4">
             <i className="bi bi-person-plus-fill text-muted mb-3" style={{ fontSize: "2rem" }}></i>
             <p className="text-muted mb-0">Please select your team to see transfer information.</p>
+            {onOpenSettings && (
+              <div className="mt-3">
+                <Button variant="primary" onClick={onOpenSettings}>
+                  <i className="bi bi-gear me-2" aria-hidden="true"></i>
+                  Open Settings
+                </Button>
+              </div>
+            )}
           </div>
         ) : availableOtherTeams.length === 0 ? (
           <div className="text-center py-4">

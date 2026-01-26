@@ -126,6 +126,26 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
+
+    it("shows settings shortcut when no team selected and handler provided", () => {
+      const handleOpenSettings = vi.fn();
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: [],
+        validatedMyTeam: null, // Set validated team to null
+      });
+
+      renderWithProviders(
+        <TransferView
+          {...defaultProps}
+          myTeam={null}
+          onOpenSettings={handleOpenSettings}
+        />,
+      );
+
+      const button = screen.getByRole("button", { name: /Open Settings/i });
+      expect(button).toBeInTheDocument();
+    });
   });
 
   describe("Team comparison UI", () => {

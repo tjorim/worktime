@@ -120,7 +120,11 @@ export function MainTabs({
             </>
           }
         >
-          <TransferView myTeam={myTeam} initialOtherTeam={transferTargetTeam} />
+          <TransferView
+            myTeam={myTeam}
+            initialOtherTeam={transferTargetTeam}
+            onOpenSettings={onOpenSettings}
+          />
         </Tab>
 
         <Tab
