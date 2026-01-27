@@ -437,29 +437,30 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     };
   }, [handleCancelEditMode, handleExport, handleImport, handleRedo, handleUndo]);
 
-  useEffect(() => {
-    if (!isActive) {
-      return;
+  const isEditableTarget = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      // Only skip shortcuts when user is typing in a text field
-      const isTextInput =
-        target instanceof HTMLInputElement &&
-        target.type !== "checkbox" &&
-        target.type !== "radio";
+    const isTextInput =
+      target instanceof HTMLInputElement &&
+      target.type !== "checkbox" &&
+      target.type !== "radio";
 
-      if (
-        isTextInput ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) {
+    return (
+      isTextInput ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target.isContentEditable
+    );
+  };
+
+  const handleTimeOffKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
         return;
       }
 
-      // Handle Escape key for cancel edit mode
       if (event.key === "Escape") {
         if (showEventModal && modalMode === "edit" && editIndex >= 0) {
           event.preventDefault();
@@ -468,7 +469,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
         return;
       }
 
-      // Handle Delete key for bulk delete
       if (event.key === "Delete") {
         if (viewMode === "table" && selectedIndices.length > 0) {
           event.preventDefault();
@@ -500,14 +500,21 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           handlersRef.current.handleImport();
         }
       }
-    };
+    },
+    [editIndex, modalMode, selectedIndices.length, showEventModal, viewMode],
+  );
 
-    document.addEventListener("keydown", handleKeyDown);
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    document.addEventListener("keydown", handleTimeOffKeyDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleTimeOffKeyDown);
     };
-  }, [editIndex, isActive, modalMode, selectedIndices.length, showEventModal, viewMode]);
+  }, [handleTimeOffKeyDown, isActive]);
 
   const previewLine = buildPreviewLine({
     eventType,
