@@ -49,7 +49,7 @@ export function SetupActionButton({
   size,
   showChangeSchedule = false,
 }: SetupActionButtonProps) {
-  const { needsSchedule, hasTeams, teamCount } = useSetupAction({ mode });
+  const { needsSchedule, hasTeams, teamCount, buttonText, buttonIcon } = useSetupAction({ mode });
 
   // Primary action: Select Schedule
   if (needsSchedule && onChangeSchedule) {
@@ -60,8 +60,8 @@ export function SetupActionButton({
         onClick={onChangeSchedule}
         title="Select your work schedule"
       >
-        <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-        Select Schedule
+        <i className={`bi ${buttonIcon} me-1`} aria-hidden="true"></i>
+        {buttonText}
       </Button>
     );
   }
@@ -70,8 +70,8 @@ export function SetupActionButton({
   if (hasTeams && teamCount > 1 && onChangeTeam) {
     return (
       <Button variant="primary" size={size} onClick={onChangeTeam} title="Select your team">
-        <i className="bi bi-person-plus me-1" aria-hidden="true"></i>
-        Select Team
+        <i className={`bi ${buttonIcon} me-1`} aria-hidden="true"></i>
+        {buttonText}
       </Button>
     );
   }

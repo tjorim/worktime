@@ -46,8 +46,8 @@ export function useSetupAction(options?: UseSetupActionOptions): SetupActionResu
   const needsTeam = mode === "team" || (!!scheduleType && hasTeams);
 
   // Button text and icon based on context
-  const buttonText = needsSchedule ? "Choose Schedule" : "Select Team";
-  const buttonIcon = needsSchedule ? "bi-gear" : "bi-person-plus";
+  const buttonText = needsSchedule ? "Select Schedule" : "Select Team";
+  const buttonIcon = needsSchedule ? "bi-calendar-week" : "bi-person-plus";
 
   return {
     needsSchedule,

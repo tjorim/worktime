@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Synchronises a React state value with window.localStorage.
@@ -54,7 +54,7 @@ export function useLocalStorage<T>(
     };
   }, [key]);
 
-  const setValue = (value: T | ((prev: T) => T)) => {
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
     try {
       // Use ref for functional updates to handle multiple calls in same render
       const valueToStore = value instanceof Function ? value(latestValueRef.current) : value;
@@ -77,7 +77,7 @@ export function useLocalStorage<T>(
     } catch {
       // Handle any other errors silently - app continues to function
     }
-  };
+  }, [key]);
 
   return [storedValue, setValue];
 }
