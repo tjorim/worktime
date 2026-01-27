@@ -18,6 +18,7 @@ interface MainTabsProps {
   onTabChange?: (tab: string) => void;
   initialView?: string; // Initial view mode for sub-tabs (e.g., "today", "week", "stats")
   onChangeSchedule?: () => void; // Callback to open schedule selector
+  onChangeTeam?: () => void; // Callback to open team selector
 }
 
 /**
@@ -35,6 +36,7 @@ interface MainTabsProps {
  * @param onTabChange - Callback invoked when the active tab changes
  * @param initialView - Initial view mode for sub-tabs from URL parameter
  * @param onChangeSchedule - Callback to open schedule selector
+ * @param onChangeTeam - Callback to open team selector
  * @returns The rendered tabbed interface component.
  */
 export function MainTabs({
@@ -45,6 +47,7 @@ export function MainTabs({
   onTabChange,
   initialView,
   onChangeSchedule,
+  onChangeTeam,
 }: MainTabsProps) {
   const tabsId = useId();
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
@@ -104,6 +107,7 @@ export function MainTabs({
           <CalendarView
             myTeam={myTeam}
             onChangeSchedule={onChangeSchedule}
+            onChangeTeam={onChangeTeam}
             onOpenScheduleTab={() => setActiveTab("schedule")}
           />
         </Tab>
@@ -140,6 +144,7 @@ export function MainTabs({
             myTeam={myTeam}
             initialOtherTeam={transferTargetTeam}
             onChangeSchedule={onChangeSchedule}
+            onChangeTeam={onChangeTeam}
           />
         </Tab>
 

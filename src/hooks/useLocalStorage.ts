@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Synchronises a React state value with window.localStorage.
@@ -28,6 +28,11 @@ export function useLocalStorage<T>(
     }
   });
 
+  // Track latest value in a ref to handle multiple setValue calls in the same render
+  // This prevents stale closure issues when batching updates
+  const latestValueRef = useRef(storedValue);
+  latestValueRef.current = storedValue;
+
   // Listen for changes to this key in other tabs
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -51,7 +56,11 @@ export function useLocalStorage<T>(
 
   const setValue = (value: T | ((prev: T) => T)) => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      // Use ref for functional updates to handle multiple calls in same render
+      const valueToStore = value instanceof Function ? value(latestValueRef.current) : value;
+
+      // Update ref immediately so subsequent calls in this render get the new value
+      latestValueRef.current = valueToStore;
 
       // Update state
       setStoredValue(valueToStore);

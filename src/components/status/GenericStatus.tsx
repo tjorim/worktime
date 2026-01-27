@@ -8,7 +8,8 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import { useSettings } from "../../contexts/SettingsContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { SetupActionButton } from "../shared/SetupActionButton";
+import { useSetupAction } from "../../hooks/useSetupAction";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../../utils/dateTimeUtils";
@@ -43,9 +44,7 @@ export function GenericStatus({
 }: GenericStatusProps) {
   const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection;
-  const teamCount = scheduleConfig.shiftConfig.teamCount;
+  const { hasTeams, teamCount } = useSetupAction();
 
   const today = dayjs();
   const liveTime = useLiveTime();
@@ -149,34 +148,12 @@ export function GenericStatus({
                 <i className="bi bi-people me-1"></i>
                 Who's On?
               </Button>
-              {!scheduleType && onChangeSchedule ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={onChangeSchedule}
-                  title="Select your work schedule"
-                >
-                  <i className="bi bi-calendar-week me-1"></i>
-                  Select Schedule
-                </Button>
-              ) : hasTeams && teamCount > 1 ? (
-                <Button variant="primary" size="sm" onClick={onChangeTeam}>
-                  <i className="bi bi-person-plus me-1"></i>
-                  Select Team
-                </Button>
-              ) : (
-                onChangeSchedule && (
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    onClick={onChangeSchedule}
-                    title="Change your work schedule"
-                  >
-                    <i className="bi bi-calendar-week me-1"></i>
-                    Change Schedule
-                  </Button>
-                )
-              )}
+              <SetupActionButton
+                onChangeSchedule={onChangeSchedule}
+                onChangeTeam={onChangeTeam}
+                size="sm"
+                showChangeSchedule
+              />
             </div>
           </div>
 

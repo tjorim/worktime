@@ -141,7 +141,15 @@ export function useTransferCalculations({
 
   // Calculate transfers based on current parameters
   const transfersResult = useMemo(() => {
-    if (!validatedMyTeam) return { transfers: [], hasMoreTransfers: false };
+    // Early return if no valid team or no other teams to compare with
+    if (!validatedMyTeam || availableOtherTeams.length === 0) {
+      return { transfers: [], hasMoreTransfers: false };
+    }
+
+    // Guard against stale otherTeam value during schedule transitions
+    if (!availableOtherTeams.includes(otherTeam)) {
+      return { transfers: [], hasMoreTransfers: false };
+    }
 
     const foundTransfers: TransferInfo[] = [];
 
@@ -271,7 +279,7 @@ export function useTransferCalculations({
       transfers: foundTransfers,
       hasMoreTransfers,
     };
-  }, [validatedMyTeam, otherTeam, limit, customStartDate, customEndDate, scheduleType]);
+  }, [validatedMyTeam, otherTeam, availableOtherTeams, limit, customStartDate, customEndDate, scheduleType]);
 
   return {
     transfers: transfersResult.transfers,

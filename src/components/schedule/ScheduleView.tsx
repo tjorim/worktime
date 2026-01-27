@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -64,17 +64,17 @@ export function ScheduleView({
     return myTeam === teamNumber ? "my-team" : "";
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     setCurrentDate(currentDate.subtract(7, "day"));
-  };
+  }, [currentDate, setCurrentDate]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentDate(currentDate.add(7, "day"));
-  };
+  }, [currentDate, setCurrentDate]);
 
-  const handleCurrent = () => {
+  const handleCurrent = useCallback(() => {
     setCurrentDate(dayjs());
-  };
+  }, [setCurrentDate]);
 
   const handleDateChange = (dateString: string) => {
     if (dateString) {

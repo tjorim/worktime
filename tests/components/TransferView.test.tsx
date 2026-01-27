@@ -127,8 +127,9 @@ describe("TransferView", () => {
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
 
-    it("shows schedule selector shortcut when no team selected and handler provided", () => {
-      const handleChangeSchedule = vi.fn();
+    it("shows team selector shortcut when no team selected and handler provided", async () => {
+      const user = userEvent.setup();
+      const handleChangeTeam = vi.fn();
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         transfers: [],
@@ -136,11 +137,14 @@ describe("TransferView", () => {
       });
 
       renderWithProviders(
-        <TransferView {...defaultProps} myTeam={null} onChangeSchedule={handleChangeSchedule} />,
+        <TransferView {...defaultProps} myTeam={null} onChangeTeam={handleChangeTeam} />,
       );
 
-      const button = screen.getByRole("button", { name: /Choose Schedule/i });
+      const button = screen.getByRole("button", { name: /Select Team/i });
       expect(button).toBeInTheDocument();
+
+      await user.click(button);
+      expect(handleChangeTeam).toHaveBeenCalled();
     });
   });
 

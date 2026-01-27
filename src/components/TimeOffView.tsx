@@ -333,9 +333,9 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     }
   }, [isRawEditorDirty, rawText]);
 
-  const handleImport = () => {
+  const handleImport = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -12,11 +12,13 @@ import classNames from "classnames";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
+import { SetupActionButton } from "./shared/SetupActionButton";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
   initialOtherTeam?: number | null; // Initial other team (e.g., from Team Detail Modal)
   onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
 }
 
 /**
@@ -30,12 +32,14 @@ interface TransferViewProps {
  * @param myTeam - The user's team number or `null`. Team validation is handled by the useTransferCalculations hook.
  * @param initialOtherTeam - Optional team number to preselect as the "other" team when the component mounts.
  * @param onChangeSchedule - Optional callback to open schedule selector.
+ * @param onChangeTeam - Optional callback to open team selector.
  * @returns The rendered TransferView element.
  */
 export function TransferView({
   myTeam: inputMyTeam,
   initialOtherTeam,
   onChangeSchedule,
+  onChangeTeam,
 }: TransferViewProps) {
   // Generate unique IDs for form elements
   const otherTeamSelectId = useId();
@@ -110,16 +114,9 @@ export function TransferView({
       <Card.Body>
         {!myTeam ? (
           <div className="text-center py-4">
-            <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg"></i>
-            <p className="text-muted mb-0">Please select your team to see transfer information.</p>
-            {onChangeSchedule && (
-              <div className="mt-3">
-                <Button variant="primary" onClick={onChangeSchedule}>
-                  <i className="bi bi-gear me-2" aria-hidden="true"></i>
-                  Choose Schedule
-                </Button>
-              </div>
-            )}
+            <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
+            <p className="text-muted mb-3">Please select your team to see transfer information.</p>
+            <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
         ) : availableOtherTeams.length === 0 ? (
           <div className="text-center py-4">
