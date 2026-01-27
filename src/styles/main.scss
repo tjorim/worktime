@@ -19,6 +19,10 @@ body {
   z-index: 1020;
 }
 
+.calendar-legend-emoji {
+  font-size: 0.875rem;
+}
+
 /* Month calendar CSS variables */
 :root {
   --month-calendar-bg: #fff;
@@ -709,15 +713,6 @@ body {
   font-size: 1.25rem;
 }
 
-.header-button {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
-
-.header-button-spacing {
-  gap: 0.25rem;
-}
-
 /* Team card hover effects */
 .team-card-interactive {
   transition: all 0.2s ease;
@@ -758,7 +753,9 @@ body {
   --shift-off: #212121;
   --shift-off-text: #bdbdbd;
   --primary-color: #90caf9;
+}
 
+[data-bs-theme="dark"]:not(.navbar) {
   background-color: #181a1b !important;
   color: #e0e0e0 !important;
 }
@@ -768,8 +765,7 @@ body {
 [data-bs-theme="dark"] .offcanvas,
 [data-bs-theme="dark"] .table,
 [data-bs-theme="dark"] .tab-content,
-[data-bs-theme="dark"] .nav,
-[data-bs-theme="dark"] .navbar,
+[data-bs-theme="dark"] .nav:not(.navbar .nav),
 [data-bs-theme="dark"] .dropdown-menu {
   background-color: #23272b !important;
   color: #e0e0e0 !important;

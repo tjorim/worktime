@@ -36,10 +36,7 @@ const legendPopover = (
         <div className="d-flex flex-wrap gap-2 mt-1">
           {EVENT_TYPE_LEGEND.map(({ colorClass, label }) => (
             <span key={colorClass} className="d-inline-flex align-items-center gap-1">
-              <span
-                className={`month-calendar-event-color ${colorClass}`}
-                style={{ width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0 }}
-              />
+              <span className={`month-calendar-event-color ${colorClass}`} />
               <small>{label}</small>
             </span>
           ))}
@@ -50,7 +47,7 @@ const legendPopover = (
         <div className="d-flex flex-wrap gap-2 mt-1">
           {INDICATOR_LEGEND.map(({ emoji, label }) => (
             <span key={emoji} className="d-inline-flex align-items-center gap-1">
-              <span style={{ fontSize: "0.875rem" }}>{emoji}</span>
+              <span className="calendar-legend-emoji">{emoji}</span>
               <small>{label}</small>
             </span>
           ))}
@@ -69,7 +66,7 @@ const legendPopover = (
  */
 export function CalendarLegend() {
   return (
-    <OverlayTrigger trigger="click" placement="left" overlay={legendPopover} rootClose>
+    <OverlayTrigger trigger="click" placement="left-end" overlay={legendPopover} rootClose>
       <Button variant="link" size="sm" className="text-muted p-0 text-decoration-none">
         <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
         Legend

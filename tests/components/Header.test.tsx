@@ -25,35 +25,13 @@ describe("Header", () => {
       expect(screen.getByText("Worktime")).toBeInTheDocument();
     });
 
-    it("renders About button", () => {
+    it("renders Settings button", () => {
       renderWithProviders(<Header />);
-      expect(screen.getByLabelText("About Worktime")).toBeInTheDocument();
+      expect(screen.getByLabelText("Settings")).toBeInTheDocument();
     });
   });
 
   describe("About modal", () => {
-    it("calls onShowAbout callback when about button is clicked", async () => {
-      const user = userEvent.setup();
-      const mockOnShowAbout = vi.fn();
-      renderWithProviders(<Header onShowAbout={mockOnShowAbout} />);
-
-      const aboutButton = screen.getByLabelText("About Worktime");
-      await user.click(aboutButton);
-
-      expect(mockOnShowAbout).toHaveBeenCalledTimes(1);
-    });
-
-    it("opens About modal when About button is clicked in full App", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<App />);
-
-      const aboutButton = screen.getByLabelText("About Worktime");
-      await user.click(aboutButton);
-
-      // Modal should be open
-      expect(screen.getByText("About Worktime")).toBeInTheDocument();
-    });
-
     it("opens About modal when accessed from Settings panel in full App", async () => {
       const user = userEvent.setup();
       renderWithProviders(<App />);
@@ -74,9 +52,13 @@ describe("Header", () => {
       const user = userEvent.setup();
       renderWithProviders(<App />);
 
-      // Open About modal
-      const aboutButton = screen.getByLabelText("About Worktime");
-      await user.click(aboutButton);
+      // Open Settings panel first
+      const settingsButton = screen.getByLabelText("Settings");
+      await user.click(settingsButton);
+
+      // Click About & Help in settings panel
+      const aboutHelpButton = screen.getByText("About & Help");
+      await user.click(aboutHelpButton);
 
       // Modal should be open
       expect(screen.getByText("About Worktime")).toBeInTheDocument();

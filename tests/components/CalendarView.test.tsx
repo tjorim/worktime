@@ -58,14 +58,26 @@ describe("CalendarView", () => {
 
   describe("Component Rendering", () => {
     it("should render without crashing when myTeam is provided", () => {
+      // Setup: configure schedule so getShiftForDate returns a value
+      localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "5-shift",
+          settings: { timeFormat: "24h", theme: "system" },
+        }),
+      );
+
       const { container } = render(
         <AllProviders>
           <CalendarView myTeam={1} />
         </AllProviders>,
       );
 
-      // Component should render
+      // Component should render with calendar grid (not empty state)
       expect(container.querySelector(".calendar-view")).toBeInTheDocument();
+      expect(container.querySelector(".month-calendar")).toBeInTheDocument();
     });
 
     it("should render calendar card structure", () => {
