@@ -62,6 +62,24 @@ const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
  */
 const DEFAULT_WEEKDAY = 1;
 
+const isEditableTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const isTextInput =
+    target instanceof HTMLInputElement &&
+    target.type !== "checkbox" &&
+    target.type !== "radio";
+
+  return (
+    isTextInput ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  );
+};
+
 /**
  * Empty state component for when no time-off events exist.
  * Adapts styling and messaging based on the current view mode.
@@ -436,24 +454,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       handleUndo,
     };
   }, [handleCancelEditMode, handleExport, handleImport, handleRedo, handleUndo]);
-
-  const isEditableTarget = (target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) {
-      return false;
-    }
-
-    const isTextInput =
-      target instanceof HTMLInputElement &&
-      target.type !== "checkbox" &&
-      target.type !== "radio";
-
-    return (
-      isTextInput ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement ||
-      target.isContentEditable
-    );
-  };
 
   const handleTimeOffKeyDown = useCallback(
     (event: KeyboardEvent) => {
