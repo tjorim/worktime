@@ -58,7 +58,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/ui": "^4.0.18",
     "canvas": "^3.2.1",
-    "happy-dom": "^20.3.1",
+    "happy-dom": "^20.3.9",
     "lightningcss": "^1.30.2",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
