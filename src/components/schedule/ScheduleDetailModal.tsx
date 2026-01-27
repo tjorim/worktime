@@ -48,7 +48,7 @@ export function ScheduleDetailModal({
   const effectiveScheduleType = scheduleOverride ?? userScheduleType;
   const scheduleConfig = getScheduleConfig(effectiveScheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
-  const teamCount = scheduleConfig.shiftConfig.teamCount;
+  const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
   const normalizedTeamNumber = hasTeams
     ? Math.min(Math.max(teamNumber, 1), teamCount)
     : 1;
