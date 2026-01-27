@@ -53,7 +53,7 @@ const DEFAULT_WEEKDAY = 1;
 
 interface CalendarViewProps {
   myTeam: number | null;
-  onOpenSettings?: () => void;
+  onChangeSchedule?: () => void;
   onOpenScheduleTab?: () => void;
 }
 
@@ -74,10 +74,10 @@ interface CalendarViewProps {
  * - Displays shift information and time-off events together
  *
  * @param props.myTeam - The user's team number from onboarding or null
- * @param props.onOpenSettings - Optional callback to open settings dialog
+ * @param props.onChangeSchedule - Optional callback to open schedule selector
  * @param props.onOpenScheduleTab - Optional callback to open Schedule tab
  */
-export function CalendarView({ myTeam, onOpenSettings, onOpenScheduleTab }: CalendarViewProps) {
+export function CalendarView({ myTeam, onChangeSchedule, onOpenScheduleTab }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
   const { scheduleType } = useSettings();
@@ -380,9 +380,9 @@ export function CalendarView({ myTeam, onOpenSettings, onOpenScheduleTab }: Cale
               <p className="mb-4">
                 To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings.
               </p>
-              {onOpenSettings && (
+              {onChangeSchedule && (
                 <div className="mb-3">
-                  <Button variant="primary" onClick={onOpenSettings}>
+                  <Button variant="primary" onClick={onChangeSchedule}>
                     <i className="bi bi-gear me-2" aria-hidden="true"></i>
                     Choose Schedule
                   </Button>

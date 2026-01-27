@@ -127,8 +127,8 @@ describe("TransferView", () => {
       expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
 
-    it("shows settings shortcut when no team selected and handler provided", () => {
-      const handleOpenSettings = vi.fn();
+    it("shows schedule selector shortcut when no team selected and handler provided", () => {
+      const handleChangeSchedule = vi.fn();
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         transfers: [],
@@ -136,7 +136,7 @@ describe("TransferView", () => {
       });
 
       renderWithProviders(
-        <TransferView {...defaultProps} myTeam={null} onOpenSettings={handleOpenSettings} />,
+        <TransferView {...defaultProps} myTeam={null} onChangeSchedule={handleChangeSchedule} />,
       );
 
       const button = screen.getByRole("button", { name: /Choose Schedule/i });
