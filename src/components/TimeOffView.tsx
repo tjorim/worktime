@@ -99,7 +99,7 @@ function EmptyState() {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("calendar", "table", "stats", or "raw")
+  initialView?: string; // Initial view mode from URL parameter ("table", "stats", or "raw")
 }
 
 export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {

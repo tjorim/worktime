@@ -214,15 +214,18 @@ export function TodayView({
   }, [currentDate, scheduleType]);
 
   // Keyboard shortcuts (only active when this tab is visible)
-  useKeyboardShortcuts(
-    isActive
-      ? {
-          onToday: onTodayClick,
-          onPrevious: onPreviousDay,
-          onNext: onNextDay,
-        }
-      : {},
+  const shortcuts = useMemo(
+    () =>
+      isActive
+        ? {
+            onToday: onTodayClick,
+            onPrevious: onPreviousDay,
+            onNext: onNextDay,
+          }
+        : {},
+    [isActive, onTodayClick, onPreviousDay, onNextDay],
   );
+  useKeyboardShortcuts(shortcuts);
 
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
@@ -20,13 +20,18 @@ interface HeaderProps {
 export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
   const [showSettings, setShowSettings] = useState(false);
 
-  const handleToggleSettings = () => {
+  const handleToggleSettings = useCallback(() => {
     setShowSettings((prev) => !prev);
-  };
+  }, []);
 
-  useKeyboardShortcuts({
-    onToggleSettings: handleToggleSettings,
-  });
+  const shortcuts = useMemo(
+    () => ({
+      onToggleSettings: handleToggleSettings,
+    }),
+    [handleToggleSettings],
+  );
+
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <>

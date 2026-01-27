@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -91,15 +91,18 @@ export function ScheduleView({
   const isCurrentWeek = startOfWeek.isSame(currentWeekStart, "day");
 
   // Keyboard shortcuts (only active when this tab is visible)
-  useKeyboardShortcuts(
-    isActive
-      ? {
-          onToday: handleCurrent,
-          onPrevious: handlePrevious,
-          onNext: handleNext,
-        }
-      : {},
+  const shortcuts = useMemo(
+    () =>
+      isActive
+        ? {
+            onToday: handleCurrent,
+            onPrevious: handlePrevious,
+            onNext: handleNext,
+          }
+        : {},
+    [isActive, handleCurrent, handlePrevious, handleNext],
   );
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <Card>

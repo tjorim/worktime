@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useId, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -61,22 +61,26 @@ export function MainTabs({
     setShowTeamDetail(false);
   };
 
-  const handleOpenScheduleTab = () => {
-    setActiveKey("schedule");
-    onTabChange?.("schedule");
-  };
+  const setActiveTab = useCallback(
+    (tab: string) => {
+      setActiveKey(tab);
+      onTabChange?.(tab);
+    },
+    [setActiveKey, onTabChange],
+  );
 
-  const setActiveTab = (tab: string) => {
-    setActiveKey(tab);
-    onTabChange?.(tab);
-  };
+  const shortcuts = useMemo(
+    () => ({
+      onTabCalendar: () => setActiveTab("calendar"),
+      onTabSchedule: () => setActiveTab("schedule"),
+      onTabTransfer: () => setActiveTab("transfer"),
+      onTabTimeOff: () => setActiveTab("timeoff"),
+      onToggleSettings: onOpenSettings,
+    }),
+    [setActiveTab, onOpenSettings],
+  );
 
-  useKeyboardShortcuts({
-    onTabCalendar: () => setActiveTab("calendar"),
-    onTabSchedule: () => setActiveTab("schedule"),
-    onTabTransfer: () => setActiveTab("transfer"),
-    onTabTimeOff: () => setActiveTab("timeoff"),
-  });
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <>
@@ -101,7 +105,7 @@ export function MainTabs({
           <CalendarView
             myTeam={myTeam}
             onOpenSettings={onOpenSettings}
-            onOpenScheduleTab={handleOpenScheduleTab}
+            onOpenScheduleTab={() => setActiveTab("schedule")}
           />
         </Tab>
 
@@ -159,8 +163,7 @@ export function MainTabs({
         onHide={handleCloseTeamDetail}
         teamNumber={selectedTeamForDetail}
         onViewTransfers={(team: number) => {
-          setActiveKey("transfer");
-          onTabChange?.("transfer");
+          setActiveTab("transfer");
           // Only set initial other team if it's different from user's team
           if (team !== myTeam) {
             setTransferTargetTeam(team);
