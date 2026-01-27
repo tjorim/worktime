@@ -10,6 +10,7 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
+import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
@@ -20,6 +21,7 @@ interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
   teamNumber: number;
+  scheduleType?: ScheduleOption | null;
   onViewTransfers?: (team: number) => void;
 }
 
@@ -31,6 +33,7 @@ interface ScheduleDetailModalProps {
  * weekly statistics (working/rest days and shift distribution), and quick actions including share and view transfers.
  *
  * @param teamNumber - Team number to display (for multi-team schedules) or 1 (for single-user schedules)
+ * @param scheduleType - Optional schedule type override for cross-schedule viewing
  * @param onViewTransfers - Optional callback invoked with the team number when "View Transfers" is activated (multi-team only)
  * @returns The modal element for the specified team or schedule
  */
@@ -38,10 +41,12 @@ export function ScheduleDetailModal({
   show,
   onHide,
   teamNumber,
+  scheduleType: scheduleOverride,
   onViewTransfers,
 }: ScheduleDetailModalProps) {
-  const { settings, myTeam, scheduleType } = useSettings();
-  const scheduleConfig = getScheduleConfig(scheduleType);
+  const { settings, myTeam, scheduleType: userScheduleType } = useSettings();
+  const effectiveScheduleType = scheduleOverride ?? userScheduleType;
+  const scheduleConfig = getScheduleConfig(effectiveScheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount;
   const normalizedTeamNumber = hasTeams
@@ -64,7 +69,7 @@ export function ScheduleDetailModal({
       const date = today.add(i, "day");
       // Use calendar date directly for schedule display, not shift day
       // This ensures the schedule shows the correct day even before 7 AM
-      const shift = calculateShift(date, normalizedTeamNumber, scheduleType);
+      const shift = calculateShift(date, normalizedTeamNumber, effectiveScheduleType);
 
       schedule.push({
         date,
@@ -75,7 +80,7 @@ export function ScheduleDetailModal({
     }
 
     return schedule;
-  }, [normalizedTeamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [normalizedTeamNumber, currentDateKey, effectiveScheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -139,7 +144,7 @@ export function ScheduleDetailModal({
                     <Badge className={getShiftByCode(currentStatus?.shift.code).className} pill>
                       <i className="bi bi-briefcase me-1"></i>
                       {currentStatus?.shift
-                        ? getShiftDisplay(currentStatus.shift, scheduleType).displayName
+                        ? getShiftDisplay(currentStatus.shift, effectiveScheduleType).displayName
                         : "Unknown"}
                     </Badge>
                   )}
@@ -152,7 +157,7 @@ export function ScheduleDetailModal({
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
                   <Badge className={getShiftByCode(nextShift.shift.code).className} pill>
-                    {getShiftDisplay(nextShift.shift, scheduleType).displayName}
+                    {getShiftDisplay(nextShift.shift, effectiveScheduleType).displayName}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -205,7 +210,7 @@ export function ScheduleDetailModal({
                         </Badge>
                       ) : (
                         <Badge className={getShiftByCode(day.shift.code).className} pill>
-                          {getShiftDisplay(day.shift, scheduleType).displayName}
+                          {getShiftDisplay(day.shift, effectiveScheduleType).displayName}
                         </Badge>
                       )}
                     </td>

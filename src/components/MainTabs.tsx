@@ -2,6 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useCallback, useId, useMemo, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
+import type { ScheduleOption } from "../data/rosters";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { CalendarView } from "./CalendarView";
@@ -53,10 +54,13 @@ export function MainTabs({
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
+  const [selectedScheduleForDetail, setSelectedScheduleForDetail] =
+    useState<ScheduleOption | null>(null);
   const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
 
-  const handleTeamClick = (teamNumber: number) => {
+  const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
+    setSelectedScheduleForDetail(scheduleType);
     setShowTeamDetail(true);
   };
 
@@ -166,6 +170,7 @@ export function MainTabs({
         show={showTeamDetail}
         onHide={handleCloseTeamDetail}
         teamNumber={selectedTeamForDetail}
+        scheduleType={selectedScheduleForDetail}
         onViewTransfers={(team: number) => {
           setActiveTab("transfer");
           // Only set initial other team if it's different from user's team

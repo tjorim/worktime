@@ -3,6 +3,7 @@ import { useId } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
+import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
@@ -25,7 +26,7 @@ interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  onTeamClick?: (teamNumber: number) => void;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
