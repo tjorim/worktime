@@ -43,6 +43,10 @@ export function ScheduleDetailModal({
   const { settings, myTeam, scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
+  const teamCount = scheduleConfig.shiftConfig.teamCount;
+  const normalizedTeamNumber = hasTeams
+    ? Math.min(Math.max(teamNumber, 1), teamCount)
+    : 1;
 
   const calendarTooltipId = useId();
   const transfersDisabledTooltipId = useId();
@@ -60,7 +64,7 @@ export function ScheduleDetailModal({
       const date = today.add(i, "day");
       // Use calendar date directly for schedule display, not shift day
       // This ensures the schedule shows the correct day even before 7 AM
-      const shift = calculateShift(date, teamNumber, scheduleType);
+      const shift = calculateShift(date, normalizedTeamNumber, scheduleType);
 
       schedule.push({
         date,
@@ -71,7 +75,7 @@ export function ScheduleDetailModal({
     }
 
     return schedule;
-  }, [teamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [normalizedTeamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -97,7 +101,7 @@ export function ScheduleDetailModal({
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
   // Button state logic - only allow viewing transfers for other teams, not your own
-  const isViewingOwnTeam = teamNumber === myTeam;
+  const isViewingOwnTeam = normalizedTeamNumber === myTeam;
   const canViewTransfers = !isViewingOwnTeam;
 
   return (
@@ -112,7 +116,7 @@ export function ScheduleDetailModal({
               "text-primary",
             )}
           ></i>
-          {hasTeams ? `Team ${teamNumber} Details` : "My Schedule Details"}
+          {hasTeams ? `Team ${normalizedTeamNumber} Details` : "My Schedule Details"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -347,7 +351,7 @@ export function ScheduleDetailModal({
                     <Button
                       variant="outline-secondary"
                       size="sm"
-                      onClick={() => onViewTransfers?.(teamNumber)}
+                      onClick={() => onViewTransfers?.(normalizedTeamNumber)}
                       disabled={!canViewTransfers}
                       style={isViewingOwnTeam ? { pointerEvents: "none" } : {}}
                     >
