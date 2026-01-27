@@ -41,6 +41,19 @@ describe("useLocalStorage", () => {
     expect(window.localStorage.getItem("test_functional_update")).toBe("1");
   });
 
+  it("handles multiple functional updates in the same render", () => {
+    const { result } = renderHook(() => useLocalStorage("test_batched_updates", 0));
+
+    act(() => {
+      result.current[1]((prev) => prev + 1);
+      result.current[1]((prev) => prev + 1);
+      result.current[1]((prev) => prev + 1);
+    });
+
+    expect(result.current[0]).toBe(3);
+    expect(window.localStorage.getItem("test_batched_updates")).toBe("3");
+  });
+
   it("handles malformed JSON gracefully", () => {
     // Set up malformed JSON in localStorage
     window.localStorage.setItem("test_malformed", "invalid-json");
