@@ -197,7 +197,7 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Current Status")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /select team/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /select schedule/i })).toBeInTheDocument();
     });
 
     it("should show who is working button when callback is provided", () => {

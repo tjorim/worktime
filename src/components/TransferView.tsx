@@ -116,7 +116,11 @@ export function TransferView({
           <div className="text-center py-4">
             <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
             <p className="text-muted mb-3">Please select your team to see transfer information.</p>
-            <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
+            <SetupActionButton
+              onChangeSchedule={onChangeSchedule}
+              onChangeTeam={onChangeTeam}
+              mode="team"
+            />
           </div>
         ) : availableOtherTeams.length === 0 ? (
           <div className="text-center py-4">
