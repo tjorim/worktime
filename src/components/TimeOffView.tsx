@@ -422,7 +422,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const handlersRef = useRef({
     handleCancelEditMode,
     handleExport,
-    handleOpenAddModal,
+    handleImport,
     handleRedo,
     handleUndo,
   });
@@ -431,11 +431,11 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     handlersRef.current = {
       handleCancelEditMode,
       handleExport,
-      handleOpenAddModal,
+      handleImport,
       handleRedo,
       handleUndo,
     };
-  }, [handleCancelEditMode, handleExport, handleOpenAddModal, handleRedo, handleUndo]);
+  }, [handleCancelEditMode, handleExport, handleImport, handleRedo, handleUndo]);
 
   useEffect(() => {
     if (!isActive) {
@@ -444,8 +444,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      // Only skip shortcuts when user is typing in a text field
+      const isTextInput =
+        target instanceof HTMLInputElement &&
+        target.type !== "checkbox" &&
+        target.type !== "radio";
+
       if (
-        target instanceof HTMLInputElement ||
+        isTextInput ||
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement ||
         (target instanceof HTMLElement && target.isContentEditable)
@@ -489,9 +495,9 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           event.preventDefault();
           handlersRef.current.handleExport();
         }
-        if (key === "n") {
+        if (key === "i") {
           event.preventDefault();
-          handlersRef.current.handleOpenAddModal();
+          handlersRef.current.handleImport();
         }
       }
     };

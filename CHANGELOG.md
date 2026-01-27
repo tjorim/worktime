@@ -10,9 +10,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 
 - Calendar export (.ics format)
-- Enhanced keyboard shortcuts
 - Notification system
 - Theme customization
+- Cross-schedule transfer view
+
+## [4.5.1] - 2026-01-27
+
+### Added
+
+- CalendarView Component: New calendar tab displaying working days with shift badges, time-off events, and public holiday indicators
+- Calendar Legend: Popover legend explaining event type colors and day indicators (public holidays, school holidays, payday, courses)
+- Working Day Utilities: New workingDayUtils module with functions for calculating working days, retrieving shift information, and handling time-off overlays
+- Global Keyboard Shortcuts: Tab switching (C/S/T/O keys), date navigation (arrow keys, Ctrl+H/J/K), settings toggle (Ctrl+,)
+- Time-Off Keyboard Shortcuts: Import (Ctrl+I), export (Ctrl+S), delete selected (Delete key), cancel edit (Escape), undo/redo (Ctrl+Z/Y)
+- Keyboard Shortcuts Modal: View all available shortcuts from Settings > Keyboard Shortcuts
+- Empty State Guidance: Helpful empty state for Calendar view with quick actions to select schedule or open settings
+
+### Changed
+
+- Tab Reorganization: Grouped Today and Schedule views under unified Schedule tab for cleaner navigation
+- Header Component: Refactored to use Bootstrap Navbar component with fixed positioning and proper theming
+- About Button: Removed from header - now accessible via Settings > About & Help (reduces UI clutter)
+- MonthCalendar: Moved from timeoff/ to calendar/ directory; simplified by removing complex keyboard navigation
+- DayCell: Moved to calendar/ directory; removed empty state indicator for cleaner appearance
+- Navbar Theming: Fixed dark/light theme colors using data-bs-theme attribute (Bootstrap 5.3+ pattern)
+
+### Fixed
+
+- Schedule Display: Fixed showing previous day's shift before 7 AM instead of current day
+- Schedule Dropdown: Fixed not syncing with user selection after onboarding
+- Mobile Layout: Fixed horizontal scroll and layout overflow on mobile devices
+- Navbar Z-Index: Calendar legend popover now properly appears below navbar
+- Fixed Navbar: Added body padding to prevent content from being hidden under fixed navbar
+- Theme Override: Fixed CSS selector to exclude navbar from dark theme background override
+
+### Calendar View and Keyboard Shortcuts
+
+Created CalendarView.tsx (466 lines) as a new main tab displaying working days with shift information, time-off events, and public holiday indicators. Implemented CalendarLegend.tsx (76 lines) with OverlayTrigger popover showing event type colors and day indicator emojis. Added workingDayUtils.ts (210 lines) with getWorkingDaysForMonth(), getShiftForDate(), and event overlay logic. Extended useKeyboardShortcuts hook with tab switching (c/s/t/o), date navigation (arrows, Ctrl+H/J/K), and settings toggle (Ctrl+,). Added time-off specific shortcuts to TimeOffView: Ctrl+I import, Ctrl+S export, Delete for bulk delete, Escape to cancel edit, Ctrl+Z/Y for undo/redo. Added KeyboardShortcutsModal for discoverability. Grouped Today and Schedule views under unified Schedule tab. Refactored Header.tsx to use Bootstrap Navbar component with fixed='top', bg='primary', and data-bs-theme='dark' for proper theming. Removed About button from header (accessible via Settings panel). Moved MonthCalendar and DayCell from timeoff/ to calendar/ directory with simplified implementation. Fixed schedule display before 7 AM, schedule dropdown sync after onboarding, mobile layout overflow, and navbar z-index issues. All 787 tests passing.
 
 ## [4.5.0] - 2026-01-11
 
@@ -27,14 +61,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - CurrentStatus Architecture: Refactored from 486-line monolithic component to clean 40-line router delegating to PersonalizedStatus and GenericStatus (following NextShift PR #34 pattern)
-- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without \*FiveShift wrapper functions
+- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without *FiveShift wrapper functions
 - Component Organization: Created status/ and shared/ subdirectories for better code organization and discoverability
 - Transfer Tab Visibility: Transfer tab now always visible to enable future cross-schedule coordination features
 - TodayView Shift Calculations: Moved from MainTabs into component for cross-schedule viewing support
 
 ### Schedule-Generic Component Refactoring
 
-Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed \*FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use scheduleConfig.showsTeamSelection to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
+Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed *FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use scheduleConfig.showsTeamSelection to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
 
 ## [4.4.1] - 2026-01-10
 
@@ -440,9 +474,9 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 ### v4.6.0 - Advanced Features
 
 - Calendar export (.ics format)
-- Enhanced keyboard shortcuts
 - Notification system
 - Theme customization
+- Cross-schedule transfer view
 
 ### Future Releases
 
@@ -451,7 +485,8 @@ Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js f
 - Mobile carousel for team browsing
 - Advanced accessibility features
 
-[Unreleased]: https://github.com/tjorim/worktime/compare/v4.5.0...HEAD
+[Unreleased]: https://github.com/tjorim/worktime/compare/v4.5.1...HEAD
+[4.5.1]: https://github.com/tjorim/worktime/compare/v4.5.0...v4.5.1
 [4.5.0]: https://github.com/tjorim/worktime/compare/v4.4.1...v4.5.0
 [4.4.1]: https://github.com/tjorim/worktime/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/tjorim/worktime/compare/v4.3.0...v4.4.0

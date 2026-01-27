@@ -118,8 +118,8 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             const tabShortcuts: Record<string, { cb?: () => void; name: string }> = {
               c: { cb: shortcuts.onTabCalendar, name: "onTabCalendar" },
               s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
-              r: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
-              t: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
+              t: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
+              o: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
             };
 
             const shortcut = tabShortcuts[key];

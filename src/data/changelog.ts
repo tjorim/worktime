@@ -14,9 +14,44 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.5.1",
+    date: "2026-01-27",
+    status: "current",
+    added: [
+      "CalendarView Component: New calendar tab displaying working days with shift badges, time-off events, and public holiday indicators",
+      "Calendar Legend: Popover legend explaining event type colors and day indicators (public holidays, school holidays, payday, courses)",
+      "Working Day Utilities: New workingDayUtils module with functions for calculating working days, retrieving shift information, and handling time-off overlays",
+      "Global Keyboard Shortcuts: Tab switching (C/S/T/O keys), date navigation (arrow keys, Ctrl+H/J/K), settings toggle (Ctrl+,)",
+      "Time-Off Keyboard Shortcuts: Import (Ctrl+I), export (Ctrl+S), delete selected (Delete key), cancel edit (Escape), undo/redo (Ctrl+Z/Y)",
+      "Keyboard Shortcuts Modal: View all available shortcuts from Settings > Keyboard Shortcuts",
+      "Empty State Guidance: Helpful empty state for Calendar view with quick actions to select schedule or open settings",
+    ],
+    changed: [
+      "Tab Reorganization: Grouped Today and Schedule views under unified Schedule tab for cleaner navigation",
+      "Header Component: Refactored to use Bootstrap Navbar component with fixed positioning and proper theming",
+      "About Button: Removed from header - now accessible via Settings > About & Help (reduces UI clutter)",
+      "MonthCalendar: Moved from timeoff/ to calendar/ directory; simplified by removing complex keyboard navigation",
+      "DayCell: Moved to calendar/ directory; removed empty state indicator for cleaner appearance",
+      "Navbar Theming: Fixed dark/light theme colors using data-bs-theme attribute (Bootstrap 5.3+ pattern)",
+    ],
+    fixed: [
+      "Schedule Display: Fixed showing previous day's shift before 7 AM instead of current day",
+      "Schedule Dropdown: Fixed not syncing with user selection after onboarding",
+      "Mobile Layout: Fixed horizontal scroll and layout overflow on mobile devices",
+      "Navbar Z-Index: Calendar legend popover now properly appears below navbar",
+      "Fixed Navbar: Added body padding to prevent content from being hidden under fixed navbar",
+      "Theme Override: Fixed CSS selector to exclude navbar from dark theme background override",
+    ],
+    technicalDetails: {
+      title: "Calendar View and Keyboard Shortcuts",
+      description:
+        "Created CalendarView.tsx (466 lines) as a new main tab displaying working days with shift information, time-off events, and public holiday indicators. Implemented CalendarLegend.tsx (76 lines) with OverlayTrigger popover showing event type colors and day indicator emojis. Added workingDayUtils.ts (210 lines) with getWorkingDaysForMonth(), getShiftForDate(), and event overlay logic. Extended useKeyboardShortcuts hook with tab switching (c/s/t/o), date navigation (arrows, Ctrl+H/J/K), and settings toggle (Ctrl+,). Added time-off specific shortcuts to TimeOffView: Ctrl+I import, Ctrl+S export, Delete for bulk delete, Escape to cancel edit, Ctrl+Z/Y for undo/redo. Added KeyboardShortcutsModal for discoverability. Grouped Today and Schedule views under unified Schedule tab. Refactored Header.tsx to use Bootstrap Navbar component with fixed='top', bg='primary', and data-bs-theme='dark' for proper theming. Removed About button from header (accessible via Settings panel). Moved MonthCalendar and DayCell from timeoff/ to calendar/ directory with simplified implementation. Fixed schedule display before 7 AM, schedule dropdown sync after onboarding, mobile layout overflow, and navbar z-index issues. All 787 tests passing.",
+    },
+  },
+  {
     version: "4.5.0",
     date: "2026-01-11",
-    status: "current",
+    status: "released",
     added: [
       "Cross-Schedule Viewing: Schedule and Today views now include schedule selector dropdown allowing users to view any schedule type (9-5, 5-shift, 2-shift, weekend-shift)",
       "Shared Component Library: Created reusable ShiftBadge, ShiftTimeDisplay, and CountdownBadge components for consistent shift display across the app",
@@ -456,9 +491,9 @@ export const futurePlans = {
     title: "Advanced Features",
     features: [
       "Calendar export (.ics format)",
-      "Enhanced keyboard shortcuts",
       "Notification system",
       "Theme customization",
+      "Cross-schedule transfer view",
     ],
   },
   future: {

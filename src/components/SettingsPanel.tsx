@@ -9,6 +9,7 @@ import { useToast } from "../contexts/ToastContext";
 import { CONFIG } from "../utils/config";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
+import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 
 interface SettingsPanelProps {
   show: boolean;
@@ -28,6 +29,7 @@ interface SettingsPanelProps {
  */
 export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const toast = useToast();
   const { settings, updateTimeFormat, updateTheme, resetSettings } = useSettings();
 
@@ -37,6 +39,14 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
 
   const handleChangelogClose = () => {
     setShowChangelog(false);
+  };
+
+  const handleShortcutsClick = () => {
+    setShowShortcuts(true);
+  };
+
+  const handleShortcutsClose = () => {
+    setShowShortcuts(false);
   };
 
   // Clear/reset all settings
@@ -200,6 +210,18 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
                 </ListGroup.Item>
+                <ListGroup.Item action onClick={handleShortcutsClick}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">
+                        <i className="bi bi-keyboard me-2"></i>
+                        Keyboard Shortcuts
+                      </div>
+                      <small className="text-muted">Navigation and action shortcuts</small>
+                    </div>
+                    <i className="bi bi-chevron-right text-muted"></i>
+                  </div>
+                </ListGroup.Item>
               </ListGroup>
             </div>
           </div>
@@ -279,6 +301,9 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={handleChangelogClose} />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal show={showShortcuts} onHide={handleShortcutsClose} />
     </>
   );
 }

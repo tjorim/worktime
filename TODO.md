@@ -1,6 +1,6 @@
 # Worktime Development Roadmap
 
-**Current Version**: 4.4.1
+**Current Version**: 4.5.1
 **Branch**: `main`
 **Status**: Active Development
 
@@ -29,27 +29,7 @@ Critical features and improvements that significantly impact user experience.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Planned
 
-#### 2. Keyboard Shortcuts Implementation
-
-- **Component**: Enhanced navigation and time-off workflows with keyboard shortcuts
-- **Use Cases**:
-  - Quick tab switching (T for Today, S for Schedule, R for Transfers)
-  - Date navigation (← → arrow keys)
-  - Settings panel toggle (Ctrl+,)
-  - Ctrl+S / Cmd+S to download .hday file
-  - Ctrl+N to add new time-off event
-  - Escape to cancel edit mode
-  - Delete key to remove selected event
-- **Implementation**: Integrate existing useKeyboardShortcuts hook into components
-- **Files to Modify**:
-  - `src/components/MainTabs.tsx` - Add shortcut handlers
-  - `src/components/ScheduleView.tsx` - Add date navigation shortcuts
-  - `src/components/Header.tsx` - Add settings shortcut
-  - `src/components/TimeOffView.tsx` - Add time-off specific shortcuts
-- **Estimated Effort**: 4–5 hours
-- **Status**: 🔲 Planned
-
-#### 3. Version Sync Fix
+#### 2. Version Sync Fix
 
 - **Component**: Changelog version alignment
 - **Use Cases**:
@@ -87,31 +67,14 @@ Critical features and improvements that significantly impact user experience.
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Planned
 
-**4.3 Enhanced Keyboard Navigation**
-
-- **Component**: Calendar-specific keyboard shortcuts
-- **Source**: `HdayPlanner/frontend/src/components/MonthGrid.tsx` (roving tabindex)
-- **Use Cases**:
-  - Arrow keys navigate calendar grid
-  - Home/End jump to month bounds
-  - Enter opens day for editing
-  - Escape closes modals
-- **Current Worktime**: Basic keyboard support in modals only
-- **Implementation**: Add keyboard handlers to calendar component
-- **Dependencies**: None (calendar grid view already available)
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future (depends on calendar view)
-
 **Summary of HdayPlanner Integration Gaps:**
 
 - ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all flags/types
 - ✅ **Restored in Worktime**: Undo/redo with history tracking, bulk operations (multi-select, bulk delete/duplicate, select all)
 - ✅ **Completed in v4.3.0**: Raw .hday content editor/viewer with dedicated tab view
 - ✅ **Completed in v4.4.0**: Vacation statistics dashboard with allowance tracking and analytics
-- ❌ **Missing UX**: Advanced keyboard nav for calendar
-- 📊 **Total Estimated Effort**: 2–3 hours to achieve feature parity
-- 🎯 **Priority Order**:
-  1. Advanced keyboard nav (2-3h) - Efficiency improvements
+- ✅ **Completed in v4.5.1**: Calendar view with working day integration, calendar legend
+- 📊 **HdayPlanner Feature Parity**: Achieved
 
 ### 🎯 Medium-Priority Items
 
@@ -446,8 +409,8 @@ Advanced features for future development phases.
 ### 🔲 Next Up
 
 1. **Export Schedule Feature** - Calendar export functionality (user-facing)
-2. **Keyboard Shortcuts** - Enhanced navigation and time-off workflows
-3. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
+2. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
+3. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
 
 ### 📋 Backlog (Code Quality)
 
@@ -557,7 +520,6 @@ Advanced features for future development phases.
 
 - Customizable themes
 - Advanced notification preferences
-- Keyboard shortcuts panel
 - Export/import settings
 - Integration with calendar apps
 
@@ -599,9 +561,8 @@ Advanced features for future development phases.
 - High contrast mode
 - Font size preferences
 - Motion reduction settings
-- Keyboard navigation improvements
 
 ---
 
-**Last Updated**: 2026-01-11
-**Next Review**: After v4.5.0 (Export Schedule Feature)
+**Last Updated**: 2026-01-27
+**Next Review**: After v4.6.0 (Export Schedule Feature)
