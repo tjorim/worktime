@@ -75,9 +75,8 @@ export function MainTabs({
       onTabSchedule: () => setActiveTab("schedule"),
       onTabTransfer: () => setActiveTab("transfer"),
       onTabTimeOff: () => setActiveTab("timeoff"),
-      onToggleSettings: onOpenSettings,
     }),
-    [setActiveTab, onOpenSettings],
+    [setActiveTab],
   );
 
   useKeyboardShortcuts(shortcuts);
