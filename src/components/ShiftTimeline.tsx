@@ -167,7 +167,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
           >
             <Badge
               className={classNames(
-                getShiftByCode(currentWorkingTeam.shift.code).className,
+                getShiftByCode(currentWorkingTeam.shift.code, scheduleType).className,
                 "timeline-current-badge",
                 "timeline-badge",
               )}

@@ -130,7 +130,10 @@ export function ScheduleDetailModal({
                       Off Duty
                     </Badge>
                   ) : (
-                    <Badge className={getShiftByCode(currentStatus?.shift.code).className} pill>
+                    <Badge
+                      className={getShiftByCode(currentStatus?.shift.code, scheduleType).className}
+                      pill
+                    >
                       <i className="bi bi-briefcase me-1"></i>
                       {currentStatus?.shift
                         ? getShiftDisplay(currentStatus.shift, scheduleType).displayName
@@ -145,7 +148,7 @@ export function ScheduleDetailModal({
               {nextShift && (
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
-                  <Badge className={getShiftByCode(nextShift.shift.code).className} pill>
+                  <Badge className={getShiftByCode(nextShift.shift.code, scheduleType).className} pill>
                     {getShiftDisplay(nextShift.shift, scheduleType).displayName}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
@@ -198,7 +201,7 @@ export function ScheduleDetailModal({
                           Off
                         </Badge>
                       ) : (
-                        <Badge className={getShiftByCode(day.shift.code).className} pill>
+                        <Badge className={getShiftByCode(day.shift.code, scheduleType).className} pill>
                           {getShiftDisplay(day.shift, scheduleType).displayName}
                         </Badge>
                       )}

@@ -127,7 +127,7 @@ export function PersonalizedStatus({
   // Tooltip details for current shift badge
   const shiftTooltipDetails = useMemo(() => {
     if (!currentShift) return null;
-    const shift = getShiftByCode(currentShift.shift.code);
+    const shift = getShiftByCode(currentShift.shift.code, scheduleType);
     const { displayName } = getShiftDisplay(shift, scheduleType);
     const formattedTime = getFormattedShiftTime(shift, scheduleType, settings.timeFormat);
     return `${shift.emoji} ${displayName} shift (${formattedTime})`;
@@ -242,7 +242,7 @@ export function PersonalizedStatus({
                               "shift-code",
                               "shift-badge-lg",
                               "cursor-help",
-                              getShiftByCode(currentShift.shift.code).className,
+                              getShiftByCode(currentShift.shift.code, scheduleType).className,
                             )}
                           >
                             {hasTeams

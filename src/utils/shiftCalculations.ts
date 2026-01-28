@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { SHIFT_TIME_DEFINITIONS, type ScheduleOption } from "../data/rosters";
+import { type ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -109,9 +109,15 @@ export interface OffDayProgress {
   total: number;
 }
 
-// Shift definitions
-const buildShift = (code: ShiftType, emoji: string, className: string): Shift => {
-  const definition = SHIFT_TIME_DEFINITIONS[code];
+const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
+  getScheduleConfig(scheduleOption);
+
+const buildShift = (
+  code: ShiftType,
+  definition: { name: string; hours: string; start: number | null; end: number | null; isWorking: boolean },
+  emoji: string,
+  className: string,
+): Shift => {
   return {
     code,
     emoji,
@@ -124,16 +130,20 @@ const buildShift = (code: ShiftType, emoji: string, className: string): Shift =>
   };
 };
 
-export const SHIFTS = Object.freeze({
-  MORNING: Object.freeze(buildShift("M", "🌅", "shift-morning")),
-  LATE: Object.freeze(buildShift("L", "🌆", "shift-late")),
-  DAY: Object.freeze(buildShift("D", "☀️", "shift-day")),
-  NIGHT: Object.freeze(buildShift("N", "🌙", "shift-night")),
-  OFF: Object.freeze(buildShift("O", "🏠", "shift-off")),
-});
+const getShiftTimeDefinition = (scheduleOption: NullableScheduleOption, code: ShiftType) => {
+  const schedule = getScheduleForOption(scheduleOption);
+  return schedule.shiftConfig.shiftTimes[code];
+};
 
-const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
-  getScheduleConfig(scheduleOption);
+const defaultShiftTimes = (code: ShiftType) => getShiftTimeDefinition("5-shift", code);
+
+export const SHIFTS = Object.freeze({
+  MORNING: Object.freeze(buildShift("M", defaultShiftTimes("M"), "🌅", "shift-morning")),
+  LATE: Object.freeze(buildShift("L", defaultShiftTimes("L"), "🌆", "shift-late")),
+  DAY: Object.freeze(buildShift("D", defaultShiftTimes("D"), "☀️", "shift-day")),
+  NIGHT: Object.freeze(buildShift("N", defaultShiftTimes("N"), "🌙", "shift-night")),
+  OFF: Object.freeze(buildShift("O", defaultShiftTimes("O"), "🏠", "shift-off")),
+});
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
   if (scheduleOption == null) return false;
@@ -167,18 +177,22 @@ const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): n
   return schedule.shiftConfig.referenceTeam;
 };
 
-const mapShiftCodeToShift = (code: ShiftType): Shift => {
+const mapShiftCodeToShift = (
+  code: ShiftType,
+  scheduleOption?: NullableScheduleOption,
+): Shift => {
+  const definition = getShiftTimeDefinition(scheduleOption, code);
   switch (code) {
     case "M":
-      return SHIFTS.MORNING;
+      return buildShift(code, definition, "🌅", "shift-morning");
     case "L":
-      return SHIFTS.LATE;
+      return buildShift(code, definition, "🌆", "shift-late");
     case "N":
-      return SHIFTS.NIGHT;
+      return buildShift(code, definition, "🌙", "shift-night");
     case "D":
-      return SHIFTS.DAY;
+      return buildShift(code, definition, "☀️", "shift-day");
     case "O":
-      return SHIFTS.OFF;
+      return buildShift(code, definition, "🏠", "shift-off");
     default: {
       const _exhaustive: never = code;
       return _exhaustive;
@@ -287,22 +301,26 @@ export function getFormattedShiftTime(
  * Retrieve a shift definition for a given shift code, returning an 'Unknown' shift object when no match is found.
  *
  * @param code - Shift code to look up; may be null or undefined
+ * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The matching shift object from `SHIFTS`, or a fallback object with code `'U'`, emoji `❓`, name `'Unknown'`, non-working flags and null times when no match exists
  */
-export function getShiftByCode(code: string | null | undefined): ShiftOrUnknown {
-  const shift = Object.values(SHIFTS).find((s) => s.code === code);
-  return (
-    shift || {
-      code: "U",
-      emoji: "❓",
-      name: "Unknown",
-      hours: "Unknown hours",
-      start: null,
-      end: null,
-      isWorking: false,
-      className: "shift-off",
-    }
-  );
+export function getShiftByCode(
+  code: string | null | undefined,
+  scheduleOption?: NullableScheduleOption,
+): ShiftOrUnknown {
+  if (code && ["M", "L", "N", "D", "O"].includes(code)) {
+    return mapShiftCodeToShift(code as ShiftType, scheduleOption);
+  }
+  return {
+    code: "U",
+    emoji: "❓",
+    name: "Unknown",
+    hours: "Unknown hours",
+    start: null,
+    end: null,
+    isWorking: false,
+    className: "shift-off",
+  };
 }
 
 /**
@@ -370,7 +388,7 @@ export function calculateShift(
     );
     return SHIFTS.OFF;
   }
-  return mapShiftCodeToShift(matchingDay.shift);
+  return mapShiftCodeToShift(matchingDay.shift, scheduleOption);
 }
 
 /**

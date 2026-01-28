@@ -24,7 +24,7 @@ export type ShiftTimeDefinition = {
   isWorking: boolean;
 };
 
-export const SHIFT_TIME_DEFINITIONS = {
+export const DEFAULT_SHIFT_TIMES = {
   M: {
     name: "Morning",
     hours: "07:00-15:00",
@@ -67,6 +67,7 @@ export type ShiftRosterConfig = {
   teamCount: number;
   cycleLengthDays: number;
   shiftsPerDay: number;
+  shiftTimes: Record<ShiftCode, ShiftTimeDefinition>;
   schedulePattern: SchedulePattern;
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
@@ -124,7 +125,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
   }
 
   // Validation 3: Shift codes are valid
-  const validShiftCodes = new Set(Object.keys(SHIFT_TIME_DEFINITIONS));
+  const validShiftCodes = new Set(Object.keys(config.shiftTimes));
   const invalidShifts = schedulePattern.days.filter((d) => !validShiftCodes.has(d.shift));
 
   if (invalidShifts.length > 0) {
@@ -196,6 +197,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 1,
       cycleLengthDays: 7,
       shiftsPerDay: 1,
+      shiftTimes: DEFAULT_SHIFT_TIMES,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: {
@@ -223,6 +225,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
+      shiftTimes: DEFAULT_SHIFT_TIMES,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
       schedulePattern: {
@@ -282,6 +285,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 14,
       shiftsPerDay: 2,
+      shiftTimes: DEFAULT_SHIFT_TIMES,
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
       schedulePattern: {
@@ -322,6 +326,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 5,
       cycleLengthDays: 10,
       shiftsPerDay: 3,
+      shiftTimes: DEFAULT_SHIFT_TIMES,
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: {

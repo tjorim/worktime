@@ -276,7 +276,7 @@ export function ScheduleView({
                               className={classNames(
                                 "shift-code",
                                 "cursor-help",
-                                getShiftByCode(shift.code).className,
+                                getShiftByCode(shift.code, scheduleType).className,
                               )}
                             >
                               {shiftDisplay.displayCode}

@@ -181,7 +181,7 @@ export function GenericStatus({
                           className={classNames(
                             "shift-code",
                             "shift-badge-lg",
-                            getShiftByCode(currentWorkingTeam.shift.code).className,
+                            getShiftByCode(currentWorkingTeam.shift.code, scheduleType).className,
                           )}
                         >
                           {hasTeams

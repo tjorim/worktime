@@ -19,7 +19,7 @@ describe("Shift Calculations", () => {
       // Reference: Team 1 on 2025-07-16 should be in morning shift (cycle start)
       const referenceDate = new Date("2025-07-16");
       const shift = calculateShift(referenceDate, 1);
-      expect(shift).toBe(SHIFTS.MORNING);
+      expect(shift).toStrictEqual(SHIFTS.MORNING);
     });
 
     it("should calculate different shifts for different teams on same date", () => {
@@ -60,7 +60,7 @@ describe("Shift Calculations", () => {
 
       // Verify Team 1 has morning shift on reference date with 5-shift schedule
       const shift = calculateShift(referenceDate, 1, "5-shift");
-      expect(shift).toBe(SHIFTS.MORNING);
+      expect(shift).toStrictEqual(SHIFTS.MORNING);
     });
   });
 
@@ -444,7 +444,7 @@ describe("Roster Configuration Integration Tests", () => {
     const referenceTeam = fiveShiftRoster?.shiftConfig.referenceTeam ?? 1;
 
     const referenceShift = calculateShift(referenceDate, referenceTeam, "5-shift");
-    expect(referenceShift).toBe(SHIFTS.MORNING);
+    expect(referenceShift).toStrictEqual(SHIFTS.MORNING);
   });
 
   it("should respect roster-specific cycle length", () => {
