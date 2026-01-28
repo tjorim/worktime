@@ -98,8 +98,8 @@ export function useShiftCalculation(): UseShiftCalculationReturn {
 
   // Calculate current shift day (handles pre-7AM night shift logic)
   const currentShiftDay = useMemo((): Dayjs => {
-    return getCurrentShiftDay(currentDate);
-  }, [currentDate]);
+    return getCurrentShiftDay(currentDate, scheduleType);
+  }, [currentDate, scheduleType]);
 
   return {
     myTeam,

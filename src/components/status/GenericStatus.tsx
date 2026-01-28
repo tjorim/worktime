@@ -100,8 +100,8 @@ export function GenericStatus({
   const countdown = useCountdown(nextShiftStartTime);
 
   const currentShiftDay = useMemo(() => {
-    return getCurrentShiftDay(liveTime);
-  }, [liveTime]);
+    return getCurrentShiftDay(liveTime, scheduleType);
+  }, [liveTime, scheduleType]);
 
   return (
     <Col className="mb-4">
