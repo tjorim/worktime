@@ -239,13 +239,13 @@ describe("Shift Calculations", () => {
   });
 
   describe("isCurrentlyWorking with schedule awareness", () => {
-    it("should treat pre-7AM as same day for non-night schedules", () => {
-      const shift = { code: "D", start: 5, end: 13 };
-      const date = dayjs("2025-01-13");
+    it("should avoid legacy cutoff for non-night schedules before 7 AM", () => {
+      const shift = SHIFTS.NIGHT;
+      const date = dayjs("2025-01-12");
       const currentTime = dayjs("2025-01-13 06:00");
 
       const working = isCurrentlyWorking(shift, date, currentTime, "9-5");
-      expect(working).toBe(true);
+      expect(working).toBe(false);
     });
 
     it("should treat pre-7AM as previous day for night-shift schedules", () => {
