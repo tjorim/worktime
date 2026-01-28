@@ -55,10 +55,10 @@ export function MainTabs({
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] =
-    useState<ScheduleOption | null>(null);
+    useState<ScheduleOption>("5-shift");
   const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
 
-  const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
+  const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption) => {
     setSelectedTeamForDetail(teamNumber);
     setSelectedScheduleForDetail(scheduleType);
     setShowTeamDetail(true);

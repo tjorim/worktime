@@ -21,7 +21,7 @@ interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
   teamNumber: number;
-  scheduleType?: ScheduleOption | null;
+  scheduleType: ScheduleOption;
   onViewTransfers?: (team: number) => void;
 }
 
@@ -33,7 +33,7 @@ interface ScheduleDetailModalProps {
  * weekly statistics (working/rest days and shift distribution), and quick actions including share and view transfers.
  *
  * @param teamNumber - Team number to display (for multi-team schedules) or 1 (for single-user schedules)
- * @param scheduleType - Optional schedule type override for cross-schedule viewing
+ * @param scheduleType - Schedule type for cross-schedule viewing
  * @param onViewTransfers - Optional callback invoked with the team number when "View Transfers" is activated (multi-team only)
  * @returns The modal element for the specified team or schedule
  */
@@ -41,12 +41,11 @@ export function ScheduleDetailModal({
   show,
   onHide,
   teamNumber,
-  scheduleType: scheduleOverride,
+  scheduleType,
   onViewTransfers,
 }: ScheduleDetailModalProps) {
-  const { settings, myTeam, scheduleType: userScheduleType } = useSettings();
-  const effectiveScheduleType = scheduleOverride ?? userScheduleType;
-  const scheduleConfig = getScheduleConfig(effectiveScheduleType);
+  const { settings, myTeam } = useSettings();
+  const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
   const normalizedTeamNumber = hasTeams
@@ -69,7 +68,7 @@ export function ScheduleDetailModal({
       const date = today.add(i, "day");
       // Use calendar date directly for schedule display, not shift day
       // This ensures the schedule shows the correct day even before 7 AM
-      const shift = calculateShift(date, normalizedTeamNumber, effectiveScheduleType);
+      const shift = calculateShift(date, normalizedTeamNumber, scheduleType);
 
       schedule.push({
         date,
@@ -80,7 +79,7 @@ export function ScheduleDetailModal({
     }
 
     return schedule;
-  }, [normalizedTeamNumber, currentDateKey, effectiveScheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [normalizedTeamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -144,7 +143,7 @@ export function ScheduleDetailModal({
                     <Badge className={getShiftByCode(currentStatus?.shift.code).className} pill>
                       <i className="bi bi-briefcase me-1"></i>
                       {currentStatus?.shift
-                        ? getShiftDisplay(currentStatus.shift, effectiveScheduleType).displayName
+                        ? getShiftDisplay(currentStatus.shift, scheduleType).displayName
                         : "Unknown"}
                     </Badge>
                   )}
@@ -157,7 +156,7 @@ export function ScheduleDetailModal({
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
                   <Badge className={getShiftByCode(nextShift.shift.code).className} pill>
-                    {getShiftDisplay(nextShift.shift, effectiveScheduleType).displayName}
+                    {getShiftDisplay(nextShift.shift, scheduleType).displayName}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -210,7 +209,7 @@ export function ScheduleDetailModal({
                         </Badge>
                       ) : (
                         <Badge className={getShiftByCode(day.shift.code).className} pill>
-                          {getShiftDisplay(day.shift, effectiveScheduleType).displayName}
+                          {getShiftDisplay(day.shift, scheduleType).displayName}
                         </Badge>
                       )}
                     </td>

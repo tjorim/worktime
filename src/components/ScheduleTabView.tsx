@@ -26,7 +26,7 @@ interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption) => void;
   isActive?: boolean;
   initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
@@ -57,7 +57,8 @@ export function ScheduleTabView({
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
   const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
-  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
+  const defaultScheduleType = availableSchedules[0]?.value ?? "5-shift";
+  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(defaultScheduleType);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));
@@ -100,16 +101,13 @@ export function ScheduleTabView({
           <Form.Select
             id={scheduleSelectId}
             size="sm"
-            value={viewingScheduleType || ""}
+            value={viewingScheduleType}
             onChange={(e) => {
               const value = e.target.value;
-              setViewingScheduleType(isValidScheduleType(value) ? value : null);
+              setViewingScheduleType(isValidScheduleType(value) ? value : defaultScheduleType);
             }}
             style={{ width: "auto" }}
           >
-            <option value="" disabled>
-              Select schedule...
-            </option>
             {availableSchedules.map((schedule) => (
               <option key={schedule.value} value={schedule.value}>
                 {schedule.title}
