@@ -55,10 +55,10 @@ export function MainTabs({
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] =
-    useState<ScheduleOption>("5-shift");
+    useState<ScheduleOption | null>(null);
   const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
 
-  const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption) => {
+  const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
     setSelectedScheduleForDetail(scheduleType);
     setShowTeamDetail(true);
@@ -166,21 +166,23 @@ export function MainTabs({
       </Tabs>
 
       {/* Schedule Detail Modal */}
-      <ScheduleDetailModal
-        show={showTeamDetail}
-        onHide={handleCloseTeamDetail}
-        teamNumber={selectedTeamForDetail}
-        scheduleType={selectedScheduleForDetail}
-        onViewTransfers={(team: number) => {
-          setActiveTab("transfer");
-          // Only set initial other team if it's different from user's team
-          if (team !== myTeam) {
-            setTransferTargetTeam(team);
-          }
-          // Close the modal after navigation
-          setShowTeamDetail(false);
-        }}
-      />
+      {selectedScheduleForDetail && (
+        <ScheduleDetailModal
+          show={showTeamDetail}
+          onHide={handleCloseTeamDetail}
+          teamNumber={selectedTeamForDetail}
+          scheduleType={selectedScheduleForDetail}
+          onViewTransfers={(team: number) => {
+            setActiveTab("transfer");
+            // Only set initial other team if it's different from user's team
+            if (team !== myTeam) {
+              setTransferTargetTeam(team);
+            }
+            // Close the modal after navigation
+            setShowTeamDetail(false);
+          }}
+        />
+      )}
     </>
   );
 }

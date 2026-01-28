@@ -44,7 +44,7 @@ export function ScheduleDetailModal({
   scheduleType,
   onViewTransfers,
 }: ScheduleDetailModalProps) {
-  const { settings, myTeam } = useSettings();
+  const { settings } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
@@ -53,7 +53,6 @@ export function ScheduleDetailModal({
     : 1;
 
   const calendarTooltipId = useId();
-  const transfersDisabledTooltipId = useId();
   const transfersTooltipId = useId();
 
   // Current date key for daily recalculation
@@ -104,9 +103,7 @@ export function ScheduleDetailModal({
   const currentStatus = weekSchedule[0];
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
-  // Button state logic - only allow viewing transfers for other teams, not your own
-  const isViewingOwnTeam = normalizedTeamNumber === myTeam;
-  const canViewTransfers = !isViewingOwnTeam;
+  const canViewTransfers = true;
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
@@ -340,15 +337,9 @@ export function ScheduleDetailModal({
                 <OverlayTrigger
                   placement="top"
                   overlay={
-                    isViewingOwnTeam ? (
-                      <Tooltip id={transfersDisabledTooltipId}>
-                        You are viewing your own team. Transfers are only shown for other teams.
-                      </Tooltip>
-                    ) : (
-                      <Tooltip id={transfersTooltipId}>
-                        View transfers between your team and this team
-                      </Tooltip>
-                    )
+                    <Tooltip id={transfersTooltipId}>
+                      View transfers between your team and this team
+                    </Tooltip>
                   }
                 >
                   <span className="d-inline-block">
@@ -357,7 +348,6 @@ export function ScheduleDetailModal({
                       size="sm"
                       onClick={() => onViewTransfers?.(normalizedTeamNumber)}
                       disabled={!canViewTransfers}
-                      style={isViewingOwnTeam ? { pointerEvents: "none" } : {}}
                     >
                       <i className="bi bi-arrow-left-right me-1"></i>
                       View Transfers

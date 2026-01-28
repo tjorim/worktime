@@ -26,7 +26,7 @@ interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption) => void;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
@@ -57,8 +57,7 @@ export function ScheduleTabView({
   const scheduleSelectId = useId();
   const { scheduleType: userScheduleType } = useSettings();
   const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
-  const defaultScheduleType = availableSchedules[0]?.value ?? "5-shift";
-  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(defaultScheduleType);
+  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));
@@ -101,13 +100,16 @@ export function ScheduleTabView({
           <Form.Select
             id={scheduleSelectId}
             size="sm"
-            value={viewingScheduleType}
+            value={viewingScheduleType || ""}
             onChange={(e) => {
               const value = e.target.value;
-              setViewingScheduleType(isValidScheduleType(value) ? value : defaultScheduleType);
+              setViewingScheduleType(isValidScheduleType(value) ? value : null);
             }}
             style={{ width: "auto" }}
           >
+            <option value="" disabled>
+              Select schedule...
+            </option>
             {availableSchedules.map((schedule) => (
               <option key={schedule.value} value={schedule.value}>
                 {schedule.title}
@@ -118,7 +120,13 @@ export function ScheduleTabView({
         </div>
       </div>
 
-      {viewMode === "today" && (
+      {!viewingScheduleType && (
+        <div className="alert alert-info mb-0" role="status">
+          Select a schedule to view the team lineup and shift details.
+        </div>
+      )}
+
+      {viewingScheduleType && viewMode === "today" && (
         <TodayView
           myTeam={myTeam}
           currentDate={currentDate}
@@ -131,7 +139,7 @@ export function ScheduleTabView({
         />
       )}
 
-      {viewMode === "week" && (
+      {viewingScheduleType && viewMode === "week" && (
         <ScheduleView
           myTeam={myTeam}
           currentDate={currentDate}

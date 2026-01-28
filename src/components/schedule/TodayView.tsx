@@ -29,7 +29,7 @@ interface TodayViewProps {
   onPreviousDay: () => void;
   onNextDay: () => void;
   onTodayClick: () => void;
-  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption) => void;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   viewingScheduleType: ScheduleOption;
 }
@@ -59,7 +59,7 @@ function TeamCard({
   isMyTeam: boolean;
   isCurrentlyActive: boolean;
   hasTeams: boolean;
-  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption) => void;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   scheduleType: ScheduleOption;
 }) {
   const { settings } = useSettings();
