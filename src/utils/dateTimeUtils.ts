@@ -137,14 +137,27 @@ export function formatTimeByPreference(dayjsObj: dayjs.Dayjs, timeFormat: "12h" 
  * @param timeFormat - Either `"12h"` or `"24h"` to control formatting style
  * @returns The formatted time string or `null` if neither `start` nor `end` is provided
  */
+const buildTime = (hourValue: number) => {
+  const wholeHours = Math.floor(hourValue);
+  const minutes = Math.round((hourValue - wholeHours) * 60);
+  const adjustedHours = minutes === 60 ? wholeHours + 1 : wholeHours;
+  const adjustedMinutes = minutes === 60 ? 0 : minutes;
+  return { hours: adjustedHours, minutes: adjustedMinutes };
+};
+
 export function getLocalizedShiftTime(
   start: number | null,
   end: number | null,
   timeFormat: "12h" | "24h",
 ): string | null {
   if (start == null && end == null) return null;
-  const format = (hour: number) =>
-    formatTimeByPreference(dayjs().hour(hour).minute(0).second(0), timeFormat);
+  const format = (hour: number) => {
+    const { hours, minutes } = buildTime(hour);
+    return formatTimeByPreference(
+      dayjs().hour(hours).minute(minutes).second(0),
+      timeFormat,
+    );
+  };
   if (start != null && end != null) {
     const startTime = format(start);
     const endTime = end === 0 ? (timeFormat === "24h" ? "24:00" : "12:00 AM") : format(end);

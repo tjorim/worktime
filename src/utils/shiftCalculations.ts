@@ -668,7 +668,7 @@ export function isCurrentlyWorking(
   const shiftDay = getCurrentShiftDay(currentTime, scheduleOption);
   if (!shiftDay.isSame(date, "day")) return false;
 
-  const hour = currentTime.hour();
+  const hour = currentTime.hour() + currentTime.minute() / 60;
 
   // Detect shifts spanning midnight by comparing start/end hours (more robust than checking shift code)
   if (shift.start > shift.end) {

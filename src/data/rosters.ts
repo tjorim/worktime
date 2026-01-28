@@ -24,43 +24,13 @@ export type ShiftTimeDefinition = {
   isWorking: boolean;
 };
 
-export const DEFAULT_SHIFT_TIMES = {
-  M: {
-    name: "Morning",
-    hours: "07:00-15:00",
-    start: 7,
-    end: 15,
-    isWorking: true,
-  },
-  L: {
-    name: "Late",
-    hours: "15:00-23:00",
-    start: 15,
-    end: 23,
-    isWorking: true,
-  },
-  D: {
-    name: "Day",
-    hours: "09:00-17:00",
-    start: 9,
-    end: 17,
-    isWorking: true,
-  },
-  N: {
-    name: "Night",
-    hours: "23:00-07:00",
-    start: 23,
-    end: 7,
-    isWorking: true,
-  },
-  O: {
-    name: "Off",
-    hours: "Not working",
-    start: null,
-    end: null,
-    isWorking: false,
-  },
-} as const satisfies Record<ShiftCode, ShiftTimeDefinition>;
+const OFF_SHIFT_TIME: ShiftTimeDefinition = {
+  name: "Off",
+  hours: "Not working",
+  start: null,
+  end: null,
+  isWorking: false,
+};
 
 export type ShiftRosterConfig = {
   // Required fields for shift calculation
@@ -197,7 +167,37 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 1,
       cycleLengthDays: 7,
       shiftsPerDay: 1,
-      shiftTimes: DEFAULT_SHIFT_TIMES,
+      shiftTimes: {
+        M: {
+          name: "Morning",
+          hours: "07:00-15:00",
+          start: 7,
+          end: 15,
+          isWorking: true,
+        },
+        L: {
+          name: "Late",
+          hours: "15:00-23:00",
+          start: 15,
+          end: 23,
+          isWorking: true,
+        },
+        N: {
+          name: "Night",
+          hours: "23:00-07:00",
+          start: 23,
+          end: 7,
+          isWorking: true,
+        },
+        D: {
+          name: "Day",
+          hours: "09:00-17:00",
+          start: 9,
+          end: 17,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: {
@@ -225,7 +225,37 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
-      shiftTimes: DEFAULT_SHIFT_TIMES,
+      shiftTimes: {
+        M: {
+          name: "Early",
+          hours: "07:00-15:00",
+          start: 7,
+          end: 15,
+          isWorking: true,
+        },
+        L: {
+          name: "Late",
+          hours: "15:00-23:00",
+          start: 15,
+          end: 23,
+          isWorking: true,
+        },
+        N: {
+          name: "Night",
+          hours: "23:00-07:00",
+          start: 23,
+          end: 7,
+          isWorking: true,
+        },
+        D: {
+          name: "Day",
+          hours: "09:00-17:00",
+          start: 9,
+          end: 17,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
       schedulePattern: {
@@ -271,7 +301,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       notes:
         "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
       shiftDisplayOverrides: {
-        M: { displayName: "Early", displayCode: "E" },
+        M: { displayCode: "E" },
       },
     },
   },
@@ -285,7 +315,37 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 14,
       shiftsPerDay: 2,
-      shiftTimes: DEFAULT_SHIFT_TIMES,
+      shiftTimes: {
+        M: {
+          name: "Early",
+          hours: "06:00-14:30",
+          start: 6,
+          end: 14.5,
+          isWorking: true,
+        },
+        L: {
+          name: "Late",
+          hours: "13:30-22:00",
+          start: 13.5,
+          end: 22,
+          isWorking: true,
+        },
+        N: {
+          name: "Night",
+          hours: "23:00-07:00",
+          start: 23,
+          end: 7,
+          isWorking: true,
+        },
+        D: {
+          name: "Day",
+          hours: "08:00-16:30",
+          start: 8,
+          end: 16.5,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
       schedulePattern: {
@@ -310,9 +370,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       },
       notes: "Weekend-only coverage with early/late rotation.",
       shiftDisplayOverrides: {
-        M: { displayName: "Early", displayCode: "E", displayHours: "06:00-14:30" },
-        L: { displayHours: "13:30-22:00" },
-        D: { displayHours: "08:00-16:30" },
+        M: { displayCode: "E" },
       },
     },
   },
@@ -326,7 +384,37 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 5,
       cycleLengthDays: 10,
       shiftsPerDay: 3,
-      shiftTimes: DEFAULT_SHIFT_TIMES,
+      shiftTimes: {
+        M: {
+          name: "Morning",
+          hours: "07:00-15:00",
+          start: 7,
+          end: 15,
+          isWorking: true,
+        },
+        L: {
+          name: "Evening",
+          hours: "15:00-23:00",
+          start: 15,
+          end: 23,
+          isWorking: true,
+        },
+        N: {
+          name: "Night",
+          hours: "23:00-07:00",
+          start: 23,
+          end: 7,
+          isWorking: true,
+        },
+        D: {
+          name: "Day",
+          hours: "09:00-17:00",
+          start: 9,
+          end: 17,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: {
@@ -345,7 +433,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       },
       notes: "Continuous multi-team rotation.",
       shiftDisplayOverrides: {
-        L: { displayName: "Evening", displayCode: "E" },
+        L: { displayCode: "E" },
       },
     },
   },
