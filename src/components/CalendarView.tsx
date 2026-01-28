@@ -12,7 +12,7 @@ import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
-import { calculateShift } from "../utils/shiftCalculations";
+import { calculateShift, getShiftDisplay } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
@@ -318,7 +318,7 @@ export function CalendarView({
 
     return (date: Dayjs) => {
       const shift = calculateShift(date, effectiveTeam, scheduleType);
-      const shiftConfig = roster.shiftConfig.shiftDisplayOverrides?.[shift.code];
+      const shiftDisplay = getShiftDisplay(shift, scheduleType);
 
       // Determine if this is actually a working day
       const actuallyWorking = isWorkingDay(
@@ -330,7 +330,7 @@ export function CalendarView({
       );
 
       // Additional context for display
-      let displayLabel = shiftConfig?.displayName || shift.name;
+      let displayLabel = shiftDisplay.displayName;
       if (!actuallyWorking && shift.code !== "O") {
         if (hasTimeOffEvent(date, events)) {
           displayLabel = "Time Off";

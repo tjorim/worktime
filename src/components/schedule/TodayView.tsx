@@ -225,7 +225,7 @@ export function TodayView({
   const isCurrentlyActive = (shiftResult: ShiftResult) => {
     if (!shiftResult.shift.isWorking) return false;
     const now = dayjs();
-    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now);
+    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
   };
 
   // Get events for the current date

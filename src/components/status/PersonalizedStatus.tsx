@@ -115,19 +115,19 @@ export function PersonalizedStatus({
 
   const currentTimeShiftCode = useMemo(() => {
     if (!validatedTeam) return null;
-    const shiftDay = getCurrentShiftDay(liveTime);
+    const shiftDay = getCurrentShiftDay(liveTime, scheduleType);
     const shift = calculateShift(shiftDay, validatedTeam, scheduleType);
     return shift.code;
   }, [liveTime, validatedTeam, scheduleType]);
 
   const currentShiftDay = useMemo(() => {
-    return getCurrentShiftDay(liveTime);
-  }, [liveTime]);
+    return getCurrentShiftDay(liveTime, scheduleType);
+  }, [liveTime, scheduleType]);
 
   // Tooltip details for current shift badge
   const shiftTooltipDetails = useMemo(() => {
     if (!currentShift) return null;
-    const shift = getShiftByCode(currentShift.shift.code);
+    const shift = getShiftByCode(currentShift.shift.code, scheduleType);
     const { displayName } = getShiftDisplay(shift, scheduleType);
     const formattedTime = getFormattedShiftTime(shift, scheduleType, settings.timeFormat);
     return `${shift.emoji} ${displayName} shift (${formattedTime})`;
@@ -242,7 +242,7 @@ export function PersonalizedStatus({
                               "shift-code",
                               "shift-badge-lg",
                               "cursor-help",
-                              getShiftByCode(currentShift.shift.code).className,
+                              getShiftByCode(currentShift.shift.code, scheduleType).className,
                             )}
                           >
                             {hasTeams

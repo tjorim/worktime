@@ -100,8 +100,8 @@ export function GenericStatus({
   const countdown = useCountdown(nextShiftStartTime);
 
   const currentShiftDay = useMemo(() => {
-    return getCurrentShiftDay(liveTime);
-  }, [liveTime]);
+    return getCurrentShiftDay(liveTime, scheduleType);
+  }, [liveTime, scheduleType]);
 
   return (
     <Col className="mb-4">
@@ -181,7 +181,7 @@ export function GenericStatus({
                           className={classNames(
                             "shift-code",
                             "shift-badge-lg",
-                            getShiftByCode(currentWorkingTeam.shift.code).className,
+                            getShiftByCode(currentWorkingTeam.shift.code, scheduleType).className,
                           )}
                         >
                           {hasTeams

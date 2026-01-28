@@ -1,17 +1,22 @@
 export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift";
 
-export type ShiftDisplayOverride = {
-  displayName?: string;
-  displayHours?: string;
+export type ShiftCode = "M" | "L" | "N" | "D" | "O";
+
+export type ShiftTimeDefinition = {
+  name: string;
+  hours: string;
+  start: number | null;
+  end: number | null;
+  isWorking: boolean;
   displayCode?: string;
 };
 
-export type ShiftDisplayOverrides = {
-  M?: ShiftDisplayOverride;
-  L?: ShiftDisplayOverride;
-  N?: ShiftDisplayOverride;
-  D?: ShiftDisplayOverride;
-  O?: ShiftDisplayOverride;
+const OFF_SHIFT_TIME: ShiftTimeDefinition = {
+  name: "Off",
+  hours: "Not working",
+  start: null,
+  end: null,
+  isWorking: false,
 };
 
 export type ShiftRosterConfig = {
@@ -19,18 +24,18 @@ export type ShiftRosterConfig = {
   teamCount: number;
   cycleLengthDays: number;
   shiftsPerDay: number;
+  shiftTimes: Record<ShiftCode, ShiftTimeDefinition | undefined>;
   schedulePattern: SchedulePattern;
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
   // Optional fields
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
-  shiftDisplayOverrides?: ShiftDisplayOverrides;
 };
 
 export type SchedulePattern = {
   days: Array<{
     dayIndex: number;
-    shift: "M" | "L" | "N" | "D" | "O"; // M=morning/early, L=evening/late, N=night, D=day, O=off
+    shift: ShiftCode; // M=morning/early, L=evening/late, N=night, D=day, O=off
   }>;
   extra?: {
     weekendAssignment?: string;
@@ -75,15 +80,23 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 3: Shift codes are valid
-  const validShiftCodes = new Set(["M", "L", "N", "D", "O"]);
-  const invalidShifts = schedulePattern.days.filter((d) => !validShiftCodes.has(d.shift));
+  // Validation 3: Shift codes are valid and defined in shiftTimes
+  const validShiftCodes = new Set(Object.keys(config.shiftTimes));
+  const invalidShifts = schedulePattern.days.filter(
+    (d) => !validShiftCodes.has(d.shift) || !config.shiftTimes[d.shift],
+  );
 
   if (invalidShifts.length > 0) {
     throw new Error(
       `Schedule pattern validation failed: ` +
         `Invalid shift codes found: ${invalidShifts.map((d) => `${d.shift} at day ${d.dayIndex}`).join(", ")}. ` +
-        `Valid codes: M, L, N, D, O`,
+        `Valid codes must be defined in shiftTimes.`,
+    );
+  }
+
+  if (!config.shiftTimes.O) {
+    throw new Error(
+      `Schedule pattern validation failed: shiftTimes must define an "O" off-day shift`,
     );
   }
 
@@ -148,6 +161,16 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 1,
       cycleLengthDays: 7,
       shiftsPerDay: 1,
+      shiftTimes: {
+        D: {
+          name: "Day",
+          hours: "09:00-17:00",
+          start: 9,
+          end: 17,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: {
@@ -175,6 +198,24 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
+      shiftTimes: {
+        M: {
+          name: "Early",
+          hours: "07:00-15:00",
+          start: 7,
+          end: 15,
+          isWorking: true,
+          displayCode: "E",
+        },
+        L: {
+          name: "Late",
+          hours: "15:00-23:00",
+          start: 15,
+          end: 23,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
       schedulePattern: {
@@ -219,9 +260,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       },
       notes:
         "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
-      shiftDisplayOverrides: {
-        M: { displayName: "Early", displayCode: "E" },
-      },
     },
   },
   {
@@ -234,6 +272,31 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 2,
       cycleLengthDays: 14,
       shiftsPerDay: 2,
+      shiftTimes: {
+        M: {
+          name: "Early",
+          hours: "06:00-14:30",
+          start: 6,
+          end: 14.5,
+          isWorking: true,
+          displayCode: "E",
+        },
+        L: {
+          name: "Late",
+          hours: "13:30-22:00",
+          start: 13.5,
+          end: 22,
+          isWorking: true,
+        },
+        D: {
+          name: "Day",
+          hours: "08:00-16:30",
+          start: 8,
+          end: 16.5,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
       schedulePattern: {
@@ -257,11 +320,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         ],
       },
       notes: "Weekend-only coverage with early/late rotation.",
-      shiftDisplayOverrides: {
-        M: { displayName: "Early", displayCode: "E", displayHours: "06:00-14:30" },
-        L: { displayHours: "13:30-22:00" },
-        D: { displayHours: "08:00-16:30" },
-      },
     },
   },
   {
@@ -274,6 +332,31 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       teamCount: 5,
       cycleLengthDays: 10,
       shiftsPerDay: 3,
+      shiftTimes: {
+        M: {
+          name: "Morning",
+          hours: "07:00-15:00",
+          start: 7,
+          end: 15,
+          isWorking: true,
+        },
+        L: {
+          name: "Evening",
+          hours: "15:00-23:00",
+          start: 15,
+          end: 23,
+          isWorking: true,
+          displayCode: "E",
+        },
+        N: {
+          name: "Night",
+          hours: "23:00-07:00",
+          start: 23,
+          end: 7,
+          isWorking: true,
+        },
+        O: OFF_SHIFT_TIME,
+      },
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: {
@@ -291,9 +374,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         ],
       },
       notes: "Continuous multi-team rotation.",
-      shiftDisplayOverrides: {
-        L: { displayName: "Evening", displayCode: "E" },
-      },
     },
   },
 ];
