@@ -110,7 +110,7 @@ export function ScheduleDetailModal({
               "text-primary",
             )}
           ></i>
-          {hasTeams ? `Team ${teamNumber} Details` : "My Schedule Details"}
+          {hasTeams ? `Team ${teamNumber} Details` : "Schedule Details"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
