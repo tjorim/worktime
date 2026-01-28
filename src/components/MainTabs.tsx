@@ -56,7 +56,6 @@ export function MainTabs({
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] =
     useState<ScheduleOption | null>(null);
-  const [transferTargetTeam, setTransferTargetTeam] = useState<number | null>(null);
 
   const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
@@ -144,12 +143,12 @@ export function MainTabs({
             </>
           }
         >
-          <TransferView
-            myTeam={myTeam}
-            initialOtherTeam={transferTargetTeam}
-            onChangeSchedule={onChangeSchedule}
-            onChangeTeam={onChangeTeam}
-          />
+        <TransferView
+          myTeam={myTeam}
+          initialOtherTeam={null}
+          onChangeSchedule={onChangeSchedule}
+          onChangeTeam={onChangeTeam}
+        />
         </Tab>
 
         <Tab
@@ -172,15 +171,6 @@ export function MainTabs({
           onHide={handleCloseTeamDetail}
           teamNumber={selectedTeamForDetail}
           scheduleType={selectedScheduleForDetail}
-          onViewTransfers={(team: number) => {
-            setActiveTab("transfer");
-            // Only set initial other team if it's different from user's team
-            if (team !== myTeam) {
-              setTransferTargetTeam(team);
-            }
-            // Close the modal after navigation
-            setShowTeamDetail(false);
-          }}
         />
       )}
     </>
