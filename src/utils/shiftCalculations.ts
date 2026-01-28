@@ -146,7 +146,6 @@ export const SHIFTS = Object.freeze({
 });
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
-  if (scheduleOption == null) return false;
   const schedule = getScheduleForOption(scheduleOption);
   return schedule.shiftConfig.schedulePattern.days.some((day) => day.shift === "N");
 };
