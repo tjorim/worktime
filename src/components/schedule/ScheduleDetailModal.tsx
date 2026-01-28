@@ -43,9 +43,12 @@ export function ScheduleDetailModal({
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
-  const normalizedTeamNumber = hasTeams
-    ? Math.min(Math.max(teamNumber, 1), teamCount)
-    : 1;
+  const isValidTeamNumber = hasTeams ? teamNumber >= 1 && teamNumber <= teamCount : teamNumber === 1;
+  if (!isValidTeamNumber) {
+    throw new Error(
+      `Invalid team number: ${teamNumber}. Expected ${hasTeams ? `1-${teamCount}` : "1"}`,
+    );
+  }
 
   // Current date key for daily recalculation
   const currentDateKey = dayjs().format("YYYY-MM-DD");
@@ -59,7 +62,7 @@ export function ScheduleDetailModal({
       const date = today.add(i, "day");
       // Use calendar date directly for schedule display, not shift day
       // This ensures the schedule shows the correct day even before 7 AM
-      const shift = calculateShift(date, normalizedTeamNumber, scheduleType);
+      const shift = calculateShift(date, teamNumber, scheduleType);
 
       schedule.push({
         date,
@@ -70,7 +73,7 @@ export function ScheduleDetailModal({
     }
 
     return schedule;
-  }, [normalizedTeamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
+  }, [teamNumber, currentDateKey, scheduleType]); // oxlint-disable-line react/exhaustive-deps -- currentDateKey forces daily recalculation even if modal stays open past midnight
 
   // Calculate team statistics
   const stats = useMemo(() => {
@@ -107,7 +110,7 @@ export function ScheduleDetailModal({
               "text-primary",
             )}
           ></i>
-          {hasTeams ? `Team ${normalizedTeamNumber} Details` : "My Schedule Details"}
+          {hasTeams ? `Team ${teamNumber} Details` : "My Schedule Details"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
