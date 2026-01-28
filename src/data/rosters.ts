@@ -1,5 +1,7 @@
 export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift";
 
+export type ShiftCode = "M" | "L" | "N" | "D" | "O";
+
 export type ShiftDisplayOverride = {
   displayName?: string;
   displayHours?: string;
@@ -13,6 +15,52 @@ export type ShiftDisplayOverrides = {
   D?: ShiftDisplayOverride;
   O?: ShiftDisplayOverride;
 };
+
+export type ShiftTimeDefinition = {
+  name: string;
+  hours: string;
+  start: number | null;
+  end: number | null;
+  isWorking: boolean;
+};
+
+export const SHIFT_TIME_DEFINITIONS = {
+  M: {
+    name: "Morning",
+    hours: "07:00-15:00",
+    start: 7,
+    end: 15,
+    isWorking: true,
+  },
+  L: {
+    name: "Late",
+    hours: "15:00-23:00",
+    start: 15,
+    end: 23,
+    isWorking: true,
+  },
+  D: {
+    name: "Day",
+    hours: "09:00-17:00",
+    start: 9,
+    end: 17,
+    isWorking: true,
+  },
+  N: {
+    name: "Night",
+    hours: "23:00-07:00",
+    start: 23,
+    end: 7,
+    isWorking: true,
+  },
+  O: {
+    name: "Off",
+    hours: "Not working",
+    start: null,
+    end: null,
+    isWorking: false,
+  },
+} as const satisfies Record<ShiftCode, ShiftTimeDefinition>;
 
 export type ShiftRosterConfig = {
   // Required fields for shift calculation
@@ -30,7 +78,7 @@ export type ShiftRosterConfig = {
 export type SchedulePattern = {
   days: Array<{
     dayIndex: number;
-    shift: "M" | "L" | "N" | "D" | "O"; // M=morning/early, L=evening/late, N=night, D=day, O=off
+    shift: ShiftCode; // M=morning/early, L=evening/late, N=night, D=day, O=off
   }>;
   extra?: {
     weekendAssignment?: string;
@@ -76,7 +124,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
   }
 
   // Validation 3: Shift codes are valid
-  const validShiftCodes = new Set(["M", "L", "N", "D", "O"]);
+  const validShiftCodes = new Set(Object.keys(SHIFT_TIME_DEFINITIONS));
   const invalidShifts = schedulePattern.days.filter((d) => !validShiftCodes.has(d.shift));
 
   if (invalidShifts.length > 0) {

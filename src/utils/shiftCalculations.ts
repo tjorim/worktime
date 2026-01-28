@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption } from "../data/rosters";
+import { SHIFT_TIME_DEFINITIONS, type ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -110,57 +110,26 @@ export interface OffDayProgress {
 }
 
 // Shift definitions
+const buildShift = (code: ShiftType, emoji: string, className: string): Shift => {
+  const definition = SHIFT_TIME_DEFINITIONS[code];
+  return {
+    code,
+    emoji,
+    name: definition.name,
+    hours: definition.hours,
+    start: definition.start,
+    end: definition.end,
+    isWorking: definition.isWorking,
+    className,
+  };
+};
+
 export const SHIFTS = Object.freeze({
-  MORNING: Object.freeze({
-    code: "M",
-    emoji: "🌅",
-    name: "Morning",
-    hours: "07:00-15:00",
-    start: 7,
-    end: 15,
-    isWorking: true,
-    className: "shift-morning",
-  }),
-  LATE: Object.freeze({
-    code: "L",
-    emoji: "🌆",
-    name: "Late",
-    hours: "15:00-23:00",
-    start: 15,
-    end: 23,
-    isWorking: true,
-    className: "shift-late",
-  }),
-  DAY: Object.freeze({
-    code: "D",
-    emoji: "☀️",
-    name: "Day",
-    hours: "09:00-17:00",
-    start: 9,
-    end: 17,
-    isWorking: true,
-    className: "shift-day",
-  }),
-  NIGHT: Object.freeze({
-    code: "N",
-    emoji: "🌙",
-    name: "Night",
-    hours: "23:00-07:00",
-    start: 23,
-    end: 7,
-    isWorking: true,
-    className: "shift-night",
-  }),
-  OFF: Object.freeze({
-    code: "O",
-    emoji: "🏠",
-    name: "Off",
-    hours: "Not working",
-    start: null,
-    end: null,
-    isWorking: false,
-    className: "shift-off",
-  }),
+  MORNING: Object.freeze(buildShift("M", "🌅", "shift-morning")),
+  LATE: Object.freeze(buildShift("L", "🌆", "shift-late")),
+  DAY: Object.freeze(buildShift("D", "☀️", "shift-day")),
+  NIGHT: Object.freeze(buildShift("N", "🌙", "shift-night")),
+  OFF: Object.freeze(buildShift("O", "🏠", "shift-off")),
 });
 
 const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
