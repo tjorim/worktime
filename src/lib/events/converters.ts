@@ -27,7 +27,7 @@
 
 import { v4 as uuidv4 } from "uuid";
 import type { ShiftResult } from "../../utils/shiftCalculations";
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs, splitFractionalHour, pad2 } from "../../utils/dateTimeUtils";
 import type { HdayEvent } from "../hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "../hday/parser";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
@@ -68,14 +68,18 @@ import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 export function shiftToCalendarEvent(shift: ShiftResult): CalendarEvent {
   const dateStr = shift.date.format("YYYY-MM-DD");
 
+  // Format fractional hours like 6.5 to "06:30" instead of "6.5:00"
+  const formatShiftTime = (fractionalHour: number): string => {
+    const { hours, minutes } = splitFractionalHour(fractionalHour);
+    return `${pad2(hours)}:${pad2(minutes)}`;
+  };
+
   const meta: ShiftMetadata = {
     type: "shift",
     team: shift.teamNumber,
     shiftCode: shift.shift.code as "M" | "L" | "N" | "D" | "O",
-    startTime:
-      shift.shift.start !== null ? `${String(shift.shift.start).padStart(2, "0")}:00` : undefined,
-    endTime:
-      shift.shift.end !== null ? `${String(shift.shift.end).padStart(2, "0")}:00` : undefined,
+    startTime: shift.shift.start !== null ? formatShiftTime(shift.shift.start) : undefined,
+    endTime: shift.shift.end !== null ? formatShiftTime(shift.shift.end) : undefined,
     className: shift.shift.className,
   };
 
