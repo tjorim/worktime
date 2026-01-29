@@ -227,31 +227,25 @@ type ShiftRosterConfig = {
   teamCount: number;               // Number of teams (1 for single-user)
   cycleLengthDays: number;         // Length of repeating cycle
   shiftsPerDay: number;            // How many shifts per 24h period
-  schedulePattern: SchedulePattern; // Day-by-day shift assignments
+  shiftTimes: { ... };             // Shift time definitions keyed by shift code
+  schedulePattern: ShiftCode[];    // Day-by-day shift assignments
   referenceDate: string;           // ISO date anchoring calculations
   referenceTeam: number;           // Team number at reference point
   notes?: string;                  // Developer documentation
-  shiftDisplayOverrides?: { ... }; // Custom display names/codes
 };
 ```
 
 ### Schedule Pattern Format
 
-Patterns define the repeating cycle of shifts:
+Patterns define the repeating cycle of shifts as a list of shift codes:
 
 ```typescript
-schedulePattern: {
-  days: [
-    { dayIndex: 1, shift: "M" },  // Day 1: Morning
-    { dayIndex: 2, shift: "M" },  // Day 2: Morning
-    { dayIndex: 3, shift: "L" },  // Day 3: Late
-    // ... continues for full cycle
-  ],
-  extra?: {
-    weekendAssignment?: string,    // Weekend rotation details
-    jumpday?: string,              // Jump day information
-  }
-}
+schedulePattern: [
+  "M", // Day 1: Morning
+  "M", // Day 2: Morning
+  "L", // Day 3: Late
+  // ... continues for full cycle
+]
 ```
 
 **Shift Codes**:
@@ -296,14 +290,17 @@ To add a new roster pattern:
     teamCount: 3,
     cycleLengthDays: 21,
     shiftsPerDay: 2,
+    shiftTimes: {
+      M: { name: "Morning", start: 7, end: 15, displayCode: "M" },
+      L: { name: "Late", start: 15, end: 23, displayCode: "L" },
+      O: { name: "Off", start: null, end: null, displayCode: "O" },
+    },
     referenceDate: "2025-01-06",  // Pick a Monday for consistency
     referenceTeam: 1,
-    schedulePattern: {
-      days: [
-        { dayIndex: 1, shift: "M" },
-        // ... define all days in cycle
-      ],
-    },
+    schedulePattern: [
+      "M",
+      // ... define all days in cycle
+    ],
     notes: "Internal documentation about this schedule",
   },
 }
@@ -321,34 +318,30 @@ export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift" | "
 
 5. **Test shift calculations** to ensure the reference date/team anchoring works correctly
 
-### Display Overrides
+### Shift Times
 
-Customize how shifts appear to users without changing internal logic:
+Define shift time metadata in `shiftTimes` for each shift code used by the schedule:
 
 ```typescript
-shiftDisplayOverrides: {
-  M: {
-    displayName: "Early",           // Show "Early" instead of "Morning"
-    displayCode: "E",               // Show "E" instead of "M"
-    displayHours: "06:00-14:30",   // Custom hours display
-  },
+shiftTimes: {
+  M: { name: "Morning", start: 7, end: 15, displayCode: "M" },
+  L: { name: "Late", start: 15, end: 23, displayCode: "L" },
+  N: { name: "Night", start: 23, end: 7, displayCode: "N" },
+  O: { name: "Off", start: null, end: null, displayCode: "O" },
 }
 ```
-
-**Note**: Display codes are context-dependent. "E" can mean "Early" in one schedule and "Evening" in another - users only see one schedule at a time, so there's no collision.
 
 ### Validation
 
 The system validates all configurations at module load time (`validateSchedulePattern` function):
 
 1. Pattern length matches `cycleLengthDays`
-2. Day indices are sequential (1, 2, 3, ...)
-3. Shift codes are valid (M, L, N, D, O)
-4. Reference date is valid ISO format and parseable
-5. Reference team is within valid range (1 to `teamCount`)
-6. Cycle length is reasonable (1-365 days)
-7. Team count is positive
-8. At least one working shift exists (not all off days)
+2. Shift codes are valid (M, L, N, D, O) and defined in `shiftTimes`
+3. Reference date is valid ISO format and parseable
+4. Reference team is within valid range (1 to `teamCount`)
+5. Cycle length is reasonable (1-365 days)
+6. Team count is positive
+7. At least one working shift exists (not all off days)
 
 If validation fails, the error message will indicate exactly what's wrong.
 
@@ -510,7 +503,7 @@ d1i # Every Monday in office
 - **Multiple Schedule Types**: Support for 5-shift, 9-5, 2-shift (coming soon), weekend-shift (coming soon)
 - **Runtime Validation**: Comprehensive validation of roster configurations at module load
 - **Reference Date System**: Per-schedule reference dates and teams for accurate calculations
-- **Display Overrides**: Customize shift names, codes, and hours per schedule
+- **Shift Times**: Define shift names, display codes, and hours per schedule
 - **Schedule-Aware Components**: All shift calculations now support multiple roster patterns
 - **Backward Compatibility**: Existing 5-shift users continue working without migration
 
