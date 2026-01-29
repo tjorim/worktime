@@ -349,7 +349,7 @@ describe("SHIFTS Constant Validation", () => {
 
     expect(SHIFTS.LATE.code).toBe("L");
     expect(SHIFTS.LATE.emoji).toBe("🌆");
-    expect(SHIFTS.LATE.name).toBe("Evening");
+    expect(SHIFTS.LATE.name).toBe("Late");
     expect(SHIFTS.LATE.hours).toBe("15:00-23:00");
     expect(SHIFTS.LATE.start).toBe(15);
     expect(SHIFTS.LATE.end).toBe(23);
