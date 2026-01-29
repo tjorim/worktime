@@ -7,7 +7,7 @@ export type ShiftTimeDefinition = {
   hours: string;
   start: number | null;
   end: number | null;
-  displayCode?: string;
+  displayCode: string;
 };
 
 const OFF_SHIFT_TIME: ShiftTimeDefinition = {
@@ -15,6 +15,7 @@ const OFF_SHIFT_TIME: ShiftTimeDefinition = {
   hours: "Not working",
   start: null,
   end: null,
+  displayCode: "O",
 };
 
 export type ShiftRosterConfig = {
@@ -165,6 +166,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "09:00-17:00",
           start: 9,
           end: 17,
+          displayCode: "D",
         },
         O: OFF_SHIFT_TIME,
       },
@@ -208,12 +210,14 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "15:00-24:00",
           start: 15,
           end: 24,
+          displayCode: "L",
         },
         D: {
           name: "Day",
           hours: "07:00-16:00",
           start: 7,
           end: 16,
+          displayCode: "D",
         },
         O: OFF_SHIFT_TIME,
       },
@@ -286,12 +290,14 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "13:30-22:00",
           start: 13.5,
           end: 22,
+          displayCode: "L",
         },
         D: {
           name: "Day",
           hours: "08:00-16:30",
           start: 8,
           end: 16.5,
+          displayCode: "D",
         },
         O: OFF_SHIFT_TIME,
       },
@@ -336,6 +342,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "07:00-15:00",
           start: 7,
           end: 15,
+          displayCode: "M",
         },
         L: {
           name: "Evening",
@@ -349,6 +356,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "23:00-07:00",
           start: 23,
           end: 7,
+          displayCode: "N",
         },
         O: OFF_SHIFT_TIME,
       },
