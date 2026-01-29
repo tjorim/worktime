@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { type ScheduleOption } from "../data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -144,24 +144,20 @@ const getShiftTimeDefinition = (
   return schedule.shiftConfig.shiftTimes[code];
 };
 
-const defaultShiftTimes = (code: ShiftType) =>
-  getShiftTimeDefinition("5-shift", code) ??
-  getShiftTimeDefinition("9-5", code) ??
-  getShiftTimeDefinition("2-shift", code) ??
-  getShiftTimeDefinition("weekend-shift", code) ??
-  ({
-    name: "Unknown",
-    hours: "Unknown hours",
-    start: null,
-    end: null,
-    isWorking: false,
-  } satisfies {
-    name: string;
-    hours: string;
-    start: number | null;
-    end: number | null;
-    isWorking: boolean;
-  });
+const defaultShiftTimes = (code: ShiftType) => {
+  const definition = SCHEDULE_OPTIONS.map((option) => option.shiftConfig.shiftTimes[code]).find(
+    Boolean,
+  );
+  return (
+    definition ?? {
+      name: "Unknown",
+      hours: "Unknown hours",
+      start: null,
+      end: null,
+      isWorking: false,
+    }
+  );
+};
 
 export const SHIFTS = Object.freeze({
   MORNING: Object.freeze(buildShift("M", defaultShiftTimes("M"), "🌅", "shift-morning")),
