@@ -37,7 +37,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
   // Find which team is currently working
   const currentWorkingTeam = useMemo((): ShiftResult | null => {
     return getCurrentWorkingTeam(today, scheduleType);
-  }, [todayMinuteKey, scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [todayMinuteKey, scheduleType]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   // Calculate next shift change across all teams
   const nextShiftAnyTeam = useMemo((): (UpcomingShiftResult & { teamNumber: number }) | null => {
@@ -71,7 +71,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
     }
 
     return earliestShift;
-  }, [todayMinuteKey, scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [todayMinuteKey, scheduleType]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   // Calculate next shift start time for countdown
   const nextShiftStartTime = useMemo(() => {
