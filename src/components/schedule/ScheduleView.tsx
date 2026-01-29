@@ -52,33 +52,6 @@ export function ScheduleView({
   // Use prop if provided, otherwise fall back to user's schedule type
   const scheduleType = propViewingScheduleType ?? userScheduleType;
 
-  // No schedule selected - show setup prompt
-  if (!scheduleType) {
-    return (
-      <Card>
-        <Card.Body className="text-center py-4">
-          <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-          <p className="text-muted mb-3">
-            Please select your schedule to view the weekly overview.
-          </p>
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  const scheduleConfig = getScheduleConfig(scheduleType);
-  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
-  const hasTeams = scheduleConfig.showsTeamSelection;
-  // Validate and sanitize myTeam prop
-  let myTeam = inputMyTeam;
-  if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
-    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
-    myTeam = null;
-  }
-  const isMyTeam = (teamNumber: number) => {
-    return myTeam === teamNumber ? "my-team" : "";
-  };
-
   const handlePrevious = useCallback(() => {
     setCurrentDate(currentDate.subtract(7, "day"));
   }, [currentDate, setCurrentDate]);
@@ -118,6 +91,33 @@ export function ScheduleView({
     [isActive, handleCurrent, handlePrevious, handleNext],
   );
   useKeyboardShortcuts(shortcuts);
+
+  // No schedule selected - show setup prompt
+  if (!scheduleType) {
+    return (
+      <Card>
+        <Card.Body className="text-center py-4">
+          <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+          <p className="text-muted mb-3">
+            Please select your schedule to view the weekly overview.
+          </p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
+  const hasTeams = scheduleConfig.showsTeamSelection;
+  // Validate and sanitize myTeam prop
+  let myTeam = inputMyTeam;
+  if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {
+    console.warn(`Invalid team number: ${myTeam}. Expected 1-${teamCount}`);
+    myTeam = null;
+  }
+  const isMyTeam = (teamNumber: number) => {
+    return myTeam === teamNumber ? "my-team" : "";
+  };
 
   return (
     <Card>
