@@ -325,7 +325,7 @@ Define shift time metadata in `shiftTimes` for each shift code used by the sched
 ```typescript
 shiftTimes: {
   M: { name: "Morning", start: 7, end: 15, displayCode: "M" },
-  L: { name: "Late", start: 15, end: 23, displayCode: "L" },
+  L: { name: "Evening", start: 15, end: 23, displayCode: "E" }, // e.g., "L" shift can be displayed as "E"
   N: { name: "Night", start: 23, end: 7, displayCode: "N" },
   O: { name: "Off", start: null, end: null, displayCode: "O" },
 }
