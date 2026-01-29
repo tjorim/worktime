@@ -32,14 +32,7 @@ export type ShiftRosterConfig = {
 };
 
 export type SchedulePattern = {
-  days: Array<{
-    dayIndex: number;
-    shift: ShiftCode; // M=morning/early, L=evening/late, N=night, D=day, O=off
-  }>;
-  extra?: {
-    weekendAssignment?: string;
-    jumpday?: string;
-  };
+  days: ShiftCode[]; // M=morning/early, L=evening/late, N=night, D=day, O=off
 };
 
 export type ScheduleRoster = {
@@ -66,29 +59,16 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 2: Day indices are sequential starting from 1
-  const expectedIndices = Array.from({ length: cycleLengthDays }, (_, i) => i + 1);
-  const actualIndices = schedulePattern.days.map((d) => d.dayIndex);
-  const indicesMismatch = expectedIndices.some((expected, i) => expected !== actualIndices[i]);
-
-  if (indicesMismatch) {
-    throw new Error(
-      `Schedule pattern validation failed: ` +
-        `Day indices must be sequential from 1 to ${cycleLengthDays}. ` +
-        `Got: [${actualIndices.join(", ")}]`,
-    );
-  }
-
-  // Validation 3: Shift codes are valid and defined in shiftTimes
+  // Validation 2: Shift codes are valid and defined in shiftTimes
   const validShiftCodes = new Set(Object.keys(config.shiftTimes));
   const invalidShifts = schedulePattern.days.filter(
-    (d) => !validShiftCodes.has(d.shift) || !config.shiftTimes[d.shift],
+    (shift) => !validShiftCodes.has(shift) || !config.shiftTimes[shift],
   );
 
   if (invalidShifts.length > 0) {
     throw new Error(
       `Schedule pattern validation failed: ` +
-        `Invalid shift codes found: ${invalidShifts.map((d) => `${d.shift} at day ${d.dayIndex}`).join(", ")}. ` +
+        `Invalid shift codes found: ${invalidShifts.join(", ")}. ` +
         `Valid codes must be defined in shiftTimes.`,
     );
   }
@@ -99,7 +79,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 4: Reference date is valid ISO format and parseable
+  // Validation 3: Reference date is valid ISO format and parseable
   const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
   if (!isoDatePattern.test(referenceDate)) {
     throw new Error(
@@ -116,7 +96,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 5: Reference team is within valid range
+  // Validation 4: Reference team is within valid range
   if (referenceTeam < 1 || referenceTeam > teamCount) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -124,7 +104,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 6: Cycle length is reasonable (1-365 days)
+  // Validation 5: Cycle length is reasonable (1-365 days)
   if (cycleLengthDays < 1 || cycleLengthDays > 365) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -132,15 +112,15 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 7: Team count is positive
+  // Validation 6: Team count is positive
   if (teamCount < 1) {
     throw new Error(
       `Schedule pattern validation failed: ` + `Team count ${teamCount} must be at least 1`,
     );
   }
 
-  // Validation 8: At least one working shift exists (not all off days)
-  const hasWorkingShift = schedulePattern.days.some((d) => d.shift !== "O");
+  // Validation 7: At least one working shift exists (not all off days)
+  const hasWorkingShift = schedulePattern.days.some((shift) => shift !== "O");
   if (!hasWorkingShift) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -174,13 +154,13 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: {
         days: [
-          { dayIndex: 1, shift: "D" }, // Monday
-          { dayIndex: 2, shift: "D" }, // Tuesday
-          { dayIndex: 3, shift: "D" }, // Wednesday
-          { dayIndex: 4, shift: "D" }, // Thursday
-          { dayIndex: 5, shift: "D" }, // Friday
-          { dayIndex: 6, shift: "O" }, // Saturday
-          { dayIndex: 7, shift: "O" }, // Sunday
+          "D", // Monday
+          "D", // Tuesday
+          "D", // Wednesday
+          "D", // Thursday
+          "D", // Friday
+          "O", // Saturday
+          "O", // Sunday
         ],
       },
       notes: "Weekday-only coverage.",
@@ -226,45 +206,41 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       schedulePattern: {
         days: [
           // Week 1: Early shift Mon-Fri, off weekend
-          { dayIndex: 1, shift: "M" }, // Monday
-          { dayIndex: 2, shift: "M" }, // Tuesday
-          { dayIndex: 3, shift: "M" }, // Wednesday
-          { dayIndex: 4, shift: "M" }, // Thursday
-          { dayIndex: 5, shift: "M" }, // Friday
-          { dayIndex: 6, shift: "O" }, // Saturday
-          { dayIndex: 7, shift: "O" }, // Sunday
+          "M", // Monday
+          "M", // Tuesday
+          "M", // Wednesday
+          "M", // Thursday
+          "M", // Friday
+          "O", // Saturday
+          "O", // Sunday
           // Week 2: Late shift Mon-Fri, off weekend
-          { dayIndex: 8, shift: "L" }, // Monday
-          { dayIndex: 9, shift: "L" }, // Tuesday
-          { dayIndex: 10, shift: "L" }, // Wednesday
-          { dayIndex: 11, shift: "L" }, // Thursday
-          { dayIndex: 12, shift: "L" }, // Friday
-          { dayIndex: 13, shift: "O" }, // Saturday
-          { dayIndex: 14, shift: "O" }, // Sunday
+          "L", // Monday
+          "L", // Tuesday
+          "L", // Wednesday
+          "L", // Thursday
+          "L", // Friday
+          "O", // Saturday
+          "O", // Sunday
           // Week 3: Early shift Mon-Fri, off weekend
-          { dayIndex: 15, shift: "M" }, // Monday
-          { dayIndex: 16, shift: "M" }, // Tuesday
-          { dayIndex: 17, shift: "M" }, // Wednesday
-          { dayIndex: 18, shift: "M" }, // Thursday
-          { dayIndex: 19, shift: "M" }, // Friday
-          { dayIndex: 20, shift: "O" }, // Saturday
-          { dayIndex: 21, shift: "O" }, // Sunday
-          // Week 4: Late shift Mon-Fri, day shift weekend
-          { dayIndex: 22, shift: "L" }, // Monday
-          { dayIndex: 23, shift: "L" }, // Tuesday
-          { dayIndex: 24, shift: "L" }, // Wednesday
-          { dayIndex: 25, shift: "L" }, // Thursday
-          { dayIndex: 26, shift: "L" }, // Friday
-          { dayIndex: 27, shift: "D" }, // Saturday
-          { dayIndex: 28, shift: "D" }, // Sunday
+          "M", // Monday
+          "M", // Tuesday
+          "M", // Wednesday
+          "M", // Thursday
+          "M", // Friday
+          "O", // Saturday
+          "O", // Sunday
+          // Week 4: Late shift Mon-Fri, off weekend (assigned weekend day shift TBD)
+          "L", // Monday
+          "L", // Tuesday
+          "L", // Wednesday
+          "L", // Thursday
+          "L", // Friday
+          "O", // Saturday
+          "O", // Sunday
         ],
-        extra: {
-          weekendAssignment: "One assigned weekend within the 4-week cycle.",
-          jumpday: "Fixed jumpday within the cycle.",
-        },
       },
       notes:
-        "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
+        "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend (day shift) and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
     },
   },
   {
@@ -306,24 +282,25 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       schedulePattern: {
         days: [
           // Week 1: Off Mon-Thu, Day Friday, Early Sat-Sun
-          { dayIndex: 1, shift: "O" },
-          { dayIndex: 2, shift: "O" },
-          { dayIndex: 3, shift: "O" },
-          { dayIndex: 4, shift: "O" },
-          { dayIndex: 5, shift: "D" }, // Friday
-          { dayIndex: 6, shift: "M" }, // Saturday
-          { dayIndex: 7, shift: "M" }, // Sunday
+          "O",
+          "O",
+          "O",
+          "O",
+          "D", // Friday
+          "M", // Saturday
+          "M", // Sunday
           // Week 2: Off Mon-Thu, Day Friday, Late Sat-Sun
-          { dayIndex: 8, shift: "O" },
-          { dayIndex: 9, shift: "O" },
-          { dayIndex: 10, shift: "O" },
-          { dayIndex: 11, shift: "O" },
-          { dayIndex: 12, shift: "D" }, // Friday
-          { dayIndex: 13, shift: "L" }, // Saturday
-          { dayIndex: 14, shift: "L" }, // Sunday
+          "O",
+          "O",
+          "O",
+          "O",
+          "D", // Friday
+          "L", // Saturday
+          "L", // Sunday
         ],
       },
-      notes: "Weekend-only coverage with early/late rotation.",
+      notes:
+        "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
     },
   },
   {
@@ -364,16 +341,16 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: {
         days: [
-          { dayIndex: 1, shift: "M" },
-          { dayIndex: 2, shift: "M" },
-          { dayIndex: 3, shift: "L" },
-          { dayIndex: 4, shift: "L" },
-          { dayIndex: 5, shift: "N" },
-          { dayIndex: 6, shift: "N" },
-          { dayIndex: 7, shift: "O" },
-          { dayIndex: 8, shift: "O" },
-          { dayIndex: 9, shift: "O" },
-          { dayIndex: 10, shift: "O" },
+          "M",
+          "M",
+          "L",
+          "L",
+          "N",
+          "N",
+          "O",
+          "O",
+          "O",
+          "O",
         ],
       },
       notes: "Continuous multi-team rotation.",

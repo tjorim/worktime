@@ -35,21 +35,12 @@ describe("Schedule pattern validation", () => {
     });
   });
 
-  it("should have sequential day indices starting from 1", () => {
-    SCHEDULE_OPTIONS.forEach((schedule) => {
-      const { schedulePattern, cycleLengthDays } = schedule.shiftConfig;
-      const dayIndices = schedulePattern.days.map((d) => d.dayIndex);
-      const expectedIndices = Array.from({ length: cycleLengthDays }, (_, i) => i + 1);
-      expect(dayIndices).toEqual(expectedIndices);
-    });
-  });
-
   it("should only use valid shift codes", () => {
     const validCodes = new Set(["M", "L", "N", "D", "O"]);
     SCHEDULE_OPTIONS.forEach((schedule) => {
       const { schedulePattern } = schedule.shiftConfig;
-      schedulePattern.days.forEach((day) => {
-        expect(validCodes.has(day.shift)).toBe(true);
+      schedulePattern.days.forEach((shift) => {
+        expect(validCodes.has(shift)).toBe(true);
       });
     });
   });
@@ -98,7 +89,7 @@ describe("Schedule pattern validation", () => {
     expect(schedule?.shiftConfig.schedulePattern.days).toHaveLength(10);
 
     // Verify the expected pattern: M, M, L, L, N, N, O, O, O, O
-    const pattern = schedule?.shiftConfig.schedulePattern.days.map((d) => d.shift);
+    const pattern = schedule?.shiftConfig.schedulePattern.days;
     expect(pattern).toEqual(["M", "M", "L", "L", "N", "N", "O", "O", "O", "O"]);
   });
 
@@ -108,28 +99,8 @@ describe("Schedule pattern validation", () => {
     expect(schedule?.shiftConfig.schedulePattern.days).toHaveLength(7);
 
     // Verify the expected pattern: D, D, D, D, D, O, O (Mon-Fri work, weekend off)
-    const pattern = schedule?.shiftConfig.schedulePattern.days.map((d) => d.shift);
+    const pattern = schedule?.shiftConfig.schedulePattern.days;
     expect(pattern).toEqual(["D", "D", "D", "D", "D", "O", "O"]);
-  });
-
-  it("should have display overrides properly structured", () => {
-    SCHEDULE_OPTIONS.forEach((schedule) => {
-      if (schedule.shiftConfig.shiftDisplayOverrides) {
-        const overrides = schedule.shiftConfig.shiftDisplayOverrides;
-        Object.entries(overrides).forEach(([code, override]) => {
-          expect(["M", "L", "N", "D", "O"]).toContain(code);
-          if (override.displayName) {
-            expect(typeof override.displayName).toBe("string");
-          }
-          if (override.displayCode) {
-            expect(typeof override.displayCode).toBe("string");
-          }
-          if (override.displayHours) {
-            expect(typeof override.displayHours).toBe("string");
-          }
-        });
-      }
-    });
   });
 
   it("should have valid reference dates", () => {

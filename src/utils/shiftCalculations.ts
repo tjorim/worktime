@@ -170,7 +170,7 @@ export const SHIFTS = Object.freeze({
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
   const schedule = getScheduleForOption(scheduleOption);
-  return schedule.shiftConfig.schedulePattern.days.some((day) => day.shift === "N");
+  return schedule.shiftConfig.schedulePattern.days.includes("N");
 };
 
 const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
@@ -399,18 +399,17 @@ export function calculateShift(
   const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
   const adjustedDays = daysSinceReference - teamOffset;
   const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-  const dayIndex = cyclePosition + 1;
-  const matchingDay = schedulePattern.days.find((day) => day.dayIndex === dayIndex);
-  if (!matchingDay) {
+  const shiftCode = schedulePattern.days[cyclePosition];
+  if (!shiftCode) {
     // This indicates a likely configuration error: the schedulePattern is missing
-    // an entry for the computed dayIndex. We keep the existing behavior of
+    // an entry for the computed cycle position. We keep the existing behavior of
     // returning SHIFTS.OFF but emit a warning to aid diagnosis.
     console.warn(
-      `[shiftCalculations] Missing schedulePattern day for dayIndex=${dayIndex} (cyclePosition=${cyclePosition}, cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to SHIFTS.OFF.`,
+      `[shiftCalculations] Missing schedulePattern day for cyclePosition=${cyclePosition} (cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to SHIFTS.OFF.`,
     );
     return SHIFTS.OFF;
   }
-  return mapShiftCodeToShift(matchingDay.shift, scheduleOption);
+  return mapShiftCodeToShift(shiftCode, scheduleOption);
 }
 
 /**
