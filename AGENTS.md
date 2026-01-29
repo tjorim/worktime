@@ -94,7 +94,7 @@ npm test -- --coverage      # Run with coverage report
 - `tests/data/rosters.test.ts` - Roster configuration validation tests (14 test cases)
 - `tests/lib/hday.test.ts` - .hday parser tests (139 test cases)
 - `tests/contexts/EventStoreContext.test.tsx` - Event store tests
-- `tests/utils/shiftCalculations.test.ts` - Business logic tests
+- `tests/utils/shiftCalculations.test.ts` - Core shift calculation logic tests
 - `tests/utils/workingDayUtils.test.ts` - Working day and holiday logic tests
 - `tests/utils/vacationCalculations.test.ts` - Vacation and time-off aggregation tests
 
