@@ -55,8 +55,8 @@ export function CurrentStatus({
   // Find which team is currently working (for timeline)
   const currentWorkingTeam = useMemo(() => {
     if (!scheduleType) return null;
-    return getCurrentWorkingTeam(today, scheduleType);
-  }, [today.startOf("minute").toISOString(), scheduleType]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute-normalized ISO string
+    return getCurrentWorkingTeam(liveTime, scheduleType);
+  }, [liveTime, scheduleType]);
 
   // No schedule selected - show setup prompt
   if (!scheduleType) {
