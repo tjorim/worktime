@@ -133,31 +133,9 @@ The built files will be in the `dist/` directory, ready for deployment to any st
 
 ## Configuration
 
-### Environment Variables
-
-Configure reference variables for shift calculations using environment variables or runtime configuration:
-
-```bash
-# Development (.env file)
-VITE_REFERENCE_DATE=2025-01-06
-VITE_REFERENCE_TEAM=1
-
-# Production build
-VITE_REFERENCE_DATE=2025-01-13 VITE_REFERENCE_TEAM=3 npm run build
-```
-
-### Runtime Configuration
-
-Alternatively, configure at runtime by adding to your HTML before the main script:
-
-```javascript
-window.WORKTIME_CONFIG = {
-  REFERENCE_DATE: "2025-01-06",
-  REFERENCE_TEAM: 1,
-};
-```
-
-These variables anchor all shift calculations to your specific schedule. If not configured, defaults to `2025-01-06` and team `1`.
+Reference dates and teams for shift calculations are configured per schedule in
+`src/data/rosters.ts`. Each roster entry defines its own `referenceDate` and
+`referenceTeam` values, and the application uses those values automatically.
 
 ### Development Commands
 

@@ -94,7 +94,9 @@ npm test -- --coverage      # Run with coverage report
 - `tests/data/rosters.test.ts` - Roster configuration validation tests (14 test cases)
 - `tests/lib/hday.test.ts` - .hday parser tests (139 test cases)
 - `tests/contexts/EventStoreContext.test.tsx` - Event store tests
-- `tests/shiftCalculations.test.ts` - Business logic tests
+- `tests/utils/shiftCalculations.test.ts` - Core shift calculation logic tests
+- `tests/utils/workingDayUtils.test.ts` - Working day and holiday logic tests
+- `tests/utils/vacationCalculations.test.ts` - Vacation and time-off aggregation tests
 
 ## File Structure
 
@@ -106,16 +108,42 @@ Worktime/
 │   ├── main.tsx           # React app entry point and initialization
 │   ├── vite-env.d.ts      # TypeScript environment declarations
 │   ├── components/        # React components
-│   │   ├── ChangelogModal.tsx   # Interactive changelog viewer with accordion layout
-│   │   ├── CurrentStatus.tsx    # Current team shift and status display with timeline
-│   │   ├── ErrorBoundary.tsx    # Error boundary wrapper for graceful error handling
-│   │   ├── Header.tsx           # App header with title and controls
-│   │   ├── MainTabs.tsx         # Main tabbed interface container
-│   │   ├── ScheduleView.tsx     # Weekly schedule overview
-│   │   ├── ShiftTimeline.tsx    # Today's shift timeline component (extracted from CurrentStatus)
-│   │   ├── TeamSelector.tsx     # Team selection modal
-│   │   ├── TodayView.tsx        # Today's schedule for all teams
-│   │   └── TransferView.tsx     # Team handover/transfer analysis
+│   │   ├── AboutModal.tsx        # About modal with app/version details
+│   │   ├── CalendarView.tsx      # Monthly calendar view with holidays/events
+│   │   ├── ChangelogModal.tsx    # Interactive changelog viewer with accordion layout
+│   │   ├── ConfirmationDialog.tsx # Reusable confirmation dialog
+│   │   ├── CurrentStatus.tsx     # Current team shift and status display with timeline
+│   │   ├── ErrorBoundary.tsx     # Error boundary wrapper for graceful error handling
+│   │   ├── EventModal.tsx        # Time-off event editor modal
+│   │   ├── Header.tsx            # App header with title and controls
+│   │   ├── KeyboardShortcutsModal.tsx # Keyboard shortcut helper modal
+│   │   ├── MainTabs.tsx          # Main tabbed interface container
+│   │   ├── ScheduleTabView.tsx   # Schedule tab container and controls
+│   │   ├── SettingsPanel.tsx     # Settings sidebar and configuration
+│   │   ├── ShiftTimeline.tsx     # Today's shift timeline component (extracted from CurrentStatus)
+│   │   ├── TimeOffView.tsx       # Time-off management view
+│   │   ├── TransferView.tsx      # Team handover/transfer analysis
+│   │   ├── WelcomeWizard.tsx     # Onboarding wizard (schedule/team selection)
+│   │   ├── calendar/             # Calendar view building blocks
+│   │   │   ├── CalendarLegend.tsx
+│   │   │   ├── ContextMenu.tsx
+│   │   │   ├── DayCell.tsx
+│   │   │   └── MonthCalendar.tsx
+│   │   ├── schedule/             # Schedule views
+│   │   │   ├── ScheduleDetailModal.tsx
+│   │   │   ├── ScheduleView.tsx
+│   │   │   └── TodayView.tsx
+│   │   ├── shared/               # Shared UI building blocks
+│   │   │   ├── CountdownBadge.tsx
+│   │   │   ├── SetupActionButton.tsx
+│   │   │   ├── ShiftBadge.tsx
+│   │   │   └── ShiftTimeDisplay.tsx
+│   │   ├── status/               # Status card variants
+│   │   │   ├── GenericStatus.tsx
+│   │   │   └── PersonalizedStatus.tsx
+│   │   └── timeoff/              # Time-off view panels
+│   │       ├── RawContentPanel.tsx
+│   │       └── VacationStatsPanel.tsx
 │   ├── contexts/          # React contexts for global state
 │   │   ├── EventStoreContext.tsx    # .hday event storage and CRUD operations
 │   │   ├── SettingsContext.tsx      # User settings (team, time format, etc.)
@@ -126,11 +154,18 @@ Worktime/
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useCountdown.ts         # Countdown timer hook for next shift timing
 │   │   ├── useFocusTrap.ts         # Focus trap for modals
+│   │   ├── useFormattedShiftTime.ts # Shift time formatting helpers
 │   │   ├── useKeyboardShortcuts.ts # Keyboard shortcuts functionality
 │   │   ├── useLiveTime.ts          # Live updating time with configurable frequency
 │   │   ├── useLocalStorage.ts      # LocalStorage persistence hook
+│   │   ├── useOpenHolidays.ts      # OpenHolidays API hook
+│   │   ├── usePublicHolidays.ts    # Public holiday lookup hook
+│   │   ├── useSchoolHolidays.ts    # School holiday lookup hook
+│   │   ├── useSetupAction.ts       # Wizard/setup action helpers
 │   │   ├── useShiftCalculation.ts  # Shift calculation logic hook
-│   │   └── useTransferCalculations.ts # Team transfer analysis hook
+│   │   ├── useSyncedState.ts       # State synchronized with storage
+│   │   ├── useTransferCalculations.ts # Team transfer analysis hook
+│   │   └── useViewMode.ts          # View mode preference hook
 │   ├── lib/               # Core libraries
 │   │   ├── events/        # Event processing
 │   │   │   └── converters.ts      # .hday to internal format converters
@@ -139,8 +174,13 @@ Worktime/
 │   ├── utils/             # TypeScript utilities and business logic
 │   │   ├── config.ts           # App configuration and constants
 │   │   ├── dateTimeUtils.ts    # Date formatting and localization
+│   │   ├── paydayUtils.ts      # Payday calculation helpers
+│   │   ├── scheduleUtils.ts    # Schedule type guards and helpers
 │   │   ├── share.ts            # Share functionality
-│   │   └── shiftCalculations.ts # Core shift calculation functions
+│   │   ├── shiftCalculations.ts # Core shift calculation functions
+│   │   ├── vacationCalculations.ts # Vacation/time-off aggregations
+│   │   ├── viewUtils.ts         # View-level helpers
+│   │   └── workingDayUtils.ts   # Working day and holiday logic
 │   └── styles/
 │       └── main.scss      # Custom styles and shift color coding (Sass)
 ├── tests/                 # Test files
@@ -149,7 +189,7 @@ Worktime/
 │   ├── hooks/            # Hook tests
 │   ├── lib/              # Library tests
 │   ├── setup.ts          # Test environment setup
-│   └── shiftCalculations.test.ts # Business logic tests
+│   └── utils/             # Utility tests
 ├── public/
 │   └── assets/icons/      # Favicon icons
 ├── scripts/               # Build and utility scripts
@@ -187,31 +227,25 @@ type ShiftRosterConfig = {
   teamCount: number;               // Number of teams (1 for single-user)
   cycleLengthDays: number;         // Length of repeating cycle
   shiftsPerDay: number;            // How many shifts per 24h period
-  schedulePattern: SchedulePattern; // Day-by-day shift assignments
+  shiftTimes: { ... };             // Shift time definitions keyed by shift code
+  schedulePattern: ShiftCode[];    // Day-by-day shift assignments
   referenceDate: string;           // ISO date anchoring calculations
   referenceTeam: number;           // Team number at reference point
   notes?: string;                  // Developer documentation
-  shiftDisplayOverrides?: { ... }; // Custom display names/codes
 };
 ```
 
 ### Schedule Pattern Format
 
-Patterns define the repeating cycle of shifts:
+Patterns define the repeating cycle of shifts as a list of shift codes:
 
 ```typescript
-schedulePattern: {
-  days: [
-    { dayIndex: 1, shift: "M" },  // Day 1: Morning
-    { dayIndex: 2, shift: "M" },  // Day 2: Morning
-    { dayIndex: 3, shift: "L" },  // Day 3: Late
-    // ... continues for full cycle
-  ],
-  extra?: {
-    weekendAssignment?: string,    // Weekend rotation details
-    jumpday?: string,              // Jump day information
-  }
-}
+schedulePattern: [
+  "M", // Day 1: Morning
+  "M", // Day 2: Morning
+  "L", // Day 3: Late
+  // ... continues for full cycle
+]
 ```
 
 **Shift Codes**:
@@ -256,14 +290,17 @@ To add a new roster pattern:
     teamCount: 3,
     cycleLengthDays: 21,
     shiftsPerDay: 2,
+    shiftTimes: {
+      M: { name: "Morning", start: 7, end: 15, displayCode: "M" },
+      L: { name: "Late", start: 15, end: 23, displayCode: "L" },
+      O: { name: "Off", start: null, end: null, displayCode: "O" },
+    },
     referenceDate: "2025-01-06",  // Pick a Monday for consistency
     referenceTeam: 1,
-    schedulePattern: {
-      days: [
-        { dayIndex: 1, shift: "M" },
-        // ... define all days in cycle
-      ],
-    },
+    schedulePattern: [
+      "M",
+      // ... define all days in cycle
+    ],
     notes: "Internal documentation about this schedule",
   },
 }
@@ -281,34 +318,30 @@ export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift" | "
 
 5. **Test shift calculations** to ensure the reference date/team anchoring works correctly
 
-### Display Overrides
+### Shift Times
 
-Customize how shifts appear to users without changing internal logic:
+Define shift time metadata in `shiftTimes` for each shift code used by the schedule:
 
 ```typescript
-shiftDisplayOverrides: {
-  M: {
-    displayName: "Early",           // Show "Early" instead of "Morning"
-    displayCode: "E",               // Show "E" instead of "M"
-    displayHours: "06:00-14:30",   // Custom hours display
-  },
+shiftTimes: {
+  M: { name: "Morning", start: 7, end: 15, displayCode: "M" },
+  L: { name: "Evening", start: 15, end: 23, displayCode: "E" }, // e.g., "L" shift can be displayed as "E"
+  N: { name: "Night", start: 23, end: 7, displayCode: "N" },
+  O: { name: "Off", start: null, end: null, displayCode: "O" },
 }
 ```
-
-**Note**: Display codes are context-dependent. "E" can mean "Early" in one schedule and "Evening" in another - users only see one schedule at a time, so there's no collision.
 
 ### Validation
 
 The system validates all configurations at module load time (`validateSchedulePattern` function):
 
 1. Pattern length matches `cycleLengthDays`
-2. Day indices are sequential (1, 2, 3, ...)
-3. Shift codes are valid (M, L, N, D, O)
-4. Reference date is valid ISO format and parseable
-5. Reference team is within valid range (1 to `teamCount`)
-6. Cycle length is reasonable (1-365 days)
-7. Team count is positive
-8. At least one working shift exists (not all off days)
+2. Shift codes are valid (M, L, N, D, O) and defined in `shiftTimes`
+3. Reference date is valid ISO format and parseable
+4. Reference team is within valid range (1 to `teamCount`)
+5. Cycle length is reasonable (1-365 days)
+6. Team count is positive
+7. At least one working shift exists (not all off days)
 
 If validation fails, the error message will indicate exactly what's wrong.
 
@@ -362,17 +395,6 @@ Uses weeknumber.weekday format (YYWW.D):
 - Night shifts use previous day (2520.1N for night starting Monday 23h)
 - Full shift codes: **2520.2M**, **2520.2E**, **2520.1N**
 
-### Legacy Reference Variables (Deprecated)
-
-**Note**: Reference dates and teams are now defined per-schedule in `src/data/rosters.ts`. The old environment variable system is maintained for backward compatibility but should not be used for new schedules.
-
-Legacy environment variables (for 5-shift schedule only):
-
-- `VITE_REFERENCE_DATE` - Defaults to schedule-specific reference date
-- `VITE_REFERENCE_TEAM` - Defaults to schedule-specific reference team
-
-For new schedules, configure `referenceDate` and `referenceTeam` directly in the roster configuration.
-
 ## Key Features
 
 - **Schedule Selection**: Users choose their roster type during onboarding (5-shift, 9-5, etc.)
@@ -381,6 +403,7 @@ For new schedules, configure `referenceDate` and `referenceTeam` directly in the
 - **Next Shift Lookup**: See when any team's next shift is scheduled
 - **My Team Next Shift**: Quickly see when user's team works next
 - **Transfer/Handover View**: See when user's team transfers with any other team (works before/after)
+- **Calendar View**: Monthly calendar with working shifts, time-off, public holidays, school holidays, and paydays
 - **Time Off Management**: Import/export .hday files for vacation and time-off tracking with event overlays on schedule
 - **Date Navigation**: Today button, date picker, previous/next day
 - **Date Format**: Display in YYWW.D format (e.g., 2520.2M = year 2025, week 20, Tuesday Morning)
@@ -469,7 +492,7 @@ d1i # Every Monday in office
 - **Multiple Schedule Types**: Support for 5-shift, 9-5, 2-shift (coming soon), weekend-shift (coming soon)
 - **Runtime Validation**: Comprehensive validation of roster configurations at module load
 - **Reference Date System**: Per-schedule reference dates and teams for accurate calculations
-- **Display Overrides**: Customize shift names, codes, and hours per schedule
+- **Shift Times**: Define shift names, display codes, and hours per schedule
 - **Schedule-Aware Components**: All shift calculations now support multiple roster patterns
 - **Backward Compatibility**: Existing 5-shift users continue working without migration
 

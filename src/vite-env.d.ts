@@ -4,8 +4,6 @@
 declare const __APP_VERSION__: string;
 
 interface ImportMetaEnv {
-  readonly VITE_REFERENCE_DATE?: string;
-  readonly VITE_REFERENCE_TEAM?: string;
 }
 
 interface ImportMeta {
