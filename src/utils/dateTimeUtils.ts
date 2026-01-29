@@ -130,7 +130,7 @@ export function formatTimeByPreference(dayjsObj: dayjs.Dayjs, timeFormat: "12h" 
 /**
  * Produce a localized time representation for a shift start, end, or range.
  *
- * Formats times according to `timeFormat`. When both `start` and `end` are provided returns a range joined with an en dash (e.g. "07:00–15:00" or "7:00 AM–3:00 PM"). If only one is provided returns that time. Special-case: an `end` value of `0` is rendered as "24:00" for `24h` or "12:00 AM" for `12h`.
+ * Formats times according to `timeFormat`. When both `start` and `end` are provided returns a range joined with an en dash (e.g. "07:00–15:00" or "7:00 AM–3:00 PM"). If only one is provided returns that time. Special-case: an `end` value of `0` or a computed time of `24:00` is rendered as "24:00" for `24h` or "12:00 AM" for `12h`.
  *
  * @param start - Start hour (0–23) or `null`
  * @param end - End hour (0–23) or `null`
@@ -151,8 +151,12 @@ export function getLocalizedShiftTime(
   timeFormat: "12h" | "24h",
 ): string | null {
   if (start == null && end == null) return null;
+  const formatMidnight = () => (timeFormat === "24h" ? "24:00" : "12:00 AM");
   const format = (hour: number) => {
     const { hours, minutes } = buildTime(hour);
+    if (hours === 24 && minutes === 0) {
+      return formatMidnight();
+    }
     return formatTimeByPreference(
       dayjs().hour(hours).minute(minutes).second(0),
       timeFormat,
@@ -160,11 +164,11 @@ export function getLocalizedShiftTime(
   };
   if (start != null && end != null) {
     const startTime = format(start);
-    const endTime = end === 0 ? (timeFormat === "24h" ? "24:00" : "12:00 AM") : format(end);
+    const endTime = end === 0 ? formatMidnight() : format(end);
     return `${startTime}–${endTime}`;
   }
   if (start != null) return format(start);
-  if (end != null) return end === 0 ? (timeFormat === "24h" ? "24:00" : "12:00 AM") : format(end);
+  if (end != null) return end === 0 ? formatMidnight() : format(end);
   return null;
 }
 

@@ -35,6 +35,36 @@ describe("Schedule pattern validation", () => {
     });
   });
 
+  it("should define shiftTimes for every shift used in schedulePattern", () => {
+    const timeRangePattern = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+
+    SCHEDULE_OPTIONS.forEach((schedule) => {
+      const { schedulePattern, shiftTimes } = schedule.shiftConfig;
+
+      schedulePattern.forEach((shift) => {
+        const definition = shiftTimes[shift];
+        expect(definition).toBeDefined();
+        if (!definition) return;
+
+        expect(typeof definition.name).toBe("string");
+        expect(definition.name.length).toBeGreaterThan(0);
+        expect(typeof definition.hours).toBe("string");
+        expect(definition.hours.length).toBeGreaterThan(0);
+        expect(typeof definition.displayCode).toBe("string");
+        expect(definition.displayCode.length).toBeGreaterThan(0);
+
+        if (shift === "O") {
+          expect(definition.start).toBeNull();
+          expect(definition.end).toBeNull();
+        } else {
+          expect(typeof definition.start).toBe("number");
+          expect(typeof definition.end).toBe("number");
+          expect(timeRangePattern.test(definition.hours)).toBe(true);
+        }
+      });
+    });
+  });
+
   it("should only use valid shift codes", () => {
     const validCodes = new Set(["M", "L", "N", "D", "O"]);
     SCHEDULE_OPTIONS.forEach((schedule) => {
