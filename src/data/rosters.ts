@@ -231,7 +231,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     value: "weekend-shift",
     title: "Weekend shift",
     description: "Weekend-only teams rotating early one weekend, late the next.",
-    showsTeamSelection: false,
+    showsTeamSelection: true,
     isAvailable: true,
     shiftConfig: {
       teamCount: 2,
