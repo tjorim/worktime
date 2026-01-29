@@ -198,16 +198,22 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       shiftTimes: {
         M: {
           name: "Early",
-          hours: "07:00-15:00",
-          start: 7,
-          end: 15,
+          hours: "06:30-15:30",
+          start: 6.5,
+          end: 15.5,
           displayCode: "E",
         },
         L: {
           name: "Late",
-          hours: "15:00-23:00",
+          hours: "15:00-24:00",
           start: 15,
-          end: 23,
+          end: 24,
+        },
+        D: {
+          name: "Day",
+          hours: "07:00-16:00",
+          start: 7,
+          end: 16,
         },
         O: OFF_SHIFT_TIME,
       },
@@ -239,14 +245,14 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           { dayIndex: 19, shift: "M" }, // Friday
           { dayIndex: 20, shift: "O" }, // Saturday
           { dayIndex: 21, shift: "O" }, // Sunday
-          // Week 4: Late shift Mon-Fri, off weekend
+          // Week 4: Late shift Mon-Fri, day shift weekend
           { dayIndex: 22, shift: "L" }, // Monday
           { dayIndex: 23, shift: "L" }, // Tuesday
           { dayIndex: 24, shift: "L" }, // Wednesday
           { dayIndex: 25, shift: "L" }, // Thursday
           { dayIndex: 26, shift: "L" }, // Friday
-          { dayIndex: 27, shift: "O" }, // Saturday
-          { dayIndex: 28, shift: "O" }, // Sunday
+          { dayIndex: 27, shift: "D" }, // Saturday
+          { dayIndex: 28, shift: "D" }, // Sunday
         ],
         extra: {
           weekendAssignment: "One assigned weekend within the 4-week cycle.",
