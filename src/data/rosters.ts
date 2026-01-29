@@ -1,6 +1,7 @@
 export type ScheduleOption = "9-5" | "2-shift" | "weekend-shift" | "5-shift";
 
 export type ShiftCode = "M" | "L" | "N" | "D" | "O";
+export const SHIFT_CODES = ["M", "L", "N", "D", "O"] as const;
 
 export type ShiftTimeDefinition = {
   name: string;

@@ -66,14 +66,13 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { type ScheduleOption } from "../data/rosters";
+import { SHIFT_CODES, type ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
 export type ShiftType = "M" | "L" | "N" | "D" | "O";
-const VALID_SHIFT_CODES = ["M", "L", "N", "D", "O"] as const;
 
 export interface Shift {
   code: ShiftType;
@@ -335,7 +334,7 @@ export function getShiftByCode(
   code: string | null | undefined,
   scheduleOption?: NullableScheduleOption,
 ): ShiftOrUnknown {
-  if (code && VALID_SHIFT_CODES.includes(code as ShiftType)) {
+  if (code && SHIFT_CODES.includes(code as ShiftType)) {
     return mapShiftCodeToShift(code as ShiftType, scheduleOption);
   }
   return {

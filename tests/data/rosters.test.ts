@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCHEDULE_OPTIONS } from "../../src/data/rosters";
+import { SCHEDULE_OPTIONS, SHIFT_CODES } from "../../src/data/rosters";
 
 describe("Schedule pattern validation", () => {
   it("should pass validation for all existing schedules", () => {
@@ -65,7 +65,7 @@ describe("Schedule pattern validation", () => {
   });
 
   it("should only use valid shift codes", () => {
-    const validCodes = new Set(["M", "L", "N", "D", "O"]);
+    const validCodes = new Set(SHIFT_CODES);
     SCHEDULE_OPTIONS.forEach((schedule) => {
       const { schedulePattern } = schedule.shiftConfig;
       schedulePattern.forEach((shift) => {
