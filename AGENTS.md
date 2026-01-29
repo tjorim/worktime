@@ -395,17 +395,6 @@ Uses weeknumber.weekday format (YYWW.D):
 - Night shifts use previous day (2520.1N for night starting Monday 23h)
 - Full shift codes: **2520.2M**, **2520.2E**, **2520.1N**
 
-### Legacy Reference Variables (Deprecated)
-
-**Note**: Reference dates and teams are now defined per-schedule in `src/data/rosters.ts`. The old environment variable system is maintained for backward compatibility but should not be used for new schedules.
-
-Legacy environment variables (for 5-shift schedule only):
-
-- `VITE_REFERENCE_DATE` - Defaults to schedule-specific reference date
-- `VITE_REFERENCE_TEAM` - Defaults to schedule-specific reference team
-
-For new schedules, configure `referenceDate` and `referenceTeam` directly in the roster configuration.
-
 ## Key Features
 
 - **Schedule Selection**: Users choose their roster type during onboarding (5-shift, 9-5, etc.)
