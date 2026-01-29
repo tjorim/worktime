@@ -205,6 +205,10 @@ const mapShiftCodeToShift = (
 ): Shift => {
   const definition = getShiftTimeDefinition(scheduleOption, code);
   if (!definition) {
+    const schedule = getScheduleForOption(scheduleOption);
+    console.warn(
+      `[shiftCalculations] Missing shiftTimes definition for code=${code} in schedule=${schedule.value}. Falling back to SHIFTS.OFF.`,
+    );
     return SHIFTS.OFF;
   }
   switch (code) {
