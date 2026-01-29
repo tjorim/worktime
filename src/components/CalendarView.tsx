@@ -340,7 +340,7 @@ export function CalendarView({
       }
 
       return {
-        code: shiftConfig?.displayCode || shift.code,
+        code: shiftDisplay.displayCode,
         label: displayLabel,
         isWorking: actuallyWorking,
       };
