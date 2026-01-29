@@ -12,7 +12,12 @@ import { SetupActionButton } from "../shared/SetupActionButton";
 import { useSetupAction } from "../../hooks/useSetupAction";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useLiveTime } from "../../hooks/useLiveTime";
-import { dayjs, formatTimeByPreference, formatYYWWD } from "../../utils/dateTimeUtils";
+import {
+  dayjs,
+  formatTimeByPreference,
+  formatYYWWD,
+  setTimeFromFractionalHour,
+} from "../../utils/dateTimeUtils";
 import type { UpcomingShiftResult, ShiftResult } from "../../utils/shiftCalculations";
 import {
   getAllTeamsShifts,
@@ -68,7 +73,7 @@ export function GenericStatus({
       for (const teamShift of allTeamsShifts) {
         if (!teamShift.shift.isWorking || !teamShift.shift.start) continue;
 
-        const shiftStartTime = teamShift.date.hour(teamShift.shift.start).minute(0).second(0);
+        const shiftStartTime = setTimeFromFractionalHour(teamShift.date, teamShift.shift.start);
 
         if (!shiftStartTime.isAfter(now)) continue;
 
@@ -93,7 +98,7 @@ export function GenericStatus({
   const nextShiftStartTime = useMemo(() => {
     if (!nextShiftAnyTeam || !nextShiftAnyTeam.shift.start) return null;
     const shiftDate = nextShiftAnyTeam.date;
-    const startTime = shiftDate.hour(nextShiftAnyTeam.shift.start).minute(0).second(0);
+    const startTime = setTimeFromFractionalHour(shiftDate, nextShiftAnyTeam.shift.start);
     return startTime;
   }, [nextShiftAnyTeam]);
 

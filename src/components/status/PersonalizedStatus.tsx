@@ -12,7 +12,12 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig, getEffectiveTeam } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useLiveTime } from "../../hooks/useLiveTime";
-import { dayjs, formatTimeByPreference, formatYYWWD } from "../../utils/dateTimeUtils";
+import {
+  dayjs,
+  formatTimeByPreference,
+  formatYYWWD,
+  setTimeFromFractionalHour,
+} from "../../utils/dateTimeUtils";
 import type {
   UpcomingShiftResult,
   OffDayProgress,
@@ -106,9 +111,7 @@ export function PersonalizedStatus({
   // Calculate next shift start time for countdown
   const nextShiftStartTime = useMemo(() => {
     if (!nextShift || !nextShift.shift.start) return null;
-    const shiftDate = nextShift.date;
-    const startTime = shiftDate.hour(nextShift.shift.start).minute(0).second(0);
-    return startTime;
+    return setTimeFromFractionalHour(nextShift.date, nextShift.shift.start);
   }, [nextShift]);
 
   const countdown = useCountdown(nextShiftStartTime);
