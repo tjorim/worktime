@@ -245,7 +245,7 @@ schedulePattern: [
   "M", // Day 2: Morning
   "L", // Day 3: Late
   // ... continues for full cycle
-]
+];
 ```
 
 **Shift Codes**:

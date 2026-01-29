@@ -61,9 +61,9 @@ const mockTodayShifts: ShiftResult[] = [
     code: "2503.3M",
     shift: {
       code: "M",
+      displayCode: "M",
       emoji: "🌅",
       name: "Morning",
-      hours: "07:00-15:00",
       start: 7,
       end: 15,
       isWorking: true,
@@ -76,9 +76,9 @@ const mockTodayShifts: ShiftResult[] = [
     code: "2503.3L",
     shift: {
       code: "L",
+      displayCode: "L",
       emoji: "🌆",
       name: "Late",
-      hours: "15:00-23:00",
       start: 15,
       end: 23,
       isWorking: true,

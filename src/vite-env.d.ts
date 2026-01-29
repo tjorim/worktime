@@ -3,8 +3,7 @@
 // Global constants injected by Vite
 declare const __APP_VERSION__: string;
 
-interface ImportMetaEnv {
-}
+interface ImportMetaEnv {}
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;

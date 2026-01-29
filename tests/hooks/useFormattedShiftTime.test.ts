@@ -62,9 +62,7 @@ describe("useFormattedShiftTime", () => {
     const { result: missingStart } = renderHook(() =>
       useFormattedShiftTime({ start: null, end: 15 }),
     );
-    const { result: missingEnd } = renderHook(() =>
-      useFormattedShiftTime({ start: 7, end: null }),
-    );
+    const { result: missingEnd } = renderHook(() => useFormattedShiftTime({ start: 7, end: null }));
 
     expect(missingStart.current).toBe("Not working");
     expect(missingEnd.current).toBe("Not working");

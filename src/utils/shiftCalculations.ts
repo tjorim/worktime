@@ -285,12 +285,12 @@ export function getFormattedShiftTime(
  * @example
  * // Get Team 1's shift on a specific date
  * calculateShift('2025-01-06', 1)
- * // Returns: { code: 'M', name: 'Morning', hours: '07:00-15:00', ... }
+ * // Returns: { code: 'M', displayCode: "M", name: 'Morning', ... }
  *
  * @example
  * // Using a Date object
  * calculateShift(new Date('2025-01-08'), 1)
- * // Returns: { code: 'E', name: 'Evening', hours: '15:00-23:00', ... }
+ * // Returns: { code: 'E', displayCode: "E", name: 'Evening', ... }
  *
  * @example
  * // Invalid team number throws error

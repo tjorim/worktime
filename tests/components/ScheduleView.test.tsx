@@ -74,9 +74,9 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
 vi.mock("../../src/utils/shiftCalculations", () => ({
   calculateShift: vi.fn(() => ({
     code: "M",
+    displayCode: "M",
     emoji: "🌅",
     name: "Morning",
-    hours: "07:00-15:00",
     start: 7,
     end: 15,
     isWorking: true,
@@ -84,9 +84,9 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   })),
   getShift: vi.fn(() => ({
     code: "M",
+    displayCode: "M",
     emoji: "🌅",
     name: "Morning",
-    hours: "07:00-15:00",
     start: 7,
     end: 15,
     isWorking: true,
