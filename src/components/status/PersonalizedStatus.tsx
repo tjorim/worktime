@@ -113,16 +113,15 @@ export function PersonalizedStatus({
 
   const countdown = useCountdown(nextShiftStartTime);
 
-  const currentTimeShiftCode = useMemo(() => {
-    if (!validatedTeam) return null;
-    const shiftDay = getCurrentShiftDay(liveTime, scheduleType);
-    const shift = calculateShift(shiftDay, validatedTeam, scheduleType);
-    return shift.code;
-  }, [liveTime, validatedTeam, scheduleType]);
-
   const currentShiftDay = useMemo(() => {
     return getCurrentShiftDay(liveTime, scheduleType);
   }, [liveTime, scheduleType]);
+
+  const currentTimeShiftCode = useMemo(() => {
+    if (!validatedTeam) return null;
+    const shift = calculateShift(currentShiftDay, validatedTeam, scheduleType);
+    return shift.code;
+  }, [currentShiftDay, validatedTeam, scheduleType]);
 
   // Tooltip details for current shift badge
   const shiftTooltipDetails = useMemo(() => {
