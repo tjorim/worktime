@@ -73,6 +73,7 @@ import { getScheduleConfig } from "./scheduleUtils";
 type NullableScheduleOption = ScheduleOption | null | undefined;
 
 export type ShiftType = "M" | "L" | "N" | "D" | "O";
+const VALID_SHIFT_CODES = ["M", "L", "N", "D", "O"] as const;
 
 export interface Shift {
   code: ShiftType;
@@ -334,7 +335,7 @@ export function getShiftByCode(
   code: string | null | undefined,
   scheduleOption?: NullableScheduleOption,
 ): ShiftOrUnknown {
-  if (code && ["M", "L", "N", "D", "O"].includes(code)) {
+  if (code && VALID_SHIFT_CODES.includes(code as ShiftType)) {
     return mapShiftCodeToShift(code as ShiftType, scheduleOption);
   }
   return {
