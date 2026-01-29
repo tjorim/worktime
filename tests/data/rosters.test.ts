@@ -14,7 +14,6 @@ describe("Schedule pattern validation", () => {
       expect(schedule.value).toBeDefined();
       expect(schedule.title).toBeDefined();
       expect(schedule.description).toBeDefined();
-      expect(schedule.showsTeamSelection).toBeDefined();
       expect(schedule.isAvailable).toBeDefined();
       expect(schedule.shiftConfig).toBeDefined();
     });
@@ -73,7 +72,6 @@ describe("Schedule pattern validation", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "9-5");
     expect(schedule).toBeDefined();
     expect(schedule?.isAvailable).toBe(true);
-    expect(schedule?.showsTeamSelection).toBe(false);
     expect(schedule?.shiftConfig.teamCount).toBe(1);
   });
 
@@ -81,7 +79,6 @@ describe("Schedule pattern validation", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     expect(schedule).toBeDefined();
     expect(schedule?.isAvailable).toBe(true);
-    expect(schedule?.showsTeamSelection).toBe(true);
     expect(schedule?.shiftConfig.teamCount).toBe(5);
   });
 
@@ -91,10 +88,10 @@ describe("Schedule pattern validation", () => {
     expect(schedule?.isAvailable).toBe(false);
   });
 
-  it("should have weekend-shift schedule marked as coming soon", () => {
+  it("should have weekend-shift schedule available", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "weekend-shift");
     expect(schedule).toBeDefined();
-    expect(schedule?.isAvailable).toBe(false);
+    expect(schedule?.isAvailable).toBe(true);
   });
 
   it("should have documented notes field for developer reference", () => {

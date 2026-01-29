@@ -34,7 +34,6 @@ export type ScheduleRoster = {
   value: ScheduleOption;
   title: string;
   description: string;
-  showsTeamSelection: boolean;
   isAvailable: boolean; // Whether this schedule is available for selection
   shiftConfig: ShiftRosterConfig;
 };
@@ -126,7 +125,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     value: "9-5",
     title: "9-5",
     description: "Standard weekday schedule with weekends off.",
-    showsTeamSelection: false,
     isAvailable: true,
     shiftConfig: {
       teamCount: 1,
@@ -160,7 +158,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     value: "2-shift",
     title: "2-shift",
     description: "Alternating early and late shifts each week.",
-    showsTeamSelection: false,
     isAvailable: false, // Coming soon
     shiftConfig: {
       teamCount: 2,
@@ -231,7 +228,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     value: "weekend-shift",
     title: "Weekend shift",
     description: "Weekend-only teams rotating early one weekend, late the next.",
-    showsTeamSelection: true,
     isAvailable: true,
     shiftConfig: {
       teamCount: 2,
@@ -285,7 +281,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
     value: "5-shift",
     title: "5-shift",
     description: "Continuous rotating shifts across multiple teams.",
-    showsTeamSelection: true,
     isAvailable: true,
     shiftConfig: {
       teamCount: 5,

@@ -11,7 +11,7 @@ import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
-import { getTeamCountForOption } from "../utils/scheduleUtils";
+import { getTeamCountForOption, hasMultipleTeams } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 
 type WizardStep =
@@ -114,10 +114,9 @@ export function WelcomeWizard({
 
   const isChangeTeamFlow = mode === "change-team";
   const isChangeScheduleFlow = mode === "change-schedule";
-  const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
-    (option) => option.value === selectedSchedule,
-  );
-  const shouldShowTeamSelection = selectedScheduleConfig?.showsTeamSelection ?? false;
+  const shouldShowTeamSelection = selectedSchedule
+    ? hasMultipleTeams(selectedSchedule)
+    : false;
   const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
@@ -132,7 +131,7 @@ export function WelcomeWizard({
    *
    * Team selection step is included when:
    * - In change-team mode (always shown)
-   * - Schedule has showsTeamSelection=true (multi-team schedules)
+   * - Schedule has multiple teams (teamCount > 1)
    */
   const getTotalSteps = () => {
     if (isChangeTeamFlow) return 1;

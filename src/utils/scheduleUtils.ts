@@ -70,6 +70,10 @@ export function getTeamCountForOption(scheduleOption: ScheduleOption | null | un
   return config.shiftConfig.teamCount;
 }
 
+export function hasMultipleTeams(scheduleOption: ScheduleOption | null | undefined): boolean {
+  return getTeamCountForOption(scheduleOption) > 1;
+}
+
 /**
  * Get the effective team number for the user, handling single-user schedules.
  *

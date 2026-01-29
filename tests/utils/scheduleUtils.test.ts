@@ -47,7 +47,7 @@ describe("scheduleUtils", () => {
   });
 
   describe("getEffectiveTeam", () => {
-    describe("single-user schedules (showsTeamSelection: false)", () => {
+    describe("single-user schedules (teamCount = 1)", () => {
       it("should return 1 when myTeam is null", () => {
         const result = getEffectiveTeam(null, "9-5");
         expect(result).toBe(1);
@@ -74,7 +74,7 @@ describe("scheduleUtils", () => {
       });
     });
 
-    describe("multi-team schedules (showsTeamSelection: true)", () => {
+    describe("multi-team schedules (teamCount > 1)", () => {
       it("should return null when myTeam is null", () => {
         const result = getEffectiveTeam(null, "5-shift");
         expect(result).toBe(null);
@@ -128,8 +128,7 @@ describe("scheduleUtils", () => {
       });
     });
 
-    describe("multi-team schedules with hidden selection (showsTeamSelection: false)", () => {
-      // These schedules have multiple teams but don't show team selection UI
+    describe("multi-team schedules with two teams", () => {
       // Examples: "2-shift" and "weekend-shift" with teamCount: 2
 
       it("should return null when myTeam is null for 2-shift", () => {
@@ -172,7 +171,7 @@ describe("scheduleUtils", () => {
         expect(result).toBe(null);
       });
 
-      it("should log a warning for invalid team number in hidden selection schedule", () => {
+      it("should log a warning for invalid team number in a two-team schedule", () => {
         const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
         getEffectiveTeam(5, "2-shift");

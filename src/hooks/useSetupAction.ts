@@ -37,7 +37,7 @@ interface SetupActionResult {
 export function useSetupAction(options?: UseSetupActionOptions): SetupActionResult {
   const { scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection;
+  const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
   const teamCount = scheduleConfig.shiftConfig.teamCount;
   const mode = options?.mode ?? "auto";
 

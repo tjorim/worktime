@@ -12,7 +12,7 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { dayjs } from "./utils/dateTimeUtils";
-import { getScheduleConfig } from "./utils/scheduleUtils";
+import { getScheduleConfig, hasMultipleTeams } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 /**
@@ -110,7 +110,7 @@ function AppContent() {
       // Always reset team when changing schedules, regardless of team count
       // Teams in different schedules represent different rosters
       const scheduleChanged = schedule !== scheduleType;
-      const teamsDisabled = !(nextScheduleConfig.showsTeamSelection ?? true);
+      const teamsDisabled = !hasMultipleTeams(nextScheduleConfig.value);
 
       if (scheduleChanged || teamsDisabled) {
         // Only show notification if user had a team selected
@@ -173,7 +173,7 @@ function AppContent() {
         );
         return;
       }
-      const requiresTeam = selectedScheduleConfig.showsTeamSelection;
+      const requiresTeam = hasMultipleTeams(selectedScheduleConfig.value);
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
       if (teamForCompletion !== null) {

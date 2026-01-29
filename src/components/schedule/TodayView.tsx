@@ -11,7 +11,7 @@ import classNames from "classnames";
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "../../data/rosters";
 import { useEventStore } from "../../contexts/EventStoreContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import type { ShiftResult } from "../../utils/shiftCalculations";
@@ -189,7 +189,7 @@ export function TodayView({
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const scheduleType = viewingScheduleType;
-  const hasTeams = getScheduleConfig(viewingScheduleType).showsTeamSelection;
+  const hasTeams = hasMultipleTeams(viewingScheduleType);
 
   // Calculate shifts for the viewing schedule
   const todayShifts = useMemo(() => {

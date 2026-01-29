@@ -5,7 +5,7 @@ import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { getScheduleConfig, hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { dayjs, setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
 import type { UpcomingShiftResult, ShiftResult } from "../../utils/shiftCalculations";
@@ -28,7 +28,7 @@ interface GenericStatusContentProps {
  */
 export function GenericStatusContent({ scheduleType }: GenericStatusContentProps) {
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection;
+  const hasTeams = hasMultipleTeams(scheduleConfig.value);
   const teamCount = scheduleConfig.shiftConfig.teamCount;
 
   const today = dayjs();

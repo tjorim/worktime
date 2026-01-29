@@ -10,7 +10,7 @@ import Table from "react-bootstrap/Table";
 import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { getScheduleConfig, hasMultipleTeams } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
 import { calculateShift } from "../../utils/shiftCalculations";
@@ -41,7 +41,7 @@ export function ScheduleDetailModal({
 }: ScheduleDetailModalProps) {
   const { settings } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = scheduleConfig.showsTeamSelection;
+  const hasTeams = hasMultipleTeams(scheduleConfig.value);
   const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
   const isValidTeamNumber = hasTeams
     ? teamNumber >= 1 && teamNumber <= teamCount

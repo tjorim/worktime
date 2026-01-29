@@ -10,7 +10,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { getScheduleConfig, hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import {
   dayjs,
@@ -108,7 +108,7 @@ export function ScheduleView({
 
   const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
-  const hasTeams = scheduleConfig.showsTeamSelection;
+  const hasTeams = hasMultipleTeams(scheduleConfig.value);
   // Validate and sanitize myTeam prop
   let myTeam = inputMyTeam;
   if (typeof myTeam === "number" && (myTeam < 1 || myTeam > teamCount)) {

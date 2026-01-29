@@ -25,8 +25,8 @@ interface TransferViewProps {
 /**
  * Display transfer events between the user's team and a selected other team.
  *
- * Works with any multi-team schedule. For single-user schedules, this component should
- * not be rendered (MainTabs hides the Transfer tab via scheduleConfig.showsTeamSelection).
+ * Works with any multi-team schedule. For single-user schedules, this component
+ * displays the schedule/team setup prompts instead of transfer results.
  *
  * Renders a card containing controls for choosing the other team, optionally filtering by a custom date range, and a paginated table of transfer records (or appropriate empty states).
  *
