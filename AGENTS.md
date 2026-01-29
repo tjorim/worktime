@@ -94,7 +94,9 @@ npm test -- --coverage      # Run with coverage report
 - `tests/data/rosters.test.ts` - Roster configuration validation tests (14 test cases)
 - `tests/lib/hday.test.ts` - .hday parser tests (139 test cases)
 - `tests/contexts/EventStoreContext.test.tsx` - Event store tests
-- `tests/shiftCalculations.test.ts` - Business logic tests
+- `tests/utils/shiftCalculations.test.ts` - Business logic tests
+- `tests/utils/workingDayUtils.test.ts` - Working day and holiday logic tests
+- `tests/utils/vacationCalculations.test.ts` - Vacation and time-off aggregation tests
 
 ## File Structure
 
@@ -106,16 +108,42 @@ Worktime/
 │   ├── main.tsx           # React app entry point and initialization
 │   ├── vite-env.d.ts      # TypeScript environment declarations
 │   ├── components/        # React components
-│   │   ├── ChangelogModal.tsx   # Interactive changelog viewer with accordion layout
-│   │   ├── CurrentStatus.tsx    # Current team shift and status display with timeline
-│   │   ├── ErrorBoundary.tsx    # Error boundary wrapper for graceful error handling
-│   │   ├── Header.tsx           # App header with title and controls
-│   │   ├── MainTabs.tsx         # Main tabbed interface container
-│   │   ├── ScheduleView.tsx     # Weekly schedule overview
-│   │   ├── ShiftTimeline.tsx    # Today's shift timeline component (extracted from CurrentStatus)
-│   │   ├── TeamSelector.tsx     # Team selection modal
-│   │   ├── TodayView.tsx        # Today's schedule for all teams
-│   │   └── TransferView.tsx     # Team handover/transfer analysis
+│   │   ├── AboutModal.tsx        # About modal with app/version details
+│   │   ├── CalendarView.tsx      # Monthly calendar view with holidays/events
+│   │   ├── ChangelogModal.tsx    # Interactive changelog viewer with accordion layout
+│   │   ├── ConfirmationDialog.tsx # Reusable confirmation dialog
+│   │   ├── CurrentStatus.tsx     # Current team shift and status display with timeline
+│   │   ├── ErrorBoundary.tsx     # Error boundary wrapper for graceful error handling
+│   │   ├── EventModal.tsx        # Time-off event editor modal
+│   │   ├── Header.tsx            # App header with title and controls
+│   │   ├── KeyboardShortcutsModal.tsx # Keyboard shortcut helper modal
+│   │   ├── MainTabs.tsx          # Main tabbed interface container
+│   │   ├── ScheduleTabView.tsx   # Schedule tab container and controls
+│   │   ├── SettingsPanel.tsx     # Settings sidebar and configuration
+│   │   ├── ShiftTimeline.tsx     # Today's shift timeline component (extracted from CurrentStatus)
+│   │   ├── TimeOffView.tsx       # Time-off management view
+│   │   ├── TransferView.tsx      # Team handover/transfer analysis
+│   │   ├── WelcomeWizard.tsx     # Onboarding wizard (schedule/team selection)
+│   │   ├── calendar/             # Calendar view building blocks
+│   │   │   ├── CalendarLegend.tsx
+│   │   │   ├── ContextMenu.tsx
+│   │   │   ├── DayCell.tsx
+│   │   │   └── MonthCalendar.tsx
+│   │   ├── schedule/             # Schedule views
+│   │   │   ├── ScheduleDetailModal.tsx
+│   │   │   ├── ScheduleView.tsx
+│   │   │   └── TodayView.tsx
+│   │   ├── shared/               # Shared UI building blocks
+│   │   │   ├── CountdownBadge.tsx
+│   │   │   ├── SetupActionButton.tsx
+│   │   │   ├── ShiftBadge.tsx
+│   │   │   └── ShiftTimeDisplay.tsx
+│   │   ├── status/               # Status card variants
+│   │   │   ├── GenericStatus.tsx
+│   │   │   └── PersonalizedStatus.tsx
+│   │   └── timeoff/              # Time-off view panels
+│   │       ├── RawContentPanel.tsx
+│   │       └── VacationStatsPanel.tsx
 │   ├── contexts/          # React contexts for global state
 │   │   ├── EventStoreContext.tsx    # .hday event storage and CRUD operations
 │   │   ├── SettingsContext.tsx      # User settings (team, time format, etc.)
@@ -126,11 +154,18 @@ Worktime/
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useCountdown.ts         # Countdown timer hook for next shift timing
 │   │   ├── useFocusTrap.ts         # Focus trap for modals
+│   │   ├── useFormattedShiftTime.ts # Shift time formatting helpers
 │   │   ├── useKeyboardShortcuts.ts # Keyboard shortcuts functionality
 │   │   ├── useLiveTime.ts          # Live updating time with configurable frequency
 │   │   ├── useLocalStorage.ts      # LocalStorage persistence hook
+│   │   ├── useOpenHolidays.ts      # OpenHolidays API hook
+│   │   ├── usePublicHolidays.ts    # Public holiday lookup hook
+│   │   ├── useSchoolHolidays.ts    # School holiday lookup hook
+│   │   ├── useSetupAction.ts       # Wizard/setup action helpers
 │   │   ├── useShiftCalculation.ts  # Shift calculation logic hook
-│   │   └── useTransferCalculations.ts # Team transfer analysis hook
+│   │   ├── useSyncedState.ts       # State synchronized with storage
+│   │   ├── useTransferCalculations.ts # Team transfer analysis hook
+│   │   └── useViewMode.ts          # View mode preference hook
 │   ├── lib/               # Core libraries
 │   │   ├── events/        # Event processing
 │   │   │   └── converters.ts      # .hday to internal format converters
@@ -139,8 +174,13 @@ Worktime/
 │   ├── utils/             # TypeScript utilities and business logic
 │   │   ├── config.ts           # App configuration and constants
 │   │   ├── dateTimeUtils.ts    # Date formatting and localization
+│   │   ├── paydayUtils.ts      # Payday calculation helpers
+│   │   ├── scheduleUtils.ts    # Schedule type guards and helpers
 │   │   ├── share.ts            # Share functionality
-│   │   └── shiftCalculations.ts # Core shift calculation functions
+│   │   ├── shiftCalculations.ts # Core shift calculation functions
+│   │   ├── vacationCalculations.ts # Vacation/time-off aggregations
+│   │   ├── viewUtils.ts         # View-level helpers
+│   │   └── workingDayUtils.ts   # Working day and holiday logic
 │   └── styles/
 │       └── main.scss      # Custom styles and shift color coding (Sass)
 ├── tests/                 # Test files
@@ -149,7 +189,7 @@ Worktime/
 │   ├── hooks/            # Hook tests
 │   ├── lib/              # Library tests
 │   ├── setup.ts          # Test environment setup
-│   └── shiftCalculations.test.ts # Business logic tests
+│   └── utils/             # Utility tests
 ├── public/
 │   └── assets/icons/      # Favicon icons
 ├── scripts/               # Build and utility scripts
@@ -381,6 +421,7 @@ For new schedules, configure `referenceDate` and `referenceTeam` directly in the
 - **Next Shift Lookup**: See when any team's next shift is scheduled
 - **My Team Next Shift**: Quickly see when user's team works next
 - **Transfer/Handover View**: See when user's team transfers with any other team (works before/after)
+- **Calendar View**: Monthly calendar with working shifts, time-off, public holidays, school holidays, and paydays
 - **Time Off Management**: Import/export .hday files for vacation and time-off tracking with event overlays on schedule
 - **Date Navigation**: Today button, date picker, previous/next day
 - **Date Format**: Display in YYWW.D format (e.g., 2520.2M = year 2025, week 20, Tuesday Morning)
