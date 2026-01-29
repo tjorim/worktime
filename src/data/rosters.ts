@@ -56,10 +56,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
   }
 
   // Validation 2: Shift codes are valid and defined in shiftTimes
-  const validShiftCodes = new Set(Object.keys(config.shiftTimes));
-  const invalidShifts = schedulePattern.filter(
-    (shift) => !validShiftCodes.has(shift) || !config.shiftTimes[shift],
-  );
+  const invalidShifts = schedulePattern.filter((shift) => !config.shiftTimes[shift]);
 
   if (invalidShifts.length > 0) {
     throw new Error(
