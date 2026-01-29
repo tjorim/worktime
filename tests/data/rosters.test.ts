@@ -30,7 +30,6 @@ describe("Schedule pattern validation", () => {
       expect(config.referenceTeam).toBeGreaterThan(0);
       expect(config.referenceTeam).toBeLessThanOrEqual(config.teamCount);
       expect(config.schedulePattern).toBeDefined();
-      expect(config.schedulePattern).toBeDefined();
       expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
     });
   });
