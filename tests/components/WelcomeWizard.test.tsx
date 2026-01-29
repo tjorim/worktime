@@ -839,7 +839,7 @@ describe("WelcomeWizard", () => {
       expect(fiveShiftButton).toBeInTheDocument();
     });
 
-    it("should not allow selection of disabled/unavailable schedules", async () => {
+    it("should not allow selection of disabled schedules", async () => {
       const user = userEvent.setup();
       const onScheduleSelectMock = vi.fn();
 
@@ -856,21 +856,19 @@ describe("WelcomeWizard", () => {
         expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
       });
 
-      // Find disabled schedule buttons (2-shift and weekend-shift are marked as unavailable)
+      // Find disabled schedule button (2-shift is marked as unavailable)
       const twoShiftButton = screen.getByRole("button", { name: /2-shift/i });
       const weekendShiftButton = screen.getByRole("button", { name: /Weekend shift/i });
 
-      // These buttons should be disabled
+      // 2-shift should be disabled while weekend shift is available
       expect(twoShiftButton).toBeDisabled();
-      expect(weekendShiftButton).toBeDisabled();
+      expect(weekendShiftButton).not.toBeDisabled();
 
-      // Attempting to click should not select them
+      // Attempting to click should not select disabled option
       await user.click(twoShiftButton);
-      await user.click(weekendShiftButton);
 
       // Button should remain disabled even if clicked
       expect(twoShiftButton).toBeDisabled();
-      expect(weekendShiftButton).toBeDisabled();
     });
 
     it("should show tooltip on disabled schedule options", async () => {
