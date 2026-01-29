@@ -30,8 +30,8 @@ describe("Schedule pattern validation", () => {
       expect(config.referenceTeam).toBeGreaterThan(0);
       expect(config.referenceTeam).toBeLessThanOrEqual(config.teamCount);
       expect(config.schedulePattern).toBeDefined();
-      expect(config.schedulePattern.days).toBeDefined();
-      expect(config.schedulePattern.days.length).toBe(config.cycleLengthDays);
+      expect(config.schedulePattern).toBeDefined();
+      expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
     });
   });
 
@@ -39,7 +39,7 @@ describe("Schedule pattern validation", () => {
     const validCodes = new Set(["M", "L", "N", "D", "O"]);
     SCHEDULE_OPTIONS.forEach((schedule) => {
       const { schedulePattern } = schedule.shiftConfig;
-      schedulePattern.days.forEach((shift) => {
+      schedulePattern.forEach((shift) => {
         expect(validCodes.has(shift)).toBe(true);
       });
     });
@@ -86,20 +86,20 @@ describe("Schedule pattern validation", () => {
   it("should have 5-shift schedule with correct 10-day cycle pattern", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     expect(schedule?.shiftConfig.cycleLengthDays).toBe(10);
-    expect(schedule?.shiftConfig.schedulePattern.days).toHaveLength(10);
+    expect(schedule?.shiftConfig.schedulePattern).toHaveLength(10);
 
     // Verify the expected pattern: M, M, L, L, N, N, O, O, O, O
-    const pattern = schedule?.shiftConfig.schedulePattern.days;
+    const pattern = schedule?.shiftConfig.schedulePattern;
     expect(pattern).toEqual(["M", "M", "L", "L", "N", "N", "O", "O", "O", "O"]);
   });
 
   it("should have 9-5 schedule with correct 7-day cycle pattern", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "9-5");
     expect(schedule?.shiftConfig.cycleLengthDays).toBe(7);
-    expect(schedule?.shiftConfig.schedulePattern.days).toHaveLength(7);
+    expect(schedule?.shiftConfig.schedulePattern).toHaveLength(7);
 
     // Verify the expected pattern: D, D, D, D, D, O, O (Mon-Fri work, weekend off)
-    const pattern = schedule?.shiftConfig.schedulePattern.days;
+    const pattern = schedule?.shiftConfig.schedulePattern;
     expect(pattern).toEqual(["D", "D", "D", "D", "D", "O", "O"]);
   });
 

@@ -170,7 +170,7 @@ export const SHIFTS = Object.freeze({
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
   const schedule = getScheduleForOption(scheduleOption);
-  return schedule.shiftConfig.schedulePattern.days.includes("N");
+  return schedule.shiftConfig.schedulePattern.includes("N");
 };
 
 const getTeamCountForSchedule = (scheduleOption?: NullableScheduleOption) => {
@@ -399,7 +399,7 @@ export function calculateShift(
   const teamOffset = getCycleTeamOffsetDays(scheduleOption, teamNumber);
   const adjustedDays = daysSinceReference - teamOffset;
   const cyclePosition = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-  const shiftCode = schedulePattern.days[cyclePosition];
+  const shiftCode = schedulePattern[cyclePosition];
   if (!shiftCode) {
     // This indicates a likely configuration error: the schedulePattern is missing
     // an entry for the computed cycle position. We keep the existing behavior of
