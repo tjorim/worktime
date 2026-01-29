@@ -144,58 +144,31 @@ const getShiftTimeDefinition = (
   return schedule.shiftConfig.shiftTimes[code];
 };
 
-const BASE_SHIFT_DEFINITIONS = {
-  M: {
-    name: "Morning",
-    hours: "07:00-15:00",
-    start: 7,
-    end: 15,
-    isWorking: true,
-  },
-  L: {
-    name: "Late",
-    hours: "15:00-23:00",
-    start: 15,
-    end: 23,
-    isWorking: true,
-  },
-  N: {
-    name: "Night",
-    hours: "23:00-07:00",
-    start: 23,
-    end: 7,
-    isWorking: true,
-  },
-  D: {
-    name: "Day",
-    hours: "09:00-17:00",
-    start: 9,
-    end: 17,
-    isWorking: true,
-  },
-  O: {
-    name: "Off",
-    hours: "Not working",
-    start: null,
-    end: null,
-    isWorking: false,
-  },
-} satisfies Record<ShiftType, {
-  name: string;
-  hours: string;
-  start: number | null;
-  end: number | null;
-  isWorking: boolean;
-}>;
-
-const getBaseShiftDefinition = (code: ShiftType) => BASE_SHIFT_DEFINITIONS[code];
+const buildShiftTemplate = (
+  code: ShiftType,
+  emoji: string,
+  className: string,
+  isWorking: boolean,
+): Shift =>
+  buildShift(
+    code,
+    {
+      name: "",
+      hours: "",
+      start: null,
+      end: null,
+      isWorking,
+    },
+    emoji,
+    className,
+  );
 
 export const SHIFTS = Object.freeze({
-  MORNING: Object.freeze(buildShift("M", getBaseShiftDefinition("M"), "🌅", "shift-morning")),
-  LATE: Object.freeze(buildShift("L", getBaseShiftDefinition("L"), "🌆", "shift-late")),
-  DAY: Object.freeze(buildShift("D", getBaseShiftDefinition("D"), "☀️", "shift-day")),
-  NIGHT: Object.freeze(buildShift("N", getBaseShiftDefinition("N"), "🌙", "shift-night")),
-  OFF: Object.freeze(buildShift("O", getBaseShiftDefinition("O"), "🏠", "shift-off")),
+  MORNING: Object.freeze(buildShiftTemplate("M", "🌅", "shift-morning", true)),
+  LATE: Object.freeze(buildShiftTemplate("L", "🌆", "shift-late", true)),
+  DAY: Object.freeze(buildShiftTemplate("D", "☀️", "shift-day", true)),
+  NIGHT: Object.freeze(buildShiftTemplate("N", "🌙", "shift-night", true)),
+  OFF: Object.freeze(buildShiftTemplate("O", "🏠", "shift-off", false)),
 });
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
