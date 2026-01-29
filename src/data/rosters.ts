@@ -10,15 +10,13 @@ export type ShiftTimeDefinition = {
   displayCode: string;
 };
 
-const OFF_SHIFT_TIME: ShiftTimeDefinition = {
+const OFF_SHIFT_TIME: ShiftTimeDefinition = Object.freeze({
   name: "Off",
   hours: "Not working",
   start: null,
   end: null,
   displayCode: "O",
-};
-
-const IMMUTABLE_OFF_SHIFT_TIME = Object.freeze(OFF_SHIFT_TIME);
+});
 
 export type ShiftRosterConfig = {
   // Required fields for shift calculation
@@ -146,7 +144,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           end: 17,
           displayCode: "D",
         },
-        O: IMMUTABLE_OFF_SHIFT_TIME,
+        O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
@@ -195,7 +193,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           end: 16,
           displayCode: "D",
         },
-        O: IMMUTABLE_OFF_SHIFT_TIME,
+        O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
@@ -269,7 +267,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           end: 16.5,
           displayCode: "D",
         },
-        O: IMMUTABLE_OFF_SHIFT_TIME,
+        O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
       referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
@@ -327,7 +325,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           end: 7,
           displayCode: "N",
         },
-        O: IMMUTABLE_OFF_SHIFT_TIME,
+        O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
