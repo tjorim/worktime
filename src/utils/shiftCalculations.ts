@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
+import { type ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -145,11 +145,9 @@ const getShiftTimeDefinition = (
 };
 
 const defaultShiftTimes = (code: ShiftType) => {
-  const definition = SCHEDULE_OPTIONS.map((option) => option.shiftConfig.shiftTimes[code]).find(
-    Boolean,
-  );
+  const schedule = getScheduleForOption(undefined);
   return (
-    definition ?? {
+    schedule.shiftConfig.shiftTimes[code] ?? {
       name: "Unknown",
       hours: "Unknown hours",
       start: null,
