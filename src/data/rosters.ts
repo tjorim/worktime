@@ -7,7 +7,6 @@ export type ShiftTimeDefinition = {
   hours: string;
   start: number | null;
   end: number | null;
-  isWorking: boolean;
   displayCode?: string;
 };
 
@@ -16,7 +15,6 @@ const OFF_SHIFT_TIME: ShiftTimeDefinition = {
   hours: "Not working",
   start: null,
   end: null,
-  isWorking: false,
 };
 
 export type ShiftRosterConfig = {
@@ -167,7 +165,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "09:00-17:00",
           start: 9,
           end: 17,
-          isWorking: true,
         },
         O: OFF_SHIFT_TIME,
       },
@@ -204,7 +201,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "07:00-15:00",
           start: 7,
           end: 15,
-          isWorking: true,
           displayCode: "E",
         },
         L: {
@@ -212,7 +208,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "15:00-23:00",
           start: 15,
           end: 23,
-          isWorking: true,
         },
         O: OFF_SHIFT_TIME,
       },
@@ -278,7 +273,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "06:00-14:30",
           start: 6,
           end: 14.5,
-          isWorking: true,
           displayCode: "E",
         },
         L: {
@@ -286,14 +280,12 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "13:30-22:00",
           start: 13.5,
           end: 22,
-          isWorking: true,
         },
         D: {
           name: "Day",
           hours: "08:00-16:30",
           start: 8,
           end: 16.5,
-          isWorking: true,
         },
         O: OFF_SHIFT_TIME,
       },
@@ -338,14 +330,12 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "07:00-15:00",
           start: 7,
           end: 15,
-          isWorking: true,
         },
         L: {
           name: "Evening",
           hours: "15:00-23:00",
           start: 15,
           end: 23,
-          isWorking: true,
           displayCode: "E",
         },
         N: {
@@ -353,7 +343,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
           hours: "23:00-07:00",
           start: 23,
           end: 7,
-          isWorking: true,
         },
         O: OFF_SHIFT_TIME,
       },

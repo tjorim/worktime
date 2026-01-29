@@ -119,7 +119,6 @@ const buildShift = (
     hours: string;
     start: number | null;
     end: number | null;
-    isWorking: boolean;
   },
   emoji: string,
   className: string,
@@ -131,7 +130,7 @@ const buildShift = (
     hours: definition.hours,
     start: definition.start,
     end: definition.end,
-    isWorking: definition.isWorking,
+    isWorking: code !== "O",
     className,
   };
 };
@@ -148,7 +147,6 @@ const buildShiftTemplate = (
   code: ShiftType,
   emoji: string,
   className: string,
-  isWorking: boolean,
 ): Shift =>
   buildShift(
     code,
@@ -157,18 +155,17 @@ const buildShiftTemplate = (
       hours: "",
       start: null,
       end: null,
-      isWorking,
     },
     emoji,
     className,
   );
 
 export const SHIFTS = Object.freeze({
-  MORNING: Object.freeze(buildShiftTemplate("M", "🌅", "shift-morning", true)),
-  LATE: Object.freeze(buildShiftTemplate("L", "🌆", "shift-late", true)),
-  DAY: Object.freeze(buildShiftTemplate("D", "☀️", "shift-day", true)),
-  NIGHT: Object.freeze(buildShiftTemplate("N", "🌙", "shift-night", true)),
-  OFF: Object.freeze(buildShiftTemplate("O", "🏠", "shift-off", false)),
+  MORNING: Object.freeze(buildShiftTemplate("M", "🌅", "shift-morning")),
+  LATE: Object.freeze(buildShiftTemplate("L", "🌆", "shift-late")),
+  DAY: Object.freeze(buildShiftTemplate("D", "☀️", "shift-day")),
+  NIGHT: Object.freeze(buildShiftTemplate("N", "🌙", "shift-night")),
+  OFF: Object.freeze(buildShiftTemplate("O", "🏠", "shift-off")),
 });
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
