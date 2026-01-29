@@ -8,6 +8,23 @@ import * as useCountdownHook from "../../src/hooks/useCountdown";
 import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
 import * as shiftCalculations from "../../src/utils/shiftCalculations";
 
+// Mock useSettings to provide scheduleType
+vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+  return {
+    ...actual,
+    useSettings: vi.fn(() => ({
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+      },
+      scheduleType: "5-shift",
+    })),
+  };
+});
+
 // Mock dependencies
 vi.mock("../../src/utils/shiftCalculations", () => ({
   calculateShift: vi.fn(),
@@ -16,14 +33,14 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getNextShift: vi.fn(),
   getOffDayProgress: vi.fn(),
   getShiftCode: vi.fn(),
-  getShiftByCode: vi.fn(),
-  getShiftDisplay: vi.fn(),
+  getShift: vi.fn(),
   getFormattedShiftTime: vi.fn((shift) => {
-    // Return formatted time with en-dash based on shift hours
-    if (shift.hours) {
-      return shift.hours.replace("-", "–");
+    // Return formatted time based on shift start/end
+    if (shift.start != null && shift.end != null) {
+      const formatHour = (h: number) => String(Math.floor(h)).padStart(2, "0") + ":00";
+      return `${formatHour(shift.start)}–${formatHour(shift.end)}`;
     }
-    return "";
+    return "Not working";
   }),
   isCurrentlyWorking: vi.fn(),
   getCurrentWorkingTeam: vi.fn(),
@@ -82,9 +99,9 @@ describe("CurrentStatus Component", () => {
     vi.mocked(shiftCalculations.getCurrentShiftDay).mockReturnValue(dayjs("2024-01-15"));
     vi.mocked(shiftCalculations.calculateShift).mockReturnValue({
       code: "M",
+      displayCode: "M",
       emoji: "🌅",
       name: "Morning",
-      hours: "07:00-15:00",
       start: 7,
       end: 15,
       isWorking: true,
@@ -96,9 +113,9 @@ describe("CurrentStatus Component", () => {
         teamNumber: 1,
         shift: {
           code: "M",
+          displayCode: "M",
           emoji: "🌅",
           name: "Morning",
-          hours: "07:00-15:00",
           start: 7,
           end: 15,
           isWorking: true,
@@ -111,9 +128,9 @@ describe("CurrentStatus Component", () => {
         teamNumber: 2,
         shift: {
           code: "O",
+          displayCode: "O",
           emoji: "☀️",
           name: "Off",
-          hours: "",
           start: null,
           end: null,
           isWorking: false,
@@ -127,9 +144,9 @@ describe("CurrentStatus Component", () => {
       teamNumber: 1,
       shift: {
         code: "M",
+        displayCode: "M",
         emoji: "🌅",
         name: "Morning",
-        hours: "07:00-15:00",
         start: 7,
         end: 15,
         isWorking: true,
@@ -142,9 +159,9 @@ describe("CurrentStatus Component", () => {
       date: dayjs("2024-01-16"),
       shift: {
         code: "L",
+        displayCode: "E",
         emoji: "🌆",
         name: "Evening",
-        hours: "15:00-23:00",
         start: 15,
         end: 23,
         isWorking: true,
@@ -156,20 +173,16 @@ describe("CurrentStatus Component", () => {
       current: 2,
       total: 4,
     });
-    vi.mocked(shiftCalculations.getShiftByCode).mockReturnValue({
+    vi.mocked(shiftCalculations.getShift).mockReturnValue({
       code: "M",
+      displayCode: "M",
       emoji: "🌅",
       name: "Morning",
-      hours: "07:00-15:00",
       start: 7,
       end: 15,
       isWorking: true,
       className: "shift-morning",
     });
-    vi.mocked(shiftCalculations.getShiftDisplay).mockImplementation((shift) => ({
-      displayName: shift.name,
-      displayHours: shift.hours,
-    }));
     vi.mocked(shiftCalculations.isCurrentlyWorking).mockReturnValue(true);
     vi.mocked(useCountdownHook.useCountdown).mockReturnValue({
       days: 0,
@@ -197,7 +210,8 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Current Status")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /select schedule/i })).toBeInTheDocument();
+      // With scheduleType set to "5-shift" via mock, shows "Select Team" button
+      expect(screen.getByRole("button", { name: /select team/i })).toBeInTheDocument();
     });
 
     it("should show who is working button when callback is provided", () => {
@@ -279,9 +293,9 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "M",
+          displayCode: "M",
           emoji: "🌅",
           name: "Morning",
-          hours: "07:00-15:00",
           start: 7,
           end: 15,
           isWorking: true,
@@ -300,9 +314,9 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "N",
+          displayCode: "N",
           emoji: "🌙",
           name: "Night",
-          hours: "23:00-07:00",
           start: 23,
           end: 7,
           isWorking: true,
@@ -338,9 +352,9 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "O",
+          displayCode: "O",
           emoji: "☀️",
           name: "Off",
-          hours: "",
           start: null,
           end: null,
           isWorking: false,
@@ -434,9 +448,9 @@ describe("CurrentStatus Component", () => {
         date: dayjs("2024-01-16"),
         shift: {
           code: "O",
+          displayCode: "O",
           emoji: "☀️",
           name: "Off",
-          hours: "",
           start: null,
           end: null,
           isWorking: false,
@@ -455,7 +469,11 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={4} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Team 4: Morning")).toBeInTheDocument();
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 4, null);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        4,
+        "5-shift",
+      );
     });
   });
 
@@ -505,7 +523,11 @@ describe("CurrentStatus Component", () => {
         <CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />,
       );
 
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 1, null);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        1,
+        "5-shift",
+      );
 
       rerender(
         <ToastProvider>
@@ -515,7 +537,11 @@ describe("CurrentStatus Component", () => {
         </ToastProvider>,
       );
 
-      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(expect.any(Object), 2, null);
+      expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
+        expect.any(Object),
+        2,
+        "5-shift",
+      );
     });
 
     it("should use memoized values correctly", () => {

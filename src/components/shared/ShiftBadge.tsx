@@ -3,10 +3,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useId } from "react";
 import classNames from "classnames";
+import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 import type { ShiftResult } from "../../utils/shiftCalculations";
-import type { ScheduleOption } from "../../data/rosters";
-import { getShiftDisplay } from "../../utils/shiftCalculations";
-import { useSettings } from "../../contexts/SettingsContext";
 
 // Helper: Determine size class
 const getSizeClass = (size: "sm" | "md" | "lg"): string => {
@@ -28,7 +26,6 @@ const getBadgeContent = (
 
 interface ShiftBadgeProps {
   shift: ShiftResult["shift"];
-  scheduleType?: ScheduleOption | null;
   variant?: "code" | "name" | "both";
   pill?: boolean;
   size?: "sm" | "md" | "lg";
@@ -37,10 +34,9 @@ interface ShiftBadgeProps {
 }
 
 /**
- * Reusable shift badge component with schedule-aware styling and optional tooltip.
+ * Reusable shift badge component with styling and optional tooltip.
  *
  * @param shift - Shift object with code, name, className, etc.
- * @param scheduleType - Optional schedule type for display overrides
  * @param variant - What to display: 'code' (default), 'name', or 'both'
  * @param pill - Whether to use pill styling
  * @param size - Badge size: 'sm', 'md' (default), or 'lg'
@@ -50,7 +46,6 @@ interface ShiftBadgeProps {
  */
 export function ShiftBadge({
   shift,
-  scheduleType,
   variant = "code",
   pill = false,
   size = "md",
@@ -58,12 +53,10 @@ export function ShiftBadge({
   showTooltip = variant === "code",
 }: ShiftBadgeProps) {
   const tooltipId = useId();
-  const { scheduleType: userScheduleType } = useSettings();
-  const effectiveScheduleType = scheduleType ?? userScheduleType;
-  const shiftDisplay = getShiftDisplay(shift, effectiveScheduleType);
+  const formattedTime = useFormattedShiftTime(shift);
 
   const sizeClass = getSizeClass(size);
-  const content = getBadgeContent(variant, shiftDisplay.displayCode, shiftDisplay.displayName);
+  const content = getBadgeContent(variant, shift.displayCode, shift.name);
 
   const badge = (
     <Badge
@@ -86,11 +79,11 @@ export function ShiftBadge({
         placement="top"
         overlay={
           <Tooltip id={tooltipId}>
-            {shiftDisplay.displayName}
+            {shift.name}
             {shift.isWorking && (
               <>
                 <br />
-                {shiftDisplay.displayHours}
+                {formattedTime}
               </>
             )}
           </Tooltip>

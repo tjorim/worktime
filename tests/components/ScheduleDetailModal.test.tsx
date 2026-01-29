@@ -37,12 +37,7 @@ describe("ScheduleDetailModal", () => {
 
   it("shows Schedule Details for single-user schedules", () => {
     renderWithSettings(
-      <ScheduleDetailModal
-        show={true}
-        onHide={() => {}}
-        teamNumber={1}
-        scheduleType="9-5"
-      />,
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
     );
 
     expect(screen.getByText("Schedule Details")).toBeInTheDocument();
@@ -51,12 +46,7 @@ describe("ScheduleDetailModal", () => {
   it("throws an error when team number is out of range", () => {
     expect(() =>
       renderWithSettings(
-        <ScheduleDetailModal
-          show={true}
-          onHide={() => {}}
-          teamNumber={0}
-          scheduleType="5-shift"
-        />,
+        <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={0} scheduleType="5-shift" />,
       ),
     ).toThrow(/Invalid team number/);
   });

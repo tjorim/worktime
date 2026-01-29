@@ -12,7 +12,7 @@ import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
-import { calculateShift, getShiftDisplay } from "../utils/shiftCalculations";
+import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
@@ -318,7 +318,6 @@ export function CalendarView({
 
     return (date: Dayjs) => {
       const shift = calculateShift(date, effectiveTeam, scheduleType);
-      const shiftDisplay = getShiftDisplay(shift, scheduleType);
 
       // Determine if this is actually a working day
       const actuallyWorking = isWorkingDay(
@@ -330,7 +329,7 @@ export function CalendarView({
       );
 
       // Additional context for display
-      let displayLabel = shiftDisplay.displayName;
+      let displayLabel = shift.name;
       if (!actuallyWorking && shift.code !== "O") {
         if (hasTimeOffEvent(date, events)) {
           displayLabel = "Time Off";
@@ -340,7 +339,7 @@ export function CalendarView({
       }
 
       return {
-        code: shiftDisplay.displayCode,
+        code: shift.displayCode,
         label: displayLabel,
         isWorking: actuallyWorking,
       };
@@ -390,10 +389,7 @@ export function CalendarView({
                   ? "To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings."
                   : "To see your personalized calendar, please select your team in Settings."}
               </p>
-              <SetupActionButton
-                onChangeSchedule={onChangeSchedule}
-                onChangeTeam={onChangeTeam}
-              />
+              <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
               <p className="text-muted mt-4 mb-3">
                 You can still explore the Today and Week schedule views before making a selection.
               </p>

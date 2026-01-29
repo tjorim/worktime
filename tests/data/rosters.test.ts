@@ -35,8 +35,6 @@ describe("Schedule pattern validation", () => {
   });
 
   it("should define shiftTimes for every shift used in schedulePattern", () => {
-    const timeRangePattern = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
-
     SCHEDULE_OPTIONS.forEach((schedule) => {
       const { schedulePattern, shiftTimes } = schedule.shiftConfig;
 
@@ -47,8 +45,6 @@ describe("Schedule pattern validation", () => {
 
         expect(typeof definition.name).toBe("string");
         expect(definition.name.length).toBeGreaterThan(0);
-        expect(typeof definition.hours).toBe("string");
-        expect(definition.hours.length).toBeGreaterThan(0);
         expect(typeof definition.displayCode).toBe("string");
         expect(definition.displayCode.length).toBeGreaterThan(0);
 
@@ -58,7 +54,6 @@ describe("Schedule pattern validation", () => {
         } else {
           expect(typeof definition.start).toBe("number");
           expect(typeof definition.end).toBe("number");
-          expect(timeRangePattern.test(definition.hours)).toBe(true);
         }
       });
     });

@@ -9,9 +9,10 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
+import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
-import { getShiftByCode, getShiftDisplayName } from "../utils/shiftCalculations";
+import { getShift } from "../utils/shiftCalculations";
 import { SetupActionButton } from "./shared/SetupActionButton";
 
 interface TransferViewProps {
@@ -52,6 +53,8 @@ export function TransferView({
   const [useCustomRange, setUseCustomRange] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+
+  const { scheduleType } = useSettings();
 
   // Use the transfer calculations hook - it validates the team number
   const {
@@ -112,7 +115,15 @@ export function TransferView({
         )}
       </Card.Header>
       <Card.Body>
-        {!myTeam ? (
+        {!scheduleType ? (
+          <div className="text-center py-4">
+            <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+            <p className="text-muted mb-3">
+              Please select your schedule to see transfer information.
+            </p>
+            <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
+          </div>
+        ) : !myTeam ? (
           <div className="text-center py-4">
             <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
             <p className="text-muted mb-3">Please select your team to see transfer information.</p>
@@ -252,84 +263,82 @@ export function TransferView({
                       </tr>
                     </thead>
                     <tbody>
-                      {transfers.map((transfer) => (
-                        <tr
-                          key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
-                        >
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <i
-                                className={classNames("bi", "me-2", {
-                                  "bi-arrow-right-circle text-success":
-                                    transfer.type === "handover",
-                                  "bi-arrow-left-circle text-info": transfer.type !== "handover",
-                                })}
-                              ></i>
-                              <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-1">
-                              <Badge
-                                bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
-                                className="text-nowrap"
-                              >
-                                {transfer.fromTeam === myTeam ? "Your " : ""}
-                                Team {transfer.fromTeam}
-                              </Badge>
-                              <i className="bi bi-arrow-right text-muted"></i>
-                              <Badge
-                                bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
-                                className="text-nowrap"
-                              >
-                                {transfer.toTeam === myTeam ? "Your " : ""}
-                                Team {transfer.toTeam}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td>
-                            <OverlayTrigger
-                              placement="top"
-                              overlay={
-                                <Tooltip
-                                  id={`tooltip-${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
+                      {transfers.map((transfer) => {
+                        const fromShift = getShift(transfer.fromShiftType, scheduleType);
+                        const toShift = getShift(transfer.toShiftType, scheduleType);
+                        return (
+                          <tr
+                            key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
+                          >
+                            <td>
+                              <div className="d-flex align-items-center">
+                                <i
+                                  className={classNames("bi", "me-2", {
+                                    "bi-arrow-right-circle text-success":
+                                      transfer.type === "handover",
+                                    "bi-arrow-left-circle text-info": transfer.type !== "handover",
+                                  })}
+                                ></i>
+                                <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center gap-1">
+                                <Badge
+                                  bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
+                                  className="text-nowrap"
                                 >
-                                  {transfer.type === "handover"
-                                    ? "Your team transfers to them"
-                                    : "They transfer to your team"}
-                                </Tooltip>
-                              }
-                            >
-                              <Badge
-                                bg={transfer.type === "handover" ? "success" : "info"}
-                                pill
-                                style={{
-                                  cursor: "help",
-                                }}
+                                  {transfer.fromTeam === myTeam ? "Your " : ""}
+                                  Team {transfer.fromTeam}
+                                </Badge>
+                                <i className="bi bi-arrow-right text-muted"></i>
+                                <Badge
+                                  bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
+                                  className="text-nowrap"
+                                >
+                                  {transfer.toTeam === myTeam ? "Your " : ""}
+                                  Team {transfer.toTeam}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td>
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={
+                                  <Tooltip
+                                    id={`tooltip-${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
+                                  >
+                                    {transfer.type === "handover"
+                                      ? "Your team transfers to them"
+                                      : "They transfer to your team"}
+                                  </Tooltip>
+                                }
                               >
-                                {transfer.type === "handover" ? "Handover" : "Takeover"}
-                              </Badge>
-                            </OverlayTrigger>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-2">
-                              <Badge
-                                className={getShiftByCode(transfer.fromShiftType).className}
-                                pill
-                              >
-                                {getShiftDisplayName(getShiftByCode(transfer.fromShiftType))}
-                              </Badge>
-                              <i className="bi bi-arrow-right text-muted"></i>
-                              <Badge
-                                className={getShiftByCode(transfer.toShiftType).className}
-                                pill
-                              >
-                                {getShiftDisplayName(getShiftByCode(transfer.toShiftType))}
-                              </Badge>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                                <Badge
+                                  bg={transfer.type === "handover" ? "success" : "info"}
+                                  pill
+                                  style={{
+                                    cursor: "help",
+                                  }}
+                                >
+                                  {transfer.type === "handover" ? "Handover" : "Takeover"}
+                                </Badge>
+                              </OverlayTrigger>
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center gap-2">
+                                <Badge className={fromShift.className} pill>
+                                  {fromShift.emoji} {fromShift.name}
+                                </Badge>
+                                <i className="bi bi-arrow-right text-muted"></i>
+                                <Badge className={toShift.className} pill>
+                                  {toShift.emoji} {toShift.name}
+                                </Badge>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </Table>
                 </div>

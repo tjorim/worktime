@@ -7,22 +7,28 @@ interface KeyboardShortcutsModalProps {
 }
 
 const SHORTCUTS = [
-  { category: "Navigation", items: [
-    { keys: ["C"], description: "Calendar tab" },
-    { keys: ["S"], description: "Schedule tab" },
-    { keys: ["T"], description: "Transfers tab" },
-    { keys: ["O"], description: "Time Off tab" },
-    { keys: ["←", "→"], description: "Previous / next date" },
-    { keys: ["Ctrl", ","], description: "Open settings" },
-  ]},
-  { category: "Time Off", items: [
-    { keys: ["Ctrl", "I"], description: "Import .hday file" },
-    { keys: ["Ctrl", "S"], description: "Export .hday file" },
-    { keys: ["Delete"], description: "Delete selected events" },
-    { keys: ["Escape"], description: "Cancel edit" },
-    { keys: ["Ctrl", "Z"], description: "Undo" },
-    { keys: ["Ctrl", "Y"], description: "Redo" },
-  ]},
+  {
+    category: "Navigation",
+    items: [
+      { keys: ["C"], description: "Calendar tab" },
+      { keys: ["S"], description: "Schedule tab" },
+      { keys: ["T"], description: "Transfers tab" },
+      { keys: ["O"], description: "Time Off tab" },
+      { keys: ["←", "→"], description: "Previous / next date" },
+      { keys: ["Ctrl", ","], description: "Open settings" },
+    ],
+  },
+  {
+    category: "Time Off",
+    items: [
+      { keys: ["Ctrl", "I"], description: "Import .hday file" },
+      { keys: ["Ctrl", "S"], description: "Export .hday file" },
+      { keys: ["Delete"], description: "Delete selected events" },
+      { keys: ["Escape"], description: "Cancel edit" },
+      { keys: ["Ctrl", "Z"], description: "Undo" },
+      { keys: ["Ctrl", "Y"], description: "Redo" },
+    ],
+  },
 ] as const;
 
 /**
@@ -43,7 +49,10 @@ export function KeyboardShortcutsModal({ show, onHide }: KeyboardShortcutsModalP
             <h6 className="text-muted mb-2">{category}</h6>
             <div className="row g-2">
               {items.map(({ keys, description }) => (
-                <div key={description} className="col-12 d-flex justify-content-between align-items-center">
+                <div
+                  key={description}
+                  className="col-12 d-flex justify-content-between align-items-center"
+                >
                   <span className="text-muted small">{description}</span>
                   <span>
                     {keys.map((key, i) => (

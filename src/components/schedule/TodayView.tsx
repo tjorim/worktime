@@ -11,17 +11,12 @@ import classNames from "classnames";
 import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "../../data/rosters";
 import { useEventStore } from "../../contexts/EventStoreContext";
-import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import type { ShiftResult } from "../../utils/shiftCalculations";
-import {
-  getAllTeamsShifts,
-  getShiftDisplay,
-  getFormattedShiftTime,
-  isCurrentlyWorking,
-} from "../../utils/shiftCalculations";
+import { getAllTeamsShifts, isCurrentlyWorking } from "../../utils/shiftCalculations";
+import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -62,15 +57,9 @@ function TeamCard({
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   scheduleType: ScheduleOption;
 }) {
-  const { settings } = useSettings();
-
-  // Use shiftResult.shift directly - already contains emoji/className/name/hours
-  const shiftDisplay = getShiftDisplay(shiftResult.shift, scheduleType);
-  const shiftTimeLabel = getFormattedShiftTime(
-    shiftResult.shift,
-    scheduleType,
-    settings.timeFormat,
-  );
+  // Use shiftResult.shift directly - already contains emoji/className/name/displayCode
+  const shift = shiftResult.shift;
+  const shiftTimeLabel = useFormattedShiftTime(shift);
 
   const cardContent = (
     <>
@@ -101,25 +90,25 @@ function TeamCard({
           placement="top"
           overlay={
             <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Shift Code: {shiftDisplay.displayCode}</strong>
+              <strong>Shift Code: {shift.displayCode}</strong>
               <br />
               <>
-                {shiftResult.shift.emoji} <em>{shiftDisplay.displayName}</em>
+                {shift.emoji} <em>{shift.name}</em>
                 <br />
                 {shiftTimeLabel}
               </>
             </Tooltip>
           }
         >
-          <Badge className={classNames("shift-code", "cursor-help", shiftResult.shift.className)}>
-            {shiftDisplay.displayCode}
+          <Badge className={classNames("shift-code", "cursor-help", shift.className)}>
+            {shift.displayCode}
           </Badge>
         </OverlayTrigger>
       </div>
       <div className="text-muted small">
-        {shiftDisplay.displayName}
+        {shift.name}
         <br />
-        {shiftResult.shift.isWorking ? shiftTimeLabel : "Not working today"}
+        {shift.isWorking ? shiftTimeLabel : "Not working today"}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger
@@ -131,8 +120,7 @@ function TeamCard({
               Format: YYWW.D + Shift
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
-              Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")},{" "}
-              {shiftDisplay.displayName}
+              Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")}, {shift.name}
             </Tooltip>
           }
         >

@@ -1,11 +1,28 @@
 import { render, screen } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import type React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ShiftTimeline } from "../../src/components/ShiftTimeline";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
+
+// Mock useSettings to provide scheduleType
+vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+  return {
+    ...actual,
+    useSettings: vi.fn(() => ({
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+      },
+      scheduleType: "5-shift",
+    })),
+  };
+});
 
 // Helper to render component with required providers
 const renderWithProviders = (component: React.ReactElement) => {
@@ -23,6 +40,7 @@ const createMockShiftResult = (
   code: `${date.format("YYWW.d")}${shiftCode}`,
   shift: {
     code: shiftCode,
+    displayCode: shiftCode,
     emoji: shiftCode === "M" ? "🌅" : shiftCode === "L" ? "🌆" : shiftCode === "N" ? "🌙" : "🏠",
     name:
       shiftCode === "M"
@@ -32,14 +50,6 @@ const createMockShiftResult = (
           : shiftCode === "N"
             ? "Night"
             : "Off",
-    hours:
-      shiftCode === "M"
-        ? "07:00-15:00"
-        : shiftCode === "L"
-          ? "15:00-23:00"
-          : shiftCode === "N"
-            ? "23:00-07:00"
-            : "Not working",
     start: shiftCode === "M" ? 7 : shiftCode === "L" ? 15 : shiftCode === "N" ? 23 : null,
     end: shiftCode === "M" ? 15 : shiftCode === "L" ? 23 : shiftCode === "N" ? 7 : null,
     isWorking: shiftCode !== "O",

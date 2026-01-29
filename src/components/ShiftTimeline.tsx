@@ -5,14 +5,10 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import { useSettings } from "../contexts/SettingsContext";
+import { useFormattedShiftTime } from "../hooks/useFormattedShiftTime";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
-import {
-  getAllTeamsShifts,
-  getShiftByCode,
-  getShiftDisplay,
-  getFormattedShiftTime,
-} from "../utils/shiftCalculations";
+import { getAllTeamsShifts } from "../utils/shiftCalculations";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -131,7 +127,13 @@ interface ShiftTimelineProps {
 export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps) {
   // Generate unique ID for tooltip to avoid HTML ID conflicts
   const timelineTooltipId = useId();
-  const { settings, scheduleType } = useSettings();
+  const { scheduleType } = useSettings();
+  const formattedShiftTime = useFormattedShiftTime(currentWorkingTeam.shift);
+
+  if (!scheduleType) {
+    throw new Error("ShiftTimeline requires a schedule to be selected");
+  }
+
   const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam, scheduleType);
 
   return (
@@ -146,9 +148,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             <Badge bg="light" text="dark" className="timeline-badge">
               T{prevShift.teamNumber}
             </Badge>
-            <div className="timeline-code">
-              {getShiftDisplay(prevShift.shift, scheduleType).displayCode}
-            </div>
+            <div className="timeline-code">{prevShift.shift.displayCode}</div>
           </div>
         )}
         {prevShift && <span className="timeline-arrow">→</span>}
@@ -159,15 +159,15 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
               <Tooltip id={timelineTooltipId}>
                 <strong>Currently Active</strong>
                 <br />
-                {getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayName}
+                {currentWorkingTeam.shift.name}
                 <br />
-                {getFormattedShiftTime(currentWorkingTeam.shift, scheduleType, settings.timeFormat)}
+                {formattedShiftTime}
               </Tooltip>
             }
           >
             <Badge
               className={classNames(
-                getShiftByCode(currentWorkingTeam.shift.code, scheduleType).className,
+                currentWorkingTeam.shift.className,
                 "timeline-current-badge",
                 "timeline-badge",
               )}
@@ -176,7 +176,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             </Badge>
           </OverlayTrigger>
           <div className="timeline-code">
-            {getShiftDisplay(currentWorkingTeam.shift, scheduleType).displayCode}
+            {currentWorkingTeam.shift.displayCode}
             <OverlayTrigger
               placement="bottom"
               overlay={
@@ -197,9 +197,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             <Badge bg="light" text="dark" className="timeline-badge">
               T{nextShift.teamNumber}
             </Badge>
-            <div className="timeline-code">
-              {getShiftDisplay(nextShift.shift, scheduleType).displayCode}
-            </div>
+            <div className="timeline-code">{nextShift.shift.displayCode}</div>
           </div>
         )}
       </div>

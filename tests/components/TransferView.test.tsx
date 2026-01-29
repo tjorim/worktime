@@ -7,6 +7,23 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 
+// Mock useSettings to provide scheduleType
+vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+  return {
+    ...actual,
+    useSettings: vi.fn(() => ({
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+      },
+      scheduleType: "5-shift",
+    })),
+  };
+});
+
 function renderWithProviders(ui: React.ReactElement) {
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
@@ -19,13 +36,25 @@ vi.mock("../../src/hooks/useTransferCalculations", () => ({
 const mockUseTransferCalculations = vi.mocked(useTransferCalculations);
 
 vi.mock("../../src/utils/shiftCalculations", () => ({
-  getShiftByCode: vi.fn((code) => {
-    const shifts = {
+  getShift: vi.fn((code) => {
+    const shifts: Record<
+      string,
+      {
+        code: string;
+        displayCode: string;
+        emoji: string;
+        name: string;
+        start: number;
+        end: number;
+        isWorking: boolean;
+        className: string;
+      }
+    > = {
       M: {
         code: "M",
+        displayCode: "M",
         emoji: "🌅",
         name: "Morning",
-        hours: "07:00-15:00",
         start: 7,
         end: 15,
         isWorking: true,
@@ -33,9 +62,9 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
       },
       L: {
         code: "L",
+        displayCode: "E",
         emoji: "🌆",
         name: "Evening",
-        hours: "15:00-23:00",
         start: 15,
         end: 23,
         isWorking: true,
@@ -43,9 +72,9 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
       },
       N: {
         code: "N",
+        displayCode: "N",
         emoji: "🌙",
         name: "Night",
-        hours: "23:00-07:00",
         start: 23,
         end: 7,
         isWorking: true,
@@ -53,22 +82,6 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
       },
     };
     return shifts[code] || shifts.M;
-  }),
-  getShiftDisplayName: vi.fn((shift) => `${shift.emoji} ${shift.name}`),
-  getShiftDisplay: vi.fn((shift) => {
-    // Apply 5-shift roster display overrides
-    if (shift.code === "L") {
-      return {
-        displayName: "Evening",
-        displayHours: shift.hours,
-        displayCode: "E",
-      };
-    }
-    return {
-      displayName: shift.name,
-      displayHours: shift.hours,
-      displayCode: shift.code,
-    };
   }),
 }));
 

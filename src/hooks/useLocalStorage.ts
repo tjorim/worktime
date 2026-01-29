@@ -54,30 +54,33 @@ export function useLocalStorage<T>(
     };
   }, [key]);
 
-  const setValue = useCallback((value: T | ((prev: T) => T)) => {
-    try {
-      // Use ref for functional updates to handle multiple calls in same render
-      const valueToStore = value instanceof Function ? value(latestValueRef.current) : value;
+  const setValue = useCallback(
+    (value: T | ((prev: T) => T)) => {
+      try {
+        // Use ref for functional updates to handle multiple calls in same render
+        const valueToStore = value instanceof Function ? value(latestValueRef.current) : value;
 
-      // Update ref immediately so subsequent calls in this render get the new value
-      latestValueRef.current = valueToStore;
+        // Update ref immediately so subsequent calls in this render get the new value
+        latestValueRef.current = valueToStore;
 
-      // Update state
-      setStoredValue(valueToStore);
+        // Update state
+        setStoredValue(valueToStore);
 
-      // Persist to localStorage
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore));
-        } catch {
-          // Handle storage quota exceeded or other localStorage errors silently
-          // App continues to function normally even if storage fails
+        // Persist to localStorage
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          } catch {
+            // Handle storage quota exceeded or other localStorage errors silently
+            // App continues to function normally even if storage fails
+          }
         }
+      } catch {
+        // Handle any other errors silently - app continues to function
       }
-    } catch {
-      // Handle any other errors silently - app continues to function
-    }
-  }, [key]);
+    },
+    [key],
+  );
 
   return [storedValue, setValue];
 }

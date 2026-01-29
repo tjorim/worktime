@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import { SHIFT_CODES, type ScheduleOption } from "../data/rosters";
+import type { ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
@@ -76,9 +76,9 @@ export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
 export interface Shift {
   code: ShiftType;
+  displayCode: string;
   emoji: string;
   name: string;
-  hours: string;
   start: number | null;
   end: number | null;
   isWorking: boolean;
@@ -116,18 +116,18 @@ const buildShift = (
   code: ShiftType,
   definition: {
     name: string;
-    hours: string;
     start: number | null;
     end: number | null;
+    displayCode: string;
   },
   emoji: string,
   className: string,
 ): Shift => {
   return {
     code,
+    displayCode: definition.displayCode,
     emoji,
     name: definition.name,
-    hours: definition.hours,
     start: definition.start,
     end: definition.end,
     isWorking: code !== "O",
@@ -135,26 +135,19 @@ const buildShift = (
   };
 };
 
-const getShiftTimeDefinition = (
-  scheduleOption: NullableScheduleOption,
-  code: ShiftType,
-) => {
+const getShiftTimeDefinition = (scheduleOption: NullableScheduleOption, code: ShiftType) => {
   const schedule = getScheduleForOption(scheduleOption);
   return schedule.shiftConfig.shiftTimes[code];
 };
 
-const buildShiftTemplate = (
-  code: ShiftType,
-  emoji: string,
-  className: string,
-): Shift =>
+const buildShiftTemplate = (code: ShiftType, emoji: string, className: string): Shift =>
   buildShift(
     code,
     {
       name: "",
-      hours: "",
       start: null,
       end: null,
+      displayCode: code,
     },
     emoji,
     className,
@@ -208,17 +201,21 @@ const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
   O: { emoji: "🏠", className: "shift-off" },
 };
 
-const mapShiftCodeToShift = (
-  code: ShiftType,
-  scheduleOption?: NullableScheduleOption,
-): Shift => {
+/**
+ * Retrieve a shift definition for a given shift code and schedule.
+ *
+ * @param code - Shift code to look up (M, L, N, D, or O)
+ * @param scheduleOption - Schedule type to look up the shift in
+ * @returns The matching shift object for the schedule
+ * @throws {Error} If the shift code is not defined in the schedule's shiftTimes
+ */
+export const getShift = (code: ShiftType, scheduleOption: ScheduleOption): Shift => {
   const definition = getShiftTimeDefinition(scheduleOption, code);
   const visuals = SHIFT_VISUALS[code];
 
   if (!definition) {
-    const schedule = getScheduleForOption(scheduleOption);
     throw new Error(
-      `Missing shiftTimes definition for code="${code}" in schedule="${schedule.value}". ` +
+      `Missing shiftTimes definition for code="${code}" in schedule="${scheduleOption}". ` +
         `Ensure all shift codes used in the schedule pattern are defined in shiftTimes.`,
     );
   }
@@ -253,97 +250,21 @@ const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNum
 };
 
 /**
- * Combine a shift's emoji and name into a single display label.
+ * Format shift time with localization.
  *
- * @param shift - The shift object whose emoji and name will be used
- * @returns The display string in the form "`<emoji> <name>`"
- */
-export function getShiftDisplayName(shift: ShiftOrUnknown): string {
-  return `${shift.emoji} ${shift.name}`;
-}
-
-/**
- * Get roster-specific display properties for a shift.
+ * Returns localized shift time (e.g., "7:00 AM - 3:00 PM" or "07:00-15:00") when the shift
+ * has valid start and end times. Returns "Not working" for off shifts (start/end are null).
  *
- * Returns the shift's display name and hours, applying roster-specific overrides if configured.
- * For example, the 5-shift roster displays "Evening" for L shifts, while 2-shift displays "Late".
- *
- * @param shift - The shift object to get display properties for
- * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
- * @returns Object containing displayName and displayHours (may be overridden by roster config)
- *
- * @example
- * // 5-shift roster: L shift shows as "Evening"
- * const display = getShiftDisplay(SHIFTS.LATE, "5-shift");
- * // Returns: { displayName: "Evening", displayHours: "15:00-23:00" }
- *
- * @example
- * // 2-shift roster: M shift shows as "Early"
- * const display = getShiftDisplay(SHIFTS.MORNING, "2-shift");
- * // Returns: { displayName: "Early", displayHours: "07:00-15:00" }
- */
-export function getShiftDisplay(
-  shift: ShiftOrUnknown,
-  scheduleOption?: NullableScheduleOption,
-): { displayName: string; displayHours: string; displayCode: string } {
-  const schedule = getScheduleForOption(scheduleOption);
-  const shiftTimes = schedule.shiftConfig.shiftTimes[shift.code as ShiftType];
-
-  return {
-    displayName: shiftTimes?.name ?? shift.name,
-    displayHours: shiftTimes?.hours ?? shift.hours,
-    displayCode: shiftTimes?.displayCode ?? shift.code,
-  };
-}
-
-/**
- * Format shift time with localization, falling back to display hours when localization is unavailable.
- *
- * Returns localized shift time (e.g., "7:00 AM - 3:00 PM") when the shift has valid start and end
- * times. If the shift start/end are null or invalid, or if localization fails, it falls back to the
- * roster-specific display hours from shift time definitions. This ensures consistent shift time
- * formatting across the app.
- *
- * @param shift - Shift object with code, start, and end times
- * @param scheduleOption - Schedule option used to resolve shift time definitions
+ * @param shift - Shift object with start and end times
  * @param timeFormat - Time format preference ("12h" or "24h")
- * @returns Formatted shift time string
+ * @returns Formatted shift time string, or "Not working" for off shifts
  */
 export function getFormattedShiftTime(
-  shift: ShiftOrUnknown,
-  scheduleOption: NullableScheduleOption,
+  shift: { start: number | null; end: number | null },
   timeFormat: "12h" | "24h",
 ): string {
-  const { displayHours } = getShiftDisplay(shift, scheduleOption);
-  return shift.start != null && shift.end != null
-    ? (getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? displayHours)
-    : displayHours;
-}
-
-/**
- * Retrieve a shift definition for a given shift code, returning an 'Unknown' shift object when no match is found.
- *
- * @param code - Shift code to look up; may be null or undefined
- * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
- * @returns The matching shift object from `SHIFTS`, or a fallback object with code `'U'`, emoji `❓`, name `'Unknown'`, non-working flags and null times when no match exists
- */
-export function getShiftByCode(
-  code: string | null | undefined,
-  scheduleOption?: NullableScheduleOption,
-): ShiftOrUnknown {
-  if (code && SHIFT_CODES.includes(code as ShiftType)) {
-    return mapShiftCodeToShift(code as ShiftType, scheduleOption);
-  }
-  return {
-    code: "U",
-    emoji: "❓",
-    name: "Unknown",
-    hours: "Unknown hours",
-    start: null,
-    end: null,
-    isWorking: false,
-    className: "shift-off",
-  };
+  if (shift.start == null || shift.end == null) return "Not working";
+  return getLocalizedShiftTime(shift.start, shift.end, timeFormat) ?? "Not working";
 }
 
 /**
@@ -403,14 +324,14 @@ export function calculateShift(
   const shiftCode = schedulePattern[cyclePosition];
   if (!shiftCode) {
     // This indicates a likely configuration error: the schedulePattern is missing
-    // an entry for the computed cycle position. We keep the existing behavior of
-    // returning SHIFTS.OFF but emit a warning to aid diagnosis.
+    // an entry for the computed cycle position. Fall back to the schedule's OFF
+    // shift definition to ensure consistent field population.
     console.warn(
-      `[shiftCalculations] Missing schedulePattern day for cyclePosition=${cyclePosition} (cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to SHIFTS.OFF.`,
+      `[shiftCalculations] Missing schedulePattern day for cyclePosition=${cyclePosition} (cycleLength=${cycleLength}, teamNumber=${teamNumber}, schedule=${schedule.value}). Falling back to OFF shift.`,
     );
-    return SHIFTS.OFF;
+    return getShift("O", schedule.value);
   }
-  return mapShiftCodeToShift(shiftCode, scheduleOption);
+  return getShift(shiftCode, schedule.value);
 }
 
 /**

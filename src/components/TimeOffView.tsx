@@ -68,9 +68,7 @@ const isEditableTarget = (target: EventTarget | null) => {
   }
 
   const isTextInput =
-    target instanceof HTMLInputElement &&
-    target.type !== "checkbox" &&
-    target.type !== "radio";
+    target instanceof HTMLInputElement && target.type !== "checkbox" && target.type !== "radio";
 
   return (
     isTextInput ||

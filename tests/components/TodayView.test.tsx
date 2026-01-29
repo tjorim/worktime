@@ -16,9 +16,9 @@ const mockTodayShiftsData: ShiftResult[] = [
     teamNumber: 1,
     shift: {
       code: "M",
+      displayCode: "M",
       emoji: "🌅",
       name: "🌅 Morning",
-      hours: "07:00-15:00",
       start: 7,
       end: 15,
       isWorking: true,
@@ -31,9 +31,9 @@ const mockTodayShiftsData: ShiftResult[] = [
     teamNumber: 2,
     shift: {
       code: "L",
+      displayCode: "E",
       emoji: "🌆",
       name: "🌆 Evening",
-      hours: "15:00-23:00",
       start: 15,
       end: 23,
       isWorking: true,
@@ -46,9 +46,9 @@ const mockTodayShiftsData: ShiftResult[] = [
     teamNumber: 3,
     shift: {
       code: "O",
+      displayCode: "O",
       emoji: "🏠",
       name: "🏠 Off",
-      hours: "",
       start: null,
       end: null,
       isWorking: false,
@@ -62,31 +62,16 @@ const mockTodayShiftsData: ShiftResult[] = [
 // Mock shift calculation utilities
 vi.mock("../../src/utils/shiftCalculations", () => ({
   getAllTeamsShifts: vi.fn(() => mockTodayShiftsData),
-  getShiftByCode: vi.fn(() => ({
+  getShift: vi.fn(() => ({
     code: "M",
+    displayCode: "M",
     emoji: "🌅",
     name: "Morning",
-    hours: "07:00-15:00",
     start: 7,
     end: 15,
     isWorking: true,
     className: "shift-morning",
   })),
-  getShiftDisplay: vi.fn((shift) => {
-    // Apply 5-shift roster display overrides
-    if (shift.code === "L") {
-      return {
-        displayName: "Evening",
-        displayHours: shift.hours,
-        displayCode: "E",
-      };
-    }
-    return {
-      displayName: shift.name,
-      displayHours: shift.hours,
-      displayCode: shift.code,
-    };
-  }),
   getFormattedShiftTime: vi.fn(() => "07:00-15:00"),
   isCurrentlyWorking: vi.fn(() => false),
 }));

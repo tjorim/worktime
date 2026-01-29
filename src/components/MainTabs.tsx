@@ -54,8 +54,9 @@ export function MainTabs({
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
   const [showTeamDetail, setShowTeamDetail] = useState(false);
   const [selectedTeamForDetail, setSelectedTeamForDetail] = useState<number>(1);
-  const [selectedScheduleForDetail, setSelectedScheduleForDetail] =
-    useState<ScheduleOption | null>(null);
+  const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
+    null,
+  );
 
   const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
@@ -143,12 +144,12 @@ export function MainTabs({
             </>
           }
         >
-        <TransferView
-          myTeam={myTeam}
-          initialOtherTeam={null}
-          onChangeSchedule={onChangeSchedule}
-          onChangeTeam={onChangeTeam}
-        />
+          <TransferView
+            myTeam={myTeam}
+            initialOtherTeam={null}
+            onChangeSchedule={onChangeSchedule}
+            onChangeTeam={onChangeTeam}
+          />
         </Tab>
 
         <Tab

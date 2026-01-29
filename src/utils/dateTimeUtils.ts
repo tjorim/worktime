@@ -191,10 +191,7 @@ export function getLocalizedShiftTime(
     if (hours === 24 && minutes === 0) {
       return formatMidnight();
     }
-    return formatTimeByPreference(
-      dayjs().hour(hours).minute(minutes).second(0),
-      timeFormat,
-    );
+    return formatTimeByPreference(dayjs().hour(hours).minute(minutes).second(0), timeFormat);
   };
   if (start != null && end != null) {
     const startTime = format(start);

@@ -279,7 +279,15 @@ export function useTransferCalculations({
       transfers: foundTransfers,
       hasMoreTransfers,
     };
-  }, [validatedMyTeam, otherTeam, availableOtherTeams, limit, customStartDate, customEndDate, scheduleType]);
+  }, [
+    validatedMyTeam,
+    otherTeam,
+    availableOtherTeams,
+    limit,
+    customStartDate,
+    customEndDate,
+    scheduleType,
+  ]);
 
   return {
     transfers: transfersResult.transfers,

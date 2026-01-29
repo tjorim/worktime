@@ -1,34 +1,20 @@
 import type { ShiftResult } from "../../utils/shiftCalculations";
-import type { ScheduleOption } from "../../data/rosters";
-import { getFormattedShiftTime } from "../../utils/shiftCalculations";
-import { useSettings } from "../../contexts/SettingsContext";
+import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 
 interface ShiftTimeDisplayProps {
   shift: ShiftResult["shift"];
-  scheduleType?: ScheduleOption | null;
-  timeFormat?: "12h" | "24h";
   className?: string;
 }
 
 /**
- * Reusable shift time display component with schedule-aware formatting.
+ * Reusable shift time display component.
  *
  * @param shift - Shift object with start/end times
- * @param scheduleType - Optional schedule type for display overrides
- * @param timeFormat - Time format preference (defaults to user setting)
  * @param className - Additional CSS classes (default: "small text-muted")
  * @returns Formatted shift time display
  */
-export function ShiftTimeDisplay({
-  shift,
-  scheduleType,
-  timeFormat,
-  className = "small text-muted",
-}: ShiftTimeDisplayProps) {
-  const { settings, scheduleType: userScheduleType } = useSettings();
-  const effectiveTimeFormat = timeFormat ?? settings.timeFormat;
-  const effectiveScheduleType = scheduleType ?? userScheduleType;
-  const formattedTime = getFormattedShiftTime(shift, effectiveScheduleType, effectiveTimeFormat);
+export function ShiftTimeDisplay({ shift, className = "small text-muted" }: ShiftTimeDisplayProps) {
+  const formattedTime = useFormattedShiftTime(shift);
 
   return <div className={className}>{formattedTime}</div>;
 }

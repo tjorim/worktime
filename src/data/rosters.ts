@@ -5,7 +5,6 @@ export const SHIFT_CODES = ["M", "L", "N", "D", "O"] as const;
 
 export type ShiftTimeDefinition = {
   name: string;
-  hours: string;
   start: number | null;
   end: number | null;
   displayCode: string;
@@ -13,7 +12,6 @@ export type ShiftTimeDefinition = {
 
 const OFF_SHIFT_TIME: ShiftTimeDefinition = Object.freeze({
   name: "Off",
-  hours: "Not working",
   start: null,
   end: null,
   displayCode: "O",
@@ -137,7 +135,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       shiftTimes: {
         D: {
           name: "Day",
-          hours: "09:00-17:00",
           start: 9,
           end: 17,
           displayCode: "D",
@@ -172,21 +169,18 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       shiftTimes: {
         M: {
           name: "Early",
-          hours: "06:30-15:30",
           start: 6.5,
           end: 15.5,
           displayCode: "E",
         },
         L: {
           name: "Late",
-          hours: "15:00-24:00",
           start: 15,
           end: 24,
           displayCode: "L",
         },
         D: {
           name: "Day",
-          hours: "07:00-16:00",
           start: 7,
           end: 16,
           displayCode: "D",
@@ -246,21 +240,18 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       shiftTimes: {
         M: {
           name: "Early",
-          hours: "06:00-14:30",
           start: 6,
           end: 14.5,
           displayCode: "E",
         },
         L: {
           name: "Late",
-          hours: "13:30-22:00",
           start: 13.5,
           end: 22,
           displayCode: "L",
         },
         D: {
           name: "Day",
-          hours: "08:00-16:30",
           start: 8,
           end: 16.5,
           displayCode: "D",
@@ -287,8 +278,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Saturday
         "L", // Sunday
       ],
-      notes:
-        "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
+      notes: "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
     },
   },
   {
@@ -304,21 +294,18 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       shiftTimes: {
         M: {
           name: "Morning",
-          hours: "07:00-15:00",
           start: 7,
           end: 15,
           displayCode: "M",
         },
         L: {
           name: "Evening",
-          hours: "15:00-23:00",
           start: 15,
           end: 23,
           displayCode: "E",
         },
         N: {
           name: "Night",
-          hours: "23:00-07:00",
           start: 23,
           end: 7,
           displayCode: "N",
@@ -327,18 +314,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
       },
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
       referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
-      schedulePattern: [
-        "M",
-        "M",
-        "L",
-        "L",
-        "N",
-        "N",
-        "O",
-        "O",
-        "O",
-        "O",
-      ],
+      schedulePattern: ["M", "M", "L", "L", "N", "N", "O", "O", "O", "O"],
       notes: "Continuous multi-team rotation.",
     },
   },

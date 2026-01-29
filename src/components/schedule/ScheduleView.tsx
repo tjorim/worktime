@@ -18,7 +18,7 @@ import {
   getISOWeekYear2Digit,
   getLocalizedShiftTime,
 } from "../../utils/dateTimeUtils";
-import { calculateShift, getShiftByCode, getShiftDisplay } from "../../utils/shiftCalculations";
+import { calculateShift } from "../../utils/shiftCalculations";
 
 interface ScheduleViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -50,7 +50,22 @@ export function ScheduleView({
   const { settings, scheduleType: userScheduleType } = useSettings();
 
   // Use prop if provided, otherwise fall back to user's schedule type
-  const scheduleType = propViewingScheduleType || userScheduleType;
+  const scheduleType = propViewingScheduleType ?? userScheduleType;
+
+  // No schedule selected - show setup prompt
+  if (!scheduleType) {
+    return (
+      <Card>
+        <Card.Body className="text-center py-4">
+          <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+          <p className="text-muted mb-3">
+            Please select your schedule to view the weekly overview.
+          </p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
   const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount ?? 1;
   const hasTeams = scheduleConfig.showsTeamSelection;
@@ -238,7 +253,6 @@ export function ScheduleView({
                   {weekDays.map((day) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
                     const isToday = day.isSame(dayjs(), "day");
-                    const shiftDisplay = getShiftDisplay(shift, scheduleType);
 
                     return (
                       <td
@@ -246,8 +260,8 @@ export function ScheduleView({
                         className={classNames("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shiftDisplay.displayName : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shiftDisplay.displayName : "Off"}`
+                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
                         }
                       >
                         {shift.isWorking && (
@@ -257,12 +271,12 @@ export function ScheduleView({
                               <Tooltip
                                 id={`schedule-tooltip-${teamNumber}-${day.format("YYYY-MM-DD")}`}
                               >
-                                <strong>Shift: {shiftDisplay.displayCode}</strong>
+                                <strong>Shift: {shift.displayCode}</strong>
                                 <br />
-                                {shiftDisplay.displayName} shift
+                                {shift.name} shift
                                 <br />
                                 <em>
-                                  {shiftDisplay.displayName} -{" "}
+                                  {shift.name} -{" "}
                                   {getLocalizedShiftTime(
                                     shift.start,
                                     shift.end,
@@ -273,13 +287,9 @@ export function ScheduleView({
                             }
                           >
                             <Badge
-                              className={classNames(
-                                "shift-code",
-                                "cursor-help",
-                                getShiftByCode(shift.code, scheduleType).className,
-                              )}
+                              className={classNames("shift-code", "cursor-help", shift.className)}
                             >
-                              {shiftDisplay.displayCode}
+                              {shift.displayCode}
                             </Badge>
                           </OverlayTrigger>
                         )}

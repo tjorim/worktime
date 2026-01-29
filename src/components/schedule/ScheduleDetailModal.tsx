@@ -13,7 +13,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
-import { calculateShift, getShiftByCode, getShiftDisplay } from "../../utils/shiftCalculations";
+import { calculateShift } from "../../utils/shiftCalculations";
 
 interface ScheduleDetailModalProps {
   show: boolean;
@@ -43,7 +43,9 @@ export function ScheduleDetailModal({
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.showsTeamSelection;
   const teamCount = scheduleConfig.shiftConfig.teamCount || 1;
-  const isValidTeamNumber = hasTeams ? teamNumber >= 1 && teamNumber <= teamCount : teamNumber === 1;
+  const isValidTeamNumber = hasTeams
+    ? teamNumber >= 1 && teamNumber <= teamCount
+    : teamNumber === 1;
   if (!isValidTeamNumber) {
     throw new Error(
       `Invalid team number: ${teamNumber}. Expected ${hasTeams ? `1-${teamCount}` : "1"}`,
@@ -94,8 +96,8 @@ export function ScheduleDetailModal({
     };
   }, [weekSchedule]);
 
-  // Find current status
-  const currentStatus = weekSchedule[0];
+  // Find current status (weekSchedule always has 7 elements)
+  const currentStatus = weekSchedule[0]!;
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
   return (
@@ -124,32 +126,25 @@ export function ScheduleDetailModal({
                   Current Status
                 </h6>
                 <div className="d-flex align-items-center gap-2">
-                  {currentStatus?.shift.code === "O" ? (
+                  {currentStatus.shift.code === "O" ? (
                     <Badge bg="secondary" pill>
                       <i className="bi bi-house me-1"></i>
                       Off Duty
                     </Badge>
                   ) : (
-                    <Badge
-                      className={getShiftByCode(currentStatus?.shift.code, scheduleType).className}
-                      pill
-                    >
+                    <Badge className={currentStatus.shift.className} pill>
                       <i className="bi bi-briefcase me-1"></i>
-                      {currentStatus?.shift
-                        ? getShiftDisplay(currentStatus.shift, scheduleType).displayName
-                        : "Unknown"}
+                      {currentStatus.shift.name}
                     </Badge>
                   )}
-                  <small className="text-muted">
-                    {currentStatus?.date.format("dddd, MMM D") || "Unknown date"}
-                  </small>
+                  <small className="text-muted">{currentStatus.date.format("dddd, MMM D")}</small>
                 </div>
               </div>
               {nextShift && (
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
-                  <Badge className={getShiftByCode(nextShift.shift.code, scheduleType).className} pill>
-                    {getShiftDisplay(nextShift.shift, scheduleType).displayName}
+                  <Badge className={nextShift.shift.className} pill>
+                    {nextShift.shift.name}
                   </Badge>
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -201,8 +196,8 @@ export function ScheduleDetailModal({
                           Off
                         </Badge>
                       ) : (
-                        <Badge className={getShiftByCode(day.shift.code, scheduleType).className} pill>
-                          {getShiftDisplay(day.shift, scheduleType).displayName}
+                        <Badge className={day.shift.className} pill>
+                          {day.shift.name}
                         </Badge>
                       )}
                     </td>
@@ -302,7 +297,6 @@ export function ScheduleDetailModal({
             </Card>
           </Col>
         </Row>
-
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
