@@ -199,34 +199,31 @@ const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): n
   return schedule.shiftConfig.referenceTeam;
 };
 
+// Mapping of shift codes to their visual properties (emoji and CSS class)
+const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
+  M: { emoji: "🌅", className: "shift-morning" },
+  L: { emoji: "🌆", className: "shift-late" },
+  N: { emoji: "🌙", className: "shift-night" },
+  D: { emoji: "☀️", className: "shift-day" },
+  O: { emoji: "🏠", className: "shift-off" },
+};
+
 const mapShiftCodeToShift = (
   code: ShiftType,
   scheduleOption?: NullableScheduleOption,
 ): Shift => {
   const definition = getShiftTimeDefinition(scheduleOption, code);
+  const visuals = SHIFT_VISUALS[code];
+
   if (!definition) {
     const schedule = getScheduleForOption(scheduleOption);
-    console.warn(
-      `[shiftCalculations] Missing shiftTimes definition for code=${code} in schedule=${schedule.value}. Falling back to SHIFTS.OFF.`,
+    throw new Error(
+      `Missing shiftTimes definition for code="${code}" in schedule="${schedule.value}". ` +
+        `Ensure all shift codes used in the schedule pattern are defined in shiftTimes.`,
     );
-    return SHIFTS.OFF;
   }
-  switch (code) {
-    case "M":
-      return buildShift(code, definition, "🌅", "shift-morning");
-    case "L":
-      return buildShift(code, definition, "🌆", "shift-late");
-    case "N":
-      return buildShift(code, definition, "🌙", "shift-night");
-    case "D":
-      return buildShift(code, definition, "☀️", "shift-day");
-    case "O":
-      return buildShift(code, definition, "🏠", "shift-off");
-    default: {
-      const _exhaustive: never = code;
-      return _exhaustive;
-    }
-  }
+
+  return buildShift(code, definition, visuals.emoji, visuals.className);
 };
 
 /**
