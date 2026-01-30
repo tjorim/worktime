@@ -94,6 +94,61 @@ body {
   --context-menu-shadow: rgba(0, 0, 0, 0.5);
   --context-menu-item-hover: #3a3f44;
   --context-menu-item-text: #e9ecef;
+
+  --shift-morning: #1565c0;
+  --shift-morning-text: #e3f2fd;
+  --shift-late: #8d3200;
+  --shift-late-text: #ffe0b2;
+  --shift-day: #b85500;
+  --shift-day-text: #fff3e0;
+  --shift-night: #4527a0;
+  --shift-night-text: #ede7f6;
+  --shift-off: #212121;
+  --shift-off-text: #bdbdbd;
+  --primary-color: #90caf9;
+  --bs-body-bg: #181a1b;
+  --bs-body-color: #e0e0e0;
+  --bs-border-color: #495057;
+  --bs-secondary-bg: #23272b;
+  --bs-tertiary-bg: #1f242a;
+  --bs-card-bg: #23272b;
+  --bs-modal-bg: #23272b;
+  --bs-offcanvas-bg: #23272b;
+  --bs-dropdown-bg: #23272b;
+  --bs-table-bg: #23272b;
+  --bs-table-color: #e0e0e0;
+  --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
+  --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
+  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+
+  .team-card-interactive:hover,
+  .team-card-interactive:focus {
+    background-color: var(--bs-body-bg, #181a1b);
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-tabs .nav-link {
+    color: #adb5bd;
+  }
+
+  .nav-tabs .nav-link.active {
+    font-weight: 600;
+  }
+
+  .nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+  }
+
+  .schedule-table th,
+  .schedule-table .team-header {
+    background-color: var(--bs-table-bg, #23272b);
+    color: var(--bs-table-color, #e0e0e0);
+  }
+
+  .schedule-table td:first-child {
+    background-color: var(--bs-table-bg, #23272b);
+  }
 }
 
 /* Today column highlighting for schedule table */
@@ -747,63 +802,6 @@ body {
   z-index: 2;
 }
 
-@include color-mode(dark) {
-  --shift-morning: #1565c0;
-  --shift-morning-text: #e3f2fd;
-  --shift-late: #8d3200;
-  --shift-late-text: #ffe0b2;
-  --shift-day: #b85500;
-  --shift-day-text: #fff3e0;
-  --shift-night: #4527a0;
-  --shift-night-text: #ede7f6;
-  --shift-off: #212121;
-  --shift-off-text: #bdbdbd;
-  --primary-color: #90caf9;
-  --bs-body-bg: #181a1b;
-  --bs-body-color: #e0e0e0;
-  --bs-border-color: #495057;
-  --bs-secondary-bg: #23272b;
-  --bs-tertiary-bg: #1f242a;
-  --bs-card-bg: #23272b;
-  --bs-modal-bg: #23272b;
-  --bs-offcanvas-bg: #23272b;
-  --bs-dropdown-bg: #23272b;
-  --bs-table-bg: #23272b;
-  --bs-table-color: #e0e0e0;
-  --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
-  --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
-}
-
-@include color-mode(dark) {
-  .team-card-interactive:hover,
-  .team-card-interactive:focus {
-    background-color: var(--bs-body-bg, #181a1b);
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
-  }
-
-  .nav-tabs .nav-link {
-    color: #adb5bd;
-  }
-
-  .nav-tabs .nav-link.active {
-    font-weight: 600;
-  }
-
-  .nav-tabs .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #e0e0e0;
-  }
-
-  .schedule-table th,
-  .schedule-table .team-header {
-    background-color: var(--bs-table-bg, #23272b);
-    color: var(--bs-table-color, #e0e0e0);
-  }
-
-  .schedule-table td:first-child {
-    background-color: var(--bs-table-bg, #23272b);
-  }
-}
 
 .schedule-table td:first-child {
   background-color: var(--bs-table-bg, #f8f9fa);
@@ -867,9 +865,6 @@ body {
   --calendar-time-off-bg: rgba(255, 193, 7, 0.1);
 }
 
-@include color-mode(dark) {
-  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
-}
 
 .working-schedule-calendar .calendar-grid {
   margin-bottom: 0;
