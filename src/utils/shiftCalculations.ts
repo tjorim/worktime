@@ -367,7 +367,12 @@ export function getCurrentShiftDay(
   // because the shift day is anchored to the prior calendar day. Schedules without
   // night shifts should follow the calendar day without adjustment.
   if (usesNightShift) {
-    const nightShiftEnd = getShiftTimeDefinition(scheduleOption, "N")?.end ?? 7;
+    const nightShiftEnd = getShiftTimeDefinition(scheduleOption, "N")?.end;
+    if (nightShiftEnd == null) {
+      throw new Error(
+        `Night shift definition missing end time for schedule ${scheduleOption ?? "5-shift"}.`,
+      );
+    }
     if (hour < nightShiftEnd) {
       return current.subtract(1, "day");
     }
