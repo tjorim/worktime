@@ -1,5 +1,9 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
 
+const SCHEDULE_MAP = new Map<ScheduleOption, ScheduleRoster>(
+  SCHEDULE_OPTIONS.map((option) => [option.value, option]),
+);
+
 /**
  * Type guard to check if a value is a valid ScheduleOption.
  * Useful for runtime validation of user input or localStorage data.
@@ -16,7 +20,7 @@ import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../d
  */
 export function isValidScheduleType(value: unknown): value is ScheduleOption {
   if (typeof value !== "string") return false;
-  return SCHEDULE_OPTIONS.some((option) => option.value === value);
+  return SCHEDULE_MAP.has(value as ScheduleOption);
 }
 
 /**
@@ -45,7 +49,7 @@ export function getScheduleConfig(
   // Fallback to "5-shift" for backward compatibility with pre-schedule-selection user data.
   // New users must explicitly select a schedule during onboarding (see WelcomeWizard).
   const lookupKey = scheduleOption ?? "5-shift";
-  const config = SCHEDULE_OPTIONS.find((option) => option.value === lookupKey);
+  const config = SCHEDULE_MAP.get(lookupKey);
 
   if (!config) {
     // This error can be reached if scheduleOption is invalid or if the default '5-shift' is missing
