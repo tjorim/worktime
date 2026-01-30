@@ -1,6 +1,6 @@
 import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
 
-const SCHEDULE_MAP = new Map<ScheduleOption, ScheduleRoster>(
+const SCHEDULE_MAP = new Map<string, ScheduleRoster>(
   SCHEDULE_OPTIONS.map((option) => [option.value, option]),
 );
 
@@ -20,7 +20,7 @@ const SCHEDULE_MAP = new Map<ScheduleOption, ScheduleRoster>(
  */
 export function isValidScheduleType(value: unknown): value is ScheduleOption {
   if (typeof value !== "string") return false;
-  return SCHEDULE_MAP.has(value as ScheduleOption);
+  return SCHEDULE_MAP.has(value);
 }
 
 /**
