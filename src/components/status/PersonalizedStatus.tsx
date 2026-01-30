@@ -8,7 +8,7 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
-import { getScheduleConfig, hasMultipleTeams } from "../../utils/scheduleUtils";
+import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 import { dayjs, setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
@@ -47,7 +47,7 @@ export function PersonalizedStatusContent({
   const teamTooltipId = useId();
 
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = hasMultipleTeams(scheduleConfig.value);
+  const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
 
   const today = dayjs();
   const todayMinuteKey = today.startOf("minute").toISOString();
