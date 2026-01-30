@@ -12,11 +12,6 @@ export default defineConfig(() => ({
   plugins: [reactPlugin()],
   css: {
     transformer: "lightningcss",
-    preprocessorOptions: {
-      scss: {
-        quietDeps: true,
-      },
-    },
   },
   build: {
     outDir: "dist",
