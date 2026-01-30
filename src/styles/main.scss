@@ -1,14 +1,12 @@
 // Bootstrap configuration
-@import "bootstrap/scss/functions";
-
-$color-mode-type: data;
-$body-bg-dark: #181a1b;
-$body-color-dark: #e0e0e0;
-$body-secondary-bg-dark: #23272b;
-$body-tertiary-bg-dark: #1f242a;
-$border-color-dark: #495057;
-
-@import "bootstrap/scss/bootstrap";
+@use "bootstrap/scss/bootstrap" as * with (
+  $color-mode-type: data,
+  $body-bg-dark: #181a1b,
+  $body-color-dark: #e0e0e0,
+  $body-secondary-bg-dark: #23272b,
+  $body-tertiary-bg-dark: #1f242a,
+  $border-color-dark: #495057
+);
 
 // Bootstrap Icons
 @import "bootstrap-icons/font/bootstrap-icons.css";
