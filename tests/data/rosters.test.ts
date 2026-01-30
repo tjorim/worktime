@@ -59,6 +59,31 @@ describe("Schedule pattern validation", () => {
     });
   });
 
+  it("should have valid shift time ranges", () => {
+    SCHEDULE_OPTIONS.forEach((schedule) => {
+      Object.entries(schedule.shiftConfig.shiftTimes).forEach(([shift, definition]) => {
+        if (!definition) return;
+
+        if (shift === "O") {
+          expect(definition.start).toBeNull();
+          expect(definition.end).toBeNull();
+          return;
+        }
+
+        expect(definition.start).toBeGreaterThanOrEqual(0);
+        expect(definition.start).toBeLessThanOrEqual(24);
+        expect(definition.end).toBeGreaterThanOrEqual(0);
+        expect(definition.end).toBeLessThanOrEqual(24);
+
+        if (shift === "N") {
+          expect(definition.start).toBeGreaterThan(definition.end);
+        } else {
+          expect(definition.start).toBeLessThan(definition.end);
+        }
+      });
+    });
+  });
+
   it("should only use valid shift codes", () => {
     const validCodes = new Set(SHIFT_CODES);
     SCHEDULE_OPTIONS.forEach((schedule) => {

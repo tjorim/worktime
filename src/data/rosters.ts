@@ -71,7 +71,55 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 3: Reference date is valid ISO format and parseable
+  // Validation 3: Shift time definitions are valid
+  const isValidHour = (value: number) => Number.isFinite(value) && value >= 0 && value <= 24;
+
+  Object.entries(config.shiftTimes).forEach(([shiftCode, definition]) => {
+    if (!definition) return;
+
+    const { start, end } = definition;
+
+    if (shiftCode === "O") {
+      if (start !== null || end !== null) {
+        throw new Error(
+          `Schedule pattern validation failed: Off shift must use null start/end times (shift=${shiftCode}).`,
+        );
+      }
+      return;
+    }
+
+    if (start == null || end == null) {
+      throw new Error(
+        `Schedule pattern validation failed: Working shift ${shiftCode} must define start and end times.`,
+      );
+    }
+
+    if (!isValidHour(start) || !isValidHour(end)) {
+      throw new Error(
+        `Schedule pattern validation failed: Shift ${shiftCode} has invalid time range (${start}-${end}).`,
+      );
+    }
+
+    if (start === end) {
+      throw new Error(
+        `Schedule pattern validation failed: Shift ${shiftCode} must have a non-zero duration.`,
+      );
+    }
+
+    if (shiftCode === "N") {
+      if (start <= end) {
+        throw new Error(
+          `Schedule pattern validation failed: Night shift ${shiftCode} must span midnight (start > end).`,
+        );
+      }
+    } else if (start > end) {
+      throw new Error(
+        `Schedule pattern validation failed: Shift ${shiftCode} must not span midnight (start < end).`,
+      );
+    }
+  });
+
+  // Validation 4: Reference date is valid ISO format and parseable
   const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
   if (!isoDatePattern.test(referenceDate)) {
     throw new Error(
@@ -88,7 +136,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 4: Reference team is within valid range
+  // Validation 5: Reference team is within valid range
   if (referenceTeam < 1 || referenceTeam > teamCount) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -96,7 +144,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 5: Cycle length is reasonable (1-365 days)
+  // Validation 6: Cycle length is reasonable (1-365 days)
   if (cycleLengthDays < 1 || cycleLengthDays > 365) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -104,14 +152,14 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 6: Team count is positive
+  // Validation 7: Team count is positive
   if (teamCount < 1) {
     throw new Error(
       `Schedule pattern validation failed: ` + `Team count ${teamCount} must be at least 1`,
     );
   }
 
-  // Validation 7: At least one working shift exists (not all off days)
+  // Validation 8: At least one working shift exists (not all off days)
   const hasWorkingShift = schedulePattern.some((shift) => shift !== "O");
   if (!hasWorkingShift) {
     throw new Error(

@@ -57,7 +57,7 @@
  *
  * ## Edge Cases
  *
- * - **Pre-07:00 times**: Mapped to previous day's night shift via `getCurrentShiftDay()` for schedules with night shifts
+ * - **Pre-night-shift end times**: Mapped to previous day's night shift via `getCurrentShiftDay()` for schedules with night shifts
  * - **Invalid team numbers**: Throw error (fail fast)
  * - **Invalid dates**: Handled by dayjs (may return Invalid Date)
  * - **Year boundaries**: ISO week dates handled correctly (week 1 can be in December)
@@ -335,15 +335,15 @@ export function calculateShift(
 }
 
 /**
- * Map a timestamp to the shift's effective day, assigning times before 07:00 to the previous calendar day
- * only for schedules that include night shifts.
+ * Map a timestamp to the shift's effective day, assigning times before the end of the night shift
+ * to the previous calendar day only for schedules that include night shifts.
  *
- * This is critical for night shift handling: since night shifts run from 23:00 to 07:00,
- * any time between 00:00 and 06:59 belongs to the previous day's night shift.
+ * This is critical for night shift handling: since night shifts typically run overnight,
+ * any time before the configured night shift end hour belongs to the previous day's night shift.
  *
  * @param date - The date or timestamp to evaluate
  * @param scheduleOption - Optional schedule type; defaults to night-shift behavior when omitted
- * @returns The Dayjs representing the shift day (the previous day if `date` is before 07:00 and the schedule has night shifts)
+ * @returns The Dayjs representing the shift day (the previous day if `date` is before the night shift end time and the schedule has night shifts)
  *
  * @example
  * // During morning hours (7am or later) - same day
@@ -351,7 +351,7 @@ export function calculateShift(
  * // Returns: Dayjs for 2025-01-15
  *
  * @example
- * // During night shift (before 7am) - previous day
+ * // During night shift (before the night shift end) - previous day
  * getCurrentShiftDay('2025-01-15 02:30')
  * // Returns: Dayjs for 2025-01-14 (previous day's night shift)
  */
@@ -360,13 +360,15 @@ export function getCurrentShiftDay(
   scheduleOption?: NullableScheduleOption,
 ): Dayjs {
   const current = dayjs(date);
-  const hour = current.hour();
+  const hour = current.hour() + current.minute() / 60;
   const usesNightShift = scheduleOption == null || scheduleHasNightShift(scheduleOption);
+  const nightShiftEnd =
+    scheduleOption == null ? 7 : getShiftTimeDefinition(scheduleOption, "N")?.end ?? 7;
 
-  // Schedules with night shifts keep the legacy 07:00 cutoff because the shift day
-  // is anchored to the prior calendar day. Schedules without night shifts should
-  // follow the calendar day without adjustment.
-  if (usesNightShift && hour < 7) {
+  // Schedules with night shifts use the configured night shift end time as the cutoff
+  // because the shift day is anchored to the prior calendar day. Schedules without
+  // night shifts should follow the calendar day without adjustment.
+  if (usesNightShift && hour < nightShiftEnd) {
     return current.subtract(1, "day");
   }
 
