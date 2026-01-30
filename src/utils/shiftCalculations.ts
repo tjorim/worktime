@@ -360,24 +360,27 @@ export function getCurrentShiftDay(
   scheduleOption?: NullableScheduleOption,
 ): Dayjs {
   const current = dayjs(date);
-  const hour = current.hour() + current.minute() / 60;
-  const usesNightShift = scheduleOption == null || scheduleHasNightShift(scheduleOption);
 
-  // Schedules with night shifts use the configured night shift end time as the cutoff
-  // because the shift day is anchored to the prior calendar day. Schedules without
-  // night shifts should follow the calendar day without adjustment.
-  if (usesNightShift) {
-    const nightShiftEnd = getShiftTimeDefinition(scheduleOption, "N")?.end;
-    if (nightShiftEnd == null) {
-      throw new Error(
-        `Night shift definition missing end time for schedule ${scheduleOption ?? "5-shift"}.`,
-      );
-    }
-    if (hour < nightShiftEnd) {
-      return current.subtract(1, "day");
-    }
-  } else {
+  // Without a schedule, return calendar day (no assumptions)
+  if (scheduleOption == null) {
     return current;
+  }
+
+  // Only adjust for schedules that actually have night shifts
+  if (!scheduleHasNightShift(scheduleOption)) {
+    return current;
+  }
+
+  const nightShiftEnd = getShiftTimeDefinition(scheduleOption, "N")?.end;
+  if (nightShiftEnd == null) {
+    throw new Error(
+      `Night shift definition missing end time for schedule ${scheduleOption}.`,
+    );
+  }
+
+  const hour = current.hour() + current.minute() / 60;
+  if (hour < nightShiftEnd) {
+    return current.subtract(1, "day");
   }
 
   return current;

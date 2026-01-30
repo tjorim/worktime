@@ -123,13 +123,13 @@ describe("Shift Calculations", () => {
   describe("Current Shift Day", () => {
     it("should return same day for times after 7 AM", () => {
       const testDate = dayjs("2025-07-16 10:00");
-      const shiftDay = getCurrentShiftDay(testDate);
+      const shiftDay = getCurrentShiftDay(testDate, "5-shift");
       expect(shiftDay.isSame(testDate, "day")).toBe(true);
     });
 
-    it("should return previous day for times before 7 AM", () => {
+    it("should return previous day for times before 7 AM for 5-shift", () => {
       const testDate = dayjs("2025-07-16 05:00");
-      const shiftDay = getCurrentShiftDay(testDate);
+      const shiftDay = getCurrentShiftDay(testDate, "5-shift");
       const expectedDay = testDate.subtract(1, "day");
       expect(shiftDay.isSame(expectedDay, "day")).toBe(true);
     });
@@ -153,11 +153,10 @@ describe("Shift Calculations", () => {
       });
     });
 
-    it("should default to night-shift behavior when schedule is omitted", () => {
+    it("should return calendar day when schedule is omitted", () => {
       const testDate = dayjs("2025-07-16 06:00");
       const shiftDay = getCurrentShiftDay(testDate);
-      const expectedDay = testDate.subtract(1, "day");
-      expect(shiftDay.isSame(expectedDay, "day")).toBe(true);
+      expect(shiftDay.isSame(testDate, "day")).toBe(true);
     });
 
     it("should return current day after 7 AM for all schedules", () => {
@@ -179,9 +178,9 @@ describe("Shift Calculations", () => {
       // Test at 2 AM during a night shift (using date with known night shift)
       const nightTime = dayjs("2025-07-20 02:00"); // 2 AM on July 20 (team 1 night shift period)
 
-      const shiftDay = getCurrentShiftDay(nightTime); // Should be July 19
-      const shift = calculateShift(shiftDay, 1);
-      const code = getShiftCode(shiftDay, 1);
+      const shiftDay = getCurrentShiftDay(nightTime, "5-shift"); // Should be July 19
+      const shift = calculateShift(shiftDay, 1, "5-shift");
+      const code = getShiftCode(shiftDay, 1, "5-shift");
 
       // All calculations should be based on the same day (shiftDay)
       expect(shiftDay.isSame(nightTime.subtract(1, "day"), "day")).toBe(true);
@@ -207,8 +206,8 @@ describe("Shift Calculations", () => {
       const team2Monday = calculateShift(monday, 2, "5-shift");
       expect(team2Monday.code).toBe("L"); // Evening shift on Monday
 
-      // Using getCurrentShiftDay would incorrectly give Sunday's shift
-      const shiftDay = getCurrentShiftDay(mondayMorning); // Returns Sunday
+      // Using getCurrentShiftDay with 5-shift gives Sunday's shift (for night shift tracking)
+      const shiftDay = getCurrentShiftDay(mondayMorning, "5-shift"); // Returns Sunday
       const team2ShiftDay = calculateShift(shiftDay, 2, "5-shift");
       expect(team2ShiftDay.code).toBe("M"); // Sunday's Morning shift (WRONG for schedule display)
 
@@ -228,8 +227,8 @@ describe("Shift Calculations", () => {
       const team2Friday = calculateShift(friday, 2, "5-shift");
       expect(team2Friday.code).toBe("O"); // Off on Friday
 
-      // Using shift day would incorrectly show Thursday's schedule
-      const shiftDay = getCurrentShiftDay(fridayMorning); // Returns Thursday
+      // Using getCurrentShiftDay with 5-shift gives Thursday (for night shift tracking)
+      const shiftDay = getCurrentShiftDay(fridayMorning, "5-shift"); // Returns Thursday
       const team2ShiftDay = calculateShift(shiftDay, 2, "5-shift");
       expect(team2ShiftDay.code).toBe("N"); // Thursday's Night shift (WRONG for schedule display)
 
@@ -257,13 +256,18 @@ describe("Shift Calculations", () => {
       expect(working).toBe(true);
     });
 
-    it("should preserve legacy behavior when schedule option is omitted", () => {
+    it("should require schedule option for night shift detection", () => {
       const shift = getShift("N", "5-shift");
       const date = dayjs("2025-07-19");
       const currentTime = dayjs("2025-07-20 06:00");
 
-      const working = isCurrentlyWorking(shift, date, currentTime);
-      expect(working).toBe(true);
+      // Without schedule option, calendar day is used (no night shift assumption)
+      const workingWithoutSchedule = isCurrentlyWorking(shift, date, currentTime);
+      expect(workingWithoutSchedule).toBe(false);
+
+      // With 5-shift schedule, previous day is used (night shift aware)
+      const workingWithSchedule = isCurrentlyWorking(shift, date, currentTime, "5-shift");
+      expect(workingWithSchedule).toBe(true);
     });
   });
 });
@@ -566,14 +570,14 @@ describe("Real-world Scenario Tests", () => {
   });
 
   it("should maintain shift consistency during night shift transitions", () => {
-    // Test night shift handling across midnight
+    // Test night shift handling across midnight for 5-shift schedule
     const lateNight = dayjs("2025-07-20 23:30");
     const earlyMorning = dayjs("2025-07-21 02:00");
     const morning = dayjs("2025-07-21 08:00");
 
-    const lateShiftDay = getCurrentShiftDay(lateNight);
-    const earlyShiftDay = getCurrentShiftDay(earlyMorning);
-    const morningShiftDay = getCurrentShiftDay(morning);
+    const lateShiftDay = getCurrentShiftDay(lateNight, "5-shift");
+    const earlyShiftDay = getCurrentShiftDay(earlyMorning, "5-shift");
+    const morningShiftDay = getCurrentShiftDay(morning, "5-shift");
 
     // Late night and early morning should be same shift day
     expect(lateShiftDay.isSame(lateNight, "day")).toBe(true);
