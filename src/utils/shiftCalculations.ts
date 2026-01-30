@@ -342,17 +342,17 @@ export function calculateShift(
  * any time before the configured night shift end hour belongs to the previous day's night shift.
  *
  * @param date - The date or timestamp to evaluate
- * @param scheduleOption - Optional schedule type; defaults to night-shift behavior when omitted
+ * @param scheduleOption - The schedule type; when omitted, returns calendar day without adjustment
  * @returns The Dayjs representing the shift day (the previous day if `date` is before the night shift end time and the schedule has night shifts)
  *
  * @example
- * // During morning hours (7am or later) - same day
- * getCurrentShiftDay('2025-01-15 09:30')
+ * // Without schedule - returns calendar day (no assumptions)
+ * getCurrentShiftDay('2025-01-15 02:30')
  * // Returns: Dayjs for 2025-01-15
  *
  * @example
- * // During night shift (before the night shift end) - previous day
- * getCurrentShiftDay('2025-01-15 02:30')
+ * // With 5-shift schedule during night shift (before 7am) - previous day
+ * getCurrentShiftDay('2025-01-15 02:30', '5-shift')
  * // Returns: Dayjs for 2025-01-14 (previous day's night shift)
  */
 export function getCurrentShiftDay(
