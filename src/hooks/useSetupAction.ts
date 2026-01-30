@@ -1,5 +1,5 @@
 import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig, hasMultipleTeams } from "../utils/scheduleUtils";
+import { getScheduleConfig } from "../utils/scheduleUtils";
 
 interface UseSetupActionOptions {
   /**
@@ -37,8 +37,8 @@ interface SetupActionResult {
 export function useSetupAction(options?: UseSetupActionOptions): SetupActionResult {
   const { scheduleType } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
-  const hasTeams = hasMultipleTeams(scheduleConfig.value);
   const teamCount = scheduleConfig.shiftConfig.teamCount;
+  const hasTeams = teamCount > 1;
   const mode = options?.mode ?? "auto";
 
   // Determine what the user needs to do
