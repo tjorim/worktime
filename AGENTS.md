@@ -218,7 +218,6 @@ type ScheduleRoster = {
   value: ScheduleOption;           // "5-shift" | "9-5" | "2-shift" | "weekend-shift"
   title: string;                   // Display name for schedule selection
   description: string;             // User-facing description
-  showsTeamSelection: boolean;     // Whether to show team selection in wizard
   isAvailable: boolean;            // Whether schedule is ready for use
   shiftConfig: ShiftRosterConfig;  // Detailed shift configuration
 };
@@ -284,7 +283,6 @@ To add a new roster pattern:
   value: "my-schedule",
   title: "My Schedule",
   description: "Description for users",
-  showsTeamSelection: true,  // false for single-user schedules
   isAvailable: true,         // false while in development
   shiftConfig: {
     teamCount: 3,
