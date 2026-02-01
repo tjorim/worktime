@@ -4,12 +4,11 @@
    Modular SCSS architecture for maintainability and clarity.
    
    File structure:
-   - _variables.scss: CSS variables (light/dark modes, Bootstrap overrides)
-   - _base.scss: Base HTML styles and utility classes
-   - _components.scss: Reusable components (badges, buttons, indicators)
-   - _timeline.scss: Timeline and status display components
-   - _schedule.scss: Schedule table and related views
-   - _calendar.scss: All calendar components and interactions
+   - _variables.scss: CSS variables (--wt-* custom, --bs-* overrides)
+   - _utilities.scss: Helper classes and utility styles
+   - _calendar.scss: Calendar components and interactions
+   - _shifts.scss: Shift badges, timeline, schedule table, event indicators
+   - _modals.scss: Modal and dialog styles
    ========================================================================= */
 
 /* Bootstrap Configuration */
@@ -27,8 +26,7 @@
 
 /* Worktime Modular Styles */
 @import "variables";
-@import "base";
-@import "components";
-@import "timeline";
-@import "schedule";
+@import "utilities";
 @import "calendar";
+@import "shifts";
+@import "modals";

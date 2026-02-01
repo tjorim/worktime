@@ -1,7 +1,11 @@
 /* ============================================================================
-   BASE STYLES & UTILITIES
+   UTILITIES
    ============================================================================
-   Core HTML element styles and utility classes
+   Helper classes and utility styles
+   ========================================================================= */
+
+/* ============================================================================
+   BASE HTML ELEMENTS
    ========================================================================= */
 
 /* Prevent horizontal scroll on mobile */
@@ -25,7 +29,7 @@ body {
 }
 
 /* ============================================================================
-   UTILITY CLASSES
+   HELPER CLASSES
    ========================================================================= */
 
 .cursor-help {
@@ -61,6 +65,17 @@ body {
   height: 8px;
 }
 
+/* Text utilities */
+.textarea-mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+}
+
+/* ============================================================================
+   LAYOUT UTILITIES
+   ========================================================================= */
+
 /* Remove top border radius from main component cards in tab content for seamless look, but not nested cards */
 .tab-content > .tab-pane > .card {
   border-top-left-radius: 0;
@@ -73,9 +88,3 @@ body {
   border-top-right-radius: 0;
 }
 
-/* Text utilities */
-.textarea-mono {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-    monospace;
-}

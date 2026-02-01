@@ -1,0 +1,34 @@
+/* ============================================================================
+   MODALS AND DIALOGS
+   ============================================================================
+   Styles for modal dialogs and overlay components
+   ========================================================================= */
+
+/* PWA install prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 1050;
+  display: none;
+}
+
+@media (width >= 768px) {
+  .install-prompt {
+    left: auto;
+    right: 1rem;
+    max-width: 300px;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE MODAL ADJUSTMENTS
+   ========================================================================= */
+
+@media (width <= 768px) {
+  /* Ensure modals fit on small screens */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
