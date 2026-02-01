@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
-import clsx from "clsx";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
+import type { ScheduleOption } from "../data/rosters";
 import { getTeamCountForOption, hasMultipleTeams } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 import {
@@ -20,6 +14,11 @@ import {
   getStepIndex,
   getTotalSteps,
 } from "./wizardStepConfig";
+import { Step1Welcome } from "./wizard/Step1Welcome";
+import { Step2Features } from "./wizard/Step2Features";
+import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
+import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
+import { Step5VacationAllowance } from "./wizard/Step5VacationAllowance";
 
 /**
  * Validates vacation amount input.
@@ -220,345 +219,6 @@ export function WelcomeWizard({
     return config.title;
   };
 
-  const renderWelcomeStep = () => (
-    <>
-      <div className="text-center mb-4">
-        <div className="mb-3">
-          <i className="bi bi-clock-history text-primary icon-display"></i>
-        </div>
-        <h4 className="text-primary mb-3">Welcome to Worktime!</h4>
-        <p className="lead mb-3">
-          Your personal shift tracker and time-off planner, built for flexible schedules
-        </p>
-        <p className="text-muted">
-          Worktime helps you stay on top of your schedule with real-time tracking, countdown timers,
-          and integrated time-off management - stored locally in your browser.
-        </p>
-      </div>
-      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-        <Button
-          variant="outline-secondary"
-          onClick={() => {
-            if (onDefer) {
-              onDefer();
-            } else {
-              onHide(); // Fallback: close modal and complete onboarding via onHide handler
-            }
-          }}
-          disabled={isLoading}
-          ref={currentStep === "welcome" ? firstButtonRef : undefined}
-          className="order-2 order-sm-1"
-        >
-          Maybe Later
-        </Button>
-        <Button
-          variant="primary"
-          onClick={nextStep}
-          disabled={isLoading}
-          className="order-1 order-sm-2"
-        >
-          Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>
-        </Button>
-      </div>
-    </>
-  );
-
-  const renderFeaturesStep = () => (
-    <>
-      <div className="mb-4">
-        <h5 className="text-center mb-4">Here's what Worktime can do for you:</h5>
-        <Row className="g-3">
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
-              <div>
-                <h6 className="mb-1">Live Countdown Timers</h6>
-                <small className="text-muted">Know exactly when your next shift starts</small>
-              </div>
-            </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <i className="bi bi-wifi-off text-info me-3 mt-1 icon-feature"></i>
-              <div>
-                <h6 className="mb-1">Local-First Data</h6>
-                <small className="text-muted">
-                  Your settings and events are saved in your browser for quick access
-                </small>
-              </div>
-            </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <i className="bi bi-people text-warning me-3 mt-1 icon-feature"></i>
-              <div>
-                <h6 className="mb-1">Team Overview</h6>
-                <small className="text-muted">See who is working across your schedule</small>
-              </div>
-            </div>
-          </Col>
-          <Col xs={12} md={6}>
-            <div className="d-flex align-items-start">
-              <i className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature"></i>
-              <div>
-                <h6 className="mb-1">Time-Off Planning</h6>
-                <small className="text-muted">Track vacation and time-off with .hday files</small>
-              </div>
-            </div>
-          </Col>
-        </Row>
-        <Alert variant="info" className="mt-4">
-          <i className="bi bi-gear me-2"></i>
-          <strong>Tip:</strong> You can customize your experience anytime in the{" "}
-          <b>{SETTINGS_LOCATION_TEXT}</b>.
-        </Alert>
-      </div>
-      <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-        <Button
-          variant="outline-secondary"
-          onClick={prevStep}
-          disabled={isLoading}
-          ref={currentStep === "features" ? firstButtonRef : undefined}
-          className="order-2 order-sm-1"
-        >
-          <i className="bi bi-arrow-left me-1"></i> Back
-        </Button>
-        <Button
-          variant="primary"
-          onClick={nextStep}
-          disabled={isLoading}
-          className="order-1 order-sm-2"
-        >
-          Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
-        </Button>
-      </div>
-    </>
-  );
-
-  const renderScheduleSelectionStep = () => {
-    const handleScheduleChange = (schedule: ScheduleOption) => {
-      setSelectedSchedule(schedule);
-    };
-    const handleBackClick = () => {
-      if (isChangeScheduleFlow) {
-        onHide();
-        return;
-      }
-      prevStep();
-    };
-    const continueLabel = isChangeScheduleFlow
-      ? shouldShowTeamSelection
-        ? "Continue"
-        : "Save Schedule"
-      : "Continue";
-
-    return (
-      <>
-        <div className="text-center mb-4">
-          <h5 className="mb-2">Which roster matches your team?</h5>
-          <p className="text-muted">This helps us tailor your setup. You can change it later.</p>
-        </div>
-
-        <div className="mb-4">
-          {SCHEDULE_OPTIONS.map((schedule) => (
-            <Button
-              key={schedule.value}
-              variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
-              className="w-100 text-start mb-2"
-              onClick={() => handleScheduleChange(schedule.value)}
-              disabled={isLoading || !schedule.isAvailable}
-              title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
-              ref={
-                currentStep === "schedule-selection" && schedule.value === "9-5"
-                  ? firstButtonRef
-                  : undefined
-              }
-            >
-              <div className="fw-semibold d-flex align-items-center gap-2">
-                <span>{schedule.title}</span>
-                {!schedule.isAvailable && <span className="badge bg-secondary">Coming Soon</span>}
-              </div>
-              <small className="d-block text-muted">{schedule.description}</small>
-            </Button>
-          ))}
-        </div>
-
-        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-          <Button
-            variant="outline-secondary"
-            onClick={handleBackClick}
-            disabled={isLoading}
-            className="order-2 order-sm-1"
-          >
-            <i
-              className={clsx(
-                "bi",
-                isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left",
-                "me-1",
-              )}
-            ></i>{" "}
-            {isChangeScheduleFlow ? "Cancel" : "Back"}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={nextStep}
-            disabled={isLoading || !selectedSchedule}
-            className="order-1 order-sm-2"
-          >
-            {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
-          </Button>
-        </div>
-      </>
-    );
-  };
-
-  const renderTeamSelectionStep = () => (
-    <>
-      <div className="text-center mb-4">
-        <h5 className="mb-3">Choose your team</h5>
-        <p className="text-muted">You can always change this later in the app.</p>
-      </div>
-
-      <div className="mb-4">
-        <h6 className="mb-3">Option 1: Select Your Team (Recommended)</h6>
-        <p className="small text-muted mb-3">
-          Get personalized features like countdown timers and shift progress tracking.
-        </p>
-        <Row className="g-2" aria-label="Select your team">
-          {teams.map((team) => (
-            <Col key={team} xs={6} sm={4} md={4}>
-              <Button
-                variant="outline-primary"
-                className="w-100 team-btn"
-                onClick={() => handleTeamSelect(team)}
-                disabled={isLoading}
-                aria-label={`Select Team ${team}`}
-                ref={currentStep === "team-selection" && team === 1 ? firstButtonRef : undefined}
-              >
-                Team {team}
-              </Button>
-            </Col>
-          ))}
-        </Row>
-      </div>
-
-      {/* Only show Browse All Teams option if there are multiple teams */}
-      {teamCount > 1 && (
-        <>
-          <hr />
-
-          <div className="text-center">
-            <h6 className="mb-2">Option 2: Browse All Teams</h6>
-            <p className="small text-muted mb-3">
-              View shift information for all teams without personalization.
-            </p>
-            <Button variant="outline-secondary" onClick={handleSkip} disabled={isLoading}>
-              <i className="bi bi-eye me-1"></i>
-              Browse All Teams
-            </Button>
-          </div>
-        </>
-      )}
-
-      <div className="d-flex justify-content-start mt-3">
-        <Button variant="outline-secondary" size="sm" onClick={prevStep} disabled={isLoading}>
-          <i className="bi bi-arrow-left me-1"></i> Back
-        </Button>
-      </div>
-    </>
-  );
-
-  const renderVacationAllowanceStep = () => {
-    const validation = validateVacationAmount(vacationAmount);
-
-    return (
-      <>
-        <div className="text-center mb-4">
-          <i className="bi bi-calendar-check display-4 text-primary"></i>
-          <h4 className="mt-3">Set Up Vacation Tracking (Optional)</h4>
-          <p className="text-muted">
-            Track your vacation allowance and see how much time off you have remaining. You can skip
-            this and set it up later in Settings.
-          </p>
-        </div>
-
-        <Form>
-          <Form.Group className="mb-3" controlId="vacationAmount">
-            <Form.Label>Annual vacation allowance</Form.Label>
-            <Form.Control
-              type="number"
-              min={0}
-              step={0.5}
-              placeholder="e.g., 25"
-              value={vacationAmount}
-              onChange={(e) => setVacationAmount(e.target.value)}
-              disabled={isLoading}
-              isInvalid={validation.isInvalid}
-            />
-            <Form.Control.Feedback type="invalid">
-              Please enter a valid number (0 or greater)
-            </Form.Control.Feedback>
-            <Form.Text className="text-muted">Leave empty to skip vacation tracking</Form.Text>
-          </Form.Group>
-
-          <Form.Group controlId="vacationUnit">
-            <Form.Label>Unit</Form.Label>
-            <div className="d-flex gap-3">
-              <Form.Check
-                type="radio"
-                id="unit-days"
-                label="Days"
-                checked={vacationUnit === "days"}
-                onChange={() => setVacationUnit("days")}
-                disabled={isLoading}
-              />
-              <Form.Check
-                type="radio"
-                id="unit-hours"
-                label="Hours"
-                checked={vacationUnit === "hours"}
-                onChange={() => setVacationUnit("hours")}
-                disabled={isLoading}
-              />
-            </div>
-          </Form.Group>
-        </Form>
-
-        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
-          <Button
-            variant="outline-secondary"
-            onClick={prevStep}
-            disabled={isLoading}
-            ref={currentStep === "vacation-allowance" ? firstButtonRef : undefined}
-            className="order-3 order-sm-1"
-          >
-            <i className="bi bi-arrow-left me-2"></i>
-            Back
-          </Button>
-          <div className="d-flex gap-2 order-1 order-sm-2">
-            <Button
-              variant="outline-secondary"
-              onClick={handleVacationSkip}
-              disabled={isLoading}
-              className="flex-fill flex-sm-grow-0"
-            >
-              Skip
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleVacationComplete}
-              disabled={isLoading || validation.isInvalid}
-              className="flex-fill flex-sm-grow-0"
-            >
-              {validation.isValid ? "Save & Complete" : "Complete"}
-              <i className="bi bi-check-lg ms-2"></i>
-            </Button>
-          </div>
-        </div>
-      </>
-    );
-  };
-
   return (
     <Modal
       show={show}
@@ -595,14 +255,86 @@ export function WelcomeWizard({
           </div>
         ) : (
           <>
-            {currentStep === "welcome" && renderWelcomeStep()}
-            {currentStep === "features" && renderFeaturesStep()}
-            {currentStep === "schedule-selection" && renderScheduleSelectionStep()}
-            {currentStep === "team-selection" && hasTeamSelectionStep && renderTeamSelectionStep()}
-            {currentStep === "team-selection" &&
-              !hasTeamSelectionStep &&
-              renderScheduleSelectionStep()}
-            {currentStep === "vacation-allowance" && renderVacationAllowanceStep()}
+            {currentStep === "welcome" && (
+              <Step1Welcome
+                onDefer={onDefer}
+                onHide={onHide}
+                onNext={nextStep}
+                isLoading={isLoading}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {currentStep === "features" && (
+              <Step2Features
+                onPrev={prevStep}
+                onNext={nextStep}
+                isLoading={isLoading}
+                firstButtonRef={firstButtonRef}
+                settingsLocationText={SETTINGS_LOCATION_TEXT}
+              />
+            )}
+            {currentStep === "schedule-selection" && (
+              <Step3ScheduleSelection
+                selectedSchedule={selectedSchedule}
+                onScheduleChange={setSelectedSchedule}
+                onPrev={() => {
+                  if (isChangeScheduleFlow) {
+                    onHide();
+                  } else {
+                    prevStep();
+                  }
+                }}
+                onNext={nextStep}
+                isLoading={isLoading}
+                isChangeScheduleFlow={isChangeScheduleFlow}
+                shouldShowTeamSelection={shouldShowTeamSelection}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {currentStep === "team-selection" && hasTeamSelectionStep && (
+              <Step4TeamSelection
+                teams={teams}
+                teamCount={teamCount}
+                onTeamSelect={handleTeamSelect}
+                onSkip={handleSkip}
+                onPrev={prevStep}
+                isLoading={isLoading}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {currentStep === "team-selection" && !hasTeamSelectionStep && (
+              <Step3ScheduleSelection
+                selectedSchedule={selectedSchedule}
+                onScheduleChange={setSelectedSchedule}
+                onPrev={() => {
+                  if (isChangeScheduleFlow) {
+                    onHide();
+                  } else {
+                    prevStep();
+                  }
+                }}
+                onNext={nextStep}
+                isLoading={isLoading}
+                isChangeScheduleFlow={isChangeScheduleFlow}
+                shouldShowTeamSelection={shouldShowTeamSelection}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {currentStep === "vacation-allowance" && (
+              <Step5VacationAllowance
+                vacationAmount={vacationAmount}
+                vacationUnit={vacationUnit}
+                onVacationAmountChange={setVacationAmount}
+                onVacationUnitChange={setVacationUnit}
+                onPrev={prevStep}
+                onSkip={handleVacationSkip}
+                onComplete={handleVacationComplete}
+                isLoading={isLoading}
+                isInvalid={validateVacationAmount(vacationAmount).isInvalid}
+                isValid={validateVacationAmount(vacationAmount).isValid}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
           </>
         )}
       </Modal.Body>
