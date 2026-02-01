@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
-import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
-import { isValidDate } from "../lib/hday/validation";
-import { dayjs } from "../utils/dateTimeUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { useViewMode } from "../hooks/useViewMode";
+import { useEventForm } from "../hooks/useEventForm";
+import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { RawContentPanel } from "./timeoff/RawContentPanel";
@@ -21,9 +21,8 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TIMEOFF_VIEWS,
-  DEFAULT_WEEKDAY,
 } from "./timeoff/constants";
-import { isEditableTarget } from "./timeoff/helpers";
+import { importHdayFile, exportHdayFile } from "../utils/fileOperations";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -69,27 +68,37 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
   const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
 
+  // Use custom hook for event form state management
+  const {
+    eventType,
+    eventWeekday,
+    eventStart,
+    eventEnd,
+    eventTitle,
+    eventFlags,
+    startDateError,
+    endDateError,
+    setEventType,
+    setEventWeekday,
+    setEventStart,
+    setEventEnd,
+    setEventTitle,
+    resetForm,
+    validateForm,
+    prefillFormFromEvent,
+    handleTypeFlagChange,
+    handleTimeFlagChange,
+  } = useEventForm();
+
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
-  // Event form state
-  const [eventType, setEventType] = useState<"range" | "weekly">("range");
-  const [eventWeekday, setEventWeekday] = useState(DEFAULT_WEEKDAY);
-  const [eventStart, setEventStart] = useState("");
-  const [eventEnd, setEventEnd] = useState("");
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventFlags, setEventFlags] = useState<EventFlag[]>([]);
-
   // Raw .hday editor state
   const [rawEditorText, setRawEditorText] = useState(rawText);
   const [rawEditorError, setRawEditorError] = useState("");
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
-
-  // Validation errors
-  const [startDateError, setStartDateError] = useState("");
-  const [endDateError, setEndDateError] = useState("");
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -101,72 +110,12 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const resetForm = useCallback(() => {
-    setEventType("range");
-    setEventWeekday(DEFAULT_WEEKDAY);
-    setEventStart("");
-    setEventEnd("");
-    setEventTitle("");
-    setEventFlags([]);
-    setStartDateError("");
-    setEndDateError("");
-  }, []);
-
-  const validateForm = (): boolean => {
-    let valid = true;
-
-    if (eventType === "range") {
-      // Validate start date
-      if (!eventStart) {
-        setStartDateError("Start date is required");
-        valid = false;
-      } else if (!isValidDate(eventStart)) {
-        setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else {
-        setStartDateError("");
-      }
-
-      // Validate end date
-      if (eventEnd && !isValidDate(eventEnd)) {
-        setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else if (eventEnd && eventStart && dayjs(eventEnd).isBefore(dayjs(eventStart))) {
-        setEndDateError("End date must be after start date");
-        valid = false;
-      } else {
-        setEndDateError("");
-      }
-    }
-
-    return valid;
-  };
-
   const handleOpenAddModal = useCallback(() => {
     resetForm();
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
   }, [resetForm]);
-
-  const prefillFormFromEvent = useCallback((event: HdayEvent) => {
-    if (event.type === "range") {
-      setEventType("range");
-      setEventStart(event.start || "");
-      setEventEnd(event.end || "");
-      setEventWeekday(DEFAULT_WEEKDAY);
-    } else if (event.type === "weekly") {
-      setEventType("weekly");
-      setEventWeekday(event.weekday || DEFAULT_WEEKDAY);
-      setEventStart("");
-      setEventEnd("");
-    }
-
-    setEventTitle(event.title || "");
-    setEventFlags(event.flags || []);
-    setStartDateError("");
-    setEndDateError("");
-  }, []);
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
@@ -289,7 +238,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     if (!file) return;
 
     try {
-      const text = await file.text();
+      const text = await importHdayFile(file);
       importHday(text);
       setSelectedIndices([]); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
@@ -314,16 +263,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       return;
     }
 
-    const blob = new Blob([hdayContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "timeoff.hday";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
+    exportHdayFile(hdayContent);
     toast.showSuccess("Exported timeoff.hday", "📤");
   }, [exportHday, toast]);
 
@@ -365,85 +305,25 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     toast.showSuccess("Redo successful", "↪️");
   }, [canRedo, redo, toast]);
 
-  // Ref to hold latest handlers to avoid stale closures in keyboard event listener
-  const handlersRef = useRef({
-    handleCancelEditMode,
-    handleExport,
-    handleImport,
-    handleRedo,
-    handleUndo,
-  });
-
-  useEffect(() => {
-    handlersRef.current = {
-      handleCancelEditMode,
-      handleExport,
-      handleImport,
-      handleRedo,
-      handleUndo,
-    };
-  }, [handleCancelEditMode, handleExport, handleImport, handleRedo, handleUndo]);
-
-  const handleTimeOffKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-
-      if (event.key === "Escape") {
-        if (showEventModal && modalMode === "edit" && editIndex >= 0) {
-          event.preventDefault();
-          handlersRef.current.handleCancelEditMode();
-        }
-        return;
-      }
-
-      if (event.key === "Delete") {
-        if (viewMode === "table" && selectedIndices.length > 0) {
-          event.preventDefault();
-          setShowBulkDeleteConfirm(true);
-        }
-        return;
-      }
-
-      if (event.ctrlKey || event.metaKey) {
-        const key = event.key.toLowerCase();
-        if (key === "z") {
-          event.preventDefault();
-          if (event.shiftKey) {
-            handlersRef.current.handleRedo();
-          } else {
-            handlersRef.current.handleUndo();
-          }
-        }
-        if (key === "y") {
-          event.preventDefault();
-          handlersRef.current.handleRedo();
-        }
-        if (key === "s") {
-          event.preventDefault();
-          handlersRef.current.handleExport();
-        }
-        if (key === "i") {
-          event.preventDefault();
-          handlersRef.current.handleImport();
-        }
-      }
+  // Use custom hook for keyboard shortcuts
+  useTimeOffKeyboardShortcuts(
+    {
+      onUndo: handleUndo,
+      onRedo: handleRedo,
+      onImport: handleImport,
+      onExport: handleExport,
+      onBulkDelete: () => setShowBulkDeleteConfirm(true),
+      onCancelEditMode: handleCancelEditMode,
     },
-    [editIndex, modalMode, selectedIndices.length, showEventModal, viewMode],
+    {
+      isActive,
+      showEventModal,
+      modalMode,
+      editIndex,
+      viewMode,
+      selectedIndicesCount: selectedIndices.length,
+    },
   );
-
-  useEffect(() => {
-    if (!isActive) {
-      return;
-    }
-
-    document.addEventListener("keydown", handleTimeOffKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleTimeOffKeyDown);
-    };
-  }, [handleTimeOffKeyDown, isActive]);
 
   const previewLine = buildPreviewLine({
     eventType,
@@ -453,28 +333,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     title: eventTitle,
     flags: eventFlags,
   });
-
-  const handleTypeFlagChange = (flag: TypeFlag | "none") => {
-    if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f)));
-    } else {
-      setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f));
-        return [...filtered, flag];
-      });
-    }
-  };
-
-  const handleTimeFlagChange = (flag: TimeLocationFlag | "none") => {
-    if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f)));
-    } else {
-      setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f));
-        return [...filtered, flag];
-      });
-    }
-  };
 
   return (
     <div className="time-off-view py-3">
