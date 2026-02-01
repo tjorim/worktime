@@ -21,6 +21,142 @@ type WizardStep =
   | "team-selection"
   | "vacation-allowance";
 
+type WizardMode = "onboarding" | "change-team" | "change-schedule";
+
+/**
+ * Configuration for a single wizard step.
+ * Defines visibility conditions and navigation behavior.
+ */
+interface StepConfig {
+  /** Step identifier */
+  id: WizardStep;
+  /** Title displayed in the modal header */
+  title: string;
+  /** Determines if this step should be included in the flow */
+  isVisible: (context: WizardContext) => boolean;
+  /** Determines the next step, or null to close the wizard */
+  getNextStep: (context: WizardContext) => WizardStep | null;
+  /** Determines the previous step, or null to close the wizard */
+  getPrevStep: (context: WizardContext) => WizardStep | null;
+}
+
+/**
+ * Runtime context passed to step configuration functions.
+ * Contains mode, schedule selection state, and team visibility logic.
+ */
+interface WizardContext {
+  mode: WizardMode;
+  shouldShowTeamSelection: boolean;
+  isChangeTeamFlow: boolean;
+  isChangeScheduleFlow: boolean;
+}
+
+/**
+ * Declarative wizard flow configuration.
+ * Defines all possible steps and their visibility/navigation rules.
+ * 
+ * Benefits:
+ * - Single source of truth for wizard flows
+ * - Easy to add/modify steps
+ * - Self-documenting step relationships
+ * - Type-safe step transitions
+ */
+const WIZARD_STEP_CONFIG: StepConfig[] = [
+  {
+    id: "welcome",
+    title: "Welcome to Worktime! 👋",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "features",
+    getPrevStep: () => null,
+  },
+  {
+    id: "features",
+    title: "What can Worktime do? ✨",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "schedule-selection",
+    getPrevStep: () => "welcome",
+  },
+  {
+    id: "schedule-selection",
+    title: "Pick Your Schedule 🗓️",
+    isVisible: (ctx) => ctx.mode === "onboarding" || ctx.mode === "change-schedule",
+    getNextStep: (ctx) => {
+      if (ctx.shouldShowTeamSelection) {
+        return "team-selection";
+      }
+      // In change modes, close wizard after schedule selection
+      if (ctx.isChangeScheduleFlow) {
+        return null;
+      }
+      // In onboarding, continue to vacation allowance
+      return "vacation-allowance";
+    },
+    getPrevStep: (ctx) => {
+      // In change modes, close wizard when going back from schedule
+      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+        return null;
+      }
+      return "features";
+    },
+  },
+  {
+    id: "team-selection",
+    title: "Choose Your Experience 🎯",
+    isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.isChangeTeamFlow,
+    getNextStep: (ctx) => {
+      // In change modes, close wizard after team selection
+      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+        return null;
+      }
+      // In onboarding, continue to vacation allowance
+      return "vacation-allowance";
+    },
+    getPrevStep: () => "schedule-selection",
+  },
+  {
+    id: "vacation-allowance",
+    title: "Vacation Tracking ✈️",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => null, // Always closes wizard after vacation setup
+    getPrevStep: (ctx) =>
+      ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection",
+  },
+];
+
+/**
+ * Get visible steps for current wizard context.
+ */
+function getVisibleSteps(context: WizardContext): StepConfig[] {
+  return WIZARD_STEP_CONFIG.filter((step) => step.isVisible(context));
+}
+
+/**
+ * Get configuration for a specific step.
+ */
+function getStepConfig(stepId: WizardStep): StepConfig {
+  const config = WIZARD_STEP_CONFIG.find((s) => s.id === stepId);
+  if (!config) {
+    throw new Error(`No configuration found for step: ${stepId}`);
+  }
+  return config;
+}
+
+/**
+ * Get 1-based index of a step within visible steps.
+ */
+function getStepIndex(stepId: WizardStep, context: WizardContext): number {
+  const visibleSteps = getVisibleSteps(context);
+  const index = visibleSteps.findIndex((s) => s.id === stepId);
+  return index === -1 ? 1 : index + 1; // 1-based index
+}
+
+/**
+ * Get total number of visible steps for current context.
+ */
+function getTotalSteps(context: WizardContext): number {
+  return getVisibleSteps(context).length;
+}
+
 /**
  * Validates vacation amount input.
  * Returns an object with validation state:
@@ -119,51 +255,12 @@ export function WelcomeWizard({
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
-  /**
-   * Calculate total number of steps in the wizard based on mode and schedule configuration.
-   *
-   * Step count varies by mode:
-   * - change-team: 1 step (team selection only)
-   * - change-schedule: 1 step (schedule) + optional team selection = 1-2 steps
-   * - onboarding: 5 steps (welcome, features, schedule, optional team, vacation)
-   *
-   * Team selection step is included when:
-   * - In change-team mode (always shown)
-   * - Schedule has multiple teams (teamCount > 1)
-   */
-  const getTotalSteps = () => {
-    if (isChangeTeamFlow) return 1;
-    if (isChangeScheduleFlow) return shouldShowTeamSelection ? 2 : 1;
-    return shouldShowTeamSelection ? 5 : 4;
-  };
-
-  /**
-   * Get current step index (1-based) for progress tracking.
-   *
-   * Maps step names to step numbers accounting for conditional team selection:
-   * - Onboarding: welcome(1), features(2), schedule(3), [team(4)], vacation(4 or 5)
-   * - Change-schedule: schedule(1), [team(2)]
-   * - Change-team: team(1)
-   */
-  const getStepIndex = () => {
-    if (isChangeTeamFlow) return 1;
-    if (isChangeScheduleFlow) {
-      return currentStep === "team-selection" ? 2 : 1;
-    }
-    switch (currentStep) {
-      case "welcome":
-        return 1;
-      case "features":
-        return 2;
-      case "schedule-selection":
-        return 3;
-      case "team-selection":
-        return 4;
-      case "vacation-allowance":
-        return shouldShowTeamSelection ? 5 : 4;
-      default:
-        return 1;
-    }
+  // Create wizard context for configuration functions
+  const wizardContext: WizardContext = {
+    mode,
+    shouldShowTeamSelection,
+    isChangeTeamFlow,
+    isChangeScheduleFlow,
   };
 
   // Reset to startStep when modal opens
@@ -218,71 +315,45 @@ export function WelcomeWizard({
   };
 
   const nextStep = () => {
-    if (currentStep === "welcome") {
-      setCurrentStep("features");
-    } else if (currentStep === "features") {
-      setCurrentStep("schedule-selection");
-    } else if (currentStep === "schedule-selection") {
+    const currentConfig = getStepConfig(currentStep);
+    const nextStepId = currentConfig.getNextStep(wizardContext);
+
+    // Handle schedule selection callback before navigation
+    if (currentStep === "schedule-selection") {
       if (selectedSchedule && selectedSchedule !== scheduleType) {
         onScheduleSelect?.(selectedSchedule);
       }
-      if (isChangeScheduleFlow || isChangeTeamFlow) {
-        if (shouldShowTeamSelection) {
-          setCurrentStep("team-selection");
-        } else {
-          onHide();
-        }
-        return;
-      }
-      setCurrentStep(shouldShowTeamSelection ? "team-selection" : "vacation-allowance");
-    } else if (currentStep === "team-selection") {
-      if (isChangeScheduleFlow || isChangeTeamFlow) {
-        onHide();
-      } else {
-        setCurrentStep("vacation-allowance");
-      }
+    }
+
+    if (nextStepId === null) {
+      // Configuration says to close wizard
+      onHide();
+    } else {
+      setCurrentStep(nextStepId);
     }
   };
 
   const prevStep = () => {
-    if (currentStep === "vacation-allowance") {
-      setCurrentStep(shouldShowTeamSelection ? "team-selection" : "schedule-selection");
-    } else if (currentStep === "team-selection") {
-      // In change-team mode, allow going back to schedule-selection to change schedule
-      setCurrentStep("schedule-selection");
-    } else if (currentStep === "schedule-selection") {
-      if (isChangeScheduleFlow || isChangeTeamFlow) {
-        // When going back from schedule-selection in change mode, close the wizard
-        onHide();
-        return;
-      }
-      setCurrentStep("features");
-    } else if (currentStep === "features") {
-      setCurrentStep("welcome");
+    const currentConfig = getStepConfig(currentStep);
+    const prevStepId = currentConfig.getPrevStep(wizardContext);
+
+    if (prevStepId === null) {
+      // Configuration says to close wizard
+      onHide();
+    } else {
+      setCurrentStep(prevStepId);
     }
   };
 
   const getProgressPercentage = () => {
-    const totalSteps = getTotalSteps();
-    const stepIndex = getStepIndex();
+    const totalSteps = getTotalSteps(wizardContext);
+    const stepIndex = getStepIndex(currentStep, wizardContext);
     return (stepIndex / totalSteps) * 100;
   };
 
   const getStepTitle = () => {
-    switch (currentStep) {
-      case "welcome":
-        return "Welcome to Worktime! 👋";
-      case "features":
-        return "What can Worktime do? ✨";
-      case "schedule-selection":
-        return "Pick Your Schedule 🗓️";
-      case "team-selection":
-        return "Choose Your Experience 🎯";
-      case "vacation-allowance":
-        return "Vacation Tracking ✈️";
-      default:
-        return "Welcome to Worktime";
-    }
+    const config = getStepConfig(currentStep);
+    return config.title;
   };
 
   const renderWelcomeStep = () => (
@@ -648,7 +719,7 @@ export function WelcomeWizard({
           />
           <div className="d-flex justify-content-between small text-muted">
             <span>
-              Step {getStepIndex()} of {getTotalSteps()}
+              Step {getStepIndex(currentStep, wizardContext)} of {getTotalSteps(wizardContext)}
             </span>
             <span>{getProgressPercentage()}% Complete</span>
           </div>
