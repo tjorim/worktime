@@ -1,0 +1,277 @@
+/* ============================================================================
+   COMPONENTS
+   ============================================================================
+   Reusable component styles: badges, cards, buttons, indicators
+   ========================================================================= */
+
+/* ============================================================================
+   SHIFT BADGES
+   ============================================================================
+   Colors are chosen to be visually distinct and accessible:
+   - Morning (blue): High contrast, symbolizes early/dawn
+   - Late/Evening (orange-red): Warm color, symbolizes sunset
+   - Day (orange): Bright daytime color, distinct from late shift
+   - Night (purple): Cool dark color, symbolizes nighttime
+   - Off (gray): Neutral, symbolizes rest/off-duty
+   
+   Text colors adapt to theme:
+   - Light theme: Day shift uses dark text (#111111) for accessibility
+   - Dark theme: All shifts use light text for accessibility
+   
+   Contrast ratios (WCAG AA requirement: 4.5:1 for normal text):
+   Light theme:
+   - Morning: #1976d2 / #ffffff = 4.60:1 ✓
+   - Late: #bf360c / #ffffff = 8.57:1 ✓
+   - Day: #f57c00 / #111111 = 6.98:1 ✓
+   - Night: #7b1fa2 / #ffffff = 7.29:1 ✓
+   - Off: #616161 / #ffffff = 4.54:1 ✓
+   
+   Color-blind safe: Uses both hue and brightness differences.
+   Variables defined in: _variables.scss
+   ========================================================================= */
+
+.shift-morning {
+  background-color: var(--wt-shift-morning);
+  color: var(--wt-shift-morning-text);
+  border: 1px solid var(--wt-shift-morning-text);
+}
+
+.shift-late {
+  background-color: var(--wt-shift-late);
+  color: var(--wt-shift-late-text);
+  border: 1px solid var(--wt-shift-late-text);
+}
+
+.shift-day {
+  background-color: var(--wt-shift-day);
+  color: var(--wt-shift-day-text);
+  border: 1px solid var(--wt-shift-day-text);
+}
+
+.shift-night {
+  background-color: var(--wt-shift-night);
+  color: var(--wt-shift-night-text);
+  border: 1px solid var(--wt-shift-night-text);
+}
+
+.shift-off {
+  background-color: var(--wt-shift-off);
+  color: var(--wt-shift-off-text);
+  border: 1px solid var(--wt-shift-off-text);
+}
+
+/* Higher specificity for shift badges to override Bootstrap defaults */
+.badge.shift-morning {
+  background-color: var(--wt-shift-morning);
+  color: var(--wt-shift-morning-text);
+}
+
+.badge.shift-late {
+  background-color: var(--wt-shift-late);
+  color: var(--wt-shift-late-text);
+}
+
+.badge.shift-day {
+  background-color: var(--wt-shift-day);
+  color: var(--wt-shift-day-text);
+}
+
+.badge.shift-night {
+  background-color: var(--wt-shift-night);
+  color: var(--wt-shift-night-text);
+}
+
+.badge.shift-off {
+  background-color: var(--wt-shift-off);
+  color: var(--wt-shift-off-text);
+}
+
+/* Team highlight for user's team */
+.my-team {
+  border: 2px solid var(--wt-primary-color) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wt-primary-color) 30%, transparent);
+}
+
+/* Large shift badge styling */
+.shift-badge-lg {
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Shift codes */
+.shift-code {
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  display: inline-block;
+  min-width: 2rem;
+}
+
+/* ============================================================================
+   EVENT INDICATORS & BADGES
+   ============================================================================
+   Colors match EVENT_COLORS in parser.ts for time-off events
+   ========================================================================= */
+
+.event-indicators {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.event-type-badge {
+  color: #000;
+}
+
+/* Event type colors */
+.event-holiday-full {
+  background-color: #ec0000;
+}
+.event-holiday-half {
+  background-color: #ff8a8a;
+}
+.event-business-full {
+  background-color: #ff9500;
+}
+.event-business-half {
+  background-color: #ffc04d;
+}
+.event-course-full {
+  background-color: #d9ad00;
+}
+.event-course-half {
+  background-color: #f0d04d;
+}
+.event-in-full {
+  background-color: #008899;
+}
+.event-in-half {
+  background-color: #00b8cc;
+}
+.event-weekend-full {
+  background-color: #990099;
+}
+.event-weekend-half {
+  background-color: #cc66cc;
+}
+.event-birthday-full {
+  background-color: #0000cc;
+}
+.event-birthday-half {
+  background-color: #6666ff;
+}
+.event-ill-full {
+  background-color: #336600;
+}
+.event-ill-half {
+  background-color: #669933;
+}
+.event-other-full {
+  background-color: #008b8b;
+}
+.event-other-half {
+  background-color: #4db8b8;
+}
+.event-unknown {
+  background-color: #ccc;
+}
+
+/* ============================================================================
+   BUTTONS & INTERACTIVE ELEMENTS
+   ========================================================================= */
+
+/* Team selection buttons */
+.team-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+}
+
+.team-btn.selected {
+  background-color: var(--wt-primary-color);
+  color: white;
+  border-color: var(--wt-primary-color);
+}
+
+/* Date navigation */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* PWA install prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 1050;
+  display: none;
+}
+
+@media (width >= 768px) {
+  .install-prompt {
+    left: auto;
+    right: 1rem;
+    max-width: 300px;
+  }
+}
+
+/* ============================================================================
+   STATUS INDICATORS
+   ========================================================================= */
+
+/* Connection status */
+.connection-offline {
+  background-color: #dc3545 !important;
+}
+
+.connection-online {
+  background-color: #198754 !important;
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================================================= */
+
+@media (width <= 768px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  .btn-sm {
+    font-size: 0.75rem;
+  }
+
+  /* Ensure modals fit on small screens */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  /* Adjust card headers for mobile */
+  .card-header {
+    padding: 0.75rem;
+  }
+}

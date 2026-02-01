@@ -1,0 +1,186 @@
+/* ============================================================================
+   WORKTIME CUSTOM CSS VARIABLES
+   ============================================================================
+   All Worktime-specific CSS variables for components and styling.
+   Variables do NOT override Bootstrap defaults.
+   All custom variables use the --wt-* prefix for clarity.
+   ========================================================================= */
+
+/* ============================================================================
+   LIGHT MODE VARIABLES
+   ========================================================================= */
+
+:root {
+  /* --- Month Calendar Component --- */
+  /* Background and borders */
+  --wt-month-calendar-bg: #fff;
+  --wt-month-calendar-border: #e9ecef;
+  --wt-month-calendar-day-bg: #fdfdfd;
+  --wt-month-calendar-day-other: #f8f9fa;
+  --wt-month-calendar-day-other-text: #adb5bd;
+  --wt-month-calendar-day-weekend: #fff7f7;
+  
+  /* Event highlighting */
+  --wt-month-calendar-event-bg: rgba(13, 110, 253, 0.08);
+  --wt-month-calendar-event-hover: rgba(13, 110, 253, 0.16);
+  --wt-month-calendar-event-text: #1f2d3d;
+  
+  /* Calendar text and indicators */
+  --wt-month-calendar-weekday-text: #6c757d;
+  --wt-month-calendar-today-border: #0d6efd;
+  --wt-month-calendar-today-bg: rgba(13, 110, 253, 0.05);
+  --wt-month-calendar-today-shadow: rgb(13 110 253 / 0.4);
+  --wt-month-calendar-focus-outline: #0d6efd;
+  
+  /* Holiday and special day indicators */
+  --wt-month-calendar-public-holiday-border: #ffb703;
+  --wt-month-calendar-public-holiday-bg: #fff4db;
+  --wt-month-calendar-school-holiday-border: #6f42c1;
+  --wt-month-calendar-school-holiday-bg: #f5f0ff;
+  --wt-month-calendar-payday-border: #198754;
+  --wt-month-calendar-payday-bg: #e9f7ef;
+
+  /* --- Context Menu Component --- */
+  --wt-context-menu-bg: #fff;
+  --wt-context-menu-border: #dee2e6;
+  --wt-context-menu-shadow: rgba(0, 0, 0, 0.15);
+  --wt-context-menu-item-hover: #f8f9fa;
+  --wt-context-menu-item-text: #212529;
+
+  /* --- Shift Badge Colors --- */
+  /* See _components.scss for detailed contrast ratio documentation */
+  --wt-shift-morning: #1976d2;
+  --wt-shift-morning-text: #ffffff;
+  --wt-shift-late: #bf360c;
+  --wt-shift-late-text: #ffffff;
+  --wt-shift-day: #f57c00;
+  --wt-shift-day-text: #111111;
+  --wt-shift-night: #7b1fa2;
+  --wt-shift-night-text: #ffffff;
+  --wt-shift-off: #616161;
+  --wt-shift-off-text: #ffffff;
+
+  /* --- Application Theme --- */
+  --wt-primary-color: #0d6efd;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.1);
+}
+
+/* ============================================================================
+   DARK MODE VARIABLES
+   ========================================================================= */
+
+@include color-mode(dark) {
+  /* --- Month Calendar Component --- */
+  /* Background and borders */
+  --wt-month-calendar-bg: #1f242a;
+  --wt-month-calendar-border: #2f353d;
+  --wt-month-calendar-day-bg: #1b1f24;
+  --wt-month-calendar-day-other: #15181c;
+  --wt-month-calendar-day-other-text: #6c757d;
+  --wt-month-calendar-day-weekend: #231c1c;
+  
+  /* Event highlighting */
+  --wt-month-calendar-event-bg: rgba(110, 168, 254, 0.18);
+  --wt-month-calendar-event-hover: rgba(110, 168, 254, 0.28);
+  --wt-month-calendar-event-text: #e9edf1;
+  
+  /* Calendar text and indicators */
+  --wt-month-calendar-weekday-text: #9aa4b2;
+  --wt-month-calendar-today-border: #6ea8fe;
+  --wt-month-calendar-today-bg: rgba(110, 168, 254, 0.12);
+  --wt-month-calendar-today-shadow: rgb(110 168 254 / 0.5);
+  --wt-month-calendar-focus-outline: #6ea8fe;
+  
+  /* Holiday and special day indicators */
+  --wt-month-calendar-public-holiday-border: #d4930a;
+  --wt-month-calendar-public-holiday-bg: rgba(212, 147, 10, 0.15);
+  --wt-month-calendar-school-holiday-border: #9d73d4;
+  --wt-month-calendar-school-holiday-bg: rgba(157, 115, 212, 0.15);
+  --wt-month-calendar-payday-border: #4db380;
+  --wt-month-calendar-payday-bg: rgba(77, 179, 128, 0.15);
+
+  /* --- Context Menu Component --- */
+  --wt-context-menu-bg: #2b3035;
+  --wt-context-menu-border: #495057;
+  --wt-context-menu-shadow: rgba(0, 0, 0, 0.5);
+  --wt-context-menu-item-hover: #3a3f44;
+  --wt-context-menu-item-text: #e9ecef;
+
+  /* --- Shift Badge Colors --- */
+  /* Dark mode uses darker backgrounds with lighter text for accessibility */
+  --wt-shift-morning: #1565c0;
+  --wt-shift-morning-text: #e3f2fd;
+  --wt-shift-late: #8d3200;
+  --wt-shift-late-text: #ffe0b2;
+  --wt-shift-day: #b85500;
+  --wt-shift-day-text: #fff3e0;
+  --wt-shift-night: #4527a0;
+  --wt-shift-night-text: #ede7f6;
+  --wt-shift-off: #212121;
+  --wt-shift-off-text: #bdbdbd;
+
+  /* --- Application Theme --- */
+  --wt-primary-color: #90caf9;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+
+  /* ==========================================================================
+     BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
+     ==========================================================================
+     These override Bootstrap's default dark mode values to match Worktime's
+     dark theme design (--bs-body-secondary-bg-dark: #23272b).
+     
+     Why these overrides exist:
+     - Consistent card/modal/dropdown backgrounds across the app
+     - Match dark theme background colors used in Sass configuration
+     - Ensure proper contrast for table content in dark mode
+     - Customize tab navigation styling for better visibility
+     ======================================================================= */
+
+  /* Component backgrounds - use secondary background color (#23272b) */
+  --bs-card-bg: #23272b;
+  --bs-modal-bg: #23272b;
+  --bs-offcanvas-bg: #23272b;
+  --bs-dropdown-bg: #23272b;
+  --bs-table-bg: #23272b;
+  
+  /* Table text color - ensure readability on dark backgrounds */
+  --bs-table-color: #e0e0e0;
+  
+  /* Tab navigation borders - match dark theme styling */
+  --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
+  --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
+
+  /* Dark mode specific component styling */
+  .team-card-interactive:hover,
+  .team-card-interactive:focus {
+    background-color: var(--bs-body-bg, #181a1b);
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-tabs .nav-link {
+    color: #adb5bd;
+  }
+
+  .nav-tabs .nav-link.active {
+    font-weight: 600;
+  }
+
+  .nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+  }
+
+  .schedule-table th,
+  .schedule-table .team-header {
+    background-color: var(--bs-table-bg, #23272b);
+    color: var(--bs-table-color, #e0e0e0);
+  }
+
+  .schedule-table td:first-child {
+    background-color: var(--bs-table-bg, #23272b);
+  }
+}

@@ -1,0 +1,23 @@
+/* ============================================================================
+   SCHEDULE & TABLE VIEWS
+   ============================================================================
+   Schedule table styling and related components
+   ========================================================================= */
+
+/* Schedule table styling */
+.schedule-table {
+  font-size: 0.875rem;
+}
+
+.schedule-table th,
+.schedule-table td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.5rem 0.25rem;
+}
+
+.schedule-table .team-header {
+  background-color: var(--bs-table-bg, #f8f9fa);
+  color: var(--bs-table-color, #212529);
+  font-weight: 600;
+}
