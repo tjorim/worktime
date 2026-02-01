@@ -38,63 +38,64 @@ body {
    ============================================================================
    These are Worktime-specific variables for custom components and styling.
    They do NOT override Bootstrap defaults.
+   All custom variables use the --wt-* prefix for clarity.
    ========================================================================= */
 
 :root {
   /* --- Month Calendar Component --- */
   /* Background and borders */
-  --month-calendar-bg: #fff;
-  --month-calendar-border: #e9ecef;
-  --month-calendar-day-bg: #fdfdfd;
-  --month-calendar-day-other: #f8f9fa;
-  --month-calendar-day-other-text: #adb5bd;
-  --month-calendar-day-weekend: #fff7f7;
+  --wt-month-calendar-bg: #fff;
+  --wt-month-calendar-border: #e9ecef;
+  --wt-month-calendar-day-bg: #fdfdfd;
+  --wt-month-calendar-day-other: #f8f9fa;
+  --wt-month-calendar-day-other-text: #adb5bd;
+  --wt-month-calendar-day-weekend: #fff7f7;
   
   /* Event highlighting */
-  --month-calendar-event-bg: rgba(13, 110, 253, 0.08);
-  --month-calendar-event-hover: rgba(13, 110, 253, 0.16);
-  --month-calendar-event-text: #1f2d3d;
+  --wt-month-calendar-event-bg: rgba(13, 110, 253, 0.08);
+  --wt-month-calendar-event-hover: rgba(13, 110, 253, 0.16);
+  --wt-month-calendar-event-text: #1f2d3d;
   
   /* Calendar text and indicators */
-  --month-calendar-weekday-text: #6c757d;
-  --month-calendar-today-border: #0d6efd;
-  --month-calendar-today-bg: rgba(13, 110, 253, 0.05);
-  --month-calendar-today-shadow: rgb(13 110 253 / 0.4);
-  --month-calendar-focus-outline: #0d6efd;
+  --wt-month-calendar-weekday-text: #6c757d;
+  --wt-month-calendar-today-border: #0d6efd;
+  --wt-month-calendar-today-bg: rgba(13, 110, 253, 0.05);
+  --wt-month-calendar-today-shadow: rgb(13 110 253 / 0.4);
+  --wt-month-calendar-focus-outline: #0d6efd;
   
   /* Holiday and special day indicators */
-  --month-calendar-public-holiday-border: #ffb703;
-  --month-calendar-public-holiday-bg: #fff4db;
-  --month-calendar-school-holiday-border: #6f42c1;
-  --month-calendar-school-holiday-bg: #f5f0ff;
-  --month-calendar-payday-border: #198754;
-  --month-calendar-payday-bg: #e9f7ef;
+  --wt-month-calendar-public-holiday-border: #ffb703;
+  --wt-month-calendar-public-holiday-bg: #fff4db;
+  --wt-month-calendar-school-holiday-border: #6f42c1;
+  --wt-month-calendar-school-holiday-bg: #f5f0ff;
+  --wt-month-calendar-payday-border: #198754;
+  --wt-month-calendar-payday-bg: #e9f7ef;
 
   /* --- Context Menu Component --- */
-  --context-menu-bg: #fff;
-  --context-menu-border: #dee2e6;
-  --context-menu-shadow: rgba(0, 0, 0, 0.15);
-  --context-menu-item-hover: #f8f9fa;
-  --context-menu-item-text: #212529;
+  --wt-context-menu-bg: #fff;
+  --wt-context-menu-border: #dee2e6;
+  --wt-context-menu-shadow: rgba(0, 0, 0, 0.15);
+  --wt-context-menu-item-hover: #f8f9fa;
+  --wt-context-menu-item-text: #212529;
 
   /* --- Shift Badge Colors --- */
   /* See lines 387-410 for detailed contrast ratio documentation */
-  --shift-morning: #1976d2;
-  --shift-morning-text: #ffffff;
-  --shift-late: #bf360c;
-  --shift-late-text: #ffffff;
-  --shift-day: #f57c00;
-  --shift-day-text: #111111;
-  --shift-night: #7b1fa2;
-  --shift-night-text: #ffffff;
-  --shift-off: #616161;
-  --shift-off-text: #ffffff;
+  --wt-shift-morning: #1976d2;
+  --wt-shift-morning-text: #ffffff;
+  --wt-shift-late: #bf360c;
+  --wt-shift-late-text: #ffffff;
+  --wt-shift-day: #f57c00;
+  --wt-shift-day-text: #111111;
+  --wt-shift-night: #7b1fa2;
+  --wt-shift-night-text: #ffffff;
+  --wt-shift-off: #616161;
+  --wt-shift-off-text: #ffffff;
 
   /* --- Application Theme --- */
-  --primary-color: #0d6efd;
+  --wt-primary-color: #0d6efd;
 
   /* --- Time Off Calendar Highlighting --- */
-  --calendar-time-off-bg: rgba(255, 193, 7, 0.1);
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.1);
 }
 
 /* ============================================================================
@@ -106,62 +107,63 @@ body {
      WORKTIME CUSTOM CSS VARIABLES (Dark Mode)
      ==========================================================================
      Dark mode values for Worktime-specific variables.
+     All custom variables use the --wt-* prefix for clarity.
      ======================================================================= */
 
   /* --- Month Calendar Component --- */
   /* Background and borders */
-  --month-calendar-bg: #1f242a;
-  --month-calendar-border: #2f353d;
-  --month-calendar-day-bg: #1b1f24;
-  --month-calendar-day-other: #15181c;
-  --month-calendar-day-other-text: #6c757d;
-  --month-calendar-day-weekend: #231c1c;
+  --wt-month-calendar-bg: #1f242a;
+  --wt-month-calendar-border: #2f353d;
+  --wt-month-calendar-day-bg: #1b1f24;
+  --wt-month-calendar-day-other: #15181c;
+  --wt-month-calendar-day-other-text: #6c757d;
+  --wt-month-calendar-day-weekend: #231c1c;
   
   /* Event highlighting */
-  --month-calendar-event-bg: rgba(110, 168, 254, 0.18);
-  --month-calendar-event-hover: rgba(110, 168, 254, 0.28);
-  --month-calendar-event-text: #e9edf1;
+  --wt-month-calendar-event-bg: rgba(110, 168, 254, 0.18);
+  --wt-month-calendar-event-hover: rgba(110, 168, 254, 0.28);
+  --wt-month-calendar-event-text: #e9edf1;
   
   /* Calendar text and indicators */
-  --month-calendar-weekday-text: #9aa4b2;
-  --month-calendar-today-border: #6ea8fe;
-  --month-calendar-today-bg: rgba(110, 168, 254, 0.12);
-  --month-calendar-today-shadow: rgb(110 168 254 / 0.5);
-  --month-calendar-focus-outline: #6ea8fe;
+  --wt-month-calendar-weekday-text: #9aa4b2;
+  --wt-month-calendar-today-border: #6ea8fe;
+  --wt-month-calendar-today-bg: rgba(110, 168, 254, 0.12);
+  --wt-month-calendar-today-shadow: rgb(110 168 254 / 0.5);
+  --wt-month-calendar-focus-outline: #6ea8fe;
   
   /* Holiday and special day indicators */
-  --month-calendar-public-holiday-border: #d4930a;
-  --month-calendar-public-holiday-bg: rgba(212, 147, 10, 0.15);
-  --month-calendar-school-holiday-border: #9d73d4;
-  --month-calendar-school-holiday-bg: rgba(157, 115, 212, 0.15);
-  --month-calendar-payday-border: #4db380;
-  --month-calendar-payday-bg: rgba(77, 179, 128, 0.15);
+  --wt-month-calendar-public-holiday-border: #d4930a;
+  --wt-month-calendar-public-holiday-bg: rgba(212, 147, 10, 0.15);
+  --wt-month-calendar-school-holiday-border: #9d73d4;
+  --wt-month-calendar-school-holiday-bg: rgba(157, 115, 212, 0.15);
+  --wt-month-calendar-payday-border: #4db380;
+  --wt-month-calendar-payday-bg: rgba(77, 179, 128, 0.15);
 
   /* --- Context Menu Component --- */
-  --context-menu-bg: #2b3035;
-  --context-menu-border: #495057;
-  --context-menu-shadow: rgba(0, 0, 0, 0.5);
-  --context-menu-item-hover: #3a3f44;
-  --context-menu-item-text: #e9ecef;
+  --wt-context-menu-bg: #2b3035;
+  --wt-context-menu-border: #495057;
+  --wt-context-menu-shadow: rgba(0, 0, 0, 0.5);
+  --wt-context-menu-item-hover: #3a3f44;
+  --wt-context-menu-item-text: #e9ecef;
 
   /* --- Shift Badge Colors --- */
   /* Dark mode uses darker backgrounds with lighter text for accessibility */
-  --shift-morning: #1565c0;
-  --shift-morning-text: #e3f2fd;
-  --shift-late: #8d3200;
-  --shift-late-text: #ffe0b2;
-  --shift-day: #b85500;
-  --shift-day-text: #fff3e0;
-  --shift-night: #4527a0;
-  --shift-night-text: #ede7f6;
-  --shift-off: #212121;
-  --shift-off-text: #bdbdbd;
+  --wt-shift-morning: #1565c0;
+  --wt-shift-morning-text: #e3f2fd;
+  --wt-shift-late: #8d3200;
+  --wt-shift-late-text: #ffe0b2;
+  --wt-shift-day: #b85500;
+  --wt-shift-day-text: #fff3e0;
+  --wt-shift-night: #4527a0;
+  --wt-shift-night-text: #ede7f6;
+  --wt-shift-off: #212121;
+  --wt-shift-off-text: #bdbdbd;
 
   /* --- Application Theme --- */
-  --primary-color: #90caf9;
+  --wt-primary-color: #90caf9;
 
   /* --- Time Off Calendar Highlighting --- */
-  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.15);
 
   /* ==========================================================================
      BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
@@ -412,65 +414,65 @@ body {
 
 /* Shift status badges */
 .shift-morning {
-  background-color: var(--shift-morning);
-  color: var(--shift-morning-text);
-  border: 1px solid var(--shift-morning-text);
+  background-color: var(--wt-shift-morning);
+  color: var(--wt-shift-morning-text);
+  border: 1px solid var(--wt-shift-morning-text);
 }
 
 .shift-late {
-  background-color: var(--shift-late);
-  color: var(--shift-late-text);
-  border: 1px solid var(--shift-late-text);
+  background-color: var(--wt-shift-late);
+  color: var(--wt-shift-late-text);
+  border: 1px solid var(--wt-shift-late-text);
 }
 
 .shift-day {
-  background-color: var(--shift-day);
-  color: var(--shift-day-text);
-  border: 1px solid var(--shift-day-text);
+  background-color: var(--wt-shift-day);
+  color: var(--wt-shift-day-text);
+  border: 1px solid var(--wt-shift-day-text);
 }
 
 .shift-night {
-  background-color: var(--shift-night);
-  color: var(--shift-night-text);
-  border: 1px solid var(--shift-night-text);
+  background-color: var(--wt-shift-night);
+  color: var(--wt-shift-night-text);
+  border: 1px solid var(--wt-shift-night-text);
 }
 
 .shift-off {
-  background-color: var(--shift-off);
-  color: var(--shift-off-text);
-  border: 1px solid var(--shift-off-text);
+  background-color: var(--wt-shift-off);
+  color: var(--wt-shift-off-text);
+  border: 1px solid var(--wt-shift-off-text);
 }
 
 /* Higher specificity for shift badges to override Bootstrap defaults */
 .badge.shift-morning {
-  background-color: var(--shift-morning);
-  color: var(--shift-morning-text);
+  background-color: var(--wt-shift-morning);
+  color: var(--wt-shift-morning-text);
 }
 
 .badge.shift-late {
-  background-color: var(--shift-late);
-  color: var(--shift-late-text);
+  background-color: var(--wt-shift-late);
+  color: var(--wt-shift-late-text);
 }
 
 .badge.shift-day {
-  background-color: var(--shift-day);
-  color: var(--shift-day-text);
+  background-color: var(--wt-shift-day);
+  color: var(--wt-shift-day-text);
 }
 
 .badge.shift-night {
-  background-color: var(--shift-night);
-  color: var(--shift-night-text);
+  background-color: var(--wt-shift-night);
+  color: var(--wt-shift-night-text);
 }
 
 .badge.shift-off {
-  background-color: var(--shift-off);
-  color: var(--shift-off-text);
+  background-color: var(--wt-shift-off);
+  color: var(--wt-shift-off-text);
 }
 
 /* Team highlight for user's team */
 .my-team {
-  border: 2px solid var(--primary-color) !important;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  border: 2px solid var(--wt-primary-color) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wt-primary-color) 30%, transparent);
 }
 
 /* Large shift badge styling */
@@ -630,9 +632,9 @@ body {
 }
 
 .team-btn.selected {
-  background-color: var(--primary-color);
+  background-color: var(--wt-primary-color);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--wt-primary-color);
 }
 
 /* Date navigation */
@@ -662,7 +664,7 @@ body {
 
 /* Time-off month calendar */
 .month-calendar {
-  background: var(--month-calendar-bg);
+  background: var(--wt-month-calendar-bg);
   border-radius: 0.75rem;
 }
 
@@ -686,15 +688,15 @@ body {
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-align: center;
-  color: var(--month-calendar-weekday-text);
+  color: var(--wt-month-calendar-weekday-text);
 }
 
 .month-calendar-day {
   display: flex;
   flex-direction: column;
   border-radius: 0.75rem;
-  border: 1px solid var(--month-calendar-border);
-  background: var(--month-calendar-day-bg);
+  border: 1px solid var(--wt-month-calendar-border);
+  background: var(--wt-month-calendar-day-bg);
   min-height: 140px;
   padding: 0.25rem;
   transition:
@@ -703,42 +705,42 @@ body {
 }
 
 .month-calendar-day.is-other-month {
-  background: var(--month-calendar-day-other);
-  color: var(--month-calendar-day-other-text);
+  background: var(--wt-month-calendar-day-other);
+  color: var(--wt-month-calendar-day-other-text);
 }
 
 .month-calendar-day.is-weekend {
-  background: var(--month-calendar-day-weekend);
+  background: var(--wt-month-calendar-day-weekend);
 }
 
 .month-calendar-day.is-public-holiday {
-  border-color: var(--month-calendar-public-holiday-border);
-  background: var(--month-calendar-public-holiday-bg);
+  border-color: var(--wt-month-calendar-public-holiday-border);
+  background: var(--wt-month-calendar-public-holiday-bg);
 }
 
 .month-calendar-day.is-school-holiday {
-  border-color: var(--month-calendar-school-holiday-border);
-  background: var(--month-calendar-school-holiday-bg);
+  border-color: var(--wt-month-calendar-school-holiday-border);
+  background: var(--wt-month-calendar-school-holiday-bg);
 }
 
 .month-calendar-day.is-public-holiday.is-school-holiday {
   background: linear-gradient(
     135deg,
-    var(--month-calendar-public-holiday-bg),
-    var(--month-calendar-school-holiday-bg)
+    var(--wt-month-calendar-public-holiday-bg),
+    var(--wt-month-calendar-school-holiday-bg)
   );
 }
 
 .month-calendar-day.is-payday {
-  border-color: var(--month-calendar-payday-border);
-  background: var(--month-calendar-payday-bg);
+  border-color: var(--wt-month-calendar-payday-border);
+  background: var(--wt-month-calendar-payday-bg);
 }
 
 .month-calendar-day.is-today {
-  border-color: var(--month-calendar-today-border);
-  background: var(--month-calendar-today-bg);
+  border-color: var(--wt-month-calendar-today-border);
+  background: var(--wt-month-calendar-today-bg);
   border-width: 2px;
-  box-shadow: 0 0 0 3px var(--month-calendar-today-shadow);
+  box-shadow: 0 0 0 3px var(--wt-month-calendar-today-shadow);
 }
 
 .month-calendar-day-header {
@@ -779,7 +781,7 @@ body {
 
 .month-calendar-event {
   border: none;
-  background: var(--month-calendar-event-bg);
+  background: var(--wt-month-calendar-event-bg);
   border-radius: 0.5rem;
   padding: 0.2rem 0.35rem;
   display: flex;
@@ -787,12 +789,12 @@ body {
   gap: 0.35rem;
   font-size: 0.75rem;
   text-align: left;
-  color: var(--month-calendar-event-text);
+  color: var(--wt-month-calendar-event-text);
   cursor: pointer;
 }
 
 .month-calendar-event:hover {
-  background: var(--month-calendar-event-hover);
+  background: var(--wt-month-calendar-event-hover);
 }
 
 .month-calendar-event-color {
@@ -870,10 +872,10 @@ body {
 .context-menu {
   position: fixed;
   z-index: 1060; /* Above modals (1055) */
-  background: var(--context-menu-bg);
-  border: 1px solid var(--context-menu-border);
+  background: var(--wt-context-menu-bg);
+  border: 1px solid var(--wt-context-menu-border);
   border-radius: 0.375rem;
-  box-shadow: 0 0.5rem 1rem var(--context-menu-shadow);
+  box-shadow: 0 0.5rem 1rem var(--wt-context-menu-shadow);
   min-width: 160px;
   padding: 0.25rem 0;
 }
@@ -886,7 +888,7 @@ body {
   padding: 0.5rem 1rem;
   border: none;
   background: transparent;
-  color: var(--context-menu-item-text);
+  color: var(--wt-context-menu-item-text);
   text-align: left;
   cursor: pointer;
   font-size: 0.875rem;
@@ -894,7 +896,7 @@ body {
 
   &:hover,
   &:focus {
-    background: var(--context-menu-item-hover);
+    background: var(--wt-context-menu-item-hover);
     outline: none;
   }
 
@@ -936,27 +938,27 @@ body {
 }
 
 .calendar-day-cell.today-cell {
-  background-color: var(--month-calendar-today-bg);
-  border: 2px solid var(--month-calendar-today-border) !important;
-  box-shadow: 0 0 0 1px var(--month-calendar-today-shadow);
+  background-color: var(--wt-month-calendar-today-bg);
+  border: 2px solid var(--wt-month-calendar-today-border) !important;
+  box-shadow: 0 0 0 1px var(--wt-month-calendar-today-shadow);
 }
 
 .calendar-day-cell.focused-cell {
-  outline: 2px solid var(--month-calendar-focus-outline);
+  outline: 2px solid var(--wt-month-calendar-focus-outline);
   outline-offset: -2px;
 }
 
 .calendar-day-cell.weekend-cell {
-  background-color: var(--month-calendar-day-weekend);
+  background-color: var(--wt-month-calendar-day-weekend);
 }
 
 .calendar-day-cell.public-holiday-cell {
-  background-color: var(--month-calendar-public-holiday-bg);
-  border-left: 3px solid var(--month-calendar-public-holiday-border) !important;
+  background-color: var(--wt-month-calendar-public-holiday-bg);
+  border-left: 3px solid var(--wt-month-calendar-public-holiday-border) !important;
 }
 
 .calendar-day-cell.time-off-cell {
-  background-color: var(--calendar-time-off-bg);
+  background-color: var(--wt-calendar-time-off-bg);
 }
 
 .calendar-day-cell.text-muted {
