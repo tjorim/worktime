@@ -33,22 +33,36 @@ body {
   font-size: 0.875rem;
 }
 
-/* Month calendar CSS variables */
+/* ============================================================================
+   WORKTIME CUSTOM CSS VARIABLES (Light Mode)
+   ============================================================================
+   These are Worktime-specific variables for custom components and styling.
+   They do NOT override Bootstrap defaults.
+   ========================================================================= */
+
 :root {
+  /* --- Month Calendar Component --- */
+  /* Background and borders */
   --month-calendar-bg: #fff;
   --month-calendar-border: #e9ecef;
   --month-calendar-day-bg: #fdfdfd;
   --month-calendar-day-other: #f8f9fa;
   --month-calendar-day-other-text: #adb5bd;
   --month-calendar-day-weekend: #fff7f7;
+  
+  /* Event highlighting */
   --month-calendar-event-bg: rgba(13, 110, 253, 0.08);
   --month-calendar-event-hover: rgba(13, 110, 253, 0.16);
   --month-calendar-event-text: #1f2d3d;
+  
+  /* Calendar text and indicators */
   --month-calendar-weekday-text: #6c757d;
   --month-calendar-today-border: #0d6efd;
   --month-calendar-today-bg: rgba(13, 110, 253, 0.05);
   --month-calendar-today-shadow: rgb(13 110 253 / 0.4);
   --month-calendar-focus-outline: #0d6efd;
+  
+  /* Holiday and special day indicators */
   --month-calendar-public-holiday-border: #ffb703;
   --month-calendar-public-holiday-bg: #fff4db;
   --month-calendar-school-holiday-border: #6f42c1;
@@ -56,29 +70,66 @@ body {
   --month-calendar-payday-border: #198754;
   --month-calendar-payday-bg: #e9f7ef;
 
-  /* Context menu variables */
+  /* --- Context Menu Component --- */
   --context-menu-bg: #fff;
   --context-menu-border: #dee2e6;
   --context-menu-shadow: rgba(0, 0, 0, 0.15);
   --context-menu-item-hover: #f8f9fa;
   --context-menu-item-text: #212529;
+
+  /* --- Shift Badge Colors --- */
+  /* See lines 387-410 for detailed contrast ratio documentation */
+  --shift-morning: #1976d2;
+  --shift-morning-text: #ffffff;
+  --shift-late: #bf360c;
+  --shift-late-text: #ffffff;
+  --shift-day: #f57c00;
+  --shift-day-text: #111111;
+  --shift-night: #7b1fa2;
+  --shift-night-text: #ffffff;
+  --shift-off: #616161;
+  --shift-off-text: #ffffff;
+
+  /* --- Application Theme --- */
+  --primary-color: #0d6efd;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --calendar-time-off-bg: rgba(255, 193, 7, 0.1);
 }
 
+/* ============================================================================
+   DARK MODE STYLES
+   ============================================================================ */
+
 @include color-mode(dark) {
+  /* ==========================================================================
+     WORKTIME CUSTOM CSS VARIABLES (Dark Mode)
+     ==========================================================================
+     Dark mode values for Worktime-specific variables.
+     ======================================================================= */
+
+  /* --- Month Calendar Component --- */
+  /* Background and borders */
   --month-calendar-bg: #1f242a;
   --month-calendar-border: #2f353d;
   --month-calendar-day-bg: #1b1f24;
   --month-calendar-day-other: #15181c;
   --month-calendar-day-other-text: #6c757d;
   --month-calendar-day-weekend: #231c1c;
+  
+  /* Event highlighting */
   --month-calendar-event-bg: rgba(110, 168, 254, 0.18);
   --month-calendar-event-hover: rgba(110, 168, 254, 0.28);
   --month-calendar-event-text: #e9edf1;
+  
+  /* Calendar text and indicators */
   --month-calendar-weekday-text: #9aa4b2;
   --month-calendar-today-border: #6ea8fe;
   --month-calendar-today-bg: rgba(110, 168, 254, 0.12);
   --month-calendar-today-shadow: rgb(110 168 254 / 0.5);
   --month-calendar-focus-outline: #6ea8fe;
+  
+  /* Holiday and special day indicators */
   --month-calendar-public-holiday-border: #d4930a;
   --month-calendar-public-holiday-bg: rgba(212, 147, 10, 0.15);
   --month-calendar-school-holiday-border: #9d73d4;
@@ -86,13 +137,15 @@ body {
   --month-calendar-payday-border: #4db380;
   --month-calendar-payday-bg: rgba(77, 179, 128, 0.15);
 
-  /* Context menu variables */
+  /* --- Context Menu Component --- */
   --context-menu-bg: #2b3035;
   --context-menu-border: #495057;
   --context-menu-shadow: rgba(0, 0, 0, 0.5);
   --context-menu-item-hover: #3a3f44;
   --context-menu-item-text: #e9ecef;
 
+  /* --- Shift Badge Colors --- */
+  /* Dark mode uses darker backgrounds with lighter text for accessibility */
   --shift-morning: #1565c0;
   --shift-morning-text: #e3f2fd;
   --shift-late: #8d3200;
@@ -103,16 +156,39 @@ body {
   --shift-night-text: #ede7f6;
   --shift-off: #212121;
   --shift-off-text: #bdbdbd;
+
+  /* --- Application Theme --- */
   --primary-color: #90caf9;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+
+  /* ==========================================================================
+     BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
+     ==========================================================================
+     These override Bootstrap's default dark mode values to match Worktime's
+     dark theme design (--bs-body-secondary-bg-dark: #23272b).
+     
+     Why these overrides exist:
+     - Consistent card/modal/dropdown backgrounds across the app
+     - Match dark theme background colors used in Sass configuration
+     - Ensure proper contrast for table content in dark mode
+     - Customize tab navigation styling for better visibility
+     ======================================================================= */
+
+  /* Component backgrounds - use secondary background color (#23272b) */
   --bs-card-bg: #23272b;
   --bs-modal-bg: #23272b;
   --bs-offcanvas-bg: #23272b;
   --bs-dropdown-bg: #23272b;
   --bs-table-bg: #23272b;
+  
+  /* Table text color - ensure readability on dark backgrounds */
   --bs-table-color: #e0e0e0;
+  
+  /* Tab navigation borders - match dark theme styling */
   --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
   --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
-  --calendar-time-off-bg: rgba(255, 193, 7, 0.15);
 
   .team-card-interactive:hover,
   .team-card-interactive:focus {
@@ -329,20 +405,10 @@ body {
  * - Off: #616161 / #ffffff = 4.54:1 ✓
  * 
  * Color-blind safe: Uses both hue and brightness differences.
+ * 
+ * NOTE: Shift badge CSS variables are defined at the top of this file (lines 43-108).
  */
-:root {
-  --shift-morning: #1976d2;
-  --shift-morning-text: #ffffff;
-  --shift-late: #bf360c;
-  --shift-late-text: #ffffff;
-  --shift-day: #f57c00;
-  --shift-day-text: #111111;
-  --shift-night: #7b1fa2;
-  --shift-night-text: #ffffff;
-  --shift-off: #616161;
-  --shift-off-text: #ffffff;
-  --primary-color: #0d6efd;
-}
+
 
 /* Shift status badges */
 .shift-morning {
@@ -853,11 +919,10 @@ body {
     monospace;
 }
 
-/* Working Calendar Styles */
-:root {
-  --calendar-time-off-bg: rgba(255, 193, 7, 0.1);
-}
-
+/* Working Calendar Styles
+ * NOTE: Calendar time-off background variable (--calendar-time-off-bg) is defined
+ * at the top of this file with other custom CSS variables (lines 43-108).
+ */
 
 .working-schedule-calendar .calendar-grid {
   margin-bottom: 0;
