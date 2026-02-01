@@ -36,10 +36,20 @@ export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS
 ).filter((f) => f !== "none") as EventFlag[];
 
 /**
+ * Type flags as a Set for O(1) lookup performance.
+ */
+export const TYPE_FLAGS_SET = new Set(TYPE_FLAGS_AS_EVENT_FLAGS);
+
+/**
  * Time/Location flags mapped to EventFlag type for use in flag filtering.
  */
 export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
   TIME_LOCATION_FLAG_OPTIONS.map(([flag]) => flag).filter((f) => f !== "none") as EventFlag[];
+
+/**
+ * Time/Location flags as a Set for O(1) lookup performance.
+ */
+export const TIME_LOCATION_FLAGS_SET = new Set(TIME_LOCATION_FLAGS_AS_EVENT_FLAGS);
 
 /**
  * Valid view modes for the Time Off tab.

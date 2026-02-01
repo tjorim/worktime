@@ -2,10 +2,15 @@
  * Import an .hday file from user's file system.
  * @param file - The file to import
  * @returns Promise resolving to the file content as text
- * @throws Error if file reading fails
+ * @throws Error with descriptive message if file reading fails
  */
 export async function importHdayFile(file: File): Promise<string> {
-  return await file.text();
+  try {
+    return await file.text();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Failed to read .hday file: ${errorMessage}`);
+  }
 }
 
 /**
