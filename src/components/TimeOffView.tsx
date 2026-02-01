@@ -2,15 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
-import {
-  buildPreviewLine,
-  getEventColorClass,
-  getEventTypeLabel,
-  getTimeLocationSymbol,
-  normalizeEventFlags,
-} from "../lib/hday/parser";
+import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -21,78 +14,18 @@ import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { RawContentPanel } from "./timeoff/RawContentPanel";
 import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-
-const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
-  ["none", "Holiday (default)"],
-  ["business", "Business trip"],
-  ["course", "Training/Course"],
-  ["in", "In office"],
-  ["weekend", "Weekend"],
-  ["birthday", "Birthday"],
-  ["ill", "Sick leave"],
-  ["other", "Other"],
-];
-
-const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", string]> = [
-  ["none", "Full day"],
-  ["half_am", "AM (half day)"],
-  ["half_pm", "PM (half day)"],
-  ["onsite", "Onsite"],
-  ["no_fly", "No fly"],
-  ["can_fly", "Can fly"],
-];
-
-const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.map(
-  ([flag]) => flag,
-).filter((f) => f !== "none") as EventFlag[];
-
-const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_FLAG_OPTIONS.map(
-  ([flag]) => flag,
-).filter((f) => f !== "none") as EventFlag[];
-
-/**
- * Valid view modes for the Time Off tab.
- * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
- * Note: Calendar view has been moved to its own main tab.
- */
-const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
-
-/**
- * Default weekday value for weekly events (1 = Monday).
- */
-const DEFAULT_WEEKDAY = 1;
-
-const isEditableTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  const isTextInput =
-    target instanceof HTMLInputElement && target.type !== "checkbox" && target.type !== "radio";
-
-  return (
-    isTextInput ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    target.isContentEditable
-  );
-};
-
-/**
- * Empty state component for when no time-off events exist.
- * Adapts styling and messaging based on the current view mode.
- */
-function EmptyState() {
-  return (
-    <div className="text-center text-muted py-5">
-      <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
-      <p>No time-off events yet.</p>
-      <p className="small">
-        Click "Add Event" to create your first event, or "Import" to load an existing .hday file.
-      </p>
-    </div>
-  );
-}
+import { EmptyState } from "./timeoff/EmptyState";
+import { EventTable } from "./timeoff/EventTable";
+import {
+  TYPE_FLAG_OPTIONS,
+  TIME_LOCATION_FLAG_OPTIONS,
+  TYPE_FLAGS_AS_EVENT_FLAGS,
+  TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
+  TIMEOFF_VIEWS,
+  DEFAULT_WEEKDAY,
+  VIEW_MODE_HELP_TEXT,
+} from "./timeoff/constants";
+import { isEditableTarget } from "./timeoff/helpers";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -545,22 +478,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     }
   };
 
-  const getEventRowKey = (event: HdayEvent, index: number) => {
-    if (event.type === "range") {
-      return `range-${index}-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
-    }
-    if (event.type === "weekly") {
-      return `weekly-${index}-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
-    }
-    return `unknown-${index}-${event.raw ?? ""}`;
-  };
-
-  const viewModeHelpText = {
-    table: "Select events from the table to edit or delete.",
-    stats: "Review allowance usage and vacation breakdowns by year.",
-    raw: "Edit raw .hday content directly. Click Apply to save changes.",
-  } as const;
-
   return (
     <div className="time-off-view py-3">
       <Card>
@@ -669,123 +586,22 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 )}
               </Button>
             </ButtonGroup>
-            <span className="text-muted small">{viewModeHelpText[viewMode]}</span>
+            <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
           </div>
 
           {viewMode === "table" &&
             (events.length === 0 ? (
               <EmptyState />
             ) : (
-              <Table responsive hover>
-                <thead>
-                  <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        aria-label="Select all events"
-                        checked={events.length > 0 && selectedIndices.length === events.length}
-                        onChange={(event) => {
-                          if (event.target.checked) {
-                            handleSelectAll();
-                          } else {
-                            handleClearSelection();
-                          }
-                        }}
-                      />
-                    </th>
-                    <th>Type</th>
-                    <th>Date / Pattern</th>
-                    <th>Title</th>
-                    <th>Flags</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((event, index) => {
-                    const eventColorClass =
-                      event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
-                    const eventLabel =
-                      event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
-                    const symbol =
-                      event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
-
-                    const unknownDescriptionId =
-                      event.type === "unknown" ? `unknown-event-${index}` : undefined;
-
-                    return (
-                      <tr
-                        key={getEventRowKey(event, index)}
-                        aria-describedby={unknownDescriptionId}
-                      >
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${event.title || eventLabel}`}
-                            checked={selectedIndices.includes(index)}
-                            onChange={() => handleToggleSelection(index)}
-                          />
-                        </td>
-                        <td>
-                          <span className={`badge event-type-badge ${eventColorClass}`}>
-                            {symbol && `${symbol} `}
-                            {eventLabel}
-                          </span>
-                        </td>
-                        <td>
-                          {event.type === "range" && (
-                            <>
-                              {event.start}
-                              {event.end && event.end !== event.start && ` → ${event.end}`}
-                            </>
-                          )}
-                          {event.type === "weekly" &&
-                            `Every ${event.weekday !== undefined && event.weekday >= 1 && event.weekday <= 7 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][event.weekday - 1] : "Unknown"}`}
-                          {event.type === "unknown" && (
-                            <>
-                              <span className="text-muted">Unknown format</span>
-                              <span id={unknownDescriptionId} className="visually-hidden">
-                                Unknown event format. Remove or re-import this entry to resolve the
-                                issue.
-                              </span>
-                            </>
-                          )}
-                        </td>
-                        <td>{event.title || <span className="text-muted">—</span>}</td>
-                        <td>
-                          {event.flags && event.flags.length > 0 ? (
-                            <span className="text-muted small">{event.flags.join(", ")}</span>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        <td>
-                          {event.type !== "unknown" && (
-                            <>
-                              <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                onClick={() => handleOpenEditModal(index)}
-                                className="me-2"
-                                aria-label={`Edit ${event.title || eventLabel}`}
-                              >
-                                <i className="bi bi-pencil" aria-hidden="true"></i>
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => handleDeleteClick(index)}
-                                aria-label={`Delete ${event.title || eventLabel}`}
-                              >
-                                <i className="bi bi-trash" aria-hidden="true"></i>
-                              </Button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
+              <EventTable
+                events={events}
+                selectedIndices={selectedIndices}
+                onToggleSelection={handleToggleSelection}
+                onSelectAll={handleSelectAll}
+                onClearSelection={handleClearSelection}
+                onEditEvent={handleOpenEditModal}
+                onDeleteEvent={handleDeleteClick}
+              />
             ))}
 
           {viewMode === "stats" && (
