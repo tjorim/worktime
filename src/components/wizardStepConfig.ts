@@ -1,0 +1,149 @@
+/**
+ * Configuration for WelcomeWizard step navigation.
+ * 
+ * This module provides a declarative configuration system for the wizard's
+ * step visibility and navigation logic across different modes.
+ */
+
+export type WizardStep =
+  | "welcome"
+  | "features"
+  | "schedule-selection"
+  | "team-selection"
+  | "vacation-allowance";
+
+export type WizardMode = "onboarding" | "change-team" | "change-schedule";
+
+/**
+ * Configuration for a single wizard step.
+ * Defines visibility conditions and navigation behavior.
+ */
+export interface StepConfig {
+  /** Step identifier */
+  id: WizardStep;
+  /** Title displayed in the modal header */
+  title: string;
+  /** Determines if this step should be included in the flow */
+  isVisible: (context: WizardContext) => boolean;
+  /** Determines the next step, or null to close the wizard */
+  getNextStep: (context: WizardContext) => WizardStep | null;
+  /** Determines the previous step, or null to close the wizard */
+  getPrevStep: (context: WizardContext) => WizardStep | null;
+}
+
+/**
+ * Runtime context passed to step configuration functions.
+ * Contains mode, schedule selection state, and team visibility logic.
+ */
+export interface WizardContext {
+  mode: WizardMode;
+  shouldShowTeamSelection: boolean;
+  isChangeTeamFlow: boolean;
+  isChangeScheduleFlow: boolean;
+}
+
+/**
+ * Declarative wizard flow configuration.
+ * Defines all possible steps and their visibility/navigation rules.
+ * 
+ * Benefits:
+ * - Single source of truth for wizard flows
+ * - Easy to add/modify steps
+ * - Self-documenting step relationships
+ * - Type-safe step transitions
+ */
+export const WIZARD_STEP_CONFIG: StepConfig[] = [
+  {
+    id: "welcome",
+    title: "Welcome to Worktime! 👋",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "features",
+    getPrevStep: () => null,
+  },
+  {
+    id: "features",
+    title: "What can Worktime do? ✨",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "schedule-selection",
+    getPrevStep: () => "welcome",
+  },
+  {
+    id: "schedule-selection",
+    title: "Pick Your Schedule 🗓️",
+    isVisible: (ctx) => ctx.mode === "onboarding" || ctx.mode === "change-schedule",
+    getNextStep: (ctx) => {
+      if (ctx.shouldShowTeamSelection) {
+        return "team-selection";
+      }
+      // In change modes, close wizard after schedule selection
+      if (ctx.isChangeScheduleFlow) {
+        return null;
+      }
+      // In onboarding, continue to vacation allowance
+      return "vacation-allowance";
+    },
+    getPrevStep: (ctx) => {
+      // In change modes, close wizard when going back from schedule
+      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+        return null;
+      }
+      return "features";
+    },
+  },
+  {
+    id: "team-selection",
+    title: "Choose Your Experience 🎯",
+    isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.isChangeTeamFlow,
+    getNextStep: (ctx) => {
+      // In change modes, close wizard after team selection
+      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+        return null;
+      }
+      // In onboarding, continue to vacation allowance
+      return "vacation-allowance";
+    },
+    getPrevStep: () => "schedule-selection",
+  },
+  {
+    id: "vacation-allowance",
+    title: "Vacation Tracking ✈️",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => null, // Always closes wizard after vacation setup
+    getPrevStep: (ctx) =>
+      ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection",
+  },
+];
+
+/**
+ * Get visible steps for current wizard context.
+ */
+export function getVisibleSteps(context: WizardContext): StepConfig[] {
+  return WIZARD_STEP_CONFIG.filter((step) => step.isVisible(context));
+}
+
+/**
+ * Get configuration for a specific step.
+ */
+export function getStepConfig(stepId: WizardStep): StepConfig {
+  const config = WIZARD_STEP_CONFIG.find((s) => s.id === stepId);
+  if (!config) {
+    throw new Error(`No configuration found for step: ${stepId}`);
+  }
+  return config;
+}
+
+/**
+ * Get 1-based index of a step within visible steps.
+ */
+export function getStepIndex(stepId: WizardStep, context: WizardContext): number {
+  const visibleSteps = getVisibleSteps(context);
+  const index = visibleSteps.findIndex((s) => s.id === stepId);
+  return index === -1 ? 1 : index + 1; // 1-based index
+}
+
+/**
+ * Get total number of visible steps for current context.
+ */
+export function getTotalSteps(context: WizardContext): number {
+  return getVisibleSteps(context).length;
+}
