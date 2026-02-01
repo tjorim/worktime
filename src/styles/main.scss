@@ -1,14 +1,13 @@
 /* ============================================================================
    WORKTIME - MAIN STYLESHEET
    ============================================================================
-   Modular SCSS architecture for maintainability and clarity.
+   Clean, modular SCSS architecture with 4 focused files.
    
    File structure:
    - _variables.scss: CSS variables (--wt-* custom, --bs-* overrides)
-   - _utilities.scss: Helper classes and utility styles
+   - _utilities.scss: Helper classes, utilities, and modal styles
    - _calendar.scss: Calendar components and interactions
    - _shifts.scss: Shift badges, timeline, schedule table, event indicators
-   - _modals.scss: Modal and dialog styles
    ========================================================================= */
 
 /* Bootstrap Configuration */
@@ -29,4 +28,3 @@
 @import "utilities";
 @import "calendar";
 @import "shifts";
-@import "modals";
