@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
@@ -16,6 +14,7 @@ import { RawContentPanel } from "./timeoff/RawContentPanel";
 import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
 import { EmptyState } from "./timeoff/EmptyState";
 import { EventTable } from "./timeoff/EventTable";
+import { TimeOffToolbar } from "./timeoff/TimeOffToolbar";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
@@ -23,7 +22,6 @@ import {
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
-  VIEW_MODE_HELP_TEXT,
 } from "./timeoff/constants";
 import { isEditableTarget } from "./timeoff/helpers";
 
@@ -481,113 +479,28 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   return (
     <div className="time-off-view py-3">
       <Card>
-        <Card.Header>
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
-            <h5 className="mb-0">
-              <i className="bi bi-calendar-check me-2"></i>
-              Time Off Management
-            </h5>
-            <div className="d-flex flex-wrap gap-2">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={handleUndo}
-                disabled={!canUndo}
-                aria-label="Undo last change"
-              >
-                <i className="bi bi-arrow-counterclockwise me-1"></i>
-                Undo
-              </Button>
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={handleRedo}
-                disabled={!canRedo}
-                aria-label="Redo last change"
-              >
-                <i className="bi bi-arrow-clockwise me-1"></i>
-                Redo
-              </Button>
-            </div>
-          </div>
-          <div className="d-flex flex-wrap gap-2">
-            <Button
-              variant="outline-danger"
-              size="sm"
-              onClick={() => {
-                if (selectedIndices.length === 0) {
-                  return;
-                }
-                setShowBulkDeleteConfirm(true);
-              }}
-              disabled={selectedIndices.length === 0}
-              aria-label="Delete selected events"
-            >
-              <i className="bi bi-trash me-1"></i>
-              Delete Selected
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleSelectAll}
-              disabled={events.length === 0 || selectedIndices.length === events.length}
-            >
-              Select All
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleClearSelection}
-              disabled={selectedIndices.length === 0}
-            >
-              Clear Selection
-            </Button>
-            <Button variant="outline-primary" size="sm" onClick={handleImport}>
-              <i className="bi bi-download me-1"></i>
-              Import
-            </Button>
-            <Button variant="outline-primary" size="sm" onClick={handleExport}>
-              <i className="bi bi-upload me-1"></i>
-              Export
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleOpenAddModal}>
-              <i className="bi bi-plus-lg me-1"></i>
-              Add Event
-            </Button>
-          </div>
-        </Card.Header>
+        <TimeOffToolbar
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          eventCount={events.length}
+          selectedCount={selectedIndices.length}
+          onSelectAll={handleSelectAll}
+          onClearSelection={handleClearSelection}
+          onBulkDelete={() => {
+            if (selectedIndices.length > 0) {
+              setShowBulkDeleteConfirm(true);
+            }
+          }}
+          onImport={handleImport}
+          onExport={handleExport}
+          onAddEvent={handleOpenAddModal}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          isRawEditorDirty={isRawEditorDirty}
+        />
         <Card.Body>
-          <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-            <ButtonGroup aria-label="Toggle time off view">
-              <Button
-                variant={viewMode === "table" ? "primary" : "outline-primary"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-              >
-                <i className="bi bi-table me-1" aria-hidden="true"></i>
-                Table
-              </Button>
-              <Button
-                variant={viewMode === "stats" ? "primary" : "outline-primary"}
-                size="sm"
-                onClick={() => setViewMode("stats")}
-              >
-                <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
-                Statistics
-              </Button>
-              <Button
-                variant={viewMode === "raw" ? "primary" : "outline-primary"}
-                size="sm"
-                onClick={() => setViewMode("raw")}
-              >
-                Raw .hday
-                {isRawEditorDirty && viewMode !== "raw" && (
-                  <span className="badge bg-warning text-dark ms-1">•</span>
-                )}
-              </Button>
-            </ButtonGroup>
-            <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
-          </div>
 
           {viewMode === "table" &&
             (events.length === 0 ? (
