@@ -2,16 +2,25 @@
 
 **Created by [Jorim Tielemans](https://github.com/tjorim)**
 
-A lightweight web application for tracking 5-team continuous (24/7) shift schedules and managing time-off with .hday files.
+A lightweight web application supporting multiple roster patterns including continuous 24/7 rotations, standard weekday schedules, and custom shift patterns. Combines shift tracking with integrated time-off management (.hday format).
 
 ## Overview
 
-Worktime helps teams working in a 5-team rotating shift system to quickly check:
+Worktime helps teams and individuals working in various shift schedules to quickly check:
 
 - Which teams are working on any given day
 - When their next shift is scheduled
 - Transfer/handover points between teams
 - Complete schedule overview with easy navigation
+- Vacation and time-off planning with statistics
+- Monthly calendar with working days, holidays, and events
+
+**Supported Schedule Types:**
+
+- **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
+- **9-5**: Standard weekday schedule (Mon-Fri, single user)
+- **Weekend shift**: Weekend-only rotation
+- **2-shift**: Alternating early/late shifts (coming soon)
 
 ## Features
 
@@ -19,26 +28,52 @@ Worktime helps teams working in a 5-team rotating shift system to quickly check:
 
 - Real-time display of your team's current shift
 - Next shift countdown and scheduling
+- Shift timeline showing current and upcoming shifts
 - Date display in YYWW.D format (e.g., 2520.2M = year 2025, week 20, Tuesday Morning)
 
-### 👥 Team Management
+### 📅 Schedule Selection
+
+- Choose from multiple roster patterns (5-shift, 9-5, weekend-shift)
+- Cross-schedule viewing - view any schedule type from any account
+- Onboarding wizard for easy setup
+- Switch schedules anytime in settings
+
+### 👥 Team Management (Multi-Team Schedules)
 
 - Team selection on first visit (stored locally)
 - Highlight your team across all views
 - Easy team switching
+- Transfer view to find handover/takeover points
 
-### 📅 Schedule Views
+### 📆 Calendar & Schedule Views
 
-- **Today**: All 5 teams' current shifts
-- **Schedule**: 7-day calendar view with navigation
+- **Schedule Tab**: Today and 7-day schedule views with date navigation
+- **Calendar**: Monthly calendar with shift badges, time-off events, and holiday indicators
 - **Transfers**: Find handover/takeover points between teams
 - **Time Off**: Import/export .hday files for vacation and time-off tracking
+
+### ⌨️ Keyboard Shortcuts
+
+- Tab switching (C/S/T/O keys)
+- Date navigation (arrow keys, Ctrl+H/J/K)
+- Settings toggle (Ctrl+,)
+- Time-off actions (Ctrl+I import, Ctrl+S export, Delete, Escape)
+- View all shortcuts via Settings > Keyboard Shortcuts
+
+### 📊 Vacation Statistics
+
+- Comprehensive vacation allowance tracking
+- Usage analytics with progress visualization
+- Event type breakdown (holiday, business, course, sick leave, etc.)
+- Year-based filtering
+- Configurable allowance in days or hours
 
 ### 📱 Web App Features
 
 - **Responsive**: Mobile-first design with Bootstrap 5
-- **Fast**: Optimized build with Vite
+- **Fast**: Optimized build with Vite 8 and React 19
 - **Local Storage**: All data stored in browser localStorage
+- **Offline Capable**: Fully functional without internet connection
 
 ### 📝 .hday File Format
 
@@ -58,16 +93,22 @@ d1 # Every Monday off
 
 **Example files** are available in the [examples/](examples/) directory.
 
-## Shift Pattern
+## 5-Shift Pattern
 
-Each team follows a 10-day repeating cycle:
+The 5-shift schedule is a continuous 24/7 rotation where each team follows a 10-day repeating cycle:
 
 - **Days 1-2**: Morning shift (07:00-15:00) - Code: M
 - **Days 3-4**: Evening shift (15:00-23:00) - Code: E
 - **Days 5-6**: Night shift (23:00-07:00) - Code: N
 - **Days 7-10**: Off days
 
-Teams are numbered 1-5, with each team starting their cycle 2 days after the previous team.
+Teams are numbered 1-5, with each team starting their cycle 2 days after the previous team, ensuring 24/7 coverage.
+
+**Other Schedules:**
+
+- **9-5**: Monday-Friday day shifts (09:00-17:00) with weekends off
+- **Weekend shift**: Weekend-only rotation pattern
+- **2-shift**: Alternating early/late shifts (coming soon)
 
 ## Date Format
 
@@ -90,7 +131,7 @@ Examples:
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20.19.0 or higher
 - npm (comes with Node.js)
 
 ### Local Development
@@ -116,7 +157,10 @@ Examples:
 
 4. **Open your browser**
    - Navigate to `http://localhost:8000`
-   - Select your team when prompted
+   - Follow the onboarding wizard:
+     1. Choose your schedule type (5-shift, 9-5, or weekend-shift)
+     2. Select your team (for multi-team schedules)
+     3. Configure vacation allowance (optional)
    - Start tracking your shifts!
 
 ### Building for Production
@@ -128,6 +172,8 @@ npm run build
 # Preview the production build
 npm run preview
 ```
+
+**⚠️ Important**: Always run `npm run build` before `npm run preview`. The preview command serves the built files from the `dist/` directory.
 
 The built files will be in the `dist/` directory, ready for deployment to any static hosting service.
 
@@ -155,10 +201,10 @@ npm run test         # Run test suite
 
 ### Core Framework
 
-- **Frontend**: React 19 + TypeScript
-- **Build Tool**: Vite 8 beta
+- **Frontend**: React 19 + TypeScript with modern JSX transform
+- **Build Tool**: Vite 8 beta for modern development and optimization
 - **UI Framework**: React Bootstrap (Bootstrap 5 components)
-- **Styling**: CSS3 with Bootstrap 5 design system
+- **Styling**: Sass with Bootstrap 5 design system
 
 ### Development Tools
 
@@ -171,8 +217,8 @@ npm run test         # Run test suite
 
 - **Date Handling**: Day.js with timezone and week plugins
 - **Storage**: Custom localStorage hook with error handling
-- **State Management**: React hooks + custom hooks
-- **Icons**: PNG icons generated programmatically
+- **State Management**: React Context + custom hooks
+- **Icons**: Bootstrap Icons + programmatically generated favicons
 
 ### Deployment
 
@@ -180,33 +226,49 @@ npm run test         # Run test suite
 - **Static Hosting**: Deployable to any static hosting service
 - **Performance**: Lighthouse monitoring and optimization
 
-## What's New in v3.1+
+## What's New in v4.5+
 
-### 🚀 Performance & Accuracy
+### 🗓️ Calendar View (v4.5.1)
 
-- **60x Faster Updates**: Live time now updates every minute instead of every second for better performance
-- **Accurate Night Shifts**: Date codes now correctly show shift day (2530.5N) instead of calendar day (2530.6N)
-- **Smart Timeline**: Timeline now shows next shift from tomorrow when current shift is the last of the day
+- **Monthly Calendar**: New calendar tab displaying working days with shift badges
+- **Event Overlays**: Time-off events, public holidays, school holidays, and paydays
+- **Calendar Legend**: Popover legend explaining event colors and day indicators
+- **Empty State**: Helpful guidance when no schedule selected
 
-### 🎨 Enhanced UI
+### ⌨️ Keyboard Shortcuts (v4.5.1)
 
-- **Timeline Component**: Extracted shift timeline into dedicated component with cleaner design
-- **Improved Layout**: Current status header optimized with better spacing and information display
-- **Interactive Changelog**: In-app changelog viewer with accordion interface
-- **Toast Notifications**: Global notification system for better user feedback
+- **Navigation**: Tab switching (C/S/T/O), date navigation (arrows, Ctrl+H/J/K)
+- **Quick Actions**: Settings (Ctrl+,), import (Ctrl+I), export (Ctrl+S)
+- **Editing**: Delete events, cancel edits (Escape), undo/redo (Ctrl+Z/Y)
+- **Discoverability**: Keyboard shortcuts modal accessible via Settings
 
-### 🔧 Developer Experience
+### 📊 Vacation Statistics (v4.4.0)
 
-- **Component Architecture**: Better separation of concerns with dedicated timeline component
-- **Enhanced Testing**: Data-driven tests for better maintainability
-- **Error Boundaries**: Graceful error handling and recovery
-- **TypeScript**: Improved type safety and documentation
+- **Allowance Tracking**: Configure annual vacation in days or hours
+- **Usage Analytics**: Real-time calculation of used vs. remaining vacation
+- **Progress Visualization**: Interactive progress bar and breakdown table
+- **Year Filtering**: Filter vacation data by year with automatic detection
 
-### 📱 User Experience
+### 📅 Multi-Schedule Support (v4.4.0)
 
-- **Clearer Date Display**: Shows both calendar day and shift day in tooltips for clarity
-- **Contextual Information**: Enhanced date format "2530.5N • Saturday, Jul 26 • 02:24"
-- **Better Performance**: Reduced re-renders and smoother interactions
+- **Schedule Selection**: Choose from 5-shift, 9-5, or weekend-shift patterns
+- **Cross-Schedule Viewing**: View any schedule type from any account
+- **Onboarding Wizard**: Extended 4-step wizard with vacation setup
+- **Schedule-Generic Components**: All components work with any schedule type
+
+### 🚀 Performance & Architecture (v4.5.0)
+
+- **Component Refactoring**: Split CurrentStatus into PersonalizedStatus and GenericStatus
+- **Shared Components**: Reusable ShiftBadge, ShiftTimeDisplay, CountdownBadge
+- **Clean Architecture**: Better separation of concerns with status/ and shared/ directories
+- **60x Faster Updates**: Live time updates every minute instead of every second
+
+### 🎨 Enhanced UI (v4.5.1)
+
+- **Fixed Navbar**: Bootstrap navbar with proper theming and positioning
+- **Tab Reorganization**: Unified Schedule tab with Today and Schedule views
+- **Better Mobile**: Fixed horizontal scroll and layout overflow issues
+- **Accessibility**: Semantic HTML, ARIA labels, keyboard navigation throughout
 
 ## 🤝 Contributing & Support
 
