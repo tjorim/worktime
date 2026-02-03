@@ -143,7 +143,7 @@ export function CurrentStatus({
           {/* Timeline Row */}
           {currentWorkingTeam && (
             <div className="mb-3">
-              <ShiftTimeline currentWorkingTeam={currentWorkingTeam} today={today} />
+              <ShiftTimeline currentWorkingTeam={currentWorkingTeam} />
             </div>
           )}
 

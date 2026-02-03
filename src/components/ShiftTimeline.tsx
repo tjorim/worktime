@@ -1,4 +1,3 @@
-import type { Dayjs } from "dayjs";
 import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -9,25 +8,25 @@ import { useFormattedShiftTime } from "../hooks/useFormattedShiftTime";
 import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
 import { getAllTeamsShifts } from "../utils/shiftCalculations";
+import { getTeamCountForOption } from "../utils/scheduleUtils";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
   currentShift: ShiftResult;
   nextShift: ShiftResult | null;
+  workingTeams: ShiftResult[];
 }
 
 /**
- * Build a timeline of working shifts for the given day and identify the previous and next shifts relative to the provided current working team.
+ * Build a timeline of working shifts and identify the previous and next shifts relative to the provided current working team.
  *
- * If the current team is the first working shift of the day, the previous shift (if any) is taken from the last working shift of the previous day. If the current team is the last working shift of the day, the next shift (if any) is taken from the first working shift of the following day.
+ * The shift day is derived from `currentWorkingTeam.date`. If the current team is the first working shift of the day, the previous shift (if any) is taken from the last working shift of the previous day. If the current team is the last working shift of the day, the next shift (if any) is taken from the first working shift of the following day.
  *
- * @param _today - The reference date (calendar day) - not used; shift day is derived from currentWorkingTeam.date
- * @param currentWorkingTeam - The team currently active within today's shifts
+ * @param currentWorkingTeam - The team currently active, from which the shift day is derived
  * @param scheduleOption - The schedule configuration to use
- * @returns An object with `prevShift` set to the adjacent previous working shift or `null`, `currentShift` equal to `currentWorkingTeam`, and `nextShift` set to the adjacent next working shift or `null`
+ * @returns An object with `prevShift`, `nextShift`, and `currentShift` for the shift day
  */
 function computeShiftTimeline(
-  _today: Dayjs,
   currentWorkingTeam: ShiftResult,
   scheduleOption?: ScheduleOption | null,
 ): TimelineData {
@@ -56,6 +55,7 @@ function computeShiftTimeline(
       prevShift: null,
       currentShift: currentWorkingTeam,
       nextShift: null,
+      workingTeams,
     };
   }
 
@@ -107,12 +107,27 @@ function computeShiftTimeline(
     prevShift,
     currentShift: currentWorkingTeam,
     nextShift,
+    workingTeams,
   };
+}
+
+/**
+ * Check if multiple teams have the same shift start time (parallel shifts)
+ * @param teams Array of ShiftResult objects (should be pre-filtered to working teams only)
+ * @returns true if teams work simultaneously (same start time), false if sequential
+ */
+function hasTeamsWithSameStartTime(teams: ShiftResult[]): boolean {
+  // Filter to only teams with valid start times (excludes "Off" shifts with null start)
+  const teamsWithStart = teams.filter((t) => t.shift.start !== null);
+  if (teamsWithStart.length <= 1) return false;
+
+  const startTimes = new Set(teamsWithStart.map((t) => t.shift.start));
+  // If number of teams > number of unique start times, there are parallel shifts
+  return teamsWithStart.length > startTimes.size;
 }
 
 interface ShiftTimelineProps {
   currentWorkingTeam: ShiftResult;
-  today: Dayjs;
 }
 
 /**
@@ -121,10 +136,9 @@ interface ShiftTimelineProps {
  * Shows the previous and next working teams when available and a highlighted current team badge with tooltips for shift details and live updates.
  *
  * @param currentWorkingTeam - The ShiftResult representing the currently active team
- * @param today - The Dayjs date used to compute the timeline for the current day
  * @returns A React element that displays the shift timeline UI
  */
-export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps) {
+export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
   // Generate unique ID for tooltip to avoid HTML ID conflicts
   const timelineTooltipId = useId();
   const { scheduleType } = useSettings();
@@ -134,8 +148,19 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
     throw new Error("ShiftTimeline requires a schedule to be selected");
   }
 
-  const { prevShift, nextShift } = computeShiftTimeline(today, currentWorkingTeam, scheduleType);
+  // Scenario 1: Single-team schedule - hide timeline (use roster config, not working teams count)
+  const rosterTeamCount = getTeamCountForOption(scheduleType);
+  if (rosterTeamCount === 1) {
+    return null;
+  }
 
+  const { prevShift, nextShift, workingTeams } = computeShiftTimeline(
+    currentWorkingTeam,
+    scheduleType,
+  );
+
+  // Scenario 2: Check for parallel shifts (teams with same start time)
+  const hasParallelShifts = hasTeamsWithSameStartTime(workingTeams);
   return (
     <div className="card-timeline timeline-container">
       <div className="timeline-header text-center">
@@ -151,7 +176,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             <div className="timeline-code">{prevShift.shift.displayCode}</div>
           </div>
         )}
-        {prevShift && <span className="timeline-arrow">→</span>}
+        {prevShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
         <div className="timeline-team">
           <OverlayTrigger
             placement="bottom"
@@ -191,7 +216,7 @@ export function ShiftTimeline({ currentWorkingTeam, today }: ShiftTimelineProps)
             </OverlayTrigger>
           </div>
         </div>
-        {nextShift && <span className="timeline-arrow">→</span>}
+        {nextShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
         {nextShift && (
           <div className="timeline-team">
             <Badge bg="light" text="dark" className="timeline-badge">
