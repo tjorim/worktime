@@ -102,7 +102,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(-1);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
@@ -195,30 +195,44 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   };
 
   const handleToggleSelection = (index: number) => {
-    setSelectedIndices((prev) =>
-      prev.includes(index) ? prev.filter((item) => item !== index) : [...prev, index],
-    );
+    setSelectedIndices((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
   };
 
   const handleSelectAll = () => {
-    setSelectedIndices(events.map((_, index) => index));
+    setSelectedIndices(new Set(events.map((_, index) => index)));
   };
 
   const handleClearSelection = () => {
-    setSelectedIndices([]);
+    setSelectedIndices(new Set());
   };
 
   const handleBulkDeleteConfirm = () => {
-    if (selectedIndices.length > 0) {
-      deleteEvents(selectedIndices);
-      toast.showSuccess(`Deleted ${selectedIndices.length} events`, "🗑️");
+    if (selectedIndices.size > 0) {
+      deleteEvents(Array.from(selectedIndices));
+      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "🗑️");
     }
-    setSelectedIndices([]);
+    setSelectedIndices(new Set());
     setShowBulkDeleteConfirm(false);
   };
 
   useEffect(() => {
-    setSelectedIndices((prev) => prev.filter((index) => index >= 0 && index < events.length));
+    setSelectedIndices((prev) => {
+      const newSet = new Set<number>();
+      prev.forEach((index) => {
+        if (index >= 0 && index < events.length) {
+          newSet.add(index);
+        }
+      });
+      return newSet;
+    });
   }, [events.length]);
 
   useEffect(() => {
@@ -238,7 +252,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     try {
       const text = await file.text();
       importHday(text);
-      setSelectedIndices([]); // Clear selection after import
+      setSelectedIndices(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
       setRawEditorError(""); // Clear any raw editor errors
       toast.showSuccess(`Imported ${file.name}`, "📥");
@@ -284,7 +298,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const handleParseRawEditor = useCallback(() => {
     try {
       importHday(rawEditorText);
-      setSelectedIndices([]);
+      setSelectedIndices(new Set());
       setIsRawEditorDirty(false);
       setRawEditorError("");
       toast.showSuccess("Raw .hday content applied", "✓");
@@ -329,7 +343,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       modalMode,
       editIndex,
       viewMode,
-      selectedIndicesCount: selectedIndices.length,
+      selectedIndicesCount: selectedIndices.size,
     },
   );
 
@@ -351,14 +365,10 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           onUndo={handleUndo}
           onRedo={handleRedo}
           eventCount={events.length}
-          selectedCount={selectedIndices.length}
+          selectedCount={selectedIndices.size}
           onSelectAll={handleSelectAll}
           onClearSelection={handleClearSelection}
-          onBulkDelete={() => {
-            if (selectedIndices.length > 0) {
-              setShowBulkDeleteConfirm(true);
-            }
-          }}
+          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}
           onExport={handleExport}
           onAddEvent={handleOpenAddModal}
@@ -472,7 +482,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       <ConfirmationDialog
         isOpen={showBulkDeleteConfirm}
         title="Delete Selected Events"
-        message={`Are you sure you want to delete ${selectedIndices.length} selected events? You can undo this with the Undo button or Ctrl+Z.`}
+        message={`Are you sure you want to delete ${selectedIndices.size} selected events? You can undo this with the Undo button or Ctrl+Z.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"

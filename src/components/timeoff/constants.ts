@@ -31,15 +31,15 @@ export const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", strin
 /**
  * Type flags mapped to EventFlag type for use in flag filtering.
  */
-export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.map(
-  ([flag]) => flag,
-).filter((f) => f !== "none") as EventFlag[];
+export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.flatMap(
+  ([flag]) => (flag !== "none" ? [flag as EventFlag] : []),
+);
 
 /**
  * Time/Location flags mapped to EventFlag type for use in flag filtering.
  */
 export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
-  TIME_LOCATION_FLAG_OPTIONS.map(([flag]) => flag).filter((f) => f !== "none") as EventFlag[];
+  TIME_LOCATION_FLAG_OPTIONS.flatMap(([flag]) => (flag !== "none" ? [flag as EventFlag] : []));
 
 /**
  * Valid view modes for the Time Off tab.
@@ -49,15 +49,21 @@ export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
 export const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
 
 /**
+ * Type derived from TIMEOFF_VIEWS for type-safe view mode handling.
+ */
+export type TimeOffViewMode = (typeof TIMEOFF_VIEWS)[number];
+
+/**
  * Default weekday value for weekly events (1 = Monday).
  */
 export const DEFAULT_WEEKDAY = 1;
 
 /**
  * Help text for each view mode in the Time Off tab.
+ * Type-checked to ensure all TIMEOFF_VIEWS modes have corresponding help text.
  */
-export const VIEW_MODE_HELP_TEXT = {
+export const VIEW_MODE_HELP_TEXT: Record<(typeof TIMEOFF_VIEWS)[number], string> = {
   table: "Select events from the table to edit or delete.",
   stats: "Review allowance usage and vacation breakdowns by year.",
   raw: "Edit raw .hday content directly. Click Apply to save changes.",
-} as const;
+};

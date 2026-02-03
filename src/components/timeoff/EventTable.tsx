@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import type { HdayEvent } from "../../lib/hday/types";
@@ -8,16 +9,18 @@ import {
 } from "../../lib/hday/parser";
 
 /**
- * Generate a unique key for an event table row.
+ * Generate a unique key for an event table row using stable event properties.
+ * Avoids using array index to prevent reconciliation issues when events are reordered.
+ * Uses deterministic combinations of stable properties (type, start, end, weekday, title, raw).
  */
-function getEventRowKey(event: HdayEvent, index: number): string {
+function getEventRowKey(event: HdayEvent): string {
   if (event.type === "range") {
-    return `range-${index}-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
+    return `range-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
   }
   if (event.type === "weekly") {
-    return `weekly-${index}-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
+    return `weekly-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
   }
-  return `unknown-${index}-${event.raw ?? ""}`;
+  return `unknown-${event.raw ?? ""}`;
 }
 
 /**
@@ -45,7 +48,7 @@ function formatEventDate(event: HdayEvent): React.ReactNode {
 
 type EventTableProps = {
   events: HdayEvent[];
-  selectedIndices: number[];
+  selectedIndices: Set<number>;
   onToggleSelection: (index: number) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
@@ -72,15 +75,27 @@ export function EventTable({
   onEditEvent,
   onDeleteEvent,
 }: EventTableProps) {
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  // Update indeterminate state for select-all checkbox when selection changes
+  useEffect(() => {
+    if (selectAllRef.current) {
+      const isIndeterminate =
+        selectedIndices.size > 0 && selectedIndices.size < events.length;
+      selectAllRef.current.indeterminate = isIndeterminate;
+    }
+  }, [selectedIndices, events.length]);
+
   return (
     <Table responsive hover>
       <thead>
         <tr>
           <th>
             <input
+              ref={selectAllRef}
               type="checkbox"
               aria-label="Select all events"
-              checked={events.length > 0 && selectedIndices.length === events.length}
+              checked={events.length > 0 && selectedIndices.size === events.length}
               onChange={(event) => {
                 if (event.target.checked) {
                   onSelectAll();
@@ -98,6 +113,13 @@ export function EventTable({
         </tr>
       </thead>
       <tbody>
+        {events.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="text-center py-4">
+              <span className="text-muted">No events found</span>
+            </td>
+          </tr>
+        ) : null}
         {events.map((event, index) => {
           const eventColorClass =
             event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
@@ -109,12 +131,12 @@ export function EventTable({
             event.type === "unknown" ? `unknown-event-${index}` : undefined;
 
           return (
-            <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
+            <tr key={getEventRowKey(event)} aria-describedby={unknownDescriptionId}>
               <td>
                 <input
                   type="checkbox"
                   aria-label={`Select ${event.title || eventLabel}`}
-                  checked={selectedIndices.includes(index)}
+                  checked={selectedIndices.has(index)}
                   onChange={() => onToggleSelection(index)}
                 />
               </td>

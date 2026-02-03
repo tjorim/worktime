@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import type { TimeOffViewMode } from "../components/timeoff/constants";
 
 /**
  * Check if an event target is an editable element.
@@ -32,7 +33,7 @@ type KeyboardShortcutOptions = {
   showEventModal: boolean;
   modalMode: "add" | "edit" | "view";
   editIndex: number;
-  viewMode: string;
+  viewMode: TimeOffViewMode;
   selectedIndicesCount: number;
 };
 
@@ -74,7 +75,7 @@ export function useTimeOffKeyboardShortcuts(
       }
 
       // Delete key - Bulk delete selected events
-      if (event.key === "Delete") {
+      if (event.key === "Delete" || event.key === "Backspace") {
         if (viewMode === "table" && selectedIndicesCount > 0) {
           event.preventDefault();
           handlersRef.current.onBulkDelete();

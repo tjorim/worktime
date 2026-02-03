@@ -1,7 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { VIEW_MODE_HELP_TEXT } from "./constants";
+import { VIEW_MODE_HELP_TEXT, type TimeOffViewMode } from "./constants";
 
 type TimeOffToolbarProps = {
   // Undo/Redo
@@ -25,8 +25,8 @@ type TimeOffToolbarProps = {
   onAddEvent: () => void;
 
   // View mode
-  viewMode: "table" | "stats" | "raw";
-  onViewModeChange: (mode: "table" | "stats" | "raw") => void;
+  viewMode: TimeOffViewMode;
+  onViewModeChange: (mode: TimeOffViewMode) => void;
   isRawEditorDirty: boolean;
 };
 
@@ -97,6 +97,7 @@ export function TimeOffToolbar({
           size="sm"
           onClick={onSelectAll}
           disabled={eventCount === 0 || selectedCount === eventCount}
+          aria-label="Select all events"
         >
           Select All
         </Button>
@@ -105,18 +106,19 @@ export function TimeOffToolbar({
           size="sm"
           onClick={onClearSelection}
           disabled={selectedCount === 0}
+          aria-label="Clear selection"
         >
           Clear Selection
         </Button>
-        <Button variant="outline-primary" size="sm" onClick={onImport}>
+        <Button variant="outline-primary" size="sm" onClick={onImport} aria-label="Import events">
           <i className="bi bi-download me-1"></i>
           Import
         </Button>
-        <Button variant="outline-primary" size="sm" onClick={onExport}>
+        <Button variant="outline-primary" size="sm" onClick={onExport} aria-label="Export events">
           <i className="bi bi-upload me-1"></i>
           Export
         </Button>
-        <Button variant="primary" size="sm" onClick={onAddEvent}>
+        <Button variant="primary" size="sm" onClick={onAddEvent} aria-label="Add event">
           <i className="bi bi-plus-lg me-1"></i>
           Add Event
         </Button>
