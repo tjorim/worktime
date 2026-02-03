@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useRef } from "react";
-import { isEditableTarget } from "../components/timeoff/helpers";
+
+/**
+ * Check if an event target is an editable element.
+ * Used to determine whether keyboard shortcuts should be active.
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const isTextInput =
+    target instanceof HTMLInputElement && target.type !== "checkbox" && target.type !== "radio";
+  return (
+    isTextInput ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  );
+}
 
 type KeyboardShortcutHandlers = {
   onUndo: () => void;

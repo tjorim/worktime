@@ -3,8 +3,8 @@ import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hd
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
 import {
-  TYPE_FLAGS_SET,
-  TIME_LOCATION_FLAGS_SET,
+  TYPE_FLAGS_AS_EVENT_FLAGS,
+  TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
 } from "../components/timeoff/constants";
 
@@ -102,10 +102,10 @@ export function useEventForm() {
    */
   const handleTypeFlagChange = useCallback((flag: TypeFlag | "none") => {
     if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_SET.has(f)));
+      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f)));
     } else {
       setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TYPE_FLAGS_SET.has(f));
+        const filtered = prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f));
         return [...filtered, flag];
       });
     }
@@ -117,10 +117,10 @@ export function useEventForm() {
    */
   const handleTimeFlagChange = useCallback((flag: TimeLocationFlag | "none") => {
     if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_SET.has(f)));
+      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f)));
     } else {
       setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_SET.has(f));
+        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f));
         return [...filtered, flag];
       });
     }

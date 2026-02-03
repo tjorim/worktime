@@ -12,7 +12,6 @@ import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { RawContentPanel } from "./timeoff/RawContentPanel";
 import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-import { EmptyState } from "./timeoff/EmptyState";
 import { EventTable } from "./timeoff/EventTable";
 import { TimeOffToolbar } from "./timeoff/TimeOffToolbar";
 import {
@@ -22,7 +21,6 @@ import {
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TIMEOFF_VIEWS,
 } from "./timeoff/constants";
-import { importHdayFile, exportHdayFile } from "../utils/fileOperations";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -238,7 +236,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     if (!file) return;
 
     try {
-      const text = await importHdayFile(file);
+      const text = await file.text();
       importHday(text);
       setSelectedIndices([]); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
@@ -263,7 +261,17 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       return;
     }
 
-    exportHdayFile(hdayContent);
+    // Export as downloadable file
+    const blob = new Blob([hdayContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "timeoff.hday";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     toast.showSuccess("Exported timeoff.hday", "📤");
   }, [exportHday, toast]);
 
@@ -362,7 +370,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
           {viewMode === "table" &&
             (events.length === 0 ? (
-              <EmptyState />
+              <div className="text-center text-muted py-5">
+                <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
+                <p>No time-off events yet.</p>
+                <p className="small">
+                  Click "Add Event" to create your first event, or "Import" to load an existing
+                  .hday file.
+                </p>
+              </div>
             ) : (
               <EventTable
                 events={events}
