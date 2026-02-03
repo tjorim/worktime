@@ -114,9 +114,7 @@ export function WelcomeWizard({
 
   const isChangeTeamFlow = mode === "change-team";
   const isChangeScheduleFlow = mode === "change-schedule";
-  const shouldShowTeamSelection = selectedSchedule
-    ? hasMultipleTeams(selectedSchedule)
-    : false;
+  const shouldShowTeamSelection = selectedSchedule ? hasMultipleTeams(selectedSchedule) : false;
   const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);

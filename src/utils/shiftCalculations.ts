@@ -373,9 +373,7 @@ export function getCurrentShiftDay(
 
   const nightShiftEnd = getShiftTimeDefinition(scheduleOption, "N")?.end;
   if (nightShiftEnd == null) {
-    throw new Error(
-      `Night shift definition missing end time for schedule ${scheduleOption}.`,
-    );
+    throw new Error(`Night shift definition missing end time for schedule ${scheduleOption}.`);
   }
 
   const hour = current.hour() + current.minute() / 60;
