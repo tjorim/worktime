@@ -76,7 +76,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
         return "team-selection";
       }
       // In change modes, close wizard after schedule selection
-      if (ctx.isChangeScheduleFlow) {
+      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
         return null;
       }
       // In onboarding, continue to vacation allowance
