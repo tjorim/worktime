@@ -77,13 +77,13 @@ body {
    ========================================================================= */
 
 /* Remove top border radius from main component cards in tab content for seamless look, but not nested cards */
-.tab-content > .tab-pane > .card {
+.tab-content .card:not(.card .card) {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 
 /* Also remove top border radius from card headers in main tab content cards */
-.tab-content > .tab-pane > .card > .card-header {
+.tab-content .card:not(.card .card) > .card-header {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }

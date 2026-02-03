@@ -270,10 +270,6 @@
   z-index: 2;
 }
 
-.schedule-table td:first-child {
-  background-color: var(--bs-table-bg, #f8f9fa);
-}
-
 /* ============================================================================
    CONTEXT MENU
    ========================================================================= */
@@ -339,5 +335,30 @@
 
   .month-calendar-events {
     padding: 0.15rem 0.25rem 0.35rem;
+  }
+}
+
+/* ============================================================================
+   DARK MODE OVERRIDES
+   ========================================================================= */
+
+@include color-mode(dark) {
+  .team-card-interactive:hover,
+  .team-card-interactive:focus {
+    background-color: var(--bs-body-bg, #181a1b);
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-tabs .nav-link {
+    color: #adb5bd;
+  }
+
+  .nav-tabs .nav-link.active {
+    font-weight: 600;
+  }
+
+  .nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
   }
 }

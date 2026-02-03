@@ -130,6 +130,10 @@
   font-weight: 600;
 }
 
+.schedule-table td:first-child {
+  background-color: var(--bs-table-bg, #f8f9fa);
+}
+
 /* Today column highlighting for schedule table */
 .today-column {
   background-color: var(--bs-primary-bg-subtle) !important;
@@ -378,6 +382,22 @@
 .loading {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* ============================================================================
+   DARK MODE OVERRIDES
+   ========================================================================= */
+
+@include color-mode(dark) {
+  .schedule-table th,
+  .schedule-table .team-header {
+    background-color: var(--bs-table-bg, #23272b);
+    color: var(--bs-table-color, #e0e0e0);
+  }
+
+  .schedule-table td:first-child {
+    background-color: var(--bs-table-bg, #23272b);
+  }
 }
 
 /* ============================================================================

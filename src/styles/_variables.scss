@@ -1,9 +1,9 @@
 /* ============================================================================
-   WORKTIME CUSTOM CSS VARIABLES
+   WORKTIME CUSTOM CSS VARIABLES & BOOTSTRAP OVERRIDES
    ============================================================================
    All Worktime-specific CSS variables for components and styling.
-   Variables do NOT override Bootstrap defaults.
-   All custom variables use the --wt-* prefix for clarity.
+   Includes Worktime custom variables (prefixed --wt-*) and Bootstrap variable
+   overrides (--bs-*) used primarily for dark mode.
    ========================================================================= */
 
 /* ============================================================================
@@ -48,7 +48,7 @@
   --wt-context-menu-item-text: #212529;
 
   /* --- Shift Badge Colors --- */
-  /* See _components.scss for detailed contrast ratio documentation */
+  /* See _shifts.scss for detailed contrast ratio documentation */
   --wt-shift-morning: #1976d2;
   --wt-shift-morning-text: #ffffff;
   --wt-shift-late: #bf360c;
@@ -153,34 +153,4 @@
   /* Tab navigation borders - match dark theme styling */
   --bs-nav-tabs-link-hover-border-color: transparent transparent #343a40;
   --bs-nav-tabs-link-active-border-color: #495057 #495057 #23272b;
-
-  /* Dark mode specific component styling */
-  .team-card-interactive:hover,
-  .team-card-interactive:focus {
-    background-color: var(--bs-body-bg, #181a1b);
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
-  }
-
-  .nav-tabs .nav-link {
-    color: #adb5bd;
-  }
-
-  .nav-tabs .nav-link.active {
-    font-weight: 600;
-  }
-
-  .nav-tabs .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #e0e0e0;
-  }
-
-  .schedule-table th,
-  .schedule-table .team-header {
-    background-color: var(--bs-table-bg, #23272b);
-    color: var(--bs-table-color, #e0e0e0);
-  }
-
-  .schedule-table td:first-child {
-    background-color: var(--bs-table-bg, #23272b);
-  }
 }
