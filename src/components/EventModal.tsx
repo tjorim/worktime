@@ -276,7 +276,7 @@ export function EventModal({
           <Row className="g-3">
             {mode !== "view" && (
               <Col xs={12}>
-                <Card className="preview-card border-0 bg-light">
+                <Card className="preview-card border-0 bg-body-secondary">
                   <Card.Body className="py-2">
                     <div className="small text-uppercase text-muted">Preview</div>
                     <div className="fw-semibold">
