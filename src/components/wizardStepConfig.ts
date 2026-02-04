@@ -142,8 +142,7 @@ export function getStepIndex(stepId: WizardStep, context: WizardContext): number
   const visibleSteps = getVisibleSteps(context);
   const index = visibleSteps.findIndex((s) => s.id === stepId);
   if (index === -1) {
-    console.warn(`Step "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`);
-    return 1;
+    throw new Error(`Unknown WizardStep: "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`);
   }
   return index + 1; // 1-based index
 }

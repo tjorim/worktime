@@ -13,6 +13,7 @@ import {
   getStepConfig,
   getStepIndex,
   getTotalSteps,
+  getVisibleSteps,
 } from "./wizardStepConfig";
 import { Step1Welcome } from "./wizard/Step1Welcome";
 import { Step2Features } from "./wizard/Step2Features";
@@ -111,17 +112,24 @@ export function WelcomeWizard({
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
-  const isChangeTeamFlow = mode === "change-team";
   const isChangeScheduleFlow = mode === "change-schedule";
   const shouldShowTeamSelection = selectedSchedule ? hasMultipleTeams(selectedSchedule) : false;
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
+  const vacationValidation = validateVacationAmount(vacationAmount);
 
   // Create wizard context for configuration functions
   const wizardContext: WizardContext = {
     mode,
     shouldShowTeamSelection,
   };
+
+  // Derive an effective step that is guaranteed to be visible in the current context.
+  // During mode transitions (e.g. onboarding -> change-team), currentStep may briefly
+  // reference a step from the previous mode before the useEffect sync fires.
+  const visibleSteps = getVisibleSteps(wizardContext);
+  const isCurrentStepVisible = visibleSteps.some((s) => s.id === currentStep);
+  const effectiveStep = isCurrentStepVisible ? currentStep : (visibleSteps[0]?.id ?? startStep);
 
   // Reset to startStep when modal opens
   const handleModalEntered = () => {
@@ -136,20 +144,12 @@ export function WelcomeWizard({
 
   const handleTeamSelect = (team: number) => {
     onTeamSelect(team);
-    if (isChangeScheduleFlow || isChangeTeamFlow) {
-      onHide();
-      return;
-    }
-    nextStep(); // Go to vacation allowance step
+    nextStep();
   };
 
   const handleSkip = () => {
     onSkip?.();
-    if (isChangeScheduleFlow || isChangeTeamFlow) {
-      onHide();
-      return;
-    }
-    nextStep(); // Go to vacation allowance step
+    nextStep();
   };
 
   const handleVacationComplete = () => {
@@ -175,11 +175,11 @@ export function WelcomeWizard({
   };
 
   const nextStep = () => {
-    const currentConfig = getStepConfig(currentStep);
+    const currentConfig = getStepConfig(effectiveStep);
     const nextStepId = currentConfig.getNextStep(wizardContext);
 
     // Handle schedule selection callback before navigation
-    if (currentStep === "schedule-selection") {
+    if (effectiveStep === "schedule-selection") {
       if (selectedSchedule && selectedSchedule !== scheduleType) {
         onScheduleSelect?.(selectedSchedule);
       }
@@ -194,7 +194,7 @@ export function WelcomeWizard({
   };
 
   const prevStep = () => {
-    const currentConfig = getStepConfig(currentStep);
+    const currentConfig = getStepConfig(effectiveStep);
     const prevStepId = currentConfig.getPrevStep(wizardContext);
 
     if (prevStepId === null) {
@@ -207,12 +207,12 @@ export function WelcomeWizard({
 
   const getProgressPercentage = () => {
     const totalSteps = getTotalSteps(wizardContext);
-    const stepIndex = getStepIndex(currentStep, wizardContext);
+    const stepIndex = getStepIndex(effectiveStep, wizardContext);
     return (stepIndex / totalSteps) * 100;
   };
 
   const getStepTitle = () => {
-    const config = getStepConfig(currentStep);
+    const config = getStepConfig(effectiveStep);
     return config.title;
   };
 
@@ -240,7 +240,7 @@ export function WelcomeWizard({
           />
           <div className="d-flex justify-content-between small text-muted">
             <span>
-              Step {getStepIndex(currentStep, wizardContext)} of {getTotalSteps(wizardContext)}
+              Step {getStepIndex(effectiveStep, wizardContext)} of {getTotalSteps(wizardContext)}
             </span>
             <span>{getProgressPercentage()}% Complete</span>
           </div>
@@ -252,7 +252,7 @@ export function WelcomeWizard({
           </div>
         ) : (
           <>
-            {currentStep === "welcome" && (
+            {effectiveStep === "welcome" && (
               <Step1Welcome
                 onDefer={onDefer}
                 onHide={onHide}
@@ -261,7 +261,7 @@ export function WelcomeWizard({
                 firstButtonRef={firstButtonRef}
               />
             )}
-            {currentStep === "features" && (
+            {effectiveStep === "features" && (
               <Step2Features
                 onPrev={prevStep}
                 onNext={nextStep}
@@ -270,7 +270,7 @@ export function WelcomeWizard({
                 settingsLocationText={SETTINGS_LOCATION_TEXT}
               />
             )}
-            {currentStep === "schedule-selection" && (
+            {effectiveStep === "schedule-selection" && (
               <Step3ScheduleSelection
                 selectedSchedule={selectedSchedule}
                 onScheduleChange={setSelectedSchedule}
@@ -282,10 +282,9 @@ export function WelcomeWizard({
                 firstButtonRef={firstButtonRef}
               />
             )}
-            {currentStep === "team-selection" && (
+            {effectiveStep === "team-selection" && (
               <Step4TeamSelection
                 teams={teams}
-                teamCount={teamCount}
                 onTeamSelect={handleTeamSelect}
                 onSkip={handleSkip}
                 onPrev={prevStep}
@@ -293,7 +292,7 @@ export function WelcomeWizard({
                 firstButtonRef={firstButtonRef}
               />
             )}
-            {currentStep === "vacation-allowance" && (
+            {effectiveStep === "vacation-allowance" && (
               <Step5VacationAllowance
                 vacationAmount={vacationAmount}
                 vacationUnit={vacationUnit}
@@ -303,8 +302,8 @@ export function WelcomeWizard({
                 onSkip={handleVacationSkip}
                 onComplete={handleVacationComplete}
                 isLoading={isLoading}
-                isInvalid={validateVacationAmount(vacationAmount).isInvalid}
-                isValid={validateVacationAmount(vacationAmount).isValid}
+                isInvalid={vacationValidation.isInvalid}
+                isValid={vacationValidation.isValid}
                 firstButtonRef={firstButtonRef}
               />
             )}

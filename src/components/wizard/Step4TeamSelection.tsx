@@ -4,7 +4,6 @@ import Row from "react-bootstrap/Row";
 
 interface Step4TeamSelectionProps {
   teams: number[];
-  teamCount: number;
   onTeamSelect: (team: number) => void;
   onSkip: () => void;
   onPrev: () => void;
@@ -14,7 +13,6 @@ interface Step4TeamSelectionProps {
 
 export function Step4TeamSelection({
   teams,
-  teamCount,
   onTeamSelect,
   onSkip,
   onPrev,
@@ -52,7 +50,7 @@ export function Step4TeamSelection({
       </div>
 
       {/* Only show Browse All Teams option if there are multiple teams */}
-      {teamCount > 1 && (
+      {teams.length > 1 && (
         <>
           <hr />
 
