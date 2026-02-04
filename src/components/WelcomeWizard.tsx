@@ -261,7 +261,6 @@ export function WelcomeWizard({
                 onDefer={onDefer}
                 onHide={onHide}
                 onNext={nextStep}
-                isLoading={isLoading}
                 firstButtonRef={firstButtonRef}
               />
             )}
@@ -269,7 +268,6 @@ export function WelcomeWizard({
               <Step2Features
                 onPrev={prevStep}
                 onNext={nextStep}
-                isLoading={isLoading}
                 firstButtonRef={firstButtonRef}
                 settingsLocationText={SETTINGS_LOCATION_TEXT}
               />
@@ -280,7 +278,6 @@ export function WelcomeWizard({
                 onScheduleChange={setSelectedSchedule}
                 onPrev={prevStep}
                 onNext={nextStep}
-                isLoading={isLoading}
                 isChangeFlow={isChangeFlow}
                 shouldShowTeamSelection={shouldShowTeamSelection}
                 firstButtonRef={firstButtonRef}
@@ -292,7 +289,6 @@ export function WelcomeWizard({
                 onTeamSelect={handleTeamSelect}
                 onSkip={handleSkip}
                 onPrev={prevStep}
-                isLoading={isLoading}
                 isChangeFlow={isChangeFlow}
                 firstButtonRef={firstButtonRef}
               />
@@ -306,7 +302,6 @@ export function WelcomeWizard({
                 onPrev={prevStep}
                 onSkip={handleVacationSkip}
                 onComplete={handleVacationComplete}
-                isLoading={isLoading}
                 isInvalid={vacationValidation.isInvalid}
                 isValid={vacationValidation.isValid}
                 firstButtonRef={firstButtonRef}

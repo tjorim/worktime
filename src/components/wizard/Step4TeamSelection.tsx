@@ -8,7 +8,6 @@ interface Step4TeamSelectionProps {
   onTeamSelect: (team: number) => void;
   onSkip: () => void;
   onPrev: () => void;
-  isLoading: boolean;
   isChangeFlow: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
@@ -18,7 +17,6 @@ export function Step4TeamSelection({
   onTeamSelect,
   onSkip,
   onPrev,
-  isLoading,
   isChangeFlow,
   firstButtonRef,
 }: Step4TeamSelectionProps) {
@@ -41,7 +39,6 @@ export function Step4TeamSelection({
                 variant="outline-primary"
                 className="w-100 team-btn"
                 onClick={() => onTeamSelect(team)}
-                disabled={isLoading}
                 aria-label={`Select Team ${team}`}
                 ref={index === 0 ? firstButtonRef : undefined}
               >
@@ -62,7 +59,7 @@ export function Step4TeamSelection({
             <p className="small text-muted mb-3">
               View shift information for all teams without personalization.
             </p>
-            <Button variant="outline-secondary" onClick={onSkip} disabled={isLoading}>
+            <Button variant="outline-secondary" onClick={onSkip}>
               <i className="bi bi-eye me-1"></i>
               Browse All Teams
             </Button>
@@ -71,7 +68,7 @@ export function Step4TeamSelection({
       )}
 
       <div className="d-flex justify-content-start mt-3">
-        <Button variant="outline-secondary" size="sm" onClick={onPrev} disabled={isLoading}>
+        <Button variant="outline-secondary" size="sm" onClick={onPrev}>
           <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>
           {isChangeFlow ? "Cancel" : "Back"}
         </Button>

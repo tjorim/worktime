@@ -10,7 +10,6 @@ interface Step5VacationAllowanceProps {
   onPrev: () => void;
   onSkip: () => void;
   onComplete: () => void;
-  isLoading: boolean;
   isInvalid: boolean;
   isValid: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
@@ -24,7 +23,6 @@ export function Step5VacationAllowance({
   onPrev,
   onSkip,
   onComplete,
-  isLoading,
   isInvalid,
   isValid,
   firstButtonRef,
@@ -50,7 +48,6 @@ export function Step5VacationAllowance({
             placeholder="e.g., 25"
             value={vacationAmount}
             onChange={(e) => onVacationAmountChange(e.target.value)}
-            disabled={isLoading}
             isInvalid={isInvalid}
           />
           <Form.Control.Feedback type="invalid">
@@ -68,7 +65,6 @@ export function Step5VacationAllowance({
               label="Days"
               checked={vacationUnit === "days"}
               onChange={() => onVacationUnitChange("days")}
-              disabled={isLoading}
             />
             <Form.Check
               type="radio"
@@ -76,7 +72,6 @@ export function Step5VacationAllowance({
               label="Hours"
               checked={vacationUnit === "hours"}
               onChange={() => onVacationUnitChange("hours")}
-              disabled={isLoading}
             />
           </div>
         </Form.Group>
@@ -86,7 +81,6 @@ export function Step5VacationAllowance({
         <Button
           variant="outline-secondary"
           onClick={onPrev}
-          disabled={isLoading}
           ref={firstButtonRef}
           className="order-3 order-sm-1"
         >
@@ -97,7 +91,6 @@ export function Step5VacationAllowance({
           <Button
             variant="outline-secondary"
             onClick={onSkip}
-            disabled={isLoading}
             className="flex-fill flex-sm-grow-0"
           >
             Skip
@@ -105,7 +98,7 @@ export function Step5VacationAllowance({
           <Button
             variant="primary"
             onClick={onComplete}
-            disabled={isLoading || isInvalid}
+            disabled={isInvalid}
             className="flex-fill flex-sm-grow-0"
           >
             {isValid ? "Save & Complete" : "Complete"}

@@ -7,7 +7,6 @@ interface Step3ScheduleSelectionProps {
   onScheduleChange: (schedule: ScheduleOption) => void;
   onPrev: () => void;
   onNext: () => void;
-  isLoading: boolean;
   isChangeFlow: boolean;
   shouldShowTeamSelection: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
@@ -18,7 +17,6 @@ export function Step3ScheduleSelection({
   onScheduleChange,
   onPrev,
   onNext,
-  isLoading,
   isChangeFlow,
   shouldShowTeamSelection,
   firstButtonRef,
@@ -46,7 +44,7 @@ export function Step3ScheduleSelection({
               variant={isSelected ? "primary" : "outline-primary"}
               className="w-100 text-start mb-2"
               onClick={() => onScheduleChange(schedule.value)}
-              disabled={isLoading || !schedule.isAvailable}
+              disabled={!schedule.isAvailable}
               title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
               ref={schedule.value === "9-5" ? firstButtonRef : undefined}
             >
@@ -66,7 +64,6 @@ export function Step3ScheduleSelection({
         <Button
           variant="outline-secondary"
           onClick={onPrev}
-          disabled={isLoading}
           className="order-2 order-sm-1"
         >
           <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>{" "}
@@ -75,7 +72,7 @@ export function Step3ScheduleSelection({
         <Button
           variant="primary"
           onClick={onNext}
-          disabled={isLoading || !selectedSchedule}
+          disabled={!selectedSchedule}
           className="order-1 order-sm-2"
         >
           {continueLabel} <i className="bi bi-arrow-right ms-1"></i>

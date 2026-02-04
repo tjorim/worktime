@@ -7,7 +7,6 @@ import type { RefObject } from "react";
 interface Step2FeaturesProps {
   onPrev: () => void;
   onNext: () => void;
-  isLoading: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
   settingsLocationText: string;
 }
@@ -15,7 +14,6 @@ interface Step2FeaturesProps {
 export function Step2Features({
   onPrev,
   onNext,
-  isLoading,
   firstButtonRef,
   settingsLocationText,
 }: Step2FeaturesProps) {
@@ -73,7 +71,6 @@ export function Step2Features({
         <Button
           variant="outline-secondary"
           onClick={onPrev}
-          disabled={isLoading}
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
@@ -82,7 +79,6 @@ export function Step2Features({
         <Button
           variant="primary"
           onClick={onNext}
-          disabled={isLoading}
           className="order-1 order-sm-2"
         >
           Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>

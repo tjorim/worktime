@@ -4,7 +4,6 @@ interface Step1WelcomeProps {
   onDefer?: () => void;
   onHide: () => void;
   onNext: () => void;
-  isLoading: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
@@ -12,7 +11,6 @@ export function Step1Welcome({
   onDefer,
   onHide,
   onNext,
-  isLoading,
   firstButtonRef,
 }: Step1WelcomeProps) {
   return (
@@ -40,7 +38,6 @@ export function Step1Welcome({
               onHide(); // Fallback: close modal and complete onboarding via onHide handler
             }
           }}
-          disabled={isLoading}
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
@@ -49,7 +46,6 @@ export function Step1Welcome({
         <Button
           variant="primary"
           onClick={onNext}
-          disabled={isLoading}
           className="order-1 order-sm-2"
         >
           Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>

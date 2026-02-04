@@ -801,11 +801,12 @@ describe("WelcomeWizard", () => {
       await user.click(settingsButton);
 
       // Click Select Schedule button
-      await waitFor(() => {
-        const selectScheduleButton = screen.getByRole("button", { name: /Select Schedule/i });
-        expect(selectScheduleButton).toBeInTheDocument();
+      const selectScheduleButton = await waitFor(() => {
+        const button = screen.getByRole("button", { name: /Select Schedule/i });
+        expect(button).toBeInTheDocument();
+        return button;
       });
-      await user.click(screen.getByRole("button", { name: /Select Schedule/i }));
+      await user.click(selectScheduleButton);
 
       // Should open wizard in change-schedule mode
       await waitFor(() => {
