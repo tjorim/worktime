@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
 import type { ScheduleOption } from "../data/rosters";
-import { getTeamCountForOption, hasMultipleTeams } from "../utils/scheduleUtils";
+import { getTeamCountForOption, hasMultipleTeams, isValidScheduleType } from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 import {
   type WizardStep,
@@ -113,8 +113,9 @@ export function WelcomeWizard({
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
   const isChangeFlow = mode === "change-schedule" || mode === "change-team";
-  const shouldShowTeamSelection = selectedSchedule ? hasMultipleTeams(selectedSchedule) : false;
-  const teamCount = getTeamCountForOption(selectedSchedule);
+  const resolvedSchedule = isValidScheduleType(selectedSchedule) ? selectedSchedule : null;
+  const shouldShowTeamSelection = resolvedSchedule ? hasMultipleTeams(resolvedSchedule) : false;
+  const teamCount = resolvedSchedule ? getTeamCountForOption(resolvedSchedule) : 0;
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
   const vacationValidation = validateVacationAmount(vacationAmount);
 

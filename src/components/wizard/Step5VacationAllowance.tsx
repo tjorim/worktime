@@ -62,6 +62,7 @@ export function Step5VacationAllowance({
             <Form.Check
               type="radio"
               id="unit-days"
+              name="vacationUnit"
               label="Days"
               checked={vacationUnit === "days"}
               onChange={() => onVacationUnitChange("days")}
@@ -69,6 +70,7 @@ export function Step5VacationAllowance({
             <Form.Check
               type="radio"
               id="unit-hours"
+              name="vacationUnit"
               label="Hours"
               checked={vacationUnit === "hours"}
               onChange={() => onVacationUnitChange("hours")}
