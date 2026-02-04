@@ -3,7 +3,6 @@ import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
-import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
@@ -12,6 +11,7 @@ import type { UpcomingShiftResult, ShiftResult } from "../../utils/shiftCalculat
 import { getAllTeamsShifts, getCurrentWorkingTeam } from "../../utils/shiftCalculations";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
+import { ShiftBadge } from "../shared/ShiftBadge";
 
 interface GenericStatusContentProps {
   scheduleType: ScheduleOption;
@@ -92,17 +92,17 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
             <div className="flex-grow-1">
               {currentWorkingTeam ? (
                 <div>
-                  <Badge
-                    className={classNames(
-                      "shift-code",
-                      "shift-badge-lg",
-                      currentWorkingTeam.shift.className,
-                    )}
-                  >
-                    {hasTeams
-                      ? `Team ${currentWorkingTeam.teamNumber}: ${currentWorkingTeam.shift.name}`
-                      : currentWorkingTeam.shift.name}
-                  </Badge>
+                  {hasTeams && (
+                    <span className="fw-semibold me-1">
+                      Team {currentWorkingTeam.teamNumber}:
+                    </span>
+                  )}
+                  <ShiftBadge
+                    shift={currentWorkingTeam.shift}
+                    showName
+                    size="lg"
+                    showTooltip={false}
+                  />
                   <ShiftTimeDisplay
                     shift={currentWorkingTeam.shift}
                     className="small text-muted mt-1"

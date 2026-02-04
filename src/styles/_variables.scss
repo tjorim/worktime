@@ -71,7 +71,7 @@
    DARK MODE VARIABLES
    ========================================================================= */
 
-@include color-mode(dark) {
+[data-bs-theme="dark"] {
   /* --- Month Calendar Component --- */
   /* Background and borders */
   --wt-month-calendar-bg: #1f242a;
@@ -115,14 +115,16 @@
   --wt-shift-late: #8d3200;
   --wt-shift-late-text: #ffe0b2;
   --wt-shift-day: #b85500;
-  --wt-shift-day-text: #fff3e0;
+  --wt-shift-day-text: #ffffff; /* #fff3e0 only gave 4.41:1; white gives 4.84:1 (AA pass) */
   --wt-shift-night: #4527a0;
   --wt-shift-night-text: #ede7f6;
-  --wt-shift-off: #212121;
-  --wt-shift-off-text: #bdbdbd;
+  --wt-shift-off: #616161; /* same as light mode; #212121 was invisible on dark body #181a1b (1.08:1) */
+  --wt-shift-off-text: #ffffff;
 
   /* --- Application Theme --- */
-  --wt-primary-color: #90caf9;
+  /* Keep same as light mode: used as background in .team-btn.selected with white text,
+     where #90caf9 would fail WCAG AA contrast (1.75:1 vs required 4.5:1) */
+  --wt-primary-color: #0d6efd;
 
   /* --- Time Off Calendar Highlighting --- */
   --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.15);

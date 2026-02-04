@@ -4,7 +4,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Modal from "react-bootstrap/Modal";
-import classNames from "classnames";
+import clsx from "clsx";
 import { type ChangelogVersion, changelogData, futurePlans } from "../data/changelog";
 
 interface ChangelogModalProps {
@@ -41,7 +41,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     return (
       <div className="mb-3">
         <h6 className={`text-${variant} mb-2`}>
-          <i className={classNames("bi", `bi-${getIconForSection(title)}`, "me-2")}></i>
+          <i className={clsx("bi", `bi-${getIconForSection(title)}`, "me-2")}></i>
           {title}
         </h6>
         <ul className="list-unstyled">
@@ -74,7 +74,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     <Modal show={show} onHide={onHide} size="lg" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          <i className={classNames("bi", "bi-journal-text", "me-2")}></i>
+          <i className={clsx("bi", "bi-journal-text", "me-2")}></i>
           What's New in Worktime
         </Modal.Title>
       </Modal.Header>
@@ -117,7 +117,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                   <Card className="mt-3 border-0 bg-body-secondary">
                     <Card.Body className="py-2">
                       <small className="text-muted">
-                        <i className={classNames("bi", "bi-info-circle", "me-1")}></i>
+                        <i className={clsx("bi", "bi-info-circle", "me-1")}></i>
                         <strong>{version.technicalDetails.title}:</strong>{" "}
                         {version.technicalDetails.description}
                       </small>
@@ -131,7 +131,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
 
         <div className="mt-4 p-3 bg-body-secondary rounded">
           <h6 className="text-primary mb-2">
-            <i className={classNames("bi", "bi-rocket", "me-2")}></i>
+            <i className={clsx("bi", "bi-rocket", "me-2")}></i>
             Coming Soon
           </h6>
           {Object.entries(futurePlans).map(([version, plan], index, array) => (

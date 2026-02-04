@@ -8,12 +8,13 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShift } from "../utils/shiftCalculations";
 import { SetupActionButton } from "./shared/SetupActionButton";
+import { ShiftBadge } from "./shared/ShiftBadge";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -273,7 +274,7 @@ export function TransferView({
                             <td>
                               <div className="d-flex align-items-center">
                                 <i
-                                  className={classNames("bi", "me-2", {
+                                  className={clsx("bi", "me-2", {
                                     "bi-arrow-right-circle text-success":
                                       transfer.type === "handover",
                                     "bi-arrow-left-circle text-info": transfer.type !== "handover",
@@ -327,13 +328,9 @@ export function TransferView({
                             </td>
                             <td>
                               <div className="d-flex align-items-center gap-2">
-                                <Badge className={fromShift.className} pill>
-                                  {fromShift.emoji} {fromShift.name}
-                                </Badge>
+                                <ShiftBadge shift={fromShift} showEmoji showName pill showTooltip={false} />
                                 <i className="bi bi-arrow-right text-muted"></i>
-                                <Badge className={toShift.className} pill>
-                                  {toShift.emoji} {toShift.name}
-                                </Badge>
+                                <ShiftBadge shift={toShift} showEmoji showName pill showTooltip={false} />
                               </div>
                             </td>
                           </tr>

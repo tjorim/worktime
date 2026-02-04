@@ -1,13 +1,12 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useId, useMemo } from "react";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
-import classNames from "classnames";
+import clsx from "clsx";
 import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
@@ -16,9 +15,9 @@ import {
   dayjs,
   formatYYWWD,
   getISOWeekYear2Digit,
-  getLocalizedShiftTime,
 } from "../../utils/dateTimeUtils";
 import { calculateShift } from "../../utils/shiftCalculations";
+import { ShiftBadge } from "../shared/ShiftBadge";
 
 interface ScheduleViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -47,7 +46,7 @@ export function ScheduleView({
   viewingScheduleType: propViewingScheduleType,
 }: ScheduleViewProps) {
   const datePickerId = useId();
-  const { settings, scheduleType: userScheduleType } = useSettings();
+  const { scheduleType: userScheduleType } = useSettings();
 
   // Use prop if provided, otherwise fall back to user's schedule type
   const scheduleType = propViewingScheduleType ?? userScheduleType;
@@ -208,7 +207,7 @@ export function ScheduleView({
                   return (
                     <th
                       key={day.format("YYYY-MM-DD")}
-                      className={classNames("text-center", isToday && "today-column")}
+                      className={clsx("text-center", isToday && "today-column")}
                       aria-label={`${day.format("dddd, MMM D")}${isToday ? " (today)" : ""}`}
                     >
                       <div className="fw-semibold">{day.format("ddd")}</div>
@@ -257,42 +256,14 @@ export function ScheduleView({
                     return (
                       <td
                         key={day.format("YYYY-MM-DD")}
-                        className={classNames("text-center", isToday && "today-column")}
+                        className={clsx("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams
                             ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
                             : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
                         }
                       >
-                        {shift.isWorking && (
-                          <OverlayTrigger
-                            placement="bottom"
-                            overlay={
-                              <Tooltip
-                                id={`schedule-tooltip-${teamNumber}-${day.format("YYYY-MM-DD")}`}
-                              >
-                                <strong>Shift: {shift.displayCode}</strong>
-                                <br />
-                                {shift.name} shift
-                                <br />
-                                <em>
-                                  {shift.name} -{" "}
-                                  {getLocalizedShiftTime(
-                                    shift.start,
-                                    shift.end,
-                                    settings.timeFormat,
-                                  )}
-                                </em>
-                              </Tooltip>
-                            }
-                          >
-                            <Badge
-                              className={classNames("shift-code", "cursor-help", shift.className)}
-                            >
-                              {shift.displayCode}
-                            </Badge>
-                          </OverlayTrigger>
-                        )}
+                        {shift.isWorking && <ShiftBadge shift={shift} />}
                       </td>
                     );
                   })}

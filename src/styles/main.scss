@@ -2,7 +2,7 @@
    WORKTIME - MAIN STYLESHEET
    ============================================================================
    Clean, modular SCSS architecture with 4 focused files.
-   
+
    File structure:
    - _variables.scss: CSS variables (--wt-* custom, --bs-* overrides)
    - _utilities.scss: Helper classes, utilities, and modal styles
@@ -20,11 +20,11 @@
   $border-color-dark: #495057
 );
 
+/* Worktime Modular Styles */
+@use "variables";
+@use "utilities";
+@use "calendar";
+@use "shifts";
+
 /* Bootstrap Icons */
 @import "bootstrap-icons/font/bootstrap-icons.css";
-
-/* Worktime Modular Styles */
-@import "variables";
-@import "utilities";
-@import "calendar";
-@import "shifts";

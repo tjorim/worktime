@@ -34,31 +34,26 @@
 .shift-morning {
   background-color: var(--wt-shift-morning);
   color: var(--wt-shift-morning-text);
-  border: 1px solid var(--wt-shift-morning-text);
 }
 
 .shift-late {
   background-color: var(--wt-shift-late);
   color: var(--wt-shift-late-text);
-  border: 1px solid var(--wt-shift-late-text);
 }
 
 .shift-day {
   background-color: var(--wt-shift-day);
   color: var(--wt-shift-day-text);
-  border: 1px solid var(--wt-shift-day-text);
 }
 
 .shift-night {
   background-color: var(--wt-shift-night);
   color: var(--wt-shift-night-text);
-  border: 1px solid var(--wt-shift-night-text);
 }
 
 .shift-off {
   background-color: var(--wt-shift-off);
   color: var(--wt-shift-off-text);
-  border: 1px solid var(--wt-shift-off-text);
 }
 
 /* Higher specificity for shift badges to override Bootstrap defaults */
@@ -205,7 +200,7 @@
 .timeline-code {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--bs-secondary-color);
 }
 
 /* ============================================================================
@@ -388,7 +383,7 @@
    DARK MODE OVERRIDES
    ========================================================================= */
 
-@include color-mode(dark) {
+[data-bs-theme="dark"] {
   .schedule-table th,
   .schedule-table .team-header {
     background-color: var(--bs-table-bg, #23272b);

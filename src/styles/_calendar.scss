@@ -342,7 +342,7 @@
    DARK MODE OVERRIDES
    ========================================================================= */
 
-@include color-mode(dark) {
+[data-bs-theme="dark"] {
   .team-card-interactive:hover,
   .team-card-interactive:focus {
     background-color: var(--bs-body-bg, #181a1b);

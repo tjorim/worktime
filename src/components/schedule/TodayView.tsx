@@ -7,8 +7,9 @@ import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import classNames from "classnames";
+import clsx from "clsx";
 import type { Dayjs } from "dayjs";
+import { ShiftBadge } from "../shared/ShiftBadge";
 import type { ScheduleOption } from "../../data/rosters";
 import { useEventStore } from "../../contexts/EventStoreContext";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
@@ -86,24 +87,7 @@ function TeamCard({
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
         </div>
-        <OverlayTrigger
-          placement="top"
-          overlay={
-            <Tooltip id={`shift-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Shift Code: {shift.displayCode}</strong>
-              <br />
-              <>
-                {shift.emoji} <em>{shift.name}</em>
-                <br />
-                {shiftTimeLabel}
-              </>
-            </Tooltip>
-          }
-        >
-          <Badge className={classNames("shift-code", "cursor-help", shift.className)}>
-            {shift.displayCode}
-          </Badge>
-        </OverlayTrigger>
+        <ShiftBadge shift={shift} />
       </div>
       <div className="text-muted small">
         {shift.name}
@@ -133,7 +117,7 @@ function TeamCard({
   if (onTeamClick) {
     return (
       <Card
-        className={classNames("team-card-interactive", "w-100", isMyTeam && "my-team")}
+        className={clsx("team-card-interactive", "w-100", isMyTeam && "my-team")}
         onClick={() => onTeamClick(shiftResult.teamNumber, scheduleType)}
         role="button"
         aria-label={

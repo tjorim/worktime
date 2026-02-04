@@ -83,6 +83,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     };
     return shifts[code] || shifts.M;
   }),
+  getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
 }));
 
 vi.mock("../../src/utils/config", () => ({

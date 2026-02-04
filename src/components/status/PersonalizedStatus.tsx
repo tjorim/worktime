@@ -1,12 +1,10 @@
 import { useId, useMemo } from "react";
-import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
-import classNames from "classnames";
 import type { ScheduleOption } from "../../data/rosters";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
@@ -25,6 +23,7 @@ import {
 } from "../../utils/shiftCalculations";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
+import { ShiftBadge } from "../shared/ShiftBadge";
 
 interface PersonalizedStatusContentProps {
   myTeam: number;
@@ -94,6 +93,11 @@ export function PersonalizedStatusContent({
               🏷️ Your Team Status
             </Card.Title>
             <div className="flex-grow-1">
+              {hasTeams && (
+                <span className="fw-semibold me-1">
+                  Team {myTeam}:
+                </span>
+              )}
               <OverlayTrigger
                 placement="bottom"
                 overlay={
@@ -108,18 +112,13 @@ export function PersonalizedStatusContent({
                   </Tooltip>
                 }
               >
-                <Badge
-                  className={classNames(
-                    "shift-code",
-                    "shift-badge-lg",
-                    "cursor-help",
-                    currentShift.shift.className,
-                  )}
-                >
-                  {hasTeams
-                    ? `Team ${myTeam}: ${currentShift.shift.name}`
-                    : currentShift.shift.name}
-                </Badge>
+                <ShiftBadge
+                  shift={currentShift.shift}
+                  showName
+                  size="lg"
+                  showTooltip={false}
+                  className="cursor-help"
+                />
               </OverlayTrigger>
               {currentShift.shift.start != null && currentShift.shift.end != null && (
                 <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
