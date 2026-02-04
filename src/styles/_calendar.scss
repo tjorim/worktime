@@ -151,6 +151,12 @@
   background: var(--wt-month-calendar-event-hover);
 }
 
+.month-calendar-event:focus-visible {
+  background: var(--wt-month-calendar-event-hover);
+  outline: 2px solid var(--wt-month-calendar-focus-outline);
+  outline-offset: 1px;
+}
+
 .month-calendar-event-color {
   width: 0.5rem;
   height: 0.5rem;

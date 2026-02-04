@@ -172,6 +172,7 @@
 }
 
 .timeline-flow {
+  display: flex;
   gap: 1rem;
   align-items: center;
   justify-content: center;
@@ -281,7 +282,7 @@
 }
 
 .event-type-badge {
-  color: #000;
+  color: var(--bs-body-color);
 }
 
 /* Event type colors */
