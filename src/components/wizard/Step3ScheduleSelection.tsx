@@ -1,5 +1,5 @@
 import Button from "react-bootstrap/Button";
-import classNames from "classnames";
+import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../../data/rosters";
 
 interface Step3ScheduleSelectionProps {
@@ -64,7 +64,7 @@ export function Step3ScheduleSelection({
           className="order-2 order-sm-1"
         >
           <i
-            className={classNames(
+            className={clsx(
               "bi",
               isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left",
               "me-1",
