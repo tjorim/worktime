@@ -73,16 +73,16 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.shouldShowTeamSelection) {
         return "team-selection";
       }
-      // In change modes, close wizard after schedule selection
-      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
+      // In change-schedule mode, close wizard after schedule selection if no team is needed
+      if (ctx.mode === "change-schedule") {
         return null;
       }
       // In onboarding, continue to vacation allowance
       return "vacation-allowance";
     },
     getPrevStep: (ctx) => {
-      // In change modes, close wizard when going back from schedule
-      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
+      // In change-schedule mode, close wizard when going back
+      if (ctx.mode === "change-schedule") {
         return null;
       }
       return "features";
@@ -103,9 +103,6 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     getPrevStep: (ctx) => {
       if (ctx.mode === "change-team") {
         return null;
-      }
-      if (ctx.mode === "change-schedule" && ctx.shouldShowTeamSelection) {
-        return "schedule-selection";
       }
       return "schedule-selection";
     },

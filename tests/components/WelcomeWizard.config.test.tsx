@@ -142,15 +142,17 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBeNull();
     });
 
-    it("should close wizard when schedule-selection is evaluated in change-team mode (hidden step)", () => {
+    it("should continue to vacation-allowance when schedule-selection is evaluated in change-team mode (hidden step)", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
       };
 
+      // This step is not visible in change-team mode, but if evaluated directly
+      // it falls through to the onboarding path (vacation-allowance)
       const scheduleConfig = getStepConfig("schedule-selection");
       const nextStep = scheduleConfig.getNextStep(context);
-      expect(nextStep).toBeNull();
+      expect(nextStep).toBe("vacation-allowance");
     });
 
     it("should go to team-selection after schedule in change-schedule mode (with team)", () => {
