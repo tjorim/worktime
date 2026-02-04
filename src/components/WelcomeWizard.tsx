@@ -114,7 +114,6 @@ export function WelcomeWizard({
   const isChangeTeamFlow = mode === "change-team";
   const isChangeScheduleFlow = mode === "change-schedule";
   const shouldShowTeamSelection = selectedSchedule ? hasMultipleTeams(selectedSchedule) : false;
-  const hasTeamSelectionStep = shouldShowTeamSelection || isChangeTeamFlow;
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
 
@@ -122,8 +121,6 @@ export function WelcomeWizard({
   const wizardContext: WizardContext = {
     mode,
     shouldShowTeamSelection,
-    isChangeTeamFlow,
-    isChangeScheduleFlow,
   };
 
   // Reset to startStep when modal opens
@@ -277,13 +274,7 @@ export function WelcomeWizard({
               <Step3ScheduleSelection
                 selectedSchedule={selectedSchedule}
                 onScheduleChange={setSelectedSchedule}
-                onPrev={() => {
-                  if (isChangeScheduleFlow) {
-                    onHide();
-                  } else {
-                    prevStep();
-                  }
-                }}
+                onPrev={prevStep}
                 onNext={nextStep}
                 isLoading={isLoading}
                 isChangeScheduleFlow={isChangeScheduleFlow}
@@ -291,7 +282,7 @@ export function WelcomeWizard({
                 firstButtonRef={firstButtonRef}
               />
             )}
-            {currentStep === "team-selection" && hasTeamSelectionStep && (
+            {currentStep === "team-selection" && (
               <Step4TeamSelection
                 teams={teams}
                 teamCount={teamCount}
@@ -299,24 +290,6 @@ export function WelcomeWizard({
                 onSkip={handleSkip}
                 onPrev={prevStep}
                 isLoading={isLoading}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {currentStep === "team-selection" && !hasTeamSelectionStep && (
-              <Step3ScheduleSelection
-                selectedSchedule={selectedSchedule}
-                onScheduleChange={setSelectedSchedule}
-                onPrev={() => {
-                  if (isChangeScheduleFlow) {
-                    onHide();
-                  } else {
-                    prevStep();
-                  }
-                }}
-                onNext={nextStep}
-                isLoading={isLoading}
-                isChangeScheduleFlow={isChangeScheduleFlow}
-                shouldShowTeamSelection={shouldShowTeamSelection}
                 firstButtonRef={firstButtonRef}
               />
             )}

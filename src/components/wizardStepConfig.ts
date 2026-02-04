@@ -33,13 +33,11 @@ export interface StepConfig {
 
 /**
  * Runtime context passed to step configuration functions.
- * Contains mode, schedule selection state, and team visibility logic.
+ * Contains mode and schedule selection state.
  */
 export interface WizardContext {
   mode: WizardMode;
   shouldShowTeamSelection: boolean;
-  isChangeTeamFlow: boolean;
-  isChangeScheduleFlow: boolean;
 }
 
 /**
@@ -76,7 +74,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
         return "team-selection";
       }
       // In change modes, close wizard after schedule selection
-      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
       // In onboarding, continue to vacation allowance
@@ -84,7 +82,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     },
     getPrevStep: (ctx) => {
       // In change modes, close wizard when going back from schedule
-      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
       return "features";
@@ -93,10 +91,10 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   {
     id: "team-selection",
     title: "Choose Your Experience 🎯",
-    isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.isChangeTeamFlow,
+    isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.mode === "change-team",
     getNextStep: (ctx) => {
       // In change modes, close wizard after team selection
-      if (ctx.isChangeScheduleFlow || ctx.isChangeTeamFlow) {
+      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
       // In onboarding, continue to vacation allowance
@@ -138,7 +136,11 @@ export function getStepConfig(stepId: WizardStep): StepConfig {
 export function getStepIndex(stepId: WizardStep, context: WizardContext): number {
   const visibleSteps = getVisibleSteps(context);
   const index = visibleSteps.findIndex((s) => s.id === stepId);
-  return index === -1 ? 1 : index + 1; // 1-based index
+  if (index === -1) {
+    console.warn(`Step "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`);
+    return 1;
+  }
+  return index + 1; // 1-based index
 }
 
 /**

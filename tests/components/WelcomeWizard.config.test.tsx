@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   type WizardContext,
-  type WizardStep,
   getVisibleSteps,
   getTotalSteps,
   getStepIndex,
@@ -24,8 +23,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -43,8 +40,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -61,8 +56,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -74,8 +67,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -87,8 +78,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -102,8 +91,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const welcomeConfig = getStepConfig("welcome");
@@ -115,8 +102,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const featuresConfig = getStepConfig("features");
@@ -128,8 +113,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -141,8 +124,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -154,8 +135,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -167,8 +146,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -180,8 +157,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -193,8 +168,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -206,8 +179,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const vacationConfig = getStepConfig("vacation-allowance");
@@ -221,8 +192,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const featuresConfig = getStepConfig("features");
@@ -234,8 +203,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -247,8 +214,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -260,8 +225,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -273,8 +236,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const vacationConfig = getStepConfig("vacation-allowance");
@@ -286,8 +247,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const vacationConfig = getStepConfig("vacation-allowance");
@@ -301,8 +260,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -313,8 +270,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -325,8 +280,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -337,8 +290,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -349,8 +300,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -363,8 +312,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       expect(getStepIndex("welcome", context)).toBe(1);
@@ -378,8 +325,6 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
       };
 
       expect(getStepIndex("welcome", context)).toBe(1);
@@ -392,101 +337,9 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
       };
 
       expect(getStepIndex("team-selection", context)).toBe(1);
-    });
-  });
-
-  describe("Step Configuration - Benefits Validation", () => {
-    it("validates that configuration is declarative and centralized", () => {
-      const sampleStepConfig = {
-        id: "welcome",
-        title: "Welcome to Worktime! 👋",
-        isVisible: (ctx: WizardContext) => ctx.mode === "onboarding",
-        getNextStep: () => "features" as WizardStep | null,
-        getPrevStep: () => null as WizardStep | null,
-      };
-
-      const requiredProps = ["id", "title", "isVisible", "getNextStep", "getPrevStep"];
-      requiredProps.forEach((prop) => {
-        expect(sampleStepConfig).toHaveProperty(prop);
-      });
-    });
-
-    it("validates that step visibility is computed from configuration", () => {
-      const onboardingContext: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
-      };
-      const onboardingSteps = getVisibleSteps(onboardingContext);
-      expect(onboardingSteps).toHaveLength(5);
-
-      const changeTeamContext: WizardContext = {
-        mode: "change-team",
-        shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
-      };
-      const changeTeamSteps = getVisibleSteps(changeTeamContext);
-      expect(changeTeamSteps).toHaveLength(1);
-    });
-
-    it("validates that navigation is derived from configuration", () => {
-      const onboardingContext: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
-      };
-
-      const welcomeNext = getStepConfig("welcome").getNextStep(onboardingContext);
-      expect(welcomeNext).toBe("features");
-
-      const featuresPrev = getStepConfig("features").getPrevStep(onboardingContext);
-      expect(featuresPrev).toBe("welcome");
-
-      const changeScheduleContext: WizardContext = {
-        mode: "change-schedule",
-        shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: true,
-      };
-      const scheduleNext = getStepConfig("schedule-selection").getNextStep(changeScheduleContext);
-      expect(scheduleNext).toBeNull();
-    });
-
-    it("validates that step counting is automatic from visible steps", () => {
-      const onboardingWithTeam: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: true,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
-      };
-      expect(getTotalSteps(onboardingWithTeam)).toBe(5);
-
-      const onboardingWithoutTeam: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: false,
-        isChangeTeamFlow: false,
-        isChangeScheduleFlow: false,
-      };
-      expect(getTotalSteps(onboardingWithoutTeam)).toBe(4);
-
-      const changeTeam: WizardContext = {
-        mode: "change-team",
-        shouldShowTeamSelection: false,
-        isChangeTeamFlow: true,
-        isChangeScheduleFlow: false,
-      };
-      expect(getTotalSteps(changeTeam)).toBe(1);
-
-      // Validate step indexing
-      expect(getStepIndex("schedule-selection", onboardingWithTeam)).toBe(3);
     });
   });
 });
