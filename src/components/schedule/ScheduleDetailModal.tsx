@@ -7,7 +7,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
-import classNames from "classnames";
+import clsx from "clsx";
+import { ShiftBadge } from "../shared/ShiftBadge";
 import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
@@ -105,7 +106,7 @@ export function ScheduleDetailModal({
       <Modal.Header closeButton>
         <Modal.Title>
           <i
-            className={classNames(
+            className={clsx(
               "bi",
               hasTeams ? "bi-people" : "bi-calendar-week",
               "me-2",
@@ -132,10 +133,7 @@ export function ScheduleDetailModal({
                       Off Duty
                     </Badge>
                   ) : (
-                    <Badge className={currentStatus.shift.className} pill>
-                      <i className="bi bi-briefcase me-1"></i>
-                      {currentStatus.shift.name}
-                    </Badge>
+                    <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
                   )}
                   <small className="text-muted">{currentStatus.date.format("dddd, MMM D")}</small>
                 </div>
@@ -143,9 +141,7 @@ export function ScheduleDetailModal({
               {nextShift && (
                 <div className="text-end">
                   <small className="text-muted d-block">Next Shift</small>
-                  <Badge className={nextShift.shift.className} pill>
-                    {nextShift.shift.name}
-                  </Badge>
+                  <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
               )}
@@ -196,9 +192,7 @@ export function ScheduleDetailModal({
                           Off
                         </Badge>
                       ) : (
-                        <Badge className={day.shift.className} pill>
-                          {day.shift.name}
-                        </Badge>
+                        <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
                       )}
                     </td>
                     <td>

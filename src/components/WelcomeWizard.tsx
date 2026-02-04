@@ -7,7 +7,7 @@ import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
@@ -456,7 +456,7 @@ export function WelcomeWizard({
             className="order-2 order-sm-1"
           >
             <i
-              className={classNames(
+              className={clsx(
                 "bi",
                 isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left",
                 "me-1",

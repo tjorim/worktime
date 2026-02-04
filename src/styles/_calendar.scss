@@ -1,0 +1,370 @@
+/* ============================================================================
+   CALENDAR COMPONENTS
+   ============================================================================
+   All calendar-related styling including month calendar, working calendar,
+   context menus, and calendar interactions
+   ========================================================================= */
+
+/* ============================================================================
+   MONTH CALENDAR
+   ========================================================================= */
+
+.month-calendar {
+  background: var(--wt-month-calendar-bg);
+  border-radius: 0.75rem;
+}
+
+.month-calendar-header {
+  gap: 1rem;
+}
+
+.month-calendar-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.month-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.month-calendar-weekday {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: var(--wt-month-calendar-weekday-text);
+}
+
+/* ============================================================================
+   CALENDAR DAY CELLS
+   ========================================================================= */
+
+.month-calendar-day {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.75rem;
+  border: 1px solid var(--wt-month-calendar-border);
+  background: var(--wt-month-calendar-day-bg);
+  min-height: 140px;
+  padding: 0.25rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.month-calendar-day.is-other-month {
+  background: var(--wt-month-calendar-day-other);
+  color: var(--wt-month-calendar-day-other-text);
+}
+
+.month-calendar-day.is-weekend {
+  background: var(--wt-month-calendar-day-weekend);
+}
+
+.month-calendar-day.is-public-holiday {
+  border-color: var(--wt-month-calendar-public-holiday-border);
+  background: var(--wt-month-calendar-public-holiday-bg);
+}
+
+.month-calendar-day.is-school-holiday {
+  border-color: var(--wt-month-calendar-school-holiday-border);
+  background: var(--wt-month-calendar-school-holiday-bg);
+}
+
+.month-calendar-day.is-public-holiday.is-school-holiday {
+  background: linear-gradient(
+    135deg,
+    var(--wt-month-calendar-public-holiday-bg),
+    var(--wt-month-calendar-school-holiday-bg)
+  );
+}
+
+.month-calendar-day.is-payday {
+  border-color: var(--wt-month-calendar-payday-border);
+  background: var(--wt-month-calendar-payday-bg);
+}
+
+.month-calendar-day.is-today {
+  border-color: var(--wt-month-calendar-today-border);
+  background: var(--wt-month-calendar-today-bg);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px var(--wt-month-calendar-today-shadow);
+}
+
+.month-calendar-day-header {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 600;
+  color: inherit;
+}
+
+.month-calendar-day-number {
+  font-size: 0.95rem;
+}
+
+.month-calendar-day-indicators {
+  font-size: 0.95rem;
+  display: inline-flex;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.month-calendar-day-indicator {
+  line-height: 1;
+}
+
+/* ============================================================================
+   CALENDAR EVENTS
+   ========================================================================= */
+
+.month-calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem 0.35rem 0.5rem;
+  flex: 1;
+}
+
+.month-calendar-event {
+  border: none;
+  background: var(--wt-month-calendar-event-bg);
+  border-radius: 0.5rem;
+  padding: 0.2rem 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  text-align: left;
+  color: var(--wt-month-calendar-event-text);
+  cursor: pointer;
+}
+
+.month-calendar-event:hover {
+  background: var(--wt-month-calendar-event-hover);
+}
+
+.month-calendar-event:focus-visible {
+  background: var(--wt-month-calendar-event-hover);
+  outline: 2px solid var(--wt-month-calendar-focus-outline);
+  outline-offset: 1px;
+}
+
+.month-calendar-event-color {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.month-calendar-event-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.month-calendar-event-symbol {
+  font-size: 0.7rem;
+}
+
+.month-calendar-event-overflow,
+.month-calendar-event-empty {
+  font-size: 0.7rem;
+}
+
+/* Shift badge in calendar cells */
+.month-calendar-shift-badge {
+  display: inline-block;
+  padding: 0.125rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ============================================================================
+   WORKING CALENDAR
+   ========================================================================= */
+
+.working-schedule-calendar .calendar-grid {
+  margin-bottom: 0;
+}
+
+.calendar-day-cell {
+  vertical-align: top;
+  position: relative;
+  min-height: 80px;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.calendar-day-cell.today-cell {
+  background-color: var(--wt-month-calendar-today-bg);
+  border: 2px solid var(--wt-month-calendar-today-border) !important;
+  box-shadow: 0 0 0 1px var(--wt-month-calendar-today-shadow);
+}
+
+.calendar-day-cell.focused-cell {
+  outline: 2px solid var(--wt-month-calendar-focus-outline);
+  outline-offset: -2px;
+}
+
+.calendar-day-cell.weekend-cell {
+  background-color: var(--wt-month-calendar-day-weekend);
+}
+
+.calendar-day-cell.public-holiday-cell {
+  background-color: var(--wt-month-calendar-public-holiday-bg);
+  border-left: 3px solid var(--wt-month-calendar-public-holiday-border) !important;
+}
+
+.calendar-day-cell.time-off-cell {
+  background-color: var(--wt-calendar-time-off-bg);
+}
+
+.calendar-day-cell.text-muted {
+  opacity: 0.5;
+}
+
+.calendar-legend .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* ============================================================================
+   TEAM CARDS
+   ========================================================================= */
+
+/* Header styling */
+.header-icon {
+  font-size: 1.25rem;
+}
+
+/* Team card hover effects */
+.team-card-interactive {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background: none;
+}
+
+.team-card-interactive:hover,
+.team-card-interactive:focus {
+  background-color: var(--bs-body-bg, #fff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+/* Team card header - ensures content stays above decorative elements */
+.team-card-header {
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================================================
+   CONTEXT MENU
+   ========================================================================= */
+
+.context-menu {
+  position: fixed;
+  z-index: 1060; /* Above modals (1055) */
+  background: var(--wt-context-menu-bg);
+  border: 1px solid var(--wt-context-menu-border);
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem var(--wt-context-menu-shadow);
+  min-width: 160px;
+  padding: 0.25rem 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--wt-context-menu-item-text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover,
+  &:focus {
+    background: var(--wt-context-menu-item-hover);
+    outline: none;
+  }
+
+  &.danger {
+    color: var(--bs-danger);
+
+    &:hover,
+    &:focus {
+      background: rgba(var(--bs-danger-rgb), 0.1);
+    }
+  }
+
+  i {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================================================= */
+
+@media (width <= 768px) {
+  .month-calendar-grid {
+    gap: 0.35rem;
+  }
+
+  .month-calendar-day {
+    min-height: 110px;
+  }
+
+  .month-calendar-events {
+    padding: 0.15rem 0.25rem 0.35rem;
+  }
+}
+
+/* ============================================================================
+   DARK MODE OVERRIDES
+   ========================================================================= */
+
+[data-bs-theme="dark"] {
+  .team-card-interactive:hover,
+  .team-card-interactive:focus {
+    background-color: var(--bs-body-bg, #181a1b);
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-tabs .nav-link {
+    color: #adb5bd;
+  }
+
+  .nav-tabs .nav-link.active {
+    font-weight: 600;
+  }
+
+  .nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useId } from "react";
 import { createPortal } from "react-dom";
-import classNames from "classnames";
+import clsx from "clsx";
 
 export interface ContextMenuItem {
   label: string;
@@ -155,11 +155,11 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
           key={`${menuId}-item-${index}`}
           type="button"
           role="menuitem"
-          className={classNames("context-menu-item", item.variant === "danger" && "danger")}
+          className={clsx("context-menu-item", item.variant === "danger" && "danger")}
           onClick={() => handleItemClick(item)}
           aria-label={item.label}
         >
-          {item.icon && <i className={classNames("bi", item.icon)} aria-hidden="true"></i>}
+          {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
           {item.label}
         </button>
       ))}

@@ -794,8 +794,8 @@ describe("WelcomeWizard", () => {
         expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
       );
 
-      // Open Settings panel
-      const settingsButton = screen.getByRole("button", { name: /Settings/i });
+      // Open Settings panel (match exact "Settings", not "Reset Settings")
+      const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
       await user.click(settingsButton);
 
       // Click Change Schedule button

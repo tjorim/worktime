@@ -257,13 +257,9 @@ describe("CurrentStatus Component", () => {
     it("should show current shift information when team is selected", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      // Use a function matcher to find an element containing both 'Team 1' and 'Morning'
-      const teamMorning = screen.getAllByText((content, _node) => {
-        const hasTeam = /Team\s*1/.test(content);
-        const hasMorning = /Morning/.test(content);
-        return hasTeam && hasMorning;
-      });
-      expect(teamMorning.length).toBeGreaterThan(0);
+      // Team label and shift name are now separate elements
+      expect(screen.getByText("Team 1:")).toBeInTheDocument();
+      expect(screen.getAllByText("Morning").length).toBeGreaterThan(0);
 
       // Also check for hours somewhere in the document (localized format uses en-dash)
       expect(screen.getAllByText("07:00–15:00").length).toBeGreaterThan(0);
@@ -468,7 +464,8 @@ describe("CurrentStatus Component", () => {
     it("should handle different team numbers correctly", () => {
       renderWithProviders(<CurrentStatus myTeam={4} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText("Team 4: Morning")).toBeInTheDocument();
+      expect(screen.getByText("Team 4:")).toBeInTheDocument();
+      expect(screen.getAllByText("Morning").length).toBeGreaterThan(0);
       expect(shiftCalculations.calculateShift).toHaveBeenCalledWith(
         expect.any(Object),
         4,
@@ -582,7 +579,7 @@ describe("CurrentStatus Component", () => {
     it("should render badges with correct classes", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      const shiftBadges = screen.getAllByText("Team 1: Morning");
+      const shiftBadges = screen.getAllByText("Morning");
       const mainShiftBadge = shiftBadges.find((badge) =>
         badge.classList.contains("shift-badge-lg"),
       );
@@ -590,6 +587,7 @@ describe("CurrentStatus Component", () => {
       expect(mainShiftBadge).toHaveClass("badge");
       expect(mainShiftBadge).toHaveClass("shift-code");
       expect(mainShiftBadge).toHaveClass("shift-badge-lg");
+      expect(screen.getByText("Team 1:")).toBeInTheDocument();
     });
   });
 });

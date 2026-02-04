@@ -2,7 +2,7 @@ import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useId } from "react";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 
@@ -13,20 +13,25 @@ const getSizeClass = (size: "sm" | "md" | "lg"): string => {
   return "";
 };
 
-// Helper: Determine badge content based on variant
+// Helper: Build badge content from boolean flags
 const getBadgeContent = (
-  variant: "code" | "name" | "both",
-  displayCode: string,
-  displayName: string,
+  shift: ShiftResult["shift"],
+  showEmoji: boolean,
+  showCode: boolean,
+  showName: boolean,
 ): string => {
-  if (variant === "name") return displayName;
-  if (variant === "both") return `${displayCode} ${displayName}`;
-  return displayCode;
+  const parts: string[] = [];
+  if (showEmoji) parts.push(shift.emoji);
+  if (showCode) parts.push(shift.displayCode);
+  if (showName) parts.push(shift.name);
+  return parts.join(" ");
 };
 
 interface ShiftBadgeProps {
   shift: ShiftResult["shift"];
-  variant?: "code" | "name" | "both";
+  showEmoji?: boolean;
+  showCode?: boolean;
+  showName?: boolean;
   pill?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -36,31 +41,39 @@ interface ShiftBadgeProps {
 /**
  * Reusable shift badge component with styling and optional tooltip.
  *
+ * Content is controlled by boolean flags: `showEmoji`, `showCode`, `showName`.
+ * By default only `showCode` is true, displaying the shift display code (e.g., "M").
+ *
  * @param shift - Shift object with code, name, className, etc.
- * @param variant - What to display: 'code' (default), 'name', or 'both'
+ * @param showEmoji - Show shift emoji (e.g., "🌅")
+ * @param showCode - Show shift display code (default: true when showName is false)
+ * @param showName - Show shift name (e.g., "Morning")
  * @param pill - Whether to use pill styling
  * @param size - Badge size: 'sm', 'md' (default), or 'lg'
  * @param className - Additional CSS classes
- * @param showTooltip - Whether to show tooltip on hover (default: true for 'code' variant)
+ * @param showTooltip - Whether to show tooltip on hover (default: true when only showCode is active)
  * @returns Badge component with shift styling
  */
 export function ShiftBadge({
   shift,
-  variant = "code",
+  showEmoji = false,
+  showName = false,
+  showCode = !showName,
   pill = false,
   size = "md",
   className = "",
-  showTooltip = variant === "code",
+  showTooltip = showCode && !showName && !showEmoji,
 }: ShiftBadgeProps) {
   const tooltipId = useId();
   const formattedTime = useFormattedShiftTime(shift);
 
   const sizeClass = getSizeClass(size);
-  const content = getBadgeContent(variant, shift.displayCode, shift.name);
+  const content = getBadgeContent(shift, showEmoji, showCode, showName);
 
   const badge = (
     <Badge
-      className={classNames(
+      bg=""
+      className={clsx(
         "shift-code",
         sizeClass,
         showTooltip && "cursor-help",
@@ -79,7 +92,7 @@ export function ShiftBadge({
         placement="top"
         overlay={
           <Tooltip id={tooltipId}>
-            {shift.name}
+            {shift.emoji} {shift.name}
             {shift.isWorking && (
               <>
                 <br />

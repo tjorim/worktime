@@ -1,0 +1,123 @@
+/* ============================================================================
+   UTILITIES
+   ============================================================================
+   Helper classes and utility styles
+   ========================================================================= */
+
+/* ============================================================================
+   BASE HTML ELEMENTS
+   ========================================================================= */
+
+/* Prevent horizontal scroll on mobile */
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Account for fixed navbar height */
+body {
+  padding-top: 60px;
+}
+
+/* Calendar legend popover - below fixed navbar (1030) */
+#calendar-legend-popover {
+  z-index: 1020;
+}
+
+.calendar-legend-emoji {
+  font-size: 0.875rem;
+}
+
+/* ============================================================================
+   HELPER CLASSES
+   ========================================================================= */
+
+.cursor-help {
+  cursor: help;
+}
+
+.help-underline {
+  cursor: help;
+  text-decoration: underline dotted;
+}
+
+.date-picker-auto {
+  width: auto;
+}
+
+.toast-icon {
+  font-size: 1.2em;
+}
+
+.icon-display {
+  font-size: 3rem;
+}
+
+.icon-feature {
+  font-size: 1.5rem;
+}
+
+.icon-lg {
+  font-size: 2rem;
+}
+
+.progress-thin {
+  height: 8px;
+}
+
+/* Text utilities */
+.textarea-mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+}
+
+/* ============================================================================
+   LAYOUT UTILITIES
+   ========================================================================= */
+
+/* Remove top border radius from main component cards in tab content for seamless look, but not nested cards */
+.tab-content .card:not(.card .card) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* Also remove top border radius from card headers in main tab content cards */
+.tab-content .card:not(.card .card) > .card-header {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ============================================================================
+   MODALS AND DIALOGS
+   ========================================================================= */
+
+/* PWA install prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 1050;
+  display: none;
+}
+
+@media (width >= 768px) {
+  .install-prompt {
+    left: auto;
+    right: 1rem;
+    max-width: 300px;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================================================= */
+
+@media (width <= 768px) {
+  /* Ensure modals fit on small screens */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
+

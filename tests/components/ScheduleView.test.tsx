@@ -92,6 +92,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     isWorking: true,
     className: "shift-morning",
   })),
+  getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
 }));
 
 const defaultProps = {

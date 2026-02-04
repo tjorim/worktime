@@ -2,7 +2,7 @@ import { useId } from "react";
 import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useSettings } from "../contexts/SettingsContext";
 import { useFormattedShiftTime } from "../hooks/useFormattedShiftTime";
 import type { ShiftResult } from "../utils/shiftCalculations";
@@ -191,7 +191,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             }
           >
             <Badge
-              className={classNames(
+              className={clsx(
                 currentWorkingTeam.shift.className,
                 "timeline-current-badge",
                 "timeline-badge",
