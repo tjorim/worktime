@@ -226,44 +226,44 @@ npm run test         # Run test suite
 - **Static Hosting**: Deployable to any static hosting service
 - **Performance**: Lighthouse monitoring and optimization
 
-## What's New in v4.5+
+## Recent Improvements
 
-### 🗓️ Calendar View (v4.5.1)
+### 🗓️ Calendar View
 
-- **Monthly Calendar**: New calendar tab displaying working days with shift badges
+- **Monthly Calendar**: Calendar tab displaying working days with shift badges
 - **Event Overlays**: Time-off events, public holidays, school holidays, and paydays
 - **Calendar Legend**: Popover legend explaining event colors and day indicators
 - **Empty State**: Helpful guidance when no schedule selected
 
-### ⌨️ Keyboard Shortcuts (v4.5.1)
+### ⌨️ Keyboard Shortcuts
 
 - **Navigation**: Tab switching (C/S/T/O), date navigation (arrows, Ctrl+H/J/K)
 - **Quick Actions**: Settings (Ctrl+,), import (Ctrl+I), export (Ctrl+S)
 - **Editing**: Delete events, cancel edits (Escape), undo/redo (Ctrl+Z/Y)
 - **Discoverability**: Keyboard shortcuts modal accessible via Settings
 
-### 📊 Vacation Statistics (v4.4.0)
+### 📊 Vacation Statistics
 
 - **Allowance Tracking**: Configure annual vacation in days or hours
 - **Usage Analytics**: Real-time calculation of used vs. remaining vacation
 - **Progress Visualization**: Interactive progress bar and breakdown table
 - **Year Filtering**: Filter vacation data by year with automatic detection
 
-### 📅 Multi-Schedule Support (v4.4.0)
+### 📅 Multi-Schedule Support
 
 - **Schedule Selection**: Choose from 5-shift, 9-5, or weekend-shift patterns
 - **Cross-Schedule Viewing**: View any schedule type from any account
 - **Onboarding Wizard**: Extended 4-step wizard with vacation setup
 - **Schedule-Generic Components**: All components work with any schedule type
 
-### 🚀 Performance & Architecture (v4.5.0)
+### 🚀 Performance & Architecture
 
 - **Component Refactoring**: Split CurrentStatus into PersonalizedStatus and GenericStatus
 - **Shared Components**: Reusable ShiftBadge, ShiftTimeDisplay, CountdownBadge
 - **Clean Architecture**: Better separation of concerns with status/ and shared/ directories
 - **60x Faster Updates**: Live time updates every minute instead of every second
 
-### 🎨 Enhanced UI (v4.5.1)
+### 🎨 Enhanced UI
 
 - **Fixed Navbar**: Bootstrap navbar with proper theming and positioning
 - **Tab Reorganization**: Unified Schedule tab with Today and Schedule views
