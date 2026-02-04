@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -7,6 +6,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { CONFIG } from "../utils/config";
+import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
@@ -16,6 +16,7 @@ interface SettingsPanelProps {
   onHide: () => void;
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
 }
 
 /**
@@ -25,13 +26,20 @@ interface SettingsPanelProps {
  * @param onHide - Callback invoked to hide the settings panel
  * @param onShowAbout - Optional callback invoked to show the About modal
  * @param onChangeSchedule - Optional callback invoked when the user wants to change the schedule
+ * @param onChangeTeam - Optional callback invoked when the user wants to change their team
  * @returns The rendered settings panel element
  */
-export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: SettingsPanelProps) {
+export function SettingsPanel({
+  show,
+  onHide,
+  onShowAbout,
+  onChangeSchedule,
+  onChangeTeam,
+}: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const toast = useToast();
-  const { settings, updateTimeFormat, updateTheme, resetSettings } = useSettings();
+  const { settings, scheduleType, updateTimeFormat, updateTheme, resetSettings } = useSettings();
 
   const handleChangelogClick = () => {
     setShowChangelog(true);
@@ -70,6 +78,11 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
     // Close first to avoid stacked overlays if the callback opens another UI surface
     onHide();
     onChangeSchedule?.();
+  };
+
+  const handleChangeTeam = () => {
+    onHide();
+    onChangeTeam?.();
   };
 
   // Share handler
@@ -151,29 +164,6 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                     </ButtonGroup>
                   </div>
                 </ListGroup.Item>
-                <ListGroup.Item className="">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium text-muted">
-                        Notifications
-                        <Badge bg="secondary" className="ms-2 small">
-                          Coming Soon
-                        </Badge>
-                      </div>
-                      <small className="text-muted">Shift reminders and alerts</small>
-                    </div>
-                    <ButtonGroup size="sm">
-                      <Button variant="outline-secondary" disabled>
-                        <i className="bi bi-bell me-1"></i>
-                        On
-                      </Button>
-                      <Button variant="secondary" disabled>
-                        <i className="bi bi-bell-slash me-1"></i>
-                        Off
-                      </Button>
-                    </ButtonGroup>
-                  </div>
-                </ListGroup.Item>
               </ListGroup>
             </div>
           </div>
@@ -240,7 +230,7 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                       <div>
                         <div className="fw-medium">
                           <i className="bi bi-calendar-week me-2"></i>
-                          Change Schedule
+                          Select Schedule
                         </div>
                         <small className="text-muted">Pick a different roster</small>
                       </div>
@@ -248,21 +238,20 @@ export function SettingsPanel({ show, onHide, onShowAbout, onChangeSchedule }: S
                     </div>
                   </ListGroup.Item>
                 )}
-                <ListGroup.Item action disabled>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-calendar-event me-2"></i>
-                        Export Schedule{" "}
-                        <Badge bg="secondary" className="ms-2">
-                          Coming Soon
-                        </Badge>
+                {onChangeTeam && hasMultipleTeams(scheduleType) && (
+                  <ListGroup.Item action onClick={handleChangeTeam}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-person-gear me-2"></i>
+                          Select Team
+                        </div>
+                        <small className="text-muted">Switch to a different team</small>
                       </div>
-                      <small className="text-muted">Download as calendar file</small>
+                      <i className="bi bi-chevron-right text-muted"></i>
                     </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
+                  </ListGroup.Item>
+                )}
                 <ListGroup.Item action onClick={handleShareApp}>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>

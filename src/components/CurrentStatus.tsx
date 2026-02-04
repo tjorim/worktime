@@ -1,11 +1,9 @@
 import { useId, useMemo } from "react";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
-import { useSetupAction } from "../hooks/useSetupAction";
 import { useLiveTime } from "../hooks/useLiveTime";
 import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
@@ -19,27 +17,20 @@ interface CurrentStatusProps {
   myTeam: number | null;
   onChangeTeam: () => void;
   onChangeSchedule?: () => void;
-  onShowWhoIsWorking?: () => void;
 }
 
 /**
  * Current Status component displaying shift information.
  *
- * Shows a common header with date/time and action buttons, then renders either
- * personalized content (user's team shifts) or generic content (overview of all teams).
+ * Shows a common header with date/time, then renders either personalized content
+ * (user's team shifts) or generic content (overview of all teams).
  *
  * For single-user schedules (9-5), automatically treats user as team 1.
  * For multi-team schedules, shows generic view if no team selected.
  */
-export function CurrentStatus({
-  myTeam,
-  onChangeTeam,
-  onChangeSchedule,
-  onShowWhoIsWorking,
-}: CurrentStatusProps) {
+export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: CurrentStatusProps) {
   const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
-  const { hasTeams, teamCount } = useSetupAction();
   const liveTime = useLiveTime();
   const today = dayjs();
 
@@ -74,9 +65,6 @@ export function CurrentStatus({
       </Col>
     );
   }
-
-  // Determine which action button to show in header
-  const showChangeTeamButton = effectiveTeam && hasTeams && teamCount > 1;
 
   return (
     <Col className="mb-4">
@@ -113,31 +101,11 @@ export function CurrentStatus({
                 </OverlayTrigger>
               </div>
             </div>
-            <div className="d-flex gap-2">
-              <Button
-                variant="outline-primary"
-                size="sm"
-                onClick={onShowWhoIsWorking}
-                title="See who's working right now"
-                disabled={!onShowWhoIsWorking}
-              >
-                <i className="bi bi-people me-1"></i>
-                Who's On?
-              </Button>
-              {showChangeTeamButton ? (
-                <Button variant="outline-secondary" size="sm" onClick={onChangeTeam}>
-                  <i className="bi bi-person-gear me-1"></i>
-                  Change Team
-                </Button>
-              ) : (
-                <SetupActionButton
-                  onChangeSchedule={onChangeSchedule}
-                  onChangeTeam={onChangeTeam}
-                  size="sm"
-                  showChangeSchedule
-                />
-              )}
-            </div>
+            <SetupActionButton
+              onChangeSchedule={onChangeSchedule}
+              onChangeTeam={onChangeTeam}
+              size="sm"
+            />
           </div>
 
           {/* Timeline Row */}

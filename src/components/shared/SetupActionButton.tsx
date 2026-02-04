@@ -3,12 +3,12 @@ import { useSetupAction } from "../../hooks/useSetupAction";
 
 interface SetupActionButtonProps {
   /**
-   * Callback when user clicks to select/change schedule.
+   * Callback when user clicks to select schedule.
    * Opens the welcome wizard at the schedule selection step.
    */
   onChangeSchedule?: () => void;
   /**
-   * Callback when user clicks to select/change team.
+   * Callback when user clicks to select team.
    * Opens the welcome wizard at the team selection step.
    */
   onChangeTeam?: () => void;
@@ -22,11 +22,6 @@ interface SetupActionButtonProps {
    * Button size (Bootstrap size prop).
    */
   size?: "sm" | "lg";
-  /**
-   * Whether to show "Change Schedule" fallback when no setup action is needed.
-   * Useful for GenericStatus where we always want a schedule-related button.
-   */
-  showChangeSchedule?: boolean;
 }
 
 /**
@@ -34,22 +29,20 @@ interface SetupActionButtonProps {
  *
  * - No schedule selected: Shows "Select Schedule" button (primary)
  * - Schedule selected but needs team: Shows "Select Team" button (primary)
- * - showChangeSchedule=true and setup complete: Shows "Change Schedule" button (outline-secondary)
+ * - Setup complete: Renders null
  *
  * @param onChangeSchedule - Callback to open schedule selection
  * @param onChangeTeam - Callback to open team selection
  * @param mode - Override automatic detection ("auto" or "team")
  * @param size - Button size ("sm" or "lg")
- * @param showChangeSchedule - Show "Change Schedule" fallback when setup is complete
  */
 export function SetupActionButton({
   onChangeSchedule,
   onChangeTeam,
   mode = "auto",
   size,
-  showChangeSchedule = false,
 }: SetupActionButtonProps) {
-  const { needsSchedule, hasTeams, teamCount, buttonText, buttonIcon } = useSetupAction({ mode });
+  const { needsSchedule, needsTeam, buttonText, buttonIcon } = useSetupAction({ mode });
 
   // Primary action: Select Schedule
   if (needsSchedule && onChangeSchedule) {
@@ -66,27 +59,12 @@ export function SetupActionButton({
     );
   }
 
-  // Primary action: Select Team (for multi-team schedules)
-  if (hasTeams && teamCount > 1 && onChangeTeam) {
+  // Primary action: Select Team (for multi-team schedules when no team selected)
+  if (needsTeam && onChangeTeam) {
     return (
       <Button variant="primary" size={size} onClick={onChangeTeam} title="Select your team">
         <i className={`bi ${buttonIcon} me-1`} aria-hidden="true"></i>
         {buttonText}
-      </Button>
-    );
-  }
-
-  // Fallback: Change Schedule (when showChangeSchedule is enabled)
-  if (showChangeSchedule && onChangeSchedule) {
-    return (
-      <Button
-        variant="outline-secondary"
-        size={size}
-        onClick={onChangeSchedule}
-        title="Change your work schedule"
-      >
-        <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-        Change Schedule
       </Button>
     );
   }

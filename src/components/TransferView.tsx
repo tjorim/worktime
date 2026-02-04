@@ -328,9 +328,21 @@ export function TransferView({
                             </td>
                             <td>
                               <div className="d-flex align-items-center gap-2">
-                                <ShiftBadge shift={fromShift} showEmoji showName pill showTooltip={false} />
+                                <ShiftBadge
+                                  shift={fromShift}
+                                  showEmoji
+                                  showName
+                                  pill
+                                  showTooltip={false}
+                                />
                                 <i className="bi bi-arrow-right text-muted"></i>
-                                <ShiftBadge shift={toShift} showEmoji showName pill showTooltip={false} />
+                                <ShiftBadge
+                                  shift={toShift}
+                                  showEmoji
+                                  showName
+                                  pill
+                                  showTooltip={false}
+                                />
                               </div>
                             </td>
                           </tr>

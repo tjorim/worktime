@@ -11,11 +11,7 @@ import type { ScheduleOption } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import {
-  dayjs,
-  formatYYWWD,
-  getISOWeekYear2Digit,
-} from "../../utils/dateTimeUtils";
+import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import { calculateShift } from "../../utils/shiftCalculations";
 import { ShiftBadge } from "../shared/ShiftBadge";
 
