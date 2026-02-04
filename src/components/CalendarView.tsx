@@ -26,8 +26,6 @@ import {
   TIME_LOCATION_FLAG_OPTIONS,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
-  TYPE_FLAGS_SET,
-  TIME_LOCATION_FLAGS_SET,
   DEFAULT_WEEKDAY,
 } from "./timeoff/constants";
 
@@ -170,10 +168,10 @@ export function CalendarView({
 
   const handleTypeFlagChange = (flag: TypeFlag | "none") => {
     if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_SET.has(f)));
+      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f)));
     } else {
       setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TYPE_FLAGS_SET.has(f));
+        const filtered = prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f));
         return [...filtered, flag];
       });
     }
@@ -181,10 +179,10 @@ export function CalendarView({
 
   const handleTimeFlagChange = (flag: TimeLocationFlag | "none") => {
     if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_SET.has(f)));
+      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f)));
     } else {
       setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_SET.has(f));
+        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f));
         return [...filtered, flag];
       });
     }
