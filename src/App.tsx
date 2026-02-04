@@ -11,7 +11,6 @@ import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
-import { dayjs } from "./utils/dateTimeUtils";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
@@ -194,24 +193,20 @@ function AppContent() {
     setShowTeamModal(false);
   };
 
-  const handleShowWhoIsWorking = () => {
-    // Switch to Schedule tab to show who's working
-    setActiveTab("schedule");
-    setCurrentDate(dayjs());
-    showInfo("Switched to Schedule view to see who's working", "👥");
-  };
-
   return (
     <ErrorBoundary>
       <div className="min-vh-100">
         <Container fluid>
-          <Header onShowAbout={() => setShowAbout(true)} onChangeSchedule={handleChangeSchedule} />
+          <Header
+            onShowAbout={() => setShowAbout(true)}
+            onChangeSchedule={handleChangeSchedule}
+            onChangeTeam={handleChangeTeam}
+          />
           <ErrorBoundary>
             <CurrentStatus
               myTeam={myTeam}
               onChangeTeam={handleChangeTeam}
               onChangeSchedule={handleChangeSchedule}
-              onShowWhoIsWorking={handleShowWhoIsWorking}
             />
           </ErrorBoundary>
           <ErrorBoundary>

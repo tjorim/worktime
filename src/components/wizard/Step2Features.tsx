@@ -2,12 +2,13 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
+import type { RefObject } from "react";
 
 interface Step2FeaturesProps {
   onPrev: () => void;
   onNext: () => void;
   isLoading: boolean;
-  firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  firstButtonRef?: RefObject<HTMLButtonElement | null>;
   settingsLocationText: string;
 }
 

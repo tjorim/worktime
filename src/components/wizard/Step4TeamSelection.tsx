@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
+import clsx from "clsx";
 
 interface Step4TeamSelectionProps {
   teams: number[];
@@ -8,6 +9,7 @@ interface Step4TeamSelectionProps {
   onSkip: () => void;
   onPrev: () => void;
   isLoading: boolean;
+  isChangeFlow: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
@@ -17,6 +19,7 @@ export function Step4TeamSelection({
   onSkip,
   onPrev,
   isLoading,
+  isChangeFlow,
   firstButtonRef,
 }: Step4TeamSelectionProps) {
   return (
@@ -31,8 +34,8 @@ export function Step4TeamSelection({
         <p className="small text-muted mb-3">
           Get personalized features like countdown timers and shift progress tracking.
         </p>
-        <Row className="g-2" aria-label="Select your team">
-          {teams.map((team) => (
+        <Row className="g-2" aria-label="Select your team" role="group">
+          {teams.map((team, index) => (
             <Col key={team} xs={6} sm={4} md={4}>
               <Button
                 variant="outline-primary"
@@ -40,7 +43,7 @@ export function Step4TeamSelection({
                 onClick={() => onTeamSelect(team)}
                 disabled={isLoading}
                 aria-label={`Select Team ${team}`}
-                ref={team === 1 ? firstButtonRef : undefined}
+                ref={index === 0 ? firstButtonRef : undefined}
               >
                 Team {team}
               </Button>
@@ -69,7 +72,8 @@ export function Step4TeamSelection({
 
       <div className="d-flex justify-content-start mt-3">
         <Button variant="outline-secondary" size="sm" onClick={onPrev} disabled={isLoading}>
-          <i className="bi bi-arrow-left me-1"></i> Back
+          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>
+          {isChangeFlow ? "Cancel" : "Back"}
         </Button>
       </div>
     </>

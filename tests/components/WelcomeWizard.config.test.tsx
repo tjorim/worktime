@@ -9,7 +9,7 @@ import {
 
 /**
  * Tests for WelcomeWizard configuration-driven step navigation.
- * 
+ *
  * These tests verify that the declarative step configuration correctly handles:
  * - Step visibility in different wizard modes
  * - Navigation between steps based on context
@@ -142,7 +142,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBeNull();
     });
 
-    it("should close wizard after schedule selection in change-team mode (no team)", () => {
+    it("should close wizard when schedule-selection is evaluated in change-team mode (hidden step)", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
@@ -243,7 +243,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(prevStep).toBeNull();
     });
 
-    it("should close wizard when going back from team-selection in change-schedule mode", () => {
+    it("should go back from team-selection to schedule-selection in change-schedule mode", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
@@ -251,7 +251,7 @@ describe("WelcomeWizard Configuration System", () => {
 
       const teamConfig = getStepConfig("team-selection");
       const prevStep = teamConfig.getPrevStep(context);
-      expect(prevStep).toBeNull();
+      expect(prevStep).toBe("schedule-selection");
     });
 
     it("should go back from vacation to team when team selection shown", () => {

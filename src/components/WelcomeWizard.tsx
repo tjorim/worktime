@@ -112,7 +112,7 @@ export function WelcomeWizard({
 
   const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
 
-  const isChangeScheduleFlow = mode === "change-schedule";
+  const isChangeFlow = mode === "change-schedule" || mode === "change-team";
   const shouldShowTeamSelection = selectedSchedule ? hasMultipleTeams(selectedSchedule) : false;
   const teamCount = getTeamCountForOption(selectedSchedule);
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
@@ -207,8 +207,12 @@ export function WelcomeWizard({
 
   const getProgressPercentage = () => {
     const totalSteps = getTotalSteps(wizardContext);
+    if (totalSteps === 0) {
+      return 0;
+    }
     const stepIndex = getStepIndex(effectiveStep, wizardContext);
-    return (stepIndex / totalSteps) * 100;
+    const pct = (stepIndex / totalSteps) * 100;
+    return Math.round(pct * 10) / 10;
   };
 
   const getStepTitle = () => {
@@ -277,7 +281,7 @@ export function WelcomeWizard({
                 onPrev={prevStep}
                 onNext={nextStep}
                 isLoading={isLoading}
-                isChangeScheduleFlow={isChangeScheduleFlow}
+                isChangeFlow={isChangeFlow}
                 shouldShowTeamSelection={shouldShowTeamSelection}
                 firstButtonRef={firstButtonRef}
               />
@@ -289,6 +293,7 @@ export function WelcomeWizard({
                 onSkip={handleSkip}
                 onPrev={prevStep}
                 isLoading={isLoading}
+                isChangeFlow={isChangeFlow}
                 firstButtonRef={firstButtonRef}
               />
             )}

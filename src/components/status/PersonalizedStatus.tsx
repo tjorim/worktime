@@ -93,11 +93,7 @@ export function PersonalizedStatusContent({
               🏷️ Your Team Status
             </Card.Title>
             <div className="flex-grow-1">
-              {hasTeams && (
-                <span className="fw-semibold me-1">
-                  Team {myTeam}:
-                </span>
-              )}
+              {hasTeams && <span className="fw-semibold me-1">Team {myTeam}:</span>}
               <OverlayTrigger
                 placement="bottom"
                 overlay={

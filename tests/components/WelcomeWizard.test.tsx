@@ -606,9 +606,11 @@ describe("WelcomeWizard", () => {
       expect(saved.settings?.vacationAllowance?.amount).toBe(25);
       expect(saved.myTeam).toBe(1);
 
-      // Now open the wizard in change-team mode
-      const changeTeamButton = screen.getByRole("button", { name: /Change Team/i });
-      await user.click(changeTeamButton);
+      // Now open the wizard in change-team mode via Settings panel
+      const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
+      await user.click(settingsButton);
+      const selectTeamButton = screen.getByRole("button", { name: /Select Team/i });
+      await user.click(selectTeamButton);
 
       // Should show the wizard again
       await waitFor(() => expect(screen.getByText(/Choose your team/i)).toBeInTheDocument());
@@ -752,7 +754,7 @@ describe("WelcomeWizard", () => {
       localStorage.clear();
     });
 
-    it("should open Change Schedule wizard when Change Schedule button is clicked", async () => {
+    it("should open Select Schedule wizard when Select Schedule button is clicked", async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -798,12 +800,12 @@ describe("WelcomeWizard", () => {
       const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
       await user.click(settingsButton);
 
-      // Click Change Schedule button
+      // Click Select Schedule button
       await waitFor(() => {
-        const changeScheduleButton = screen.getByRole("button", { name: /Change Schedule/i });
-        expect(changeScheduleButton).toBeInTheDocument();
+        const selectScheduleButton = screen.getByRole("button", { name: /Select Schedule/i });
+        expect(selectScheduleButton).toBeInTheDocument();
       });
-      await user.click(screen.getByRole("button", { name: /Change Schedule/i }));
+      await user.click(screen.getByRole("button", { name: /Select Schedule/i }));
 
       // Should open wizard in change-schedule mode
       await waitFor(() => {

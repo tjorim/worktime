@@ -93,9 +93,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               {currentWorkingTeam ? (
                 <div>
                   {hasTeams && (
-                    <span className="fw-semibold me-1">
-                      Team {currentWorkingTeam.teamNumber}:
-                    </span>
+                    <span className="fw-semibold me-1">Team {currentWorkingTeam.teamNumber}:</span>
                   )}
                   <ShiftBadge
                     shift={currentWorkingTeam.shift}

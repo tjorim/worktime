@@ -1,6 +1,6 @@
 /**
  * Configuration for WelcomeWizard step navigation.
- * 
+ *
  * This module provides a declarative configuration system for the wizard's
  * step visibility and navigation logic across different modes.
  */
@@ -43,7 +43,7 @@ export interface WizardContext {
 /**
  * Declarative wizard flow configuration.
  * Defines all possible steps and their visibility/navigation rules.
- * 
+ *
  * Benefits:
  * - Single source of truth for wizard flows
  * - Easy to add/modify steps
@@ -101,8 +101,11 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       return "vacation-allowance";
     },
     getPrevStep: (ctx) => {
-      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
+      if (ctx.mode === "change-team") {
         return null;
+      }
+      if (ctx.mode === "change-schedule" && ctx.shouldShowTeamSelection) {
+        return "schedule-selection";
       }
       return "schedule-selection";
     },
@@ -112,8 +115,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     title: "Vacation Tracking ✈️",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null, // Always closes wizard after vacation setup
-    getPrevStep: (ctx) =>
-      ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection",
+    getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },
 ];
 
@@ -142,7 +144,9 @@ export function getStepIndex(stepId: WizardStep, context: WizardContext): number
   const visibleSteps = getVisibleSteps(context);
   const index = visibleSteps.findIndex((s) => s.id === stepId);
   if (index === -1) {
-    throw new Error(`Unknown WizardStep: "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`);
+    throw new Error(
+      `Unknown WizardStep: "${stepId}" is not visible in the current wizard context (mode: ${context.mode})`,
+    );
   }
   return index + 1; // 1-based index
 }

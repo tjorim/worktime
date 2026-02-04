@@ -8,7 +8,7 @@ interface Step3ScheduleSelectionProps {
   onPrev: () => void;
   onNext: () => void;
   isLoading: boolean;
-  isChangeScheduleFlow: boolean;
+  isChangeFlow: boolean;
   shouldShowTeamSelection: boolean;
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
@@ -19,11 +19,11 @@ export function Step3ScheduleSelection({
   onPrev,
   onNext,
   isLoading,
-  isChangeScheduleFlow,
+  isChangeFlow,
   shouldShowTeamSelection,
   firstButtonRef,
 }: Step3ScheduleSelectionProps) {
-  const continueLabel = isChangeScheduleFlow
+  const continueLabel = isChangeFlow
     ? shouldShowTeamSelection
       ? "Continue"
       : "Save Schedule"
@@ -37,23 +37,29 @@ export function Step3ScheduleSelection({
       </div>
 
       <div className="mb-4">
-        {SCHEDULE_OPTIONS.map((schedule) => (
-          <Button
-            key={schedule.value}
-            variant={selectedSchedule === schedule.value ? "primary" : "outline-primary"}
-            className="w-100 text-start mb-2"
-            onClick={() => onScheduleChange(schedule.value)}
-            disabled={isLoading || !schedule.isAvailable}
-            title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
-            ref={schedule.value === "9-5" ? firstButtonRef : undefined}
-          >
-            <div className="fw-semibold d-flex align-items-center gap-2">
-              <span>{schedule.title}</span>
-              {!schedule.isAvailable && <span className="badge bg-secondary">Coming Soon</span>}
-            </div>
-            <small className="d-block text-muted">{schedule.description}</small>
-          </Button>
-        ))}
+        {SCHEDULE_OPTIONS.map((schedule) => {
+          const isSelected = selectedSchedule === schedule.value;
+
+          return (
+            <Button
+              key={schedule.value}
+              variant={isSelected ? "primary" : "outline-primary"}
+              className="w-100 text-start mb-2"
+              onClick={() => onScheduleChange(schedule.value)}
+              disabled={isLoading || !schedule.isAvailable}
+              title={!schedule.isAvailable ? "This schedule option is coming soon" : undefined}
+              ref={schedule.value === "9-5" ? firstButtonRef : undefined}
+            >
+              <div className="fw-semibold d-flex align-items-center gap-2">
+                <span>{schedule.title}</span>
+                {!schedule.isAvailable && <span className="badge bg-secondary">Coming Soon</span>}
+              </div>
+              <small className={clsx("d-block", isSelected ? "text-white-50" : "text-muted")}>
+                {schedule.description}
+              </small>
+            </Button>
+          );
+        })}
       </div>
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
@@ -63,14 +69,8 @@ export function Step3ScheduleSelection({
           disabled={isLoading}
           className="order-2 order-sm-1"
         >
-          <i
-            className={clsx(
-              "bi",
-              isChangeScheduleFlow ? "bi-x-lg" : "bi-arrow-left",
-              "me-1",
-            )}
-          ></i>{" "}
-          {isChangeScheduleFlow ? "Cancel" : "Back"}
+          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>{" "}
+          {isChangeFlow ? "Cancel" : "Back"}
         </Button>
         <Button
           variant="primary"

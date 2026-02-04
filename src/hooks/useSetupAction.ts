@@ -35,7 +35,7 @@ interface SetupActionResult {
  * @returns Object indicating what action is needed and appropriate button text/icon
  */
 export function useSetupAction(options?: UseSetupActionOptions): SetupActionResult {
-  const { scheduleType } = useSettings();
+  const { scheduleType, myTeam } = useSettings();
   const scheduleConfig = getScheduleConfig(scheduleType);
   const teamCount = scheduleConfig.shiftConfig.teamCount;
   const hasTeams = teamCount > 1;
@@ -43,7 +43,7 @@ export function useSetupAction(options?: UseSetupActionOptions): SetupActionResu
 
   // Determine what the user needs to do
   const needsSchedule = mode === "auto" && !scheduleType;
-  const needsTeam = mode === "team" || (!!scheduleType && hasTeams);
+  const needsTeam = mode === "team" || (!!scheduleType && hasTeams && myTeam === null);
 
   // Button text and icon based on context
   const buttonText = needsSchedule ? "Select Schedule" : "Select Team";

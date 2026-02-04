@@ -8,6 +8,7 @@ import { SettingsPanel } from "./SettingsPanel";
 interface HeaderProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
 }
 
 /**
@@ -15,9 +16,10 @@ interface HeaderProps {
  *
  * @param onShowAbout - Optional callback invoked when About is accessed from Settings panel
  * @param onChangeSchedule - Optional callback invoked when the work schedule settings are changed
+ * @param onChangeTeam - Optional callback invoked when the user wants to change their team
  * @returns The header React element containing the app title and Settings button
  */
-export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
+export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleToggleSettings = useCallback(() => {
@@ -59,6 +61,7 @@ export function Header({ onShowAbout, onChangeSchedule }: HeaderProps = {}) {
         onHide={() => setShowSettings(false)}
         onShowAbout={onShowAbout}
         onChangeSchedule={onChangeSchedule}
+        onChangeTeam={onChangeTeam}
       />
     </>
   );

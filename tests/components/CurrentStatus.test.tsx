@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "../../src/components/CurrentStatus";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
@@ -21,6 +20,7 @@ vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
         vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
       },
       scheduleType: "5-shift",
+      myTeam: null,
     })),
   };
 });
@@ -89,7 +89,6 @@ function renderWithProviders(ui: React.ReactElement) {
 
 describe("CurrentStatus Component", () => {
   const mockOnChangeTeam = vi.fn();
-  const mockOnShowWhoIsWorking = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -212,31 +211,6 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("Current Status")).toBeInTheDocument();
       // With scheduleType set to "5-shift" via mock, shows "Select Team" button
       expect(screen.getByRole("button", { name: /select team/i })).toBeInTheDocument();
-    });
-
-    it("should show who is working button when callback is provided", () => {
-      renderWithProviders(
-        <CurrentStatus
-          myTeam={1}
-          onChangeTeam={mockOnChangeTeam}
-          onShowWhoIsWorking={mockOnShowWhoIsWorking}
-        />,
-      );
-
-      const whoIsWorkingButton = screen.getByRole("button", {
-        name: /who's on/i,
-      });
-      expect(whoIsWorkingButton).toBeInTheDocument();
-      expect(whoIsWorkingButton).not.toBeDisabled();
-    });
-
-    it("should disable who is working button when callback is not provided", () => {
-      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
-
-      const whoIsWorkingButton = screen.getByRole("button", {
-        name: /who's on/i,
-      });
-      expect(whoIsWorkingButton).toBeDisabled();
     });
   });
 
@@ -385,40 +359,6 @@ describe("CurrentStatus Component", () => {
     });
   });
 
-  describe("User Interactions", () => {
-    it("should call onChangeTeam when change team button is clicked", async () => {
-      const user = userEvent.setup();
-
-      renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
-
-      const changeTeamButton = screen.getByRole("button", {
-        name: /change team/i,
-      });
-      await user.click(changeTeamButton);
-
-      expect(mockOnChangeTeam).toHaveBeenCalledTimes(1);
-    });
-
-    it("should call onShowWhoIsWorking when who is working button is clicked", async () => {
-      const user = userEvent.setup();
-
-      renderWithProviders(
-        <CurrentStatus
-          myTeam={1}
-          onChangeTeam={mockOnChangeTeam}
-          onShowWhoIsWorking={mockOnShowWhoIsWorking}
-        />,
-      );
-
-      const whoIsWorkingButton = screen.getByRole("button", {
-        name: /who's on/i,
-      });
-      await user.click(whoIsWorkingButton);
-
-      expect(mockOnShowWhoIsWorking).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe("Edge Cases and Error Handling", () => {
     it("should show fallback when no team is selected", () => {
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
@@ -475,42 +415,13 @@ describe("CurrentStatus Component", () => {
   });
 
   describe("Accessibility", () => {
-    it("should have proper button labels and titles", () => {
-      renderWithProviders(
-        <CurrentStatus
-          myTeam={1}
-          onChangeTeam={mockOnChangeTeam}
-          onShowWhoIsWorking={mockOnShowWhoIsWorking}
-        />,
-      );
+    it("should have proper button labels and titles when setup needed", () => {
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
-      const whoIsWorkingButton = screen.getByRole("button", {
-        name: /who's on/i,
+      const selectTeamButton = screen.getByRole("button", {
+        name: /select team/i,
       });
-      expect(whoIsWorkingButton).toHaveAttribute("title", "See who's working right now");
-    });
-
-    it("should maintain focus management for buttons", () => {
-      renderWithProviders(
-        <CurrentStatus
-          myTeam={1}
-          onChangeTeam={mockOnChangeTeam}
-          onShowWhoIsWorking={mockOnShowWhoIsWorking}
-        />,
-      );
-
-      const changeTeamButton = screen.getByRole("button", {
-        name: /change team/i,
-      });
-      const whoIsWorkingButton = screen.getByRole("button", {
-        name: /who's on/i,
-      });
-
-      changeTeamButton.focus();
-      expect(changeTeamButton).toHaveFocus();
-
-      whoIsWorkingButton.focus();
-      expect(whoIsWorkingButton).toHaveFocus();
+      expect(selectTeamButton).toHaveAttribute("title", "Select your team");
     });
   });
 
@@ -568,12 +479,6 @@ describe("CurrentStatus Component", () => {
       // Check for Bootstrap card structure
       const cardElement = screen.getByText("Current Status").closest(".card");
       expect(cardElement).toBeInTheDocument();
-
-      // Check for Bootstrap button classes
-      const changeTeamButton = screen.getByRole("button", {
-        name: /change team/i,
-      });
-      expect(changeTeamButton).toHaveClass("btn");
     });
 
     it("should render badges with correct classes", () => {
