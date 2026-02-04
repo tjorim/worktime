@@ -35,13 +35,13 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     }
   };
 
-  const renderChangeSection = (title: string, items: string[], variant: string) => {
+  const renderChangeSection = (title: string, items: string[], textClass: string) => {
     if (items.length === 0) return null;
 
     return (
       <div className="mb-3">
-        <h6 className={`text-${variant} mb-2`}>
-          <i className={clsx("bi", `bi-${getIconForSection(title)}`, "me-2")}></i>
+        <h6 className={clsx(textClass, "mb-2")}>
+          <i className={clsx("bi", getIconForSection(title), "me-2")}></i>
           {title}
         </h6>
         <ul className="list-unstyled">
@@ -58,15 +58,15 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
   const getIconForSection = (title: string): string => {
     switch (title) {
       case "Added":
-        return "plus-circle";
+        return "bi-plus-circle";
       case "Changed":
-        return "arrow-repeat";
+        return "bi-arrow-repeat";
       case "Fixed":
-        return "bug";
+        return "bi-bug";
       case "Planned":
-        return "calendar-event";
+        return "bi-calendar-event";
       default:
-        return "info-circle";
+        return "bi-info-circle";
     }
   };
 
@@ -108,10 +108,11 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                 </div>
               </Accordion.Header>
               <Accordion.Body>
-                {renderChangeSection("Added", version.added, "success")}
-                {renderChangeSection("Changed", version.changed, "info")}
-                {renderChangeSection("Fixed", version.fixed, "warning")}
-                {version.planned && renderChangeSection("Planned", version.planned, "secondary")}
+                {renderChangeSection("Added", version.added, "text-success")}
+                {renderChangeSection("Changed", version.changed, "text-info")}
+                {renderChangeSection("Fixed", version.fixed, "text-warning")}
+                {version.planned &&
+                  renderChangeSection("Planned", version.planned, "text-secondary")}
 
                 {version.technicalDetails && (
                   <Card className="mt-3 border-0 bg-body-secondary">

@@ -76,11 +76,7 @@ export function Step2Features({
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button
-          variant="primary"
-          onClick={onNext}
-          className="order-1 order-sm-2"
-        >
+        <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
           Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>

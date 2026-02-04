@@ -5,7 +5,11 @@ import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
 import type { ScheduleOption } from "../data/rosters";
-import { getTeamCountForOption, hasMultipleTeams, isValidScheduleType } from "../utils/scheduleUtils";
+import {
+  getTeamCountForOption,
+  hasMultipleTeams,
+  isValidScheduleType,
+} from "../utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 import {
   type WizardStep,

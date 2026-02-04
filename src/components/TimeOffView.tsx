@@ -20,7 +20,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TIMEOFF_VIEWS,
-} from "./timeoff/constants";
+} from "../data/timeoffConstants";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -226,12 +226,15 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   useEffect(() => {
     setSelectedIndices((prev) => {
       const newSet = new Set<number>();
+      let changed = false;
       prev.forEach((index) => {
         if (index >= 0 && index < events.length) {
           newSet.add(index);
+        } else {
+          changed = true;
         }
       });
-      return newSet;
+      return changed ? newSet : prev;
     });
   }, [events.length]);
 
@@ -377,7 +380,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           isRawEditorDirty={isRawEditorDirty}
         />
         <Card.Body>
-
           {viewMode === "table" &&
             (events.length === 0 ? (
               <div className="text-center text-muted py-5">

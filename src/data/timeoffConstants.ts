@@ -1,4 +1,4 @@
-import type { EventFlag, TimeLocationFlag, TypeFlag } from "../../lib/hday/types";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 
 /**
  * Type flag options available for time-off events.
@@ -31,8 +31,8 @@ export const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", strin
 /**
  * Type flags mapped to EventFlag type for use in flag filtering.
  */
-export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.flatMap(
-  ([flag]) => (flag !== "none" ? [flag as EventFlag] : []),
+export const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.flatMap(([flag]) =>
+  flag !== "none" ? [flag as EventFlag] : [],
 );
 
 /**

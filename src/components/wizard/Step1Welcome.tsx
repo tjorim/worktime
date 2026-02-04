@@ -7,12 +7,7 @@ interface Step1WelcomeProps {
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-export function Step1Welcome({
-  onDefer,
-  onHide,
-  onNext,
-  firstButtonRef,
-}: Step1WelcomeProps) {
+export function Step1Welcome({ onDefer, onHide, onNext, firstButtonRef }: Step1WelcomeProps) {
   return (
     <>
       <div className="text-center mb-4">
@@ -43,11 +38,7 @@ export function Step1Welcome({
         >
           Maybe Later
         </Button>
-        <Button
-          variant="primary"
-          onClick={onNext}
-          className="order-1 order-sm-2"
-        >
+        <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
           Let's Get Started! <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>

@@ -6,7 +6,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
-} from "../components/timeoff/constants";
+} from "../data/timeoffConstants";
 
 /**
  * Custom hook for managing event form state and validation.
@@ -62,7 +62,12 @@ export function useEventForm() {
       if (eventEnd && !isValidDate(eventEnd)) {
         setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
         valid = false;
-      } else if (eventEnd && eventStart && isValidDate(eventStart) && dayjs(eventEnd).isBefore(dayjs(eventStart))) {
+      } else if (
+        eventEnd &&
+        eventStart &&
+        isValidDate(eventStart) &&
+        dayjs(eventEnd).isBefore(dayjs(eventStart))
+      ) {
         setEndDateError("End date must be after start date");
         valid = false;
       } else {

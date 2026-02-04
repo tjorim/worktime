@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
@@ -10,17 +11,17 @@ import {
 
 /**
  * Generate a unique key for an event table row using stable event properties.
- * Avoids using array index to prevent reconciliation issues when events are reordered.
- * Uses deterministic combinations of stable properties (type, start, end, weekday, title, raw).
+ * The index parameter serves as a disambiguation suffix to prevent duplicate keys
+ * when two events share identical properties (e.g., two vacation days on the same date).
  */
-function getEventRowKey(event: HdayEvent): string {
+function getEventRowKey(event: HdayEvent, index: number): string {
   if (event.type === "range") {
-    return `range-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
+    return `range-${index}-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
   }
   if (event.type === "weekly") {
-    return `weekly-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
+    return `weekly-${index}-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
   }
-  return `unknown-${event.raw ?? ""}`;
+  return `unknown-${index}-${event.raw ?? ""}`;
 }
 
 /**
@@ -80,8 +81,7 @@ export function EventTable({
   // Update indeterminate state for select-all checkbox when selection changes
   useEffect(() => {
     if (selectAllRef.current) {
-      const isIndeterminate =
-        selectedIndices.size > 0 && selectedIndices.size < events.length;
+      const isIndeterminate = selectedIndices.size > 0 && selectedIndices.size < events.length;
       selectAllRef.current.indeterminate = isIndeterminate;
     }
   }, [selectedIndices, events.length]);
@@ -113,25 +113,17 @@ export function EventTable({
         </tr>
       </thead>
       <tbody>
-        {events.length === 0 ? (
-          <tr>
-            <td colSpan={6} className="text-center py-4">
-              <span className="text-muted">No events found</span>
-            </td>
-          </tr>
-        ) : null}
         {events.map((event, index) => {
           const eventColorClass =
             event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
-          const eventLabel =
-            event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
+          const eventLabel = event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
           const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
 
           const unknownDescriptionId =
             event.type === "unknown" ? `unknown-event-${index}` : undefined;
 
           return (
-            <tr key={getEventRowKey(event)} aria-describedby={unknownDescriptionId}>
+            <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
               <td>
                 <input
                   type="checkbox"
@@ -141,7 +133,7 @@ export function EventTable({
                 />
               </td>
               <td>
-                <span className={`badge event-type-badge ${eventColorClass}`}>
+                <span className={clsx("badge", "event-type-badge", eventColorClass)}>
                   {symbol && `${symbol} `}
                   {eventLabel}
                 </span>

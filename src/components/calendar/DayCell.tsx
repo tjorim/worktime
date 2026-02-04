@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
@@ -206,7 +207,10 @@ export function DayCell({
         {/* Shift badge - shows working schedule when provided */}
         {shiftBadge && (
           <div
-            className={`month-calendar-shift-badge ${shiftBadge.isWorking ? "bg-success" : "bg-secondary"}`}
+            className={clsx(
+              "month-calendar-shift-badge",
+              shiftBadge.isWorking ? "bg-success" : "bg-secondary",
+            )}
             title={shiftBadge.label}
           >
             {shiftBadge.code}
@@ -235,7 +239,7 @@ export function DayCell({
               }}
               aria-label={`View ${label}`}
             >
-              <span className={`month-calendar-event-color ${colorClass}`} />
+              <span className={clsx("month-calendar-event-color", colorClass)} />
               <span className="month-calendar-event-label">
                 {symbol && (
                   <span

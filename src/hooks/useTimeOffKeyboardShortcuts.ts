@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { TimeOffViewMode } from "../components/timeoff/constants";
+import type { TimeOffViewMode } from "../data/timeoffConstants";
 
 /**
  * Check if an event target is an editable element.
@@ -75,7 +75,7 @@ export function useTimeOffKeyboardShortcuts(
       }
 
       // Delete key - Bulk delete selected events
-      if (event.key === "Delete" || event.key === "Backspace") {
+      if (event.key === "Delete") {
         if (viewMode === "table" && selectedIndicesCount > 0) {
           event.preventDefault();
           handlersRef.current.onBulkDelete();

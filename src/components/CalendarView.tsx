@@ -27,7 +27,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
-} from "./timeoff/constants";
+} from "../data/timeoffConstants";
 
 interface CalendarViewProps {
   myTeam: number | null;

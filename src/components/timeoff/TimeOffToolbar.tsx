@@ -1,7 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { VIEW_MODE_HELP_TEXT, type TimeOffViewMode } from "./constants";
+import { VIEW_MODE_HELP_TEXT, type TimeOffViewMode } from "../../data/timeoffConstants";
 
 type TimeOffToolbarProps = {
   // Undo/Redo
