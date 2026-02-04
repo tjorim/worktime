@@ -221,7 +221,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(prevStep).toBeNull();
     });
 
-    it("should go back from team-selection to schedule-selection", () => {
+    it("should go back from team-selection to schedule-selection in onboarding", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
@@ -230,6 +230,28 @@ describe("WelcomeWizard Configuration System", () => {
       const teamConfig = getStepConfig("team-selection");
       const prevStep = teamConfig.getPrevStep(context);
       expect(prevStep).toBe("schedule-selection");
+    });
+
+    it("should close wizard when going back from team-selection in change-team mode", () => {
+      const context: WizardContext = {
+        mode: "change-team",
+        shouldShowTeamSelection: false,
+      };
+
+      const teamConfig = getStepConfig("team-selection");
+      const prevStep = teamConfig.getPrevStep(context);
+      expect(prevStep).toBeNull();
+    });
+
+    it("should close wizard when going back from team-selection in change-schedule mode", () => {
+      const context: WizardContext = {
+        mode: "change-schedule",
+        shouldShowTeamSelection: true,
+      };
+
+      const teamConfig = getStepConfig("team-selection");
+      const prevStep = teamConfig.getPrevStep(context);
+      expect(prevStep).toBeNull();
     });
 
     it("should go back from vacation to team when team selection shown", () => {

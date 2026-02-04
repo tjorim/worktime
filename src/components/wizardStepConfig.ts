@@ -100,7 +100,12 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       // In onboarding, continue to vacation allowance
       return "vacation-allowance";
     },
-    getPrevStep: () => "schedule-selection",
+    getPrevStep: (ctx) => {
+      if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
+        return null;
+      }
+      return "schedule-selection";
+    },
   },
   {
     id: "vacation-allowance",
