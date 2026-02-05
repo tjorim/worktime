@@ -97,10 +97,10 @@ export function useTimeTrackingStorage() {
 
   const importData = useCallback(
     (payload: ImportPayload) => {
-      if (payload.tasks) {
+      if (Array.isArray(payload.tasks)) {
         setTasks(payload.tasks);
       }
-      if (payload.templates) {
+      if (Array.isArray(payload.templates)) {
         setTemplates(payload.templates);
       }
     },
