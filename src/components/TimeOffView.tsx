@@ -448,6 +448,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
           {viewMode === "raw" && (
             <div role="region" aria-label="Raw .hday content editor">
+              <h5 className="fw-semibold mb-3">Raw .hday content</h5>
               <RawContentPanel
                 rawText={rawEditorText}
                 error={rawEditorError}
