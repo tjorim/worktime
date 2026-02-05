@@ -397,25 +397,25 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
         <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
       </div>
 
-      <Card>
-        <TimeOffToolbar
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          eventCount={events.length}
-          selectedCount={selectedIndices.size}
-          onSelectAll={handleSelectAll}
-          onClearSelection={handleClearSelection}
-          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
-          onImport={handleImport}
-          onExport={handleExport}
-          onAddEvent={handleOpenAddModal}
-          viewMode={viewMode}
-        />
-        <Card.Body>
-          {viewMode === "table" &&
-            (events.length === 0 ? (
+      {viewMode === "table" && (
+        <Card>
+          <TimeOffToolbar
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            eventCount={events.length}
+            selectedCount={selectedIndices.size}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
+            onBulkDelete={() => setShowBulkDeleteConfirm(true)}
+            onImport={handleImport}
+            onExport={handleExport}
+            onAddEvent={handleOpenAddModal}
+            viewMode={viewMode}
+          />
+          <Card.Body>
+            {events.length === 0 ? (
               <div className="text-center text-muted py-5">
                 <i className="bi bi-calendar-x display-4 d-block mb-3" aria-hidden="true"></i>
                 <p>No time-off events yet.</p>
@@ -434,9 +434,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 onEditEvent={handleOpenEditModal}
                 onDeleteEvent={handleDeleteClick}
               />
-            ))}
+            )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {viewMode === "stats" && (
+      {viewMode === "stats" && (
+        <Card>
+          <Card.Body>
             <div role="region" aria-label="Vacation statistics">
               <VacationStatsPanel
                 events={events}
@@ -444,11 +449,15 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 onUpdateAllowance={updateVacationAllowance}
               />
             </div>
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {viewMode === "raw" && (
+      {viewMode === "raw" && (
+        <Card>
+          <Card.Header className="fw-semibold">Raw .hday content</Card.Header>
+          <Card.Body>
             <div role="region" aria-label="Raw .hday content editor">
-              <h5 className="fw-semibold mb-3">Raw .hday content</h5>
               <RawContentPanel
                 rawText={rawEditorText}
                 error={rawEditorError}
@@ -458,9 +467,9 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
                 onReset={handleResetRawEditor}
               />
             </div>
-          )}
-        </Card.Body>
-      </Card>
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Hidden file input for import */}
       <input
