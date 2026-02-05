@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import Button from "react-bootstrap/Button";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
@@ -20,6 +22,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TIMEOFF_VIEWS,
+  VIEW_MODE_HELP_TEXT,
 } from "../data/timeoffConstants";
 
 /**
@@ -362,6 +365,38 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
   return (
     <div className="time-off-view py-3">
+      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+        <ButtonGroup aria-label="Toggle time off view">
+          <Button
+            variant={viewMode === "table" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+          >
+            <i className="bi bi-table me-1" aria-hidden="true"></i>
+            Table
+          </Button>
+          <Button
+            variant={viewMode === "stats" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("stats")}
+          >
+            <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
+            Statistics
+          </Button>
+          <Button
+            variant={viewMode === "raw" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("raw")}
+          >
+            Raw .hday
+            {isRawEditorDirty && viewMode !== "raw" && (
+              <span className="badge bg-warning text-dark ms-1">•</span>
+            )}
+          </Button>
+        </ButtonGroup>
+        <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
+      </div>
+
       <Card>
         <TimeOffToolbar
           canUndo={canUndo}
@@ -377,8 +412,6 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           onExport={handleExport}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          isRawEditorDirty={isRawEditorDirty}
         />
         <Card.Body>
           {viewMode === "table" &&

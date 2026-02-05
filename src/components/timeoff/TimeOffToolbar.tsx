@@ -1,8 +1,7 @@
 import { memo } from "react";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { VIEW_MODE_HELP_TEXT, type TimeOffViewMode } from "../../data/timeoffConstants";
+import type { TimeOffViewMode } from "../../data/timeoffConstants";
 
 type TimeOffToolbarProps = {
   // Undo/Redo
@@ -27,13 +26,11 @@ type TimeOffToolbarProps = {
 
   // View mode
   viewMode: TimeOffViewMode;
-  onViewModeChange: (mode: TimeOffViewMode) => void;
-  isRawEditorDirty: boolean;
 };
 
 /**
  * Toolbar component for Time Off Management view.
- * Contains all action buttons, view mode toggle, and help text.
+ * Contains all action buttons and table-only controls.
  * Memoized to prevent unnecessary re-renders from parent prop changes.
  */
 function TimeOffToolbarComponent({
@@ -50,8 +47,6 @@ function TimeOffToolbarComponent({
   onExport,
   onAddEvent,
   viewMode,
-  onViewModeChange,
-  isRawEditorDirty,
 }: TimeOffToolbarProps) {
   return (
     <Card.Header>
@@ -90,37 +85,6 @@ function TimeOffToolbarComponent({
             Redo
           </Button>
         </div>
-      </div>
-      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <ButtonGroup aria-label="Toggle time off view">
-          <Button
-            variant={viewMode === "table" ? "primary" : "outline-primary"}
-            size="sm"
-            onClick={() => onViewModeChange("table")}
-          >
-            <i className="bi bi-table me-1" aria-hidden="true"></i>
-            Table
-          </Button>
-          <Button
-            variant={viewMode === "stats" ? "primary" : "outline-primary"}
-            size="sm"
-            onClick={() => onViewModeChange("stats")}
-          >
-            <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
-            Statistics
-          </Button>
-          <Button
-            variant={viewMode === "raw" ? "primary" : "outline-primary"}
-            size="sm"
-            onClick={() => onViewModeChange("raw")}
-          >
-            Raw .hday
-            {isRawEditorDirty && viewMode !== "raw" && (
-              <span className="badge bg-warning text-dark ms-1">•</span>
-            )}
-          </Button>
-        </ButtonGroup>
-        <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
       </div>
       <div className="d-flex flex-wrap gap-2">
         {viewMode === "table" && (
