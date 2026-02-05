@@ -23,8 +23,8 @@ export function TimeTrackingView() {
   const [viewMode, setViewMode] = useViewMode(undefined, TIME_TRACKING_VIEWS, "daily");
 
   return (
-    <div className="time-tracking-view py-3">
-      <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
+    <div className="time-tracking-view py-3 d-flex flex-column gap-3">
+      <div className="d-flex align-items-center gap-2 flex-wrap">
         <ButtonGroup aria-label="Toggle time tracking view">
           <Button
             variant={viewMode === "daily" ? "primary" : "outline-primary"}
