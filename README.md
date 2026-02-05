@@ -56,7 +56,7 @@ Worktime helps teams and individuals working in various shift schedules to quick
 
 ### ⌨️ Keyboard Shortcuts
 
-- Tab switching (C/S/T/O keys)
+- Tab switching (**C**alendar, **S**chedule, **T**ransfers, Time **O**ff via C/S/T/O keys)
 - Date navigation (arrow keys, Ctrl+H/J/K)
 - Settings toggle (Ctrl+,)
 - Time-off actions (Ctrl+I import, Ctrl+S export, Delete, Escape)
