@@ -120,8 +120,8 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
         <Row className="g-3">
           <Col xs={12} lg={5}>
             <Card className="h-100">
+              <Card.Header className="fw-semibold">Allowance Settings</Card.Header>
               <Card.Body>
-                <Card.Title className="h6">Allowance Settings</Card.Title>
                 <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
                   <Form.Label>Annual vacation allowance</Form.Label>
                   <Form.Control
@@ -186,28 +186,24 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
           <Col xs={12} lg={7}>
             <Card className="h-100">
+              <Card.Header className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2">
+                <div className="fw-semibold">Vacation usage</div>
+                <Form.Select
+                  size="sm"
+                  aria-label="Select year for vacation statistics"
+                  value={selectedYear}
+                  onChange={(event) => setSelectedYear(Number(event.target.value))}
+                  className="w-auto"
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Card.Header>
               <Card.Body>
-                <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
-                  <div>
-                    <Card.Title className="h6 mb-1">Vacation usage</Card.Title>
-                    <p className="text-muted small mb-0">
-                      Based on Holiday events in {selectedYear}
-                    </p>
-                  </div>
-                  <Form.Select
-                    size="sm"
-                    aria-label="Select year for vacation statistics"
-                    value={selectedYear}
-                    onChange={(event) => setSelectedYear(Number(event.target.value))}
-                    className="w-auto"
-                  >
-                    {years.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </div>
+                <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
 
                 <div className="mb-3">
                   <div className="d-flex justify-content-between small text-muted mb-1">

@@ -335,22 +335,21 @@ export function CalendarView({
   return (
     <div className="calendar-view py-3">
       <Card>
-        <Card.Body>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Card.Title className="mb-0">
-              <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
-              My Working Calendar
-            </Card.Title>
-            {!getShiftForDate ? (
-              <small className="text-muted">
-                <i className="bi bi-info-circle me-1"></i>
-                Select your schedule to see your working calendar
-              </small>
-            ) : (
-              <CalendarLegend />
-            )}
+        <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div className="fw-semibold">
+            <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
+            My Working Calendar
           </div>
-
+          {!getShiftForDate ? (
+            <small className="text-muted">
+              <i className="bi bi-info-circle me-1"></i>
+              Select your schedule to see your working calendar
+            </small>
+          ) : (
+            <CalendarLegend />
+          )}
+        </Card.Header>
+        <Card.Body>
           {!getShiftForDate ? (
             <div className="text-center py-5">
               <div className="mb-4">
