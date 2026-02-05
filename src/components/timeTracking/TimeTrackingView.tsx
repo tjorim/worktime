@@ -2,7 +2,7 @@ import { useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
-import { useTimeTrackingStorage } from "./useTimeTrackingStorage";
+import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
 import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 
 export function TimeTrackingView() {

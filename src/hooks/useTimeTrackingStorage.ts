@@ -1,7 +1,10 @@
 import { useCallback } from "react";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { TIME_TRACKING_STORAGE_KEYS } from "./constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
+import { useLocalStorage } from "./useLocalStorage";
+import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
+import type {
+  StoredTimeTrackingTask,
+  TimeTrackingTemplate,
+} from "../components/timeTracking/types";
 
 type ImportPayload = {
   tasks?: StoredTimeTrackingTask[];

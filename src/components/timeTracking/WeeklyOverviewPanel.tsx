@@ -132,13 +132,15 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th>Day</th>
+                <th scope="col">Day</th>
                 {tags
                   .filter((tag) => tag !== "Lunch")
                   .map((tag) => (
-                    <th key={tag}>{tag}</th>
+                    <th key={tag} scope="col">
+                      {tag}
+                    </th>
                   ))}
-                <th>Total Hours</th>
+                <th scope="col">Total Hours</th>
               </tr>
             </thead>
             <tbody>
@@ -147,7 +149,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
                 let dayTotal = 0;
                 return (
                   <tr key={day.iso}>
-                    <td>{day.label}</td>
+                    <td scope="row">{day.label}</td>
                     {tags
                       .filter((tag) => tag !== "Lunch")
                       .map((tag) => {

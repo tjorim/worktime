@@ -270,7 +270,7 @@ export function TimeTrackerPanel({
               >
                 {TIME_TRACKING_TAGS.map((item) => (
                   <option key={item} value={item}>
-                    {item.replace("-", " ")}
+                    {item.replaceAll("-", " ")}
                   </option>
                 ))}
               </Form.Select>

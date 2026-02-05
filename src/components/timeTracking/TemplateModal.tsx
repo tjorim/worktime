@@ -39,6 +39,7 @@ export function TemplateModal({
             <Form.Control
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
+              aria-required="true"
             />
           </Form.Group>
           <Form.Group className="mb-3">
@@ -51,7 +52,7 @@ export function TemplateModal({
             >
               {TIME_TRACKING_TAGS.map((tag) => (
                 <option key={tag} value={tag}>
-                  {tag.replace("-", " ")}
+                  {tag.replaceAll("-", " ")}
                 </option>
               ))}
             </Form.Select>
@@ -63,6 +64,7 @@ export function TemplateModal({
                 type="time"
                 value={value.start}
                 onChange={(event) => onChange({ ...value, start: event.target.value })}
+                aria-required="true"
               />
             </Form.Group>
             <Form.Group className="flex-fill">
@@ -71,6 +73,7 @@ export function TemplateModal({
                 type="time"
                 value={value.stop}
                 onChange={(event) => onChange({ ...value, stop: event.target.value })}
+                aria-required="true"
               />
             </Form.Group>
           </div>
