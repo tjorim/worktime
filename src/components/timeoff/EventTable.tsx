@@ -93,41 +93,41 @@ export function EventTable({
   }, [selectedIndices, events.length]);
 
   return (
-    <Table responsive hover>
-      <thead>
-        <tr>
-          <th>
-            <input
-              ref={selectAllRef}
-              type="checkbox"
-              aria-label="Select all events"
-              checked={events.length > 0 && selectedIndices.size === events.length}
-              onChange={(event) => {
-                if (event.target.checked) {
-                  onSelectAll();
-                } else {
-                  onClearSelection();
-                }
-              }}
-            />
-          </th>
-          <th>Type</th>
-          <th>Date / Pattern</th>
-          <th>Title</th>
-          <th>Flags</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {events.length === 0 ? (
-          <tr role="status" aria-live="polite">
-            <td colSpan={6} className="text-center text-muted py-4">
-              <i className="bi bi-inbox d-block mb-2" style={{ fontSize: "2rem" }}></i>
-              <span>No events found</span>
-            </td>
+    <>
+      {events.length === 0 && (
+        <div role="status" aria-live="polite" className="text-center text-muted py-4">
+          <i className="bi bi-inbox d-block mb-2" style={{ fontSize: "2rem" }}></i>
+          <span>No events found</span>
+        </div>
+      )}
+      <Table responsive hover>
+        <thead>
+          <tr>
+            <th>
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                className="form-check-input"
+                aria-label="Select all events"
+                checked={events.length > 0 && selectedIndices.size === events.length}
+                onChange={(event) => {
+                  if (event.target.checked) {
+                    onSelectAll();
+                  } else {
+                    onClearSelection();
+                  }
+                }}
+              />
+            </th>
+            <th>Type</th>
+            <th>Date / Pattern</th>
+            <th>Title</th>
+            <th>Flags</th>
+            <th>Actions</th>
           </tr>
-        ) : (
-          events.map((event, index) => {
+        </thead>
+        <tbody>
+          {events.map((event, index) => {
             const eventColorClass =
               event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
             const eventLabel =
@@ -142,6 +142,7 @@ export function EventTable({
                 <td>
                   <input
                     type="checkbox"
+                    className="form-check-input"
                     aria-label={`Select ${event.title || eventLabel}`}
                     checked={selectedIndices.has(index)}
                     onChange={() => onToggleSelection(index)}
@@ -197,9 +198,9 @@ export function EventTable({
                 </td>
               </tr>
             );
-          })
-        )}
-      </tbody>
-    </Table>
+          })}
+        </tbody>
+      </Table>
+    </>
   );
 }
