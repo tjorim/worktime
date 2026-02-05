@@ -66,6 +66,8 @@ body {
 }
 
 /* Time tracking tags */
+$tag-dark-text: #1b1b1b;
+
 .time-tracking-tag {
   display: inline-flex;
   align-items: center;
@@ -78,7 +80,7 @@ body {
 
 .time-tracking-tag-factory-improvement {
   background-color: #f0b429;
-  color: #1b1b1b;
+  color: $tag-dark-text;
 }
 
 .time-tracking-tag-support {
@@ -99,17 +101,17 @@ body {
 
 .time-tracking-tag-department-improvement {
   background-color: #fd7e14;
-  color: #1b1b1b;
+  color: $tag-dark-text;
 }
 
 .time-tracking-tag-training {
   background-color: #0dcaf0;
-  color: #1b1b1b;
+  color: $tag-dark-text;
 }
 
 .time-tracking-tag-lunch {
   background-color: #9ec5fe;
-  color: #1b1b1b;
+  color: $tag-dark-text;
 }
 
 /* Text utilities */
