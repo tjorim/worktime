@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import { WeeklyOverviewPanel } from "../../../src/components/timeTracking/WeeklyOverviewPanel";
@@ -151,7 +150,7 @@ describe("WeeklyOverviewPanel Component", () => {
 
       render(<WeeklyOverviewPanel tasks={weekTasks} />);
 
-      expect(screen.getByText(/Lunch:.*0\.75.*h/i)).toBeInTheDocument();
+      expect(screen.getByText(/Lunch:.*0\.75.*h$/i)).toBeInTheDocument();
     });
   });
 
@@ -194,38 +193,32 @@ describe("WeeklyOverviewPanel Component", () => {
   });
 
   describe("User Interactions", () => {
-    it("updates display when year selector changes", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    it("updates display when year selector changes", () => {
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const yearInput = screen.getByLabelText(/Year/i);
-      await user.clear(yearInput);
-      await user.type(yearInput, "2024");
+      fireEvent.change(yearInput, { target: { value: "2024" } });
 
       expect(yearInput).toHaveValue(2024);
     });
 
-    it("updates display when week selector changes", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    it("updates display when week selector changes", () => {
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const weekInput = screen.getByLabelText(/Week/i);
-      await user.clear(weekInput);
-      await user.type(weekInput, "25");
+      fireEvent.change(weekInput, { target: { value: "25" } });
 
       expect(weekInput).toHaveValue(25);
     });
 
-    it("resets to current week when This Week button is clicked", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    it("resets to current week when This Week button is clicked", () => {
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const yearInput = screen.getByLabelText(/Year/i);
-      await user.clear(yearInput);
-      await user.type(yearInput, "2020");
+      fireEvent.change(yearInput, { target: { value: "2020" } });
 
       const thisWeekBtn = screen.getByRole("button", { name: /This Week/i });
-      await user.click(thisWeekBtn);
+      fireEvent.click(thisWeekBtn);
 
       // After clicking, year should be current year (not 2020)
       const currentYear = new Date().getFullYear();
@@ -234,9 +227,6 @@ describe("WeeklyOverviewPanel Component", () => {
   });
 
   describe("Week Filtering Logic", () => {
-    const mondayDate = "2025-01-06"; // Week 2 of 2025
-    const nextWeekMonday = "2025-01-13"; // Week 3 of 2025
-
     it("shows only tasks within selected week boundaries", () => {
       // Use dates from week 3 and week 4 (not current week 2)
       const week3Task = createTaskForDate("2025-01-13", "Support", "09:00", "12:00"); // Week 3

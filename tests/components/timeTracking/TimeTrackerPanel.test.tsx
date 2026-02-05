@@ -86,7 +86,14 @@ describe("TimeTrackerPanel", () => {
       const user = userEvent.setup();
       const today = new Date().toISOString().split("T")[0];
       const existingTasks = [
-        { id: "1", date: today, text: "Existing", tag: "Support" as const, start: "08:00", stop: "12:00" },
+        {
+          id: "1",
+          date: today,
+          text: "Existing",
+          tag: "Support" as const,
+          start: "08:00",
+          stop: "12:00",
+        },
       ];
 
       render(<TimeTrackerPanel {...mockProps} tasks={existingTasks} />);
@@ -111,8 +118,22 @@ describe("TimeTrackerPanel", () => {
     it("displays task list when tasks exist", () => {
       const today = new Date().toISOString().split("T")[0];
       const tasks = [
-        { id: "1", date: today, text: "Task A", tag: "Support" as const, start: "08:00", stop: "12:00" },
-        { id: "2", date: today, text: "Task B", tag: "Meeting" as const, start: "13:00", stop: "14:00" },
+        {
+          id: "1",
+          date: today,
+          text: "Task A",
+          tag: "Support" as const,
+          start: "08:00",
+          stop: "12:00",
+        },
+        {
+          id: "2",
+          date: today,
+          text: "Task B",
+          tag: "Meeting" as const,
+          start: "13:00",
+          stop: "14:00",
+        },
       ];
 
       render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
@@ -124,7 +145,14 @@ describe("TimeTrackerPanel", () => {
     it("shows progress indicator", () => {
       const today = new Date().toISOString().split("T")[0];
       const tasks = [
-        { id: "1", date: today, text: "Task", tag: "Support" as const, start: "08:00", stop: "12:00" },
+        {
+          id: "1",
+          date: today,
+          text: "Task",
+          tag: "Support" as const,
+          start: "08:00",
+          stop: "12:00",
+        },
       ];
 
       const { container } = render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
@@ -136,7 +164,14 @@ describe("TimeTrackerPanel", () => {
     it("provides remove action for each task", () => {
       const today = new Date().toISOString().split("T")[0];
       const tasks = [
-        { id: "1", date: today, text: "Task", tag: "Support" as const, start: "08:00", stop: "12:00" },
+        {
+          id: "1",
+          date: today,
+          text: "Task",
+          tag: "Support" as const,
+          start: "08:00",
+          stop: "12:00",
+        },
       ];
 
       render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
@@ -147,7 +182,14 @@ describe("TimeTrackerPanel", () => {
       const user = userEvent.setup();
       const today = new Date().toISOString().split("T")[0];
       const tasks = [
-        { id: "1", date: today, text: "Task", tag: "Support" as const, start: "08:00", stop: "12:00" },
+        {
+          id: "1",
+          date: today,
+          text: "Task",
+          tag: "Support" as const,
+          start: "08:00",
+          stop: "12:00",
+        },
       ];
 
       render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);

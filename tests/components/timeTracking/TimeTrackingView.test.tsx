@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import { TimeTrackingView } from "../../../src/components/timeTracking/TimeTrackingView";
@@ -47,13 +47,13 @@ describe("TimeTrackingView", () => {
     });
 
     it("should have icons in view toggle buttons", () => {
-      const { container } = render(<TimeTrackingView />);
+      render(<TimeTrackingView />);
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
 
-      const dailyIcon = dailyButton.querySelector('i');
-      const weeklyIcon = weeklyButton.querySelector('i');
+      const dailyIcon = dailyButton.querySelector("i");
+      const weeklyIcon = weeklyButton.querySelector("i");
 
       expect(dailyIcon).toHaveClass("bi-list-check");
       expect(weeklyIcon).toHaveClass("bi-bar-chart-line");

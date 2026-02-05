@@ -32,10 +32,7 @@ type TimeTrackerPanelProps = {
   }) => void;
   onRemoveTask: (id: string) => void;
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
-  onUpdateTemplate: (payload: {
-    id: number;
-    template: Omit<TimeTrackingTemplate, "id">;
-  }) => void;
+  onUpdateTemplate: (payload: { id: number; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: number) => void;
   onExportData: (date: string) => void;
   onImportData: (payload: ImportPayload) => void;
