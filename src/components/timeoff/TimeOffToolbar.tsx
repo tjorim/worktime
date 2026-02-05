@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
@@ -33,8 +34,9 @@ type TimeOffToolbarProps = {
 /**
  * Toolbar component for Time Off Management view.
  * Contains all action buttons, view mode toggle, and help text.
+ * Memoized to prevent unnecessary re-renders from parent prop changes.
  */
-export function TimeOffToolbar({
+function TimeOffToolbarComponent({
   canUndo,
   canRedo,
   onUndo,
@@ -161,3 +163,6 @@ export function TimeOffToolbar({
     </Card.Header>
   );
 }
+
+export const TimeOffToolbar = memo(TimeOffToolbarComponent);
+TimeOffToolbar.displayName = "TimeOffToolbar";

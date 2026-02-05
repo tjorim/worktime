@@ -35,6 +35,21 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
     }
   };
 
+  const getIconForSection = (title: string): string => {
+    switch (title) {
+      case "Added":
+        return "bi-plus-circle";
+      case "Changed":
+        return "bi-arrow-repeat";
+      case "Fixed":
+        return "bi-bug";
+      case "Planned":
+        return "bi-calendar-event";
+      default:
+        return "bi-info-circle";
+    }
+  };
+
   const renderChangeSection = (title: string, items: string[], textClass: string) => {
     if (items.length === 0) return null;
 
@@ -53,21 +68,6 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
         </ul>
       </div>
     );
-  };
-
-  const getIconForSection = (title: string): string => {
-    switch (title) {
-      case "Added":
-        return "bi-plus-circle";
-      case "Changed":
-        return "bi-arrow-repeat";
-      case "Fixed":
-        return "bi-bug";
-      case "Planned":
-        return "bi-calendar-event";
-      default:
-        return "bi-info-circle";
-    }
   };
 
   return (

@@ -8,20 +8,25 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "../../lib/hday/parser";
+import { Weekday } from "../../data/timeoffConstants";
 
 /**
- * Generate a unique key for an event table row using stable event properties.
- * The index parameter serves as a disambiguation suffix to prevent duplicate keys
- * when two events share identical properties (e.g., two vacation days on the same date).
+ * Weekday names for display (Monday through Sunday, ISO weekday 1-7).
+ * Hoisted to module scope to avoid repeated allocations on each render.
+ */
+const WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+/**
+ * Generate a unique key for an event table row from its index and properties.
  */
 function getEventRowKey(event: HdayEvent, index: number): string {
   if (event.type === "range") {
-    return `range-${index}-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
+    return `${index}-range-${event.start ?? "unknown"}-${event.end ?? "unknown"}-${event.title ?? ""}`;
   }
   if (event.type === "weekly") {
-    return `weekly-${index}-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
+    return `${index}-weekly-${event.weekday ?? "unknown"}-${event.title ?? ""}`;
   }
-  return `unknown-${index}-${event.raw ?? ""}`;
+  return `${index}-unknown-${event.title ?? ""}`;
 }
 
 /**
@@ -37,10 +42,11 @@ function formatEventDate(event: HdayEvent): React.ReactNode {
     );
   }
   if (event.type === "weekly") {
-    const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const weekdayName =
-      event.weekday !== undefined && event.weekday >= 1 && event.weekday <= 7
-        ? weekdayNames[event.weekday - 1]
+      event.weekday !== undefined &&
+      event.weekday >= Weekday.Monday &&
+      event.weekday <= Weekday.Sunday
+        ? WEEKDAY_NAMES[event.weekday - 1]
         : "Unknown";
     return `Every ${weekdayName}`;
   }
@@ -113,76 +119,86 @@ export function EventTable({
         </tr>
       </thead>
       <tbody>
-        {events.map((event, index) => {
-          const eventColorClass =
-            event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
-          const eventLabel = event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
-          const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
+        {events.length === 0 ? (
+          <tr role="status" aria-live="polite">
+            <td colSpan={6} className="text-center text-muted py-4">
+              <i className="bi bi-inbox d-block mb-2" style={{ fontSize: "2rem" }}></i>
+              <span>No events found</span>
+            </td>
+          </tr>
+        ) : (
+          events.map((event, index) => {
+            const eventColorClass =
+              event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
+            const eventLabel =
+              event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
+            const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
 
-          const unknownDescriptionId =
-            event.type === "unknown" ? `unknown-event-${index}` : undefined;
+            const unknownDescriptionId =
+              event.type === "unknown" ? `unknown-event-${index}` : undefined;
 
-          return (
-            <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${event.title || eventLabel}`}
-                  checked={selectedIndices.has(index)}
-                  onChange={() => onToggleSelection(index)}
-                />
-              </td>
-              <td>
-                <span className={clsx("badge", "event-type-badge", eventColorClass)}>
-                  {symbol && `${symbol} `}
-                  {eventLabel}
-                </span>
-              </td>
-              <td>
-                {formatEventDate(event)}
-                {event.type === "unknown" && (
-                  <>
-                    <span className="text-muted">Unknown format</span>
-                    <span id={unknownDescriptionId} className="visually-hidden">
-                      Unknown event format. Remove or re-import this entry to resolve the issue.
-                    </span>
-                  </>
-                )}
-              </td>
-              <td>{event.title || <span className="text-muted">—</span>}</td>
-              <td>
-                {event.flags && event.flags.length > 0 ? (
-                  <span className="text-muted small">{event.flags.join(", ")}</span>
-                ) : (
-                  <span className="text-muted">—</span>
-                )}
-              </td>
-              <td>
-                {event.type !== "unknown" && (
-                  <>
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      onClick={() => onEditEvent(index)}
-                      className="me-2"
-                      aria-label={`Edit ${event.title || eventLabel}`}
-                    >
-                      <i className="bi bi-pencil" aria-hidden="true"></i>
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => onDeleteEvent(index)}
-                      aria-label={`Delete ${event.title || eventLabel}`}
-                    >
-                      <i className="bi bi-trash" aria-hidden="true"></i>
-                    </Button>
-                  </>
-                )}
-              </td>
-            </tr>
-          );
-        })}
+            return (
+              <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${event.title || eventLabel}`}
+                    checked={selectedIndices.has(index)}
+                    onChange={() => onToggleSelection(index)}
+                  />
+                </td>
+                <td>
+                  <span className={clsx("badge", "event-type-badge", eventColorClass)}>
+                    {symbol && `${symbol} `}
+                    {eventLabel}
+                  </span>
+                </td>
+                <td>
+                  {formatEventDate(event)}
+                  {event.type === "unknown" && (
+                    <>
+                      <span className="text-muted">Unknown format</span>
+                      <span id={unknownDescriptionId} className="visually-hidden">
+                        Unknown event format. Remove or re-import this entry to resolve the issue.
+                      </span>
+                    </>
+                  )}
+                </td>
+                <td>{event.title || <span className="text-muted">—</span>}</td>
+                <td>
+                  {event.flags?.length ? (
+                    <span className="text-muted small">{event.flags.join(", ")}</span>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
+                </td>
+                <td>
+                  {event.type !== "unknown" && (
+                    <>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => onEditEvent(index)}
+                        className="me-2"
+                        aria-label={`Edit ${event.title || eventLabel}`}
+                      >
+                        <i className="bi bi-pencil" aria-hidden="true"></i>
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => onDeleteEvent(index)}
+                        aria-label={`Delete ${event.title || eventLabel}`}
+                      >
+                        <i className="bi bi-trash" aria-hidden="true"></i>
+                      </Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })
+        )}
       </tbody>
     </Table>
   );

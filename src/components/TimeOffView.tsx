@@ -188,6 +188,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const handleConfirmDelete = () => {
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
+      setSelectedIndices(new Set());
       toast.showSuccess("Event deleted successfully", "🗑️");
     }
     setShowDeleteConfirm(false);
@@ -383,7 +384,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           {viewMode === "table" &&
             (events.length === 0 ? (
               <div className="text-center text-muted py-5">
-                <i className="bi bi-calendar-x display-4 d-block mb-3"></i>
+                <i className="bi bi-calendar-x display-4 d-block mb-3" aria-hidden="true"></i>
                 <p>No time-off events yet.</p>
                 <p className="small">
                   Click "Add Event" to create your first event, or "Import" to load an existing

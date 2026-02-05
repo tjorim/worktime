@@ -166,17 +166,15 @@ export function DayCell({
 
   return (
     <div
-      className={[
+      className={clsx(
         "month-calendar-day",
-        !isCurrentMonth ? "is-other-month" : "",
-        isToday ? "is-today" : "",
-        isWeekend ? "is-weekend" : "",
-        publicHoliday ? "is-public-holiday" : "",
-        schoolHoliday ? "is-school-holiday" : "",
-        paydayInfo ? "is-payday" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+        !isCurrentMonth && "is-other-month",
+        isToday && "is-today",
+        isWeekend && "is-weekend",
+        publicHoliday && "is-public-holiday",
+        schoolHoliday && "is-school-holiday",
+        paydayInfo && "is-payday",
+      )}
       onContextMenu={(e) => {
         if (onDayContextMenu) {
           e.preventDefault();

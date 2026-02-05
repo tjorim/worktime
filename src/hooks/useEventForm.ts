@@ -73,6 +73,10 @@ export function useEventForm() {
       } else {
         setEndDateError("");
       }
+    } else {
+      // Clear stale errors for non-range event types (e.g., weekly)
+      setStartDateError("");
+      setEndDateError("");
     }
 
     return valid;

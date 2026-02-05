@@ -74,8 +74,13 @@ export function useTimeOffKeyboardShortcuts(
         return;
       }
 
+      // Suppress all other shortcuts while the modal is open
+      if (showEventModal) {
+        return;
+      }
+
       // Delete key - Bulk delete selected events
-      if (event.key === "Delete") {
+      if (event.key === "Delete" || event.key === "Backspace") {
         if (viewMode === "table" && selectedIndicesCount > 0) {
           event.preventDefault();
           handlersRef.current.onBulkDelete();
