@@ -15,6 +15,7 @@ type Summary = Record<string, number>;
 
 type WeeklyOverviewPanelProps = {
   tasks: StoredTimeTrackingTask[];
+  weeklyTargetHours?: number;
 };
 
 function getWeekDateRange(year: number, week: number): [string, string] {
@@ -33,7 +34,7 @@ function buildWeekDays(startIso: string) {
   });
 }
 
-export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
+export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOverviewPanelProps) {
   const today = dayjs();
   const [year, setYear] = useState(today.year());
   const [week, setWeek] = useState(today.isoWeek());
@@ -53,7 +54,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
     [tasks, start, end],
   );
 
-  const { summary, dailyTotals, tags, weekTotal, lunchTotal } = useMemo(() => {
+  const { summary, dailyTotals, tags, weekTotal, lunchTotal, weekDays } = useMemo(() => {
     const totals = rows.reduce<Summary>((acc, row) => {
       acc[row.tag] = (acc[row.tag] ?? 0) + calculateDurationHours(row.start, row.stop);
       return acc;
@@ -82,10 +83,9 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
       tags: tagList,
       weekTotal: weekSum,
       lunchTotal: lunch,
+      weekDays: days,
     };
   }, [rows, start]);
-
-  const weekDays = useMemo(() => buildWeekDays(start), [start]);
 
   return (
     <div>
@@ -144,17 +144,17 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
           <tbody>
             {weekDays.map((day) => {
               const daySummary = dailyTotals[day.iso] ?? {};
-              let dayTotal = 0;
+              const workTags = tags.filter((tag) => tag !== "Lunch");
+              const dayTotal = workTags.reduce(
+                (sum, tag) => sum + (daySummary[tag] ?? 0),
+                0,
+              );
               return (
                 <tr key={day.iso}>
                   <td scope="row">{day.label}</td>
-                  {tags
-                    .filter((tag) => tag !== "Lunch")
-                    .map((tag) => {
-                      const val = daySummary[tag] ?? 0;
-                      dayTotal += val;
-                      return <td key={`${day.iso}-${tag}`}>{val.toFixed(2)}</td>;
-                    })}
+                  {workTags.map((tag) => (
+                    <td key={`${day.iso}-${tag}`}>{(daySummary[tag] ?? 0).toFixed(2)}</td>
+                  ))}
                   <td className="fw-semibold">{dayTotal.toFixed(2)}</td>
                 </tr>
               );
@@ -173,7 +173,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
               </li>
             ))}
           </ul>
-          <div className="fw-semibold">Total for the week: {weekTotal.toFixed(2)} / 40.0 hours</div>
+          <div className="fw-semibold">Total for the week: {weekTotal.toFixed(2)} / {weeklyTargetHours.toFixed(1)} hours</div>
           {lunchTotal > 0 && <div className="text-muted">Lunch: {lunchTotal.toFixed(2)} h</div>}
         </div>
       )}

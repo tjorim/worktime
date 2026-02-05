@@ -208,7 +208,7 @@ describe("TimeTrackerPanel", () => {
     it("displays templates when expanded", async () => {
       const user = userEvent.setup();
       const templates = [
-        { id: 1, text: "Template A", tag: "Support" as const, start: "08:00", stop: "12:00" },
+        { id: "t1", text: "Template A", tag: "Support" as const, start: "08:00", stop: "12:00" },
       ];
 
       render(<TimeTrackerPanel {...mockProps} templates={templates} />);

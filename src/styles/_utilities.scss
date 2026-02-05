@@ -78,9 +78,8 @@ $tag-dark-text: #1b1b1b;
   color: #fff;
 }
 
-.time-tracking-tag-factory-improvement {
-  background-color: #f0b429;
-  color: $tag-dark-text;
+.time-tracking-tag-development {
+  background-color: #198754;
 }
 
 .time-tracking-tag-support {
@@ -91,17 +90,13 @@ $tag-dark-text: #1b1b1b;
   background-color: #6f42c1;
 }
 
-.time-tracking-tag-npi-duv {
-  background-color: #8d6e63;
-}
-
-.time-tracking-tag-npi-euv {
-  background-color: #795548;
-}
-
-.time-tracking-tag-department-improvement {
+.time-tracking-tag-review {
   background-color: #fd7e14;
   color: $tag-dark-text;
+}
+
+.time-tracking-tag-documentation {
+  background-color: #0d6efd;
 }
 
 .time-tracking-tag-training {
@@ -112,6 +107,10 @@ $tag-dark-text: #1b1b1b;
 .time-tracking-tag-lunch {
   background-color: #9ec5fe;
   color: $tag-dark-text;
+}
+
+.time-tracking-tag-other {
+  background-color: #6c757d;
 }
 
 /* Text utilities */

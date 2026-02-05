@@ -17,14 +17,65 @@ export function timeToMinutes(time: string): number {
 
 export function isValidRange(start: string, stop: string): boolean {
   try {
-    return timeToMinutes(stop) > timeToMinutes(start);
+    return timeToMinutes(start) !== timeToMinutes(stop);
   } catch {
     return false;
   }
 }
 
+const MINUTES_PER_DAY = 1440;
+
 export function calculateDurationHours(start: string, stop: string): number {
-  return (timeToMinutes(stop) - timeToMinutes(start)) / 60;
+  const startMin = timeToMinutes(start);
+  const stopMin = timeToMinutes(stop);
+  const diff = stopMin - startMin;
+  return (diff > 0 ? diff : diff + MINUTES_PER_DAY) / 60;
+}
+
+/**
+ * Returns true when the string looks like a valid HH:MM time value.
+ */
+export function isValidTimeString(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    timeToMinutes(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function segmentsOverlap(
+  aStart: number,
+  aStop: number,
+  bStart: number,
+  bStop: number,
+): boolean {
+  return aStart < bStop && aStop > bStart;
+}
+
+function rangeOverlapsSegments(
+  aStart: number,
+  aStop: number,
+  bStart: number,
+  bStop: number,
+): boolean {
+  const aSegs =
+    aStop > aStart
+      ? [[aStart, aStop]]
+      : [
+          [aStart, MINUTES_PER_DAY],
+          [0, aStop],
+        ];
+  const bSegs =
+    bStop > bStart
+      ? [[bStart, bStop]]
+      : [
+          [bStart, MINUTES_PER_DAY],
+          [0, bStop],
+        ];
+
+  return aSegs.some(([as, ae]) => bSegs.some(([bs, be]) => segmentsOverlap(as, ae, bs, be)));
 }
 
 export function overlaps(
@@ -41,6 +92,6 @@ export function overlaps(
     }
     const taskStart = timeToMinutes(task.start);
     const taskStop = timeToMinutes(task.stop);
-    return startMin < taskStop && stopMin > taskStart;
+    return rangeOverlapsSegments(startMin, stopMin, taskStart, taskStop);
   });
 }

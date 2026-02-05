@@ -1,15 +1,44 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
+import {
+  TIME_TRACKING_STORAGE_KEYS,
+  isTimeTrackingTag,
+} from "../components/timeTracking/constants";
+import { isValidTimeString } from "../components/timeTracking/timeUtils";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
 } from "../components/timeTracking/types";
 
 type ImportPayload = {
-  tasks?: StoredTimeTrackingTask[];
-  templates?: TimeTrackingTemplate[];
+  tasks?: unknown[];
+  templates?: unknown[];
 };
+
+function isValidTask(value: unknown): value is StoredTimeTrackingTask {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.date === "string" &&
+    typeof v.text === "string" &&
+    isTimeTrackingTag(v.tag) &&
+    isValidTimeString(v.start) &&
+    isValidTimeString(v.stop)
+  );
+}
+
+function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.text === "string" &&
+    isTimeTrackingTag(v.tag) &&
+    isValidTimeString(v.start) &&
+    isValidTimeString(v.stop)
+  );
+}
 
 export function useTimeTrackingStorage() {
   const [tasks, setTasks] = useLocalStorage<StoredTimeTrackingTask[]>(
@@ -20,6 +49,12 @@ export function useTimeTrackingStorage() {
     TIME_TRACKING_STORAGE_KEYS.templates,
     [],
   );
+
+  // Refs for stable exportData callback (item #2: avoids stale closure)
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+  const templatesRef = useRef(templates);
+  templatesRef.current = templates;
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask) => {
@@ -50,16 +85,13 @@ export function useTimeTrackingStorage() {
 
   const addTemplate = useCallback(
     (payload: Omit<TimeTrackingTemplate, "id">) => {
-      setTemplates((prev) => {
-        const maxId = prev.reduce((max, template) => Math.max(max, template.id), 0);
-        return [...prev, { id: maxId + 1, ...payload }];
-      });
+      setTemplates((prev) => [...prev, { id: crypto.randomUUID(), ...payload }]);
     },
     [setTemplates],
   );
 
   const updateTemplate = useCallback(
-    (payload: { id: number; template: Omit<TimeTrackingTemplate, "id"> }) => {
+    (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => {
       setTemplates((prev) =>
         prev.map((template) =>
           template.id === payload.id ? { id: payload.id, ...payload.template } : template,
@@ -70,7 +102,7 @@ export function useTimeTrackingStorage() {
   );
 
   const deleteTemplate = useCallback(
-    (id: number) => {
+    (id: string) => {
       setTemplates((prev) => prev.filter((template) => template.id !== id));
     },
     [setTemplates],
@@ -79,8 +111,8 @@ export function useTimeTrackingStorage() {
   const exportData = useCallback(
     (date: string) => {
       const payload = {
-        tasks,
-        templates,
+        tasks: tasksRef.current,
+        templates: templatesRef.current,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
@@ -92,16 +124,18 @@ export function useTimeTrackingStorage() {
       anchor.click();
       URL.revokeObjectURL(url);
     },
-    [tasks, templates],
+    [],
   );
 
   const importData = useCallback(
     (payload: ImportPayload) => {
       if (Array.isArray(payload.tasks)) {
-        setTasks(payload.tasks);
+        const validTasks = payload.tasks.filter(isValidTask);
+        setTasks(validTasks);
       }
       if (Array.isArray(payload.templates)) {
-        setTemplates(payload.templates);
+        const validTemplates = payload.templates.filter(isValidTemplate);
+        setTemplates(validTemplates);
       }
     },
     [setTasks, setTemplates],

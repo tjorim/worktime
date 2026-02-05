@@ -106,12 +106,12 @@ export function TransferView({
       <Card>
         <Card.Header className="d-flex justify-content-between align-items-center">
           <h6 className="mb-0">
-            <i className="bi bi-arrow-left-right me-2"></i>
+            <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
             Team Transfers
           </h6>
           {myTeam && (
             <Badge bg="primary" pill>
-              <i className="bi bi-person-check me-1"></i>
+              <i className="bi bi-person-check me-1" aria-hidden="true"></i>
               Your Team: {myTeam}
             </Badge>
           )}
@@ -139,7 +139,7 @@ export function TransferView({
             </div>
           ) : availableOtherTeams.length === 0 ? (
             <div className="text-center py-4">
-              <i className="bi bi-people text-muted mb-3 icon-lg"></i>
+              <i className="bi bi-people text-muted mb-3 icon-lg" aria-hidden="true"></i>
               <h6 className="text-muted">No Other Teams Available</h6>
               <p className="text-muted mb-0">No other teams available for transfer analysis.</p>
             </div>
@@ -149,7 +149,7 @@ export function TransferView({
               <Row className="mb-3">
                 <Col md={4}>
                   <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
-                    <i className="bi bi-people me-1"></i>
+                    <i className="bi bi-people me-1" aria-hidden="true"></i>
                     View transfers with Team:
                   </Form.Label>
                   <Form.Select
@@ -181,7 +181,7 @@ export function TransferView({
                 <Row className="mb-3">
                   <Col md={5}>
                     <Form.Label htmlFor={startDateId} className="fw-semibold">
-                      <i className="bi bi-calendar-range me-1"></i>
+                      <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
                       Start Date:
                     </Form.Label>
                     <Form.Control
@@ -214,7 +214,7 @@ export function TransferView({
                       }}
                       disabled={!customStartDate && !customEndDate}
                     >
-                      <i className="bi bi-x-circle me-1"></i>
+                      <i className="bi bi-x-circle me-1" aria-hidden="true"></i>
                       Clear
                     </Button>
                   </Col>
@@ -224,7 +224,7 @@ export function TransferView({
               <Row className="mb-3">
                 <Col>
                   <Form.Text className="text-muted">
-                    <i className="bi bi-info-circle me-1"></i>
+                    <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
                     Shows transfers between your team and the selected team
                     {useCustomRange
                       ? " within the specified date range"
@@ -237,7 +237,7 @@ export function TransferView({
               {/* Transfer Results */}
               {transfers.length === 0 ? (
                 <div className="text-center py-4">
-                  <i className="bi bi-calendar-x text-muted mb-3 icon-lg"></i>
+                  <i className="bi bi-calendar-x text-muted mb-3 icon-lg" aria-hidden="true"></i>
                   <h6 className="text-muted">No Transfers Found</h6>
                   <p className="text-muted mb-0">
                     No transfers found between Team {myTeam} and Team {otherTeam}
@@ -283,6 +283,7 @@ export function TransferView({
                                       "bi-arrow-left-circle text-info":
                                         transfer.type !== "handover",
                                     })}
+                                    aria-hidden="true"
                                   ></i>
                                   <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
                                 </div>
@@ -296,7 +297,7 @@ export function TransferView({
                                     {transfer.fromTeam === myTeam ? "Your " : ""}
                                     Team {transfer.fromTeam}
                                   </Badge>
-                                  <i className="bi bi-arrow-right text-muted"></i>
+                                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
                                   <Badge
                                     bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
                                     className="text-nowrap"
@@ -339,7 +340,7 @@ export function TransferView({
                                     pill
                                     showTooltip={false}
                                   />
-                                  <i className="bi bi-arrow-right text-muted"></i>
+                                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
                                   <ShiftBadge
                                     shift={toShift}
                                     showEmoji
@@ -363,7 +364,7 @@ export function TransferView({
                         size="sm"
                         onClick={() => setTransfersToShow((prev) => prev + 10)}
                       >
-                        <i className="bi bi-plus-circle me-1"></i>
+                        <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
                         Load More Transfers
                       </Button>
                     </div>

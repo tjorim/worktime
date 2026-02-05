@@ -11,7 +11,7 @@ export type TimeTrackingTask = {
 export type StoredTimeTrackingTask = TimeTrackingTask & { date: string };
 
 export type TimeTrackingTemplate = {
-  id: number;
+  id: string;
   text: string;
   tag: TimeTrackingTag;
   start: string;
