@@ -79,10 +79,7 @@ export function TimeTrackerPanel({
   const [editTemplateId, setEditTemplateId] = useState<number | null>(null);
   const [editTimes, setEditTimes] = useState<Record<string, { start: string; stop: string }>>({});
 
-  const dailyTasks = useMemo(
-    () => tasks.filter((task) => task.date === date),
-    [tasks, date],
-  );
+  const dailyTasks = useMemo(() => tasks.filter((task) => task.date === date), [tasks, date]);
 
   useEffect(() => {
     setEditTimes((prev) => {
@@ -219,7 +216,7 @@ export function TimeTrackerPanel({
   return (
     <Card className="shadow-sm">
       <Card.Body>
-        <Card.Title>Daily Work Log</Card.Title>
+        <Card.Title>Daily Time Tracking</Card.Title>
 
         {error && <Alert variant="danger">{error}</Alert>}
 
@@ -325,66 +322,72 @@ export function TimeTrackerPanel({
           </Form.Label>
         </div>
 
-        <ListGroup className="mt-3">
-          {dailyTasks.map((task) => {
-            const edit = editTimes[task.id] ?? { start: task.start, stop: task.stop };
-            return (
-              <ListGroup.Item key={task.id}>
-                <div className="fw-semibold">
-                  {task.text}{" "}
-                  <span className={`time-tracking-tag time-tracking-tag-${tagToClass(task.tag)}`}>
-                    {task.tag}
-                  </span>
-                </div>
-                <div className="small text-muted mb-2">
-                  Start: {task.start} · Stop: {task.stop}
-                </div>
-                <Row className="g-2 align-items-center">
-                  <Col md={3}>
-                    <Form.Control
-                      type="time"
-                      value={edit.start}
-                      onChange={(event) =>
-                        setEditTimes((prev) => ({
-                          ...prev,
-                          [task.id]: { ...edit, start: event.target.value },
-                        }))
-                      }
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      type="time"
-                      value={edit.stop}
-                      onChange={(event) =>
-                        setEditTimes((prev) => ({
-                          ...prev,
-                          [task.id]: { ...edit, stop: event.target.value },
-                        }))
-                      }
-                    />
-                  </Col>
-                  <Col md={6} className="d-flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline-primary"
-                      onClick={() => handleUpdateTask(task.id)}
-                    >
-                      Update
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-danger"
-                      onClick={() => onRemoveTask(task.id)}
-                    >
-                      Remove
-                    </Button>
-                  </Col>
-                </Row>
-              </ListGroup.Item>
-            );
-          })}
-        </ListGroup>
+        {dailyTasks.length === 0 ? (
+          <Alert className="mt-3" variant="secondary">
+            No time entries yet for this date.
+          </Alert>
+        ) : (
+          <ListGroup className="mt-3">
+            {dailyTasks.map((task) => {
+              const edit = editTimes[task.id] ?? { start: task.start, stop: task.stop };
+              return (
+                <ListGroup.Item key={task.id}>
+                  <div className="fw-semibold">
+                    {task.text}{" "}
+                    <span className={`time-tracking-tag time-tracking-tag-${tagToClass(task.tag)}`}>
+                      {task.tag}
+                    </span>
+                  </div>
+                  <div className="small text-muted mb-2">
+                    Start: {task.start} · Stop: {task.stop}
+                  </div>
+                  <Row className="g-2 align-items-center">
+                    <Col md={3}>
+                      <Form.Control
+                        type="time"
+                        value={edit.start}
+                        onChange={(event) =>
+                          setEditTimes((prev) => ({
+                            ...prev,
+                            [task.id]: { ...edit, start: event.target.value },
+                          }))
+                        }
+                      />
+                    </Col>
+                    <Col md={3}>
+                      <Form.Control
+                        type="time"
+                        value={edit.stop}
+                        onChange={(event) =>
+                          setEditTimes((prev) => ({
+                            ...prev,
+                            [task.id]: { ...edit, stop: event.target.value },
+                          }))
+                        }
+                      />
+                    </Col>
+                    <Col md={6} className="d-flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        onClick={() => handleUpdateTask(task.id)}
+                      >
+                        Update
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        onClick={() => onRemoveTask(task.id)}
+                      >
+                        Remove
+                      </Button>
+                    </Col>
+                  </Row>
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+        )}
       </Card.Body>
 
       <TemplateModal
