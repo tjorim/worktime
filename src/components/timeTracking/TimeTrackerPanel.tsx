@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Alert, Button, Card, Col, Form, ListGroup, Row } from "react-bootstrap";
+import { Alert, Button, Col, Form, ListGroup, Row } from "react-bootstrap";
 import { ProgressBar } from "./ProgressBar";
 import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 import { TemplateModal } from "./TemplateModal";
@@ -215,238 +215,234 @@ export function TimeTrackerPanel({
   };
 
   return (
-    <Card className="shadow-sm">
-      <Card.Body>
-        <Card.Title>Daily Time Tracking</Card.Title>
+    <div>
+      {error && (
+        <Alert variant="danger" aria-live="polite">
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert variant="danger" aria-live="polite">
-            {error}
-          </Alert>
-        )}
-
-        <Row className="g-3 align-items-end">
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label>Select Date</Form.Label>
-              <Form.Control
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                aria-required="true"
-                aria-describedby={error ? "date-error" : undefined}
-              />
-              {error && (
-                <div id="date-error" className="text-danger small mt-1">
-                  {error}
-                </div>
-              )}
-            </Form.Group>
-          </Col>
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label>Task</Form.Label>
-              <Form.Control
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                aria-required="true"
-                aria-describedby={error ? "task-error" : undefined}
-              />
-              {error && (
-                <div id="task-error" className="text-danger small mt-1">
-                  {error}
-                </div>
-              )}
-            </Form.Group>
-          </Col>
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label>Tag</Form.Label>
-              <Form.Select
-                value={tag}
-                onChange={(e) => setTag(e.target.value as TimeTrackingTag)}
-                aria-required="true"
-                aria-describedby={error ? "tag-error" : undefined}
-              >
-                {TIME_TRACKING_TAGS.map((item) => (
-                  <option key={item} value={item}>
-                    {item.replaceAll("-", " ")}
-                  </option>
-                ))}
-              </Form.Select>
-              {error && (
-                <div id="tag-error" className="text-danger small mt-1">
-                  {error}
-                </div>
-              )}
-            </Form.Group>
-          </Col>
-          <Col md={2}>
-            <Form.Group>
-              <Form.Label>Start</Form.Label>
-              <Form.Control
-                type="time"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                aria-required="true"
-                aria-describedby={error ? "start-error" : undefined}
-              />
-              {error && (
-                <div id="start-error" className="text-danger small mt-1">
-                  {error}
-                </div>
-              )}
-            </Form.Group>
-          </Col>
-          <Col md={2}>
-            <Form.Group>
-              <Form.Label>Stop</Form.Label>
-              <Form.Control
-                type="time"
-                value={stop}
-                onChange={(e) => setStop(e.target.value)}
-                aria-required="true"
-                aria-describedby={error ? "stop-error" : undefined}
-              />
-              {error && (
-                <div id="stop-error" className="text-danger small mt-1">
-                  {error}
-                </div>
-              )}
-            </Form.Group>
-          </Col>
-          <Col md={2}>
-            <Button className="w-100" onClick={handleAddTask}>
-              Add Task
-            </Button>
-          </Col>
-        </Row>
-
-        <Button
-          variant="outline-secondary"
-          className="mt-3"
-          onClick={() => setShowTemplates((prev) => !prev)}
-        >
-          {showTemplates ? "Hide templates" : "Show templates"}
-        </Button>
-
-        {showTemplates && (
-          <div className="mt-3">
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Quick Templates</h5>
-              <Button size="sm" onClick={() => setShowNewTemplate(true)}>
-                Add Template
-              </Button>
-            </div>
-            <ListGroup className="mt-2">
-              {templates.map((template) => (
-                <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    onClick={() => handleApplyTemplate(template)}
-                  >
-                    {template.text} ({template.start}-{template.stop})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    onClick={() => handleEditTemplate(template)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-danger"
-                    onClick={() => onDeleteTemplate(template.id)}
-                  >
-                    Delete
-                  </Button>
-                </ListGroup.Item>
+      <Row className="g-3 align-items-end">
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label>Select Date</Form.Label>
+            <Form.Control
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              aria-required="true"
+              aria-describedby={error ? "date-error" : undefined}
+            />
+            {error && (
+              <div id="date-error" className="text-danger small mt-1">
+                {error}
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={4}>
+          <Form.Group>
+            <Form.Label>Task</Form.Label>
+            <Form.Control
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              aria-required="true"
+              aria-describedby={error ? "task-error" : undefined}
+            />
+            {error && (
+              <div id="task-error" className="text-danger small mt-1">
+                {error}
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label>Tag</Form.Label>
+            <Form.Select
+              value={tag}
+              onChange={(e) => setTag(e.target.value as TimeTrackingTag)}
+              aria-required="true"
+              aria-describedby={error ? "tag-error" : undefined}
+            >
+              {TIME_TRACKING_TAGS.map((item) => (
+                <option key={item} value={item}>
+                  {item.replaceAll("-", " ")}
+                </option>
               ))}
-            </ListGroup>
-          </div>
-        )}
-
-        <ProgressBar hours={totalHours} />
-
-        <div className="d-flex flex-wrap gap-2 mt-3">
-          <Button size="sm" variant="outline-secondary" onClick={() => onExportData(date)}>
-            Export Data
+            </Form.Select>
+            {error && (
+              <div id="tag-error" className="text-danger small mt-1">
+                {error}
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={2}>
+          <Form.Group>
+            <Form.Label>Start</Form.Label>
+            <Form.Control
+              type="time"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              aria-required="true"
+              aria-describedby={error ? "start-error" : undefined}
+            />
+            {error && (
+              <div id="start-error" className="text-danger small mt-1">
+                {error}
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={2}>
+          <Form.Group>
+            <Form.Label>Stop</Form.Label>
+            <Form.Control
+              type="time"
+              value={stop}
+              onChange={(e) => setStop(e.target.value)}
+              aria-required="true"
+              aria-describedby={error ? "stop-error" : undefined}
+            />
+            {error && (
+              <div id="stop-error" className="text-danger small mt-1">
+                {error}
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={2}>
+          <Button className="w-100" onClick={handleAddTask}>
+            Add Task
           </Button>
-          <Form.Label className="btn btn-outline-secondary btn-sm mb-0">
-            Import Data
-            <Form.Control type="file" accept="application/json" onChange={handleImport} hidden />
-          </Form.Label>
-        </div>
+        </Col>
+      </Row>
 
-        {dailyTasks.length === 0 ? (
-          <Alert className="mt-3" variant="secondary">
-            No time entries yet for this date.
-          </Alert>
-        ) : (
-          <ListGroup className="mt-3">
-            {dailyTasks.map((task) => {
-              const edit = editTimes[task.id] ?? { start: task.start, stop: task.stop };
-              return (
-                <ListGroup.Item key={task.id}>
-                  <div className="fw-semibold">
-                    {task.text}{" "}
-                    <span className={`time-tracking-tag time-tracking-tag-${tagToClass(task.tag)}`}>
-                      {task.tag}
-                    </span>
-                  </div>
-                  <div className="small text-muted mb-2">
-                    Start: {task.start} · Stop: {task.stop}
-                  </div>
-                  <Row className="g-2 align-items-center">
-                    <Col md={3}>
-                      <Form.Control
-                        type="time"
-                        value={edit.start}
-                        onChange={(event) =>
-                          setEditTimes((prev) => ({
-                            ...prev,
-                            [task.id]: { ...edit, start: event.target.value },
-                          }))
-                        }
-                      />
-                    </Col>
-                    <Col md={3}>
-                      <Form.Control
-                        type="time"
-                        value={edit.stop}
-                        onChange={(event) =>
-                          setEditTimes((prev) => ({
-                            ...prev,
-                            [task.id]: { ...edit, stop: event.target.value },
-                          }))
-                        }
-                      />
-                    </Col>
-                    <Col md={6} className="d-flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        onClick={() => handleUpdateTask(task.id)}
-                      >
-                        Update
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline-danger"
-                        onClick={() => onRemoveTask(task.id)}
-                      >
-                        Remove
-                      </Button>
-                    </Col>
-                  </Row>
-                </ListGroup.Item>
-              );
-            })}
+      <Button
+        variant="outline-secondary"
+        className="mt-3"
+        onClick={() => setShowTemplates((prev) => !prev)}
+      >
+        {showTemplates ? "Hide templates" : "Show templates"}
+      </Button>
+
+      {showTemplates && (
+        <div className="mt-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">Quick Templates</h5>
+            <Button size="sm" onClick={() => setShowNewTemplate(true)}>
+              Add Template
+            </Button>
+          </div>
+          <ListGroup className="mt-2">
+            {templates.map((template) => (
+              <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={() => handleApplyTemplate(template)}
+                >
+                  {template.text} ({template.start}-{template.stop})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={() => handleEditTemplate(template)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={() => onDeleteTemplate(template.id)}
+                >
+                  Delete
+                </Button>
+              </ListGroup.Item>
+            ))}
           </ListGroup>
-        )}
-      </Card.Body>
+        </div>
+      )}
+
+      <ProgressBar hours={totalHours} />
+
+      <div className="d-flex flex-wrap gap-2 mt-3">
+        <Button size="sm" variant="outline-secondary" onClick={() => onExportData(date)}>
+          Export Data
+        </Button>
+        <Form.Label className="btn btn-outline-secondary btn-sm mb-0">
+          Import Data
+          <Form.Control type="file" accept="application/json" onChange={handleImport} hidden />
+        </Form.Label>
+      </div>
+
+      {dailyTasks.length === 0 ? (
+        <Alert className="mt-3" variant="secondary">
+          No time entries yet for this date.
+        </Alert>
+      ) : (
+        <ListGroup className="mt-3">
+          {dailyTasks.map((task) => {
+            const edit = editTimes[task.id] ?? { start: task.start, stop: task.stop };
+            return (
+              <ListGroup.Item key={task.id}>
+                <div className="fw-semibold">
+                  {task.text}{" "}
+                  <span className={`time-tracking-tag time-tracking-tag-${tagToClass(task.tag)}`}>
+                    {task.tag}
+                  </span>
+                </div>
+                <div className="small text-muted mb-2">
+                  Start: {task.start} · Stop: {task.stop}
+                </div>
+                <Row className="g-2 align-items-center">
+                  <Col md={3}>
+                    <Form.Control
+                      type="time"
+                      value={edit.start}
+                      onChange={(event) =>
+                        setEditTimes((prev) => ({
+                          ...prev,
+                          [task.id]: { ...edit, start: event.target.value },
+                        }))
+                      }
+                    />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Control
+                      type="time"
+                      value={edit.stop}
+                      onChange={(event) =>
+                        setEditTimes((prev) => ({
+                          ...prev,
+                          [task.id]: { ...edit, stop: event.target.value },
+                        }))
+                      }
+                    />
+                  </Col>
+                  <Col md={6} className="d-flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline-primary"
+                      onClick={() => handleUpdateTask(task.id)}
+                    >
+                      Update
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline-danger"
+                      onClick={() => onRemoveTask(task.id)}
+                    >
+                      Remove
+                    </Button>
+                  </Col>
+                </Row>
+              </ListGroup.Item>
+            );
+          })}
+        </ListGroup>
+      )}
 
       <TemplateModal
         show={showNewTemplate}
@@ -473,6 +469,6 @@ export function TimeTrackerPanel({
         }}
         onSubmit={handleUpdateTemplate}
       />
-    </Card>
+    </div>
   );
 }

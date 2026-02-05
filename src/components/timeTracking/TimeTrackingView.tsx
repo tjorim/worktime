@@ -1,5 +1,6 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Card from "react-bootstrap/Card";
 import { useViewMode } from "../../hooks/useViewMode";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
@@ -45,22 +46,29 @@ export function TimeTrackingView() {
         </ButtonGroup>
       </div>
 
-      {viewMode === "daily" && (
-        <TimeTrackerPanel
-          tasks={tasks}
-          templates={templates}
-          onAddTask={addTask}
-          onUpdateTaskTimes={updateTaskTimes}
-          onRemoveTask={removeTask}
-          onAddTemplate={addTemplate}
-          onUpdateTemplate={updateTemplate}
-          onDeleteTemplate={deleteTemplate}
-          onExportData={exportData}
-          onImportData={importData}
-        />
-      )}
+      <Card className="shadow-sm">
+        <Card.Header className="fw-semibold">
+          {viewMode === "daily" ? "Daily Time Tracking" : "Weekly Overview"}
+        </Card.Header>
+        <Card.Body>
+          {viewMode === "daily" && (
+            <TimeTrackerPanel
+              tasks={tasks}
+              templates={templates}
+              onAddTask={addTask}
+              onUpdateTaskTimes={updateTaskTimes}
+              onRemoveTask={removeTask}
+              onAddTemplate={addTemplate}
+              onUpdateTemplate={updateTemplate}
+              onDeleteTemplate={deleteTemplate}
+              onExportData={exportData}
+              onImportData={importData}
+            />
+          )}
 
-      {viewMode === "weekly" && <WeeklyOverviewPanel tasks={tasks} />}
+          {viewMode === "weekly" && <WeeklyOverviewPanel tasks={tasks} />}
+        </Card.Body>
+      </Card>
     </div>
   );
 }
