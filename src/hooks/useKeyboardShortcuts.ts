@@ -9,6 +9,7 @@ interface KeyboardShortcuts {
   onTabSchedule?: () => void;
   onTabTransfer?: () => void;
   onTabTimeOff?: () => void;
+  onTabTimeTracking?: () => void;
   onToggleSettings?: () => void;
 }
 
@@ -120,6 +121,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
               s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
               t: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
               o: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
+              w: { cb: shortcuts.onTabTimeTracking, name: "onTabTimeTracking" },
             };
 
             const shortcut = tabShortcuts[key];

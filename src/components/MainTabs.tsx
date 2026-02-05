@@ -9,6 +9,7 @@ import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
+import { TimeTrackingView } from "./timeTracking/TimeTrackingView";
 import { TransferView } from "./TransferView";
 
 interface MainTabsProps {
@@ -82,6 +83,7 @@ export function MainTabs({
       onTabSchedule: () => setActiveTab("schedule"),
       onTabTransfer: () => setActiveTab("transfer"),
       onTabTimeOff: () => setActiveTab("timeoff"),
+      onTabTimeTracking: () => setActiveTab("timetracking"),
     }),
     [setActiveTab],
   );
@@ -162,6 +164,18 @@ export function MainTabs({
           }
         >
           <TimeOffView isActive={activeKey === "timeoff"} initialView={initialView} />
+        </Tab>
+
+        <Tab
+          eventKey="timetracking"
+          title={
+            <>
+              <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
+              Time Tracking
+            </>
+          }
+        >
+          <TimeTrackingView />
         </Tab>
       </Tabs>
 

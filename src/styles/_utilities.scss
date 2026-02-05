@@ -65,6 +65,52 @@ body {
   height: 8px;
 }
 
+/* Time tracking tags */
+.time-tracking-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.time-tracking-tag-factory-improvement {
+  background-color: #f0b429;
+  color: #1b1b1b;
+}
+
+.time-tracking-tag-support {
+  background-color: #dc3545;
+}
+
+.time-tracking-tag-meeting {
+  background-color: #6f42c1;
+}
+
+.time-tracking-tag-npi-duv {
+  background-color: #8d6e63;
+}
+
+.time-tracking-tag-npi-euv {
+  background-color: #795548;
+}
+
+.time-tracking-tag-department-improvement {
+  background-color: #fd7e14;
+}
+
+.time-tracking-tag-training {
+  background-color: #0dcaf0;
+  color: #102a43;
+}
+
+.time-tracking-tag-lunch {
+  background-color: #9ec5fe;
+  color: #0a1f44;
+}
+
 /* Text utilities */
 .textarea-mono {
   font-family:
