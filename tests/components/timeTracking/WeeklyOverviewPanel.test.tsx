@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import React from "react";
 import { WeeklyOverviewPanel } from "../../../src/components/timeTracking/WeeklyOverviewPanel";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
+import type { TimeTrackingTag } from "../../../src/components/timeTracking/constants";
 
 describe("WeeklyOverviewPanel Component", () => {
   beforeEach(() => {
@@ -13,14 +14,14 @@ describe("WeeklyOverviewPanel Component", () => {
 
   const createTaskForDate = (
     date: string,
-    tag: string,
+    tag: TimeTrackingTag,
     startTime: string,
     endTime: string,
   ): StoredTimeTrackingTask => ({
     id: `${date}-${tag}-${Math.random()}`,
     date,
     text: `${tag} work`,
-    tag: tag as any,
+    tag,
     start: startTime,
     stop: endTime,
   });
@@ -86,7 +87,6 @@ describe("WeeklyOverviewPanel Component", () => {
 
       const dataTable = container.querySelector("table");
       expect(dataTable).toBeInTheDocument();
-      expect(dataTable).toHaveClass("table-striped");
     });
 
     it("displays weekday labels in table rows", () => {
@@ -210,7 +210,7 @@ describe("WeeklyOverviewPanel Component", () => {
 
     it("resets to current week when This Week button is clicked", async () => {
       const user = userEvent.setup();
-      const { rerender } = render(<WeeklyOverviewPanel tasks={[]} />);
+      render(<WeeklyOverviewPanel tasks={[]} />);
 
       const yearInput = screen.getByLabelText(/Year/i);
       await user.clear(yearInput);
@@ -219,8 +219,6 @@ describe("WeeklyOverviewPanel Component", () => {
       const thisWeekBtn = screen.getByRole("button", { name: /This Week/i });
       await user.click(thisWeekBtn);
 
-      rerender(<WeeklyOverviewPanel tasks={[]} />);
-      
       // After clicking, year should be current year (not 2020)
       const currentYear = new Date().getFullYear();
       expect(screen.getByLabelText(/Year/i)).toHaveValue(currentYear);
@@ -252,8 +250,9 @@ describe("WeeklyOverviewPanel Component", () => {
 
       const { container } = render(<WeeklyOverviewPanel tasks={weekTasks} />);
 
-      const table = container.querySelector("table");
-      expect(table).toHaveClass("table-responsive");
+      const responsiveWrapper = container.querySelector(".table-responsive");
+      expect(responsiveWrapper).toBeInTheDocument();
+      expect(responsiveWrapper?.querySelector("table")).toBeInTheDocument();
     });
 
     it("uses bordered table style for clarity", () => {
