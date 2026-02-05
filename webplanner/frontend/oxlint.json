@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "correctness/noUnusedVariables": "warn",
+    "suspicious/noExplicitAny": "warn"
+  }
+}

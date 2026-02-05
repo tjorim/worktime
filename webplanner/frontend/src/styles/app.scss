@@ -1,0 +1,81 @@
+$app-bg: #222226;
+$app-text: #edb926;
+$accent: #ff8503;
+
+body {
+  background-color: $app-bg;
+  color: $app-text;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background-color: $app-bg;
+}
+
+.card {
+  background-color: #2b2b30;
+  color: $app-text;
+  border: 1px solid #3a3a42;
+}
+
+.form-control,
+.form-select {
+  background-color: #36393f;
+  color: $app-text;
+  border-color: #575761;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: $accent;
+  box-shadow: 0 0 0 0.15rem rgba(255, 133, 3, 0.25);
+}
+
+.list-group-item {
+  background-color: #222226;
+  border-color: #3a3a42;
+  color: $app-text;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-left: 6px;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.tag-Meeting {
+  background: #700e01;
+}
+
+.tag-Factory-Improvement {
+  background: #feb204;
+  color: #000;
+}
+
+.tag-Support {
+  background: #d53600;
+}
+
+.tag-Department-Improvement {
+  background: $accent;
+}
+
+.tag-Training {
+  background: #30aafb;
+}
+
+.tag-NPI-DUV {
+  background: #926a2d;
+}
+
+.tag-NPI-EUV {
+  background: #7c501a;
+}
+
+.tag-Lunch {
+  background: #9cd4ff;
+  color: #002a3a;
+}

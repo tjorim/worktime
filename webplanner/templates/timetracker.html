@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Task Manager{% endblock %}
+
+{% block head_extra %}
+  <script src="{{ url_for('static', filename='timetracker.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <h1>Task Manager</h1>
+
+    <label for="dateInput">Select Date:</label>
+    <input type="date" id="dateInput" value="{{ current_date }}" onchange="loadTasks()"><br>
+    <input type="text" id="taskInput" placeholder="Enter task">
+    <select id="tagSelect">
+        <option value="Factory-Improvement">Factory Improvement</option>
+        <option value="Support">Support</option>
+        <option value="Meeting">Meeting</option>
+        <option value="NPI-DUV">NPI DUV</option>
+        <option value="NPI-EUV">NPI EUV</option>
+        <option value="Department-Improvement">Department Improvement</option>
+        <option value="Training">Training</option>
+        <option value="Lunch">Lunch</option>
+    </select>
+    <input type="time" id="startTime">
+    <input type="time" id="stopTime">
+    <button id="addTaskBtn">Add Task</button>
+    <br>
+    <div id="form-error" class="error" role="alert" aria-live="polite"></div>
+    <button id="toggleTemplates" class="collapsible">▶ Show templates</button>
+    <div class="content">
+        <h3>Quick Templates</h3>
+        <button id="openTemplateModal">Add Template</button>
+        <div id="templates"></div>
+        <div id="templateModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" id="closeTemplateModal">&times;</span>
+                <h3>Add New Template</h3>
+                <input type="text" id="newText" placeholder="Task name"><br>
+                <select id="newTag">
+                    <option value="Factory-Improvement">Factory Improvement</option>
+                    <option value="Support">Support</option>
+                    <option value="Meeting">Meeting</option>
+                    <option value="NPI-DUV">NPI DUV</option>
+                    <option value="NPI-EUV">NPI EUV</option>
+                    <option value="Department-Improvement">Department Improvement</option>
+                    <option value="Training">Training</option>
+                    <option value="Lunch">Lunch</option>
+                </select><br>
+                <input type="time" id="newStart"><br>
+                <input type="time" id="newStop"><br>
+                <button id="saveNewTemplate">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="progress-container" style="margin:20px auto; width:80%;">
+        <div style="width:100%; background:#eee; border-radius:8px; overflow:hidden;">
+            <div id="progress-bar" style="height:20px; width:0%; background:#4caf50;"></div>
+        </div>
+        <p id="progress-text">0%</p>
+    </div>
+
+    <div id="editModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeEditModal">&times;</span>
+            <h3>Edit Template</h3>
+            <input type="text" id="editText"><br>
+            <select id="editTag">
+                <option value="Factory-Improvement">Factory Improvement</option>
+                <option value="Support">Support</option>
+                <option value="Meeting">Meeting</option>
+                <option value="NPI-DUV">NPI DUV</option>
+                <option value="NPI-EUV">NPI EUV</option>
+                <option value="Department-Improvement">Department Improvement</option>
+                <option value="Training">Training</option>
+                <option value="Lunch">Lunch</option>
+            </select><br>
+            <input type="time" id="editStart"><br>
+            <input type="time" id="editStop"><br>
+            <button id="saveEditTemplate">Save Changes</button>
+        </div>
+    </div>
+
+    <ul id="taskList"></ul>
+{% endblock %}
