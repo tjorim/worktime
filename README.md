@@ -19,8 +19,11 @@ Worktime helps teams and individuals working in various shift schedules to quick
 
 - **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
 - **9-5**: Standard weekday schedule (Mon-Fri, single user)
-- **Weekend shift**: Weekend-only rotation
-- **2-shift**: Alternating early/late shifts (coming soon)
+- **Weekend shift**: Weekend-only rotation with alternating early/late shifts
+
+**Coming Soon:**
+
+- **2-shift**: Alternating early/late shifts
 
 ## Features
 
@@ -34,9 +37,8 @@ Worktime helps teams and individuals working in various shift schedules to quick
 ### 📅 Schedule Selection
 
 - Choose from multiple roster patterns (5-shift, 9-5, weekend-shift)
-- Cross-schedule viewing - view any schedule type from any account
+- Switch between schedule types at any time in settings
 - Onboarding wizard for easy setup
-- Switch schedules anytime in settings
 
 ### 👥 Team Management (Multi-Team Schedules)
 
@@ -98,7 +100,7 @@ d1 # Every Monday off
 The 5-shift schedule is a continuous 24/7 rotation where each team follows a 10-day repeating cycle:
 
 - **Days 1-2**: Morning shift (07:00-15:00) - Code: M
-- **Days 3-4**: Evening shift (15:00-23:00) - Code: E
+- **Days 3-4**: Evening shift (15:00-23:00) - Code: L (displayed as E)
 - **Days 5-6**: Night shift (23:00-07:00) - Code: N
 - **Days 7-10**: Off days
 
@@ -107,7 +109,7 @@ Teams are numbered 1-5, with each team starting their cycle 2 days after the pre
 **Other Schedules:**
 
 - **9-5**: Monday-Friday day shifts (09:00-17:00) with weekends off
-- **Weekend shift**: Weekend-only rotation pattern
+- **Weekend shift**: Weekend-only rotation with alternating early/late shifts
 - **2-shift**: Alternating early/late shifts (coming soon)
 
 ## Date Format
@@ -202,7 +204,7 @@ npm run test         # Run test suite
 ### Core Framework
 
 - **Frontend**: React 19 + TypeScript with modern JSX transform
-- **Build Tool**: Vite 8 beta for modern development and optimization
+- **Build Tool**: Vite 8 for modern development and optimization
 - **UI Framework**: React Bootstrap (Bootstrap 5 components)
 - **Styling**: Sass with Bootstrap 5 design system
 
@@ -252,21 +254,14 @@ npm run test         # Run test suite
 ### 📅 Multi-Schedule Support
 
 - **Schedule Selection**: Choose from 5-shift, 9-5, or weekend-shift patterns
-- **Cross-Schedule Viewing**: View any schedule type from any account
-- **Onboarding Wizard**: Extended 4-step wizard with vacation setup
+- **Schedule Switching**: Switch between schedule types at any time
+- **Onboarding Wizard**: 5-step wizard with schedule, team, and vacation setup
 - **Schedule-Generic Components**: All components work with any schedule type
 
-### 🚀 Performance & Architecture
+### 🚀 Performance & UI
 
-- **Component Refactoring**: Split CurrentStatus into PersonalizedStatus and GenericStatus
-- **Shared Components**: Reusable ShiftBadge, ShiftTimeDisplay, CountdownBadge
-- **Clean Architecture**: Better separation of concerns with status/ and shared/ directories
 - **60x Faster Updates**: Live time updates every minute instead of every second
-
-### 🎨 Enhanced UI
-
-- **Fixed Navbar**: Bootstrap navbar with proper theming and positioning
-- **Tab Reorganization**: Unified Schedule tab with Today and Schedule views
+- **Component Architecture**: Reusable shared components (ShiftBadge, ShiftTimeDisplay, CountdownBadge)
 - **Better Mobile**: Fixed horizontal scroll and layout overflow issues
 - **Accessibility**: Semantic HTML, ARIA labels, keyboard navigation throughout
 
