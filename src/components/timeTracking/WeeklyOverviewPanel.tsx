@@ -91,7 +91,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
     const lunch = totals["Lunch"] ?? 0;
     const weekSum = tagList
       .filter((tag) => tag !== "Lunch")
-      .reduce((sum, tag) => sum + totals[tag], 0);
+      .reduce((sum, tag) => sum + (totals[tag] ?? 0), 0);
 
     return {
       summary: totals,

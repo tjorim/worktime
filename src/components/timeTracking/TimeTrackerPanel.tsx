@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Alert, Button, Card, Col, Form, ListGroup, Row } from "react-bootstrap";
 import { ProgressBar } from "./ProgressBar";
-import { TIME_TRACKING_TAGS } from "./constants";
+import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { calculateDurationHours, isValidRange, overlaps } from "./timeUtils";
 
 type TemplateFormState = {
   text: string;
-  tag: string;
+  tag: TimeTrackingTag;
   start: string;
   stop: string;
 };
@@ -62,7 +62,7 @@ export function TimeTrackerPanel({
 }: TimeTrackerPanelProps) {
   const [date, setDate] = useState(todayIso());
   const [text, setText] = useState("");
-  const [tag, setTag] = useState(TIME_TRACKING_TAGS[0]);
+  const [tag, setTag] = useState<TimeTrackingTag>(TIME_TRACKING_TAGS[0]);
   const [start, setStart] = useState("");
   const [stop, setStop] = useState("");
   const [error, setError] = useState("");
@@ -236,7 +236,10 @@ export function TimeTrackerPanel({
           <Col md={3}>
             <Form.Group>
               <Form.Label>Tag</Form.Label>
-              <Form.Select value={tag} onChange={(e) => setTag(e.target.value)}>
+              <Form.Select
+                value={tag}
+                onChange={(e) => setTag(e.target.value as TimeTrackingTag)}
+              >
                 {TIME_TRACKING_TAGS.map((item) => (
                   <option key={item} value={item}>
                     {item.replace("-", " ")}

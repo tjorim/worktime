@@ -9,6 +9,8 @@ export const TIME_TRACKING_TAGS = [
   "Lunch",
 ] as const;
 
+export type TimeTrackingTag = (typeof TIME_TRACKING_TAGS)[number];
+
 export const TIME_TRACKING_STORAGE_KEYS = {
   tasks: "worktime_time_tracking_tasks",
   templates: "worktime_time_tracking_templates",

@@ -1,6 +1,6 @@
 export function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
+  const [hours, minutes] = time.split(":");
+  return Number(hours ?? 0) * 60 + Number(minutes ?? 0);
 }
 
 export function isValidRange(start: string, stop: string): boolean {

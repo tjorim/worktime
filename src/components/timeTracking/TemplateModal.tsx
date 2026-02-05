@@ -1,9 +1,9 @@
 import { Button, Form, Modal } from "react-bootstrap";
-import { TIME_TRACKING_TAGS } from "./constants";
+import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 
 type TemplateForm = {
   text: string;
-  tag: string;
+  tag: TimeTrackingTag;
   start: string;
   stop: string;
 };
@@ -45,7 +45,9 @@ export function TemplateModal({
             <Form.Label>Tag</Form.Label>
             <Form.Select
               value={value.tag}
-              onChange={(event) => onChange({ ...value, tag: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...value, tag: event.target.value as TimeTrackingTag })
+              }
             >
               {TIME_TRACKING_TAGS.map((tag) => (
                 <option key={tag} value={tag}>
