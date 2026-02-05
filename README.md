@@ -239,7 +239,7 @@ npm run test         # Run test suite
 
 ### ⌨️ Keyboard Shortcuts
 
-- **Navigation**: Tab switching (C/S/T/O), date navigation (arrows, Ctrl+H/J/K)
+- **Navigation**: Tab switching (**C**alendar, **S**chedule, **T**ransfers, Time **O**ff), date navigation (arrows, Ctrl+K/J), jump to today (Ctrl+H)
 - **Quick Actions**: Settings (Ctrl+,), import (Ctrl+I), export (Ctrl+S)
 - **Editing**: Delete events, cancel edits (Escape), undo/redo (Ctrl+Z/Y)
 - **Discoverability**: Keyboard shortcuts modal accessible via Settings
