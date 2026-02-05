@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Card from "react-bootstrap/Card";
 import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -14,8 +13,7 @@ import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { RawContentPanel } from "./timeoff/RawContentPanel";
 import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-import { EventTable } from "./timeoff/EventTable";
-import { TimeOffToolbar } from "./timeoff/TimeOffToolbar";
+import { TimeOffTablePanel } from "./timeoff/TimeOffTablePanel";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
@@ -398,77 +396,49 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
       </div>
 
       {viewMode === "table" && (
-        <Card>
-          <TimeOffToolbar
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            eventCount={events.length}
-            selectedCount={selectedIndices.size}
-            onSelectAll={handleSelectAll}
-            onClearSelection={handleClearSelection}
-            onBulkDelete={() => setShowBulkDeleteConfirm(true)}
-            onImport={handleImport}
-            onExport={handleExport}
-            onAddEvent={handleOpenAddModal}
-            viewMode={viewMode}
-          />
-          <Card.Body>
-            {events.length === 0 ? (
-              <div className="text-center text-muted py-5">
-                <i className="bi bi-calendar-x display-4 d-block mb-3" aria-hidden="true"></i>
-                <p>No time-off events yet.</p>
-                <p className="small">
-                  Click "Add Event" to create your first event, or "Import" to load an existing
-                  .hday file.
-                </p>
-              </div>
-            ) : (
-              <EventTable
-                events={events}
-                selectedIndices={selectedIndices}
-                onToggleSelection={handleToggleSelection}
-                onSelectAll={handleSelectAll}
-                onClearSelection={handleClearSelection}
-                onEditEvent={handleOpenEditModal}
-                onDeleteEvent={handleDeleteClick}
-              />
-            )}
-          </Card.Body>
-        </Card>
+        <TimeOffTablePanel
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          eventCount={events.length}
+          selectedCount={selectedIndices.size}
+          onSelectAll={handleSelectAll}
+          onClearSelection={handleClearSelection}
+          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
+          onImport={handleImport}
+          onExport={handleExport}
+          onAddEvent={handleOpenAddModal}
+          viewMode={viewMode}
+          events={events}
+          selectedIndices={selectedIndices}
+          onToggleSelection={handleToggleSelection}
+          onEditEvent={handleOpenEditModal}
+          onDeleteEvent={handleDeleteClick}
+        />
       )}
 
       {viewMode === "stats" && (
-        <Card>
-          <Card.Body>
-            <div role="region" aria-label="Vacation statistics">
-              <VacationStatsPanel
-                events={events}
-                allowance={settings.vacationAllowance}
-                onUpdateAllowance={updateVacationAllowance}
-              />
-            </div>
-          </Card.Body>
-        </Card>
+        <div role="region" aria-label="Vacation statistics">
+          <VacationStatsPanel
+            events={events}
+            allowance={settings.vacationAllowance}
+            onUpdateAllowance={updateVacationAllowance}
+          />
+        </div>
       )}
 
       {viewMode === "raw" && (
-        <Card>
-          <Card.Header className="fw-semibold">Raw .hday content</Card.Header>
-          <Card.Body>
-            <div role="region" aria-label="Raw .hday content editor">
-              <RawContentPanel
-                rawText={rawEditorText}
-                error={rawEditorError}
-                isDirty={isRawEditorDirty}
-                onChangeRawText={handleRawEditorChange}
-                onApply={handleParseRawEditor}
-                onReset={handleResetRawEditor}
-              />
-            </div>
-          </Card.Body>
-        </Card>
+        <div role="region" aria-label="Raw .hday content editor">
+          <RawContentPanel
+            rawText={rawEditorText}
+            error={rawEditorError}
+            isDirty={isRawEditorDirty}
+            onChangeRawText={handleRawEditorChange}
+            onApply={handleParseRawEditor}
+            onReset={handleResetRawEditor}
+          />
+        </div>
       )}
 
       {/* Hidden file input for import */}
