@@ -16,7 +16,11 @@ export function timeToMinutes(time: string): number {
 }
 
 export function isValidRange(start: string, stop: string): boolean {
-  return timeToMinutes(stop) > timeToMinutes(start);
+  try {
+    return timeToMinutes(stop) > timeToMinutes(start);
+  } catch {
+    return false;
+  }
 }
 
 export function calculateDurationHours(start: string, stop: string): number {

@@ -131,6 +131,8 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                   onChange={handleAmountChange}
                   placeholder="e.g., 25"
                   isInvalid={isAmountInvalid}
+                  required
+                  aria-required="true"
                   aria-describedby={
                     isAmountInvalid
                       ? "vacationAllowanceAmount-feedback vacationAllowanceAmountHelp"
@@ -164,6 +166,8 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
                       value={hoursPerDayInput}
                       onChange={handleHoursPerDayChange}
                       isInvalid={isHoursPerDayInvalid}
+                      required
+                      aria-required="true"
                       aria-describedby={
                         isHoursPerDayInvalid
                           ? "vacationHoursPerDay-feedback vacationHoursPerDayHelp"

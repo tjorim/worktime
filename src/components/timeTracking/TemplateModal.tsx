@@ -33,7 +33,7 @@ export function TemplateModal({
         <Modal.Title>{title}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <Form>
+        <Form onSubmit={(event) => event.preventDefault()}>
           <Form.Group className="mb-3">
             <Form.Label>Task name</Form.Label>
             <Form.Control

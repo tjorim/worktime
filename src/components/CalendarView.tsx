@@ -336,13 +336,13 @@ export function CalendarView({
     <div className="calendar-view py-3">
       <Card>
         <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <div className="fw-semibold">
+          <Card.Title className="fw-semibold mb-0">
             <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
             My Working Calendar
-          </div>
+          </Card.Title>
           {!getShiftForDate ? (
             <small className="text-muted">
-              <i className="bi bi-info-circle me-1"></i>
+              <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
               Select your schedule to see your working calendar
             </small>
           ) : (

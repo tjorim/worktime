@@ -401,6 +401,7 @@ export function TimeTrackerPanel({
                     <Form.Control
                       type="time"
                       value={edit.start}
+                      aria-label={`Start time for ${task.id}`}
                       onChange={(event) =>
                         setEditTimes((prev) => ({
                           ...prev,
@@ -413,6 +414,7 @@ export function TimeTrackerPanel({
                     <Form.Control
                       type="time"
                       value={edit.stop}
+                      aria-label={`Stop time for ${task.id}`}
                       onChange={(event) =>
                         setEditTimes((prev) => ({
                           ...prev,
