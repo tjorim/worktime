@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Alert, Button, Card, Form, Table } from "react-bootstrap";
+import { dayjs } from "../../utils/dateTimeUtils";
 import type { StoredTimeTrackingTask } from "./types";
 import { calculateDurationHours } from "./timeUtils";
 
@@ -16,44 +17,26 @@ type WeeklyOverviewPanelProps = {
   tasks: StoredTimeTrackingTask[];
 };
 
-function getIsoWeek(date: Date) {
-  const target = new Date(date.valueOf());
-  const dayNr = (date.getDay() + 6) % 7;
-  target.setDate(target.getDate() - dayNr + 3);
-  const firstThursday = target.valueOf();
-  target.setMonth(0, 1);
-  if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
-  }
-  return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-}
-
 function getWeekDateRange(year: number, week: number): [string, string] {
-  const jan4 = new Date(year, 0, 4);
-  const dayNr = (jan4.getDay() + 6) % 7;
-  const weekStart = new Date(jan4);
-  weekStart.setDate(jan4.getDate() - dayNr + (week - 1) * 7);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  return [weekStart.toISOString().slice(0, 10), weekEnd.toISOString().slice(0, 10)];
+  const start = dayjs().year(year).isoWeek(week).startOf("isoWeek");
+  const end = start.endOf("isoWeek");
+  return [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")];
 }
 
 function buildWeekDays(startIso: string) {
-  const base = new Date(startIso);
   return Array.from({ length: 7 }, (_, idx) => {
-    const date = new Date(base);
-    date.setDate(base.getDate() + idx);
+    const date = dayjs(startIso).add(idx, "day");
     return {
-      iso: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(undefined, { weekday: "long" }),
+      iso: date.format("YYYY-MM-DD"),
+      label: date.format("dddd"),
     };
   });
 }
 
 export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
-  const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [week, setWeek] = useState(getIsoWeek(today));
+  const today = dayjs();
+  const [year, setYear] = useState(today.year());
+  const [week, setWeek] = useState(today.isoWeek());
 
   const [start, end] = useMemo(() => getWeekDateRange(year, week), [year, week]);
 
@@ -133,9 +116,9 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
             <Button
               variant="outline-primary"
               onClick={() => {
-                const now = new Date();
-                setYear(now.getFullYear());
-                setWeek(getIsoWeek(now));
+                const now = dayjs();
+                setYear(now.year());
+                setWeek(now.isoWeek());
               }}
             >
               This Week

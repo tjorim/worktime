@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Alert, Button, Card, Col, Form, ListGroup, Row } from "react-bootstrap";
@@ -41,7 +42,7 @@ type TimeTrackerPanelProps = {
 };
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return dayjs().format("YYYY-MM-DD");
 }
 
 function tagToClass(tag: string) {
@@ -218,19 +219,44 @@ export function TimeTrackerPanel({
       <Card.Body>
         <Card.Title>Daily Time Tracking</Card.Title>
 
-        {error && <Alert variant="danger">{error}</Alert>}
+        {error && (
+          <Alert variant="danger" aria-live="polite">
+            {error}
+          </Alert>
+        )}
 
         <Row className="g-3 align-items-end">
           <Col md={3}>
             <Form.Group>
               <Form.Label>Select Date</Form.Label>
-              <Form.Control type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Form.Control
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-required="true"
+                aria-describedby={error ? "date-error" : undefined}
+              />
+              {error && (
+                <div id="date-error" className="text-danger small mt-1">
+                  {error}
+                </div>
+              )}
             </Form.Group>
           </Col>
           <Col md={4}>
             <Form.Group>
               <Form.Label>Task</Form.Label>
-              <Form.Control value={text} onChange={(e) => setText(e.target.value)} />
+              <Form.Control
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                aria-required="true"
+                aria-describedby={error ? "task-error" : undefined}
+              />
+              {error && (
+                <div id="task-error" className="text-danger small mt-1">
+                  {error}
+                </div>
+              )}
             </Form.Group>
           </Col>
           <Col md={3}>
@@ -239,6 +265,8 @@ export function TimeTrackerPanel({
               <Form.Select
                 value={tag}
                 onChange={(e) => setTag(e.target.value as TimeTrackingTag)}
+                aria-required="true"
+                aria-describedby={error ? "tag-error" : undefined}
               >
                 {TIME_TRACKING_TAGS.map((item) => (
                   <option key={item} value={item}>
@@ -246,18 +274,45 @@ export function TimeTrackerPanel({
                   </option>
                 ))}
               </Form.Select>
+              {error && (
+                <div id="tag-error" className="text-danger small mt-1">
+                  {error}
+                </div>
+              )}
             </Form.Group>
           </Col>
           <Col md={2}>
             <Form.Group>
               <Form.Label>Start</Form.Label>
-              <Form.Control type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+              <Form.Control
+                type="time"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                aria-required="true"
+                aria-describedby={error ? "start-error" : undefined}
+              />
+              {error && (
+                <div id="start-error" className="text-danger small mt-1">
+                  {error}
+                </div>
+              )}
             </Form.Group>
           </Col>
           <Col md={2}>
             <Form.Group>
               <Form.Label>Stop</Form.Label>
-              <Form.Control type="time" value={stop} onChange={(e) => setStop(e.target.value)} />
+              <Form.Control
+                type="time"
+                value={stop}
+                onChange={(e) => setStop(e.target.value)}
+                aria-required="true"
+                aria-describedby={error ? "stop-error" : undefined}
+              />
+              {error && (
+                <div id="stop-error" className="text-danger small mt-1">
+                  {error}
+                </div>
+              )}
             </Form.Group>
           </Col>
           <Col md={2}>

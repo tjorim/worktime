@@ -1,6 +1,18 @@
 export function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(":");
-  return Number(hours ?? 0) * 60 + Number(minutes ?? 0);
+  const parts = time.split(":");
+  if (parts.length !== 2) {
+    throw new Error(`Invalid time format "${time}". Expected HH:MM.`);
+  }
+  const [hoursRaw, minutesRaw] = parts;
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
+  }
+  if (hours < 0 || minutes < 0 || minutes >= 60) {
+    throw new Error(`Invalid time value "${time}". Hours must be >= 0 and minutes 0-59.`);
+  }
+  return hours * 60 + minutes;
 }
 
 export function isValidRange(start: string, stop: string): boolean {
