@@ -102,77 +102,78 @@ export function TransferView({
   }, [useCustomRange]);
 
   return (
-    <Card>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <h6 className="mb-0">
-          <i className="bi bi-arrow-left-right me-2"></i>
-          Team Transfers
-        </h6>
-        {myTeam && (
-          <Badge bg="primary" pill>
-            <i className="bi bi-person-check me-1"></i>
-            Your Team: {myTeam}
-          </Badge>
-        )}
-      </Card.Header>
-      <Card.Body>
-        {!scheduleType ? (
-          <div className="text-center py-4">
-            <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <p className="text-muted mb-3">
-              Please select your schedule to see transfer information.
-            </p>
-            <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-          </div>
-        ) : !myTeam ? (
-          <div className="text-center py-4">
-            <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <p className="text-muted mb-3">Please select your team to see transfer information.</p>
-            <SetupActionButton
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
-              mode="team"
-            />
-          </div>
-        ) : availableOtherTeams.length === 0 ? (
-          <div className="text-center py-4">
-            <i className="bi bi-people text-muted mb-3 icon-lg"></i>
-            <h6 className="text-muted">No Other Teams Available</h6>
-            <p className="text-muted mb-0">No other teams available for transfer analysis.</p>
-          </div>
-        ) : (
-          <>
-            {/* Controls */}
-            <Row className="mb-3">
-              <Col md={4}>
-                <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
-                  <i className="bi bi-people me-1"></i>
-                  View transfers with Team:
-                </Form.Label>
-                <Form.Select
-                  id={otherTeamSelectId}
-                  value={otherTeam}
-                  onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
-                  aria-label="Select team to view transfers with"
-                >
-                  {availableOtherTeams.map((teamNumber) => (
-                    <option key={teamNumber} value={teamNumber}>
-                      Team {teamNumber}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Col>
-              <Col md={8}>
-                <Form.Check
-                  type="checkbox"
-                  id={showPastCheckboxId}
-                  label="Filter by custom date range"
-                  checked={useCustomRange}
-                  onChange={(e) => setUseCustomRange(e.target.checked)}
-                  className="mb-3"
-                />
-              </Col>
-            </Row>
+    <div className="transfer-view py-3">
+      <Card>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+          <h6 className="mb-0">
+            <i className="bi bi-arrow-left-right me-2"></i>
+            Team Transfers
+          </h6>
+          {myTeam && (
+            <Badge bg="primary" pill>
+              <i className="bi bi-person-check me-1"></i>
+              Your Team: {myTeam}
+            </Badge>
+          )}
+        </Card.Header>
+        <Card.Body>
+          {!scheduleType ? (
+            <div className="text-center py-4">
+              <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
+              <p className="text-muted mb-3">
+                Please select your schedule to see transfer information.
+              </p>
+              <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
+            </div>
+          ) : !myTeam ? (
+            <div className="text-center py-4">
+              <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
+              <p className="text-muted mb-3">Please select your team to see transfer information.</p>
+              <SetupActionButton
+                onChangeSchedule={onChangeSchedule}
+                onChangeTeam={onChangeTeam}
+                mode="team"
+              />
+            </div>
+          ) : availableOtherTeams.length === 0 ? (
+            <div className="text-center py-4">
+              <i className="bi bi-people text-muted mb-3 icon-lg"></i>
+              <h6 className="text-muted">No Other Teams Available</h6>
+              <p className="text-muted mb-0">No other teams available for transfer analysis.</p>
+            </div>
+          ) : (
+            <>
+              {/* Controls */}
+              <Row className="mb-3">
+                <Col md={4}>
+                  <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
+                    <i className="bi bi-people me-1"></i>
+                    View transfers with Team:
+                  </Form.Label>
+                  <Form.Select
+                    id={otherTeamSelectId}
+                    value={otherTeam}
+                    onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
+                    aria-label="Select team to view transfers with"
+                  >
+                    {availableOtherTeams.map((teamNumber) => (
+                      <option key={teamNumber} value={teamNumber}>
+                        Team {teamNumber}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Col>
+                <Col md={8}>
+                  <Form.Check
+                    type="checkbox"
+                    id={showPastCheckboxId}
+                    label="Filter by custom date range"
+                    checked={useCustomRange}
+                    onChange={(e) => setUseCustomRange(e.target.checked)}
+                    className="mb-3"
+                  />
+                </Col>
+              </Row>
 
             {useCustomRange && (
               <Row className="mb-3">
@@ -366,9 +367,10 @@ export function TransferView({
                 )}
               </>
             )}
-          </>
-        )}
-      </Card.Body>
-    </Card>
+            </>
+          )}
+        </Card.Body>
+      </Card>
+    </div>
   );
 }
