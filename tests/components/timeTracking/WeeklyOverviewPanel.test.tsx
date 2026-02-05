@@ -238,15 +238,16 @@ describe("WeeklyOverviewPanel Component", () => {
     const nextWeekMonday = "2025-01-13"; // Week 3 of 2025
 
     it("shows only tasks within selected week boundaries", () => {
-      const mixedTasks = [
-        createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
-        createTaskForDate(nextWeekMonday, "Meeting", "14:00", "16:00"),
-      ];
+      // Use dates from week 3 and week 4 (not current week 2)
+      const week3Task = createTaskForDate("2025-01-13", "Support", "09:00", "12:00"); // Week 3
+      const week4Task = createTaskForDate("2025-01-20", "Meeting", "14:00", "16:00"); // Week 4
+      const mixedTasks = [week3Task, week4Task];
 
-      // Component should default to current week, which won't include our test dates
+      // Component defaults to current week (week 2 of 2025 due to fake timers)
+      // Since we only have tasks for weeks 3 and 4, current week should show empty state
       render(<WeeklyOverviewPanel tasks={mixedTasks} />);
 
-      // If no tasks for current week, should show empty state
+      // Should show empty state for current week (week 2)
       const noDataMsg = screen.queryByText(/No data for this week/i);
       expect(noDataMsg).toBeInTheDocument();
     });
