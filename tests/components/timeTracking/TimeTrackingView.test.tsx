@@ -47,13 +47,13 @@ describe("TimeTrackingView", () => {
     });
 
     it("should have icons in view toggle buttons", () => {
-      render(<TimeTrackingView />);
+      const { container } = render(<TimeTrackingView />);
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
 
-      const dailyIcon = within(dailyButton).getByRole("img", { hidden: true });
-      const weeklyIcon = within(weeklyButton).getByRole("img", { hidden: true });
+      const dailyIcon = dailyButton.querySelector('i');
+      const weeklyIcon = weeklyButton.querySelector('i');
 
       expect(dailyIcon).toHaveClass("bi-list-check");
       expect(weeklyIcon).toHaveClass("bi-bar-chart-line");
@@ -72,7 +72,7 @@ describe("TimeTrackingView", () => {
     it("should render WeeklyOverviewPanel when weekly view is selected", async () => {
       const { useViewMode } = await import("../../../src/hooks/useViewMode");
       const mockUseViewMode = vi.mocked(useViewMode);
-      mockUseViewMode.mockReturnValue(["weekly", vi.fn()]);
+      mockUseViewMode.mockReturnValueOnce(["weekly", vi.fn()]);
 
       render(<TimeTrackingView />);
 

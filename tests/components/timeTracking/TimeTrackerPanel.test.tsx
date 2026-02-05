@@ -62,7 +62,9 @@ describe("TimeTrackerPanel", () => {
 
       await user.click(screen.getByRole("button", { name: /Add Task/i }));
 
-      expect(screen.getByText(/Please fill in all fields/i)).toBeInTheDocument();
+      const alerts = screen.getAllByRole("alert");
+      const mainAlert = alerts[0]; // First alert is the main validation alert
+      expect(mainAlert.textContent).toMatch(/Please fill in all fields/i);
       expect(mockProps.onAddTask).not.toHaveBeenCalled();
     });
 
@@ -75,7 +77,9 @@ describe("TimeTrackerPanel", () => {
       await user.type(screen.getByLabelText(/^Stop$/i), "08:00");
       await user.click(screen.getByRole("button", { name: /Add Task/i }));
 
-      expect(screen.getByText(/Stop time must be after start time/i)).toBeInTheDocument();
+      const alerts = screen.getAllByRole("alert");
+      const mainAlert = alerts[0]; // First alert is the main validation alert
+      expect(mainAlert.textContent).toMatch(/Stop time must be after start time/i);
     });
 
     it("should detect time conflicts", async () => {
@@ -92,7 +96,9 @@ describe("TimeTrackerPanel", () => {
       await user.type(screen.getByLabelText(/^Stop$/i), "10:00");
       await user.click(screen.getByRole("button", { name: /Add Task/i }));
 
-      expect(screen.getByText(/Time range overlaps/i)).toBeInTheDocument();
+      const alerts = screen.getAllByRole("alert");
+      const mainAlert = alerts[0]; // First alert is the main validation alert
+      expect(mainAlert.textContent).toMatch(/Time range overlaps/i);
     });
   });
 

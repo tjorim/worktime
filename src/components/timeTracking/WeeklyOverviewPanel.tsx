@@ -90,7 +90,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
   return (
     <div>
       <div className="d-flex flex-wrap gap-3 mb-3">
-        <Form.Group>
+        <Form.Group controlId="weeklyYear">
           <Form.Label>Year</Form.Label>
           <Form.Control
             type="number"
@@ -100,7 +100,7 @@ export function WeeklyOverviewPanel({ tasks }: WeeklyOverviewPanelProps) {
             onChange={(event) => setYear(Number(event.target.value))}
           />
         </Form.Group>
-        <Form.Group>
+        <Form.Group controlId="weeklyWeek">
           <Form.Label>Week</Form.Label>
           <Form.Control
             type="number"

@@ -9,7 +9,15 @@ import type { TimeTrackingTag } from "../../../src/components/timeTracking/const
 
 describe("WeeklyOverviewPanel Component", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-06T00:00:00Z"));
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    vi.resetAllMocks();
   });
 
   const createTaskForDate = (
@@ -187,7 +195,7 @@ describe("WeeklyOverviewPanel Component", () => {
 
   describe("User Interactions", () => {
     it("updates display when year selector changes", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const yearInput = screen.getByLabelText(/Year/i);
@@ -198,7 +206,7 @@ describe("WeeklyOverviewPanel Component", () => {
     });
 
     it("updates display when week selector changes", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const weekInput = screen.getByLabelText(/Week/i);
@@ -209,7 +217,7 @@ describe("WeeklyOverviewPanel Component", () => {
     });
 
     it("resets to current week when This Week button is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<WeeklyOverviewPanel tasks={[]} />);
 
       const yearInput = screen.getByLabelText(/Year/i);
