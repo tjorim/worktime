@@ -32,10 +32,7 @@ type TimeTrackerPanelProps = {
   }) => void;
   onRemoveTask: (id: string) => void;
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
-  onUpdateTemplate: (payload: {
-    id: number;
-    template: Omit<TimeTrackingTemplate, "id">;
-  }) => void;
+  onUpdateTemplate: (payload: { id: number; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: number) => void;
   onExportData: (date: string) => void;
   onImportData: (payload: ImportPayload) => void;
@@ -224,7 +221,7 @@ export function TimeTrackerPanel({
 
       <Row className="g-3 align-items-end">
         <Col md={3}>
-          <Form.Group>
+          <Form.Group controlId="timeTrackerDate">
             <Form.Label>Select Date</Form.Label>
             <Form.Control
               type="date"
@@ -241,7 +238,7 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
         <Col md={4}>
-          <Form.Group>
+          <Form.Group controlId="timeTrackerTask">
             <Form.Label>Task</Form.Label>
             <Form.Control
               value={text}
@@ -257,7 +254,7 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
         <Col md={3}>
-          <Form.Group>
+          <Form.Group controlId="timeTrackerTag">
             <Form.Label>Tag</Form.Label>
             <Form.Select
               value={tag}
@@ -279,7 +276,7 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
         <Col md={2}>
-          <Form.Group>
+          <Form.Group controlId="timeTrackerStart">
             <Form.Label>Start</Form.Label>
             <Form.Control
               type="time"
@@ -296,7 +293,7 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
         <Col md={2}>
-          <Form.Group>
+          <Form.Group controlId="timeTrackerStop">
             <Form.Label>Stop</Form.Label>
             <Form.Control
               type="time"
