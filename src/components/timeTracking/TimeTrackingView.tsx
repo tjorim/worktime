@@ -46,12 +46,10 @@ export function TimeTrackingView() {
         </ButtonGroup>
       </div>
 
-      <Card className="shadow-sm">
-        <Card.Header className="fw-semibold">
-          {viewMode === "daily" ? "Daily Time Tracking" : "Weekly Overview"}
-        </Card.Header>
-        <Card.Body>
-          {viewMode === "daily" && (
+      {viewMode === "daily" && (
+        <Card className="shadow-sm">
+          <Card.Header className="fw-semibold">Daily Time Tracking</Card.Header>
+          <Card.Body>
             <TimeTrackerPanel
               tasks={tasks}
               templates={templates}
@@ -64,11 +62,18 @@ export function TimeTrackingView() {
               onExportData={exportData}
               onImportData={importData}
             />
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          {viewMode === "weekly" && <WeeklyOverviewPanel tasks={tasks} />}
-        </Card.Body>
-      </Card>
+      {viewMode === "weekly" && (
+        <Card className="shadow-sm">
+          <Card.Header className="fw-semibold">Weekly Overview</Card.Header>
+          <Card.Body>
+            <WeeklyOverviewPanel tasks={tasks} />
+          </Card.Body>
+        </Card>
+      )}
     </div>
   );
 }
