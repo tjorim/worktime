@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import { useSetupAction } from "../../hooks/useSetupAction";
 
@@ -53,7 +54,7 @@ export function SetupActionButton({
         onClick={onChangeSchedule}
         title="Select your work schedule"
       >
-        <i className={`bi ${buttonIcon} me-1`} aria-hidden="true"></i>
+        <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
         {buttonText}
       </Button>
     );
@@ -63,7 +64,7 @@ export function SetupActionButton({
   if (needsTeam && onChangeTeam) {
     return (
       <Button variant="primary" size={size} onClick={onChangeTeam} title="Select your team">
-        <i className={`bi ${buttonIcon} me-1`} aria-hidden="true"></i>
+        <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
         {buttonText}
       </Button>
     );

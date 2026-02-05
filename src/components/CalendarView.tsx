@@ -21,36 +21,13 @@ import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { SetupActionButton } from "./shared/SetupActionButton";
-
-const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
-  ["none", "Holiday (default)"],
-  ["business", "Business trip"],
-  ["course", "Training/Course"],
-  ["in", "In office"],
-  ["weekend", "Weekend"],
-  ["birthday", "Birthday"],
-  ["ill", "Sick leave"],
-  ["other", "Other"],
-];
-
-const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", string]> = [
-  ["none", "Full day"],
-  ["half_am", "AM (half day)"],
-  ["half_pm", "PM (half day)"],
-  ["onsite", "Onsite"],
-  ["no_fly", "No fly"],
-  ["can_fly", "Can fly"],
-];
-
-const TYPE_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TYPE_FLAG_OPTIONS.map(
-  ([flag]) => flag,
-).filter((f) => f !== "none") as EventFlag[];
-
-const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] = TIME_LOCATION_FLAG_OPTIONS.map(
-  ([flag]) => flag,
-).filter((f) => f !== "none") as EventFlag[];
-
-const DEFAULT_WEEKDAY = 1;
+import {
+  TYPE_FLAG_OPTIONS,
+  TIME_LOCATION_FLAG_OPTIONS,
+  TYPE_FLAGS_AS_EVENT_FLAGS,
+  TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
+  DEFAULT_WEEKDAY,
+} from "../data/timeoffConstants";
 
 interface CalendarViewProps {
   myTeam: number | null;

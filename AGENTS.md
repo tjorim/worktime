@@ -153,7 +153,6 @@ Worktime/
 │   │   └── rosters.ts              # Schedule roster configurations and patterns (IMPORTANT)
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useCountdown.ts         # Countdown timer hook for next shift timing
-│   │   ├── useFocusTrap.ts         # Focus trap for modals
 │   │   ├── useFormattedShiftTime.ts # Shift time formatting helpers
 │   │   ├── useKeyboardShortcuts.ts # Keyboard shortcuts functionality
 │   │   ├── useLiveTime.ts          # Live updating time with configurable frequency

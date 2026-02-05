@@ -286,61 +286,74 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.event-type-badge {
-  color: var(--bs-body-color);
-}
-
-/* Event type colors */
+/* Event type colors — text color chosen per background for WCAG AA contrast */
 .event-holiday-full {
   background-color: #ec0000;
+  color: #fff;
 }
 .event-holiday-half {
   background-color: #ff8a8a;
+  color: #000;
 }
 .event-business-full {
   background-color: #ff9500;
+  color: #000;
 }
 .event-business-half {
   background-color: #ffc04d;
+  color: #000;
 }
 .event-course-full {
   background-color: #d9ad00;
+  color: #000;
 }
 .event-course-half {
   background-color: #f0d04d;
+  color: #000;
 }
 .event-in-full {
   background-color: #008899;
+  color: #fff;
 }
 .event-in-half {
   background-color: #00b8cc;
+  color: #000;
 }
 .event-weekend-full {
   background-color: #990099;
+  color: #fff;
 }
 .event-weekend-half {
   background-color: #cc66cc;
+  color: #000;
 }
 .event-birthday-full {
   background-color: #0000cc;
+  color: #fff;
 }
 .event-birthday-half {
   background-color: #6666ff;
+  color: #000;
 }
 .event-ill-full {
   background-color: #336600;
+  color: #fff;
 }
 .event-ill-half {
   background-color: #669933;
+  color: #000;
 }
 .event-other-full {
   background-color: #008b8b;
+  color: #fff;
 }
 .event-other-half {
   background-color: #4db8b8;
+  color: #000;
 }
 .event-unknown {
   background-color: #ccc;
+  color: #000;
 }
 
 /* ============================================================================

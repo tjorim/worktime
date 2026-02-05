@@ -90,11 +90,7 @@ export function Step5VacationAllowance({
           Back
         </Button>
         <div className="d-flex gap-2 order-1 order-sm-2">
-          <Button
-            variant="outline-secondary"
-            onClick={onSkip}
-            className="flex-fill flex-sm-grow-0"
-          >
+          <Button variant="outline-secondary" onClick={onSkip} className="flex-fill flex-sm-grow-0">
             Skip
           </Button>
           <Button

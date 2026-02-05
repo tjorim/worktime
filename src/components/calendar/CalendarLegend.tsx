@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
@@ -36,7 +37,7 @@ const legendPopover = (
         <div className="d-flex flex-wrap gap-2 mt-1">
           {EVENT_TYPE_LEGEND.map(({ colorClass, label }) => (
             <span key={colorClass} className="d-inline-flex align-items-center gap-1">
-              <span className={`month-calendar-event-color ${colorClass}`} />
+              <span className={clsx("month-calendar-event-color", colorClass)} />
               <small>{label}</small>
             </span>
           ))}
