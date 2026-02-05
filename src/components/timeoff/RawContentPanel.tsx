@@ -24,7 +24,10 @@ export function RawContentPanel({
 
   return (
     <Card>
-      <Card.Header className="fw-semibold">Raw .hday content</Card.Header>
+      <Card.Header className="fw-semibold">
+        <i className="bi bi-code-square me-2" aria-hidden="true"></i>
+        Raw .hday content
+      </Card.Header>
       <Card.Body>
         <p className="text-muted">
           Paste your <code>.hday</code> content below (or load a file), click{" "}
