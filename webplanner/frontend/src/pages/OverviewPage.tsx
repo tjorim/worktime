@@ -61,6 +61,7 @@ export function OverviewPage() {
         const data = await fetchTasksRange(start, end);
         setRows(data);
       } catch (err) {
+        console.error("Failed to load overview tasks.", err);
         setError("Failed to load tasks for overview.");
       }
     };

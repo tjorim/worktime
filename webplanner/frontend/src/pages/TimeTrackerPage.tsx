@@ -67,6 +67,7 @@ export function TimeTrackerPage() {
         const data = await fetchTasks(date);
         setTasks(data);
       } catch (err) {
+        console.error("Failed to load tasks.", err);
         setError("Failed to load tasks.");
       }
     };
@@ -79,6 +80,7 @@ export function TimeTrackerPage() {
         const data = await fetchTemplates();
         setTemplates(data);
       } catch (err) {
+        console.error("Failed to load templates.", err);
         setError("Failed to load templates.");
       }
     };
