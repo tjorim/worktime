@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 import React from "react";
 import { TimeTrackingView } from "../../../src/components/timeTracking/TimeTrackingView";
 import { SettingsProvider } from "../../../src/contexts/SettingsContext";
+import { useViewMode } from "../../../src/hooks/useViewMode";
 
 // Mock the hooks
 vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
@@ -28,6 +29,7 @@ vi.mock("../../../src/hooks/useViewMode", () => ({
 describe("TimeTrackingView", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.mocked(useViewMode).mockReturnValue(["daily", vi.fn()]);
   });
 
   const renderWithSettings = () =>
@@ -77,10 +79,8 @@ describe("TimeTrackingView", () => {
   });
 
   describe("Weekly View", () => {
-    it("should render WeeklyOverviewPanel when weekly view is selected", async () => {
-      const { useViewMode } = await import("../../../src/hooks/useViewMode");
-      const mockUseViewMode = vi.mocked(useViewMode);
-      mockUseViewMode.mockReturnValueOnce(["weekly", vi.fn()]);
+    it("should render WeeklyOverviewPanel when weekly view is selected", () => {
+      vi.mocked(useViewMode).mockReturnValue(["weekly", vi.fn()]);
 
       renderWithSettings();
 
