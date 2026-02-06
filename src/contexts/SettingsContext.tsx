@@ -130,11 +130,13 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     defaultSettings.vacationAllowance,
   );
   const enableTimeOff =
-    typeof settingsRecord.enableTimeOff === "boolean" ? settingsRecord.enableTimeOff : true;
+    typeof settingsRecord.enableTimeOff === "boolean"
+      ? settingsRecord.enableTimeOff
+      : defaultSettings.enableTimeOff;
   const enableTimeTracking =
     typeof settingsRecord.enableTimeTracking === "boolean"
       ? settingsRecord.enableTimeTracking
-      : true;
+      : defaultSettings.enableTimeTracking;
   const timeTrackingWeeklyTargetHours =
     typeof settingsRecord.timeTrackingWeeklyTargetHours === "number" &&
     Number.isFinite(settingsRecord.timeTrackingWeeklyTargetHours) &&

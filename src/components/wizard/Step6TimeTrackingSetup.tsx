@@ -44,24 +44,25 @@ export function Step6TimeTrackingSetup({
           onChange={(event) => onToggle(event.target.checked)}
         />
 
-        <Form.Group className="mt-3" controlId="weeklyTargetHours">
-          <Form.Label>Weekly target hours</Form.Label>
-          <Form.Control
-            type="number"
-            min={0}
-            step={0.5}
-            value={weeklyTargetHours}
-            onChange={(event) => onWeeklyTargetHoursChange(event.target.value)}
-            isInvalid={isInvalid}
-            disabled={!isEnabled}
-          />
-          <Form.Control.Feedback type="invalid">
-            Enter a valid number (0 or greater).
-          </Form.Control.Feedback>
-          <Form.Text className="text-muted">
-            Used for weekly summaries and progress tracking.
-          </Form.Text>
-        </Form.Group>
+        {isEnabled && (
+          <Form.Group className="mt-3" controlId="weeklyTargetHours">
+            <Form.Label>Weekly target hours</Form.Label>
+            <Form.Control
+              type="number"
+              min={0}
+              step={0.5}
+              value={weeklyTargetHours}
+              onChange={(event) => onWeeklyTargetHoursChange(event.target.value)}
+              isInvalid={isInvalid}
+            />
+            <Form.Control.Feedback type="invalid">
+              Enter a valid number (0 or greater).
+            </Form.Control.Feedback>
+            <Form.Text className="text-muted">
+              Used for weekly summaries and progress tracking.
+            </Form.Text>
+          </Form.Group>
+        )}
       </Form>
 
       {isEnabled ? (
