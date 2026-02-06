@@ -62,10 +62,14 @@ describe("Time Tracking Utils", () => {
       expect(isValidRange("12:00", "12:01")).toBe(true);
     });
 
-    it("should return false when stop is before or equal to start", () => {
-      expect(isValidRange("17:00", "08:00")).toBe(false);
+    it("should return true for overnight ranges", () => {
+      expect(isValidRange("17:00", "08:00")).toBe(true);
+      expect(isValidRange("23:00", "07:00")).toBe(true);
+      expect(isValidRange("12:30", "12:00")).toBe(true);
+    });
+
+    it("should return false when start equals stop", () => {
       expect(isValidRange("12:00", "12:00")).toBe(false);
-      expect(isValidRange("12:30", "12:00")).toBe(false);
     });
 
     it("should return false for invalid time formats", () => {
@@ -75,9 +79,7 @@ describe("Time Tracking Utils", () => {
     });
 
     it("should handle midnight crossings correctly", () => {
-      // Note: This function doesn't handle midnight crossings as separate days
-      // It only compares minutes, so 23:59 to 00:01 is invalid
-      expect(isValidRange("23:59", "00:01")).toBe(false);
+      expect(isValidRange("23:59", "00:01")).toBe(true);
     });
   });
 
@@ -102,8 +104,9 @@ describe("Time Tracking Utils", () => {
       expect(calculateDurationHours("12:00", "12:01")).toBeCloseTo(1 / 60, 5);
     });
 
-    it("should handle negative durations (stop before start)", () => {
-      expect(calculateDurationHours("17:00", "08:00")).toBe(-9);
+    it("should handle overnight durations (stop before start)", () => {
+      expect(calculateDurationHours("17:00", "08:00")).toBe(15);
+      expect(calculateDurationHours("23:00", "07:00")).toBe(8);
     });
   });
 

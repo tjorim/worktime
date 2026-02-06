@@ -1,7 +1,10 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Alert, Button, Form, ListGroup } from "react-bootstrap";
+import Alert from "react-bootstrap/Alert";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
@@ -75,7 +78,13 @@ export function TimeTrackerPanel({
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editTimes, setEditTimes] = useState<Record<string, { start: string; stop: string }>>({});
 
-  const dailyTasks = useMemo(() => tasks.filter((task) => task.date === date), [tasks, date]);
+  const dailyTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => task.date === date)
+        .sort((a, b) => a.start.localeCompare(b.start)),
+    [tasks, date],
+  );
 
   useEffect(() => {
     setEditTimes((prev) => {

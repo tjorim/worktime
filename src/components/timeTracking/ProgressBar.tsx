@@ -1,4 +1,4 @@
-import { ProgressBar as BootstrapProgressBar } from "react-bootstrap";
+import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 
 type ProgressBarProps = {
   hours: number;

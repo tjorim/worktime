@@ -1,4 +1,6 @@
-import { Button, Form, Modal } from "react-bootstrap";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Modal from "react-bootstrap/Modal";
 import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 
 type TemplateForm = {

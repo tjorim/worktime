@@ -1,4 +1,9 @@
-import { Alert, Button, Col, Form, ListGroup, Row } from "react-bootstrap";
+import Alert from "react-bootstrap/Alert";
+import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
+import Row from "react-bootstrap/Row";
 import type { StoredTimeTrackingTask } from "./types";
 
 function tagToClass(tag: string) {

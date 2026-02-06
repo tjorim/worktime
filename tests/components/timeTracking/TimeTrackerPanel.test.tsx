@@ -73,7 +73,7 @@ describe("TimeTrackerPanel", () => {
       render(<TimeTrackerPanel {...mockProps} />);
 
       await user.type(screen.getByLabelText(/^Task$/i), "Test");
-      await user.type(screen.getByLabelText(/^Start$/i), "17:00");
+      await user.type(screen.getByLabelText(/^Start$/i), "08:00");
       await user.type(screen.getByLabelText(/^Stop$/i), "08:00");
       await user.click(screen.getByRole("button", { name: /Add Task/i }));
 

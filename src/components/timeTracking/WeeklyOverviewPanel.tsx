@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { Alert, Button, Form, Table } from "react-bootstrap";
+import Alert from "react-bootstrap/Alert";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { StoredTimeTrackingTask } from "./types";
 import { calculateDurationHours } from "./timeUtils";

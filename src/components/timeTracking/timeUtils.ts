@@ -28,6 +28,7 @@ const MINUTES_PER_DAY = 1440;
 export function calculateDurationHours(start: string, stop: string): number {
   const startMin = timeToMinutes(start);
   const stopMin = timeToMinutes(stop);
+  if (startMin === stopMin) return 0;
   const diff = stopMin - startMin;
   return (diff > 0 ? diff : diff + MINUTES_PER_DAY) / 60;
 }
