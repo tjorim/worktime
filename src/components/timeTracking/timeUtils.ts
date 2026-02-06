@@ -61,14 +61,14 @@ function rangeOverlapsSegments(
   bStart: number,
   bStop: number,
 ): boolean {
-  const aSegs =
+  const aSegs: Array<[number, number]> =
     aStop > aStart
       ? [[aStart, aStop]]
       : [
           [aStart, MINUTES_PER_DAY],
           [0, aStop],
         ];
-  const bSegs =
+  const bSegs: Array<[number, number]> =
     bStop > bStart
       ? [[bStart, bStop]]
       : [

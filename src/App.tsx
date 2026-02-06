@@ -45,7 +45,7 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
-  const [activeTab, setActiveTab] = useState(settings.lastActiveTab);
+  const [activeTab, setActiveTab] = useState<TabKey>(settings.lastActiveTab);
   const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
   const [urlScheduleView, setUrlScheduleView] = useState<string | undefined>(undefined);
@@ -54,9 +54,9 @@ function AppContent() {
   const initialTimeOffView = urlTimeOffView ?? settings.lastTimeOffView;
 
   const handleTabChange = useCallback(
-    (tab: string) => {
+    (tab: TabKey) => {
       setActiveTab(tab);
-      updateLastActiveTab(tab as TabKey);
+      updateLastActiveTab(tab);
     },
     [updateLastActiveTab],
   );
@@ -66,23 +66,25 @@ function AppContent() {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
     const viewParam = urlParams.get("view");
-    const availableTabs = [
+    const availableTabs: TabKey[] = [
       "calendar",
       "schedule",
       "transfer",
-      ...(settings.enableTimeOff ? ["timeoff"] : []),
-      ...(settings.enableTimeTracking ? ["timetracking"] : []),
+      ...(settings.enableTimeOff ? (["timeoff"] as TabKey[]) : []),
+      ...(settings.enableTimeTracking ? (["timetracking"] as TabKey[]) : []),
     ];
 
     // Set active tab from URL
-    if (tabParam && availableTabs.includes(tabParam)) {
-      handleTabChange(tabParam);
+    if (tabParam && availableTabs.includes(tabParam as TabKey)) {
+      handleTabChange(tabParam as TabKey);
     }
 
     // Set initial view from URL
     if (viewParam) {
       const resolvedTab =
-        tabParam && availableTabs.includes(tabParam) ? tabParam : activeTab;
+        tabParam && availableTabs.includes(tabParam as TabKey)
+          ? (tabParam as TabKey)
+          : activeTab;
       if (resolvedTab === "timeoff") {
         setUrlTimeOffView(viewParam);
       } else if (resolvedTab === "schedule") {

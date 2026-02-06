@@ -4,6 +4,7 @@ import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import type { ScheduleOption } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
+import type { TabKey } from "../contexts/SettingsContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { CalendarView } from "./CalendarView";
@@ -17,8 +18,8 @@ interface MainTabsProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
+  activeTab?: TabKey;
+  onTabChange?: (tab: TabKey) => void;
   initialScheduleView?: string; // Initial view mode for schedule sub-tabs (e.g., "today", "week")
   initialTimeOffView?: string; // Initial view mode for time-off sub-tabs (e.g., "table", "stats")
   onChangeSchedule?: () => void; // Callback to open schedule selector
@@ -77,7 +78,7 @@ export function MainTabs({
   };
 
   const setActiveTab = useCallback(
-    (tab: string) => {
+    (tab: TabKey) => {
       setActiveKey(tab);
       onTabChange?.(tab);
     },
@@ -100,13 +101,13 @@ export function MainTabs({
 
   useKeyboardShortcuts(shortcuts);
 
-  const availableTabs = useMemo(
+  const availableTabs = useMemo<TabKey[]>(
     () => [
       "calendar",
       "schedule",
       "transfer",
-      ...(timeOffEnabled ? ["timeoff"] : []),
-      ...(timeTrackingEnabled ? ["timetracking"] : []),
+      ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
+      ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
     ],
     [timeOffEnabled, timeTrackingEnabled],
   );
@@ -125,7 +126,7 @@ export function MainTabs({
       <Tabs
         activeKey={activeKey}
         onSelect={(k) => {
-          const newKey = k || "calendar";
+          const newKey = (k || "calendar") as TabKey;
           setActiveTab(newKey);
         }}
         id={tabsId}
