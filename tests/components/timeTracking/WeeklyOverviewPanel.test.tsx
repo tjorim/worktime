@@ -5,6 +5,7 @@ import React from "react";
 import { WeeklyOverviewPanel } from "../../../src/components/timeTracking/WeeklyOverviewPanel";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 import type { TimeTrackingTag } from "../../../src/components/timeTracking/constants";
+import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 describe("WeeklyOverviewPanel Component", () => {
   beforeEach(() => {
@@ -26,11 +27,10 @@ describe("WeeklyOverviewPanel Component", () => {
     endTime: string,
   ): StoredTimeTrackingTask => ({
     id: `${date}-${tag}-${Math.random()}`,
-    date,
     text: `${tag} work`,
     tag,
-    start: startTime,
-    stop: endTime,
+    startTime: dayjs(`${date}T${startTime}`),
+    stopTime: dayjs(`${date}T${endTime}`),
   });
 
   describe("Week Selection Controls", () => {

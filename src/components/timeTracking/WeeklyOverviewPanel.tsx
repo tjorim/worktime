@@ -5,13 +5,11 @@ import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { StoredTimeTrackingTask } from "./types";
-import { calculateDurationHours } from "./timeUtils";
 
 type OverviewRow = {
   tag: string;
-  start: string;
-  stop: string;
   date: string;
+  hours: number;
 };
 
 type Summary = Record<string, number>;
@@ -47,19 +45,21 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
   const rows = useMemo<OverviewRow[]>(
     () =>
       tasks
-        .filter((task) => task.date >= start && task.date <= end)
+        .filter((task) => {
+          const taskDate = task.startTime.format("YYYY-MM-DD");
+          return taskDate >= start && taskDate <= end;
+        })
         .map((task) => ({
-          date: task.date,
+          date: task.startTime.format("YYYY-MM-DD"),
           tag: task.tag,
-          start: task.start,
-          stop: task.stop,
+          hours: task.stopTime.diff(task.startTime, "hour", true),
         })),
     [tasks, start, end],
   );
 
   const { summary, dailyTotals, tags, weekTotal, lunchTotal, weekDays } = useMemo(() => {
     const totals = rows.reduce<Summary>((acc, row) => {
-      acc[row.tag] = (acc[row.tag] ?? 0) + calculateDurationHours(row.start, row.stop);
+      acc[row.tag] = (acc[row.tag] ?? 0) + row.hours;
       return acc;
     }, {});
     const days = buildWeekDays(start);
@@ -70,7 +70,7 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
 
     rows.forEach((row) => {
       const bucket = dayTotals[row.date] ?? {};
-      bucket[row.tag] = (bucket[row.tag] ?? 0) + calculateDurationHours(row.start, row.stop);
+      bucket[row.tag] = (bucket[row.tag] ?? 0) + row.hours;
       dayTotals[row.date] = bucket;
     });
 

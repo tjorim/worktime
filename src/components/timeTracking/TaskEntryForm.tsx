@@ -5,8 +5,6 @@ import Row from "react-bootstrap/Row";
 import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 
 type TaskEntryFormProps = {
-  date: string;
-  onDateChange: (date: string) => void;
   text: string;
   onTextChange: (text: string) => void;
   tag: TimeTrackingTag;
@@ -19,8 +17,6 @@ type TaskEntryFormProps = {
 };
 
 export function TaskEntryForm({
-  date,
-  onDateChange,
   text,
   onTextChange,
   tag,
@@ -33,17 +29,6 @@ export function TaskEntryForm({
 }: TaskEntryFormProps) {
   return (
     <Row className="g-3 align-items-end">
-      <Col md={3}>
-        <Form.Group controlId="timeTrackerDate">
-          <Form.Label>Select Date</Form.Label>
-          <Form.Control
-            type="date"
-            value={date}
-            onChange={(e) => onDateChange(e.target.value)}
-            aria-required="true"
-          />
-        </Form.Group>
-      </Col>
       <Col md={4}>
         <Form.Group controlId="timeTrackerTask">
           <Form.Label>Task</Form.Label>

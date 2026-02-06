@@ -40,7 +40,9 @@ export function DailyTaskList({
   return (
     <ListGroup className="mt-3">
       {tasks.map((task) => {
-        const edit = editTimes[task.id] ?? { start: task.start, stop: task.stop };
+        const startDisplay = task.startTime.format("HH:mm");
+        const stopDisplay = task.stopTime.format("HH:mm");
+        const edit = editTimes[task.id] ?? { start: startDisplay, stop: stopDisplay };
         return (
           <ListGroup.Item key={task.id}>
             <div className="fw-semibold">
@@ -50,7 +52,7 @@ export function DailyTaskList({
               </span>
             </div>
             <div className="small text-muted mb-2">
-              Start: {task.start} · Stop: {task.stop}
+              Start: {startDisplay} · Stop: {stopDisplay}
             </div>
             <Row className="g-2 align-items-center">
               <Col md={3}>

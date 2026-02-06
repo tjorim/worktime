@@ -1,17 +1,20 @@
-import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import type { Dayjs } from "dayjs";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import Row from "react-bootstrap/Row";
+import { dayjs } from "../../utils/dateTimeUtils";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import { calculateDurationHours, isValidRange, overlaps } from "./timeUtils";
+import { isValidRange, overlaps } from "./timeUtils";
 
 type TemplateFormState = {
   text: string;
@@ -30,10 +33,9 @@ type TimeTrackerPanelProps = {
   templates: TimeTrackingTemplate[];
   onAddTask: (payload: StoredTimeTrackingTask) => void;
   onUpdateTaskTimes: (payload: {
-    date: string;
     id: string;
-    newStart: string;
-    newStop: string;
+    newStartTime: Dayjs;
+    newStopTime: Dayjs;
   }) => void;
   onRemoveTask: (id: string) => void;
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
@@ -81,8 +83,8 @@ export function TimeTrackerPanel({
   const dailyTasks = useMemo(
     () =>
       tasks
-        .filter((task) => task.date === date)
-        .sort((a, b) => a.start.localeCompare(b.start)),
+        .filter((task) => task.startTime.format("YYYY-MM-DD") === date)
+        .sort((a, b) => a.startTime.diff(b.startTime)),
     [tasks, date],
   );
 
@@ -90,14 +92,21 @@ export function TimeTrackerPanel({
     setEditTimes((prev) => {
       const next: Record<string, { start: string; stop: string }> = {};
       dailyTasks.forEach((task) => {
-        next[task.id] = prev[task.id] ?? { start: task.start, stop: task.stop };
+        next[task.id] = prev[task.id] ?? {
+          start: task.startTime.format("HH:mm"),
+          stop: task.stopTime.format("HH:mm"),
+        };
       });
       return next;
     });
   }, [dailyTasks]);
 
   const totalHours = useMemo(
-    () => dailyTasks.reduce((sum, task) => sum + calculateDurationHours(task.start, task.stop), 0),
+    () =>
+      dailyTasks.reduce(
+        (sum, task) => sum + task.stopTime.diff(task.startTime, "hour", true),
+        0,
+      ),
     [dailyTasks],
   );
 
@@ -114,18 +123,22 @@ export function TimeTrackerPanel({
       setError("Stop time must be after start time.");
       return;
     }
-    if (overlaps(start, stop, dailyTasks)) {
+    const dailyForOverlap = dailyTasks.map((t) => ({
+      id: t.id,
+      start: t.startTime.format("HH:mm"),
+      stop: t.stopTime.format("HH:mm"),
+    }));
+    if (overlaps(start, stop, dailyForOverlap)) {
       setError("Time range overlaps an existing task.");
       return;
     }
 
     onAddTask({
       id: crypto.randomUUID(),
-      date,
       text,
       tag,
-      start,
-      stop,
+      startTime: dayjs(`${date}T${start}`),
+      stopTime: dayjs(`${date}T${stop}`),
     });
     setText("");
     setStart("");
@@ -143,12 +156,21 @@ export function TimeTrackerPanel({
       setError("Stop time must be after start time.");
       return;
     }
-    if (overlaps(edit.start, edit.stop, dailyTasks, taskId)) {
+    const dailyForOverlap = dailyTasks.map((t) => ({
+      id: t.id,
+      start: t.startTime.format("HH:mm"),
+      stop: t.stopTime.format("HH:mm"),
+    }));
+    if (overlaps(edit.start, edit.stop, dailyForOverlap, taskId)) {
       setError("Time range overlaps an existing task.");
       return;
     }
 
-    onUpdateTaskTimes({ date, id: taskId, newStart: edit.start, newStop: edit.stop });
+    onUpdateTaskTimes({
+      id: taskId,
+      newStartTime: dayjs(`${date}T${edit.start}`),
+      newStopTime: dayjs(`${date}T${edit.stop}`),
+    });
   };
 
   const handleApplyTemplate = (template: TimeTrackingTemplate) => {
@@ -226,9 +248,21 @@ export function TimeTrackerPanel({
         </Alert>
       )}
 
+      <Row className="g-3 mb-3">
+        <Col md={3}>
+          <Form.Group controlId="timeTrackerDate">
+            <Form.Label>Select Date</Form.Label>
+            <Form.Control
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              aria-required="true"
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
       <TaskEntryForm
-        date={date}
-        onDateChange={setDate}
         text={text}
         onTextChange={setText}
         tag={tag}

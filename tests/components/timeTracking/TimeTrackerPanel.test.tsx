@@ -8,6 +8,7 @@ import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
 } from "../../../src/components/timeTracking/types";
+import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 describe("TimeTrackerPanel", () => {
   const mockProps = {
@@ -84,15 +85,14 @@ describe("TimeTrackerPanel", () => {
 
     it("should detect time conflicts", async () => {
       const user = userEvent.setup();
-      const today = new Date().toISOString().split("T")[0];
-      const existingTasks = [
+      const today = dayjs().format("YYYY-MM-DD");
+      const existingTasks: StoredTimeTrackingTask[] = [
         {
           id: "1",
-          date: today,
           text: "Existing",
-          tag: "Support" as const,
-          start: "08:00",
-          stop: "12:00",
+          tag: "Support",
+          startTime: dayjs(`${today}T08:00`),
+          stopTime: dayjs(`${today}T12:00`),
         },
       ];
 
@@ -116,23 +116,21 @@ describe("TimeTrackerPanel", () => {
     });
 
     it("displays task list when tasks exist", () => {
-      const today = new Date().toISOString().split("T")[0];
-      const tasks = [
+      const today = dayjs().format("YYYY-MM-DD");
+      const tasks: StoredTimeTrackingTask[] = [
         {
           id: "1",
-          date: today,
           text: "Task A",
-          tag: "Support" as const,
-          start: "08:00",
-          stop: "12:00",
+          tag: "Support",
+          startTime: dayjs(`${today}T08:00`),
+          stopTime: dayjs(`${today}T12:00`),
         },
         {
           id: "2",
-          date: today,
           text: "Task B",
-          tag: "Meeting" as const,
-          start: "13:00",
-          stop: "14:00",
+          tag: "Meeting",
+          startTime: dayjs(`${today}T13:00`),
+          stopTime: dayjs(`${today}T14:00`),
         },
       ];
 
@@ -143,15 +141,14 @@ describe("TimeTrackerPanel", () => {
     });
 
     it("shows progress indicator", () => {
-      const today = new Date().toISOString().split("T")[0];
-      const tasks = [
+      const today = dayjs().format("YYYY-MM-DD");
+      const tasks: StoredTimeTrackingTask[] = [
         {
           id: "1",
-          date: today,
           text: "Task",
-          tag: "Support" as const,
-          start: "08:00",
-          stop: "12:00",
+          tag: "Support",
+          startTime: dayjs(`${today}T08:00`),
+          stopTime: dayjs(`${today}T12:00`),
         },
       ];
 
@@ -162,15 +159,14 @@ describe("TimeTrackerPanel", () => {
 
   describe("Task Management", () => {
     it("provides remove action for each task", () => {
-      const today = new Date().toISOString().split("T")[0];
-      const tasks = [
+      const today = dayjs().format("YYYY-MM-DD");
+      const tasks: StoredTimeTrackingTask[] = [
         {
           id: "1",
-          date: today,
           text: "Task",
-          tag: "Support" as const,
-          start: "08:00",
-          stop: "12:00",
+          tag: "Support",
+          startTime: dayjs(`${today}T08:00`),
+          stopTime: dayjs(`${today}T12:00`),
         },
       ];
 
@@ -180,15 +176,14 @@ describe("TimeTrackerPanel", () => {
 
     it("invokes callback on task removal", async () => {
       const user = userEvent.setup();
-      const today = new Date().toISOString().split("T")[0];
-      const tasks = [
+      const today = dayjs().format("YYYY-MM-DD");
+      const tasks: StoredTimeTrackingTask[] = [
         {
           id: "1",
-          date: today,
           text: "Task",
-          tag: "Support" as const,
-          start: "08:00",
-          stop: "12:00",
+          tag: "Support",
+          startTime: dayjs(`${today}T08:00`),
+          stopTime: dayjs(`${today}T12:00`),
         },
       ];
 

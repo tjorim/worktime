@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
@@ -9,23 +9,74 @@ import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
 } from "../components/timeTracking/types";
+import { dayjs } from "../utils/dateTimeUtils";
+
+type RawTask = {
+  id: string;
+  text: string;
+  tag: string;
+  startTime: string;
+  stopTime: string;
+};
 
 type ImportPayload = {
   tasks?: unknown[];
   templates?: unknown[];
 };
 
-function isValidTask(value: unknown): value is StoredTimeTrackingTask {
+const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+function isValidRawTask(value: unknown): value is RawTask {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === "string" &&
-    typeof v.date === "string" &&
     typeof v.text === "string" &&
     isTimeTrackingTag(v.tag) &&
-    isValidTimeString(v.start) &&
-    isValidTimeString(v.stop)
+    typeof v.startTime === "string" &&
+    ISO_LOCAL_RE.test(v.startTime) &&
+    typeof v.stopTime === "string" &&
+    ISO_LOCAL_RE.test(v.stopTime)
   );
+}
+
+function migrateRawTask(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const v = value as Record<string, unknown>;
+  if (
+    typeof v.date === "string" &&
+    typeof v.start === "string" &&
+    typeof v.stop === "string" &&
+    !("startTime" in v)
+  ) {
+    const { date, start, stop, ...rest } = v;
+    return {
+      ...rest,
+      startTime: `${date}T${start}`,
+      stopTime: `${date}T${stop}`,
+    };
+  }
+  return value;
+}
+
+function rawToTask(raw: RawTask): StoredTimeTrackingTask {
+  return {
+    id: raw.id,
+    text: raw.text,
+    tag: raw.tag as StoredTimeTrackingTask["tag"],
+    startTime: dayjs(raw.startTime),
+    stopTime: dayjs(raw.stopTime),
+  };
+}
+
+function taskToRaw(task: StoredTimeTrackingTask): RawTask {
+  return {
+    id: task.id,
+    text: task.text,
+    tag: task.tag,
+    startTime: task.startTime.format("YYYY-MM-DDTHH:mm"),
+    stopTime: task.stopTime.format("YYYY-MM-DDTHH:mm"),
+  };
 }
 
 function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
@@ -41,7 +92,7 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
 }
 
 export function useTimeTrackingStorage() {
-  const [tasks, setTasks] = useLocalStorage<StoredTimeTrackingTask[]>(
+  const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(
     TIME_TRACKING_STORAGE_KEYS.tasks,
     [],
   );
@@ -50,37 +101,43 @@ export function useTimeTrackingStorage() {
     [],
   );
 
-  // Refs for stable exportData callback (item #2: avoids stale closure)
-  const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
+  const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(rawToTask), [rawTasks]);
+
+  // Refs for stable exportData callback
+  const rawTasksRef = useRef(rawTasks);
+  rawTasksRef.current = rawTasks;
   const templatesRef = useRef(templates);
   templatesRef.current = templates;
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask) => {
-      setTasks((prev) => [...prev, payload]);
+      setRawTasks((prev) => [...prev, taskToRaw(payload)]);
     },
-    [setTasks],
+    [setRawTasks],
   );
 
   const updateTaskTimes = useCallback(
-    (payload: { date: string; id: string; newStart: string; newStop: string }) => {
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === payload.id && task.date === payload.date
-            ? { ...task, start: payload.newStart, stop: payload.newStop }
-            : task,
+    (payload: { id: string; newStartTime: StoredTimeTrackingTask["startTime"]; newStopTime: StoredTimeTrackingTask["stopTime"] }) => {
+      setRawTasks((prev) =>
+        prev.map((raw) =>
+          raw.id === payload.id
+            ? {
+                ...raw,
+                startTime: payload.newStartTime.format("YYYY-MM-DDTHH:mm"),
+                stopTime: payload.newStopTime.format("YYYY-MM-DDTHH:mm"),
+              }
+            : raw,
         ),
       );
     },
-    [setTasks],
+    [setRawTasks],
   );
 
   const removeTask = useCallback(
     (id: string) => {
-      setTasks((prev) => prev.filter((task) => task.id !== id));
+      setRawTasks((prev) => prev.filter((raw) => raw.id !== id));
     },
-    [setTasks],
+    [setRawTasks],
   );
 
   const addTemplate = useCallback(
@@ -111,7 +168,7 @@ export function useTimeTrackingStorage() {
   const exportData = useCallback(
     (date: string) => {
       const payload = {
-        tasks: tasksRef.current,
+        tasks: rawTasksRef.current,
         templates: templatesRef.current,
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -130,15 +187,16 @@ export function useTimeTrackingStorage() {
   const importData = useCallback(
     (payload: ImportPayload) => {
       if (Array.isArray(payload.tasks)) {
-        const validTasks = payload.tasks.filter(isValidTask);
-        setTasks(validTasks);
+        const migrated = payload.tasks.map(migrateRawTask);
+        const validTasks = migrated.filter(isValidRawTask);
+        setRawTasks(validTasks);
       }
       if (Array.isArray(payload.templates)) {
         const validTemplates = payload.templates.filter(isValidTemplate);
         setTemplates(validTemplates);
       }
     },
-    [setTasks, setTemplates],
+    [setRawTasks, setTemplates],
   );
 
   return {

@@ -1,14 +1,13 @@
+import type { Dayjs } from "dayjs";
 import type { TimeTrackingTag } from "./constants";
 
-export type TimeTrackingTask = {
+export type StoredTimeTrackingTask = {
   id: string;
   text: string;
   tag: TimeTrackingTag;
-  start: string;
-  stop: string;
+  startTime: Dayjs;
+  stopTime: Dayjs;
 };
-
-export type StoredTimeTrackingTask = TimeTrackingTask & { date: string };
 
 export type TimeTrackingTemplate = {
   id: string;
