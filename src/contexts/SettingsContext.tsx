@@ -26,6 +26,7 @@ export type NotificationSetting = "on" | "off";
 export type TabKey = "calendar" | "schedule" | "transfer" | "timeoff" | "timetracking";
 export type ScheduleViewKey = "today" | "week";
 export type TimeOffViewKey = "table" | "stats" | "raw";
+export type TimeTrackingViewKey = "daily" | "weekly";
 
 interface UserSettings {
   timeFormat: TimeFormat;
@@ -38,6 +39,7 @@ interface UserSettings {
   lastActiveTab: TabKey;
   lastScheduleView: ScheduleViewKey;
   lastTimeOffView: TimeOffViewKey;
+  lastTimeTrackingView: TimeTrackingViewKey;
 }
 
 interface SettingsContextType {
@@ -52,6 +54,7 @@ interface SettingsContextType {
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
+  updateLastTimeTrackingView: (view: TimeTrackingViewKey) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -95,6 +98,7 @@ export const defaultSettings: UserSettings = {
   lastActiveTab: "calendar",
   lastScheduleView: "today",
   lastTimeOffView: "table",
+  lastTimeTrackingView: "daily",
 };
 
 const validTabKeys = new Set<TabKey>([
@@ -106,6 +110,7 @@ const validTabKeys = new Set<TabKey>([
 ]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
+const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
 
 interface WorktimeUserState {
   hasCompletedOnboarding: boolean;
@@ -180,6 +185,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     validTimeOffViewKeys.has(settingsRecord.lastTimeOffView as TimeOffViewKey)
       ? (settingsRecord.lastTimeOffView as TimeOffViewKey)
       : defaultSettings.lastTimeOffView;
+  const lastTimeTrackingView =
+    typeof settingsRecord.lastTimeTrackingView === "string" &&
+    validTimeTrackingViewKeys.has(settingsRecord.lastTimeTrackingView as TimeTrackingViewKey)
+      ? (settingsRecord.lastTimeTrackingView as TimeTrackingViewKey)
+      : defaultSettings.lastTimeTrackingView;
 
   const scheduleType = (() => {
     const rawValue =
@@ -225,6 +235,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       lastActiveTab,
       lastScheduleView,
       lastTimeOffView,
+      lastTimeTrackingView,
     },
   };
 };
@@ -356,6 +367,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
+  const updateLastTimeTrackingView = useCallback(
+    (view: TimeTrackingViewKey) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, lastTimeTrackingView: view },
+      }));
+    },
+    [setUserState],
+  );
+
   const resetSettings = useCallback(() => {
     setUserState(defaultUserState);
   }, [setUserState]);
@@ -475,6 +496,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
+      updateLastTimeTrackingView,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -498,6 +520,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
+      updateLastTimeTrackingView,
       resetSettings,
       setMyTeam,
       setScheduleType,

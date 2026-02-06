@@ -27,6 +27,7 @@ function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
         lastActiveTab: "calendar",
         lastScheduleView: "today",
         lastTimeOffView: "table",
+        lastTimeTrackingView: "daily",
       },
     }),
   );

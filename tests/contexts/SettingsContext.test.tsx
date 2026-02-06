@@ -152,6 +152,7 @@ describe("SettingsContext unified user state", () => {
         lastActiveTab: "calendar",
         lastScheduleView: "today",
         lastTimeOffView: "table",
+        lastTimeTrackingView: "daily",
       },
     });
 

@@ -76,6 +76,7 @@ describe("CalendarView", () => {
             lastActiveTab: "calendar",
             lastScheduleView: "today",
             lastTimeOffView: "table",
+            lastTimeTrackingView: "daily",
           },
         }),
       );
@@ -123,6 +124,7 @@ describe("CalendarView", () => {
             lastActiveTab: "calendar",
             lastScheduleView: "today",
             lastTimeOffView: "table",
+            lastTimeTrackingView: "daily",
           },
         }),
       );

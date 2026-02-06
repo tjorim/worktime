@@ -324,6 +324,7 @@ describe("ScheduleTabView", () => {
             lastActiveTab: "calendar",
             lastScheduleView: "today",
             lastTimeOffView: "table",
+            lastTimeTrackingView: "daily",
           },
         }),
       );

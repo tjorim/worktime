@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
+import { useEffect } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useViewMode } from "../../hooks/useViewMode";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
@@ -10,7 +11,7 @@ import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
 
 export function TimeTrackingView() {
-  const { settings } = useSettings();
+  const { settings, updateLastTimeTrackingView } = useSettings();
   const {
     tasks,
     templates,
@@ -23,7 +24,15 @@ export function TimeTrackingView() {
     exportData,
     importData,
   } = useTimeTrackingStorage();
-  const [viewMode, setViewMode] = useViewMode(undefined, TIME_TRACKING_VIEWS, "daily");
+  const [viewMode, setViewMode] = useViewMode(
+    settings.lastTimeTrackingView,
+    TIME_TRACKING_VIEWS,
+    "daily",
+  );
+
+  useEffect(() => {
+    updateLastTimeTrackingView(viewMode);
+  }, [updateLastTimeTrackingView, viewMode]);
 
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">

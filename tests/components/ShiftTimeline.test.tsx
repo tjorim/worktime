@@ -26,6 +26,7 @@ vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
         lastActiveTab: "calendar",
         lastScheduleView: "today",
         lastTimeOffView: "table",
+        lastTimeTrackingView: "daily",
       },
       scheduleType: "5-shift",
     })),
@@ -143,6 +144,7 @@ describe("ShiftTimeline", () => {
         lastActiveTab: "calendar",
         lastScheduleView: "today",
         lastTimeOffView: "table",
+        lastTimeTrackingView: "daily",
       },
       scheduleType: "5-shift" as const,
     };

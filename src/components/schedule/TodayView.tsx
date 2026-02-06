@@ -29,6 +29,7 @@ interface TodayViewProps {
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   viewingScheduleType: ScheduleOption;
+  showTimeOffEvents?: boolean;
 }
 
 /**
@@ -171,6 +172,7 @@ export function TodayView({
   onTeamClick,
   isActive = false,
   viewingScheduleType,
+  showTimeOffEvents = true,
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
   const { settings } = useSettings();
@@ -209,7 +211,8 @@ export function TodayView({
   const isToday = displayDate.isSame(today, "day");
   const todayStart = displayDate.toDate();
   const todayEnd = displayDate.toDate();
-  const todayEvents = timeOffEnabled ? getEventsInRange(todayStart, todayEnd) : [];
+  const todayEvents =
+    showTimeOffEvents && timeOffEnabled ? getEventsInRange(todayStart, todayEnd) : [];
 
   return (
     <Card>
@@ -262,7 +265,7 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {timeOffEnabled && todayEvents.length > 0 && (
+        {showTimeOffEvents && timeOffEnabled && todayEvents.length > 0 && (
           <Alert variant="info" className="mb-3">
             <i className="bi bi-calendar-check me-2"></i>
             <strong>Time-off event{todayEvents.length > 1 ? "s" : ""} today:</strong>

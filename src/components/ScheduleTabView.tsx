@@ -140,6 +140,7 @@ export function ScheduleTabView({
           onTeamClick={onTeamClick}
           isActive={isActive}
           viewingScheduleType={viewingScheduleType}
+          showTimeOffEvents={false}
         />
       )}
 

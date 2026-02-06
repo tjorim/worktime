@@ -32,6 +32,7 @@ function createWrapperWithSettings(scheduleType: "5-shift" | "9-5", myTeam: numb
         lastActiveTab: "calendar",
         lastScheduleView: "today",
         lastTimeOffView: "table",
+        lastTimeTrackingView: "daily",
       },
     }),
   );

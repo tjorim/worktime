@@ -390,6 +390,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
             size="sm"
             onClick={() => setViewMode("raw")}
           >
+            <i className="bi bi-code-slash me-1" aria-hidden="true"></i>
             Raw .hday
             {isRawEditorDirty && viewMode !== "raw" && (
               <span className="badge bg-warning text-dark ms-1">•</span>
