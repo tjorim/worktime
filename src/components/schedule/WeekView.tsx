@@ -15,7 +15,7 @@ import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUt
 import { calculateShift } from "../../utils/shiftCalculations";
 import { ShiftBadge } from "../shared/ShiftBadge";
 
-interface ScheduleViewProps {
+interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
@@ -34,13 +34,13 @@ interface ScheduleViewProps {
  * @param setCurrentDate - Callback to update the displayed date
  * @returns The rendered schedule overview component
  */
-export function ScheduleView({
+export function WeekView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
   isActive = false,
   viewingScheduleType: propViewingScheduleType,
-}: ScheduleViewProps) {
+}: WeekViewProps) {
   const datePickerId = useId();
   const { scheduleType: userScheduleType } = useSettings();
 

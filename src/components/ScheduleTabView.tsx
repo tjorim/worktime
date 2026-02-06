@@ -10,7 +10,7 @@ import { useSyncedState } from "../hooks/useSyncedState";
 import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
-import { ScheduleView } from "./schedule/ScheduleView";
+import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
@@ -140,12 +140,11 @@ export function ScheduleTabView({
           onTeamClick={onTeamClick}
           isActive={isActive}
           viewingScheduleType={viewingScheduleType}
-          showTimeOffEvents={false}
         />
       )}
 
       {viewingScheduleType && viewMode === "week" && (
-        <ScheduleView
+        <WeekView
           myTeam={myTeam}
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}

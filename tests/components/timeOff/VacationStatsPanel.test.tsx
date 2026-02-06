@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { VacationStatsPanel } from "../../../src/components/timeoff/VacationStatsPanel";
+import { VacationStatsPanel } from "../../../src/components/timeOff/VacationStatsPanel";
 import type { HdayEvent } from "../../../src/lib/hday/types";
 import type { VacationAllowanceSettings } from "../../../src/utils/vacationCalculations";
 

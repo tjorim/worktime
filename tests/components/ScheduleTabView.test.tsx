@@ -24,8 +24,8 @@ vi.mock("../../src/components/schedule/TodayView", () => ({
   ),
 }));
 
-vi.mock("../../src/components/schedule/ScheduleView", () => ({
-  ScheduleView: ({
+vi.mock("../../src/components/schedule/WeekView", () => ({
+  WeekView: ({
     myTeam,
     viewingScheduleType,
   }: {
@@ -33,7 +33,7 @@ vi.mock("../../src/components/schedule/ScheduleView", () => ({
     viewingScheduleType?: ScheduleOption | null;
   }) => (
     <div data-testid="schedule-view">
-      ScheduleView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}
+      WeekView - Team {myTeam} - Schedule: {viewingScheduleType || "default"}
     </div>
   ),
 }));
@@ -191,7 +191,7 @@ describe("ScheduleTabView", () => {
       expect(screen.getByTestId("today-view")).toHaveTextContent("Team 3");
     });
 
-    it("passes myTeam prop to ScheduleView", async () => {
+    it("passes myTeam prop to WeekView", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} myTeam={3} />);
 
@@ -259,7 +259,7 @@ describe("ScheduleTabView", () => {
       expect(screen.getByTestId("today-view")).toHaveTextContent("Schedule: 5-shift");
     });
 
-    it("passes selected schedule to ScheduleView", async () => {
+    it("passes selected schedule to WeekView", async () => {
       const user = userEvent.setup();
       renderWithProviders(<ScheduleTabView {...defaultProps} />);
 
@@ -270,11 +270,11 @@ describe("ScheduleTabView", () => {
       const weekButton = screen.getByRole("button", { name: /Week/i });
       await user.click(weekButton);
 
-      // ScheduleView should be visible
+      // WeekView should be visible
       const scheduleView = screen.getByTestId("schedule-view");
       expect(scheduleView).toBeInTheDocument();
 
-      // ScheduleView should receive the updated schedule type
+      // WeekView should receive the updated schedule type
       expect(screen.getByTestId("schedule-view")).toHaveTextContent("Schedule: 5-shift");
     });
 

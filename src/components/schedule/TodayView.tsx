@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -11,8 +10,6 @@ import clsx from "clsx";
 import type { Dayjs } from "dayjs";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import type { ScheduleOption } from "../../data/rosters";
-import { useEventStore } from "../../contexts/EventStoreContext";
-import { useSettings } from "../../contexts/SettingsContext";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
@@ -29,7 +26,6 @@ interface TodayViewProps {
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   viewingScheduleType: ScheduleOption;
-  showTimeOffEvents?: boolean;
 }
 
 /**
@@ -172,11 +168,7 @@ export function TodayView({
   onTeamClick,
   isActive = false,
   viewingScheduleType,
-  showTimeOffEvents = true,
 }: TodayViewProps) {
-  const { getEventsInRange } = useEventStore();
-  const { settings } = useSettings();
-  const timeOffEnabled = settings.enableTimeOff;
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
 
@@ -205,14 +197,9 @@ export function TodayView({
     return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
   };
 
-  // Get events for the current date
   const today = dayjs();
   const displayDate = currentDate;
   const isToday = displayDate.isSame(today, "day");
-  const todayStart = displayDate.toDate();
-  const todayEnd = displayDate.toDate();
-  const todayEvents =
-    showTimeOffEvents && timeOffEnabled ? getEventsInRange(todayStart, todayEnd) : [];
 
   return (
     <Card>
@@ -265,17 +252,6 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {showTimeOffEvents && timeOffEnabled && todayEvents.length > 0 && (
-          <Alert variant="info" className="mb-3">
-            <i className="bi bi-calendar-check me-2"></i>
-            <strong>Time-off event{todayEvents.length > 1 ? "s" : ""} today:</strong>
-            <ul className="mb-0 mt-2">
-              {todayEvents.map((event) => (
-                <li key={event.id}>{event.label || "Time off"}</li>
-              ))}
-            </ul>
-          </Alert>
-        )}
         <Row className="g-2">
           {todayShifts.map((shiftResult) => (
             <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>

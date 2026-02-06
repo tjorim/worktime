@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ScheduleView } from "../../src/components/schedule/ScheduleView";
+import { WeekView } from "../../src/components/schedule/WeekView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
@@ -118,15 +118,15 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
-describe("ScheduleView", () => {
+describe("WeekView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
       expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
 
       expect(screen.getByLabelText("Go to previous week")).toBeInTheDocument();
       expect(screen.getByText("This Week")).toBeInTheDocument();
@@ -134,14 +134,14 @@ describe("ScheduleView", () => {
     });
 
     it("shows date picker", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
 
       const dateInput = screen.getByDisplayValue("2025-01-15");
       expect(dateInput).toBeInTheDocument();
     });
 
     it("displays team headers", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
 
       expect(screen.getByText("Team 1")).toBeInTheDocument();
       expect(screen.getByText("Team 2")).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<WeekView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const prevButton = screen.getByLabelText("Go to previous week");
       await user.click(prevButton);
@@ -168,7 +168,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<WeekView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const nextButton = screen.getByLabelText("Go to next week");
       await user.click(nextButton);
@@ -180,7 +180,7 @@ describe("ScheduleView", () => {
       const user = userEvent.setup();
       const mockSetCurrentDate = vi.fn();
 
-      renderWithProviders(<ScheduleView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
+      renderWithProviders(<WeekView {...defaultProps} setCurrentDate={mockSetCurrentDate} />);
 
       const thisWeekButton = screen.getByLabelText("Go to current week");
       await user.click(thisWeekButton);
@@ -191,14 +191,14 @@ describe("ScheduleView", () => {
 
   describe("Schedule table", () => {
     it("displays schedule table", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
 
       const table = screen.getByRole("table");
       expect(table).toBeInTheDocument();
     });
 
     it("shows day codes", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} />);
+      renderWithProviders(<WeekView {...defaultProps} />);
 
       // Should show formatted date codes
       const dateCodes = screen.getAllByText("2503.1");
@@ -208,7 +208,7 @@ describe("ScheduleView", () => {
 
   describe("Team highlighting", () => {
     it("highlights my team when provided", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} myTeam={2} />);
+      renderWithProviders(<WeekView {...defaultProps} myTeam={2} />);
 
       // The my team row should have my-team class
       const team2Element = screen.getByText("Team 2");
@@ -217,7 +217,7 @@ describe("ScheduleView", () => {
     });
 
     it("handles no my team", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} myTeam={null} />);
+      renderWithProviders(<WeekView {...defaultProps} myTeam={null} />);
 
       // Should render without errors
       expect(screen.getByText("Team 1")).toBeInTheDocument();
@@ -226,7 +226,7 @@ describe("ScheduleView", () => {
 
   describe("Week display", () => {
     it("shows week information", () => {
-      renderWithProviders(<ScheduleView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
+      renderWithProviders(<WeekView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
 
       // Should show week range (Jan 15 is in the week of Jan 13-19)
       expect(screen.getByText(/Week of/)).toBeInTheDocument();

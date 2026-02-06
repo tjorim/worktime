@@ -11,9 +11,9 @@ import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { RawContentPanel } from "./timeoff/RawContentPanel";
-import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-import { TimeOffTablePanel } from "./timeoff/TimeOffTablePanel";
+import { RawContentPanel } from "./timeOff/RawContentPanel";
+import { VacationStatsPanel } from "./timeOff/VacationStatsPanel";
+import { TimeOffTablePanel } from "./timeOff/TimeOffTablePanel";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
