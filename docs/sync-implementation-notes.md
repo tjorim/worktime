@@ -1,4 +1,4 @@
-# Sync Implementation Notes (Draft)
+# Backend Sync Implementation Notes (Draft)
 
 These notes capture backend-focused considerations for adding optional multi-device sync to
 Worktime. The goal is to keep the app local-first while enabling a lightweight server that stores
