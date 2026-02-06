@@ -146,6 +146,9 @@ describe("SettingsContext unified user state", () => {
           unit: "days",
           hoursPerDay: 8,
         },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+        timeTrackingWeeklyTargetHours: 40,
       },
     });
 

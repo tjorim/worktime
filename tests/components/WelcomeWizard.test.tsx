@@ -28,16 +28,27 @@ const defaultUserState = {
       unit: "days",
       hoursPerDay: 8,
     },
+    enableTimeOff: true,
+    enableTimeTracking: true,
+    timeTrackingWeeklyTargetHours: 40,
   },
 };
 
-const seedScheduleOption = () => {
-  window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
+const seedScheduleOption = (overrides?: Partial<typeof defaultUserState>) => {
+  const nextState = {
+    ...defaultUserState,
+    ...overrides,
+    settings: {
+      ...defaultUserState.settings,
+      ...(overrides?.settings ?? {}),
+    },
+  };
+  window.localStorage.setItem("worktime_user_state", JSON.stringify(nextState));
 };
 
 // Test wrapper with required providers
-function renderWithProviders(ui: React.ReactElement) {
-  seedScheduleOption();
+function renderWithProviders(ui: React.ReactElement, overrides?: Partial<typeof defaultUserState>) {
+  seedScheduleOption(overrides);
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
 
@@ -49,7 +60,7 @@ const findModalTitle = async (text: RegExp) => {
   return modalHeading;
 };
 
-const waitForStep = async (stepNumber: number, totalSteps: number = 5, timeout = 3000) => {
+const waitForStep = async (stepNumber: number, totalSteps: number = 7, timeout = 3000) => {
   await waitFor(
     () => {
       expect(
@@ -66,19 +77,19 @@ const navigateToTeamSelection = async (user: ReturnType<typeof userEvent.setup>)
     name: /Let's Get Started/i,
   });
   await user.click(getStartedButton);
-  await waitForStep(2, 5);
+  await waitForStep(2, 7);
 
   // Step 2 (features) -> Step 3 (schedule selection)
   const chooseScheduleButton = screen.getByRole("button", {
     name: /Choose a Schedule/i,
   });
   await user.click(chooseScheduleButton);
-  await waitForStep(3, 5);
+  await waitForStep(3, 7);
 
   // Step 3 (schedule selection) -> Step 4 (team selection)
   await user.click(screen.getByRole("button", { name: /5-shift/i }));
   await user.click(screen.getByRole("button", { name: /Continue/i }));
-  await waitForStep(4, 5);
+  await waitForStep(4, 7);
 };
 
 describe("WelcomeWizard", () => {
@@ -206,6 +217,12 @@ describe("WelcomeWizard", () => {
       // Select a team
       await user.click(screen.getByRole("button", { name: /Select Team 1/i }));
 
+      // Should be on time off setup step first
+      expect(
+        screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
+
       // Should be on vacation allowance step
       expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Annual vacation allowance/i)).toBeInTheDocument();
@@ -227,7 +244,7 @@ describe("WelcomeWizard", () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: /Skip/i }));
 
-      expect(mockOnHide).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
     });
 
     it("should save vacation allowance when values entered", async () => {
@@ -254,12 +271,9 @@ describe("WelcomeWizard", () => {
       // Complete
       await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
 
-      // Verify onHide was called with vacation allowance data
-      expect(mockOnHide).toHaveBeenCalledTimes(1);
-      expect(mockOnHide).toHaveBeenCalledWith({
-        amount: 28,
-        unit: "hours",
-      });
+      // Should continue to time tracking setup
+      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
+      expect(mockOnHide).not.toHaveBeenCalled();
     });
 
     it("should show 'Complete' button when no amount entered", () => {
@@ -309,8 +323,10 @@ describe("WelcomeWizard", () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: /Back/i }));
 
-      // Should go back to team selection
-      expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
+      // Should go back to time off setup
+      expect(
+        screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
+      ).toBeInTheDocument();
     });
 
     it("should show correct progress for vacation allowance step", () => {
@@ -323,7 +339,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      expect(screen.getByText(/Step 5 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 6 of 7/i)).toBeInTheDocument();
     });
 
     it("should show validation error for negative vacation amount", async () => {
@@ -395,11 +411,18 @@ describe("WelcomeWizard", () => {
       // Click the save button
       await user.click(saveButton);
 
+      // Finish setup to trigger onHide
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
+
       // Should call onHide with 0 amount (explicitly disabling vacation tracking)
-      expect(mockOnHide).toHaveBeenCalledWith({
-        amount: 0,
-        unit: "days",
-      });
+      expect(mockOnHide).toHaveBeenCalledWith(
+        expect.objectContaining({
+          vacationAllowance: {
+            amount: 0,
+            unit: "days",
+          },
+        }),
+      );
     });
   });
 
@@ -465,8 +488,12 @@ describe("WelcomeWizard", () => {
       // Complete team selection
       await user.click(screen.getByLabelText(/Select Team 1/i));
 
+      // Now on time off setup step
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
+
       // Now on vacation allowance step - skip it
       await user.click(screen.getByRole("button", { name: /Skip/i }));
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
 
       await waitFor(() =>
         expect(screen.queryByText(/Welcome to Worktime/i)).not.toBeInTheDocument(),
@@ -499,8 +526,16 @@ describe("WelcomeWizard", () => {
       });
       await user.click(browseButton);
 
+      // Now on time off setup step
+      expect(
+        screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
+
       // Now on vacation allowance step - skip it
       await user.click(screen.getByRole("button", { name: /Skip/i }));
+      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
 
       // Modal should close
       await waitFor(() =>
@@ -524,24 +559,24 @@ describe("WelcomeWizard", () => {
 
       // Verify welcome wizard appears with correct initial step
       await findModalTitle(/Welcome to Worktime/i);
-      expect(screen.getByText(/Step 1 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 1 of 7/i)).toBeInTheDocument();
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      expect(screen.getByText(/Step 2 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 2 of 7/i)).toBeInTheDocument();
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      expect(screen.getByText(/Step 3 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 3 of 7/i)).toBeInTheDocument();
 
       // Choose 5-shift to reveal team selection
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
-      expect(screen.getByText(/Step 4 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 4 of 7/i)).toBeInTheDocument();
 
       // Select a team to go to vacation allowance step
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      expect(screen.getByText(/Step 5 of 5/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 5 of 7/i)).toBeInTheDocument();
     });
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
@@ -557,7 +592,11 @@ describe("WelcomeWizard", () => {
       // Click "Browse All Teams" instead of selecting a team
       await user.click(screen.getByRole("button", { name: /Browse All Teams/i }));
 
-      // Should be on vacation allowance step
+      // Should be on time off setup step
+      expect(
+        screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
       expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
 
       // Enter vacation allowance
@@ -567,10 +606,12 @@ describe("WelcomeWizard", () => {
 
       // Complete wizard
       await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
+      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+        expect(screen.queryByText(/Set Up Time Tracking/i)).not.toBeInTheDocument(),
       );
 
       // Verify vacation allowance was saved to localStorage even without selecting a team
@@ -589,16 +630,18 @@ describe("WelcomeWizard", () => {
       await findModalTitle(/Welcome to Worktime/i);
       await navigateToTeamSelection(user);
       await user.click(screen.getByLabelText(/Select Team 1/i));
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
 
       // Set initial vacation allowance
       const initialAmountInput = screen.getByLabelText(/Annual vacation allowance/i);
       await user.clear(initialAmountInput);
       await user.type(initialAmountInput, "25");
       await user.click(screen.getByRole("button", { name: /Save & Complete/i }));
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+        expect(screen.queryByText(/Set Up Time Tracking/i)).not.toBeInTheDocument(),
       );
 
       // Verify initial vacation allowance was saved
@@ -756,6 +799,7 @@ describe("WelcomeWizard", () => {
 
     it("should open Select Schedule wizard when Select Schedule button is clicked", async () => {
       const user = userEvent.setup();
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
       render(<App />);
 
       // Complete initial onboarding by manually navigating through wizard
@@ -779,21 +823,35 @@ describe("WelcomeWizard", () => {
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
 
-      // Step 4: Team Selection -> Vacation Allowance
+      // Step 4: Team Selection -> Time Off Setup
       await waitFor(() => {
         expect(screen.getByText(/Choose your team/i)).toBeInTheDocument();
       });
       await user.click(screen.getByLabelText(/Select Team 1/i));
 
-      // Step 5: Vacation Allowance -> Complete
+      // Step 5: Time Off Setup -> Vacation Allowance
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
+        ).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Set Vacation Allowance/i }));
+
+      // Step 6: Vacation Allowance -> Time Tracking
       await waitFor(() => {
         expect(screen.getByText(/Set Up Vacation Tracking/i)).toBeInTheDocument();
       });
       await user.click(screen.getByRole("button", { name: /Complete/i }));
 
+      // Step 7: Time Tracking -> Finish
+      await waitFor(() => {
+        expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
+
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument(),
+        expect(screen.queryByText(/Set Up Time Tracking/i)).not.toBeInTheDocument(),
       );
 
       // Open Settings panel (match exact "Settings", not "Reset Settings")
@@ -899,13 +957,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 5);
+      await waitForStep(2, 7);
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 5);
+      await waitForStep(3, 7);
 
       // Select a valid schedule
       const fiveShiftButton = screen.getByRole("button", { name: /5-shift/i });
@@ -943,13 +1001,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 4); // 4 steps total when no schedule selected (no team selection)
+      await waitForStep(2, 6); // 6 steps total when no schedule selected (no team selection)
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 4); // 4 steps total when no schedule selected (no team selection)
+      await waitForStep(3, 6); // 6 steps total when no schedule selected (no team selection)
 
       // Without selecting a schedule, the continue button should be disabled
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });
@@ -984,13 +1042,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 4); // 4 steps total when no schedule selected (no team selection)
+      await waitForStep(2, 6); // 6 steps total when no schedule selected (no team selection)
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 4); // 4 steps total when no schedule selected (no team selection)
+      await waitForStep(3, 6); // 6 steps total when no schedule selected (no team selection)
 
       // Verify onScheduleSelect was not called implicitly
       expect(onScheduleSelect).not.toHaveBeenCalled();
@@ -1058,11 +1116,11 @@ describe("WelcomeWizard", () => {
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      await waitForStep(2, 4); // 4 steps when no schedule (no team selection)
+      await waitForStep(2, 6); // 6 steps when no schedule (no team selection)
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      await waitForStep(3, 4);
+      await waitForStep(3, 6);
 
       // Try to continue without selecting a schedule
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });

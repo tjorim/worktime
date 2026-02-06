@@ -30,6 +30,27 @@ const defaultProps = {
 };
 
 function renderWithProviders(ui: React.ReactElement) {
+  window.localStorage.setItem(
+    "worktime_user_state",
+    JSON.stringify({
+      hasCompletedOnboarding: true,
+      myTeam: 1,
+      scheduleType: "5-shift",
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: {
+          amount: 0,
+          unit: "days",
+          hoursPerDay: 8,
+        },
+        enableTimeOff: true,
+        enableTimeTracking: true,
+        timeTrackingWeeklyTargetHours: 40,
+      },
+    }),
+  );
   return render(wrapWithProviders(ui));
 }
 
