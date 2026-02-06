@@ -65,8 +65,13 @@ export function CalendarView({
 }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
-  const { scheduleType } = useSettings();
+  const { scheduleType, settings } = useSettings();
   const toast = useToast();
+  const timeOffEnabled = settings.enableTimeOff;
+  const calendarEvents = useMemo(
+    () => (timeOffEnabled ? events : []),
+    [timeOffEnabled, events],
+  );
 
   // Fetch holidays for the current month's year
   const currentYear = currentMonth.year();
@@ -133,6 +138,7 @@ export function CalendarView({
   };
 
   const handleAddEventForDate = (date: Dayjs) => {
+    if (!timeOffEnabled) return;
     resetForm();
     setEditIndex(-1);
     setModalMode("add");
@@ -143,6 +149,7 @@ export function CalendarView({
   };
 
   const handleOpenViewModal = (index: number) => {
+    if (!timeOffEnabled) return;
     const event = events[index];
     if (!event) return;
 
@@ -153,6 +160,7 @@ export function CalendarView({
   };
 
   const handleOpenEditModal = (index: number) => {
+    if (!timeOffEnabled) return;
     const event = events[index];
     if (!event) return;
 
@@ -163,6 +171,7 @@ export function CalendarView({
   };
 
   const handleSwitchToEdit = () => {
+    if (!timeOffEnabled) return;
     setModalMode("edit");
   };
 
@@ -189,6 +198,7 @@ export function CalendarView({
   };
 
   const handleSubmitEvent = () => {
+    if (!timeOffEnabled) return;
     // Validate dates with same logic as TimeOffView
     let valid = true;
 
@@ -268,11 +278,13 @@ export function CalendarView({
   };
 
   const handleDeleteClick = (index: number) => {
+    if (!timeOffEnabled) return;
     setDeleteIndex(index);
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
+    if (!timeOffEnabled) return;
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
       toast.showSuccess("Event deleted successfully", "🗑️");
@@ -301,14 +313,14 @@ export function CalendarView({
         date,
         effectiveTeam,
         scheduleType,
-        events,
+        calendarEvents,
         publicHolidayMap,
       );
 
       // Additional context for display
       let displayLabel = shift.name;
       if (!actuallyWorking && shift.code !== "O") {
-        if (hasTimeOffEvent(date, events)) {
+        if (hasTimeOffEvent(date, calendarEvents)) {
           displayLabel = "Time Off";
         } else if (isPublicHolidayForShift(date, effectiveTeam, scheduleType, publicHolidayMap)) {
           displayLabel = "Public Holiday";
@@ -321,7 +333,7 @@ export function CalendarView({
         isWorking: actuallyWorking,
       };
     };
-  }, [myTeam, scheduleType, events, publicHolidayMap]);
+  }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
   const previewLine = buildPreviewLine({
     eventType,
@@ -346,7 +358,7 @@ export function CalendarView({
               Select your schedule to see your working calendar
             </small>
           ) : (
-            <CalendarLegend />
+            <CalendarLegend showEventTypes={timeOffEnabled} />
           )}
         </Card.Header>
         <Card.Body>
@@ -357,8 +369,8 @@ export function CalendarView({
               </div>
               <h4>Welcome to Your Working Calendar!</h4>
               <p className="text-muted mb-4">
-                This calendar shows your working schedule with shift patterns, time-off events, and
-                public holidays all in one place.
+                This calendar shows your working schedule with shift patterns
+                {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one place.
               </p>
               <p className="text-muted mb-3">
                 {!scheduleType
@@ -380,7 +392,7 @@ export function CalendarView({
             </div>
           ) : (
             <MonthCalendar
-              events={events}
+              events={calendarEvents}
               month={currentMonth}
               publicHolidays={publicHolidayMap}
               schoolHolidays={schoolHolidayMap}
@@ -390,55 +402,58 @@ export function CalendarView({
               onViewEvent={handleOpenViewModal}
               onEditEvent={handleOpenEditModal}
               onDeleteEvent={handleDeleteClick}
+              allowEventActions={timeOffEnabled}
               getShiftForDate={getShiftForDate}
             />
           )}
         </Card.Body>
       </Card>
 
-      {/* Event Modal for Add/Edit/View */}
-      <EventModal
-        show={showEventModal}
-        mode={modalMode}
-        formRef={formRef}
-        eventType={eventType}
-        eventWeekday={eventWeekday}
-        eventStart={eventStart}
-        eventEnd={eventEnd}
-        eventTitle={eventTitle}
-        eventFlags={eventFlags}
-        startDateError={startDateError}
-        endDateError={endDateError}
-        previewLine={previewLine}
-        typeFlagOptions={TYPE_FLAG_OPTIONS}
-        timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
-        typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
-        timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-        onHide={() => setShowEventModal(false)}
-        onEntered={() => formRef.current?.focus()}
-        onEventTypeChange={setEventType}
-        onEventTitleChange={setEventTitle}
-        onEventWeekdayChange={setEventWeekday}
-        onStartDateChange={setEventStart}
-        onEndDateChange={setEventEnd}
-        onTypeFlagChange={handleTypeFlagChange}
-        onTimeFlagChange={handleTimeFlagChange}
-        onResetForm={resetForm}
-        onSubmit={handleSubmitEvent}
-        onSwitchToEdit={handleSwitchToEdit}
-      />
+      {timeOffEnabled && (
+        <>
+          <EventModal
+            show={showEventModal}
+            mode={modalMode}
+            formRef={formRef}
+            eventType={eventType}
+            eventWeekday={eventWeekday}
+            eventStart={eventStart}
+            eventEnd={eventEnd}
+            eventTitle={eventTitle}
+            eventFlags={eventFlags}
+            startDateError={startDateError}
+            endDateError={endDateError}
+            previewLine={previewLine}
+            typeFlagOptions={TYPE_FLAG_OPTIONS}
+            timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
+            typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
+            timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
+            onHide={() => setShowEventModal(false)}
+            onEntered={() => formRef.current?.focus()}
+            onEventTypeChange={setEventType}
+            onEventTitleChange={setEventTitle}
+            onEventWeekdayChange={setEventWeekday}
+            onStartDateChange={setEventStart}
+            onEndDateChange={setEventEnd}
+            onTypeFlagChange={handleTypeFlagChange}
+            onTimeFlagChange={handleTimeFlagChange}
+            onResetForm={resetForm}
+            onSubmit={handleSubmitEvent}
+            onSwitchToEdit={handleSwitchToEdit}
+          />
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showDeleteConfirm}
-        title="Delete Event"
-        message="Are you sure you want to delete this event? You can undo this from the Time Off tab."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        variant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
+          <ConfirmationDialog
+            isOpen={showDeleteConfirm}
+            title="Delete Event"
+            message="Are you sure you want to delete this event? You can undo this from the Time Off tab."
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            variant="danger"
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        </>
+      )}
     </div>
   );
 }

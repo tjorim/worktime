@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
+import { useSettings } from "../../contexts/SettingsContext";
 import { useViewMode } from "../../hooks/useViewMode";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
@@ -9,6 +10,7 @@ import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
 
 export function TimeTrackingView() {
+  const { settings } = useSettings();
   const {
     tasks,
     templates,
@@ -70,7 +72,10 @@ export function TimeTrackingView() {
         <Card className="shadow-sm">
           <Card.Header className="fw-semibold">Weekly Overview</Card.Header>
           <Card.Body>
-            <WeeklyOverviewPanel tasks={tasks} />
+            <WeeklyOverviewPanel
+              tasks={tasks}
+              weeklyTargetHours={settings.timeTrackingWeeklyTargetHours}
+            />
           </Card.Body>
         </Card>
       )}

@@ -1,8 +1,9 @@
 import type { Dayjs } from "dayjs";
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import type { ScheduleOption } from "../data/rosters";
+import { useSettings } from "../contexts/SettingsContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
 import { CalendarView } from "./CalendarView";
@@ -58,6 +59,9 @@ export function MainTabs({
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
     null,
   );
+  const { settings } = useSettings();
+  const timeOffEnabled = settings.enableTimeOff;
+  const timeTrackingEnabled = settings.enableTimeTracking;
 
   const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
@@ -77,18 +81,41 @@ export function MainTabs({
     [setActiveKey, onTabChange],
   );
 
-  const shortcuts = useMemo(
-    () => ({
+  const shortcuts = useMemo(() => {
+    const baseShortcuts = {
       onTabCalendar: () => setActiveTab("calendar"),
       onTabSchedule: () => setActiveTab("schedule"),
       onTabTransfer: () => setActiveTab("transfer"),
-      onTabTimeOff: () => setActiveTab("timeoff"),
-      onTabTimeTracking: () => setActiveTab("timetracking"),
-    }),
-    [setActiveTab],
-  );
+    };
+
+    return {
+      ...baseShortcuts,
+      ...(timeOffEnabled ? { onTabTimeOff: () => setActiveTab("timeoff") } : {}),
+      ...(timeTrackingEnabled ? { onTabTimeTracking: () => setActiveTab("timetracking") } : {}),
+    };
+  }, [setActiveTab, timeOffEnabled, timeTrackingEnabled]);
 
   useKeyboardShortcuts(shortcuts);
+
+  const availableTabs = useMemo(
+    () => [
+      "calendar",
+      "schedule",
+      "transfer",
+      ...(timeOffEnabled ? ["timeoff"] : []),
+      ...(timeTrackingEnabled ? ["timetracking"] : []),
+    ],
+    [timeOffEnabled, timeTrackingEnabled],
+  );
+
+  useEffect(() => {
+    if (!availableTabs.includes(activeKey)) {
+      const fallbackTab = availableTabs[0] ?? "calendar";
+      if (activeKey !== fallbackTab) {
+        setActiveKey(fallbackTab);
+      }
+    }
+  }, [activeKey, availableTabs, setActiveKey]);
 
   return (
     <>
@@ -154,29 +181,33 @@ export function MainTabs({
           />
         </Tab>
 
-        <Tab
-          eventKey="timeoff"
-          title={
-            <>
-              <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-              Time Off
-            </>
-          }
-        >
-          <TimeOffView isActive={activeKey === "timeoff"} initialView={initialView} />
-        </Tab>
+        {timeOffEnabled && (
+          <Tab
+            eventKey="timeoff"
+            title={
+              <>
+                <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
+                Time Off
+              </>
+            }
+          >
+            <TimeOffView isActive={activeKey === "timeoff"} initialView={initialView} />
+          </Tab>
+        )}
 
-        <Tab
-          eventKey="timetracking"
-          title={
-            <>
-              <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
-              Time Tracking
-            </>
-          }
-        >
-          <TimeTrackingView />
-        </Tab>
+        {timeTrackingEnabled && (
+          <Tab
+            eventKey="timetracking"
+            title={
+              <>
+                <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
+                Time Tracking
+              </>
+            }
+          >
+            <TimeTrackingView />
+          </Tab>
+        )}
       </Tabs>
 
       {/* Schedule Detail Modal */}

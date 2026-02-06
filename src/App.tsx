@@ -14,6 +14,13 @@ import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
+type WizardCompletionPayload = {
+  vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
+  enableTimeOff?: boolean;
+  enableTimeTracking?: boolean;
+  timeTrackingWeeklyTargetHours?: number;
+};
+
 /**
  * The main application component for team selection and shift management.
  *
@@ -47,9 +54,16 @@ function AppContent() {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
     const viewParam = urlParams.get("view");
+    const availableTabs = [
+      "calendar",
+      "schedule",
+      "transfer",
+      ...(settings.enableTimeOff ? ["timeoff"] : []),
+      ...(settings.enableTimeTracking ? ["timetracking"] : []),
+    ];
 
     // Set active tab from URL
-    if (tabParam && ["calendar", "schedule", "transfer", "timeoff"].includes(tabParam)) {
+    if (tabParam && availableTabs.includes(tabParam)) {
       setActiveTab(tabParam);
     }
 
@@ -62,7 +76,7 @@ function AppContent() {
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [settings.enableTimeOff, settings.enableTimeTracking]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -146,10 +160,7 @@ function AppContent() {
     setShowTeamModal(true);
   };
 
-  const handleTeamModalHide = (vacationAllowance?: {
-    amount: number;
-    unit: VacationAllowanceUnit;
-  }) => {
+  const handleTeamModalHide = (payload?: WizardCompletionPayload) => {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
@@ -174,13 +185,13 @@ function AppContent() {
       }
       const requiresTeam = selectedScheduleConfig.shiftConfig.teamCount > 1;
       const teamForCompletion = requiresTeam ? myTeam : null;
-      completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
+      completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
         showSuccess(`Team ${teamForCompletion} selected! Your shifts are now personalized.`, "🎯");
       }
-    } else if (teamModalMode === "change-team" && vacationAllowance) {
+    } else if (teamModalMode === "change-team" && payload?.vacationAllowance) {
       // Persist vacation allowance changes in change-team mode
-      updateVacationAllowance(vacationAllowance);
+      updateVacationAllowance(payload.vacationAllowance);
       showSuccess("Vacation allowance updated successfully.", "✅");
     }
     setShowTeamModal(false);

@@ -29,6 +29,9 @@ interface UserSettings {
   theme: Theme;
   notifications: NotificationSetting;
   vacationAllowance: VacationAllowanceSettings;
+  enableTimeOff: boolean;
+  enableTimeTracking: boolean;
+  timeTrackingWeeklyTargetHours: number;
 }
 
 interface SettingsContextType {
@@ -37,6 +40,9 @@ interface SettingsContextType {
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
+  updateTimeOffEnabled: (enabled: boolean) => void;
+  updateTimeTrackingEnabled: (enabled: boolean) => void;
+  updateTimeTrackingWeeklyTargetHours: (hours: number) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -56,7 +62,12 @@ interface SettingsContextType {
   completeOnboardingWithSchedule: (
     scheduleType: ScheduleOption | null,
     team: number | null,
-    vacationAllowance?: Partial<VacationAllowanceSettings>,
+    preferences?: {
+      vacationAllowance?: Partial<VacationAllowanceSettings>;
+      enableTimeOff?: boolean;
+      enableTimeTracking?: boolean;
+      timeTrackingWeeklyTargetHours?: number;
+    },
   ) => void;
 }
 
@@ -69,6 +80,9 @@ export const defaultSettings: UserSettings = {
     unit: "days",
     hoursPerDay: 8,
   },
+  enableTimeOff: false,
+  enableTimeTracking: false,
+  timeTrackingWeeklyTargetHours: 40,
 };
 
 interface WorktimeUserState {
@@ -115,6 +129,18 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     settingsRecord.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
     defaultSettings.vacationAllowance,
   );
+  const enableTimeOff =
+    typeof settingsRecord.enableTimeOff === "boolean" ? settingsRecord.enableTimeOff : true;
+  const enableTimeTracking =
+    typeof settingsRecord.enableTimeTracking === "boolean"
+      ? settingsRecord.enableTimeTracking
+      : true;
+  const timeTrackingWeeklyTargetHours =
+    typeof settingsRecord.timeTrackingWeeklyTargetHours === "number" &&
+    Number.isFinite(settingsRecord.timeTrackingWeeklyTargetHours) &&
+    settingsRecord.timeTrackingWeeklyTargetHours >= 0
+      ? settingsRecord.timeTrackingWeeklyTargetHours
+      : defaultSettings.timeTrackingWeeklyTargetHours;
 
   const scheduleType = (() => {
     const rawValue =
@@ -154,6 +180,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       theme,
       notifications,
       vacationAllowance,
+      enableTimeOff,
+      enableTimeTracking,
+      timeTrackingWeeklyTargetHours,
     },
   };
 };
@@ -216,6 +245,37 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
           ...prev.settings,
           vacationAllowance: sanitizeVacationAllowance(allowance, prev.settings.vacationAllowance),
         },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateTimeOffEnabled = useCallback(
+    (enabled: boolean) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, enableTimeOff: enabled },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateTimeTrackingEnabled = useCallback(
+    (enabled: boolean) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, enableTimeTracking: enabled },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateTimeTrackingWeeklyTargetHours = useCallback(
+    (hours: number) => {
+      const nextHours = Number.isFinite(hours) && hours >= 0 ? hours : defaultSettings.timeTrackingWeeklyTargetHours;
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, timeTrackingWeeklyTargetHours: nextHours },
       }));
     },
     [setUserState],
@@ -287,8 +347,20 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     (
       scheduleType: ScheduleOption | null,
       team: number | null,
-      vacationAllowance?: Partial<VacationAllowanceSettings>,
+      preferences?: {
+        vacationAllowance?: Partial<VacationAllowanceSettings>;
+        enableTimeOff?: boolean;
+        enableTimeTracking?: boolean;
+        timeTrackingWeeklyTargetHours?: number;
+      },
     ) => {
+      const nextWeeklyTargetHours =
+        preferences?.timeTrackingWeeklyTargetHours !== undefined
+          ? Number.isFinite(preferences.timeTrackingWeeklyTargetHours) &&
+            preferences.timeTrackingWeeklyTargetHours >= 0
+            ? preferences.timeTrackingWeeklyTargetHours
+            : defaultSettings.timeTrackingWeeklyTargetHours
+          : undefined;
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
@@ -296,9 +368,19 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         myTeam: team,
         settings: {
           ...prev.settings,
-          vacationAllowance: vacationAllowance
-            ? sanitizeVacationAllowance(vacationAllowance, prev.settings.vacationAllowance)
+          vacationAllowance: preferences?.vacationAllowance
+            ? sanitizeVacationAllowance(preferences.vacationAllowance, prev.settings.vacationAllowance)
             : prev.settings.vacationAllowance,
+          enableTimeOff:
+            preferences?.enableTimeOff !== undefined
+              ? preferences.enableTimeOff
+              : prev.settings.enableTimeOff,
+          enableTimeTracking:
+            preferences?.enableTimeTracking !== undefined
+              ? preferences.enableTimeTracking
+              : prev.settings.enableTimeTracking,
+          timeTrackingWeeklyTargetHours:
+            nextWeeklyTargetHours ?? prev.settings.timeTrackingWeeklyTargetHours,
         },
       }));
     },
@@ -312,6 +394,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTheme,
       updateNotifications,
       updateVacationAllowance,
+      updateTimeOffEnabled,
+      updateTimeTrackingEnabled,
+      updateTimeTrackingWeeklyTargetHours,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -329,6 +414,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTheme,
       updateNotifications,
       updateVacationAllowance,
+      updateTimeOffEnabled,
+      updateTimeTrackingEnabled,
+      updateTimeTrackingWeeklyTargetHours,
       resetSettings,
       setMyTeam,
       setScheduleType,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import { useSettings } from "../contexts/SettingsContext";
@@ -39,7 +40,16 @@ export function SettingsPanel({
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const toast = useToast();
-  const { settings, scheduleType, updateTimeFormat, updateTheme, resetSettings } = useSettings();
+  const {
+    settings,
+    scheduleType,
+    updateTimeFormat,
+    updateTheme,
+    updateTimeOffEnabled,
+    updateTimeTrackingEnabled,
+    updateTimeTrackingWeeklyTargetHours,
+    resetSettings,
+  } = useSettings();
 
   const handleChangelogClick = () => {
     setShowChangelog(true);
@@ -162,6 +172,69 @@ export function SettingsPanel({
                         Dark
                       </Button>
                     </ButtonGroup>
+                  </div>
+                </ListGroup.Item>
+              </ListGroup>
+            </div>
+          </div>
+
+          {/* Feature Toggles */}
+          <div className="border-bottom">
+            <div className="p-3">
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-grid me-2"></i>
+                Features
+              </h6>
+              <ListGroup variant="flush">
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Time Off Tracking</div>
+                      <small className="text-muted">
+                        Show time-off events and allow .hday management
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-timeoff"
+                      checked={settings.enableTimeOff}
+                      onChange={(event) => updateTimeOffEnabled(event.target.checked)}
+                      aria-label="Toggle time off tracking"
+                    />
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex flex-column gap-2">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">Time Tracking</div>
+                        <small className="text-muted">
+                          Enable daily logging and weekly summaries
+                        </small>
+                      </div>
+                      <Form.Check
+                        type="switch"
+                        id="toggle-timetracking"
+                        checked={settings.enableTimeTracking}
+                        onChange={(event) => updateTimeTrackingEnabled(event.target.checked)}
+                        aria-label="Toggle time tracking"
+                      />
+                    </div>
+                    <Form.Group controlId="weeklyTargetHours">
+                      <Form.Label className="small text-muted mb-1">
+                        Weekly target hours
+                      </Form.Label>
+                      <Form.Control
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={settings.timeTrackingWeeklyTargetHours}
+                        onChange={(event) =>
+                          updateTimeTrackingWeeklyTargetHours(Number(event.target.value))
+                        }
+                        disabled={!settings.enableTimeTracking}
+                      />
+                    </Form.Group>
                   </div>
                 </ListGroup.Item>
               </ListGroup>

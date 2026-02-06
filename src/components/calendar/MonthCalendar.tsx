@@ -19,6 +19,7 @@ interface MonthCalendarProps {
   onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
+  allowEventActions?: boolean;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
     date: dayjs.Dayjs,
@@ -95,6 +96,7 @@ export function MonthCalendar({
   onViewEvent,
   onEditEvent,
   onDeleteEvent,
+  allowEventActions = true,
   getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
@@ -177,10 +179,12 @@ export function MonthCalendar({
 
   // Context menu handlers
   const handleDayContextMenu = (date: dayjs.Dayjs, x: number, y: number) => {
+    if (!allowEventActions) return;
     setContextMenu({ type: "day", x, y, date });
   };
 
   const handleEventContextMenu = (index: number, x: number, y: number) => {
+    if (!allowEventActions) return;
     setContextMenu({ type: "event", x, y, eventIndex: index });
   };
 
@@ -304,21 +308,23 @@ export function MonthCalendar({
               events={cellEvents}
               shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
               onViewEvent={handleViewEventWrapper}
-              onDayContextMenu={handleDayContextMenu}
-              onEventContextMenu={handleEventContextMenu}
+              onDayContextMenu={allowEventActions ? handleDayContextMenu : undefined}
+              onEventContextMenu={allowEventActions ? handleEventContextMenu : undefined}
             />
           );
         })}
       </div>
 
       {/* Context menu */}
-      <ContextMenu
-        isOpen={contextMenu !== null}
-        x={contextMenu?.x ?? 0}
-        y={contextMenu?.y ?? 0}
-        onClose={handleCloseContextMenu}
-        items={contextMenuItems}
-      />
+      {allowEventActions && (
+        <ContextMenu
+          isOpen={contextMenu !== null}
+          x={contextMenu?.x ?? 0}
+          y={contextMenu?.y ?? 0}
+          onClose={handleCloseContextMenu}
+          items={contextMenuItems}
+        />
+      )}
     </div>
   );
 }

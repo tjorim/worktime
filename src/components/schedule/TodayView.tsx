@@ -12,6 +12,7 @@ import type { Dayjs } from "dayjs";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import type { ScheduleOption } from "../../data/rosters";
 import { useEventStore } from "../../contexts/EventStoreContext";
+import { useSettings } from "../../contexts/SettingsContext";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
@@ -172,6 +173,8 @@ export function TodayView({
   viewingScheduleType,
 }: TodayViewProps) {
   const { getEventsInRange } = useEventStore();
+  const { settings } = useSettings();
+  const timeOffEnabled = settings.enableTimeOff;
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
 
@@ -206,7 +209,7 @@ export function TodayView({
   const isToday = displayDate.isSame(today, "day");
   const todayStart = displayDate.toDate();
   const todayEnd = displayDate.toDate();
-  const todayEvents = getEventsInRange(todayStart, todayEnd);
+  const todayEvents = timeOffEnabled ? getEventsInRange(todayStart, todayEnd) : [];
 
   return (
     <Card>
@@ -259,7 +262,7 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {todayEvents.length > 0 && (
+        {timeOffEnabled && todayEvents.length > 0 && (
           <Alert variant="info" className="mb-3">
             <i className="bi bi-calendar-check me-2"></i>
             <strong>Time-off event{todayEvents.length > 1 ? "s" : ""} today:</strong>
