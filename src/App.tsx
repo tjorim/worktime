@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -7,7 +7,7 @@ import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { WelcomeWizard } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
-import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
@@ -29,12 +29,6 @@ type WizardCompletionPayload = {
  * @returns The application's rendered user interface.
  */
 function AppContent() {
-  const [showTeamModal, setShowTeamModal] = useState(false);
-  const [teamModalMode, setTeamModalMode] = useState<
-    "onboarding" | "change-team" | "change-schedule"
-  >("onboarding");
-  const [activeTab, setActiveTab] = useState("calendar");
-  const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo, showError } = useToast();
   const {
     myTeam,
@@ -44,10 +38,28 @@ function AppContent() {
     scheduleType,
     setScheduleType,
     updateVacationAllowance,
+    updateLastActiveTab,
     settings,
   } = useSettings();
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [teamModalMode, setTeamModalMode] = useState<
+    "onboarding" | "change-team" | "change-schedule"
+  >("onboarding");
+  const [activeTab, setActiveTab] = useState(settings.lastActiveTab);
+  const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const [initialView, setInitialView] = useState<string | undefined>(undefined);
+  const [urlScheduleView, setUrlScheduleView] = useState<string | undefined>(undefined);
+  const [urlTimeOffView, setUrlTimeOffView] = useState<string | undefined>(undefined);
+  const initialScheduleView = urlScheduleView ?? settings.lastScheduleView;
+  const initialTimeOffView = urlTimeOffView ?? settings.lastTimeOffView;
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab);
+      updateLastActiveTab(tab as TabKey);
+    },
+    [updateLastActiveTab],
+  );
 
   // Handle URL parameters for deep linking - process on mount
   useEffect(() => {
@@ -64,19 +76,27 @@ function AppContent() {
 
     // Set active tab from URL
     if (tabParam && availableTabs.includes(tabParam)) {
-      setActiveTab(tabParam);
+      handleTabChange(tabParam);
     }
 
     // Set initial view from URL
     if (viewParam) {
-      setInitialView(viewParam);
+      const resolvedTab =
+        tabParam && availableTabs.includes(tabParam) ? tabParam : activeTab;
+      if (resolvedTab === "timeoff") {
+        setUrlTimeOffView(viewParam);
+      } else if (resolvedTab === "schedule") {
+        setUrlScheduleView(viewParam);
+      } else {
+        setUrlScheduleView(viewParam);
+      }
     }
 
     // Clear URL parameters after processing to keep URL clean
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [settings.enableTimeOff, settings.enableTimeTracking]);
+  }, [activeTab, handleTabChange, settings.enableTimeOff, settings.enableTimeTracking]);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -226,8 +246,9 @@ function AppContent() {
               currentDate={currentDate}
               setCurrentDate={setCurrentDate}
               activeTab={activeTab}
-              onTabChange={setActiveTab}
-              initialView={initialView}
+              onTabChange={handleTabChange}
+              initialScheduleView={initialScheduleView}
+              initialTimeOffView={initialTimeOffView}
               onChangeSchedule={handleChangeSchedule}
               onChangeTeam={handleChangeTeam}
             />

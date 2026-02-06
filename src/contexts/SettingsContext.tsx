@@ -23,6 +23,9 @@ import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
+export type TabKey = "calendar" | "schedule" | "transfer" | "timeoff" | "timetracking";
+export type ScheduleViewKey = "today" | "week";
+export type TimeOffViewKey = "table" | "stats" | "raw";
 
 interface UserSettings {
   timeFormat: TimeFormat;
@@ -32,6 +35,9 @@ interface UserSettings {
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
   timeTrackingWeeklyTargetHours: number;
+  lastActiveTab: TabKey;
+  lastScheduleView: ScheduleViewKey;
+  lastTimeOffView: TimeOffViewKey;
 }
 
 interface SettingsContextType {
@@ -43,6 +49,9 @@ interface SettingsContextType {
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateTimeTrackingWeeklyTargetHours: (hours: number) => void;
+  updateLastActiveTab: (tab: TabKey) => void;
+  updateLastScheduleView: (view: ScheduleViewKey) => void;
+  updateLastTimeOffView: (view: TimeOffViewKey) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -83,7 +92,20 @@ export const defaultSettings: UserSettings = {
   enableTimeOff: false,
   enableTimeTracking: false,
   timeTrackingWeeklyTargetHours: 40,
+  lastActiveTab: "calendar",
+  lastScheduleView: "today",
+  lastTimeOffView: "table",
 };
+
+const validTabKeys = new Set<TabKey>([
+  "calendar",
+  "schedule",
+  "transfer",
+  "timeoff",
+  "timetracking",
+]);
+const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week"]);
+const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
 
 interface WorktimeUserState {
   hasCompletedOnboarding: boolean;
@@ -143,6 +165,21 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     settingsRecord.timeTrackingWeeklyTargetHours >= 0
       ? settingsRecord.timeTrackingWeeklyTargetHours
       : defaultSettings.timeTrackingWeeklyTargetHours;
+  const lastActiveTab =
+    typeof settingsRecord.lastActiveTab === "string" &&
+    validTabKeys.has(settingsRecord.lastActiveTab as TabKey)
+      ? (settingsRecord.lastActiveTab as TabKey)
+      : defaultSettings.lastActiveTab;
+  const lastScheduleView =
+    typeof settingsRecord.lastScheduleView === "string" &&
+    validScheduleViewKeys.has(settingsRecord.lastScheduleView as ScheduleViewKey)
+      ? (settingsRecord.lastScheduleView as ScheduleViewKey)
+      : defaultSettings.lastScheduleView;
+  const lastTimeOffView =
+    typeof settingsRecord.lastTimeOffView === "string" &&
+    validTimeOffViewKeys.has(settingsRecord.lastTimeOffView as TimeOffViewKey)
+      ? (settingsRecord.lastTimeOffView as TimeOffViewKey)
+      : defaultSettings.lastTimeOffView;
 
   const scheduleType = (() => {
     const rawValue =
@@ -185,6 +222,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       enableTimeOff,
       enableTimeTracking,
       timeTrackingWeeklyTargetHours,
+      lastActiveTab,
+      lastScheduleView,
+      lastTimeOffView,
     },
   };
 };
@@ -274,10 +314,43 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const updateTimeTrackingWeeklyTargetHours = useCallback(
     (hours: number) => {
-      const nextHours = Number.isFinite(hours) && hours >= 0 ? hours : defaultSettings.timeTrackingWeeklyTargetHours;
+      const nextHours =
+        Number.isFinite(hours) && hours >= 0
+          ? hours
+          : defaultSettings.timeTrackingWeeklyTargetHours;
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, timeTrackingWeeklyTargetHours: nextHours },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateLastActiveTab = useCallback(
+    (tab: TabKey) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, lastActiveTab: tab },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateLastScheduleView = useCallback(
+    (view: ScheduleViewKey) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, lastScheduleView: view },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateLastTimeOffView = useCallback(
+    (view: TimeOffViewKey) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, lastTimeOffView: view },
       }));
     },
     [setUserState],
@@ -399,6 +472,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateTimeTrackingWeeklyTargetHours,
+      updateLastActiveTab,
+      updateLastScheduleView,
+      updateLastTimeOffView,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -419,6 +495,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateTimeTrackingWeeklyTargetHours,
+      updateLastActiveTab,
+      updateLastScheduleView,
+      updateLastTimeOffView,
       resetSettings,
       setMyTeam,
       setScheduleType,

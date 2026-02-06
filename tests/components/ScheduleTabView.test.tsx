@@ -318,6 +318,12 @@ describe("ScheduleTabView", () => {
             theme: "auto",
             notifications: "off",
             vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "calendar",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
           },
         }),
       );

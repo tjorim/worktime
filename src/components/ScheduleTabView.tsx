@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -55,9 +55,13 @@ export function ScheduleTabView({
   initialView,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
-  const { scheduleType: userScheduleType } = useSettings();
+  const { scheduleType: userScheduleType, updateLastScheduleView } = useSettings();
   const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
   const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
+
+  useEffect(() => {
+    updateLastScheduleView(viewMode);
+  }, [updateLastScheduleView, viewMode]);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));

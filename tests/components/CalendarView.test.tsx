@@ -65,7 +65,18 @@ describe("CalendarView", () => {
           hasCompletedOnboarding: true,
           myTeam: 1,
           scheduleType: "5-shift",
-          settings: { timeFormat: "24h", theme: "system" },
+          settings: {
+            timeFormat: "24h",
+            theme: "system",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "calendar",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
+          },
         }),
       );
 
@@ -101,7 +112,18 @@ describe("CalendarView", () => {
           hasCompletedOnboarding: true,
           myTeam: 1,
           scheduleType: "5-shift",
-          settings: { timeFormat: "24h", theme: "system" },
+          settings: {
+            timeFormat: "24h",
+            theme: "system",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "calendar",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
+          },
         }),
       );
 

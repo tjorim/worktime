@@ -48,6 +48,9 @@ function renderWithProviders(ui: React.ReactElement) {
         enableTimeOff: true,
         enableTimeTracking: true,
         timeTrackingWeeklyTargetHours: 40,
+        lastActiveTab: "calendar",
+        lastScheduleView: "today",
+        lastTimeOffView: "table",
       },
     }),
   );

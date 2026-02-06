@@ -19,7 +19,8 @@ interface MainTabsProps {
   setCurrentDate: (date: Dayjs) => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  initialView?: string; // Initial view mode for sub-tabs (e.g., "today", "week", "stats")
+  initialScheduleView?: string; // Initial view mode for schedule sub-tabs (e.g., "today", "week")
+  initialTimeOffView?: string; // Initial view mode for time-off sub-tabs (e.g., "table", "stats")
   onChangeSchedule?: () => void; // Callback to open schedule selector
   onChangeTeam?: () => void; // Callback to open team selector
 }
@@ -37,7 +38,8 @@ interface MainTabsProps {
  * @param setCurrentDate - Function to update the current date
  * @param activeTab - The currently active tab (defaults to 'calendar')
  * @param onTabChange - Callback invoked when the active tab changes
- * @param initialView - Initial view mode for sub-tabs from URL parameter
+ * @param initialScheduleView - Initial schedule view mode from URL or stored preference
+ * @param initialTimeOffView - Initial time-off view mode from URL or stored preference
  * @param onChangeSchedule - Callback to open schedule selector
  * @param onChangeTeam - Callback to open team selector
  * @returns The rendered tabbed interface component.
@@ -48,7 +50,8 @@ export function MainTabs({
   setCurrentDate,
   activeTab = "calendar",
   onTabChange,
-  initialView,
+  initialScheduleView,
+  initialTimeOffView,
   onChangeSchedule,
   onChangeTeam,
 }: MainTabsProps) {
@@ -112,10 +115,10 @@ export function MainTabs({
     if (!availableTabs.includes(activeKey)) {
       const fallbackTab = availableTabs[0] ?? "calendar";
       if (activeKey !== fallbackTab) {
-        setActiveKey(fallbackTab);
+        setActiveTab(fallbackTab);
       }
     }
-  }, [activeKey, availableTabs, setActiveKey]);
+  }, [activeKey, availableTabs, setActiveTab]);
 
   return (
     <>
@@ -123,8 +126,7 @@ export function MainTabs({
         activeKey={activeKey}
         onSelect={(k) => {
           const newKey = k || "calendar";
-          setActiveKey(newKey);
-          onTabChange?.(newKey);
+          setActiveTab(newKey);
         }}
         id={tabsId}
       >
@@ -160,7 +162,7 @@ export function MainTabs({
             setCurrentDate={setCurrentDate}
             onTeamClick={handleTeamClick}
             isActive={activeKey === "schedule"}
-            initialView={initialView}
+            initialView={initialScheduleView}
           />
         </Tab>
 
@@ -191,7 +193,7 @@ export function MainTabs({
               </>
             }
           >
-            <TimeOffView isActive={activeKey === "timeoff"} initialView={initialView} />
+            <TimeOffView isActive={activeKey === "timeoff"} initialView={initialTimeOffView} />
           </Tab>
         )}
 

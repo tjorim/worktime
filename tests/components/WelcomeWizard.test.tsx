@@ -31,6 +31,9 @@ const defaultUserState = {
     enableTimeOff: true,
     enableTimeTracking: true,
     timeTrackingWeeklyTargetHours: 40,
+    lastActiveTab: "calendar",
+    lastScheduleView: "today",
+    lastTimeOffView: "table",
   },
 };
 

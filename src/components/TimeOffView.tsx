@@ -62,10 +62,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     undo,
     redo,
   } = useEventStore();
-  const { settings, updateVacationAllowance } = useSettings();
+  const { settings, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
   const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
+
+  useEffect(() => {
+    updateLastTimeOffView(viewMode);
+  }, [updateLastTimeOffView, viewMode]);
 
   // Use custom hook for event form state management
   const {
