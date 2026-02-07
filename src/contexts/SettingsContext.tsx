@@ -170,9 +170,19 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     settingsRecord.timeTrackingWeeklyTargetHours >= 0
       ? settingsRecord.timeTrackingWeeklyTargetHours
       : defaultSettings.timeTrackingWeeklyTargetHours;
+  const isTabEnabled = (tab: TabKey) => {
+    if (tab === "timeoff") {
+      return enableTimeOff;
+    }
+    if (tab === "timetracking") {
+      return enableTimeTracking;
+    }
+    return true;
+  };
   const lastActiveTab =
     typeof settingsRecord.lastActiveTab === "string" &&
-    validTabKeys.has(settingsRecord.lastActiveTab as TabKey)
+    validTabKeys.has(settingsRecord.lastActiveTab as TabKey) &&
+    isTabEnabled(settingsRecord.lastActiveTab as TabKey)
       ? (settingsRecord.lastActiveTab as TabKey)
       : defaultSettings.lastActiveTab;
   const lastScheduleView =

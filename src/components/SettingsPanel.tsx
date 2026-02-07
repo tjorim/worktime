@@ -191,7 +191,7 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">Time Off Tracking</div>
                       <small className="text-muted">
-                        Show time-off events and allow .hday management
+                        Manage time-off events and vacation days
                       </small>
                     </div>
                     <Form.Check
@@ -227,11 +227,17 @@ export function SettingsPanel({
                       <Form.Control
                         type="number"
                         min={0}
+                        max={168}
                         step={0.5}
                         value={settings.timeTrackingWeeklyTargetHours}
-                        onChange={(event) =>
-                          updateTimeTrackingWeeklyTargetHours(Number(event.target.value))
-                        }
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (!Number.isFinite(value)) {
+                            return;
+                          }
+                          const clampedValue = Math.min(168, Math.max(0, value));
+                          updateTimeTrackingWeeklyTargetHours(clampedValue);
+                        }}
                         disabled={!settings.enableTimeTracking}
                       />
                     </Form.Group>

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
@@ -107,6 +107,13 @@ export function CalendarView({
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!timeOffEnabled) {
+      setShowEventModal(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [timeOffEnabled]);
 
   const resetForm = () => {
     setEventType("range");

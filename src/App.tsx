@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -52,6 +52,7 @@ function AppContent() {
   const [urlTimeOffView, setUrlTimeOffView] = useState<string | undefined>(undefined);
   const initialScheduleView = urlScheduleView ?? settings.lastScheduleView;
   const initialTimeOffView = urlTimeOffView ?? settings.lastTimeOffView;
+  const hasProcessedUrl = useRef(false);
 
   const handleTabChange = useCallback(
     (tab: TabKey) => {
@@ -63,6 +64,11 @@ function AppContent() {
 
   // Handle URL parameters for deep linking - process on mount
   useEffect(() => {
+    if (hasProcessedUrl.current) {
+      return;
+    }
+    hasProcessedUrl.current = true;
+
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
     const viewParam = urlParams.get("view");
@@ -89,8 +95,6 @@ function AppContent() {
         setUrlTimeOffView(viewParam);
       } else if (resolvedTab === "schedule") {
         setUrlScheduleView(viewParam);
-      } else {
-        setUrlScheduleView(viewParam);
       }
     }
 
@@ -98,7 +102,7 @@ function AppContent() {
     if (urlParams.toString()) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [activeTab, handleTabChange, settings.enableTimeOff, settings.enableTimeTracking]);
+  }, []);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
