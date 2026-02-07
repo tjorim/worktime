@@ -27,6 +27,7 @@ export type ShiftRosterConfig = {
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
   // Optional fields
+  weeklyHours?: number; // Target working hours per week for this schedule (null/undefined = not yet determined)
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
 };
 
@@ -198,6 +199,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Saturday
         "O", // Sunday
       ],
+      weeklyHours: 40,
       notes: "Weekday-only coverage.",
       // 9-5 uses "Day" shift - no overrides needed
     },
@@ -322,6 +324,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Saturday
         "L", // Sunday
       ],
+      weeklyHours: 25.5,
       notes: "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
     },
   },

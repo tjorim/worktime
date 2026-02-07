@@ -49,27 +49,10 @@ function validateVacationAmount(amount: string) {
   };
 }
 
-function validateWeeklyTargetHours(hours: string) {
-  const trimmedHours = hours.trim();
-  if (trimmedHours === "") {
-    return { isValid: false, isInvalid: false, parsedHours: null };
-  }
-  const parsed = Number(trimmedHours);
-  const isNotANumber = Number.isNaN(parsed);
-  const isNegative = parsed < 0;
-
-  return {
-    isValid: !isNotANumber && parsed >= 0,
-    isInvalid: isNotANumber || isNegative,
-    parsedHours: !isNotANumber ? parsed : null,
-  };
-}
-
 type WizardCompletionPayload = {
   vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
-  timeTrackingWeeklyTargetHours?: number;
 };
 
 interface WelcomeWizardProps {
@@ -129,10 +112,6 @@ export function WelcomeWizard({
   );
   const [isTimeOffEnabled, setIsTimeOffEnabled] = useState(settings.enableTimeOff);
   const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState(settings.enableTimeTracking);
-  const [weeklyTargetHours, setWeeklyTargetHours] = useState<string>(() => {
-    const hours = settings.timeTrackingWeeklyTargetHours;
-    return Number.isFinite(hours) && hours >= 0 ? hours.toString() : "40";
-  });
 
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 
@@ -152,7 +131,6 @@ export function WelcomeWizard({
   const teamCount = resolvedSchedule ? getTeamCountForOption(resolvedSchedule) : 0;
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
   const vacationValidation = validateVacationAmount(vacationAmount);
-  const weeklyTargetValidation = validateWeeklyTargetHours(weeklyTargetHours);
 
   // Create wizard context for configuration functions
   const wizardContext: WizardContext = {
@@ -197,22 +175,14 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
-    if (isTimeTrackingEnabled && weeklyTargetValidation.isInvalid) {
-      return;
-    }
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { amount: vacationValidation.parsedAmount, unit: vacationUnit }
-        : undefined;
-    const timeTrackingHours =
-      isTimeTrackingEnabled && weeklyTargetValidation.parsedHours !== null
-        ? weeklyTargetValidation.parsedHours
         : undefined;
     onHide({
       vacationAllowance: vacationPayload,
       enableTimeOff: isTimeOffEnabled,
       enableTimeTracking: isTimeTrackingEnabled,
-      timeTrackingWeeklyTargetHours: timeTrackingHours,
     });
   };
 
@@ -352,12 +322,9 @@ export function WelcomeWizard({
             {effectiveStep === "time-tracking-setup" && (
               <Step6TimeTrackingSetup
                 isEnabled={isTimeTrackingEnabled}
-                weeklyTargetHours={weeklyTargetHours}
                 onToggle={setIsTimeTrackingEnabled}
-                onWeeklyTargetHoursChange={setWeeklyTargetHours}
                 onPrev={prevStep}
                 onComplete={handleTimeTrackingComplete}
-                isInvalid={weeklyTargetValidation.isInvalid}
                 firstButtonRef={firstButtonRef}
               />
             )}

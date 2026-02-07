@@ -30,7 +30,7 @@ const defaultUserState = {
     },
     enableTimeOff: true,
     enableTimeTracking: true,
-    timeTrackingWeeklyTargetHours: 40,
+
   },
   lastUsed: {
     activeTab: "calendar",

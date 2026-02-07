@@ -35,7 +35,7 @@ function buildWeekDays(startIso: string) {
   });
 }
 
-export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOverviewPanelProps) {
+export function WeeklyOverviewPanel({ tasks, weeklyTargetHours }: WeeklyOverviewPanelProps) {
   const today = dayjs();
   const [year, setYear] = useState(today.year());
   const [week, setWeek] = useState<number | undefined>(today.isoWeek());
@@ -204,7 +204,7 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
             ))}
           </ul>
           <div className="fw-semibold">
-            Total for the week: {weekTotal.toFixed(2)} / {weeklyTargetHours.toFixed(1)} hours
+            Total for the week: {weekTotal.toFixed(2)}{weeklyTargetHours !== undefined ? ` / ${weeklyTargetHours.toFixed(1)}` : ""} hours
           </div>
           {lunchTotal > 0 && <div className="text-muted">Lunch: {lunchTotal.toFixed(2)} h</div>}
         </div>

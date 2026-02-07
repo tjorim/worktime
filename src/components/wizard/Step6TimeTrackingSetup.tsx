@@ -5,23 +5,17 @@ import type { RefObject } from "react";
 
 interface Step6TimeTrackingSetupProps {
   isEnabled: boolean;
-  weeklyTargetHours: string;
   onToggle: (enabled: boolean) => void;
-  onWeeklyTargetHoursChange: (hours: string) => void;
   onPrev: () => void;
   onComplete: () => void;
-  isInvalid: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 export function Step6TimeTrackingSetup({
   isEnabled,
-  weeklyTargetHours,
   onToggle,
-  onWeeklyTargetHoursChange,
   onPrev,
   onComplete,
-  isInvalid,
   firstButtonRef,
 }: Step6TimeTrackingSetupProps) {
   return (
@@ -48,25 +42,7 @@ export function Step6TimeTrackingSetup({
           onChange={(event) => onToggle(event.target.checked)}
         />
 
-        {isEnabled ? (
-          <Form.Group className="mt-3" controlId="weeklyTargetHours">
-            <Form.Label>Weekly target hours</Form.Label>
-            <Form.Control
-              type="number"
-              min={0}
-              step={0.5}
-              value={weeklyTargetHours}
-              onChange={(event) => onWeeklyTargetHoursChange(event.target.value)}
-              isInvalid={isInvalid}
-            />
-            <Form.Control.Feedback type="invalid">
-              Enter a valid number (0 or greater).
-            </Form.Control.Feedback>
-            <Form.Text className="text-muted">
-              Used for weekly summaries and progress tracking.
-            </Form.Text>
-          </Form.Group>
-        ) : (
+        {!isEnabled && (
           <Form.Text className="text-muted d-block mt-2">
             You can enable time tracking later in Settings if you want to start logging hours.
           </Form.Text>
@@ -85,7 +61,6 @@ export function Step6TimeTrackingSetup({
         <Button
           variant="primary"
           onClick={onComplete}
-          disabled={isEnabled && isInvalid}
           className="order-1 order-sm-2"
         >
           Finish Setup <i className="bi bi-check-lg ms-1"></i>

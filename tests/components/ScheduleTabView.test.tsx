@@ -267,7 +267,7 @@ describe("ScheduleTabView", () => {
             vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
             enableTimeOff: false,
             enableTimeTracking: false,
-            timeTrackingWeeklyTargetHours: 40,
+
           },
           lastUsed: {
             activeTab: "calendar",

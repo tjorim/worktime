@@ -150,7 +150,6 @@ describe("SettingsContext unified user state", () => {
         },
         enableTimeOff: false,
         enableTimeTracking: false,
-        timeTrackingWeeklyTargetHours: 40,
       },
       lastUsed: {
         activeTab: "calendar",

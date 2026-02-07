@@ -412,7 +412,7 @@ interface WorktimeUserState {
 **Three groups**:
 
 1. **Identity/setup** (top-level): `hasCompletedOnboarding`, `myTeam`, `scheduleType` — set during onboarding, rarely changed
-2. **`settings`**: User preferences — `timeFormat`, `theme`, `notifications`, `vacationAllowance`, `enableTimeOff`, `enableTimeTracking`, `timeTrackingWeeklyTargetHours`
+2. **`settings`**: User preferences — `timeFormat`, `theme`, `notifications`, `vacationAllowance`, `enableTimeOff`, `enableTimeTracking`
 3. **`lastUsed`**: Where the user left off — `activeTab`, `scheduleView`, `otherSchedule`, `timeOffView`, `timeTrackingView`, `otherTeam`
 
 ### Versioned Migrations

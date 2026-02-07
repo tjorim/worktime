@@ -18,7 +18,7 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
     vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
     enableTimeOff: false,
     enableTimeTracking: false,
-    timeTrackingWeeklyTargetHours: 40,
+
   },
   lastUsed: {
     activeTab: "calendar",
@@ -34,7 +34,7 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
   updateVacationAllowance: vi.fn(),
   updateTimeOffEnabled: vi.fn(),
   updateTimeTrackingEnabled: vi.fn(),
-  updateTimeTrackingWeeklyTargetHours: vi.fn(),
+
   updateLastActiveTab: vi.fn(),
   updateLastScheduleView: vi.fn(),
   updateLastTimeOffView: vi.fn(),

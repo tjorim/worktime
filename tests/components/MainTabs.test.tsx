@@ -41,7 +41,7 @@ function renderWithProviders(ui: React.ReactElement) {
         },
         enableTimeOff: true,
         enableTimeTracking: true,
-        timeTrackingWeeklyTargetHours: 40,
+
       },
       lastUsed: {
         activeTab: "calendar",

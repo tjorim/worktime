@@ -128,7 +128,17 @@ describe("WeeklyOverviewPanel Component", () => {
 
       render(<WeeklyOverviewPanel tasks={weekTasks} />);
 
-      expect(screen.getByText(/Total for the week:.*7\.00.*\/ 40\.0 hours/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total for the week:.*7\.00.*hours/i)).toBeInTheDocument();
+    });
+
+    it("shows target when weeklyTargetHours is provided", () => {
+      const weekTasks = [
+        createTaskForDate(mondayDate, "Support", "08:00", "12:00"), // 4h
+      ];
+
+      render(<WeeklyOverviewPanel tasks={weekTasks} weeklyTargetHours={40} />);
+
+      expect(screen.getByText(/Total for the week:.*4\.00.*\/ 40\.0 hours/i)).toBeInTheDocument();
     });
 
     it("excludes lunch category from work hour totals", () => {
@@ -140,7 +150,7 @@ describe("WeeklyOverviewPanel Component", () => {
       render(<WeeklyOverviewPanel tasks={weekTasks} />);
 
       // Total should be 3.00 (excluding lunch)
-      expect(screen.getByText(/Total for the week:.*3\.00.*\/ 40\.0 hours/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total for the week:.*3\.00.*hours/i)).toBeInTheDocument();
     });
 
     it("reports lunch hours separately when present", () => {

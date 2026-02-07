@@ -29,7 +29,6 @@ interface UserSettings {
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
-  timeTrackingWeeklyTargetHours: number;
 }
 
 interface SettingsContextType {
@@ -41,7 +40,6 @@ interface SettingsContextType {
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
-  updateTimeTrackingWeeklyTargetHours: (hours: number) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -71,7 +69,6 @@ interface SettingsContextType {
       vacationAllowance?: Partial<VacationAllowanceSettings>;
       enableTimeOff?: boolean;
       enableTimeTracking?: boolean;
-      timeTrackingWeeklyTargetHours?: number;
     },
   ) => void;
 }
@@ -87,7 +84,6 @@ export const defaultSettings: UserSettings = {
   },
   enableTimeOff: false,
   enableTimeTracking: false,
-  timeTrackingWeeklyTargetHours: 40,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -266,12 +262,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.enableTimeTracking === "boolean"
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
-  const timeTrackingWeeklyTargetHours =
-    typeof settings.timeTrackingWeeklyTargetHours === "number" &&
-    Number.isFinite(settings.timeTrackingWeeklyTargetHours) &&
-    settings.timeTrackingWeeklyTargetHours >= 0
-      ? settings.timeTrackingWeeklyTargetHours
-      : defaultSettings.timeTrackingWeeklyTargetHours;
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -366,7 +356,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
-      timeTrackingWeeklyTargetHours,
     },
     lastUsed: {
       activeTab,
@@ -462,20 +451,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, enableTimeTracking: enabled },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateTimeTrackingWeeklyTargetHours = useCallback(
-    (hours: number) => {
-      const nextHours =
-        Number.isFinite(hours) && hours >= 0
-          ? hours
-          : defaultSettings.timeTrackingWeeklyTargetHours;
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, timeTrackingWeeklyTargetHours: nextHours },
       }));
     },
     [setUserState],
@@ -611,16 +586,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         vacationAllowance?: Partial<VacationAllowanceSettings>;
         enableTimeOff?: boolean;
         enableTimeTracking?: boolean;
-        timeTrackingWeeklyTargetHours?: number;
       },
     ) => {
-      const nextWeeklyTargetHours =
-        preferences?.timeTrackingWeeklyTargetHours !== undefined
-          ? Number.isFinite(preferences.timeTrackingWeeklyTargetHours) &&
-            preferences.timeTrackingWeeklyTargetHours >= 0
-            ? preferences.timeTrackingWeeklyTargetHours
-            : defaultSettings.timeTrackingWeeklyTargetHours
-          : undefined;
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
@@ -642,8 +609,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             preferences?.enableTimeTracking !== undefined
               ? preferences.enableTimeTracking
               : prev.settings.enableTimeTracking,
-          timeTrackingWeeklyTargetHours:
-            nextWeeklyTargetHours ?? prev.settings.timeTrackingWeeklyTargetHours,
         },
       }));
     },
@@ -660,7 +625,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
-      updateTimeTrackingWeeklyTargetHours,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -686,7 +650,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
-      updateTimeTrackingWeeklyTargetHours,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,

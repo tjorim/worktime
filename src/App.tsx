@@ -18,7 +18,6 @@ type WizardCompletionPayload = {
   vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
-  timeTrackingWeeklyTargetHours?: number;
 };
 
 function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {

@@ -23,7 +23,7 @@ function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
         },
         enableTimeOff: false,
         enableTimeTracking: false,
-        timeTrackingWeeklyTargetHours: 40,
+
       },
       lastUsed: {
         activeTab: "calendar",
