@@ -47,7 +47,6 @@ export function SettingsPanel({
     updateTheme,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
-    updateTimeTrackingWeeklyTargetHours,
     resetSettings,
   } = useSettings();
 
@@ -218,25 +217,6 @@ export function SettingsPanel({
                         aria-label="Toggle time tracking"
                       />
                     </div>
-                    <Form.Group controlId="weeklyTargetHours">
-                      <Form.Label className="small text-muted mb-1">Weekly target hours</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min={0}
-                        max={168}
-                        step={0.5}
-                        value={settings.timeTrackingWeeklyTargetHours}
-                        onChange={(event) => {
-                          const value = Number(event.target.value);
-                          if (!Number.isFinite(value)) {
-                            return;
-                          }
-                          const clampedValue = Math.min(168, Math.max(0, value));
-                          updateTimeTrackingWeeklyTargetHours(clampedValue);
-                        }}
-                        disabled={!settings.enableTimeTracking}
-                      />
-                    </Form.Group>
                   </div>
                 </ListGroup.Item>
               </ListGroup>

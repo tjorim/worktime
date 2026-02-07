@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
 import { useEffect, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
@@ -18,7 +19,12 @@ const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
 const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
 
 export function TimeTrackingView() {
-  const { settings, lastUsed, updateLastTimeTrackingView } = useSettings();
+  const {
+    settings,
+    lastUsed,
+    updateLastTimeTrackingView,
+    updateTimeTrackingWeeklyTargetHours,
+  } = useSettings();
   const {
     tasks,
     templates,
@@ -36,6 +42,15 @@ export function TimeTrackingView() {
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
+
+  const handleWeeklyTargetHoursChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(event.target.value);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    const clampedValue = Math.min(168, Math.max(0, value));
+    updateTimeTrackingWeeklyTargetHours(clampedValue);
+  };
 
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
@@ -59,6 +74,29 @@ export function TimeTrackingView() {
           </Button>
         </ButtonGroup>
       </div>
+
+      <Card className="shadow-sm">
+        <Card.Header className="fw-semibold">Time Tracking Settings</Card.Header>
+        <Card.Body>
+          <Form.Group controlId="weeklyTargetHours">
+            <Form.Label>Weekly target hours</Form.Label>
+            <Form.Control
+              type="number"
+              min={0}
+              max={168}
+              step={0.5}
+              value={settings.timeTrackingWeeklyTargetHours}
+              onChange={handleWeeklyTargetHoursChange}
+              required
+              aria-required="true"
+              aria-describedby="weeklyTargetHoursHelp"
+            />
+            <Form.Text className="text-muted" id="weeklyTargetHoursHelp">
+              Used for weekly summaries and progress tracking.
+            </Form.Text>
+          </Form.Group>
+        </Card.Body>
+      </Card>
 
       {viewMode === "daily" && (
         <Card className="shadow-sm">
