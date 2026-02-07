@@ -78,7 +78,7 @@ export const defaultSettings: UserSettings = {
   theme: "auto",
   notifications: "off",
   vacationAllowance: {
-    amount: 0,
+    yearlyAmounts: {},
     unit: "days",
     hoursPerDay: 8,
   },
@@ -111,7 +111,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -171,6 +171,55 @@ const migrations: Record<number, Migration> = {
       scheduleType,
       settings: cleanSettings,
       lastUsed: migratedLastUsed,
+    };
+  },
+
+  // → v2: Replace vacationAllowance.amount with yearlyAmounts[currentYear].
+  2: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
+    const va = (
+      typeof settings.vacationAllowance === "object" && settings.vacationAllowance !== null
+        ? settings.vacationAllowance
+        : {}
+    ) as RawState;
+
+    const oldAmount =
+      typeof va.amount === "number" &&
+      Number.isFinite(va.amount as number) &&
+      (va.amount as number) >= 0
+        ? (va.amount as number)
+        : 0;
+
+    const existingYearly =
+      typeof va.yearlyAmounts === "object" && va.yearlyAmounts !== null
+        ? (va.yearlyAmounts as Record<string, unknown>)
+        : {};
+
+    const currentYear = String(new Date().getFullYear());
+    const yearlyAmounts: Record<string, number> = {};
+    for (const [key, val] of Object.entries(existingYearly)) {
+      if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
+        yearlyAmounts[key] = val;
+      }
+    }
+    // Only seed from old amount if there's no entry for the current year yet
+    if (oldAmount > 0 && !(currentYear in yearlyAmounts)) {
+      yearlyAmounts[currentYear] = oldAmount;
+    }
+
+    const { amount: _amount, yearlyAmounts: _existingYearly, ...restVa } = va;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        vacationAllowance: {
+          ...restVa,
+          yearlyAmounts,
+        },
+      },
     };
   },
 };

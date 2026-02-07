@@ -84,9 +84,7 @@ export function hasMultipleTeams(scheduleOption: ScheduleOption | null | undefin
  * Returns the configured `weeklyHours` from the roster config, or `null` when
  * the value has not been determined yet (e.g. for schedules still in development).
  */
-export function getWeeklyHours(
-  scheduleOption: ScheduleOption | null | undefined,
-): number | null {
+export function getWeeklyHours(scheduleOption: ScheduleOption | null | undefined): number | null {
   return getScheduleConfig(scheduleOption).shiftConfig.weeklyHours ?? null;
 }
 

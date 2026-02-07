@@ -41,7 +41,6 @@ function renderWithProviders(ui: React.ReactElement) {
         },
         enableTimeOff: true,
         enableTimeTracking: true,
-
       },
       lastUsed: {
         activeTab: "calendar",

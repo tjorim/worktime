@@ -17,6 +17,11 @@ interface Step5TimeOffSetupProps {
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
+// Type guard to validate VacationAllowanceUnit values
+const isValidVacationAllowanceUnit = (value: unknown): value is VacationAllowanceUnit => {
+  return typeof value === "string" && (value === "days" || value === "hours");
+};
+
 export function Step5TimeOffSetup({
   isEnabled,
   onToggle,
@@ -83,9 +88,12 @@ export function Step5TimeOffSetup({
               <Form.Label>Unit</Form.Label>
               <Form.Select
                 value={vacationUnit}
-                onChange={(event) =>
-                  onVacationUnitChange(event.target.value as VacationAllowanceUnit)
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (isValidVacationAllowanceUnit(value)) {
+                    onVacationUnitChange(value);
+                  }
+                }}
               >
                 <option value="days">Days</option>
                 <option value="hours">Hours</option>

@@ -15,10 +15,9 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
     timeFormat,
     theme: "auto",
     notifications: "off",
-    vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+    vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
     enableTimeOff: false,
     enableTimeTracking: false,
-
   },
   lastUsed: {
     activeTab: "calendar",

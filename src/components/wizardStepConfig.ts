@@ -112,7 +112,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   {
     id: "timeoff-setup",
     title: "Time Off & Vacation 🗓️",
-    isVisible: (ctx) => ctx.mode === "onboarding",
+    isVisible: (ctx) => ctx.mode === "onboarding" && ctx.enableTimeOff,
     getNextStep: () => "time-tracking-setup",
     getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },

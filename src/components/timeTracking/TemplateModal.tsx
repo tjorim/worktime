@@ -35,7 +35,13 @@ export function TemplateModal({
         <Modal.Title>{title}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <Form onSubmit={(event) => event.preventDefault()}>
+        <Form
+          id="templateForm"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
           <Form.Group controlId="templateName" className="mb-3">
             <Form.Label>Task name</Form.Label>
             <Form.Control
@@ -88,7 +94,7 @@ export function TemplateModal({
         <Button variant="outline-secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onSubmit}>
+        <Button type="submit" form="templateForm" variant="primary">
           {submitLabel}
         </Button>
       </Modal.Footer>

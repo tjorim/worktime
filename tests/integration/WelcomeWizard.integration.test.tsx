@@ -27,13 +27,12 @@ const defaultUserState = {
     theme: "auto" as const,
     notifications: "off" as const,
     vacationAllowance: {
-      amount: 0,
+      yearlyAmounts: {},
       unit: "days" as const,
       hoursPerDay: 8,
     },
     enableTimeOff: true,
     enableTimeTracking: true,
-
   },
   lastUsed: {
     activeTab: "calendar",
@@ -75,10 +74,7 @@ function seedUserState(overrides?: Partial<typeof defaultUserState>) {
 /**
  * Renders component with SettingsProvider and seeded state.
  */
-function renderWithProviders(
-  ui: React.ReactElement,
-  overrides?: Partial<typeof defaultUserState>,
-) {
+function renderWithProviders(ui: React.ReactElement, overrides?: Partial<typeof defaultUserState>) {
   seedUserState(overrides);
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
@@ -245,14 +241,11 @@ describe("WelcomeWizard Integration Tests", () => {
       const user = userEvent.setup();
       const onHide = vi.fn();
 
-      renderWithProviders(
-        <WelcomeWizard {...defaultProps} mode="change-team" onHide={onHide} />,
-        {
-          hasCompletedOnboarding: true,
-          myTeam: 3,
-          scheduleType: "5-shift",
-        },
-      );
+      renderWithProviders(<WelcomeWizard {...defaultProps} mode="change-team" onHide={onHide} />, {
+        hasCompletedOnboarding: true,
+        myTeam: 3,
+        scheduleType: "5-shift",
+      });
 
       await waitFor(() => expect(screen.getByText(/Choose your team/i)).toBeInTheDocument());
 
@@ -350,7 +343,7 @@ describe("WelcomeWizard Integration Tests", () => {
       expect(screen.getByRole("button", { name: /9-5/i })).toBeInTheDocument();
     });
 
-    it("should proceed to time tracking when time off is disabled", async () => {
+    it("should redirect from time off step when time off is disabled", async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -372,14 +365,11 @@ describe("WelcomeWizard Integration Tests", () => {
       const timeOffSwitch = screen.getByLabelText(/Enable time off/i);
       await user.click(timeOffSwitch);
 
-      // Click Continue
-      await user.click(screen.getByRole("button", { name: /Continue/i }));
-
-      // Should go to time tracking
-      await waitFor(() => expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument());
-
-      // Should NOT show vacation allowance heading
-      expect(screen.queryByText(/Vacation allowance/i)).not.toBeInTheDocument();
+      // Disabling time off makes the timeoff-setup step invisible,
+      // so the wizard redirects away from it
+      await waitFor(() =>
+        expect(screen.queryByRole("heading", { name: /Set Up Time Off/i })).not.toBeInTheDocument(),
+      );
     });
 
     it("should handle schedule change during active wizard session", async () => {

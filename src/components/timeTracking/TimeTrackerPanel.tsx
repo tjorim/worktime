@@ -202,15 +202,12 @@ export function TimeTrackerPanel({
 
   const totalHours = useMemo(
     () =>
-      dailyTasks.reduce(
-        (sum, task) => {
-          const startDayjs = dayjs(task.startTime);
-          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
-          return sum + stopDayjs.diff(startDayjs, "hour", true);
-        },
-        0,
-      ),
-    [dailyTasks],
+      dailyTasks.reduce((sum, task) => {
+        const startDayjs = dayjs(task.startTime);
+        const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime;
+        return sum + stopDayjs.diff(startDayjs, "hour", true);
+      }, 0),
+    [dailyTasks, liveTime],
   );
 
   const resetTemplateForm = () =>
@@ -431,9 +428,7 @@ export function TimeTrackerPanel({
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
           <div>
             <div className="fw-semibold">Quick Timer</div>
-            <div className="small text-muted">
-              Start a task now and stop it when you're done.
-            </div>
+            <div className="small text-muted">Start a task now and stop it when you're done.</div>
           </div>
           {runningTask ? (
             <span className="badge text-bg-success">Running</span>
@@ -445,7 +440,9 @@ export function TimeTrackerPanel({
           <div className="mt-2">
             <div className="fw-semibold">
               {runningTask.text}{" "}
-              <span className={`time-tracking-tag time-tracking-tag-${tagToClass(runningTask.tag)}`}>
+              <span
+                className={`time-tracking-tag time-tracking-tag-${tagToClass(runningTask.tag)}`}
+              >
                 {runningTask.tag}
               </span>
             </div>

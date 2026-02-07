@@ -50,7 +50,7 @@ function validateVacationAmount(amount: string) {
 }
 
 type WizardCompletionPayload = {
-  vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
+  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
 };
@@ -102,9 +102,10 @@ export function WelcomeWizard({
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Vacation allowance form state - initialize from settings
+  // Vacation allowance form state - initialize from settings for current year
   const [vacationAmount, setVacationAmount] = useState<string>(() => {
-    const amount = settings.vacationAllowance?.amount ?? 0;
+    const currentYear = String(new Date().getFullYear());
+    const amount = settings.vacationAllowance?.yearlyAmounts?.[currentYear] ?? 0;
     return amount > 0 ? amount.toString() : "";
   });
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
@@ -175,9 +176,10 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
+    const currentYear = String(new Date().getFullYear());
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
-        ? { amount: vacationValidation.parsedAmount, unit: vacationUnit }
+        ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
         : undefined;
     onHide({
       vacationAllowance: vacationPayload,

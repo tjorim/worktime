@@ -63,12 +63,17 @@ export function overlaps(
     if (skipId && task.id === skipId) {
       return false;
     }
-    const taskStart = timeToMinutes(task.start);
-    const taskStop = timeToMinutes(task.stop);
-    if (taskStop <= taskStart) {
+    try {
+      const taskStart = timeToMinutes(task.start);
+      const taskStop = timeToMinutes(task.stop);
+      if (taskStop <= taskStart) {
+        return false;
+      }
+      return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
+    } catch (error) {
+      console.warn(`Failed to parse task times for task ${task.id}:`, task, error);
       return false;
     }
-    return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
   });
 }
 

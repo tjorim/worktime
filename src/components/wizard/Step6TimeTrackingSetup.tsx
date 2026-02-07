@@ -58,11 +58,7 @@ export function Step6TimeTrackingSetup({
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button
-          variant="primary"
-          onClick={onComplete}
-          className="order-1 order-sm-2"
-        >
+        <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
           Finish Setup <i className="bi bi-check-lg ms-1"></i>
         </Button>
       </div>

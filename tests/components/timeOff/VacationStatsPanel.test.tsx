@@ -6,8 +6,10 @@ import type { HdayEvent } from "../../../src/lib/hday/types";
 import type { VacationAllowanceSettings } from "../../../src/utils/vacationCalculations";
 
 describe("VacationStatsPanel", () => {
+  const currentYear = new Date().getFullYear();
+
   const defaultAllowance: VacationAllowanceSettings = {
-    amount: 25,
+    yearlyAmounts: { [String(currentYear)]: 25 },
     unit: "days",
     hoursPerDay: 8,
   };
@@ -32,7 +34,7 @@ describe("VacationStatsPanel", () => {
 
     it("should display current year badge", () => {
       render(<VacationStatsPanel {...defaultProps} />);
-      const currentYear = new Date().getFullYear();
+
       // Badge is rendered in the header
       const badges = screen.getAllByText(currentYear.toString());
       expect(badges.length).toBeGreaterThan(0);
@@ -41,7 +43,7 @@ describe("VacationStatsPanel", () => {
     it("should render allowance settings form", () => {
       render(<VacationStatsPanel {...defaultProps} />);
       expect(screen.getByText("Allowance Settings")).toBeInTheDocument();
-      expect(screen.getByLabelText("Annual vacation allowance")).toBeInTheDocument();
+      expect(screen.getByLabelText(`Allowance for ${currentYear}`)).toBeInTheDocument();
       expect(screen.getByLabelText("Unit")).toBeInTheDocument();
       expect(screen.getByLabelText("Hours per day")).toBeInTheDocument();
     });
@@ -53,7 +55,7 @@ describe("VacationStatsPanel", () => {
 
     it("should display allowance values in form inputs", () => {
       render(<VacationStatsPanel {...defaultProps} />);
-      const amountInput = screen.getByLabelText("Annual vacation allowance") as HTMLInputElement;
+      const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
       const unitSelect = screen.getByLabelText("Unit") as HTMLSelectElement;
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
 
@@ -68,7 +70,7 @@ describe("VacationStatsPanel", () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
-      const amountInput = screen.getByLabelText("Annual vacation allowance") as HTMLInputElement;
+      const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
 
       // Typing backspace will reduce 25 to 2, which is valid
       await user.click(amountInput);
@@ -76,7 +78,9 @@ describe("VacationStatsPanel", () => {
 
       // Should be called with valid value (2)
       expect(mockOnUpdateAllowance).toHaveBeenCalled();
-      expect(mockOnUpdateAllowance).toHaveBeenCalledWith({ amount: 2 });
+      expect(mockOnUpdateAllowance).toHaveBeenCalledWith({
+        yearlyAmounts: { [String(currentYear)]: 2 },
+      });
     });
 
     it("should call onUpdateAllowance when unit changes", async () => {
@@ -108,7 +112,7 @@ describe("VacationStatsPanel", () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
-      const amountInput = screen.getByLabelText("Annual vacation allowance");
+      const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`);
       await user.clear(amountInput);
       await user.type(amountInput, "-5");
 
@@ -119,7 +123,7 @@ describe("VacationStatsPanel", () => {
       const user = userEvent.setup();
       render(<VacationStatsPanel {...defaultProps} />);
 
-      const amountInput = screen.getByLabelText("Annual vacation allowance");
+      const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`);
 
       // Focus and try to type letters (which should be ignored by number input)
       await user.click(amountInput);
@@ -161,7 +165,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should calculate and display vacation days used", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -175,7 +178,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should display remaining vacation days", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -193,7 +195,7 @@ describe("VacationStatsPanel", () => {
 
     it("should show hours when allowance unit is hours", () => {
       const hoursAllowance: VacationAllowanceSettings = {
-        amount: 200,
+        yearlyAmounts: { [String(currentYear)]: 200 },
         unit: "hours",
         hoursPerDay: 8,
       };
@@ -202,7 +204,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should render progress bar with correct percentage", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -218,7 +219,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should show breakdown by event type", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -247,7 +247,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should display total days and hours", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -263,7 +262,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should handle half-day events in calculations", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -278,7 +276,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should update when hoursPerDay changes", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -288,7 +285,7 @@ describe("VacationStatsPanel", () => {
         },
       ];
       const customAllowance: VacationAllowanceSettings = {
-        amount: 25,
+        yearlyAmounts: { [String(currentYear)]: 25 },
         unit: "days",
         hoursPerDay: 7,
       };
@@ -301,13 +298,12 @@ describe("VacationStatsPanel", () => {
   describe("Year Selection", () => {
     it("should default to current year", () => {
       render(<VacationStatsPanel {...defaultProps} />);
-      const currentYear = new Date().getFullYear();
+
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       expect(yearSelect).toHaveValue(currentYear.toString());
     });
 
     it("should include years from events", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         { type: "range", start: `${currentYear - 1}/06/15`, end: `${currentYear - 1}/06/20` },
         { type: "range", start: `${currentYear}/01/10`, end: `${currentYear}/01/15` },
@@ -324,7 +320,15 @@ describe("VacationStatsPanel", () => {
 
     it("should update statistics when year changes", async () => {
       const user = userEvent.setup();
-      const currentYear = new Date().getFullYear();
+
+      const multiYearAllowance: VacationAllowanceSettings = {
+        yearlyAmounts: {
+          [String(currentYear)]: 25,
+          [String(currentYear - 1)]: 25,
+        },
+        unit: "days",
+        hoursPerDay: 8,
+      };
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -339,7 +343,9 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(
+        <VacationStatsPanel {...defaultProps} events={events} allowance={multiYearAllowance} />,
+      );
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       await user.selectOptions(yearSelect, (currentYear - 1).toString());
@@ -352,7 +358,7 @@ describe("VacationStatsPanel", () => {
   describe("Edge Cases", () => {
     it("should handle empty allowance gracefully", () => {
       const zeroAllowance: VacationAllowanceSettings = {
-        amount: 0,
+        yearlyAmounts: {},
         unit: "days",
         hoursPerDay: 8,
       };
@@ -362,9 +368,8 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should not show negative remaining days", () => {
-      const currentYear = new Date().getFullYear();
       const smallAllowance: VacationAllowanceSettings = {
-        amount: 1,
+        yearlyAmounts: { [String(currentYear)]: 1 },
         unit: "days",
         hoursPerDay: 8,
       };
@@ -385,9 +390,8 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should cap progress bar at 100%", () => {
-      const currentYear = new Date().getFullYear();
       const smallAllowance: VacationAllowanceSettings = {
-        amount: 1,
+        yearlyAmounts: { [String(currentYear)]: 1 },
         unit: "days",
         hoursPerDay: 8,
       };
@@ -406,7 +410,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should handle events with no flags as holiday", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         { type: "range", start: `${currentYear}/01/15`, end: `${currentYear}/01/17` },
       ];
@@ -416,7 +419,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should filter out non-holiday events from usage", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",
@@ -442,7 +444,7 @@ describe("VacationStatsPanel", () => {
     it("should have proper labels on form controls", () => {
       render(<VacationStatsPanel {...defaultProps} />);
 
-      expect(screen.getByLabelText("Annual vacation allowance")).toBeInTheDocument();
+      expect(screen.getByLabelText(`Allowance for ${currentYear}`)).toBeInTheDocument();
       expect(screen.getByLabelText("Unit")).toBeInTheDocument();
       expect(screen.getByLabelText("Hours per day")).toBeInTheDocument();
     });
@@ -450,7 +452,7 @@ describe("VacationStatsPanel", () => {
     it("should have valid input constraints", () => {
       render(<VacationStatsPanel {...defaultProps} />);
 
-      const amountInput = screen.getByLabelText("Annual vacation allowance") as HTMLInputElement;
+      const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
 
       expect(amountInput).toHaveAttribute("type", "number");
@@ -460,7 +462,6 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should have progress bar with aria attributes", () => {
-      const currentYear = new Date().getFullYear();
       const events: HdayEvent[] = [
         {
           type: "range",

@@ -87,10 +87,7 @@ export function TimeTrackingView() {
         <Card className="shadow-sm">
           <Card.Header className="fw-semibold">Weekly Overview</Card.Header>
           <Card.Body>
-            <WeeklyOverviewPanel
-              tasks={tasks}
-              weeklyTargetHours={weeklyTargetHours}
-            />
+            <WeeklyOverviewPanel tasks={tasks} weeklyTargetHours={weeklyTargetHours} />
           </Card.Body>
         </Card>
       )}

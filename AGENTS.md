@@ -406,6 +406,8 @@ interface WorktimeUserState {
   scheduleType: ScheduleOption | null; // Identity/setup
   settings: UserSettings; // True user preferences (theme, time format, etc.)
   lastUsed: LastUsed; // Ephemeral view state (active tab, last viewed schedule, etc.)
+  hasMigrationError?: boolean; // Set when migration fails; signals need for user-facing alert
+  rawStateBackup?: Record<string, unknown>; // Preserved raw state when migration fails; aids recovery
 }
 ```
 
@@ -461,10 +463,7 @@ function migrateState(state: RawState): RawState {
     try {
       state = migrate(state);
     } catch (error) {
-      console.error(
-        `Migration ${nextVersion} failed. Attempting recovery.`,
-        error,
-      );
+      console.error(`Migration ${nextVersion} failed. Attempting recovery.`, error);
       const rawStateBackup = state;
       const recovered = {
         myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,

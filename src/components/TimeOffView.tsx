@@ -50,6 +50,11 @@ interface TimeOffViewProps {
  */
 const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
 
+// Type guard to validate viewMode against TIMEOFF_VIEWS
+const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[number] => {
+  return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
+};
+
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
@@ -68,10 +73,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState(lastUsed.timeOffView ?? DEFAULT_TIME_OFF_VIEW);
+  const [viewMode, setViewMode] = useState(
+    isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
+  );
 
   useEffect(() => {
-    updateLastTimeOffView(viewMode);
+    if (isValidTimeOffView(viewMode)) {
+      updateLastTimeOffView(viewMode);
+    }
   }, [updateLastTimeOffView, viewMode]);
 
   // Use custom hook for event form state management

@@ -27,7 +27,7 @@ export type ShiftRosterConfig = {
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
   // Optional fields
-  weeklyHours?: number; // Target working hours per week for this schedule (null/undefined = not yet determined)
+  weeklyHours?: number | null; // Target working hours per week for this schedule (null/undefined = not yet determined)
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
 };
 

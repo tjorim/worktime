@@ -127,7 +127,7 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours }: WeeklyOverview
           <Form.Label>Week</Form.Label>
           <Form.Control
             type="number"
-            value={week}
+            value={week ?? ""}
             min={1}
             max={maxWeeks}
             onChange={(event) => {
@@ -135,10 +135,12 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours }: WeeklyOverview
               if (!value) {
                 setWeek(undefined);
               } else {
-                const weekNum = Number(value);
-                // Clamp to valid ISO week range for selected year
-                const clampedWeek = Math.min(Math.max(weekNum, 1), maxWeeks);
-                setWeek(clampedWeek);
+                const weekNum = parseInt(value, 10);
+                if (!isNaN(weekNum)) {
+                  // Clamp to valid ISO week range for selected year
+                  const clampedWeek = Math.min(Math.max(weekNum, 1), maxWeeks);
+                  setWeek(clampedWeek);
+                }
               }
             }}
           />
@@ -204,7 +206,8 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours }: WeeklyOverview
             ))}
           </ul>
           <div className="fw-semibold">
-            Total for the week: {weekTotal.toFixed(2)}{weeklyTargetHours !== undefined ? ` / ${weeklyTargetHours.toFixed(1)}` : ""} hours
+            Total for the week: {weekTotal.toFixed(2)}
+            {weeklyTargetHours !== undefined ? ` / ${weeklyTargetHours.toFixed(1)}` : ""} hours
           </div>
           {lunchTotal > 0 && <div className="text-muted">Lunch: {lunchTotal.toFixed(2)} h</div>}
         </div>

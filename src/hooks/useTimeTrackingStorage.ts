@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
@@ -65,25 +65,6 @@ function isValidRawTask(value: unknown): value is RawTask {
   );
 }
 
-function migrateRawTask(value: unknown): unknown {
-  if (typeof value !== "object" || value === null) return value;
-  const v = value as Record<string, unknown>;
-  if (
-    typeof v.date === "string" &&
-    typeof v.start === "string" &&
-    typeof v.stop === "string" &&
-    !("startTime" in v)
-  ) {
-    const { date, start, stop, ...rest } = v;
-    return {
-      ...rest,
-      startTime: `${date}T${start}`,
-      stopTime: `${date}T${stop}`,
-    };
-  }
-  return value;
-}
-
 // StoredTimeTrackingTask now has string timestamps, so it matches RawTask structure
 function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return {
@@ -119,9 +100,16 @@ export function useTimeTrackingStorage() {
 
   // Refs for stable exportData callback
   const rawTasksRef = useRef(rawTasks);
-  rawTasksRef.current = rawTasks;
   const templatesRef = useRef(templates);
-  templatesRef.current = templates;
+
+  // Synchronize refs with committed state to maintain stable references for callbacks
+  useEffect(() => {
+    rawTasksRef.current = rawTasks;
+  }, [rawTasks]);
+
+  useEffect(() => {
+    templatesRef.current = templates;
+  }, [templates]);
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask) => {
@@ -132,12 +120,9 @@ export function useTimeTrackingStorage() {
           prev.some((task) => task.stopTime === undefined || task.stopTime === null)
         ) {
           shouldAdd = false;
-          rawTasksRef.current = prev;
           return prev;
         }
-        const next = [...prev, payload];
-        rawTasksRef.current = next;
-        return next;
+        return [...prev, payload];
       });
       return shouldAdd;
     },
@@ -220,8 +205,7 @@ export function useTimeTrackingStorage() {
   const importData = useCallback(
     (payload: ImportPayload) => {
       if (Array.isArray(payload.tasks)) {
-        const migrated = payload.tasks.map(migrateRawTask);
-        const validTasks = migrated.filter(isValidRawTask);
+        const validTasks = payload.tasks.filter(isValidRawTask);
         setRawTasks(validTasks);
       }
       if (Array.isArray(payload.templates)) {

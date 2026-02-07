@@ -16,6 +16,7 @@ const defaultProps = {
 };
 
 const defaultUserState = {
+  version: 2,
   hasCompletedOnboarding: false,
   myTeam: null,
   scheduleType: "5-shift",
@@ -24,13 +25,12 @@ const defaultUserState = {
     theme: "auto",
     notifications: "off",
     vacationAllowance: {
-      amount: 0,
+      yearlyAmounts: {},
       unit: "days",
       hoursPerDay: 8,
     },
     enableTimeOff: true,
     enableTimeTracking: true,
-
   },
   lastUsed: {
     activeTab: "calendar",
@@ -238,23 +238,21 @@ describe("WelcomeWizard", () => {
       expect(mockOnHide).not.toHaveBeenCalled(); // Not completed yet
     });
 
-    it("should allow continuing past time off setup when disabled", async () => {
-      const mockOnHide = vi.fn();
-
+    it("should skip time off setup step when time off is disabled", () => {
       renderWithProviders(
         <WelcomeWizard
           show={true}
           onTeamSelect={vi.fn()}
-          onHide={mockOnHide}
+          onHide={vi.fn()}
           startStep="timeoff-setup"
         />,
         { settings: { enableTimeOff: false } },
       );
 
-      const user = userEvent.setup();
-      await user.click(screen.getByRole("button", { name: /Continue/i }));
-
-      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
+      // When enableTimeOff is false, the timeoff-setup step is not visible,
+      // so the wizard falls back to the first visible step
+      expect(screen.queryByRole("heading", { name: /Set Up Time Off/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument();
     });
 
     it("should carry vacation allowance when values entered", async () => {
@@ -267,7 +265,6 @@ describe("WelcomeWizard", () => {
           onHide={mockOnHide}
           startStep="timeoff-setup"
         />,
-        { settings: { enableTimeOff: false } },
       );
 
       const user = userEvent.setup();
@@ -296,7 +293,6 @@ describe("WelcomeWizard", () => {
           onHide={vi.fn()}
           startStep="timeoff-setup"
         />,
-        { settings: { enableTimeOff: false } },
       );
 
       const user = userEvent.setup();
@@ -314,7 +310,6 @@ describe("WelcomeWizard", () => {
           onHide={vi.fn()}
           startStep="timeoff-setup"
         />,
-        { settings: { enableTimeOff: false } },
       );
 
       expect(screen.getByText(/Step 5 of 6/i)).toBeInTheDocument();
@@ -376,7 +371,6 @@ describe("WelcomeWizard", () => {
           onHide={mockOnHide}
           startStep="timeoff-setup"
         />,
-        { settings: { enableTimeOff: false } },
       );
 
       await enableTimeOffToggle(user);
@@ -396,11 +390,12 @@ describe("WelcomeWizard", () => {
       // Finish setup to trigger onHide
       await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
 
-      // Should call onHide with 0 amount (explicitly disabling vacation tracking)
+      // Should call onHide with 0 amount for current year (explicitly disabling vacation tracking)
+      const currentYear = String(new Date().getFullYear());
       expect(mockOnHide).toHaveBeenCalledWith(
         expect.objectContaining({
           vacationAllowance: {
-            amount: 0,
+            yearlyAmounts: { [currentYear]: 0 },
             unit: "days",
           },
         }),
@@ -555,14 +550,7 @@ describe("WelcomeWizard", () => {
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
       const user = userEvent.setup();
-      const userState = {
-        ...defaultUserState,
-        settings: {
-          ...defaultUserState.settings,
-          enableTimeOff: false,
-        },
-      };
-      window.localStorage.setItem("worktime_user_state", JSON.stringify(userState));
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
       render(<App />);
 
       // Verify welcome wizard appears
@@ -594,8 +582,9 @@ describe("WelcomeWizard", () => {
       );
 
       // Verify vacation allowance was saved to localStorage even without selecting a team
+      const currentYear = String(new Date().getFullYear());
       const saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.amount).toBe(35);
+      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(35);
       expect(saved.settings?.vacationAllowance?.unit).toBe("days");
       expect(saved.hasCompletedOnboarding).toBe(true);
       expect(saved.myTeam).toBeNull(); // No team was selected
@@ -603,14 +592,7 @@ describe("WelcomeWizard", () => {
 
     it("should save vacation allowance when updated in change-team mode", async () => {
       const user = userEvent.setup();
-      const userState = {
-        ...defaultUserState,
-        settings: {
-          ...defaultUserState.settings,
-          enableTimeOff: false,
-        },
-      };
-      window.localStorage.setItem("worktime_user_state", JSON.stringify(userState));
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
       render(<App />);
 
       // Complete initial onboarding
@@ -632,8 +614,9 @@ describe("WelcomeWizard", () => {
       );
 
       // Verify initial vacation allowance was saved
+      const currentYear = String(new Date().getFullYear());
       let saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.amount).toBe(25);
+      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25);
       expect(saved.myTeam).toBe(1);
 
       // Now open the wizard in change-team mode via Settings panel
@@ -653,7 +636,7 @@ describe("WelcomeWizard", () => {
 
       // Verify team was changed but vacation allowance remains unchanged
       saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.amount).toBe(25); // Unchanged from onboarding
+      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25); // Unchanged from onboarding
       expect(saved.settings?.vacationAllowance?.unit).toBe("days");
       expect(saved.myTeam).toBe(2); // Team was changed
     });
