@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
 
 describe("SettingsContext unified user state", () => {
@@ -11,6 +11,7 @@ describe("SettingsContext unified user state", () => {
   afterEach(() => {
     window.localStorage.clear();
     document.body.removeAttribute("data-bs-theme");
+    vi.restoreAllMocks();
   });
 
   it("provides default values and mutators", () => {
@@ -436,6 +437,73 @@ describe("SettingsContext unified user state", () => {
         timeTrackingView: "daily",
         otherTeam: null,
       });
+    });
+
+    it("recovers with salvaged values when a migration is missing", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: -1,
+          myTeam: 4,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 20, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: true,
+            timeTrackingWeeklyTargetHours: 36,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.myTeam).toBe(4);
+      expect(result.current.scheduleType).toBe("9-5");
+      expect(result.current.settings.timeFormat).toBe("12h");
+      expect(result.current.settings.theme).toBe("dark");
+      // Recovery resets non-salvaged values to defaults
+      expect(result.current.hasCompletedOnboarding).toBe(false);
+      expect(result.current.lastUsed.activeTab).toBe("calendar");
+    });
+
+    it("recovers with salvaged values when a migration throws", () => {
+      const parsedState = new Proxy(
+        {
+          version: 0,
+          myTeam: 3,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 10, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+          },
+        },
+        {
+          get(target, prop, receiver) {
+            if (prop === "lastUsed") {
+              throw new Error("forced migration failure");
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        },
+      );
+
+      vi.spyOn(JSON, "parse").mockImplementation(() => parsedState as any);
+      window.localStorage.setItem("worktime_user_state", "{}");
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.myTeam).toBe(3);
+      expect(result.current.scheduleType).toBe("5-shift");
+      expect(result.current.settings.timeFormat).toBe("12h");
+      expect(result.current.lastUsed.activeTab).toBe("calendar");
     });
   });
 
