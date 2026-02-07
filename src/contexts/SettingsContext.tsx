@@ -111,6 +111,8 @@ interface WorktimeUserState {
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
   lastUsed: LastUsed;
+  rawStateBackup?: RawState;
+  hasMigrationError?: boolean;
 }
 
 const CURRENT_VERSION = 1;
@@ -177,16 +179,45 @@ const migrations: Record<number, Migration> = {
   },
 };
 
+function handleMigrationError(state: RawState, version: number): RawState {
+  console.warn(`Migration for version ${version} not found or failed. Attempting recovery.`);
+  const rawStateBackup = state;
+  const recovered = {
+    myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
+    scheduleType:
+      typeof rawStateBackup.scheduleType === "string"
+        ? rawStateBackup.scheduleType
+        : typeof rawStateBackup.scheduleOption === "string"
+          ? rawStateBackup.scheduleOption
+          : null,
+    settings:
+      typeof rawStateBackup.settings === "object" && rawStateBackup.settings !== null
+        ? rawStateBackup.settings
+        : undefined,
+  };
+
+  return {
+    ...defaultUserState,
+    ...recovered,
+    rawStateBackup,
+    hasMigrationError: true,
+  };
+}
+
 function migrateState(state: RawState): RawState {
   let version = typeof state.version === "number" ? state.version : 0;
   while (version < CURRENT_VERSION) {
     const nextVersion = version + 1;
     const migrate = migrations[nextVersion];
     if (!migrate) {
-      console.warn(`No migration found for version ${nextVersion}. Resetting to defaults.`);
-      return { ...defaultUserState };
+      return handleMigrationError(state, nextVersion);
     }
-    state = migrate(state);
+    try {
+      state = migrate(state);
+    } catch (error) {
+      console.error(`Migration ${nextVersion} failed. Attempting recovery.`, error);
+      return handleMigrationError(state, nextVersion);
+    }
     state.version = nextVersion;
     version = nextVersion;
   }
@@ -345,6 +376,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       timeTrackingView,
       otherTeam,
     },
+    rawStateBackup:
+      typeof s.rawStateBackup === "object" && s.rawStateBackup !== null
+        ? (s.rawStateBackup as RawState)
+        : undefined,
+    hasMigrationError: s.hasMigrationError === true ? true : undefined,
   };
 };
 
