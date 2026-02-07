@@ -262,8 +262,9 @@ export function TimeTrackerPanel({
       setError("Please enter a task name to start.");
       return;
     }
-    const startTime = dayjs().format("YYYY-MM-DDTHH:mm");
-    const startDate = dayjs(startTime).format("YYYY-MM-DD");
+    const now = dayjs();
+    const startTime = now.format("YYYY-MM-DDTHH:mm");
+    const startDate = now.format("YYYY-MM-DD");
     const added = onAddTask({
       id: crypto.randomUUID(),
       text: text.trim(),
