@@ -79,6 +79,13 @@ const waitForStep = async (stepNumber: number, totalSteps: number = 6, timeout =
   );
 };
 
+const enableTimeOffToggle = async (user: ReturnType<typeof userEvent.setup>) => {
+  const toggle = screen.getByLabelText(/Enable time off/i) as HTMLInputElement;
+  if (!toggle.checked) {
+    await user.click(toggle);
+  }
+};
+
 const navigateToTeamSelection = async (user: ReturnType<typeof userEvent.setup>) => {
   // Step 1 (welcome) -> Step 2 (features)
   const getStartedButton = screen.getByRole("button", {
@@ -263,7 +270,7 @@ describe("WelcomeWizard", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
       const amountInput = screen.getByLabelText(/Vacation allowance/i);
       await user.clear(amountInput);
       await user.type(amountInput, "28");
@@ -320,7 +327,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
       const amountInput = screen.getByLabelText(/Vacation allowance/i);
       await user.type(amountInput, "-5");
 
@@ -343,7 +350,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
       const amountInput = screen.getByLabelText(/Vacation allowance/i);
       await user.type(amountInput, "25");
 
@@ -367,7 +374,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
       const amountInput = screen.getByLabelText(/Vacation allowance/i);
       await user.type(amountInput, "0");
 
@@ -556,7 +563,7 @@ describe("WelcomeWizard", () => {
 
       // Should be on time off setup step
       expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument();
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
 
       // Enter vacation allowance
       const amountInput = screen.getByLabelText(/Vacation allowance/i);
@@ -589,7 +596,7 @@ describe("WelcomeWizard", () => {
       await findModalTitle(/Welcome to Worktime/i);
       await navigateToTeamSelection(user);
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      await user.click(screen.getByLabelText(/Enable time off/i));
+      await enableTimeOffToggle(user);
 
       // Set initial vacation allowance
       const initialAmountInput = screen.getByLabelText(/Vacation allowance/i);
