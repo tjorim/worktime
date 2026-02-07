@@ -20,6 +20,11 @@ interface Step5TimeOffSetupProps {
 export function Step5TimeOffSetup({
   isEnabled,
   onToggle,
+  vacationAmount,
+  vacationUnit,
+  onVacationAmountChange,
+  onVacationUnitChange,
+  isInvalid,
   onPrev,
   onNext,
   firstButtonRef,
