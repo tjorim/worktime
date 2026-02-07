@@ -114,6 +114,9 @@ export function WeekView({
     return myTeam === teamNumber ? "my-team" : "";
   };
 
+  // Memoize today's date for consistent "today" highlighting throughout rendering
+  const today = dayjs();
+
   return (
     <Card>
       <Card.Header>
@@ -199,7 +202,7 @@ export function WeekView({
               <tr>
                 <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
                 {weekDays.map((day) => {
-                  const isToday = day.isSame(dayjs(), "day");
+                  const isToday = day.isSame(today, "day");
                   return (
                     <th
                       key={day.format("YYYY-MM-DD")}
@@ -247,7 +250,7 @@ export function WeekView({
                   </td>
                   {weekDays.map((day) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
-                    const isToday = day.isSame(dayjs(), "day");
+                    const isToday = day.isSame(today, "day");
 
                     return (
                       <td

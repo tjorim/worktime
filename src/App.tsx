@@ -21,6 +21,10 @@ type WizardCompletionPayload = {
   timeTrackingWeeklyTargetHours?: number;
 };
 
+function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {
+  return typeof value === "string" && (value === "days" || value === "hours");
+}
+
 /**
  * The main application component for team selection and shift management.
  *
@@ -173,11 +177,26 @@ function AppContent() {
       (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
       payload?.vacationAllowance &&
       typeof payload.vacationAllowance.amount === "number" &&
-      payload.vacationAllowance.amount > 0
+      payload.vacationAllowance.amount > 0 &&
+      isValidVacationAllowanceUnit(payload.vacationAllowance.unit)
     ) {
       // Persist vacation allowance changes in change-team or change-schedule modes
       updateVacationAllowance(payload.vacationAllowance);
       showSuccess("Vacation allowance updated successfully.", "✅");
+    } else if (
+      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
+      payload?.vacationAllowance
+    ) {
+      // Invalid vacation allowance - show error for debugging
+      const { amount, unit } = payload.vacationAllowance;
+      const errors: string[] = [];
+      if (typeof amount !== "number" || amount <= 0) {
+        errors.push("amount must be a positive number");
+      }
+      if (!isValidVacationAllowanceUnit(unit)) {
+        errors.push(`unit must be "days" or "hours", got "${unit}"`);
+      }
+      showError(`Vacation allowance update failed: ${errors.join(", ")}`, "⚠️");
     }
     setShowTeamModal(false);
   };

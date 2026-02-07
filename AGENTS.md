@@ -438,10 +438,50 @@ function migrateState(state: RawState): RawState {
     const nextVersion = version + 1;
     const migrate = migrations[nextVersion];
     if (!migrate) {
-      console.warn(`No migration found for version ${nextVersion}. Resetting to defaults.`);
-      return { ...defaultUserState };
+      console.warn(`No migration found for version ${nextVersion}. Attempting recovery.`);
+      // Backup the raw state for recovery
+      const rawStateBackup = state;
+      // Salvage known fields to avoid total data loss
+      const recovered = {
+        myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
+        scheduleType:
+          typeof rawStateBackup.scheduleType === "string" ? rawStateBackup.scheduleType : null,
+        settings:
+          typeof rawStateBackup.settings === "object" && rawStateBackup.settings !== null
+            ? rawStateBackup.settings
+            : undefined,
+      };
+      return {
+        ...defaultUserState,
+        ...recovered,
+        rawStateBackup,
+        hasMigrationError: true,
+      };
     }
-    state = migrate(state);
+    try {
+      state = migrate(state);
+    } catch (error) {
+      console.error(
+        `Migration ${nextVersion} failed. Attempting recovery.`,
+        error,
+      );
+      const rawStateBackup = state;
+      const recovered = {
+        myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
+        scheduleType:
+          typeof rawStateBackup.scheduleType === "string" ? rawStateBackup.scheduleType : null,
+        settings:
+          typeof rawStateBackup.settings === "object" && rawStateBackup.settings !== null
+            ? rawStateBackup.settings
+            : undefined,
+      };
+      return {
+        ...defaultUserState,
+        ...recovered,
+        rawStateBackup,
+        hasMigrationError: true,
+      };
+    }
     state.version = nextVersion;
     version = nextVersion;
   }
@@ -456,6 +496,9 @@ function migrateState(state: RawState): RawState {
 - Migrations receive/return `RawState` (`Record<string, unknown>`) so they can reshape freely
 - After migration, `normalizeUserState` validates and sanitizes all fields
 - If a migration is missing, state resets to defaults with a console warning
+- If a migration is missing, the raw state is backed up to `rawStateBackup`, known fields are salvaged into the returned state, and an error flag (e.g., `hasMigrationError`) should be set so the UI can surface a user-facing alert
+
+**`normalizeUserState` (SettingsContext.tsx)**: Runs after migrations to validate and sanitize user settings. It verifies required keys, coerces types (booleans, numbers, enums), applies defaults for missing fields, strips unknown/unsafe values, and normalizes legacy field names so post-migration settings remain consistent and safe for the app.
 
 ### Adding a New Migration
 
@@ -463,6 +506,8 @@ function migrateState(state: RawState): RawState {
 2. Add `migrations[2]` with a function that transforms the raw state from v1 → v2
 3. Update `defaultUserState`, interfaces, and `normalizeUserState` for the new shape
 4. Add a test in `tests/contexts/SettingsContext.test.tsx` verifying migration from old format
+
+**Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set an error flag to surface a user-facing warning.
 
 ## Key Features
 

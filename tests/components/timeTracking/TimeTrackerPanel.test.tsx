@@ -91,8 +91,8 @@ describe("TimeTrackerPanel", () => {
           id: "1",
           text: "Existing",
           tag: "Support",
-          startTime: dayjs(`${today}T08:00`),
-          stopTime: dayjs(`${today}T12:00`),
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
         },
       ];
 
@@ -122,15 +122,15 @@ describe("TimeTrackerPanel", () => {
           id: "1",
           text: "Task A",
           tag: "Support",
-          startTime: dayjs(`${today}T08:00`),
-          stopTime: dayjs(`${today}T12:00`),
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
         },
         {
           id: "2",
           text: "Task B",
           tag: "Meeting",
-          startTime: dayjs(`${today}T13:00`),
-          stopTime: dayjs(`${today}T14:00`),
+          startTime: `${today}T13:00`,
+          stopTime: `${today}T14:00`,
         },
       ];
 
@@ -147,8 +147,8 @@ describe("TimeTrackerPanel", () => {
           id: "1",
           text: "Task",
           tag: "Support",
-          startTime: dayjs(`${today}T08:00`),
-          stopTime: dayjs(`${today}T12:00`),
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
         },
       ];
 
@@ -165,8 +165,8 @@ describe("TimeTrackerPanel", () => {
           id: "1",
           text: "Task",
           tag: "Support",
-          startTime: dayjs(`${today}T08:00`),
-          stopTime: dayjs(`${today}T12:00`),
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
         },
       ];
 
@@ -182,8 +182,8 @@ describe("TimeTrackerPanel", () => {
           id: "1",
           text: "Task",
           tag: "Support",
-          startTime: dayjs(`${today}T08:00`),
-          stopTime: dayjs(`${today}T12:00`),
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
         },
       ];
 

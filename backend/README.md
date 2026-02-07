@@ -42,11 +42,25 @@ Authorization: Bearer <access_token>
 
 **Device-link exchange (POST /v1/auth/link):**
 
-- **Request**: Client sends a link token (short-lived, shared out-of-band, e.g., QR code or manual entry).
-- **Response**: Server validates link token; if valid, returns an access token for that device.
-- **Linkage**: New access token is associated with the device/client ID, enabling per-device token revocation.
+- **Request**: Client sends a link token (short-lived, shared out-of-band, e.g., QR code or manual entry) and a device ID.
+  - **Body (JSON)**: `{"link_token":"...","device_id":"..."}`
+  - **Required**: `link_token` (string), `device_id` (string)
+  - **Format**: Treat as opaque strings; trim whitespace; reject empty values.
+- **Response**: Server validates `link_token`; if valid, returns an access token associated with the provided `device_id`, then invalidates the `link_token`.
+- **Linkage**: New access token is associated with the device/client ID, enabling per-device token revocation (device-specific invalidation).
 - **Link token lifetime**: Typically 1–5 minutes to reduce brute-force window. Once exchanged, link token is invalidated.
 - **Example flow**: User scans QR code on device → QR contains link token → device calls `POST /v1/auth/link` → server returns access token → device stores token locally and uses for sync.
+- **Example request**:
+
+```
+POST /v1/auth/link
+Content-Type: application/json
+
+{
+  "link_token": "LT-abc123",
+  "device_id": "dev-5f7d2b0c"
+}
+```
 
 **Token validation on authenticated endpoints:**
 

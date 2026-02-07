@@ -7,6 +7,16 @@ import { TimeTrackerPanel } from "./TimeTrackerPanel";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
 import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 
+/**
+ * Valid time tracking view modes. Source of truth for all available views.
+ */
+const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
+
+/**
+ * Default time tracking view mode when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
+
 export function TimeTrackingView() {
   const { settings, lastUsed, updateLastTimeTrackingView } = useSettings();
   const {
@@ -21,7 +31,7 @@ export function TimeTrackingView() {
     exportData,
     importData,
   } = useTimeTrackingStorage();
-  const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView);
+  const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
 
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);

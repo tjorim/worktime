@@ -42,6 +42,7 @@ export function TemplateModal({
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
               aria-required="true"
+              required
             />
           </Form.Group>
           <Form.Group controlId="templateTag" className="mb-3">
@@ -67,6 +68,7 @@ export function TemplateModal({
                 value={value.start}
                 onChange={(event) => onChange({ ...value, start: event.target.value })}
                 aria-required="true"
+                required
               />
             </Form.Group>
             <Form.Group controlId="templateStop" className="flex-fill">
@@ -76,6 +78,7 @@ export function TemplateModal({
                 value={value.stop}
                 onChange={(event) => onChange({ ...value, stop: event.target.value })}
                 aria-required="true"
+                required
               />
             </Form.Group>
           </div>

@@ -19,6 +19,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   VIEW_MODE_HELP_TEXT,
+  TIMEOFF_VIEWS,
 } from "../data/timeoffConstants";
 
 /**
@@ -44,6 +45,11 @@ interface TimeOffViewProps {
   isActive?: boolean;
 }
 
+/**
+ * Default view mode for Time Off tab when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
+
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
@@ -62,7 +68,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState(lastUsed.timeOffView);
+  const [viewMode, setViewMode] = useState(lastUsed.timeOffView ?? DEFAULT_TIME_OFF_VIEW);
 
   useEffect(() => {
     updateLastTimeOffView(viewMode);
@@ -394,7 +400,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             )}
           </Button>
         </ButtonGroup>
-        <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
+        <span className="text-muted small">
+          {VIEW_MODE_HELP_TEXT[viewMode] ?? VIEW_MODE_HELP_TEXT[DEFAULT_TIME_OFF_VIEW]}
+        </span>
       </div>
 
       {viewMode === "table" && (

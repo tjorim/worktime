@@ -15,6 +15,16 @@ import { TodayView } from "./schedule/TodayView";
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
+/**
+ * Valid schedule view modes. Source of truth for all available views.
+ */
+const SCHEDULE_VIEWS = ["today", "week", "transfer"] as const;
+
+/**
+ * Default schedule view mode when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_SCHEDULE_VIEW = SCHEDULE_VIEWS[0]; // "today"
+
 interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
@@ -54,7 +64,7 @@ export function ScheduleTabView({
     updateLastOtherSchedule,
     lastUsed,
   } = useSettings();
-  const [viewMode, setViewMode] = useState(lastUsed.scheduleView);
+  const [viewMode, setViewMode] = useState(lastUsed.scheduleView ?? DEFAULT_SCHEDULE_VIEW);
 
   // Initialize viewingScheduleType from persisted value, falling back to user's schedule
   const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(

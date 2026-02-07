@@ -4,6 +4,7 @@ import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
+import { dayjs } from "../../utils/dateTimeUtils";
 import type { StoredTimeTrackingTask } from "./types";
 
 function tagToClass(tag: string) {
@@ -40,9 +41,11 @@ export function DailyTaskList({
   return (
     <ListGroup className="mt-3">
       {tasks.map((task) => {
-        const startDisplay = task.startTime.format("HH:mm");
-        const stopDisplay = task.stopTime.format("HH:mm");
-        const edit = editTimes[task.id] ?? { start: startDisplay, stop: stopDisplay };
+        const startDisplay = task.startTime.substring(11, 16);
+        const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
+        const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
+        const stopInputValue = effectiveStopTime.format("HH:mm");
+        const edit = editTimes[task.id] ?? { start: startDisplay, stop: stopInputValue };
         return (
           <ListGroup.Item key={task.id}>
             <div className="fw-semibold">

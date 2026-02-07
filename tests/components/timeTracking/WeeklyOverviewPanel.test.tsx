@@ -29,8 +29,8 @@ describe("WeeklyOverviewPanel Component", () => {
     id: `${date}-${tag}-${Math.random()}`,
     text: `${tag} work`,
     tag,
-    startTime: dayjs(`${date}T${startTime}`),
-    stopTime: dayjs(`${date}T${endTime}`),
+    startTime: `${date}T${startTime}`,
+    stopTime: `${date}T${endTime}`,
   });
 
   describe("Week Selection Controls", () => {
@@ -64,7 +64,8 @@ describe("WeeklyOverviewPanel Component", () => {
 
       const weekInput = screen.getByLabelText(/Week/i);
       expect(weekInput).toHaveAttribute("min", "1");
-      expect(weekInput).toHaveAttribute("max", "53");
+      const maxWeeks = dayjs().year(2025).isoWeeksInYear();
+      expect(weekInput).toHaveAttribute("max", String(maxWeeks));
     });
   });
 
@@ -209,6 +210,20 @@ describe("WeeklyOverviewPanel Component", () => {
       fireEvent.change(weekInput, { target: { value: "25" } });
 
       expect(weekInput).toHaveValue(25);
+    });
+
+    it("clamps week selection to the year-specific ISO week count", () => {
+      render(<WeeklyOverviewPanel tasks={[]} />);
+
+      const yearInput = screen.getByLabelText(/Year/i);
+      const weekInput = screen.getByLabelText(/Week/i);
+
+      fireEvent.change(yearInput, { target: { value: "2021" } });
+
+      const maxWeeks = dayjs().year(2021).isoWeeksInYear();
+      fireEvent.change(weekInput, { target: { value: "53" } });
+
+      expect(weekInput).toHaveValue(maxWeeks);
     });
 
     it("resets to current week when This Week button is clicked", () => {

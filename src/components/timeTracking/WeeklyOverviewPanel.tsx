@@ -39,25 +39,30 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
   const today = dayjs();
   const [year, setYear] = useState(today.year());
   const [week, setWeek] = useState<number | undefined>(today.isoWeek());
+  const maxWeeks = dayjs().year(year).isoWeeksInYear();
 
   const [start, end] = useMemo(() => {
     // Fallback to today's week if week is undefined or invalid
-    const weekNum = week ?? today.isoWeek();
+    const weekNum = week ?? dayjs().isoWeek();
     return getWeekDateRange(year, weekNum);
-  }, [year, week, today]);
+  }, [year, week]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>
       tasks
         .filter((task) => {
-          const taskDate = task.startTime.format("YYYY-MM-DD");
+          const taskDate = task.startTime.substring(0, 10);
           return taskDate >= start && taskDate <= end;
         })
-        .map((task) => ({
-          date: task.startTime.format("YYYY-MM-DD"),
-          tag: task.tag,
-          hours: Math.max(task.stopTime.diff(task.startTime, "hour", true), 0),
-        })),
+        .map((task) => {
+          const startDayjs = dayjs(task.startTime);
+          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
+          return {
+            date: task.startTime.substring(0, 10),
+            tag: task.tag,
+            hours: Math.max(stopDayjs.diff(startDayjs, "hour", true), 0),
+          };
+        }),
     [tasks, start, end],
   );
 
@@ -124,15 +129,15 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
             type="number"
             value={week}
             min={1}
-            max={53}
+            max={maxWeeks}
             onChange={(event) => {
               const value = event.target.value;
               if (!value) {
                 setWeek(undefined);
               } else {
                 const weekNum = Number(value);
-                // Clamp to valid ISO week range 1-53
-                const clampedWeek = Math.min(Math.max(weekNum, 1), 53);
+                // Clamp to valid ISO week range for selected year
+                const clampedWeek = Math.min(Math.max(weekNum, 1), maxWeeks);
                 setWeek(clampedWeek);
               }
             }}

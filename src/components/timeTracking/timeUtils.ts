@@ -17,20 +17,17 @@ export function timeToMinutes(time: string): number {
 
 export function isValidRange(start: string, stop: string): boolean {
   try {
-    return timeToMinutes(start) !== timeToMinutes(stop);
+    return timeToMinutes(stop) > timeToMinutes(start);
   } catch {
     return false;
   }
 }
 
-const MINUTES_PER_DAY = 1440;
-
 export function calculateDurationHours(start: string, stop: string): number {
   const startMin = timeToMinutes(start);
   const stopMin = timeToMinutes(stop);
-  if (startMin === stopMin) return 0;
-  const diff = stopMin - startMin;
-  return (diff > 0 ? diff : diff + MINUTES_PER_DAY) / 60;
+  if (stopMin <= startMin) return 0;
+  return (stopMin - startMin) / 60;
 }
 
 /**
@@ -50,34 +47,6 @@ function segmentsOverlap(aStart: number, aStop: number, bStart: number, bStop: n
   return aStart < bStop && aStop > bStart;
 }
 
-function rangeOverlapsSegments(
-  aStart: number,
-  aStop: number,
-  bStart: number,
-  bStop: number,
-): boolean {
-  const aSegs: Array<[number, number]> =
-    aStart === aStop
-      ? []
-      : aStop > aStart
-        ? [[aStart, aStop]]
-        : [
-            [aStart, MINUTES_PER_DAY],
-            [0, aStop],
-          ];
-  const bSegs: Array<[number, number]> =
-    bStart === bStop
-      ? []
-      : bStop > bStart
-        ? [[bStart, bStop]]
-        : [
-            [bStart, MINUTES_PER_DAY],
-            [0, bStop],
-          ];
-
-  return aSegs.some(([as, ae]) => bSegs.some(([bs, be]) => segmentsOverlap(as, ae, bs, be)));
-}
-
 export function overlaps(
   start: string,
   stop: string,
@@ -86,12 +55,19 @@ export function overlaps(
 ): boolean {
   const startMin = timeToMinutes(start);
   const stopMin = timeToMinutes(stop);
+  if (stopMin <= startMin) {
+    return false;
+  }
+
   return tasks.some((task) => {
     if (skipId && task.id === skipId) {
       return false;
     }
     const taskStart = timeToMinutes(task.start);
     const taskStop = timeToMinutes(task.stop);
-    return rangeOverlapsSegments(startMin, stopMin, taskStart, taskStop);
+    if (taskStop <= taskStart) {
+      return false;
+    }
+    return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
   });
 }
