@@ -190,9 +190,7 @@ export function SettingsPanel({
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
                       <div className="fw-medium">Time Off Tracking</div>
-                      <small className="text-muted">
-                        Manage time-off events and vacation days
-                      </small>
+                      <small className="text-muted">Manage time-off events and vacation days</small>
                     </div>
                     <Form.Check
                       type="switch"
@@ -221,9 +219,7 @@ export function SettingsPanel({
                       />
                     </div>
                     <Form.Group controlId="weeklyTargetHours">
-                      <Form.Label className="small text-muted mb-1">
-                        Weekly target hours
-                      </Form.Label>
+                      <Form.Label className="small text-muted mb-1">Weekly target hours</Form.Label>
                       <Form.Control
                         type="number"
                         min={0}

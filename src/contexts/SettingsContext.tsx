@@ -140,13 +140,13 @@ const migrations: Record<number, Migration> = {
   // → v1: Move last* view fields from settings into a dedicated lastUsed group.
   //        Rename scheduleOption → scheduleType.
   1: (state) => {
-    const settings = (typeof state.settings === "object" && state.settings !== null
-      ? state.settings
-      : {}) as RawState;
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
 
-    const lastUsed = (typeof state.lastUsed === "object" && state.lastUsed !== null
-      ? state.lastUsed
-      : {}) as RawState;
+    const lastUsed = (
+      typeof state.lastUsed === "object" && state.lastUsed !== null ? state.lastUsed : {}
+    ) as RawState;
 
     // Migrate last* from settings → lastUsed (only if lastUsed doesn't already have them)
     const pick = (lastUsedKey: string, settingsKey: string) =>
@@ -162,10 +162,17 @@ const migrations: Record<number, Migration> = {
     };
 
     // Remove migrated fields from settings
-    const { lastActiveTab, lastScheduleView, lastTimeOffView, lastTimeTrackingView, ...cleanSettings } = settings;
+    const {
+      lastActiveTab,
+      lastScheduleView,
+      lastTimeOffView,
+      lastTimeTrackingView,
+      ...cleanSettings
+    } = settings;
 
     // Rename scheduleOption → scheduleType
-    const scheduleType = state.scheduleType !== undefined ? state.scheduleType : state.scheduleOption;
+    const scheduleType =
+      state.scheduleType !== undefined ? state.scheduleType : state.scheduleOption;
 
     return {
       ...state,
@@ -206,9 +213,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   // Run versioned migrations first to get data into the current shape
   const s = migrateState(state as RawState);
 
-  const settings = (typeof s.settings === "object" && s.settings !== null
-    ? s.settings
-    : {}) as RawState;
+  const settings = (
+    typeof s.settings === "object" && s.settings !== null ? s.settings : {}
+  ) as RawState;
   const scheduleOptionValues = new Set(SCHEDULE_OPTIONS.map((option) => option.value));
 
   // --- Validate settings ---
@@ -242,9 +249,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       : defaultSettings.timeTrackingWeeklyTargetHours;
 
   // --- Validate lastUsed ---
-  const lastUsed = (typeof s.lastUsed === "object" && s.lastUsed !== null
-    ? s.lastUsed
-    : {}) as RawState;
+  const lastUsed = (
+    typeof s.lastUsed === "object" && s.lastUsed !== null ? s.lastUsed : {}
+  ) as RawState;
 
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {
@@ -592,7 +599,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         settings: {
           ...prev.settings,
           vacationAllowance: preferences?.vacationAllowance
-            ? sanitizeVacationAllowance(preferences.vacationAllowance, prev.settings.vacationAllowance)
+            ? sanitizeVacationAllowance(
+                preferences.vacationAllowance,
+                prev.settings.vacationAllowance,
+              )
             : prev.settings.vacationAllowance,
           enableTimeOff:
             preferences?.enableTimeOff !== undefined

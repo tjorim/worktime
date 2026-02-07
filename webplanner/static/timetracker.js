@@ -278,7 +278,7 @@ async function updateTaskTimes(button, id, taskDate) {
 function calculateDuration(start, stop) {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = stop.split(":").map(Number);
-  return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+  return (eh * 60 + em - (sh * 60 + sm)) / 60;
 }
 
 function updateProgress(tasks) {

@@ -25,7 +25,7 @@ const tags = [
   "NPI-EUV",
   "Department-Improvement",
   "Training",
-  "Lunch"
+  "Lunch",
 ];
 
 export function TemplateModal({
@@ -35,7 +35,7 @@ export function TemplateModal({
   value,
   onChange,
   onClose,
-  onSubmit
+  onSubmit,
 }: Props) {
   return (
     <Modal show={show} onHide={onClose} centered>

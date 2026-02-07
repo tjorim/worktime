@@ -41,7 +41,7 @@ function buildWeekDays(startIso: string) {
     date.setDate(base.getDate() + idx);
     return {
       iso: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(undefined, { weekday: "long" })
+      label: date.toLocaleDateString(undefined, { weekday: "long" }),
     };
   });
 }
@@ -97,7 +97,7 @@ export function OverviewPage() {
       dailyTotals: dayTotals,
       tags: tagList,
       weekTotal: weekSum,
-      lunchTotal: lunch
+      lunchTotal: lunch,
     };
   }, [rows, week, year]);
 

@@ -9,8 +9,8 @@ export function timeToMinutes(time: string): number {
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
   }
-  if (hours < 0 || minutes < 0 || minutes >= 60) {
-    throw new Error(`Invalid time value "${time}". Hours must be >= 0 and minutes 0-59.`);
+  if (hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) {
+    throw new Error(`Invalid time value "${time}". Hours must be 0-23 and minutes must be 0-59.`);
   }
   return hours * 60 + minutes;
 }
@@ -46,12 +46,7 @@ export function isValidTimeString(value: unknown): value is string {
   }
 }
 
-function segmentsOverlap(
-  aStart: number,
-  aStop: number,
-  bStart: number,
-  bStop: number,
-): boolean {
+function segmentsOverlap(aStart: number, aStop: number, bStart: number, bStop: number): boolean {
   return aStart < bStop && aStop > bStart;
 }
 
@@ -62,19 +57,23 @@ function rangeOverlapsSegments(
   bStop: number,
 ): boolean {
   const aSegs: Array<[number, number]> =
-    aStop > aStart
-      ? [[aStart, aStop]]
-      : [
-          [aStart, MINUTES_PER_DAY],
-          [0, aStop],
-        ];
+    aStart === aStop
+      ? []
+      : aStop > aStart
+        ? [[aStart, aStop]]
+        : [
+            [aStart, MINUTES_PER_DAY],
+            [0, aStop],
+          ];
   const bSegs: Array<[number, number]> =
-    bStop > bStart
-      ? [[bStart, bStop]]
-      : [
-          [bStart, MINUTES_PER_DAY],
-          [0, bStop],
-        ];
+    bStart === bStop
+      ? []
+      : bStop > bStart
+        ? [[bStart, bStop]]
+        : [
+            [bStart, MINUTES_PER_DAY],
+            [0, bStop],
+          ];
 
   return aSegs.some(([as, ae]) => bSegs.some(([bs, be]) => segmentsOverlap(as, ae, bs, be)));
 }

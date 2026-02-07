@@ -42,20 +42,17 @@ vi.mock("../../src/hooks/useKeyboardShortcuts", () => ({
 }));
 
 vi.mock("../../src/utils/dateTimeUtils", () => {
-  let callCount = 0;
   return {
     dayjs: vi.fn(() => {
-      callCount++;
       return {
         startOf: vi.fn(() => ({
           add: vi.fn(() => {
-            const uniqueDay = 13 + (callCount % 7);
             return {
-              format: vi.fn(() => `${uniqueDay}-${Date.now()}-${Math.random()}`),
+              format: vi.fn(() => "13-STATIC"),
               isSame: vi.fn(() => false),
               isoWeek: vi.fn(() => 20),
-              isoWeekday: vi.fn(() => (callCount % 7) + 1),
-              toDate: vi.fn(() => new Date(2025, 0, uniqueDay)),
+              isoWeekday: vi.fn(() => 1),
+              toDate: vi.fn(() => new Date(2025, 0, 13)),
             };
           }),
           format: vi.fn(() => "Jan 13"),
@@ -63,10 +60,9 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
         })),
         format: vi.fn(() => "2025-01-15"),
         add: vi.fn(() => {
-          const uniqueDay = 18 + (callCount % 7);
           return {
-            format: vi.fn(() => `${uniqueDay}-${Date.now()}-${Math.random()}`),
-            toDate: vi.fn(() => new Date(2025, 0, uniqueDay)),
+            format: vi.fn(() => "18-STATIC"),
+            toDate: vi.fn(() => new Date(2025, 0, 18)),
           };
         }),
         subtract: vi.fn(() => ({

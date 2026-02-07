@@ -14,7 +14,7 @@ export async function fetchTasks(date: string): Promise<Task[]> {
 
 export async function fetchTasksRange(
   startDate: string,
-  endDate: string
+  endDate: string,
 ): Promise<Array<{ date: string; tag: string; start: string; stop: string }>> {
   return getTasks()
     .filter((task) => isBetween(task.date, startDate, endDate))
@@ -22,7 +22,7 @@ export async function fetchTasksRange(
       date: task.date,
       tag: task.tag,
       start: task.start,
-      stop: task.stop
+      stop: task.stop,
     }));
 }
 
@@ -55,7 +55,7 @@ export async function updateTaskTimes(payload: {
   const updated = tasks.map((task) =>
     task.id === payload.id && task.date === payload.date
       ? { ...task, start: payload.newStart, stop: payload.newStop }
-      : task
+      : task,
   );
   saveTasks(updated);
 }
@@ -82,7 +82,7 @@ export async function updateTemplate(payload: {
 }): Promise<void> {
   const templates = getTemplates();
   const updated = templates.map((tpl) =>
-    tpl.id === payload.id ? { id: payload.id, ...payload.template } : tpl
+    tpl.id === payload.id ? { id: payload.id, ...payload.template } : tpl,
   );
   saveTemplates(updated);
 }

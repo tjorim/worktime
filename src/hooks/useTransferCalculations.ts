@@ -131,10 +131,7 @@ export function useTransferCalculations({
 
   // State for selected other team to compare with — restore from persisted value when valid
   const [otherTeam, setOtherTeamRaw] = useState<number>(() => {
-    if (
-      lastUsed.otherTeam !== null &&
-      availableOtherTeams.includes(lastUsed.otherTeam)
-    ) {
+    if (lastUsed.otherTeam !== null && availableOtherTeams.includes(lastUsed.otherTeam)) {
       return lastUsed.otherTeam;
     }
     return availableOtherTeams[0] || 1;

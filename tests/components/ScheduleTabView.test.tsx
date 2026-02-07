@@ -73,7 +73,6 @@ describe("ScheduleTabView", () => {
       ).toBeInTheDocument();
       expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
     });
-
   });
 
   describe("View mode switching", () => {

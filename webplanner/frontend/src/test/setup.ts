@@ -13,7 +13,7 @@ Object.defineProperty(window, "localStorage", {
     },
     clear: () => {
       Object.keys(store).forEach((key) => delete store[key]);
-    }
+    },
   },
-  writable: true
+  writable: true,
 });

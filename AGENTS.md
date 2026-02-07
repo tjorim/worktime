@@ -400,12 +400,12 @@ All user state is persisted in a single localStorage key (`worktime_user_state`)
 
 ```typescript
 interface WorktimeUserState {
-  version: number;                    // Schema version for migrations
-  hasCompletedOnboarding: boolean;    // Identity/setup
-  myTeam: number | null;              // Identity/setup
+  version: number; // Schema version for migrations
+  hasCompletedOnboarding: boolean; // Identity/setup
+  myTeam: number | null; // Identity/setup
   scheduleType: ScheduleOption | null; // Identity/setup
-  settings: UserSettings;             // True user preferences (theme, time format, etc.)
-  lastUsed: LastUsed;                 // Ephemeral view state (active tab, last viewed schedule, etc.)
+  settings: UserSettings; // True user preferences (theme, time format, etc.)
+  lastUsed: LastUsed; // Ephemeral view state (active tab, last viewed schedule, etc.)
 }
 ```
 
@@ -427,7 +427,9 @@ type RawState = Record<string, unknown>;
 type Migration = (state: RawState) => RawState;
 
 const migrations: Record<number, Migration> = {
-  1: (state) => { /* move last* from settings → lastUsed, rename scheduleOption → scheduleType */ },
+  1: (state) => {
+    /* move last* from settings → lastUsed, rename scheduleOption → scheduleType */
+  },
 };
 
 function migrateState(state: RawState): RawState {

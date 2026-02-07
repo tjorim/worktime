@@ -169,8 +169,13 @@ function AppContent() {
       if (teamForCompletion !== null) {
         showSuccess(`Team ${teamForCompletion} selected! Your shifts are now personalized.`, "🎯");
       }
-    } else if (teamModalMode === "change-team" && payload?.vacationAllowance) {
-      // Persist vacation allowance changes in change-team mode
+    } else if (
+      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
+      payload?.vacationAllowance &&
+      typeof payload.vacationAllowance.amount === "number" &&
+      payload.vacationAllowance.amount > 0
+    ) {
+      // Persist vacation allowance changes in change-team or change-schedule modes
       updateVacationAllowance(payload.vacationAllowance);
       showSuccess("Vacation allowance updated successfully.", "✅");
     }

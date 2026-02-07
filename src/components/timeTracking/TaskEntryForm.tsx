@@ -29,7 +29,7 @@ export function TaskEntryForm({
 }: TaskEntryFormProps) {
   return (
     <Row className="g-3 align-items-end">
-      <Col md={4}>
+      <Col md={3}>
         <Form.Group controlId="timeTrackerTask">
           <Form.Label>Task</Form.Label>
           <Form.Control

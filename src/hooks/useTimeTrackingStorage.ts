@@ -92,10 +92,7 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
 }
 
 export function useTimeTrackingStorage() {
-  const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    [],
-  );
+  const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);
   const [templates, setTemplates] = useLocalStorage<TimeTrackingTemplate[]>(
     TIME_TRACKING_STORAGE_KEYS.templates,
     [],
@@ -117,7 +114,11 @@ export function useTimeTrackingStorage() {
   );
 
   const updateTaskTimes = useCallback(
-    (payload: { id: string; newStartTime: StoredTimeTrackingTask["startTime"]; newStopTime: StoredTimeTrackingTask["stopTime"] }) => {
+    (payload: {
+      id: string;
+      newStartTime: StoredTimeTrackingTask["startTime"];
+      newStopTime: StoredTimeTrackingTask["stopTime"];
+    }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
           raw.id === payload.id
@@ -165,24 +166,25 @@ export function useTimeTrackingStorage() {
     [setTemplates],
   );
 
-  const exportData = useCallback(
-    (date: string) => {
-      const payload = {
-        tasks: rawTasksRef.current,
-        templates: templatesRef.current,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `worktime-time-tracking-${date}.json`;
-      anchor.click();
+  const exportData = useCallback((date: string) => {
+    const payload = {
+      tasks: rawTasksRef.current,
+      templates: templatesRef.current,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `worktime-time-tracking-${date}.json`;
+    anchor.click();
+    // Delay revocation to ensure the browser has time to start the download
+    // before the object URL becomes invalid
+    setTimeout(() => {
       URL.revokeObjectURL(url);
-    },
-    [],
-  );
+    }, 100);
+  }, []);
 
   const importData = useCallback(
     (payload: ImportPayload) => {

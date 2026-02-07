@@ -38,9 +38,13 @@ function buildWeekDays(startIso: string) {
 export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOverviewPanelProps) {
   const today = dayjs();
   const [year, setYear] = useState(today.year());
-  const [week, setWeek] = useState(today.isoWeek());
+  const [week, setWeek] = useState<number | undefined>(today.isoWeek());
 
-  const [start, end] = useMemo(() => getWeekDateRange(year, week), [year, week]);
+  const [start, end] = useMemo(() => {
+    // Fallback to today's week if week is undefined or invalid
+    const weekNum = week ?? today.isoWeek();
+    return getWeekDateRange(year, weekNum);
+  }, [year, week, today]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>
@@ -52,7 +56,7 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
         .map((task) => ({
           date: task.startTime.format("YYYY-MM-DD"),
           tag: task.tag,
-          hours: task.stopTime.diff(task.startTime, "hour", true),
+          hours: Math.max(task.stopTime.diff(task.startTime, "hour", true), 0),
         })),
     [tasks, start, end],
   );
@@ -100,7 +104,18 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
             value={year}
             min={2000}
             max={2100}
-            onChange={(event) => setYear(Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (!value) {
+                // Fall back to current year when input is cleared
+                setYear(today.year());
+              } else {
+                const yearNum = parseInt(value, 10);
+                if (!isNaN(yearNum)) {
+                  setYear(yearNum);
+                }
+              }
+            }}
           />
         </Form.Group>
         <Form.Group controlId="weeklyWeek">
@@ -110,7 +125,17 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
             value={week}
             min={1}
             max={53}
-            onChange={(event) => setWeek(Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (!value) {
+                setWeek(undefined);
+              } else {
+                const weekNum = Number(value);
+                // Clamp to valid ISO week range 1-53
+                const clampedWeek = Math.min(Math.max(weekNum, 1), 53);
+                setWeek(clampedWeek);
+              }
+            }}
           />
         </Form.Group>
         <div className="align-self-end">
@@ -148,13 +173,10 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
             {weekDays.map((day) => {
               const daySummary = dailyTotals[day.iso] ?? {};
               const workTags = tags.filter((tag) => tag !== "Lunch");
-              const dayTotal = workTags.reduce(
-                (sum, tag) => sum + (daySummary[tag] ?? 0),
-                0,
-              );
+              const dayTotal = workTags.reduce((sum, tag) => sum + (daySummary[tag] ?? 0), 0);
               return (
                 <tr key={day.iso}>
-                  <td scope="row">{day.label}</td>
+                  <th scope="row">{day.label}</th>
                   {workTags.map((tag) => (
                     <td key={`${day.iso}-${tag}`}>{(daySummary[tag] ?? 0).toFixed(2)}</td>
                   ))}
@@ -176,7 +198,9 @@ export function WeeklyOverviewPanel({ tasks, weeklyTargetHours = 40 }: WeeklyOve
               </li>
             ))}
           </ul>
-          <div className="fw-semibold">Total for the week: {weekTotal.toFixed(2)} / {weeklyTargetHours.toFixed(1)} hours</div>
+          <div className="fw-semibold">
+            Total for the week: {weekTotal.toFixed(2)} / {weeklyTargetHours.toFixed(1)} hours
+          </div>
           {lunchTotal > 0 && <div className="text-muted">Lunch: {lunchTotal.toFixed(2)} h</div>}
         </div>
       )}

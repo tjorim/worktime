@@ -15,7 +15,7 @@ export function overlaps(
   start: string,
   stop: string,
   tasks: { id: string; start: string; stop: string }[],
-  skipId?: string
+  skipId?: string,
 ): boolean {
   const startMin = timeToMinutes(start);
   const stopMin = timeToMinutes(stop);

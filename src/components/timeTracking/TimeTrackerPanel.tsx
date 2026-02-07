@@ -28,15 +28,40 @@ type ImportPayload = {
   templates?: TimeTrackingTemplate[];
 };
 
+function validateImportPayload(parsed: unknown): parsed is ImportPayload {
+  if (!parsed || typeof parsed !== "object") {
+    return false;
+  }
+
+  const payload = parsed as Record<string, unknown>;
+
+  // At least one of tasks or templates must be present
+  if (!("tasks" in payload) && !("templates" in payload)) {
+    return false;
+  }
+
+  // If tasks is present, it must be an array
+  if ("tasks" in payload && payload.tasks !== undefined && !Array.isArray(payload.tasks)) {
+    return false;
+  }
+
+  // If templates is present, it must be an array
+  if (
+    "templates" in payload &&
+    payload.templates !== undefined &&
+    !Array.isArray(payload.templates)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 type TimeTrackerPanelProps = {
   tasks: StoredTimeTrackingTask[];
   templates: TimeTrackingTemplate[];
   onAddTask: (payload: StoredTimeTrackingTask) => void;
-  onUpdateTaskTimes: (payload: {
-    id: string;
-    newStartTime: Dayjs;
-    newStopTime: Dayjs;
-  }) => void;
+  onUpdateTaskTimes: (payload: { id: string; newStartTime: Dayjs; newStopTime: Dayjs }) => void;
   onRemoveTask: (id: string) => void;
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
@@ -103,10 +128,7 @@ export function TimeTrackerPanel({
 
   const totalHours = useMemo(
     () =>
-      dailyTasks.reduce(
-        (sum, task) => sum + task.stopTime.diff(task.startTime, "hour", true),
-        0,
-      ),
+      dailyTasks.reduce((sum, task) => sum + task.stopTime.diff(task.startTime, "hour", true), 0),
     [dailyTasks],
   );
 
@@ -230,7 +252,14 @@ export function TimeTrackerPanel({
     }
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as ImportPayload;
+      const parsed = JSON.parse(text);
+
+      // Validate the parsed payload before importing
+      if (!validateImportPayload(parsed)) {
+        setError("Import failed. Please select a valid export file.");
+        return;
+      }
+
       onImportData(parsed);
       setError("");
     } catch {
