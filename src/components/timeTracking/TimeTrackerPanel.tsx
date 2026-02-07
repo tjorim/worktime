@@ -7,13 +7,14 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import { dayjs } from "../../utils/dateTimeUtils";
+import { useLiveTime } from "../../hooks/useLiveTime";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import { isValidRange, overlaps } from "./timeUtils";
+import { isValidRange, overlaps, tagToClass } from "./timeUtils";
 
 type TemplateFormState = {
   text: string;
@@ -95,7 +96,7 @@ function validateImportPayload(parsed: unknown): parsed is ImportPayload {
 type TimeTrackerPanelProps = {
   tasks: StoredTimeTrackingTask[];
   templates: TimeTrackingTemplate[];
-  onAddTask: (payload: StoredTimeTrackingTask) => void;
+  onAddTask: (payload: StoredTimeTrackingTask) => boolean;
   onUpdateTaskTimes: (payload: {
     id: string;
     newStartTime: string;
@@ -111,6 +112,16 @@ type TimeTrackerPanelProps = {
 
 function todayIso() {
   return dayjs().format("YYYY-MM-DD");
+}
+
+function formatDuration(totalSeconds: number) {
+  const clampedSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(clampedSeconds / 3600);
+  const minutes = Math.floor((clampedSeconds % 3600) / 60);
+  const seconds = clampedSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export function TimeTrackerPanel({
@@ -143,14 +154,36 @@ export function TimeTrackerPanel({
   });
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editTimes, setEditTimes] = useState<Record<string, { start: string; stop: string }>>({});
+  const liveTime = useLiveTime({ precision: "second" });
 
   const dailyTasks = useMemo(
     () =>
       tasks
-        .filter((task) => task.startTime.substring(0, 10) === date)
+        .filter((task) => dayjs(task.startTime).format("YYYY-MM-DD") === date)
         .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     [tasks, date],
   );
+
+  const runningTask = useMemo(
+    () =>
+      tasks.reduce<StoredTimeTrackingTask | null>((latest, task) => {
+        if (task.stopTime === undefined || task.stopTime === null) {
+          if (!latest || task.startTime > latest.startTime) {
+            return task;
+          }
+        }
+        return latest;
+      }, null),
+    [tasks],
+  );
+
+  const runningElapsed = useMemo(() => {
+    if (!runningTask) {
+      return null;
+    }
+    const start = dayjs(runningTask.startTime);
+    return formatDuration(liveTime.diff(start, "second"));
+  }, [liveTime, runningTask]);
 
   useEffect(() => {
     setEditTimes((prev) => {
@@ -195,7 +228,7 @@ export function TimeTrackerPanel({
     }
     const dailyForOverlap = dailyTasks.map((t) => ({
       id: t.id,
-      start: t.startTime.substring(11, 16),
+      start: dayjs(t.startTime).format("HH:mm"),
       stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
     }));
     if (overlaps(start, stop, dailyForOverlap)) {
@@ -203,16 +236,70 @@ export function TimeTrackerPanel({
       return;
     }
 
-    onAddTask({
+    const added = onAddTask({
       id: crypto.randomUUID(),
       text,
       tag,
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
+    if (!added) {
+      setError("A task is already running. Stop it before adding another task.");
+      return;
+    }
     setText("");
     setStart("");
     setStop("");
+  };
+
+  const handleStartNow = () => {
+    setError("");
+    if (runningTask) {
+      setError("A task is already running. Stop it before starting another.");
+      return;
+    }
+    if (!text.trim()) {
+      setError("Please enter a task name to start.");
+      return;
+    }
+    const startTime = dayjs().format("YYYY-MM-DDTHH:mm");
+    const startDate = dayjs(startTime).format("YYYY-MM-DD");
+    const added = onAddTask({
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      tag,
+      startTime,
+    });
+    if (!added) {
+      setError("A task is already running. Stop it before starting another.");
+      return;
+    }
+    setDate(startDate);
+    setText("");
+  };
+
+  const handleStopNow = () => {
+    if (!runningTask) {
+      return;
+    }
+    setError("");
+    const startDayjs = dayjs(runningTask.startTime);
+    const startDate = startDayjs.format("YYYY-MM-DD");
+    const now = dayjs();
+    if (now.format("YYYY-MM-DD") !== startDate) {
+      setError(`This task started on ${startDate}. Please update the stop time manually.`);
+      return;
+    }
+    if (now.isBefore(startDayjs)) {
+      setError("Stop time must be after start time.");
+      return;
+    }
+    const stopTime = now.format("YYYY-MM-DDTHH:mm");
+    onUpdateTaskTimes({
+      id: runningTask.id,
+      newStartTime: runningTask.startTime,
+      newStopTime: stopTime,
+    });
   };
 
   const handleUpdateTask = (taskId: string) => {
@@ -228,7 +315,7 @@ export function TimeTrackerPanel({
     }
     const dailyForOverlap = dailyTasks.map((t) => ({
       id: t.id,
-      start: t.startTime.substring(11, 16),
+      start: dayjs(t.startTime).format("HH:mm"),
       stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
     }));
     if (overlaps(edit.start, edit.stop, dailyForOverlap, taskId)) {
@@ -338,6 +425,47 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
       </Row>
+
+      <div className="border rounded p-3 mb-3">
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <div className="fw-semibold">Quick Timer</div>
+            <div className="small text-muted">
+              Start a task now and stop it when you're done.
+            </div>
+          </div>
+          {runningTask ? (
+            <span className="badge text-bg-success">Running</span>
+          ) : (
+            <span className="badge text-bg-secondary">Idle</span>
+          )}
+        </div>
+        {runningTask ? (
+          <div className="mt-2">
+            <div className="fw-semibold">
+              {runningTask.text}{" "}
+              <span className={`time-tracking-tag time-tracking-tag-${tagToClass(runningTask.tag)}`}>
+                {runningTask.tag}
+              </span>
+            </div>
+            <div className="small text-muted mb-2">
+              Started {dayjs(runningTask.startTime).format("HH:mm")} · Elapsed {runningElapsed}
+            </div>
+            <Button size="sm" variant="danger" onClick={handleStopNow}>
+              Stop Timer
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
+            <span className="text-muted small">
+              Enter a task name and tag below, then start the timer.
+            </span>
+            <Button size="sm" variant="success" onClick={handleStartNow}>
+              Start Timer
+            </Button>
+          </div>
+        )}
+      </div>
 
       <TaskEntryForm
         text={text}

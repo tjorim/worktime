@@ -6,10 +6,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { StoredTimeTrackingTask } from "./types";
-
-function tagToClass(tag: string) {
-  return tag.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-}
+import { tagToClass } from "./timeUtils";
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
@@ -41,7 +38,7 @@ export function DailyTaskList({
   return (
     <ListGroup className="mt-3">
       {tasks.map((task) => {
-        const startDisplay = task.startTime.substring(11, 16);
+        const startDisplay = dayjs(task.startTime).format("HH:mm");
         const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
         const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
         const stopInputValue = effectiveStopTime.format("HH:mm");
