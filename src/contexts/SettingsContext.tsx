@@ -1,18 +1,3 @@
-// Unified user state (implemented):
-// - hasCompletedOnboarding: boolean
-// - myTeam: number | null (the user's team from onboarding)
-// - settings: {
-//     timeFormat: '12h' | '24h',
-//     theme: 'light' | 'dark' | 'auto',
-//     notifications: 'on' | 'off'
-//   }
-// Future expansion:
-// - language?: 'en' | 'nl'
-// - darkMode?: boolean (if separate from theme)
-// - Account sync methods
-// - Export/import preferences
-// Keep all user state in SettingsContext or unified user state.
-
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
@@ -28,6 +13,15 @@ export type ScheduleViewKey = "today" | "week";
 export type TimeOffViewKey = "table" | "stats" | "raw";
 export type TimeTrackingViewKey = "daily" | "weekly";
 
+export interface LastUsed {
+  activeTab: TabKey;
+  scheduleView: ScheduleViewKey;
+  otherSchedule: ScheduleOption | null;
+  timeOffView: TimeOffViewKey;
+  timeTrackingView: TimeTrackingViewKey;
+  otherTeam: number | null;
+}
+
 interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
@@ -36,14 +30,11 @@ interface UserSettings {
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
   timeTrackingWeeklyTargetHours: number;
-  lastActiveTab: TabKey;
-  lastScheduleView: ScheduleViewKey;
-  lastTimeOffView: TimeOffViewKey;
-  lastTimeTrackingView: TimeTrackingViewKey;
 }
 
 interface SettingsContextType {
   settings: UserSettings;
+  lastUsed: LastUsed;
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
@@ -55,6 +46,8 @@ interface SettingsContextType {
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
   updateLastTimeTrackingView: (view: TimeTrackingViewKey) => void;
+  updateLastOtherSchedule: (schedule: ScheduleOption | null) => void;
+  updateLastOtherTeam: (team: number | null) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -95,10 +88,15 @@ export const defaultSettings: UserSettings = {
   enableTimeOff: false,
   enableTimeTracking: false,
   timeTrackingWeeklyTargetHours: 40,
-  lastActiveTab: "calendar",
-  lastScheduleView: "today",
-  lastTimeOffView: "table",
-  lastTimeTrackingView: "daily",
+};
+
+export const defaultLastUsed: LastUsed = {
+  activeTab: "calendar",
+  scheduleView: "today",
+  otherSchedule: null,
+  timeOffView: "table",
+  timeTrackingView: "daily",
+  otherTeam: null,
 };
 
 const validTabKeys = new Set<TabKey>([
@@ -113,18 +111,86 @@ const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
 
 interface WorktimeUserState {
+  version: number;
   hasCompletedOnboarding: boolean;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
+  lastUsed: LastUsed;
 }
 
+const CURRENT_VERSION = 1;
+
 const defaultUserState: WorktimeUserState = {
+  version: CURRENT_VERSION,
   hasCompletedOnboarding: false,
   myTeam: null,
   scheduleType: null,
   settings: defaultSettings,
+  lastUsed: defaultLastUsed,
 };
+
+// --- Versioned migrations ---
+// Each key is the target version. The function transforms state from (key-1) → key.
+// Migrations receive and return a raw Record so they can reshape freely.
+type RawState = Record<string, unknown>;
+type Migration = (state: RawState) => RawState;
+
+const migrations: Record<number, Migration> = {
+  // → v1: Move last* view fields from settings into a dedicated lastUsed group.
+  //        Rename scheduleOption → scheduleType.
+  1: (state) => {
+    const settings = (typeof state.settings === "object" && state.settings !== null
+      ? state.settings
+      : {}) as RawState;
+
+    const lastUsed = (typeof state.lastUsed === "object" && state.lastUsed !== null
+      ? state.lastUsed
+      : {}) as RawState;
+
+    // Migrate last* from settings → lastUsed (only if lastUsed doesn't already have them)
+    const pick = (lastUsedKey: string, settingsKey: string) =>
+      lastUsed[lastUsedKey] !== undefined ? lastUsed[lastUsedKey] : settings[settingsKey];
+
+    const migratedLastUsed: RawState = {
+      activeTab: pick("activeTab", "lastActiveTab"),
+      scheduleView: pick("scheduleView", "lastScheduleView"),
+      timeOffView: pick("timeOffView", "lastTimeOffView"),
+      timeTrackingView: pick("timeTrackingView", "lastTimeTrackingView"),
+      otherSchedule: lastUsed.otherSchedule ?? null,
+      otherTeam: lastUsed.otherTeam ?? null,
+    };
+
+    // Remove migrated fields from settings
+    const { lastActiveTab, lastScheduleView, lastTimeOffView, lastTimeTrackingView, ...cleanSettings } = settings;
+
+    // Rename scheduleOption → scheduleType
+    const scheduleType = state.scheduleType !== undefined ? state.scheduleType : state.scheduleOption;
+
+    return {
+      ...state,
+      scheduleType,
+      settings: cleanSettings,
+      lastUsed: migratedLastUsed,
+    };
+  },
+};
+
+function migrateState(state: RawState): RawState {
+  let version = typeof state.version === "number" ? state.version : 0;
+  while (version < CURRENT_VERSION) {
+    const nextVersion = version + 1;
+    const migrate = migrations[nextVersion];
+    if (!migrate) {
+      console.warn(`No migration found for version ${nextVersion}. Resetting to defaults.`);
+      return { ...defaultUserState };
+    }
+    state = migrate(state);
+    state.version = nextVersion;
+    version = nextVersion;
+  }
+  return state;
+}
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
@@ -137,39 +203,49 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState;
   }
 
-  const s = state as Record<string, unknown>;
-  const settings = typeof s.settings === "object" && s.settings !== null ? s.settings : {};
-  const settingsRecord = settings as Record<string, unknown>;
+  // Run versioned migrations first to get data into the current shape
+  const s = migrateState(state as RawState);
+
+  const settings = (typeof s.settings === "object" && s.settings !== null
+    ? s.settings
+    : {}) as RawState;
   const scheduleOptionValues = new Set(SCHEDULE_OPTIONS.map((option) => option.value));
 
-  const timeFormat = ["12h", "24h"].includes(settingsRecord.timeFormat as string)
-    ? (settingsRecord.timeFormat as TimeFormat)
+  // --- Validate settings ---
+  const timeFormat = ["12h", "24h"].includes(settings.timeFormat as string)
+    ? (settings.timeFormat as TimeFormat)
     : defaultSettings.timeFormat;
-  const theme = ["light", "dark", "auto"].includes(settingsRecord.theme as string)
-    ? (settingsRecord.theme as Theme)
+  const theme = ["light", "dark", "auto"].includes(settings.theme as string)
+    ? (settings.theme as Theme)
     : defaultSettings.theme;
-  const notifications = ["on", "off"].includes(settingsRecord.notifications as string)
-    ? (settingsRecord.notifications as NotificationSetting)
+  const notifications = ["on", "off"].includes(settings.notifications as string)
+    ? (settings.notifications as NotificationSetting)
     : defaultSettings.notifications;
 
   const vacationAllowance = sanitizeVacationAllowance(
-    settingsRecord.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
+    settings.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
     defaultSettings.vacationAllowance,
   );
   const enableTimeOff =
-    typeof settingsRecord.enableTimeOff === "boolean"
-      ? settingsRecord.enableTimeOff
+    typeof settings.enableTimeOff === "boolean"
+      ? settings.enableTimeOff
       : defaultSettings.enableTimeOff;
   const enableTimeTracking =
-    typeof settingsRecord.enableTimeTracking === "boolean"
-      ? settingsRecord.enableTimeTracking
+    typeof settings.enableTimeTracking === "boolean"
+      ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
   const timeTrackingWeeklyTargetHours =
-    typeof settingsRecord.timeTrackingWeeklyTargetHours === "number" &&
-    Number.isFinite(settingsRecord.timeTrackingWeeklyTargetHours) &&
-    settingsRecord.timeTrackingWeeklyTargetHours >= 0
-      ? settingsRecord.timeTrackingWeeklyTargetHours
+    typeof settings.timeTrackingWeeklyTargetHours === "number" &&
+    Number.isFinite(settings.timeTrackingWeeklyTargetHours) &&
+    settings.timeTrackingWeeklyTargetHours >= 0
+      ? settings.timeTrackingWeeklyTargetHours
       : defaultSettings.timeTrackingWeeklyTargetHours;
+
+  // --- Validate lastUsed ---
+  const lastUsed = (typeof s.lastUsed === "object" && s.lastUsed !== null
+    ? s.lastUsed
+    : {}) as RawState;
+
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {
       return enableTimeOff;
@@ -179,33 +255,50 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     }
     return true;
   };
-  const lastActiveTab =
-    typeof settingsRecord.lastActiveTab === "string" &&
-    validTabKeys.has(settingsRecord.lastActiveTab as TabKey) &&
-    isTabEnabled(settingsRecord.lastActiveTab as TabKey)
-      ? (settingsRecord.lastActiveTab as TabKey)
-      : defaultSettings.lastActiveTab;
-  const lastScheduleView =
-    typeof settingsRecord.lastScheduleView === "string" &&
-    validScheduleViewKeys.has(settingsRecord.lastScheduleView as ScheduleViewKey)
-      ? (settingsRecord.lastScheduleView as ScheduleViewKey)
-      : defaultSettings.lastScheduleView;
-  const lastTimeOffView =
-    typeof settingsRecord.lastTimeOffView === "string" &&
-    validTimeOffViewKeys.has(settingsRecord.lastTimeOffView as TimeOffViewKey)
-      ? (settingsRecord.lastTimeOffView as TimeOffViewKey)
-      : defaultSettings.lastTimeOffView;
-  const lastTimeTrackingView =
-    typeof settingsRecord.lastTimeTrackingView === "string" &&
-    validTimeTrackingViewKeys.has(settingsRecord.lastTimeTrackingView as TimeTrackingViewKey)
-      ? (settingsRecord.lastTimeTrackingView as TimeTrackingViewKey)
-      : defaultSettings.lastTimeTrackingView;
 
+  const activeTab =
+    typeof lastUsed.activeTab === "string" &&
+    validTabKeys.has(lastUsed.activeTab as TabKey) &&
+    isTabEnabled(lastUsed.activeTab as TabKey)
+      ? (lastUsed.activeTab as TabKey)
+      : defaultLastUsed.activeTab;
+
+  const scheduleView =
+    typeof lastUsed.scheduleView === "string" &&
+    validScheduleViewKeys.has(lastUsed.scheduleView as ScheduleViewKey)
+      ? (lastUsed.scheduleView as ScheduleViewKey)
+      : defaultLastUsed.scheduleView;
+
+  const otherSchedule =
+    lastUsed.otherSchedule === null
+      ? null
+      : typeof lastUsed.otherSchedule === "string" &&
+          scheduleOptionValues.has(lastUsed.otherSchedule as ScheduleOption)
+        ? (lastUsed.otherSchedule as ScheduleOption)
+        : defaultLastUsed.otherSchedule;
+
+  const timeOffView =
+    typeof lastUsed.timeOffView === "string" &&
+    validTimeOffViewKeys.has(lastUsed.timeOffView as TimeOffViewKey)
+      ? (lastUsed.timeOffView as TimeOffViewKey)
+      : defaultLastUsed.timeOffView;
+
+  const timeTrackingView =
+    typeof lastUsed.timeTrackingView === "string" &&
+    validTimeTrackingViewKeys.has(lastUsed.timeTrackingView as TimeTrackingViewKey)
+      ? (lastUsed.timeTrackingView as TimeTrackingViewKey)
+      : defaultLastUsed.timeTrackingView;
+
+  const otherTeam =
+    lastUsed.otherTeam === null
+      ? null
+      : typeof lastUsed.otherTeam === "number" && Number.isFinite(lastUsed.otherTeam)
+        ? lastUsed.otherTeam
+        : defaultLastUsed.otherTeam;
+
+  // --- Validate scheduleType ---
   const scheduleType = (() => {
-    const rawValue =
-      s.scheduleType === undefined && s.scheduleOption !== undefined
-        ? s.scheduleOption
-        : s.scheduleType;
+    const rawValue = s.scheduleType;
     if (rawValue === undefined) {
       return defaultUserState.scheduleType;
     }
@@ -215,7 +308,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     if (typeof rawValue === "string" && scheduleOptionValues.has(rawValue as ScheduleOption)) {
       return rawValue as ScheduleOption;
     }
-    // Invalid schedule option detected - log warning and fall back to default
     console.warn(
       `Invalid schedule option "${rawValue}" found in localStorage. Falling back to default.`,
     );
@@ -223,6 +315,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   })();
 
   return {
+    version: CURRENT_VERSION,
     hasCompletedOnboarding:
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
@@ -242,10 +335,14 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       enableTimeOff,
       enableTimeTracking,
       timeTrackingWeeklyTargetHours,
-      lastActiveTab,
-      lastScheduleView,
-      lastTimeOffView,
-      lastTimeTrackingView,
+    },
+    lastUsed: {
+      activeTab,
+      scheduleView,
+      otherSchedule,
+      timeOffView,
+      timeTrackingView,
+      otherTeam,
     },
   };
 };
@@ -351,7 +448,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     (tab: TabKey) => {
       setUserState((prev) => ({
         ...prev,
-        settings: { ...prev.settings, lastActiveTab: tab },
+        lastUsed: { ...prev.lastUsed, activeTab: tab },
       }));
     },
     [setUserState],
@@ -361,7 +458,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     (view: ScheduleViewKey) => {
       setUserState((prev) => ({
         ...prev,
-        settings: { ...prev.settings, lastScheduleView: view },
+        lastUsed: { ...prev.lastUsed, scheduleView: view },
       }));
     },
     [setUserState],
@@ -371,7 +468,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     (view: TimeOffViewKey) => {
       setUserState((prev) => ({
         ...prev,
-        settings: { ...prev.settings, lastTimeOffView: view },
+        lastUsed: { ...prev.lastUsed, timeOffView: view },
       }));
     },
     [setUserState],
@@ -381,7 +478,27 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     (view: TimeTrackingViewKey) => {
       setUserState((prev) => ({
         ...prev,
-        settings: { ...prev.settings, lastTimeTrackingView: view },
+        lastUsed: { ...prev.lastUsed, timeTrackingView: view },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateLastOtherSchedule = useCallback(
+    (schedule: ScheduleOption | null) => {
+      setUserState((prev) => ({
+        ...prev,
+        lastUsed: { ...prev.lastUsed, otherSchedule: schedule },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateLastOtherTeam = useCallback(
+    (team: number | null) => {
+      setUserState((prev) => ({
+        ...prev,
+        lastUsed: { ...prev.lastUsed, otherTeam: team },
       }));
     },
     [setUserState],
@@ -496,6 +613,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const contextValue: SettingsContextType = useMemo(
     () => ({
       settings: userState.settings,
+      lastUsed: userState.lastUsed,
       updateTimeFormat,
       updateTheme,
       updateNotifications,
@@ -507,6 +625,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastScheduleView,
       updateLastTimeOffView,
       updateLastTimeTrackingView,
+      updateLastOtherSchedule,
+      updateLastOtherTeam,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -531,6 +651,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastScheduleView,
       updateLastTimeOffView,
       updateLastTimeTrackingView,
+      updateLastOtherSchedule,
+      updateLastOtherTeam,
       resetSettings,
       setMyTeam,
       setScheduleType,

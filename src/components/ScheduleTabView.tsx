@@ -1,12 +1,11 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { useSyncedState } from "../hooks/useSyncedState";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
 import { WeekView } from "./schedule/WeekView";
@@ -45,9 +44,28 @@ export function ScheduleTabView({
   isActive = false,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
-  const { scheduleType: userScheduleType, updateLastScheduleView, settings } = useSettings();
-  const [viewMode, setViewMode] = useState(settings.lastScheduleView);
-  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
+  const {
+    scheduleType: userScheduleType,
+    updateLastScheduleView,
+    updateLastOtherSchedule,
+    lastUsed,
+  } = useSettings();
+  const [viewMode, setViewMode] = useState(lastUsed.scheduleView);
+
+  // Initialize viewingScheduleType from persisted value, falling back to user's schedule
+  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
+    lastUsed.otherSchedule ?? userScheduleType,
+  );
+
+  // Reset when user's schedule changes externally (e.g. via settings)
+  const prevUserScheduleRef = useRef(userScheduleType);
+  useEffect(() => {
+    if (prevUserScheduleRef.current !== userScheduleType) {
+      setViewingScheduleType(userScheduleType);
+      updateLastOtherSchedule(userScheduleType);
+      prevUserScheduleRef.current = userScheduleType;
+    }
+  }, [userScheduleType, updateLastOtherSchedule]);
 
   useEffect(() => {
     updateLastScheduleView(viewMode);
@@ -97,7 +115,9 @@ export function ScheduleTabView({
             value={viewingScheduleType || ""}
             onChange={(e) => {
               const value = e.target.value;
-              setViewingScheduleType(isValidScheduleType(value) ? value : null);
+              const next = isValidScheduleType(value) ? value : null;
+              setViewingScheduleType(next);
+              updateLastOtherSchedule(next);
             }}
             style={{ width: "auto" }}
           >

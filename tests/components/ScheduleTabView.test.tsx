@@ -250,10 +250,14 @@ describe("ScheduleTabView", () => {
             enableTimeOff: false,
             enableTimeTracking: false,
             timeTrackingWeeklyTargetHours: 40,
-            lastActiveTab: "calendar",
-            lastScheduleView: "today",
-            lastTimeOffView: "table",
-            lastTimeTrackingView: "daily",
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
           },
         }),
       );

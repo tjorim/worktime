@@ -24,10 +24,14 @@ function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
         enableTimeOff: false,
         enableTimeTracking: false,
         timeTrackingWeeklyTargetHours: 40,
-        lastActiveTab: "calendar",
-        lastScheduleView: "today",
-        lastTimeOffView: "table",
-        lastTimeTrackingView: "daily",
+      },
+      lastUsed: {
+        activeTab: "calendar",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
       },
     }),
   );

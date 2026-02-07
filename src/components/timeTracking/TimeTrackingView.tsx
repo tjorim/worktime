@@ -8,7 +8,7 @@ import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
 import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 
 export function TimeTrackingView() {
-  const { settings, updateLastTimeTrackingView } = useSettings();
+  const { settings, lastUsed, updateLastTimeTrackingView } = useSettings();
   const {
     tasks,
     templates,
@@ -21,7 +21,7 @@ export function TimeTrackingView() {
     exportData,
     importData,
   } = useTimeTrackingStorage();
-  const [viewMode, setViewMode] = useState(settings.lastTimeTrackingView);
+  const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView);
 
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);

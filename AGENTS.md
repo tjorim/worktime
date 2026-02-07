@@ -392,6 +392,76 @@ Uses weeknumber.weekday format (YYWW.D):
 - Night shifts use previous day (2520.1N for night starting Monday 23h)
 - Full shift codes: **2520.2M**, **2520.2E**, **2520.1N**
 
+## User State & Settings Architecture
+
+**Location**: `src/contexts/SettingsContext.tsx`
+
+All user state is persisted in a single localStorage key (`worktime_user_state`) as a `WorktimeUserState` object with clear separation of concerns:
+
+```typescript
+interface WorktimeUserState {
+  version: number;                    // Schema version for migrations
+  hasCompletedOnboarding: boolean;    // Identity/setup
+  myTeam: number | null;              // Identity/setup
+  scheduleType: ScheduleOption | null; // Identity/setup
+  settings: UserSettings;             // True user preferences (theme, time format, etc.)
+  lastUsed: LastUsed;                 // Ephemeral view state (active tab, last viewed schedule, etc.)
+}
+```
+
+**Three groups**:
+
+1. **Identity/setup** (top-level): `hasCompletedOnboarding`, `myTeam`, `scheduleType` — set during onboarding, rarely changed
+2. **`settings`**: User preferences — `timeFormat`, `theme`, `notifications`, `vacationAllowance`, `enableTimeOff`, `enableTimeTracking`, `timeTrackingWeeklyTargetHours`
+3. **`lastUsed`**: Where the user left off — `activeTab`, `scheduleView`, `otherSchedule`, `timeOffView`, `timeTrackingView`, `otherTeam`
+
+### Versioned Migrations
+
+The state schema is versioned via the `version` field. When the stored version is older than `CURRENT_VERSION`, sequential migrations run automatically on load.
+
+```typescript
+const CURRENT_VERSION = 1;
+
+// Each key is the TARGET version. The function transforms state from (key-1) → key.
+type RawState = Record<string, unknown>;
+type Migration = (state: RawState) => RawState;
+
+const migrations: Record<number, Migration> = {
+  1: (state) => { /* move last* from settings → lastUsed, rename scheduleOption → scheduleType */ },
+};
+
+function migrateState(state: RawState): RawState {
+  let version = typeof state.version === "number" ? state.version : 0;
+  while (version < CURRENT_VERSION) {
+    const nextVersion = version + 1;
+    const migrate = migrations[nextVersion];
+    if (!migrate) {
+      console.warn(`No migration found for version ${nextVersion}. Resetting to defaults.`);
+      return { ...defaultUserState };
+    }
+    state = migrate(state);
+    state.version = nextVersion;
+    version = nextVersion;
+  }
+  return state;
+}
+```
+
+**Key design decisions**:
+
+- Migrations are keyed by **target version** (e.g., `migrations[1]` migrates v0 → v1)
+- Unversioned (legacy) data is treated as version 0
+- Migrations receive/return `RawState` (`Record<string, unknown>`) so they can reshape freely
+- After migration, `normalizeUserState` validates and sanitizes all fields
+- If a migration is missing, state resets to defaults with a console warning
+
+### Adding a New Migration
+
+1. Bump `CURRENT_VERSION` (e.g., `1` → `2`)
+2. Add `migrations[2]` with a function that transforms the raw state from v1 → v2
+3. Update `defaultUserState`, interfaces, and `normalizeUserState` for the new shape
+4. Add a test in `tests/contexts/SettingsContext.test.tsx` verifying migration from old format
+
 ## Key Features
 
 - **Schedule Selection**: Users choose their roster type during onboarding (5-shift, 9-5, etc.)

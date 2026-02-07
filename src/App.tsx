@@ -40,12 +40,13 @@ function AppContent() {
     updateVacationAllowance,
     updateLastActiveTab,
     settings,
+    lastUsed,
   } = useSettings();
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
-  const [activeTab, setActiveTab] = useState<TabKey>(settings.lastActiveTab);
+  const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
 

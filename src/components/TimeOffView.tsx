@@ -59,10 +59,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     undo,
     redo,
   } = useEventStore();
-  const { settings, updateVacationAllowance, updateLastTimeOffView } = useSettings();
+  const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState(settings.lastTimeOffView);
+  const [viewMode, setViewMode] = useState(lastUsed.timeOffView);
 
   useEffect(() => {
     updateLastTimeOffView(viewMode);

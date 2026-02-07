@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { getEffectiveTeam, getTeamCountForOption } from "../utils/scheduleUtils";
@@ -114,7 +114,7 @@ export function useTransferCalculations({
   customStartDate,
   customEndDate,
 }: UseTransferCalculationsProps): UseTransferCalculationsReturn {
-  const { scheduleType } = useSettings();
+  const { scheduleType, lastUsed, updateLastOtherTeam } = useSettings();
   const teamCount = getTeamCountForOption(scheduleType);
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
@@ -129,15 +129,33 @@ export function useTransferCalculations({
     return allTeams.filter((team) => team !== validatedMyTeam);
   }, [validatedMyTeam, teamCount]);
 
-  // State for selected other team to compare with
-  const [otherTeam, setOtherTeam] = useState<number>(availableOtherTeams[0] || 1);
+  // State for selected other team to compare with — restore from persisted value when valid
+  const [otherTeam, setOtherTeamRaw] = useState<number>(() => {
+    if (
+      lastUsed.otherTeam !== null &&
+      availableOtherTeams.includes(lastUsed.otherTeam)
+    ) {
+      return lastUsed.otherTeam;
+    }
+    return availableOtherTeams[0] || 1;
+  });
+
+  const setOtherTeam = useCallback(
+    (team: number) => {
+      setOtherTeamRaw(team);
+      updateLastOtherTeam(team);
+    },
+    [updateLastOtherTeam],
+  );
 
   // Update other team when user's team changes and current other team is not available
   useEffect(() => {
     if (!availableOtherTeams.includes(otherTeam)) {
-      setOtherTeam(availableOtherTeams[0] || 1);
+      const fallback = availableOtherTeams[0] || 1;
+      setOtherTeamRaw(fallback);
+      updateLastOtherTeam(fallback);
     }
-  }, [availableOtherTeams, otherTeam]);
+  }, [availableOtherTeams, otherTeam, updateLastOtherTeam]);
 
   // Calculate transfers based on current parameters
   const transfersResult = useMemo(() => {
