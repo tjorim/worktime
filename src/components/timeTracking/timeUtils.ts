@@ -72,6 +72,9 @@ export function overlaps(
   });
 }
 
-export function tagToClass(tag: string) {
-  return tag.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+export function tagToClass(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

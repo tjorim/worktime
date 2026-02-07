@@ -452,7 +452,12 @@ export function TimeTrackerPanel({
             <div className="small text-muted mb-2">
               Started {dayjs(runningTask.startTime).format("HH:mm")} · Elapsed {runningElapsed}
             </div>
-            <Button size="sm" variant="danger" onClick={handleStopNow}>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={handleStopNow}
+              aria-label={`Stop Timer for ${runningTask.text}`}
+            >
               Stop Timer
             </Button>
           </div>

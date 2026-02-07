@@ -78,6 +78,7 @@ describe("TimeTrackerPanel", () => {
       render(<TimeTrackerPanel {...mockProps} tasks={[runningTask]} />);
 
       expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
+      // Task title appears in both Quick Timer UI and the daily task list.
       expect(screen.getAllByText("On call")).toHaveLength(2);
       expect(screen.getByText(/Started 10:00/i)).toBeInTheDocument();
       expect(screen.getByText(/Elapsed 00:00:05/i)).toBeInTheDocument();
