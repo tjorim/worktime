@@ -68,11 +68,13 @@ export function Step5TimeOffSetup({
                 value={vacationAmount}
                 onChange={(e) => onVacationAmountChange(e.target.value)}
                 isInvalid={isInvalid}
+                aria-required={false}
+                aria-describedby="vacation-amount-help vacation-amount-error"
               />
-              <Form.Control.Feedback type="invalid">
+              <Form.Control.Feedback type="invalid" id="vacation-amount-error">
                 Please enter a valid number (0 or greater)
               </Form.Control.Feedback>
-              <Form.Text className="text-muted">
+              <Form.Text className="text-muted" id="vacation-amount-help">
                 Leave empty to skip vacation allowance tracking.
               </Form.Text>
             </Form.Group>
