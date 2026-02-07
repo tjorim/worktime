@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import React from "react";
@@ -26,6 +26,119 @@ describe("TimeTrackerPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  describe("Quick Timer", () => {
+    it("starts a timer when a task name is provided", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:15:30"));
+      vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as Crypto);
+      const onAddTask = vi.fn().mockReturnValue(true);
+
+      render(<TimeTrackerPanel {...mockProps} onAddTask={onAddTask} />);
+
+      fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Focus work" } });
+      fireEvent.click(screen.getByRole("button", { name: /Start Timer/i }));
+
+      expect(onAddTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "task-123",
+          text: "Focus work",
+          tag: "Development",
+          startTime: "2025-01-01T10:15",
+        }),
+      );
+    });
+
+    it("requires a task name before starting", async () => {
+      render(<TimeTrackerPanel {...mockProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /Start Timer/i }));
+
+      expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
+        /Please enter a task name to start/i,
+      );
+    });
+
+    it("renders the running task UI with elapsed time", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:00:05"));
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-1",
+        text: "On call",
+        tag: "Support",
+        startTime: "2025-01-01T10:00",
+      };
+
+      render(<TimeTrackerPanel {...mockProps} tasks={[runningTask]} />);
+
+      expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
+      // Task title appears in both Quick Timer UI and the daily task list.
+      expect(screen.getAllByText("On call")).toHaveLength(2);
+      expect(screen.getByText(/Started 10:00/i)).toBeInTheDocument();
+      expect(screen.getByText(/Elapsed 00:00:05/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Stop Timer/i })).toBeInTheDocument();
+    });
+
+    it("stops a same-day running task", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T10:30:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-2",
+        text: "Write notes",
+        tag: "Meeting",
+        startTime: "2025-01-01T10:00",
+      };
+
+      render(
+        <TimeTrackerPanel
+          {...mockProps}
+          tasks={[runningTask]}
+          onUpdateTaskTimes={onUpdateTaskTimes}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "running-2",
+        newStartTime: "2025-01-01T10:00",
+        newStopTime: "2025-01-01T10:30",
+      });
+    });
+
+    it("blocks stopping a cross-day running task and shows an error", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-02T00:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-3",
+        text: "Overnight support",
+        tag: "Support",
+        startTime: "2025-01-01T23:55",
+      };
+
+      render(
+        <TimeTrackerPanel
+          {...mockProps}
+          tasks={[runningTask]}
+          onUpdateTaskTimes={onUpdateTaskTimes}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+
+      expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
+        /This task started on 2025-01-01\. Please update the stop time manually\./i,
+      );
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+    });
   });
 
   describe("Task Form Rendering", () => {

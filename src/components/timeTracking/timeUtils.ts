@@ -71,3 +71,10 @@ export function overlaps(
     return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
   });
 }
+
+export function tagToClass(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
