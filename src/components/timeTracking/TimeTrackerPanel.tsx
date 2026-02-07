@@ -287,7 +287,7 @@ export function TimeTrackerPanel({
     const startDayjs = dayjs(runningTask.startTime);
     const startDate = startDayjs.format("YYYY-MM-DD");
     const now = dayjs();
-    if (now.format("YYYY-MM-DD") !== startDate) {
+    if (!now.isSame(startDayjs, "day")) {
       setError(`This task started on ${startDate}. Please update the stop time manually.`);
       return;
     }
