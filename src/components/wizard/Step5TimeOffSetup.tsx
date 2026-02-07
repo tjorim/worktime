@@ -81,24 +81,15 @@ export function Step5TimeOffSetup({
 
             <Form.Group controlId="vacationUnit">
               <Form.Label>Unit</Form.Label>
-              <div className="d-flex gap-3">
-                <Form.Check
-                  type="radio"
-                  id="unit-days"
-                  name="vacationUnit"
-                  label="Days"
-                  checked={vacationUnit === "days"}
-                  onChange={() => onVacationUnitChange("days")}
-                />
-                <Form.Check
-                  type="radio"
-                  id="unit-hours"
-                  name="vacationUnit"
-                  label="Hours"
-                  checked={vacationUnit === "hours"}
-                  onChange={() => onVacationUnitChange("hours")}
-                />
-              </div>
+              <Form.Select
+                value={vacationUnit}
+                onChange={(event) =>
+                  onVacationUnitChange(event.target.value as VacationAllowanceUnit)
+                }
+              >
+                <option value="days">Days</option>
+                <option value="hours">Hours</option>
+              </Form.Select>
             </Form.Group>
           </>
         ) : (

@@ -278,7 +278,7 @@ describe("WelcomeWizard", () => {
       await user.type(amountInput, "28");
 
       // Select hours unit
-      await user.click(screen.getByLabelText(/Hours/i));
+      await user.selectOptions(screen.getByLabelText(/Unit/i), "hours");
 
       // Complete
       await user.click(screen.getByRole("button", { name: /Continue/i }));
