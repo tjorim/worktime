@@ -921,15 +921,15 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       const amountInput = screen.getByLabelText(/Annual vacation allowance/i);
-      const completeButton = screen.getByRole("button", { name: /Complete/i });
+      const submitButton = screen.getByRole("button", { name: /Complete/i });
 
-      // Empty input should disable complete button (but button still shows as "Complete")
+      // Empty input should disable submit button (but button still shows as "Complete")
       await user.clear(amountInput);
-      await waitFor(() => expect(completeButton).toBeDisabled());
+      await waitFor(() => expect(submitButton).toBeDisabled());
 
       // Negative value should show validation error and disable button
       await user.type(amountInput, "-5");
-      await waitFor(() => expect(completeButton).toBeDisabled());
+      await waitFor(() => expect(submitButton).toBeDisabled());
 
       // Valid value should enable button and change text to "Save & Complete"
       await user.clear(amountInput);
