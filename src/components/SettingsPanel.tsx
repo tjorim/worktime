@@ -189,15 +189,15 @@ export function SettingsPanel({
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Time Off Tracking</div>
-                      <small className="text-muted">Manage time-off events and vacation days</small>
+                      <div className="fw-medium">Time Off</div>
+                      <small className="text-muted">Manage time off events and vacation days</small>
                     </div>
                     <Form.Check
                       type="switch"
                       id="toggle-timeoff"
                       checked={settings.enableTimeOff}
                       onChange={(event) => updateTimeOffEnabled(event.target.checked)}
-                      aria-label="Toggle time off tracking"
+                      aria-label="Toggle time off"
                     />
                   </div>
                 </ListGroup.Item>

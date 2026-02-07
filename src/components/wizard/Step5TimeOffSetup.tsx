@@ -2,10 +2,16 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
+import type { VacationAllowanceUnit } from "../../utils/vacationCalculations";
 
 interface Step5TimeOffSetupProps {
   isEnabled: boolean;
   onToggle: (enabled: boolean) => void;
+  vacationAmount: string;
+  vacationUnit: VacationAllowanceUnit;
+  onVacationAmountChange: (amount: string) => void;
+  onVacationUnitChange: (unit: VacationAllowanceUnit) => void;
+  isInvalid: boolean;
   onPrev: () => void;
   onNext: () => void;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
@@ -22,36 +28,78 @@ export function Step5TimeOffSetup({
     <>
       <div className="text-center mb-4">
         <i className="bi bi-calendar-check display-4 text-primary"></i>
-        <h4 className="mt-3">Enable Time Off Tracking</h4>
+        <h4 className="mt-3">Set Up Time Off</h4>
         <p className="text-muted">
-          Time off tracking keeps vacations and leave alongside your schedule so you can plan with
-          confidence.
+          Keep vacations and leave alongside your schedule so you can plan with confidence.
         </p>
       </div>
 
-      <Form>
+      <Alert variant="info" className="mt-3">
+        <ul className="mb-0">
+          <li>See time off events directly on your calendar and Today view.</li>
+          <li>Import or export .hday files to share with teammates.</li>
+          <li>Track vacation allowance to see your remaining balance.</li>
+        </ul>
+      </Alert>
+
+      <Form className="mt-3">
         <Form.Check
           type="switch"
           id="enable-timeoff"
-          label="Enable time off tracking"
+          label="Enable time off"
           checked={isEnabled}
           onChange={(event) => onToggle(event.target.checked)}
         />
-      </Form>
 
-      {isEnabled ? (
-        <Alert variant="info" className="mt-3">
-          <ul className="mb-0">
-            <li>See time-off events directly on your calendar and Today view.</li>
-            <li>Import or export .hday files to share with teammates.</li>
-            <li>Track vacation allowance to see remaining balance.</li>
-          </ul>
-        </Alert>
-      ) : (
-        <Alert variant="secondary" className="mt-3">
-          You can enable time off tracking later in Settings if you change your mind.
-        </Alert>
-      )}
+        {isEnabled ? (
+          <>
+            <Form.Group className="mb-3 mt-4" controlId="vacationAmount">
+              <Form.Label>Vacation allowance (optional)</Form.Label>
+              <Form.Control
+                type="number"
+                min={0}
+                step={0.5}
+                placeholder="e.g., 25"
+                value={vacationAmount}
+                onChange={(e) => onVacationAmountChange(e.target.value)}
+                isInvalid={isInvalid}
+              />
+              <Form.Control.Feedback type="invalid">
+                Please enter a valid number (0 or greater)
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Leave empty to skip vacation allowance tracking.
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group controlId="vacationUnit">
+              <Form.Label>Unit</Form.Label>
+              <div className="d-flex gap-3">
+                <Form.Check
+                  type="radio"
+                  id="unit-days"
+                  name="vacationUnit"
+                  label="Days"
+                  checked={vacationUnit === "days"}
+                  onChange={() => onVacationUnitChange("days")}
+                />
+                <Form.Check
+                  type="radio"
+                  id="unit-hours"
+                  name="vacationUnit"
+                  label="Hours"
+                  checked={vacationUnit === "hours"}
+                  onChange={() => onVacationUnitChange("hours")}
+                />
+              </div>
+            </Form.Group>
+          </>
+        ) : (
+          <Form.Text className="text-muted d-block mt-2">
+            You can enable time off later in Settings if you change your mind.
+          </Form.Text>
+        )}
+      </Form>
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
         <Button
@@ -62,8 +110,13 @@ export function Step5TimeOffSetup({
         >
           <i className="bi bi-arrow-left me-1"></i> Back
         </Button>
-        <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {isEnabled ? "Set Vacation Allowance" : "Continue"}
+        <Button
+          variant="primary"
+          onClick={onNext}
+          className="order-1 order-sm-2"
+          disabled={isEnabled && isInvalid}
+        >
+          Continue
           <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>

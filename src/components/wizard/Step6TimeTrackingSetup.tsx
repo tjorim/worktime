@@ -35,7 +35,11 @@ export function Step6TimeTrackingSetup({
         </p>
       </div>
 
-      <Form>
+      <Alert variant="info" className="mt-3">
+        Time tracking data stays on this device. Export anytime for backups.
+      </Alert>
+
+      <Form className="mt-3">
         <Form.Check
           type="switch"
           id="enable-timetracking"
@@ -44,7 +48,7 @@ export function Step6TimeTrackingSetup({
           onChange={(event) => onToggle(event.target.checked)}
         />
 
-        {isEnabled && (
+        {isEnabled ? (
           <Form.Group className="mt-3" controlId="weeklyTargetHours">
             <Form.Label>Weekly target hours</Form.Label>
             <Form.Control
@@ -62,18 +66,12 @@ export function Step6TimeTrackingSetup({
               Used for weekly summaries and progress tracking.
             </Form.Text>
           </Form.Group>
+        ) : (
+          <Form.Text className="text-muted d-block mt-2">
+            You can enable time tracking later in Settings if you want to start logging hours.
+          </Form.Text>
         )}
       </Form>
-
-      {isEnabled ? (
-        <Alert variant="info" className="mt-3">
-          Time tracking data stays on this device. Export anytime for backups.
-        </Alert>
-      ) : (
-        <Alert variant="secondary" className="mt-3">
-          You can enable time tracking later in Settings if you want to start logging hours.
-        </Alert>
-      )}
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-4">
         <Button

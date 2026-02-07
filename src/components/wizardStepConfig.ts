@@ -11,7 +11,6 @@ export type WizardStep =
   | "schedule-selection"
   | "team-selection"
   | "timeoff-setup"
-  | "vacation-allowance"
   | "time-tracking-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
@@ -112,24 +111,17 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "timeoff-setup",
-    title: "Time Off Tracking 🗓️",
+    title: "Time Off & Vacation 🗓️",
     isVisible: (ctx) => ctx.mode === "onboarding",
-    getNextStep: (ctx) => (ctx.enableTimeOff ? "vacation-allowance" : "time-tracking-setup"),
-    getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
-  },
-  {
-    id: "vacation-allowance",
-    title: "Vacation Tracking ✈️",
-    isVisible: (ctx) => ctx.mode === "onboarding" && ctx.enableTimeOff,
     getNextStep: () => "time-tracking-setup",
-    getPrevStep: () => "timeoff-setup",
+    getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },
   {
     id: "time-tracking-setup",
     title: "Time Tracking ⏱️",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null, // Always closes wizard after time tracking setup
-    getPrevStep: (ctx) => (ctx.enableTimeOff ? "vacation-allowance" : "timeoff-setup"),
+    getPrevStep: () => "timeoff-setup",
   },
 ];
 

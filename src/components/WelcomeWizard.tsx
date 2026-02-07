@@ -24,7 +24,6 @@ import { Step2Features } from "./wizard/Step2Features";
 import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
 import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
 import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
-import { Step5VacationAllowance } from "./wizard/Step5VacationAllowance";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 
 /**
@@ -87,7 +86,7 @@ interface WelcomeWizardProps {
 
 /**
  * Present a multi-step onboarding modal that guides users through welcome, feature highlights, schedule selection,
- * optional team selection, and optional vacation allowance setup.
+ * optional team selection, and optional time off setup.
  *
  * @param show - Whether the wizard modal is visible
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
@@ -97,7 +96,7 @@ interface WelcomeWizardProps {
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param mode - Determines the wizard flow ("onboarding" | "change-team" | "change-schedule")
- * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "timeoff-setup" | "vacation-allowance" | "time-tracking-setup")
+ * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "timeoff-setup" | "time-tracking-setup")
  * @returns The WelcomeWizard React element
  */
 export function WelcomeWizard({
@@ -190,15 +189,10 @@ export function WelcomeWizard({
     nextStep();
   };
 
-  const handleVacationComplete = () => {
-    if (vacationValidation.isInvalid) {
+  const handleTimeOffComplete = () => {
+    if (isTimeOffEnabled && vacationValidation.isInvalid) {
       return;
     }
-    nextStep();
-  };
-
-  const handleVacationSkip = () => {
-    setVacationAmount("");
     nextStep();
   };
 
@@ -345,22 +339,13 @@ export function WelcomeWizard({
               <Step5TimeOffSetup
                 isEnabled={isTimeOffEnabled}
                 onToggle={setIsTimeOffEnabled}
-                onPrev={prevStep}
-                onNext={nextStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "vacation-allowance" && (
-              <Step5VacationAllowance
                 vacationAmount={vacationAmount}
                 vacationUnit={vacationUnit}
                 onVacationAmountChange={setVacationAmount}
                 onVacationUnitChange={setVacationUnit}
-                onPrev={prevStep}
-                onSkip={handleVacationSkip}
-                onComplete={handleVacationComplete}
                 isInvalid={vacationValidation.isInvalid}
-                isValid={vacationValidation.isValid}
+                onPrev={prevStep}
+                onNext={handleTimeOffComplete}
                 firstButtonRef={firstButtonRef}
               />
             )}

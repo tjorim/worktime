@@ -350,7 +350,7 @@ describe("WelcomeWizard Integration Tests", () => {
       expect(screen.getByRole("button", { name: /9-5/i })).toBeInTheDocument();
     });
 
-    it("should disable time-off vacation step when time-off is disabled", async () => {
+    it("should proceed to time tracking when time off is disabled", async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -365,23 +365,21 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Should be at time-off setup
       await waitFor(() =>
-        expect(
-          screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
-        ).toBeInTheDocument(),
+        expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument(),
       );
 
       // Disable time-off by unchecking the switch
-      const timeOffSwitch = screen.getByLabelText(/Enable time off tracking/i);
+      const timeOffSwitch = screen.getByLabelText(/Enable time off/i);
       await user.click(timeOffSwitch);
 
-      // Click Continue (not "Skip for Now" - that's the button text when enabled)
+      // Click Continue
       await user.click(screen.getByRole("button", { name: /Continue/i }));
 
-      // Should skip vacation allowance and go to time tracking
+      // Should go to time tracking
       await waitFor(() => expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument());
 
-      // Should NOT have gone through vacation step
-      expect(screen.queryByText(/Set Up Vacation Tracking/i)).not.toBeInTheDocument();
+      // Should NOT show vacation allowance heading
+      expect(screen.queryByText(/Vacation allowance/i)).not.toBeInTheDocument();
     });
 
     it("should handle schedule change during active wizard session", async () => {
@@ -413,9 +411,7 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Wizard should complete
       await waitFor(() =>
-        expect(
-          screen.getByRole("heading", { name: /Enable Time Off Tracking/i }),
-        ).toBeInTheDocument(),
+        expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument(),
       );
     });
 
@@ -423,7 +419,7 @@ describe("WelcomeWizard Integration Tests", () => {
       const onTeamSelect = vi.fn();
       const onHide = vi.fn();
 
-      // Onboarding mode - 7 steps (with team selection and time-off)
+      // Onboarding mode - 6 steps (with team selection and time off)
       const { unmount } = renderWithProviders(
         <WelcomeWizard
           {...defaultProps}
@@ -435,7 +431,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await findModalTitle(/Welcome to Worktime/i);
-      await waitFor(() => expect(screen.getByText(/Step 1 of 7/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/Step 1 of 6/i)).toBeInTheDocument());
       unmount();
 
       // Change-schedule mode with team selection - 2 steps
