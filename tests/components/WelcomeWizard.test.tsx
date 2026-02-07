@@ -248,6 +248,7 @@ describe("WelcomeWizard", () => {
           onHide={mockOnHide}
           startStep="timeoff-setup"
         />,
+        { settings: { enableTimeOff: false } },
       );
 
       const user = userEvent.setup();
@@ -266,6 +267,7 @@ describe("WelcomeWizard", () => {
           onHide={mockOnHide}
           startStep="timeoff-setup"
         />,
+        { settings: { enableTimeOff: false } },
       );
 
       const user = userEvent.setup();
@@ -294,6 +296,7 @@ describe("WelcomeWizard", () => {
           onHide={vi.fn()}
           startStep="timeoff-setup"
         />,
+        { settings: { enableTimeOff: false } },
       );
 
       const user = userEvent.setup();
@@ -311,6 +314,7 @@ describe("WelcomeWizard", () => {
           onHide={vi.fn()}
           startStep="timeoff-setup"
         />,
+        { settings: { enableTimeOff: false } },
       );
 
       expect(screen.getByText(/Step 5 of 6/i)).toBeInTheDocument();
@@ -372,6 +376,7 @@ describe("WelcomeWizard", () => {
           onHide={mockOnHide}
           startStep="timeoff-setup"
         />,
+        { settings: { enableTimeOff: false } },
       );
 
       await enableTimeOffToggle(user);
@@ -550,6 +555,14 @@ describe("WelcomeWizard", () => {
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
       const user = userEvent.setup();
+      const userState = {
+        ...defaultUserState,
+        settings: {
+          ...defaultUserState.settings,
+          enableTimeOff: false,
+        },
+      };
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(userState));
       render(<App />);
 
       // Verify welcome wizard appears
@@ -590,6 +603,14 @@ describe("WelcomeWizard", () => {
 
     it("should save vacation allowance when updated in change-team mode", async () => {
       const user = userEvent.setup();
+      const userState = {
+        ...defaultUserState,
+        settings: {
+          ...defaultUserState.settings,
+          enableTimeOff: false,
+        },
+      };
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(userState));
       render(<App />);
 
       // Complete initial onboarding
