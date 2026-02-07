@@ -7,6 +7,7 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import { dayjs } from "../../utils/dateTimeUtils";
+import { useLiveTime } from "../../hooks/useLiveTime";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
@@ -113,6 +114,20 @@ function todayIso() {
   return dayjs().format("YYYY-MM-DD");
 }
 
+function formatDuration(totalSeconds: number) {
+  const clampedSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(clampedSeconds / 3600);
+  const minutes = Math.floor((clampedSeconds % 3600) / 60);
+  const seconds = clampedSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function tagToClass(tag: string) {
+  return tag.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
 export function TimeTrackerPanel({
   tasks,
   templates,
@@ -143,6 +158,7 @@ export function TimeTrackerPanel({
   });
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editTimes, setEditTimes] = useState<Record<string, { start: string; stop: string }>>({});
+  const liveTime = useLiveTime({ precision: "second" });
 
   const dailyTasks = useMemo(
     () =>
@@ -151,6 +167,22 @@ export function TimeTrackerPanel({
         .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     [tasks, date],
   );
+
+  const runningTask = useMemo(() => {
+    const running = tasks.filter((task) => task.stopTime === undefined || task.stopTime === null);
+    if (running.length === 0) {
+      return null;
+    }
+    return running.sort((a, b) => b.startTime.localeCompare(a.startTime))[0];
+  }, [tasks]);
+
+  const runningElapsed = useMemo(() => {
+    if (!runningTask) {
+      return null;
+    }
+    const start = dayjs(runningTask.startTime);
+    return formatDuration(liveTime.diff(start, "second"));
+  }, [liveTime, runningTask]);
 
   useEffect(() => {
     setEditTimes((prev) => {
@@ -213,6 +245,53 @@ export function TimeTrackerPanel({
     setText("");
     setStart("");
     setStop("");
+  };
+
+  const handleStartNow = () => {
+    setError("");
+    if (runningTask) {
+      setError("A task is already running. Stop it before starting another.");
+      return;
+    }
+    if (!text.trim()) {
+      setError("Please enter a task name to start.");
+      return;
+    }
+    const startTime = dayjs().format("YYYY-MM-DDTHH:mm");
+    const startDate = startTime.substring(0, 10);
+    onAddTask({
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      tag,
+      startTime,
+    });
+    setDate(startDate);
+    setText("");
+  };
+
+  const handleStopNow = () => {
+    if (!runningTask) {
+      return;
+    }
+    setError("");
+    const startDate = runningTask.startTime.substring(0, 10);
+    const now = dayjs();
+    if (now.format("YYYY-MM-DD") !== startDate) {
+      setError(`This task started on ${startDate}. Please update the stop time manually.`);
+      return;
+    }
+    const stopTime = now.format("YYYY-MM-DDTHH:mm");
+    const startClock = runningTask.startTime.substring(11, 16);
+    const stopClock = stopTime.substring(11, 16);
+    if (!isValidRange(startClock, stopClock)) {
+      setError("Stop time must be after start time.");
+      return;
+    }
+    onUpdateTaskTimes({
+      id: runningTask.id,
+      newStartTime: runningTask.startTime,
+      newStopTime: stopTime,
+    });
   };
 
   const handleUpdateTask = (taskId: string) => {
@@ -338,6 +417,47 @@ export function TimeTrackerPanel({
           </Form.Group>
         </Col>
       </Row>
+
+      <div className="border rounded p-3 mb-3">
+        <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <div className="fw-semibold">Quick Timer</div>
+            <div className="small text-muted">
+              Start a task now and stop it when you're done.
+            </div>
+          </div>
+          {runningTask ? (
+            <span className="badge text-bg-success">Running</span>
+          ) : (
+            <span className="badge text-bg-secondary">Idle</span>
+          )}
+        </div>
+        {runningTask ? (
+          <div className="mt-2">
+            <div className="fw-semibold">
+              {runningTask.text}{" "}
+              <span className={`time-tracking-tag time-tracking-tag-${tagToClass(runningTask.tag)}`}>
+                {runningTask.tag}
+              </span>
+            </div>
+            <div className="small text-muted mb-2">
+              Started {runningTask.startTime.substring(11, 16)} · Elapsed {runningElapsed}
+            </div>
+            <Button size="sm" variant="danger" onClick={handleStopNow}>
+              Stop Timer
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
+            <span className="text-muted small">
+              Enter a task name and tag below, then start the timer.
+            </span>
+            <Button size="sm" variant="success" onClick={handleStartNow}>
+              Start Timer
+            </Button>
+          </div>
+        )}
+      </div>
 
       <TaskEntryForm
         text={text}
