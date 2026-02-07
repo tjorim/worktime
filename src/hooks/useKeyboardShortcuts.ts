@@ -7,7 +7,6 @@ interface KeyboardShortcuts {
   onTeamSelect?: () => void;
   onTabCalendar?: () => void;
   onTabSchedule?: () => void;
-  onTabTransfer?: () => void;
   onTabTimeOff?: () => void;
   onTabTimeTracking?: () => void;
   onToggleSettings?: () => void;
@@ -119,9 +118,8 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
             const tabShortcuts: Record<string, { cb?: () => void; name: string }> = {
               c: { cb: shortcuts.onTabCalendar, name: "onTabCalendar" },
               s: { cb: shortcuts.onTabSchedule, name: "onTabSchedule" },
-              t: { cb: shortcuts.onTabTransfer, name: "onTabTransfer" },
               o: { cb: shortcuts.onTabTimeOff, name: "onTabTimeOff" },
-              w: { cb: shortcuts.onTabTimeTracking, name: "onTabTimeTracking" },
+              t: { cb: shortcuts.onTabTimeTracking, name: "onTabTimeTracking" },
             };
 
             const shortcut = tabShortcuts[key];

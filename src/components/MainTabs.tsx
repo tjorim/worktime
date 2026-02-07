@@ -12,7 +12,6 @@ import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
 import { TimeTrackingView } from "./timeTracking/TimeTrackingView";
-import { TransferView } from "./TransferView";
 
 interface MainTabsProps {
   myTeam: number | null; // The user's team from onboarding
@@ -25,12 +24,11 @@ interface MainTabsProps {
 }
 
 /**
- * Displays a tabbed interface for viewing calendar, schedules, transfers, or time off.
+ * Displays a tabbed interface for viewing calendar, schedule views, time off, or time tracking.
  *
  * Supports both internal and external control of the active tab, and notifies when the tab changes.
  * The Calendar tab shows the user's working schedule integrated with time-off and public holidays.
- * The Schedule tab groups Today and Week views together. Each tab presents different views relevant
- * to the user's team and date.
+ * The Schedule tab groups Today, Week, and Transfers views together.
  *
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
@@ -83,7 +81,6 @@ export function MainTabs({
     const baseShortcuts = {
       onTabCalendar: () => setActiveTab("calendar"),
       onTabSchedule: () => setActiveTab("schedule"),
-      onTabTransfer: () => setActiveTab("transfer"),
     };
 
     return {
@@ -99,7 +96,6 @@ export function MainTabs({
     () => [
       "calendar",
       "schedule",
-      "transfer",
       ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
       ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
     ],
@@ -156,24 +152,9 @@ export function MainTabs({
             currentDate={currentDate}
             setCurrentDate={setCurrentDate}
             onTeamClick={handleTeamClick}
-            isActive={activeKey === "schedule"}
-          />
-        </Tab>
-
-        <Tab
-          eventKey="transfer"
-          title={
-            <>
-              <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
-              Transfers
-            </>
-          }
-        >
-          <TransferView
-            myTeam={myTeam}
-            initialOtherTeam={null}
             onChangeSchedule={onChangeSchedule}
             onChangeTeam={onChangeTeam}
+            isActive={activeKey === "schedule"}
           />
         </Tab>
 

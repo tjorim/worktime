@@ -38,6 +38,12 @@ vi.mock("../../src/components/schedule/WeekView", () => ({
   ),
 }));
 
+vi.mock("../../src/components/TransferView", () => ({
+  TransferView: ({ myTeam }: { myTeam: number | null }) => (
+    <div data-testid="transfer-view">TransferView - Team {myTeam}</div>
+  ),
+}));
+
 const defaultProps = {
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
@@ -64,6 +70,7 @@ describe("ScheduleTabView", () => {
 
       expect(screen.getByRole("button", { name: /Today/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Week/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Transfers/i })).toBeInTheDocument();
     });
 
     it("shows Today view by default", () => {
@@ -106,6 +113,18 @@ describe("ScheduleTabView", () => {
       const todayButton = screen.getByRole("button", { name: /Today/i });
       await user.click(todayButton);
       expect(screen.getByTestId("today-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
+    });
+
+    it("switches to Transfer view when Transfers button is clicked", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<ScheduleTabView {...defaultProps} />);
+
+      const transferButton = screen.getByRole("button", { name: /Transfers/i });
+      await user.click(transferButton);
+
+      expect(screen.getByTestId("transfer-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("today-view")).not.toBeInTheDocument();
       expect(screen.queryByTestId("schedule-view")).not.toBeInTheDocument();
     });
   });

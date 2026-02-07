@@ -8,6 +8,7 @@ import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
+import { TransferView } from "./TransferView";
 import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
 
@@ -19,15 +20,16 @@ interface ScheduleTabViewProps {
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
+  onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
   isActive?: boolean;
 }
 
 /**
- * Displays a tabbed interface for viewing today's schedule or the weekly schedule.
+ * Displays a tabbed interface for viewing schedule details and transfers.
  *
- * Groups "Today" and "Week" views together using a ButtonGroup selector, similar to how
- * the Time Off tab has multiple internal views. Both views show generic schedules for
- * all teams in the selected schedule type.
+ * Groups "Today", "Week", and "Transfers" views together using a ButtonGroup selector.
+ * Today and Week show generic schedules for all teams in the selected schedule type.
  *
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
@@ -41,6 +43,8 @@ export function ScheduleTabView({
   currentDate,
   setCurrentDate,
   onTeamClick,
+  onChangeSchedule,
+  onChangeTeam,
   isActive = false,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
@@ -103,6 +107,14 @@ export function ScheduleTabView({
             <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
             Week
           </Button>
+          <Button
+            variant={viewMode === "transfer" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("transfer")}
+          >
+            <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+            Transfers
+          </Button>
         </ButtonGroup>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -134,7 +146,7 @@ export function ScheduleTabView({
         </div>
       </div>
 
-      {!viewingScheduleType && (
+      {!viewingScheduleType && viewMode !== "transfer" && (
         <div className="alert alert-info mb-0" role="status">
           Select a schedule to view the team lineup and shift details.
         </div>
@@ -160,6 +172,15 @@ export function ScheduleTabView({
           setCurrentDate={setCurrentDate}
           isActive={isActive}
           viewingScheduleType={viewingScheduleType}
+        />
+      )}
+
+      {viewMode === "transfer" && (
+        <TransferView
+          myTeam={myTeam}
+          initialOtherTeam={null}
+          onChangeSchedule={onChangeSchedule}
+          onChangeTeam={onChangeTeam}
         />
       )}
     </div>

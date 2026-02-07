@@ -372,7 +372,7 @@ describe("SettingsContext unified user state", () => {
             lastTimeTrackingView: "daily",
           },
           lastUsed: {
-            activeTab: "transfer",
+            activeTab: "schedule",
             scheduleView: "week",
             otherSchedule: "9-5",
             timeOffView: "raw",
@@ -384,7 +384,7 @@ describe("SettingsContext unified user state", () => {
 
       const { result } = renderHook(() => useSettings(), { wrapper });
 
-      expect(result.current.lastUsed.activeTab).toBe("transfer");
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
       expect(result.current.lastUsed.scheduleView).toBe("week");
       expect(result.current.lastUsed.otherSchedule).toBe("9-5");
       expect(result.current.lastUsed.timeOffView).toBe("raw");
@@ -395,9 +395,9 @@ describe("SettingsContext unified user state", () => {
     it("updates lastUsed.activeTab via updateLastActiveTab", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateLastActiveTab("transfer");
+        result.current.updateLastActiveTab("schedule");
       });
-      expect(result.current.lastUsed.activeTab).toBe("transfer");
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
     });
 
     it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {

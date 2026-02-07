@@ -8,8 +8,8 @@ import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
-export type TabKey = "calendar" | "schedule" | "transfer" | "timeoff" | "timetracking";
-export type ScheduleViewKey = "today" | "week";
+export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
+export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "raw";
 export type TimeTrackingViewKey = "daily" | "weekly";
 
@@ -99,14 +99,8 @@ export const defaultLastUsed: LastUsed = {
   otherTeam: null,
 };
 
-const validTabKeys = new Set<TabKey>([
-  "calendar",
-  "schedule",
-  "transfer",
-  "timeoff",
-  "timetracking",
-]);
-const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week"]);
+const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking"]);
+const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
 
@@ -163,10 +157,10 @@ const migrations: Record<number, Migration> = {
 
     // Remove migrated fields from settings
     const {
-      lastActiveTab,
-      lastScheduleView,
-      lastTimeOffView,
-      lastTimeTrackingView,
+      lastActiveTab: _lastActiveTab,
+      lastScheduleView: _lastScheduleView,
+      lastTimeOffView: _lastTimeOffView,
+      lastTimeTrackingView: _lastTimeTrackingView,
       ...cleanSettings
     } = settings;
 

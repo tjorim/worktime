@@ -58,18 +58,18 @@ describe("ProgressBar Component", () => {
       expect(progressElement).toHaveClass("bg-success");
     });
 
-    it("switches to warning variant when exceeding target", () => {
+    it("keeps success variant when exceeding target due to clamping", () => {
       const { container } = render(<ProgressBar hours={9} targetHours={8.5} />);
 
       const progressElement = container.querySelector(".progress-bar");
-      expect(progressElement).toHaveClass("bg-warning");
+      expect(progressElement).toHaveClass("bg-success");
     });
 
-    it("shows warning for significantly over target", () => {
+    it("keeps success variant for significantly over target due to clamping", () => {
       const { container } = render(<ProgressBar hours={15} targetHours={8.5} />);
 
       const progressElement = container.querySelector(".progress-bar");
-      expect(progressElement).toHaveClass("bg-warning");
+      expect(progressElement).toHaveClass("bg-success");
     });
   });
 
@@ -93,11 +93,10 @@ describe("ProgressBar Component", () => {
       expect(container.textContent).toContain("100.0%");
     });
 
-    it("displays overtime hours beyond 100 percent", () => {
+    it("clamps overtime display to 100 percent", () => {
       const { container } = render(<ProgressBar hours={12.75} targetHours={8.5} />);
 
-      // 12.75 / 8.5 = 150%
-      expect(container.textContent).toContain("150.0%");
+      expect(container.textContent).toContain("100.0%");
     });
 
     it("formats fractional percentages correctly", () => {

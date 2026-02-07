@@ -39,19 +39,23 @@ describe("Time Tracking Utils", () => {
 
     it("should throw error for invalid time values", () => {
       expect(() => timeToMinutes("-1:00")).toThrow(
-        'Invalid time value "-1:00". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "-1:00". Hours must be 0-23 and minutes must be 0-59.',
       );
       expect(() => timeToMinutes("12:-5")).toThrow(
-        'Invalid time value "12:-5". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "12:-5". Hours must be 0-23 and minutes must be 0-59.',
       );
       expect(() => timeToMinutes("12:60")).toThrow(
-        'Invalid time value "12:60". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "12:60". Hours must be 0-23 and minutes must be 0-59.',
       );
     });
 
-    it("should handle 24-hour format", () => {
-      expect(timeToMinutes("24:00")).toBe(1440);
-      expect(timeToMinutes("25:30")).toBe(1530);
+    it("should reject 24-hour overflow values", () => {
+      expect(() => timeToMinutes("24:00")).toThrow(
+        'Invalid time value "24:00". Hours must be 0-23 and minutes must be 0-59.',
+      );
+      expect(() => timeToMinutes("25:30")).toThrow(
+        'Invalid time value "25:30". Hours must be 0-23 and minutes must be 0-59.',
+      );
     });
   });
 
@@ -87,7 +91,7 @@ describe("Time Tracking Utils", () => {
     it("should calculate duration in hours", () => {
       expect(calculateDurationHours("08:00", "17:00")).toBe(9);
       expect(calculateDurationHours("09:00", "12:00")).toBe(3);
-      expect(calculateDurationHours("00:00", "24:00")).toBe(24);
+      expect(calculateDurationHours("00:00", "23:59")).toBeCloseTo(23.983333333333334, 5);
     });
 
     it("should handle fractional hours", () => {
