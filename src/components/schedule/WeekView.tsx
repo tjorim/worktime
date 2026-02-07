@@ -15,7 +15,7 @@ import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUt
 import { calculateShift } from "../../utils/shiftCalculations";
 import { ShiftBadge } from "../shared/ShiftBadge";
 
-interface ScheduleViewProps {
+interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
@@ -34,13 +34,13 @@ interface ScheduleViewProps {
  * @param setCurrentDate - Callback to update the displayed date
  * @returns The rendered schedule overview component
  */
-export function ScheduleView({
+export function WeekView({
   myTeam: inputMyTeam,
   currentDate,
   setCurrentDate,
   isActive = false,
   viewingScheduleType: propViewingScheduleType,
-}: ScheduleViewProps) {
+}: WeekViewProps) {
   const datePickerId = useId();
   const { scheduleType: userScheduleType } = useSettings();
 
@@ -113,6 +113,9 @@ export function ScheduleView({
   const isMyTeam = (teamNumber: number) => {
     return myTeam === teamNumber ? "my-team" : "";
   };
+
+  // Memoize today's date for consistent "today" highlighting throughout rendering
+  const today = dayjs();
 
   return (
     <Card>
@@ -199,7 +202,7 @@ export function ScheduleView({
               <tr>
                 <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
                 {weekDays.map((day) => {
-                  const isToday = day.isSame(dayjs(), "day");
+                  const isToday = day.isSame(today, "day");
                   return (
                     <th
                       key={day.format("YYYY-MM-DD")}
@@ -247,7 +250,7 @@ export function ScheduleView({
                   </td>
                   {weekDays.map((day) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
-                    const isToday = day.isSame(dayjs(), "day");
+                    const isToday = day.isSame(today, "day");
 
                     return (
                       <td

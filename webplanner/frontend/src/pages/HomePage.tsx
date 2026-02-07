@@ -6,8 +6,8 @@ export function HomePage() {
       <Card.Body>
         <Card.Title>Welcome to WebPlanner</Card.Title>
         <Card.Text>
-          Track daily tasks, reuse templates, and review weekly summaries. Use the
-          navigation above to open the time tracker or weekly overview.
+          Track daily tasks, reuse templates, and review weekly summaries. Use the navigation above
+          to open the time tracker or weekly overview.
         </Card.Text>
       </Card.Body>
     </Card>

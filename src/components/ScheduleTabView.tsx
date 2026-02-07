@@ -1,49 +1,51 @@
 import type { Dayjs } from "dayjs";
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { useSyncedState } from "../hooks/useSyncedState";
-import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
-import { ScheduleView } from "./schedule/ScheduleView";
+import { TransferView } from "./TransferView";
+import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
 /**
- * Valid view modes for the Schedule tab.
- * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ * Valid schedule view modes. Source of truth for all available views.
  */
-const SCHEDULE_VIEWS = ["today", "week"] as const;
+const SCHEDULE_VIEWS = ["today", "week", "transfer"] as const;
+
+/**
+ * Default schedule view mode when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_SCHEDULE_VIEW = SCHEDULE_VIEWS[0]; // "today"
 
 interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
+  onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
 
 /**
- * Displays a tabbed interface for viewing today's schedule or the weekly schedule.
+ * Displays a tabbed interface for viewing schedule details and transfers.
  *
- * Groups "Today" and "Week" views together using a ButtonGroup selector, similar to how
- * the Time Off tab has multiple internal views. Both views show generic schedules for
- * all teams in the selected schedule type.
+ * Groups "Today", "Week", and "Transfers" views together using a ButtonGroup selector.
+ * Today and Week show generic schedules for all teams in the selected schedule type.
  *
  * @param myTeam - The user's team number from onboarding or null
  * @param currentDate - The current date being viewed
  * @param setCurrentDate - Function to update the current date
  * @param onTeamClick - Optional callback for when a team is clicked in Today view
  * @param isActive - Whether this tab is currently active (for keyboard shortcuts)
- * @param initialView - Initial view mode from URL parameter ("today" or "week")
  * @returns The rendered schedule tab view component.
  */
 export function ScheduleTabView({
@@ -51,13 +53,37 @@ export function ScheduleTabView({
   currentDate,
   setCurrentDate,
   onTeamClick,
+  onChangeSchedule,
+  onChangeTeam,
   isActive = false,
-  initialView,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
-  const { scheduleType: userScheduleType } = useSettings();
-  const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
-  const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
+  const {
+    scheduleType: userScheduleType,
+    updateLastScheduleView,
+    updateLastOtherSchedule,
+    lastUsed,
+  } = useSettings();
+  const [viewMode, setViewMode] = useState(lastUsed.scheduleView ?? DEFAULT_SCHEDULE_VIEW);
+
+  // Initialize viewingScheduleType from persisted value, falling back to user's schedule
+  const [viewingScheduleType, setViewingScheduleType] = useState<ScheduleOption | null>(
+    lastUsed.otherSchedule ?? userScheduleType,
+  );
+
+  // Reset when user's schedule changes externally (e.g. via settings)
+  const prevUserScheduleRef = useRef(userScheduleType);
+  useEffect(() => {
+    if (prevUserScheduleRef.current !== userScheduleType) {
+      setViewingScheduleType(userScheduleType);
+      updateLastOtherSchedule(userScheduleType);
+      prevUserScheduleRef.current = userScheduleType;
+    }
+  }, [userScheduleType, updateLastOtherSchedule]);
+
+  useEffect(() => {
+    updateLastScheduleView(viewMode);
+  }, [updateLastScheduleView, viewMode]);
 
   const handlePreviousDay = () => {
     setCurrentDate(currentDate.subtract(1, "day"));
@@ -91,6 +117,14 @@ export function ScheduleTabView({
             <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
             Week
           </Button>
+          <Button
+            variant={viewMode === "transfer" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("transfer")}
+          >
+            <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+            Transfers
+          </Button>
         </ButtonGroup>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -103,7 +137,9 @@ export function ScheduleTabView({
             value={viewingScheduleType || ""}
             onChange={(e) => {
               const value = e.target.value;
-              setViewingScheduleType(isValidScheduleType(value) ? value : null);
+              const next = isValidScheduleType(value) ? value : null;
+              setViewingScheduleType(next);
+              updateLastOtherSchedule(next);
             }}
             style={{ width: "auto" }}
           >
@@ -120,7 +156,7 @@ export function ScheduleTabView({
         </div>
       </div>
 
-      {!viewingScheduleType && (
+      {!viewingScheduleType && viewMode !== "transfer" && (
         <div className="alert alert-info mb-0" role="status">
           Select a schedule to view the team lineup and shift details.
         </div>
@@ -140,12 +176,21 @@ export function ScheduleTabView({
       )}
 
       {viewingScheduleType && viewMode === "week" && (
-        <ScheduleView
+        <WeekView
           myTeam={myTeam}
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
           isActive={isActive}
           viewingScheduleType={viewingScheduleType}
+        />
+      )}
+
+      {viewMode === "transfer" && (
+        <TransferView
+          myTeam={myTeam}
+          initialOtherTeam={null}
+          onChangeSchedule={onChangeSchedule}
+          onChangeTeam={onChangeTeam}
         />
       )}
     </div>

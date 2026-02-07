@@ -60,6 +60,15 @@ export function Step2Features({
               </div>
             </div>
           </Col>
+          <Col xs={12} md={6}>
+            <div className="d-flex align-items-start">
+              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
+              <div>
+                <h6 className="mb-1">Time Tracking</h6>
+                <small className="text-muted">Log tasks and review weekly summaries</small>
+              </div>
+            </div>
+          </Col>
         </Row>
         <Alert variant="info" className="mt-4">
           <i className="bi bi-gear me-2"></i>

@@ -297,7 +297,10 @@ export function TransferView({
                                     {transfer.fromTeam === myTeam ? "Your " : ""}
                                     Team {transfer.fromTeam}
                                   </Badge>
-                                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                                  <i
+                                    className="bi bi-arrow-right text-muted"
+                                    aria-hidden="true"
+                                  ></i>
                                   <Badge
                                     bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
                                     className="text-nowrap"
@@ -340,7 +343,10 @@ export function TransferView({
                                     pill
                                     showTooltip={false}
                                   />
-                                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                                  <i
+                                    className="bi bi-arrow-right text-muted"
+                                    aria-hidden="true"
+                                  ></i>
                                   <ShiftBadge
                                     shift={toShift}
                                     showEmoji

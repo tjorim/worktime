@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -7,12 +7,23 @@ import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { WelcomeWizard } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
-import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
+
+type WizardCompletionPayload = {
+  vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
+  enableTimeOff?: boolean;
+  enableTimeTracking?: boolean;
+  timeTrackingWeeklyTargetHours?: number;
+};
+
+function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {
+  return typeof value === "string" && (value === "days" || value === "hours");
+}
 
 /**
  * The main application component for team selection and shift management.
@@ -22,12 +33,6 @@ import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
  * @returns The application's rendered user interface.
  */
 function AppContent() {
-  const [showTeamModal, setShowTeamModal] = useState(false);
-  const [teamModalMode, setTeamModalMode] = useState<
-    "onboarding" | "change-team" | "change-schedule"
-  >("onboarding");
-  const [activeTab, setActiveTab] = useState("calendar");
-  const [showAbout, setShowAbout] = useState(false);
   const { showSuccess, showInfo, showError } = useToast();
   const {
     myTeam,
@@ -37,32 +42,25 @@ function AppContent() {
     scheduleType,
     setScheduleType,
     updateVacationAllowance,
+    updateLastActiveTab,
     settings,
+    lastUsed,
   } = useSettings();
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [teamModalMode, setTeamModalMode] = useState<
+    "onboarding" | "change-team" | "change-schedule"
+  >("onboarding");
+  const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
+  const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const [initialView, setInitialView] = useState<string | undefined>(undefined);
 
-  // Handle URL parameters for deep linking - process on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get("tab");
-    const viewParam = urlParams.get("view");
-
-    // Set active tab from URL
-    if (tabParam && ["calendar", "schedule", "transfer", "timeoff"].includes(tabParam)) {
-      setActiveTab(tabParam);
-    }
-
-    // Set initial view from URL
-    if (viewParam) {
-      setInitialView(viewParam);
-    }
-
-    // Clear URL parameters after processing to keep URL clean
-    if (urlParams.toString()) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: TabKey) => {
+      setActiveTab(tab);
+      updateLastActiveTab(tab);
+    },
+    [updateLastActiveTab],
+  );
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -146,10 +144,7 @@ function AppContent() {
     setShowTeamModal(true);
   };
 
-  const handleTeamModalHide = (vacationAllowance?: {
-    amount: number;
-    unit: VacationAllowanceUnit;
-  }) => {
+  const handleTeamModalHide = (payload?: WizardCompletionPayload) => {
     // Complete onboarding when wizard closes (after vacation step)
     // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
@@ -174,14 +169,34 @@ function AppContent() {
       }
       const requiresTeam = selectedScheduleConfig.shiftConfig.teamCount > 1;
       const teamForCompletion = requiresTeam ? myTeam : null;
-      completeOnboardingWithSchedule(scheduleType, teamForCompletion, vacationAllowance);
+      completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
         showSuccess(`Team ${teamForCompletion} selected! Your shifts are now personalized.`, "🎯");
       }
-    } else if (teamModalMode === "change-team" && vacationAllowance) {
-      // Persist vacation allowance changes in change-team mode
-      updateVacationAllowance(vacationAllowance);
+    } else if (
+      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
+      payload?.vacationAllowance &&
+      typeof payload.vacationAllowance.amount === "number" &&
+      payload.vacationAllowance.amount > 0 &&
+      isValidVacationAllowanceUnit(payload.vacationAllowance.unit)
+    ) {
+      // Persist vacation allowance changes in change-team or change-schedule modes
+      updateVacationAllowance(payload.vacationAllowance);
       showSuccess("Vacation allowance updated successfully.", "✅");
+    } else if (
+      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
+      payload?.vacationAllowance
+    ) {
+      // Invalid vacation allowance - show error for debugging
+      const { amount, unit } = payload.vacationAllowance;
+      const errors: string[] = [];
+      if (typeof amount !== "number" || amount <= 0) {
+        errors.push("amount must be a positive number");
+      }
+      if (!isValidVacationAllowanceUnit(unit)) {
+        errors.push(`unit must be "days" or "hours", got "${unit}"`);
+      }
+      showError(`Vacation allowance update failed: ${errors.join(", ")}`, "⚠️");
     }
     setShowTeamModal(false);
   };
@@ -215,8 +230,7 @@ function AppContent() {
               currentDate={currentDate}
               setCurrentDate={setCurrentDate}
               activeTab={activeTab}
-              onTabChange={setActiveTab}
-              initialView={initialView}
+              onTabChange={handleTabChange}
               onChangeSchedule={handleChangeSchedule}
               onChangeTeam={handleChangeTeam}
             />

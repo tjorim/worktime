@@ -41,7 +41,7 @@ function buildWeekDays(startIso: string) {
     date.setDate(base.getDate() + idx);
     return {
       iso: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(undefined, { weekday: "long" })
+      label: date.toLocaleDateString(undefined, { weekday: "long" }),
     };
   });
 }
@@ -61,6 +61,7 @@ export function OverviewPage() {
         const data = await fetchTasksRange(start, end);
         setRows(data);
       } catch (err) {
+        console.error("Failed to load overview tasks.", err);
         setError("Failed to load tasks for overview.");
       }
     };
@@ -96,7 +97,7 @@ export function OverviewPage() {
       dailyTotals: dayTotals,
       tags: tagList,
       weekTotal: weekSum,
-      lunchTotal: lunch
+      lunchTotal: lunch,
     };
   }, [rows, week, year]);
 

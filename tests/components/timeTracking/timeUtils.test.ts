@@ -39,19 +39,23 @@ describe("Time Tracking Utils", () => {
 
     it("should throw error for invalid time values", () => {
       expect(() => timeToMinutes("-1:00")).toThrow(
-        'Invalid time value "-1:00". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "-1:00". Hours must be 0-23 and minutes must be 0-59.',
       );
       expect(() => timeToMinutes("12:-5")).toThrow(
-        'Invalid time value "12:-5". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "12:-5". Hours must be 0-23 and minutes must be 0-59.',
       );
       expect(() => timeToMinutes("12:60")).toThrow(
-        'Invalid time value "12:60". Hours must be >= 0 and minutes 0-59.',
+        'Invalid time value "12:60". Hours must be 0-23 and minutes must be 0-59.',
       );
     });
 
-    it("should handle 24-hour format", () => {
-      expect(timeToMinutes("24:00")).toBe(1440);
-      expect(timeToMinutes("25:30")).toBe(1530);
+    it("should reject 24-hour overflow values", () => {
+      expect(() => timeToMinutes("24:00")).toThrow(
+        'Invalid time value "24:00". Hours must be 0-23 and minutes must be 0-59.',
+      );
+      expect(() => timeToMinutes("25:30")).toThrow(
+        'Invalid time value "25:30". Hours must be 0-23 and minutes must be 0-59.',
+      );
     });
   });
 
@@ -62,10 +66,10 @@ describe("Time Tracking Utils", () => {
       expect(isValidRange("12:00", "12:01")).toBe(true);
     });
 
-    it("should return true for overnight ranges", () => {
-      expect(isValidRange("17:00", "08:00")).toBe(true);
-      expect(isValidRange("23:00", "07:00")).toBe(true);
-      expect(isValidRange("12:30", "12:00")).toBe(true);
+    it("should return false for overnight ranges", () => {
+      expect(isValidRange("17:00", "08:00")).toBe(false);
+      expect(isValidRange("23:00", "07:00")).toBe(false);
+      expect(isValidRange("12:30", "12:00")).toBe(false);
     });
 
     it("should return false when start equals stop", () => {
@@ -78,8 +82,8 @@ describe("Time Tracking Utils", () => {
       expect(isValidRange("25:61", "26:70")).toBe(false);
     });
 
-    it("should handle midnight crossings correctly", () => {
-      expect(isValidRange("23:59", "00:01")).toBe(true);
+    it("should reject midnight crossings into next day", () => {
+      expect(isValidRange("23:59", "00:01")).toBe(false);
     });
   });
 
@@ -87,7 +91,7 @@ describe("Time Tracking Utils", () => {
     it("should calculate duration in hours", () => {
       expect(calculateDurationHours("08:00", "17:00")).toBe(9);
       expect(calculateDurationHours("09:00", "12:00")).toBe(3);
-      expect(calculateDurationHours("00:00", "24:00")).toBe(24);
+      expect(calculateDurationHours("00:00", "23:59")).toBeCloseTo(23.983333333333334, 5);
     });
 
     it("should handle fractional hours", () => {
@@ -104,9 +108,9 @@ describe("Time Tracking Utils", () => {
       expect(calculateDurationHours("12:00", "12:01")).toBeCloseTo(1 / 60, 5);
     });
 
-    it("should handle overnight durations (stop before start)", () => {
-      expect(calculateDurationHours("17:00", "08:00")).toBe(15);
-      expect(calculateDurationHours("23:00", "07:00")).toBe(8);
+    it("should return 0 for overnight-like durations (stop before start)", () => {
+      expect(calculateDurationHours("17:00", "08:00")).toBe(0);
+      expect(calculateDurationHours("23:00", "07:00")).toBe(0);
     });
   });
 

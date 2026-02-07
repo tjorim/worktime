@@ -36,15 +36,16 @@ export function TemplateModal({
       </Modal.Header>
       <Modal.Body>
         <Form onSubmit={(event) => event.preventDefault()}>
-          <Form.Group className="mb-3">
+          <Form.Group controlId="templateName" className="mb-3">
             <Form.Label>Task name</Form.Label>
             <Form.Control
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
               aria-required="true"
+              required
             />
           </Form.Group>
-          <Form.Group className="mb-3">
+          <Form.Group controlId="templateTag" className="mb-3">
             <Form.Label>Tag</Form.Label>
             <Form.Select
               value={value.tag}
@@ -60,22 +61,24 @@ export function TemplateModal({
             </Form.Select>
           </Form.Group>
           <div className="d-flex gap-3">
-            <Form.Group className="flex-fill">
+            <Form.Group controlId="templateStart" className="flex-fill">
               <Form.Label>Start</Form.Label>
               <Form.Control
                 type="time"
                 value={value.start}
                 onChange={(event) => onChange({ ...value, start: event.target.value })}
                 aria-required="true"
+                required
               />
             </Form.Group>
-            <Form.Group className="flex-fill">
+            <Form.Group controlId="templateStop" className="flex-fill">
               <Form.Label>Stop</Form.Label>
               <Form.Control
                 type="time"
                 value={value.stop}
                 onChange={(event) => onChange({ ...value, stop: event.target.value })}
                 aria-required="true"
+                required
               />
             </Form.Group>
           </div>

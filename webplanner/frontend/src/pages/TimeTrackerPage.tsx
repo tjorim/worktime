@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Form,
-  ListGroup,
-  Row
-} from "react-bootstrap";
+import { Alert, Button, Card, Col, Form, ListGroup, Row } from "react-bootstrap";
 import {
   addTask,
   addTemplate,
@@ -17,7 +9,7 @@ import {
   fetchTemplates,
   removeTask,
   updateTaskTimes,
-  updateTemplate
+  updateTemplate,
 } from "../api/client";
 import { ProgressBar } from "../components/ProgressBar";
 import { TemplateModal } from "../components/TemplateModal";
@@ -33,7 +25,7 @@ const tags = [
   "NPI-EUV",
   "Department-Improvement",
   "Training",
-  "Lunch"
+  "Lunch",
 ];
 
 function todayIso() {
@@ -57,7 +49,7 @@ export function TimeTrackerPage() {
     text: "",
     tag: tags[0],
     start: "",
-    stop: ""
+    stop: "",
   });
   const [editTemplateId, setEditTemplateId] = useState<number | null>(null);
 
@@ -67,6 +59,7 @@ export function TimeTrackerPage() {
         const data = await fetchTasks(date);
         setTasks(data);
       } catch (err) {
+        console.error("Failed to load tasks.", err);
         setError("Failed to load tasks.");
       }
     };
@@ -79,6 +72,7 @@ export function TimeTrackerPage() {
         const data = await fetchTemplates();
         setTemplates(data);
       } catch (err) {
+        console.error("Failed to load templates.", err);
         setError("Failed to load templates.");
       }
     };
@@ -87,11 +81,10 @@ export function TimeTrackerPage() {
 
   const totalHours = useMemo(
     () => tasks.reduce((sum, t) => sum + calculateDurationHours(t.start, t.stop), 0),
-    [tasks]
+    [tasks],
   );
 
-  const resetTemplateForm = () =>
-    setTemplateForm({ text: "", tag: tags[0], start: "", stop: "" });
+  const resetTemplateForm = () => setTemplateForm({ text: "", tag: tags[0], start: "", stop: "" });
 
   const handleAddTask = async () => {
     setError("");
@@ -114,7 +107,7 @@ export function TimeTrackerPage() {
       text,
       tag,
       start,
-      stop
+      stop,
     });
     setText("");
     setStart("");
@@ -177,7 +170,7 @@ export function TimeTrackerPage() {
       text: tpl.text,
       tag: tpl.tag,
       start: tpl.start,
-      stop: tpl.stop
+      stop: tpl.stop,
     });
     setShowEditTemplate(true);
   };
@@ -196,7 +189,7 @@ export function TimeTrackerPage() {
     }
     await updateTemplate({
       id: editTemplateId,
-      template: templateForm
+      template: templateForm,
     });
     setShowEditTemplate(false);
     setEditTemplateId(null);
@@ -212,10 +205,10 @@ export function TimeTrackerPage() {
   const handleExport = () => {
     const payload = {
       tasks: getTasks(),
-      templates: getTemplates()
+      templates: getTemplates(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json"
+      type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -322,13 +315,25 @@ export function TimeTrackerPage() {
             <ListGroup className="mt-2">
               {templates.map((tpl) => (
                 <ListGroup.Item key={tpl.id} className="d-flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline-primary" onClick={() => handleApplyTemplate(tpl)}>
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    onClick={() => handleApplyTemplate(tpl)}
+                  >
                     {tpl.text} ({tpl.start}-{tpl.stop})
                   </Button>
-                  <Button size="sm" variant="outline-secondary" onClick={() => handleEditTemplate(tpl)}>
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    onClick={() => handleEditTemplate(tpl)}
+                  >
                     Edit
                   </Button>
-                  <Button size="sm" variant="outline-danger" onClick={() => handleDeleteTemplate(tpl)}>
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => handleDeleteTemplate(tpl)}
+                  >
                     Delete
                   </Button>
                 </ListGroup.Item>
@@ -381,7 +386,11 @@ export function TimeTrackerPage() {
                   >
                     Update
                   </Button>
-                  <Button size="sm" variant="outline-danger" onClick={() => handleRemoveTask(task.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => handleRemoveTask(task.id)}
+                  >
                     Remove
                   </Button>
                 </Col>

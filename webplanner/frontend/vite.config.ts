@@ -14,11 +14,11 @@ export default defineConfig({
       "/get_templates": "http://127.0.0.1:8876",
       "/add_template": "http://127.0.0.1:8876",
       "/update_template": "http://127.0.0.1:8876",
-      "/delete_template": "http://127.0.0.1:8876"
-    }
+      "/delete_template": "http://127.0.0.1:8876",
+    },
   },
   test: {
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts"
-  }
+    setupFiles: "./src/test/setup.ts",
+  },
 });

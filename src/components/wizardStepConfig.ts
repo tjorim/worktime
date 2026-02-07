@@ -10,7 +10,9 @@ export type WizardStep =
   | "features"
   | "schedule-selection"
   | "team-selection"
-  | "vacation-allowance";
+  | "timeoff-setup"
+  | "vacation-allowance"
+  | "time-tracking-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
 
@@ -38,6 +40,7 @@ export interface StepConfig {
 export interface WizardContext {
   mode: WizardMode;
   shouldShowTeamSelection: boolean;
+  enableTimeOff: boolean;
 }
 
 /**
@@ -77,8 +80,8 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule") {
         return null;
       }
-      // In onboarding, continue to vacation allowance
-      return "vacation-allowance";
+      // In onboarding, continue to time off setup
+      return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
       // In change-schedule mode, close wizard when going back
@@ -97,8 +100,8 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
-      // In onboarding, continue to vacation allowance
-      return "vacation-allowance";
+      // In onboarding, continue to time off setup
+      return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
       if (ctx.mode === "change-team") {
@@ -108,11 +111,25 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     },
   },
   {
+    id: "timeoff-setup",
+    title: "Time Off Tracking 🗓️",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: (ctx) => (ctx.enableTimeOff ? "vacation-allowance" : "time-tracking-setup"),
+    getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
+  },
+  {
     id: "vacation-allowance",
     title: "Vacation Tracking ✈️",
+    isVisible: (ctx) => ctx.mode === "onboarding" && ctx.enableTimeOff,
+    getNextStep: () => "time-tracking-setup",
+    getPrevStep: () => "timeoff-setup",
+  },
+  {
+    id: "time-tracking-setup",
+    title: "Time Tracking ⏱️",
     isVisible: (ctx) => ctx.mode === "onboarding",
-    getNextStep: () => null, // Always closes wizard after vacation setup
-    getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
+    getNextStep: () => null, // Always closes wizard after time tracking setup
+    getPrevStep: (ctx) => (ctx.enableTimeOff ? "vacation-allowance" : "timeoff-setup"),
   },
 ];
 

@@ -134,6 +134,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
+      version: 1,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -146,6 +147,17 @@ describe("SettingsContext unified user state", () => {
           unit: "days",
           hoursPerDay: 8,
         },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+        timeTrackingWeeklyTargetHours: 40,
+      },
+      lastUsed: {
+        activeTab: "calendar",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
       },
     });
 
@@ -298,6 +310,131 @@ describe("SettingsContext unified user state", () => {
         amount: 0,
         unit: "days",
         hoursPerDay: 8,
+      });
+    });
+  });
+
+  describe("lastUsed migration and updaters", () => {
+    it("migrates last* fields from settings to lastUsed", () => {
+      // Simulate old-format state with last* fields inside settings
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 25, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "schedule",
+            lastScheduleView: "week",
+            lastTimeOffView: "stats",
+            lastTimeTrackingView: "weekly",
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      // Values should have been migrated to lastUsed
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+      expect(result.current.lastUsed.scheduleView).toBe("week");
+      expect(result.current.lastUsed.timeOffView).toBe("stats");
+      expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
+      // New fields should have defaults
+      expect(result.current.lastUsed.otherSchedule).toBe(null);
+      expect(result.current.lastUsed.otherTeam).toBe(null);
+    });
+
+    it("prefers lastUsed over settings when both present", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "calendar",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
+            lastTimeTrackingView: "daily",
+          },
+          lastUsed: {
+            activeTab: "schedule",
+            scheduleView: "week",
+            otherSchedule: "9-5",
+            timeOffView: "raw",
+            timeTrackingView: "weekly",
+            otherTeam: 3,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+      expect(result.current.lastUsed.scheduleView).toBe("week");
+      expect(result.current.lastUsed.otherSchedule).toBe("9-5");
+      expect(result.current.lastUsed.timeOffView).toBe("raw");
+      expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
+      expect(result.current.lastUsed.otherTeam).toBe(3);
+    });
+
+    it("updates lastUsed.activeTab via updateLastActiveTab", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastActiveTab("schedule");
+      });
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+    });
+
+    it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastOtherSchedule("9-5");
+      });
+      expect(result.current.lastUsed.otherSchedule).toBe("9-5");
+
+      await act(async () => {
+        result.current.updateLastOtherSchedule(null);
+      });
+      expect(result.current.lastUsed.otherSchedule).toBe(null);
+    });
+
+    it("updates lastUsed.otherTeam via updateLastOtherTeam", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastOtherTeam(3);
+      });
+      expect(result.current.lastUsed.otherTeam).toBe(3);
+
+      await act(async () => {
+        result.current.updateLastOtherTeam(null);
+      });
+      expect(result.current.lastUsed.otherTeam).toBe(null);
+    });
+
+    it("provides default lastUsed on fresh state", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.lastUsed).toEqual({
+        activeTab: "calendar",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
       });
     });
   });

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RawContentPanel } from "../../../src/components/timeoff/RawContentPanel";
+import { RawContentPanel } from "../../../src/components/timeOff/RawContentPanel";
 
 describe("RawContentPanel", () => {
   const defaultProps = {

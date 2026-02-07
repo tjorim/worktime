@@ -4,19 +4,18 @@ import {
   TIME_TRACKING_STORAGE_KEYS,
   isTimeTrackingTag,
 } from "../components/timeTracking/constants";
-import { isValidTimeString } from "../components/timeTracking/timeUtils";
+import { isValidRange, isValidTimeString } from "../components/timeTracking/timeUtils";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
 } from "../components/timeTracking/types";
-import { dayjs } from "../utils/dateTimeUtils";
 
 type RawTask = {
   id: string;
   text: string;
   tag: string;
   startTime: string;
-  stopTime: string;
+  stopTime?: string | null;
 };
 
 type ImportPayload = {
@@ -26,17 +25,43 @@ type ImportPayload = {
 
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
+function isValidTaskDateRange(startTime: string, stopTime?: string | null): boolean {
+  if (!stopTime) {
+    return true;
+  }
+
+  const startDate = startTime.slice(0, 10);
+  const stopDate = stopTime.slice(0, 10);
+  if (startDate !== stopDate) {
+    return false;
+  }
+
+  const startClock = startTime.slice(11, 16);
+  const stopClock = stopTime.slice(11, 16);
+  return isValidRange(startClock, stopClock);
+}
+
 function isValidRawTask(value: unknown): value is RawTask {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
+  const hasValidStopValue =
+    v.stopTime === undefined ||
+    v.stopTime === null ||
+    (typeof v.stopTime === "string" && ISO_LOCAL_RE.test(v.stopTime));
+
+  if (!hasValidStopValue) {
+    return false;
+  }
+
+  const startTime = typeof v.startTime === "string" ? v.startTime : "";
+  const stopTime = typeof v.stopTime === "string" ? v.stopTime : null;
+
   return (
     typeof v.id === "string" &&
     typeof v.text === "string" &&
     isTimeTrackingTag(v.tag) &&
-    typeof v.startTime === "string" &&
-    ISO_LOCAL_RE.test(v.startTime) &&
-    typeof v.stopTime === "string" &&
-    ISO_LOCAL_RE.test(v.stopTime)
+    ISO_LOCAL_RE.test(startTime) &&
+    isValidTaskDateRange(startTime, stopTime)
   );
 }
 
@@ -59,23 +84,14 @@ function migrateRawTask(value: unknown): unknown {
   return value;
 }
 
-function rawToTask(raw: RawTask): StoredTimeTrackingTask {
+// StoredTimeTrackingTask now has string timestamps, so it matches RawTask structure
+function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return {
     id: raw.id,
     text: raw.text,
     tag: raw.tag as StoredTimeTrackingTask["tag"],
-    startTime: dayjs(raw.startTime),
-    stopTime: dayjs(raw.stopTime),
-  };
-}
-
-function taskToRaw(task: StoredTimeTrackingTask): RawTask {
-  return {
-    id: task.id,
-    text: task.text,
-    tag: task.tag,
-    startTime: task.startTime.format("YYYY-MM-DDTHH:mm"),
-    stopTime: task.stopTime.format("YYYY-MM-DDTHH:mm"),
+    startTime: raw.startTime,
+    stopTime: raw.stopTime ?? undefined,
   };
 }
 
@@ -87,21 +103,19 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
     typeof v.text === "string" &&
     isTimeTrackingTag(v.tag) &&
     isValidTimeString(v.start) &&
-    isValidTimeString(v.stop)
+    isValidTimeString(v.stop) &&
+    isValidRange(v.start, v.stop)
   );
 }
 
 export function useTimeTrackingStorage() {
-  const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    [],
-  );
+  const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);
   const [templates, setTemplates] = useLocalStorage<TimeTrackingTemplate[]>(
     TIME_TRACKING_STORAGE_KEYS.templates,
     [],
   );
 
-  const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(rawToTask), [rawTasks]);
+  const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(convertToTask), [rawTasks]);
 
   // Refs for stable exportData callback
   const rawTasksRef = useRef(rawTasks);
@@ -111,20 +125,24 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask) => {
-      setRawTasks((prev) => [...prev, taskToRaw(payload)]);
+      setRawTasks((prev) => [...prev, payload]);
     },
     [setRawTasks],
   );
 
   const updateTaskTimes = useCallback(
-    (payload: { id: string; newStartTime: StoredTimeTrackingTask["startTime"]; newStopTime: StoredTimeTrackingTask["stopTime"] }) => {
+    (payload: {
+      id: string;
+      newStartTime: StoredTimeTrackingTask["startTime"];
+      newStopTime: StoredTimeTrackingTask["stopTime"];
+    }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
           raw.id === payload.id
             ? {
                 ...raw,
-                startTime: payload.newStartTime.format("YYYY-MM-DDTHH:mm"),
-                stopTime: payload.newStopTime.format("YYYY-MM-DDTHH:mm"),
+                startTime: payload.newStartTime,
+                stopTime: payload.newStopTime ?? null,
               }
             : raw,
         ),
@@ -165,24 +183,25 @@ export function useTimeTrackingStorage() {
     [setTemplates],
   );
 
-  const exportData = useCallback(
-    (date: string) => {
-      const payload = {
-        tasks: rawTasksRef.current,
-        templates: templatesRef.current,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `worktime-time-tracking-${date}.json`;
-      anchor.click();
+  const exportData = useCallback((date: string) => {
+    const payload = {
+      tasks: rawTasksRef.current,
+      templates: templatesRef.current,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `worktime-time-tracking-${date}.json`;
+    anchor.click();
+    // Delay revocation to ensure the browser has time to start the download
+    // before the object URL becomes invalid
+    setTimeout(() => {
       URL.revokeObjectURL(url);
-    },
-    [],
-  );
+    }, 100);
+  }, []);
 
   const importData = useCallback(
     (payload: ImportPayload) => {

@@ -6,21 +6,20 @@ import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { useViewMode } from "../hooks/useViewMode";
 import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { RawContentPanel } from "./timeoff/RawContentPanel";
-import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-import { TimeOffTablePanel } from "./timeoff/TimeOffTablePanel";
+import { RawContentPanel } from "./timeOff/RawContentPanel";
+import { VacationStatsPanel } from "./timeOff/VacationStatsPanel";
+import { TimeOffTablePanel } from "./timeOff/TimeOffTablePanel";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
-  TIMEOFF_VIEWS,
   VIEW_MODE_HELP_TEXT,
+  TIMEOFF_VIEWS,
 } from "../data/timeoffConstants";
 
 /**
@@ -44,10 +43,14 @@ import {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {
+/**
+ * Default view mode for Time Off tab when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
+
+export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -62,10 +65,14 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     undo,
     redo,
   } = useEventStore();
-  const { settings, updateVacationAllowance } = useSettings();
+  const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
+  const [viewMode, setViewMode] = useState(lastUsed.timeOffView ?? DEFAULT_TIME_OFF_VIEW);
+
+  useEffect(() => {
+    updateLastTimeOffView(viewMode);
+  }, [updateLastTimeOffView, viewMode]);
 
   // Use custom hook for event form state management
   const {
@@ -386,13 +393,16 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
             size="sm"
             onClick={() => setViewMode("raw")}
           >
+            <i className="bi bi-code-slash me-1" aria-hidden="true"></i>
             Raw .hday
             {isRawEditorDirty && viewMode !== "raw" && (
               <span className="badge bg-warning text-dark ms-1">•</span>
             )}
           </Button>
         </ButtonGroup>
-        <span className="text-muted small">{VIEW_MODE_HELP_TEXT[viewMode]}</span>
+        <span className="text-muted small">
+          {VIEW_MODE_HELP_TEXT[viewMode] ?? VIEW_MODE_HELP_TEXT[DEFAULT_TIME_OFF_VIEW]}
+        </span>
       </div>
 
       {viewMode === "table" && (

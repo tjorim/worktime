@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import type { Dayjs } from "dayjs";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -28,14 +27,79 @@ type ImportPayload = {
   templates?: TimeTrackingTemplate[];
 };
 
+function validateImportPayload(parsed: unknown): parsed is ImportPayload {
+  if (!parsed || typeof parsed !== "object") {
+    return false;
+  }
+
+  const payload = parsed as Record<string, unknown>;
+
+  const isValidTimeValue = (value: unknown) =>
+    (typeof value === "string" && value.trim() !== "") ||
+    (typeof value === "number" && Number.isFinite(value));
+
+  const isValidTaskLike = (value: unknown) => {
+    if (!value || typeof value !== "object") return false;
+    const task = value as Record<string, unknown>;
+    return (
+      typeof task.id === "string" &&
+      typeof task.text === "string" &&
+      typeof task.tag === "string" &&
+      isValidTimeValue(task.startTime) &&
+      (task.stopTime === undefined || task.stopTime === null || isValidTimeValue(task.stopTime))
+    );
+  };
+
+  const isValidTemplateLike = (value: unknown) => {
+    if (!value || typeof value !== "object") return false;
+    const template = value as Record<string, unknown>;
+    return (
+      typeof template.id === "string" &&
+      typeof template.text === "string" &&
+      typeof template.tag === "string" &&
+      typeof template.start === "string" &&
+      typeof template.stop === "string"
+    );
+  };
+
+  // At least one of tasks or templates must be present
+  if (!("tasks" in payload) && !("templates" in payload)) {
+    return false;
+  }
+
+  // If tasks is present, it must be an array
+  if ("tasks" in payload && payload.tasks !== undefined && !Array.isArray(payload.tasks)) {
+    return false;
+  }
+
+  if (Array.isArray(payload.tasks) && !payload.tasks.every(isValidTaskLike)) {
+    return false;
+  }
+
+  // If templates is present, it must be an array
+  if (
+    "templates" in payload &&
+    payload.templates !== undefined &&
+    !Array.isArray(payload.templates)
+  ) {
+    return false;
+  }
+
+  if (Array.isArray(payload.templates) && !payload.templates.every(isValidTemplateLike)) {
+    return false;
+  }
+
+  return true;
+}
+
 type TimeTrackerPanelProps = {
   tasks: StoredTimeTrackingTask[];
   templates: TimeTrackingTemplate[];
   onAddTask: (payload: StoredTimeTrackingTask) => void;
   onUpdateTaskTimes: (payload: {
     id: string;
-    newStartTime: Dayjs;
-    newStopTime: Dayjs;
+    newStartTime: string;
+    newStopTime: string | null | undefined;
   }) => void;
   onRemoveTask: (id: string) => void;
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
@@ -83,8 +147,8 @@ export function TimeTrackerPanel({
   const dailyTasks = useMemo(
     () =>
       tasks
-        .filter((task) => task.startTime.format("YYYY-MM-DD") === date)
-        .sort((a, b) => a.startTime.diff(b.startTime)),
+        .filter((task) => task.startTime.substring(0, 10) === date)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     [tasks, date],
   );
 
@@ -92,9 +156,11 @@ export function TimeTrackerPanel({
     setEditTimes((prev) => {
       const next: Record<string, { start: string; stop: string }> = {};
       dailyTasks.forEach((task) => {
+        const startDayjs = dayjs(task.startTime);
+        const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
         next[task.id] = prev[task.id] ?? {
-          start: task.startTime.format("HH:mm"),
-          stop: task.stopTime.format("HH:mm"),
+          start: startDayjs.format("HH:mm"),
+          stop: stopDayjs.format("HH:mm"),
         };
       });
       return next;
@@ -104,7 +170,11 @@ export function TimeTrackerPanel({
   const totalHours = useMemo(
     () =>
       dailyTasks.reduce(
-        (sum, task) => sum + task.stopTime.diff(task.startTime, "hour", true),
+        (sum, task) => {
+          const startDayjs = dayjs(task.startTime);
+          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
+          return sum + stopDayjs.diff(startDayjs, "hour", true);
+        },
         0,
       ),
     [dailyTasks],
@@ -125,8 +195,8 @@ export function TimeTrackerPanel({
     }
     const dailyForOverlap = dailyTasks.map((t) => ({
       id: t.id,
-      start: t.startTime.format("HH:mm"),
-      stop: t.stopTime.format("HH:mm"),
+      start: t.startTime.substring(11, 16),
+      stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
     }));
     if (overlaps(start, stop, dailyForOverlap)) {
       setError("Time range overlaps an existing task.");
@@ -137,8 +207,8 @@ export function TimeTrackerPanel({
       id: crypto.randomUUID(),
       text,
       tag,
-      startTime: dayjs(`${date}T${start}`),
-      stopTime: dayjs(`${date}T${stop}`),
+      startTime: `${date}T${start}`,
+      stopTime: `${date}T${stop}`,
     });
     setText("");
     setStart("");
@@ -158,8 +228,8 @@ export function TimeTrackerPanel({
     }
     const dailyForOverlap = dailyTasks.map((t) => ({
       id: t.id,
-      start: t.startTime.format("HH:mm"),
-      stop: t.stopTime.format("HH:mm"),
+      start: t.startTime.substring(11, 16),
+      stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
     }));
     if (overlaps(edit.start, edit.stop, dailyForOverlap, taskId)) {
       setError("Time range overlaps an existing task.");
@@ -168,8 +238,8 @@ export function TimeTrackerPanel({
 
     onUpdateTaskTimes({
       id: taskId,
-      newStartTime: dayjs(`${date}T${edit.start}`),
-      newStopTime: dayjs(`${date}T${edit.stop}`),
+      newStartTime: `${date}T${edit.start}`,
+      newStopTime: `${date}T${edit.stop}`,
     });
   };
 
@@ -230,7 +300,14 @@ export function TimeTrackerPanel({
     }
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as ImportPayload;
+      const parsed = JSON.parse(text);
+
+      // Validate the parsed payload before importing
+      if (!validateImportPayload(parsed)) {
+        setError("Import failed. Please select a valid export file.");
+        return;
+      }
+
       onImportData(parsed);
       setError("");
     } catch {
