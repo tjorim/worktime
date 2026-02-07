@@ -1,14 +1,11 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
-import { useViewMode } from "../../hooks/useViewMode";
 import { TimeTrackerPanel } from "./TimeTrackerPanel";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
 import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
-
-const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
 
 export function TimeTrackingView() {
   const { settings, updateLastTimeTrackingView } = useSettings();
@@ -24,11 +21,7 @@ export function TimeTrackingView() {
     exportData,
     importData,
   } = useTimeTrackingStorage();
-  const [viewMode, setViewMode] = useViewMode(
-    settings.lastTimeTrackingView,
-    TIME_TRACKING_VIEWS,
-    "daily",
-  );
+  const [viewMode, setViewMode] = useState(settings.lastTimeTrackingView);
 
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);

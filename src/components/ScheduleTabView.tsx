@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -7,7 +7,6 @@ import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
 import { useSyncedState } from "../hooks/useSyncedState";
-import { useViewMode } from "../hooks/useViewMode";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
 import { WeekView } from "./schedule/WeekView";
@@ -16,19 +15,12 @@ import { TodayView } from "./schedule/TodayView";
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 
-/**
- * Valid view modes for the Schedule tab.
- * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
- */
-const SCHEDULE_VIEWS = ["today", "week"] as const;
-
 interface ScheduleTabViewProps {
   myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("today" or "week")
 }
 
 /**
@@ -43,7 +35,6 @@ interface ScheduleTabViewProps {
  * @param setCurrentDate - Function to update the current date
  * @param onTeamClick - Optional callback for when a team is clicked in Today view
  * @param isActive - Whether this tab is currently active (for keyboard shortcuts)
- * @param initialView - Initial view mode from URL parameter ("today" or "week")
  * @returns The rendered schedule tab view component.
  */
 export function ScheduleTabView({
@@ -52,11 +43,10 @@ export function ScheduleTabView({
   setCurrentDate,
   onTeamClick,
   isActive = false,
-  initialView,
 }: ScheduleTabViewProps) {
   const scheduleSelectId = useId();
-  const { scheduleType: userScheduleType, updateLastScheduleView } = useSettings();
-  const [viewMode, setViewMode] = useViewMode(initialView, SCHEDULE_VIEWS, "today");
+  const { scheduleType: userScheduleType, updateLastScheduleView, settings } = useSettings();
+  const [viewMode, setViewMode] = useState(settings.lastScheduleView);
   const [viewingScheduleType, setViewingScheduleType] = useSyncedState(userScheduleType);
 
   useEffect(() => {

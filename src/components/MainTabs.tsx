@@ -20,8 +20,6 @@ interface MainTabsProps {
   setCurrentDate: (date: Dayjs) => void;
   activeTab?: TabKey;
   onTabChange?: (tab: TabKey) => void;
-  initialScheduleView?: string; // Initial view mode for schedule sub-tabs (e.g., "today", "week")
-  initialTimeOffView?: string; // Initial view mode for time-off sub-tabs (e.g., "table", "stats")
   onChangeSchedule?: () => void; // Callback to open schedule selector
   onChangeTeam?: () => void; // Callback to open team selector
 }
@@ -39,8 +37,6 @@ interface MainTabsProps {
  * @param setCurrentDate - Function to update the current date
  * @param activeTab - The currently active tab (defaults to 'calendar')
  * @param onTabChange - Callback invoked when the active tab changes
- * @param initialScheduleView - Initial schedule view mode from URL or stored preference
- * @param initialTimeOffView - Initial time-off view mode from URL or stored preference
  * @param onChangeSchedule - Callback to open schedule selector
  * @param onChangeTeam - Callback to open team selector
  * @returns The rendered tabbed interface component.
@@ -51,8 +47,6 @@ export function MainTabs({
   setCurrentDate,
   activeTab = "calendar",
   onTabChange,
-  initialScheduleView,
-  initialTimeOffView,
   onChangeSchedule,
   onChangeTeam,
 }: MainTabsProps) {
@@ -163,7 +157,6 @@ export function MainTabs({
             setCurrentDate={setCurrentDate}
             onTeamClick={handleTeamClick}
             isActive={activeKey === "schedule"}
-            initialView={initialScheduleView}
           />
         </Tab>
 
@@ -194,7 +187,7 @@ export function MainTabs({
               </>
             }
           >
-            <TimeOffView isActive={activeKey === "timeoff"} initialView={initialTimeOffView} />
+            <TimeOffView isActive={activeKey === "timeoff"} />
           </Tab>
         )}
 

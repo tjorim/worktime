@@ -6,7 +6,6 @@ import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { useViewMode } from "../hooks/useViewMode";
 import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
@@ -19,7 +18,6 @@ import {
   TIME_LOCATION_FLAG_OPTIONS,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
-  TIMEOFF_VIEWS,
   VIEW_MODE_HELP_TEXT,
 } from "../data/timeoffConstants";
 
@@ -44,10 +42,9 @@ import {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {
+export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -65,7 +62,7 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
   const { settings, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
+  const [viewMode, setViewMode] = useState(settings.lastTimeOffView);
 
   useEffect(() => {
     updateLastTimeOffView(viewMode);

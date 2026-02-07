@@ -4,7 +4,6 @@ import "@testing-library/jest-dom";
 import React from "react";
 import { TimeTrackingView } from "../../../src/components/timeTracking/TimeTrackingView";
 import { SettingsProvider } from "../../../src/contexts/SettingsContext";
-import { useViewMode } from "../../../src/hooks/useViewMode";
 
 // Mock the hooks
 vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
@@ -22,14 +21,9 @@ vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
   })),
 }));
 
-vi.mock("../../../src/hooks/useViewMode", () => ({
-  useViewMode: vi.fn(() => ["daily", vi.fn()]),
-}));
-
 describe("TimeTrackingView", () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.mocked(useViewMode).mockReturnValue(["daily", vi.fn()]);
   });
 
   const renderWithSettings = () =>
@@ -80,7 +74,27 @@ describe("TimeTrackingView", () => {
 
   describe("Weekly View", () => {
     it("should render WeeklyOverviewPanel when weekly view is selected", () => {
-      vi.mocked(useViewMode).mockReturnValue(["weekly", vi.fn()]);
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: true,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "timetracking",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
+            lastTimeTrackingView: "weekly",
+          },
+        }),
+      );
 
       renderWithSettings();
 

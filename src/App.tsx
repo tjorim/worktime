@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Container from "react-bootstrap/Container";
 import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
@@ -48,11 +48,6 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabKey>(settings.lastActiveTab);
   const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
-  const [urlScheduleView, setUrlScheduleView] = useState<string | undefined>(undefined);
-  const [urlTimeOffView, setUrlTimeOffView] = useState<string | undefined>(undefined);
-  const initialScheduleView = urlScheduleView ?? settings.lastScheduleView;
-  const initialTimeOffView = urlTimeOffView ?? settings.lastTimeOffView;
-  const hasProcessedUrl = useRef(false);
 
   const handleTabChange = useCallback(
     (tab: TabKey) => {
@@ -61,48 +56,6 @@ function AppContent() {
     },
     [updateLastActiveTab],
   );
-
-  // Handle URL parameters for deep linking - process on mount
-  useEffect(() => {
-    if (hasProcessedUrl.current) {
-      return;
-    }
-    hasProcessedUrl.current = true;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get("tab");
-    const viewParam = urlParams.get("view");
-    const availableTabs: TabKey[] = [
-      "calendar",
-      "schedule",
-      "transfer",
-      ...(settings.enableTimeOff ? (["timeoff"] as TabKey[]) : []),
-      ...(settings.enableTimeTracking ? (["timetracking"] as TabKey[]) : []),
-    ];
-
-    // Set active tab from URL
-    if (tabParam && availableTabs.includes(tabParam as TabKey)) {
-      handleTabChange(tabParam as TabKey);
-    }
-
-    // Set initial view from URL
-    if (viewParam) {
-      const resolvedTab =
-        tabParam && availableTabs.includes(tabParam as TabKey)
-          ? (tabParam as TabKey)
-          : activeTab;
-      if (resolvedTab === "timeoff") {
-        setUrlTimeOffView(viewParam);
-      } else if (resolvedTab === "schedule") {
-        setUrlScheduleView(viewParam);
-      }
-    }
-
-    // Clear URL parameters after processing to keep URL clean
-    if (urlParams.toString()) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   // Show welcome wizard only on first visit (never completed onboarding)
   useEffect(() => {
@@ -253,8 +206,6 @@ function AppContent() {
               setCurrentDate={setCurrentDate}
               activeTab={activeTab}
               onTabChange={handleTabChange}
-              initialScheduleView={initialScheduleView}
-              initialTimeOffView={initialTimeOffView}
               onChangeSchedule={handleChangeSchedule}
               onChangeTeam={handleChangeTeam}
             />
