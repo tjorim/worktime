@@ -95,17 +95,12 @@ async function findModalTitle(text: RegExp) {
 
 /**
  * Waits for specific step indicator to appear.
+ * Uses regex matcher which handles split text nodes automatically.
  */
 async function waitForStep(stepNumber: number, totalSteps: number = 7, timeout = 3000) {
   await waitFor(
     () => {
-      // Use a function matcher to handle split text nodes and normalize whitespace
-      const stepText = screen.getByText((content, element) => {
-        // Normalize whitespace in text content
-        const normalizedText = element?.textContent?.replace(/\s+/g, " ").trim();
-        return normalizedText === `Step ${stepNumber} of ${totalSteps}`;
-      });
-      expect(stepText).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`Step ${stepNumber} of ${totalSteps}`, "i"))).toBeInTheDocument();
     },
     { timeout },
   );
