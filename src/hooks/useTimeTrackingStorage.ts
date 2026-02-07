@@ -125,7 +125,14 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask) => {
+      if (
+        payload.stopTime === undefined &&
+        rawTasksRef.current.some((task) => task.stopTime === undefined || task.stopTime === null)
+      ) {
+        return false;
+      }
       setRawTasks((prev) => [...prev, payload]);
+      return true;
     },
     [setRawTasks],
   );

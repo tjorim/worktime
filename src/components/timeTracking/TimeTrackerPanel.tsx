@@ -96,7 +96,7 @@ function validateImportPayload(parsed: unknown): parsed is ImportPayload {
 type TimeTrackerPanelProps = {
   tasks: StoredTimeTrackingTask[];
   templates: TimeTrackingTemplate[];
-  onAddTask: (payload: StoredTimeTrackingTask) => void;
+  onAddTask: (payload: StoredTimeTrackingTask) => boolean;
   onUpdateTaskTimes: (payload: {
     id: string;
     newStartTime: string;
@@ -235,13 +235,17 @@ export function TimeTrackerPanel({
       return;
     }
 
-    onAddTask({
+    const added = onAddTask({
       id: crypto.randomUUID(),
       text,
       tag,
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
+    if (!added) {
+      setError("A task is already running. Stop it before adding another task.");
+      return;
+    }
     setText("");
     setStart("");
     setStop("");
@@ -259,12 +263,16 @@ export function TimeTrackerPanel({
     }
     const startTime = dayjs().format("YYYY-MM-DDTHH:mm");
     const startDate = startTime.substring(0, 10);
-    onAddTask({
+    const added = onAddTask({
       id: crypto.randomUUID(),
       text: text.trim(),
       tag,
       startTime,
     });
+    if (!added) {
+      setError("A task is already running. Stop it before starting another.");
+      return;
+    }
     setDate(startDate);
     setText("");
   };
