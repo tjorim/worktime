@@ -139,6 +139,7 @@ describe("TimeTrackingView", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
+          version: 2,
           hasCompletedOnboarding: true,
           myTeam: null,
           scheduleType: "9-5",

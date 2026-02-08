@@ -47,10 +47,11 @@ export function TimeTrackingWeeklyView({
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
   const isWeeklyCurrent = weekStart.isSame(dayjs().startOf("isoWeek"), "day");
-  const [start, end] = useMemo(
-    () => getWeekDateRange(weekStart.year(), weekStart.isoWeek()),
-    [weekStart],
-  );
+
+  // Extract primitives for stable useMemo dependencies
+  const year = weekStart.year();
+  const isoWeek = weekStart.isoWeek();
+  const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>

@@ -3,7 +3,13 @@ export function timeToMinutes(time: string): number {
   if (parts.length !== 2) {
     throw new Error(`Invalid time format "${time}". Expected HH:MM.`);
   }
-  const [hoursRaw, minutesRaw] = parts;
+  const [hoursRaw, minutesRaw] = parts.map((segment) => segment.trim());
+
+  // Validate that both segments are non-empty and purely numeric
+  if (!hoursRaw || !minutesRaw || !/^\d+$/.test(hoursRaw) || !/^\d+$/.test(minutesRaw)) {
+    throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
+  }
+
   const hours = Number(hoursRaw);
   const minutes = Number(minutesRaw);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {

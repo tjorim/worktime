@@ -687,9 +687,7 @@ describe("WelcomeWizard", () => {
 
       // Should start directly at schedule selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Should show step 1 of 2 (schedule selection + team selection if needed)
@@ -727,9 +725,7 @@ describe("WelcomeWizard", () => {
 
       // Wait for schedule selection to render
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Select a schedule that doesn't require team selection (9-5)
@@ -760,9 +756,7 @@ describe("WelcomeWizard", () => {
 
       // Wait for schedule selection to render
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Select a schedule that requires team selection (5-shift)
@@ -825,9 +819,7 @@ describe("WelcomeWizard", () => {
 
       // Step 3: Schedule Selection -> Team Selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
@@ -869,9 +861,7 @@ describe("WelcomeWizard", () => {
 
       // Should open wizard in change-schedule mode
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
     });
   });
@@ -892,9 +882,7 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Select a schedule - should not crash
@@ -919,9 +907,7 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Find disabled schedule button (2-shift is marked as unavailable)
@@ -944,9 +930,7 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Find disabled schedule button

@@ -88,32 +88,73 @@ export function SettingsPanel({
   };
 
   const handleConfirmReset = () => {
+    let settingsCleared = false;
+    let timeTrackingCleared = false;
+    let timeOffCleared = false;
+    const errors: string[] = [];
+
+    // Attempt settings reset
     try {
       resetSettings();
+      settingsCleared = true;
+    } catch (error) {
+      console.error("Failed to reset settings:", error);
+      errors.push("settings");
+    }
 
-      if (clearTimeTrackingData) {
+    // Attempt time tracking data clearing if requested
+    if (clearTimeTrackingData) {
+      try {
         localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.tasks);
         localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.templates);
         localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.labels);
+        timeTrackingCleared = true;
+      } catch (error) {
+        console.error("Failed to clear time tracking data:", error);
+        errors.push("time tracking data");
       }
+    }
 
-      if (clearTimeOffData) {
+    // Attempt time off data clearing if requested
+    if (clearTimeOffData) {
+      try {
         clearTimeOffEvents();
         localStorage.removeItem(TIME_OFF_STORAGE_KEY);
+        timeOffCleared = true;
+      } catch (error) {
+        console.error("Failed to clear time off data:", error);
+        errors.push("time off data");
       }
+    }
 
-      handleCloseResetModal();
-      onHide(); // Close the settings panel
-      toast.showSuccess(
-        clearTimeTrackingData || clearTimeOffData
-          ? "Settings and selected data cleared"
-          : "Settings reset",
-        "🗑️",
+    // Always close modal and settings panel
+    handleCloseResetModal();
+    onHide();
+
+    // Aggregate results and show appropriate toast
+    const anythingSucceeded = settingsCleared || timeTrackingCleared || timeOffCleared;
+    const somethingFailed = errors.length > 0;
+
+    if (anythingSucceeded && !somethingFailed) {
+      // All attempted operations succeeded
+      const parts: string[] = [];
+      if (settingsCleared) parts.push("Settings");
+      if (timeTrackingCleared) parts.push("time tracking data");
+      if (timeOffCleared) parts.push("time off data");
+      toast.showSuccess(`${parts.join(" and ")} cleared`, "🗑️");
+    } else if (!anythingSucceeded && somethingFailed) {
+      // All attempted operations failed
+      toast.showError(`Failed to clear ${errors.join(", ")}. Please try again.`, "⚠️");
+    } else if (anythingSucceeded && somethingFailed) {
+      // Mixed results: some succeeded, some failed
+      const successParts: string[] = [];
+      if (settingsCleared) successParts.push("settings");
+      if (timeTrackingCleared) successParts.push("time tracking data");
+      if (timeOffCleared) successParts.push("time off data");
+      toast.showError(
+        `Cleared ${successParts.join(", ")} but failed to clear ${errors.join(", ")}`,
+        "⚠️",
       );
-    } catch (error) {
-      console.error("Failed to clear data:", error);
-      handleCloseResetModal();
-      toast.showError("Could not clear all data. Please try again.", "⚠️");
     }
   };
 

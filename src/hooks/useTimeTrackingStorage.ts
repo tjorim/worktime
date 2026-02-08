@@ -151,19 +151,21 @@ export function useTimeTrackingStorage() {
   }, [labels]);
 
   const addTask = useCallback(
-    (payload: StoredTimeTrackingTask) => {
-      let shouldAdd = true;
-      setRawTasks((prev) => {
-        const hasValidRunningTask = prev.some(
-          (task) => isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
-        );
-        if (payload.stopTime === undefined && hasValidRunningTask) {
-          shouldAdd = false;
-          return prev;
-        }
-        return [...prev, payload];
+    (payload: StoredTimeTrackingTask): Promise<boolean> => {
+      return new Promise((resolve) => {
+        setRawTasks((prev) => {
+          const hasValidRunningTask = prev.some(
+            (task) =>
+              isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
+          );
+          if (payload.stopTime === undefined && hasValidRunningTask) {
+            resolve(false);
+            return prev;
+          }
+          resolve(true);
+          return [...prev, payload];
+        });
       });
-      return shouldAdd;
     },
     [setRawTasks],
   );

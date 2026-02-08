@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -135,6 +135,11 @@ export function TimeTrackingConfigView({
       start: "",
       stop: "",
     });
+
+  // Sync labelsJson state when labels prop changes
+  useEffect(() => {
+    setLabelsJson(JSON.stringify({ labels }, null, 2));
+  }, [labels]);
 
   const handleCopyLabels = async () => {
     setError("");

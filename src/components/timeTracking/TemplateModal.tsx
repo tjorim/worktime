@@ -59,15 +59,22 @@ export function TemplateModal({
               value={value.label}
               onChange={(event) => onChange({ ...value, label: event.target.value })}
               disabled={labels.length === 0}
+              aria-required="true"
+              required
             >
               {labels.length === 0 ? (
                 <option value="">Add labels first</option>
               ) : (
-                labels.map((label) => (
-                  <option key={label.name} value={label.name}>
-                    {label.name}
+                <>
+                  <option value="" disabled>
+                    Select a label
                   </option>
-                ))
+                  {labels.map((label) => (
+                    <option key={label.name} value={label.name}>
+                      {label.name}
+                    </option>
+                  ))}
+                </>
               )}
             </Form.Select>
           </Form.Group>

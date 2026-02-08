@@ -21,7 +21,7 @@ type TimeTrackingDailyViewProps = {
   templates: TimeTrackingTemplate[];
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
-  onAddTask: (payload: StoredTimeTrackingTask) => boolean;
+  onAddTask: (payload: StoredTimeTrackingTask) => Promise<boolean>;
   onUpdateTaskTimes: (payload: {
     id: string;
     newStartTime: string;
@@ -140,7 +140,7 @@ export function TimeTrackingDailyView({
         ? "Stop time must be after start time."
         : undefined;
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     setError("");
     setStatus("");
     if (!text || !date || !start || !stop) {
@@ -165,7 +165,7 @@ export function TimeTrackingDailyView({
       return;
     }
 
-    const added = onAddTask({
+    const added = await onAddTask({
       id: crypto.randomUUID(),
       text,
       label: selectedLabel,
@@ -181,7 +181,7 @@ export function TimeTrackingDailyView({
     setStop("");
   };
 
-  const handleStartNow = () => {
+  const handleStartNow = async () => {
     setError("");
     setStatus("");
     if (runningTask) {
@@ -199,7 +199,7 @@ export function TimeTrackingDailyView({
     const now = dayjs();
     const startTime = now.format("YYYY-MM-DDTHH:mm");
     const startDate = now.format("YYYY-MM-DD");
-    const added = onAddTask({
+    const added = await onAddTask({
       id: crypto.randomUUID(),
       text: text.trim(),
       label: selectedLabel,
@@ -243,17 +243,20 @@ export function TimeTrackingDailyView({
     text: string;
     label: string;
     start: string;
-    stop: string;
+    stop?: string | null;
   }) => {
     setError("");
     setStatus("");
-    if (!payload.text.trim() || !payload.label || !payload.start || !payload.stop) {
+    if (!payload.text.trim() || !payload.label || !payload.start) {
       setError("Please fill in all fields.");
       return;
     }
-    if (!isValidRange(payload.start, payload.stop)) {
-      setError("Stop time must be after start time.");
-      return;
+    // Validate stop time if provided (for stopped tasks)
+    if (payload.stop) {
+      if (!isValidRange(payload.start, payload.stop)) {
+        setError("Stop time must be after start time.");
+        return;
+      }
     }
     if (!labels.some((item) => item.name === payload.label)) {
       setError("Please select a valid label.");
@@ -262,19 +265,19 @@ export function TimeTrackingDailyView({
     const taskDate =
       dailyTasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
     const newStartTime = `${taskDate}T${payload.start}`;
-    const newStopTime = `${taskDate}T${payload.stop}`;
-    if (!newStopTime) {
-      setError("Please select both start and stop times.");
-      return;
-    }
-    const dailyForOverlap = dailyTasks.map((t) => ({
-      id: t.id,
-      start: dayjs(t.startTime).format("HH:mm"),
-      stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
-    }));
-    if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
-      setError("Time range overlaps an existing task.");
-      return;
+    const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
+
+    // Overlap checking: only check if we have a stop time
+    if (payload.stop) {
+      const dailyForOverlap = dailyTasks.map((t) => ({
+        id: t.id,
+        start: dayjs(t.startTime).format("HH:mm"),
+        stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
+      }));
+      if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
+        setError("Time range overlaps an existing task.");
+        return;
+      }
     }
 
     onUpdateTaskTimes({

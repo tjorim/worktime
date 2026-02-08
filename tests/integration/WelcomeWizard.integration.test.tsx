@@ -314,9 +314,7 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Should start at schedule selection
       await waitFor(() => {
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
       // Should show step progress (1 of whatever total is appropriate)
@@ -339,9 +337,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument(),
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument(),
       );
 
       const cancelButton = screen.getByRole("button", { name: /Cancel/i });
@@ -471,9 +467,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument(),
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument(),
       );
       await waitFor(() => expect(screen.getByText(/Step 1 of 2/i)).toBeInTheDocument());
       unmount2();
@@ -490,9 +484,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(
-          screen.getByText(/Which schedule matches your work pattern\\?/i),
-        ).toBeInTheDocument(),
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument(),
       );
       await waitFor(() => expect(screen.getByText(/Step 1 of 1/i)).toBeInTheDocument());
     });

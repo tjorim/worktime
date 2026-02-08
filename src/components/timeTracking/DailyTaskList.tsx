@@ -17,7 +17,7 @@ type DailyTaskListProps = {
     text: string;
     label: string;
     start: string;
-    stop: string;
+    stop?: string | null;
   }) => void;
   onRemoveTask: (id: string) => void;
 };
@@ -51,20 +51,31 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     setEditText(task.text);
     setEditLabel(task.label);
     setEditStart(dayjs(task.startTime).format("HH:mm"));
-    setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : dayjs().format("HH:mm"));
+    setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
   };
 
   const submitEditModal = () => {
     if (!editingTask) {
       return;
     }
-    onUpdateTask({
+    // Only include stop if the task originally had one OR user entered a stop time
+    const payload: {
+      id: string;
+      text: string;
+      label: string;
+      start: string;
+      stop?: string | null;
+    } = {
       id: editingTask.id,
       text: editText,
       label: editLabel,
       start: editStart,
-      stop: editStop,
-    });
+    };
+    // Include stop if user provided a value (stopped task) or if task was originally stopped
+    if (editStop || editingTask.stopTime) {
+      payload.stop = editStop || null;
+    }
+    onUpdateTask(payload);
     closeEditModal();
   };
 
@@ -151,6 +162,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                   value={editStop}
                   onChange={(event) => setEditStop(event.target.value)}
                 />
+                <Form.Text className="text-muted">Leave empty to keep task running</Form.Text>
               </Form.Group>
             </div>
           </Form>

@@ -6,8 +6,8 @@ type ProgressBarProps = {
 };
 
 export function ProgressBar({ hours, targetHours = 8.5 }: ProgressBarProps) {
-  // Validate and sanitize targetHours: ensure it's > 0
-  const sanitizedTargetHours = targetHours > 0 ? targetHours : 8.5;
+  // Validate and sanitize targetHours: ensure it's finite and > 0
+  const sanitizedTargetHours = Number.isFinite(targetHours) && targetHours > 0 ? targetHours : 8.5;
 
   // Normalize hours: guard against NaN and non-finite values
   const normalizedHours = Number.isFinite(hours) ? hours : 0;

@@ -422,7 +422,7 @@ interface WorktimeUserState {
 The state schema is versioned via the `version` field. When the stored version is older than `CURRENT_VERSION`, sequential migrations run automatically on load.
 
 ```typescript
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 // Each key is the TARGET version. The function transforms state from (key-1) → key.
 type RawState = Record<string, unknown>;
@@ -431,6 +431,9 @@ type Migration = (state: RawState) => RawState;
 const migrations: Record<number, Migration> = {
   1: (state) => {
     /* move last* from settings → lastUsed, rename scheduleOption → scheduleType */
+  },
+  2: (state) => {
+    /* replace vacationAllowance.amount with yearlyAmounts[currentYear] */
   },
 };
 
@@ -500,10 +503,15 @@ function migrateState(state: RawState): RawState {
 
 ### Adding a New Migration
 
-1. Bump `CURRENT_VERSION` (e.g., `1` → `2`)
-2. Add `migrations[2]` with a function that transforms the raw state from v1 → v2
+1. Bump `CURRENT_VERSION` (e.g., `2` → `3`)
+2. Add `migrations[3]` with a function that transforms the raw state from v2 → v3
 3. Update `defaultUserState`, interfaces, and `normalizeUserState` for the new shape
 4. Add a test in `tests/contexts/SettingsContext.test.tsx` verifying migration from old format
+
+**Migration history**:
+
+- **v0 → v1**: Move last\* view fields from `settings` into dedicated `lastUsed` group. Rename `scheduleOption` → `scheduleType` for clarity.
+- **v1 → v2**: Replace `vacationAllowance.amount` (single number) with `yearlyAmounts[currentYear]` (per-year breakdown). If `amount` exists and current year has no entry, seed `yearlyAmounts[currentYear]` with the old `amount` value.
 
 **Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set `hasMigrationError: true` to surface a user-facing warning.
 
