@@ -27,7 +27,8 @@ type TimeTrackingDailyViewProps = {
     newStartTime: string;
     newStopTime: string | null | undefined;
     newText?: string;
-    newLabel?: string;
+    newLabelId?: string;
+    newLabelName?: string;
   }) => void;
   onRemoveTask: (id: string) => void;
 };
@@ -58,7 +59,7 @@ export function TimeTrackingDailyView({
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
   const [text, setText] = useState("");
-  const [selectedLabel, setSelectedLabel] = useState<string>(labels[0]?.name ?? "");
+  const [selectedLabelId, setSelectedLabelId] = useState<string>(labels[0]?.id ?? "");
   const [start, setStart] = useState("");
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -67,21 +68,29 @@ export function TimeTrackingDailyView({
   const liveTime = useLiveTime({ precision: "second" });
   const dailyDate = dayjs(date);
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
-  const colorByLabel = useMemo(
+  const colorByLabelId = useMemo(
     () =>
       labels.reduce<Record<string, string>>((map, label) => {
-        map[label.name] = label.color;
+        map[label.id] = label.color;
+        return map;
+      }, {}),
+    [labels],
+  );
+  const labelNameById = useMemo(
+    () =>
+      labels.reduce<Record<string, string>>((map, label) => {
+        map[label.id] = label.name;
         return map;
       }, {}),
     [labels],
   );
 
   useEffect(() => {
-    const fallback = labels[0]?.name ?? "";
-    if (!labels.some((item) => item.name === selectedLabel)) {
-      setSelectedLabel(fallback);
+    const fallback = labels[0]?.id ?? "";
+    if (!labels.some((item) => item.id === selectedLabelId)) {
+      setSelectedLabelId(fallback);
     }
-  }, [labels, selectedLabel]);
+  }, [labels, selectedLabelId]);
 
   const dailyTasks = useMemo(
     () =>
@@ -121,7 +130,7 @@ export function TimeTrackingDailyView({
       }, 0),
     [dailyTasks, liveTime],
   );
-  const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
+  const hasTaskDetails = text.trim().length > 0 && selectedLabelId.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
   const canStartNow = !runningTask && hasTaskDetails;
@@ -129,7 +138,7 @@ export function TimeTrackingDailyView({
     ? "A stopwatch is already running. Stop it before starting another."
     : !text.trim()
       ? "Enter a task name first."
-      : !selectedLabel
+      : !selectedLabelId
         ? "Select a label first."
         : undefined;
   const addDisabledReason = !text.trim()
@@ -147,7 +156,7 @@ export function TimeTrackingDailyView({
       setError("Please fill in all fields.");
       return;
     }
-    if (!selectedLabel) {
+    if (!selectedLabelId) {
       setError("Please configure at least one label.");
       return;
     }
@@ -168,7 +177,8 @@ export function TimeTrackingDailyView({
     const added = await onAddTask({
       id: crypto.randomUUID(),
       text,
-      label: selectedLabel,
+      labelId: selectedLabelId,
+      labelName: labelNameById[selectedLabelId],
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
@@ -192,7 +202,7 @@ export function TimeTrackingDailyView({
       setError("Please enter a task name to start.");
       return;
     }
-    if (!selectedLabel) {
+    if (!selectedLabelId) {
       setError("Please configure at least one label.");
       return;
     }
@@ -202,7 +212,8 @@ export function TimeTrackingDailyView({
     const added = await onAddTask({
       id: crypto.randomUUID(),
       text: text.trim(),
-      label: selectedLabel,
+      labelId: selectedLabelId,
+      labelName: labelNameById[selectedLabelId],
       startTime,
     });
     if (!added) {
@@ -253,13 +264,13 @@ export function TimeTrackingDailyView({
   const handleUpdateTask = (payload: {
     id: string;
     text: string;
-    label: string;
+    labelId: string;
     start: string;
     stop?: string | null;
   }): boolean => {
     setError("");
     setStatus("");
-    if (!payload.text.trim() || !payload.label || !payload.start) {
+    if (!payload.text.trim() || !payload.labelId || !payload.start) {
       setError("Please fill in all fields.");
       return false;
     }
@@ -270,7 +281,7 @@ export function TimeTrackingDailyView({
         return false;
       }
     }
-    if (!labels.some((item) => item.name === payload.label)) {
+    if (!labels.some((item) => item.id === payload.labelId)) {
       setError("Please select a valid label.");
       return false;
     }
@@ -304,7 +315,8 @@ export function TimeTrackingDailyView({
     onUpdateTaskTimes({
       id: payload.id,
       newText: payload.text.trim(),
-      newLabel: payload.label,
+      newLabelId: payload.labelId,
+      newLabelName: labelNameById[payload.labelId],
       newStartTime,
       newStopTime,
     });
@@ -325,7 +337,7 @@ export function TimeTrackingDailyView({
     }
 
     setText(template.text);
-    setSelectedLabel(template.label);
+    setSelectedLabelId(template.labelId);
     setStart(template.start);
     setStop(template.stop);
     setStatus(`Template "${template.text}" applied.`);
@@ -383,7 +395,11 @@ export function TimeTrackingDailyView({
                 <option value="">Choose a template</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
-                    {template.text} ({template.start}-{template.stop}) [{template.label}]
+                    {template.text} ({template.start}-{template.stop}) [
+                    {labelNameById[template.labelId] ??
+                      template.labelName ??
+                      "Unknown label"}
+                    ]
                   </option>
                 ))}
               </Form.Select>
@@ -415,11 +431,13 @@ export function TimeTrackingDailyView({
                     <span
                       className="time-tracking-label"
                       style={{
-                        backgroundColor: colorByLabel[runningTask.label] ?? "#6c757d",
+                      backgroundColor: colorByLabelId[runningTask.labelId] ?? "#6c757d",
                         color: "#000",
                       }}
                     >
-                      {runningTask.label}
+                      {labelNameById[runningTask.labelId] ??
+                        runningTask.labelName ??
+                        "Unknown label"}
                     </span>
                   </div>
                   <div className="small text-muted">
@@ -450,8 +468,8 @@ export function TimeTrackingDailyView({
           labels={labels}
           text={text}
           onTextChange={setText}
-          label={selectedLabel}
-          onLabelChange={setSelectedLabel}
+          labelId={selectedLabelId}
+          onLabelChange={setSelectedLabelId}
           start={start}
           onStartChange={setStart}
           stop={stop}

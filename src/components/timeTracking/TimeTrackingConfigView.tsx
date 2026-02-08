@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -31,7 +31,7 @@ type TemplatesImportPayload = {
 
 type TemplateFormState = {
   text: string;
-  label: string;
+  labelId: string;
   start: string;
   stop: string;
 };
@@ -132,7 +132,11 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   return sanitized;
 }
 
-function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
+function sanitizeTemplates(
+  templates: unknown[],
+  labelsByName: Map<string, TimeTrackingLabel>,
+  labelsById: Map<string, TimeTrackingLabel>,
+): TimeTrackingTemplate[] {
   const sanitized: TimeTrackingTemplate[] = [];
 
   templates.forEach((template) => {
@@ -140,19 +144,32 @@ function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
       return;
     }
     const payload = template as Record<string, unknown>;
+    const labelId =
+      typeof payload.labelId === "string"
+        ? payload.labelId
+        : typeof payload.label === "string"
+          ? labelsByName.get(payload.label.toLowerCase())?.id
+          : undefined;
+    const labelName =
+      typeof payload.labelId === "string"
+        ? labelsById.get(payload.labelId)?.name
+        : typeof payload.label === "string"
+          ? payload.label
+          : undefined;
     if (
       typeof payload.id !== "string" ||
       typeof payload.text !== "string" ||
-      typeof payload.label !== "string" ||
       typeof payload.start !== "string" ||
-      typeof payload.stop !== "string"
+      typeof payload.stop !== "string" ||
+      !labelId
     ) {
       return;
     }
     sanitized.push({
       id: payload.id,
       text: payload.text,
-      label: payload.label,
+      labelId,
+      labelName,
       start: payload.start,
       stop: payload.stop,
     });
@@ -180,9 +197,17 @@ export function TimeTrackingConfigView({
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
+  const labelNameById = useMemo(
+    () =>
+      labels.reduce<Record<string, string>>((map, label) => {
+        map[label.id] = label.name;
+        return map;
+      }, {}),
+    [labels],
+  );
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     text: "",
-    label: labels[0]?.name ?? "",
+    labelId: labels[0]?.id ?? "",
     start: "",
     stop: "",
   });
@@ -194,7 +219,7 @@ export function TimeTrackingConfigView({
   const resetTemplateForm = () =>
     setTemplateForm({
       text: "",
-      label: labels[0]?.name ?? "",
+      labelId: labels[0]?.id ?? "",
       start: "",
       stop: "",
     });
@@ -266,7 +291,11 @@ export function TimeTrackingConfigView({
         return;
       }
 
-      onImportData({ templates: sanitizeTemplates(parsed.templates ?? []) });
+      const labelsByName = new Map(labels.map((label) => [label.name.toLowerCase(), label]));
+      const labelsById = new Map(labels.map((label) => [label.id, label]));
+      onImportData({
+        templates: sanitizeTemplates(parsed.templates ?? [], labelsByName, labelsById),
+      });
       setStatus("Templates updated.");
     } catch {
       setError("Invalid templates JSON. Please check the format and try again.");
@@ -323,7 +352,7 @@ export function TimeTrackingConfigView({
   };
 
   const handleDeleteLabel = (label: TimeTrackingLabel) => {
-    const usedByTemplates = templates.filter((template) => template.label === label.name).length;
+    const usedByTemplates = templates.filter((template) => template.labelId === label.id).length;
     const confirmMessage =
       usedByTemplates > 0
         ? `Delete "${label.name}"? ${usedByTemplates} template(s) use this label.`
@@ -370,7 +399,7 @@ export function TimeTrackingConfigView({
       setError("Fill all template fields.");
       return;
     }
-    if (!templateForm.label) {
+    if (!templateForm.labelId) {
       setError("Please configure at least one label.");
       return;
     }
@@ -378,14 +407,18 @@ export function TimeTrackingConfigView({
       setError("Template stop time must be after start time.");
       return;
     }
+    const templatePayload: Omit<TimeTrackingTemplate, "id"> = {
+      ...templateForm,
+      labelName: labelNameById[templateForm.labelId],
+    };
     if (templateModalMode === "edit") {
       if (editTemplateId === null) {
         return;
       }
-      onUpdateTemplate({ id: editTemplateId, template: templateForm });
+      onUpdateTemplate({ id: editTemplateId, template: templatePayload });
       setStatus("Template updated.");
     } else {
-      onAddTemplate(templateForm);
+      onAddTemplate(templatePayload);
       setStatus("Template added.");
     }
     resetTemplateForm();
@@ -397,7 +430,7 @@ export function TimeTrackingConfigView({
     setEditTemplateId(template.id);
     setTemplateForm({
       text: template.text,
-      label: template.label,
+      labelId: template.labelId,
       start: template.start,
       stop: template.stop,
     });
@@ -480,7 +513,7 @@ export function TimeTrackingConfigView({
             <ListGroup>
               {labels.map((label) => {
                 const usedByTemplates = templates.filter(
-                  (template) => template.label === label.name,
+                  (template) => template.labelId === label.id,
                 ).length;
                 return (
                   <ListGroup.Item
@@ -576,7 +609,11 @@ export function TimeTrackingConfigView({
             {templates.map((template) => (
               <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
                 <span className="me-auto">
-                  {template.text} ({template.start}-{template.stop}) [{template.label}]
+                  {template.text} ({template.start}-{template.stop}) [
+                  {labelNameById[template.labelId] ??
+                    template.labelName ??
+                    "Unknown label"}
+                  ]
                 </span>
                 <Button
                   size="sm"
@@ -620,7 +657,7 @@ export function TimeTrackingConfigView({
           />
           <div className="small text-muted mt-2">
             Format:{" "}
-            <code>{`{"templates":[{"id":"template-1","text":"Support","label":"Support","start":"09:00","stop":"11:00"}]}`}</code>
+            <code>{`{"templates":[{"id":"template-1","text":"Support","labelId":"label-1","start":"09:00","stop":"11:00"}]}`}</code>
           </div>
         </details>
       </div>

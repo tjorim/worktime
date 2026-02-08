@@ -14,7 +14,7 @@ type DailyTaskListProps = {
   onUpdateTask: (payload: {
     id: string;
     text: string;
-    label: string;
+    labelId: string;
     start: string;
     stop?: string | null;
   }) => Promise<boolean> | boolean;
@@ -24,12 +24,16 @@ type DailyTaskListProps = {
 export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const [editLabel, setEditLabel] = useState("");
+  const [editLabelId, setEditLabelId] = useState("");
   const [editStart, setEditStart] = useState("");
   const [editStop, setEditStop] = useState("");
 
-  const colorByLabel = labels.reduce<Record<string, string>>((map, label) => {
-    map[label.name] = label.color;
+  const colorByLabelId = labels.reduce<Record<string, string>>((map, label) => {
+    map[label.id] = label.color;
+    return map;
+  }, {});
+  const labelNameById = labels.reduce<Record<string, string>>((map, label) => {
+    map[label.id] = label.name;
     return map;
   }, {});
 
@@ -40,7 +44,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const closeEditModal = () => {
     setEditingTaskId(null);
     setEditText("");
-    setEditLabel("");
+    setEditLabelId("");
     setEditStart("");
     setEditStop("");
   };
@@ -48,7 +52,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const openEditModal = (task: StoredTimeTrackingTask) => {
     setEditingTaskId(task.id);
     setEditText(task.text);
-    setEditLabel(task.label);
+    setEditLabelId(task.labelId);
     setEditStart(dayjs(task.startTime).format("HH:mm"));
     setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
   };
@@ -61,13 +65,13 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     const payload: {
       id: string;
       text: string;
-      label: string;
+      labelId: string;
       start: string;
       stop?: string | null;
     } = {
       id: editingTask.id,
       text: editText,
-      label: editLabel,
+      labelId: editLabelId,
       start: editStart,
     };
     // Include stop if user provided a value (stopped task) or if task was originally stopped
@@ -103,11 +107,11 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                 <span
                   className="time-tracking-label"
                   style={{
-                    backgroundColor: colorByLabel[task.label] ?? "#6c757d",
+                    backgroundColor: colorByLabelId[task.labelId] ?? "#6c757d",
                     color: "#000",
                   }}
                 >
-                  {task.label}
+                  {labelNameById[task.labelId] ?? task.labelName ?? "Unknown label"}
                 </span>
               </div>
               <div className="d-flex gap-2">
@@ -140,9 +144,12 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
             </Form.Group>
             <Form.Group controlId="editTaskLabel" className="mb-3">
               <Form.Label>Label</Form.Label>
-              <Form.Select value={editLabel} onChange={(event) => setEditLabel(event.target.value)}>
+              <Form.Select
+                value={editLabelId}
+                onChange={(event) => setEditLabelId(event.target.value)}
+              >
                 {labels.map((label) => (
-                  <option key={label.id} value={label.name}>
+                  <option key={label.id} value={label.id}>
                     {label.name}
                   </option>
                 ))}
