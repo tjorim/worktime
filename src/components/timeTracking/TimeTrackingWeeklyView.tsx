@@ -5,7 +5,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import type { TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type OverviewRow = {
@@ -57,14 +57,7 @@ export function TimeTrackingWeeklyView({
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
-  const labelNameById = useMemo(
-    () =>
-      labels.reduce<Record<string, string>>((map, label) => {
-        map[label.id] = label.name;
-        return map;
-      }, {}),
-    [labels],
-  );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>

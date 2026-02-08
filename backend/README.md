@@ -88,11 +88,11 @@ Content-Type: application/json
   - Invalid token or rate-limited: `401 Unauthorized` with generic message: `{"error": "Invalid or expired link token"}`.
   - Lockout/throttle: `429 Too Many Requests` with `{"error": "Too many attempts, try again later", "retry_after": 300}`.
   - Never reveal whether link_token exists, is expired, or has been used.
-- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Include:
-  - Failed token validation attempts (log token prefix only, e.g., first 2 chars, or preferably a non-reversible token ID hash such as truncated HMAC/SHA-256).
+- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Raw tokens or token prefixes must never be logged. Instead, generate an opaque `token_id` (e.g., keyed HMAC-SHA-256 digest of the token) at token creation time and store it alongside the token hash. Use this `token_id` in all log entries and audit trails. Include:
+  - Failed token validation attempts (identified by `token_id` only).
   - Rate-limit triggers and lockout events.
   - Anomaly detection flags (e.g., multiple device_ids from same IP, rapid token rotation).
-- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
+- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. Log the invalidation event using the `token_id`, never the raw token or any prefix. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
 - **Implementation**: Apply rate-limiting as middleware before handler logic (e.g., Express rate-limiter, Cloudflare Workers rate-limit API, or custom Redis-based counter). Ensure limits are enforced atomically (check-and-increment) to prevent race conditions.
 
 **Token validation on authenticated endpoints:**
@@ -108,7 +108,7 @@ Content-Type: application/json
   - `payload` (JSON/blob)
   - `updated_at` (timestamp)
   - `version` (integer)
-  - `etag` (SHA-256 of serialized payload + version string, computed before persisting/incrementing to avoid circular dependency; lowercase hex output, e.g., `etag = SHA256(json_payload + version.toString()).hex()`)
+  - `etag` (lowercase hex SHA-256 digest of the serialized payload concatenated with the version that will be stored, i.e., the post-increment/final version: `etag = SHA256(json_payload + stored_version.toString()).hex()`. Compute the etag immediately before persisting, using the final version value, to avoid circular dependency between etag and version.)
 - Optional audit table for last N writes if rollback is desired.
 
 ## Conflict handling

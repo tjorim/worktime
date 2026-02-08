@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
-import type { TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import { TemplateModal } from "./TemplateModal";
-import { isValidRange } from "./timeUtils";
+import { isValidRange, isValidTimeString } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
 
 type TemplateFormState = {
@@ -43,8 +44,9 @@ function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
     const label = typeof payload.label === "string" ? payload.label : undefined;
     if (
       typeof payload.text !== "string" ||
-      typeof payload.start !== "string" ||
-      typeof payload.stop !== "string" ||
+      !isValidTimeString(payload.start) ||
+      !isValidTimeString(payload.stop) ||
+      !isValidRange(payload.start, payload.stop) ||
       !label
     ) {
       return;
@@ -74,14 +76,10 @@ export function TemplatesPanel({
   const [templatesJson, setTemplatesJson] = useState(JSON.stringify({ templates }, null, 2));
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
-  const labelNameById = useMemo(
-    () =>
-      labels.reduce<Record<string, string>>((map, label) => {
-        map[label.id] = label.name;
-        return map;
-      }, {}),
-    [labels],
+  const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TimeTrackingTemplate | null>(
+    null,
   );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     text: "",
     label: labels[0]?.id ?? "",
@@ -139,6 +137,10 @@ export function TemplatesPanel({
     }
     if (!templateForm.label) {
       setError("Please configure at least one label.");
+      return;
+    }
+    if (!labels.some((l) => l.id === templateForm.label)) {
+      setError("Selected label no longer exists. Please choose another label.");
       return;
     }
     if (!isValidRange(templateForm.start, templateForm.stop)) {
@@ -210,13 +212,19 @@ export function TemplatesPanel({
                 {template.text} ({template.start}-{template.stop}) [
                 {labelNameById[template.label] ?? "Unknown label"}]
               </span>
-              <Button size="sm" variant="outline-secondary" onClick={() => handleEdit(template)}>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                aria-label={`Edit ${template.text}`}
+                onClick={() => handleEdit(template)}
+              >
                 Edit
               </Button>
               <Button
                 size="sm"
                 variant="outline-danger"
-                onClick={() => onDeleteTemplate(template.id)}
+                aria-label={`Delete ${template.text}`}
+                onClick={() => setPendingDeleteTemplate(template)}
               >
                 Delete
               </Button>
@@ -248,6 +256,22 @@ export function TemplatesPanel({
           setModalMode(null);
         }}
         onSubmit={handleSave}
+      />
+
+      <ConfirmationDialog
+        isOpen={pendingDeleteTemplate !== null}
+        title="Delete Template"
+        message={pendingDeleteTemplate ? `Delete "${pendingDeleteTemplate.text}"?` : ""}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteTemplate) {
+            onDeleteTemplate(pendingDeleteTemplate.id);
+            setStatus("Template deleted.");
+          }
+          setPendingDeleteTemplate(null);
+        }}
+        onCancel={() => setPendingDeleteTemplate(null)}
       />
     </div>
   );

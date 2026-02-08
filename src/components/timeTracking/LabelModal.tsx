@@ -65,6 +65,7 @@ export function LabelModal({
                 value={value.color}
                 onChange={(event) => onChange({ ...value, color: event.target.value })}
                 placeholder="#3B82F6"
+                aria-label="Label color (hex)"
                 aria-required="true"
                 required
               />

@@ -51,7 +51,7 @@ describe("TimeTrackingDailyView", () => {
       templates: TEST_TEMPLATES,
       selectedDate: dayjs().format("YYYY-MM-DD"),
       onSelectedDateChange: vi.fn(),
-      onAddTask: vi.fn(),
+      onAddTask: vi.fn().mockReturnValue(true),
       onUpdateTaskTimes: vi.fn(),
       onRemoveTask: vi.fn(),
     };

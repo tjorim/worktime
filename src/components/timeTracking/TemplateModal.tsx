@@ -32,7 +32,8 @@ export function TemplateModal({
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
-  const isSubmitDisabled = isLabelSelectionDisabled || !value.label;
+  const labelExists = labels.some((l) => l.id === value.label);
+  const isSubmitDisabled = isLabelSelectionDisabled || !value.label || !labelExists;
 
   return (
     <Modal show={show} onHide={onClose} centered>

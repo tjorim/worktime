@@ -12,12 +12,13 @@ export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_RE.test(value);
 }
 
-export function isTimeTrackingLabel(value: unknown): value is TimeTrackingLabelInput {
+export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingLabelInput {
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const label = value as Record<string, unknown>;
-  const hasValidId = label.id === undefined || typeof label.id === "string";
+  const hasValidId =
+    label.id === undefined || (typeof label.id === "string" && label.id.length > 0);
   return (
     hasValidId &&
     typeof label.name === "string" &&
@@ -53,7 +54,7 @@ export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   const sanitized: TimeTrackingLabel[] = [];
 
   labels.forEach((label) => {
-    if (!isTimeTrackingLabel(label)) {
+    if (!isTimeTrackingLabelInput(label)) {
       return;
     }
     const name = normalizeLabelName(label.name);
@@ -73,6 +74,13 @@ export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   });
 
   return sanitized;
+}
+
+export function buildLabelNameMap(labels: TimeTrackingLabel[]): Record<string, string> {
+  return labels.reduce<Record<string, string>>((map, label) => {
+    map[label.id] = label.name;
+    return map;
+  }, {});
 }
 
 export function normalizeLabelName(value: string): string {

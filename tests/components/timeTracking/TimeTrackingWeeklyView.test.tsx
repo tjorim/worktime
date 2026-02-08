@@ -12,7 +12,6 @@ describe("TimeTrackingWeeklyView Component", () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
     vi.useRealTimers();
     vi.resetAllMocks();
   });

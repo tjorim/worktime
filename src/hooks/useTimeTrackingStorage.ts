@@ -128,6 +128,10 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
+      // We resolve the Promise inside the setState updater to atomically check
+      // current state and signal success/failure. React calls the updater
+      // synchronously, so resolve() fires before microtask handlers run.
+      // The Promise resolves before the state update is committed to the DOM.
       return new Promise((resolve) => {
         setRawTasks((prev) => {
           // Check if a running task already exists in the current state

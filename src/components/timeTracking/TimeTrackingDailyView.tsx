@@ -12,7 +12,7 @@ import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
-import { getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
 
@@ -77,14 +77,7 @@ export function TimeTrackingDailyView({
       }, {}),
     [labels],
   );
-  const labelNameById = useMemo(
-    () =>
-      labels.reduce<Record<string, string>>((map, label) => {
-        map[label.id] = label.name;
-        return map;
-      }, {}),
-    [labels],
-  );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   useEffect(() => {
     const fallback = labels[0]?.id ?? "";
@@ -122,10 +115,14 @@ export function TimeTrackingDailyView({
     return formatDuration(liveTime.diff(start, "second"));
   }, [liveTime, runningTask]);
 
-  const runningLabelBackground = runningTask
-    ? (colorByLabelId[runningTask.label] ?? "#6c757d")
-    : "#6c757d";
-  const runningLabelTextColor = getContrastingTextColor(runningLabelBackground);
+  const runningLabelBackground = useMemo(
+    () => (runningTask ? (colorByLabelId[runningTask.label] ?? "#6c757d") : "#6c757d"),
+    [runningTask, colorByLabelId],
+  );
+  const runningLabelTextColor = useMemo(
+    () => getContrastingTextColor(runningLabelBackground),
+    [runningLabelBackground],
+  );
 
   const totalHours = useMemo(
     () =>
@@ -504,7 +501,6 @@ export function TimeTrackingDailyView({
           setShowDiscardConfirm(false);
         }}
         onCancel={() => {
-          setError("Task was not saved. Duration must be at least 1 minute.");
           setShowDiscardConfirm(false);
         }}
       />

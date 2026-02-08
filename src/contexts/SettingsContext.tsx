@@ -199,12 +199,21 @@ const migrations: Record<number, Migration> = {
 
     // Attempt to use a timestamp field (if present) to derive target year; otherwise fallback to best-effort currentYear.
     // This minimizes time-dependent behavior during migration.
-    const targetYear =
-      typeof state.timestamp === "number"
-        ? String(new Date(state.timestamp).getFullYear())
-        : typeof state.lastUpdated === "string"
-          ? String(new Date(state.lastUpdated).getFullYear())
-          : String(new Date().getFullYear()); // Fallback: best-effort currentYear
+    const yearFromTimestamp =
+      typeof state.timestamp === "number" ? new Date(state.timestamp).getFullYear() : undefined;
+    const yearFromLastUpdated =
+      typeof state.lastUpdated === "string" ? new Date(state.lastUpdated).getFullYear() : undefined;
+    const fallbackYear = new Date().getFullYear();
+
+    const targetYear = String(
+      yearFromTimestamp !== undefined && Number.isFinite(yearFromTimestamp) && yearFromTimestamp > 0
+        ? yearFromTimestamp
+        : yearFromLastUpdated !== undefined &&
+            Number.isFinite(yearFromLastUpdated) &&
+            yearFromLastUpdated > 0
+          ? yearFromLastUpdated
+          : fallbackYear,
+    );
 
     const yearlyAmounts: Record<string, number> = {};
     for (const [key, val] of Object.entries(existingYearly)) {

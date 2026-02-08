@@ -4,8 +4,8 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { useState } from "react";
-import { getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import { useMemo, useState } from "react";
+import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type DailyTaskListProps = {
@@ -29,14 +29,15 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const [editStop, setEditStop] = useState("");
   const [editError, setEditError] = useState("");
 
-  const colorByLabelId = labels.reduce<Record<string, string>>((map, label) => {
-    map[label.id] = label.color;
-    return map;
-  }, {});
-  const labelNameById = labels.reduce<Record<string, string>>((map, label) => {
-    map[label.id] = label.name;
-    return map;
-  }, {});
+  const colorByLabelId = useMemo(
+    () =>
+      labels.reduce<Record<string, string>>((map, label) => {
+        map[label.id] = label.color;
+        return map;
+      }, {}),
+    [labels],
+  );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   const editingTask = editingTaskId
     ? (tasks.find((task) => task.id === editingTaskId) ?? null)

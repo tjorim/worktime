@@ -55,15 +55,15 @@ describe("TimeTrackingView Integration Tests", () => {
         id: "today-task",
         text: "Today Task",
         label: "Support",
-        startTime: "2025-01-06T09:00Z",
-        stopTime: "2025-01-06T10:00Z",
+        startTime: "2025-01-06T09:00",
+        stopTime: "2025-01-06T10:00",
       },
       {
         id: "yesterday-task",
         text: "Yesterday Task",
         label: "Support",
-        startTime: "2025-01-05T09:00Z",
-        stopTime: "2025-01-05T10:00Z",
+        startTime: "2025-01-05T09:00",
+        stopTime: "2025-01-05T10:00",
       },
     ];
 
@@ -86,15 +86,15 @@ describe("TimeTrackingView Integration Tests", () => {
         id: "current-week-task",
         text: "Current Week",
         label: "Support",
-        startTime: "2025-01-13T09:00Z",
-        stopTime: "2025-01-13T11:00Z",
+        startTime: "2025-01-13T09:00",
+        stopTime: "2025-01-13T11:00",
       },
       {
         id: "previous-week-task",
         text: "Previous Week",
         label: "Development",
-        startTime: "2025-01-06T10:00Z",
-        stopTime: "2025-01-06T12:00Z",
+        startTime: "2025-01-06T10:00",
+        stopTime: "2025-01-06T12:00",
       },
     ];
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -68,6 +68,7 @@ export function TimeTrackingConfigView({
 }: TimeTrackingConfigViewProps) {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -130,10 +131,16 @@ export function TimeTrackingConfigView({
         >
           Export Data
         </Button>
-        <Form.Label className="btn btn-outline-secondary btn-sm mb-0">
+        <Button size="sm" variant="outline-secondary" onClick={() => fileInputRef.current?.click()}>
           Import Data
-          <Form.Control type="file" accept="application/json" onChange={handleImport} hidden />
-        </Form.Label>
+        </Button>
+        <Form.Control
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleImport}
+          hidden
+        />
       </div>
     </div>
   );

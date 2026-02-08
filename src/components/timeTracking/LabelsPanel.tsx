@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -7,6 +7,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import {
+  getContrastingTextColor,
   isHexColor,
   normalizeLabelName,
   sanitizeLabels,
@@ -61,6 +62,26 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       name: "",
       color: labels[0]?.color ?? "#3B82F6",
     });
+
+  const usageByLabelId = useMemo(() => {
+    const map: Record<string, { templates: number; tasks: number }> = {};
+    for (const label of labels) {
+      map[label.id] = { templates: 0, tasks: 0 };
+    }
+    for (const template of templates) {
+      const entry = map[template.label];
+      if (entry) {
+        entry.templates++;
+      }
+    }
+    for (const task of tasks) {
+      const entry = map[task.label];
+      if (entry) {
+        entry.tasks++;
+      }
+    }
+    return map;
+  }, [labels, templates, tasks]);
 
   useEffect(() => {
     setLabelsJson(JSON.stringify({ labels }, null, 2));
@@ -199,24 +220,27 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         ) : (
           <ListGroup>
             {labels.map((label) => {
-              const usedByTemplates = templates.filter(
-                (template) => template.label === label.id,
-              ).length;
-              const usedByTasks = tasks.filter((task) => task.label === label.id).length;
-              const isInUse = usedByTemplates > 0 || usedByTasks > 0;
+              const usage = usageByLabelId[label.id];
               const usageParts: string[] = [];
-              if (usedByTemplates > 0) {
-                usageParts.push(`${usedByTemplates} template${usedByTemplates === 1 ? "" : "s"}`);
+              if (usage?.templates) {
+                usageParts.push(`${usage.templates} template${usage.templates === 1 ? "" : "s"}`);
               }
-              if (usedByTasks > 0) {
-                usageParts.push(`${usedByTasks} task${usedByTasks === 1 ? "" : "s"}`);
+              if (usage?.tasks) {
+                usageParts.push(`${usage.tasks} task${usage.tasks === 1 ? "" : "s"}`);
               }
+              const isInUse = usageParts.length > 0;
               return (
                 <ListGroup.Item
                   key={label.id}
                   className="d-flex flex-wrap gap-2 align-items-center"
                 >
-                  <span className="time-tracking-label" style={{ backgroundColor: label.color }}>
+                  <span
+                    className="time-tracking-label"
+                    style={{
+                      backgroundColor: label.color,
+                      color: getContrastingTextColor(label.color),
+                    }}
+                  >
                     {label.name}
                   </span>
                   {isInUse && (
@@ -226,6 +250,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                     <Button
                       size="sm"
                       variant="outline-secondary"
+                      aria-label={`Edit ${label.name}`}
                       onClick={() => handleStartEdit(label)}
                     >
                       Edit
@@ -243,6 +268,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                           <Button
                             size="sm"
                             variant="outline-danger"
+                            aria-label={`Delete ${label.name}`}
                             disabled
                             style={{ pointerEvents: "none" }}
                           >
@@ -254,6 +280,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       <Button
                         size="sm"
                         variant="outline-danger"
+                        aria-label={`Delete ${label.name}`}
                         onClick={() => setPendingDeleteLabel(label)}
                       >
                         Delete
