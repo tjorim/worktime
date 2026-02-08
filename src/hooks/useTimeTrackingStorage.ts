@@ -111,7 +111,11 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
       return;
     }
     seen.add(key);
-    sanitized.push({ name, color: value.color });
+    sanitized.push({
+      id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
+      name,
+      color: value.color,
+    });
   });
 
   return sanitized;

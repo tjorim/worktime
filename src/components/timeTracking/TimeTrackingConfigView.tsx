@@ -54,10 +54,10 @@ type TimeTrackingConfigViewProps = {
 
 const EXAMPLE_LABELS_JSON = `{
   "labels": [
-    { "name": "Support", "color": "#3B82F6" },
-    { "name": "Project", "color": "#10B981" },
-    { "name": "Meetings", "color": "#F59E0B" },
-    { "name": "Admin", "color": "#8B5CF6" }
+    { "id": "label-1", "name": "Support", "color": "#3B82F6" },
+    { "id": "label-2", "name": "Project", "color": "#10B981" },
+    { "id": "label-3", "name": "Meetings", "color": "#F59E0B" },
+    { "id": "label-4", "name": "Admin", "color": "#8B5CF6" }
   ]
 }`;
 
@@ -122,7 +122,11 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
       return;
     }
     seen.add(key);
-    sanitized.push({ name, color: label.color });
+    sanitized.push({
+      id: typeof label.id === "string" ? label.id : crypto.randomUUID(),
+      name,
+      color: label.color,
+    });
   });
 
   return sanitized;
@@ -175,7 +179,7 @@ export function TimeTrackingConfigView({
   );
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
-  const [editLabelName, setEditLabelName] = useState<string | null>(null);
+  const [editLabelId, setEditLabelId] = useState<string | null>(null);
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     text: "",
     label: labels[0]?.name ?? "",
@@ -270,7 +274,7 @@ export function TimeTrackingConfigView({
   };
 
   const handleStartLabelEdit = (label: TimeTrackingLabel) => {
-    setEditLabelName(label.name);
+    setEditLabelId(label.id);
     setLabelForm({
       name: label.name,
       color: label.color,
@@ -293,29 +297,28 @@ export function TimeTrackingConfigView({
 
     const key = name.toLowerCase();
     const hasDuplicate = labels.some(
-      (label) =>
-        label.name.toLowerCase() === key && (editLabelName === null || label.name !== editLabelName),
+      (label) => label.name.toLowerCase() === key && (editLabelId === null || label.id !== editLabelId),
     );
     if (hasDuplicate) {
       setError("Label name must be unique.");
       return;
     }
 
-    if (editLabelName) {
-      const index = labels.findIndex((label) => label.name === editLabelName);
+    if (editLabelId) {
+      const index = labels.findIndex((label) => label.id === editLabelId);
       if (index === -1) {
         return;
       }
       const nextLabels = [...labels];
-      nextLabels[index] = { name, color: labelForm.color };
+      nextLabels[index] = { ...nextLabels[index], name, color: labelForm.color };
       onUpdateLabels(nextLabels);
       setStatus("Label updated.");
     } else {
-      onUpdateLabels([...labels, { name, color: labelForm.color }]);
+      onUpdateLabels([...labels, { id: crypto.randomUUID(), name, color: labelForm.color }]);
       setStatus("Label added.");
     }
 
-    setEditLabelName(null);
+    setEditLabelId(null);
     resetLabelForm();
   };
 
@@ -328,10 +331,10 @@ export function TimeTrackingConfigView({
     if (!window.confirm(confirmMessage)) {
       return;
     }
-    onUpdateLabels(labels.filter((item) => item.name !== label.name));
+    onUpdateLabels(labels.filter((item) => item.id !== label.id));
     setStatus("Label deleted.");
-    if (editLabelName === label.name) {
-      setEditLabelName(null);
+    if (editLabelId === label.id) {
+      setEditLabelId(null);
       resetLabelForm();
     }
   };
@@ -448,14 +451,14 @@ export function TimeTrackingConfigView({
               </Form.Group>
               <div className="d-flex gap-2 align-items-center">
                 <Button size="sm" onClick={handleSaveLabel}>
-                  {editLabelName ? "Save Label" : "Add Label"}
+                  {editLabelId ? "Save Label" : "Add Label"}
                 </Button>
-                {editLabelName && (
+                {editLabelId && (
                   <Button
                     size="sm"
                     variant="outline-secondary"
                     onClick={() => {
-                      setEditLabelName(null);
+                      setEditLabelId(null);
                       resetLabelForm();
                     }}
                   >
@@ -481,7 +484,7 @@ export function TimeTrackingConfigView({
                 ).length;
                 return (
                   <ListGroup.Item
-                    key={label.name}
+                    key={label.id}
                     className="d-flex flex-wrap gap-2 align-items-center"
                   >
                     <span
@@ -539,7 +542,8 @@ export function TimeTrackingConfigView({
               aria-label="Labels JSON"
             />
             <div className="small text-muted mt-2">
-              Format: <code>{`{"labels":[{"name":"Support","color":"#3B82F6"}]}`}</code>
+              Format:{" "}
+              <code>{`{"labels":[{"id":"label-1","name":"Support","color":"#3B82F6"}]}`}</code>
             </div>
             <details className="mt-3">
               <summary className="small text-muted">Example labels JSON</summary>

@@ -73,7 +73,7 @@ export function TemplateModal({
                     Select a label
                   </option>
                   {labels.map((label) => (
-                    <option key={label.name} value={label.name}>
+                    <option key={label.id} value={label.name}>
                       {label.name}
                     </option>
                   ))}

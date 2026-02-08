@@ -89,7 +89,7 @@ export function TaskEntryForm({
               <option value="">Add labels first</option>
             ) : (
               labels.map((item) => (
-                <option key={item.name} value={item.name}>
+                <option key={item.id} value={item.name}>
                   {item.name}
                 </option>
               ))

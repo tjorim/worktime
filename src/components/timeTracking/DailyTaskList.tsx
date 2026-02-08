@@ -142,7 +142,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
               <Form.Label>Label</Form.Label>
               <Form.Select value={editLabel} onChange={(event) => setEditLabel(event.target.value)}>
                 {labels.map((label) => (
-                  <option key={label.name} value={label.name}>
+                  <option key={label.id} value={label.name}>
                     {label.name}
                   </option>
                 ))}

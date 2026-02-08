@@ -1,7 +1,10 @@
 export type TimeTrackingLabel = {
+  id: string;
   name: string;
   color: string;
 };
+
+export type TimeTrackingLabelInput = Omit<TimeTrackingLabel, "id"> & { id?: string };
 
 const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
@@ -9,12 +12,18 @@ export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_RE.test(value);
 }
 
-export function isTimeTrackingLabel(value: unknown): value is TimeTrackingLabel {
+export function isTimeTrackingLabel(value: unknown): value is TimeTrackingLabelInput {
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const label = value as Record<string, unknown>;
-  return typeof label.name === "string" && label.name.trim().length > 0 && isHexColor(label.color);
+  const hasValidId = label.id === undefined || typeof label.id === "string";
+  return (
+    hasValidId &&
+    typeof label.name === "string" &&
+    label.name.trim().length > 0 &&
+    isHexColor(label.color)
+  );
 }
 
 export function normalizeLabelName(value: string): string {
