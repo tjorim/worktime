@@ -88,11 +88,11 @@ Content-Type: application/json
   - Invalid token or rate-limited: `401 Unauthorized` with generic message: `{"error": "Invalid or expired link token"}`.
   - Lockout/throttle: `429 Too Many Requests` with `{"error": "Too many attempts, try again later", "retry_after": 300}`.
   - Never reveal whether link_token exists, is expired, or has been used.
-- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Include:
-  - Failed token validation attempts (log token prefix only, e.g., first 4 chars).
+- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Raw tokens or token prefixes must never be logged. Instead, generate an opaque `token_id` (e.g., keyed HMAC-SHA-256 digest of the token) at token creation time and store it alongside the token hash. Use this `token_id` in all log entries and audit trails. Include:
+  - Failed token validation attempts (identified by `token_id` only).
   - Rate-limit triggers and lockout events.
   - Anomaly detection flags (e.g., multiple device_ids from same IP, rapid token rotation).
-- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
+- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. Log the invalidation event using the `token_id`, never the raw token or any prefix. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
 - **Implementation**: Apply rate-limiting as middleware before handler logic (e.g., Express rate-limiter, Cloudflare Workers rate-limit API, or custom Redis-based counter). Ensure limits are enforced atomically (check-and-increment) to prevent race conditions.
 
 **Token validation on authenticated endpoints:**
@@ -108,7 +108,7 @@ Content-Type: application/json
   - `payload` (JSON/blob)
   - `updated_at` (timestamp)
   - `version` (integer)
-  - `etag` (hash of payload + version)
+  - `etag` (lowercase hex SHA-256 digest of the serialized payload concatenated with the version that will be stored, i.e., the post-increment/final version: `etag = SHA256(json_payload + stored_version.toString()).hex()`. Compute the etag immediately before persisting, using the final version value, to avoid circular dependency between etag and version.)
 - Optional audit table for last N writes if rollback is desired.
 
 ## Conflict handling
@@ -159,7 +159,7 @@ Authorization: Bearer <access_token>
 **Audit and logging:**
 
 - Log each deletion request with timestamp, authenticated user/token ID, IP address, and result code.
-- Maintain an immutable compliance audit log (separate table) of deletions for regulatory verification (kept for ≥7 years or per jurisdiction requirements such as GDPR Article 30 or SOC 2).
+- Maintain an immutable compliance audit log (separate table) of deletion events for regulatory verification; retain the audit logs of deletion events for ≥7 years or per jurisdiction requirements such as GDPR Article 30 (processing records) or SOC 2, while ensuring user data itself is deleted promptly to satisfy GDPR Article 17 (erasure).
 - Do not log the actual deleted payload (privacy-first); only log that deletion occurred.
 - If using soft-deletes initially, transition to hard-delete after 30-day retention window.
 - **Log retention policy summary**:
@@ -177,7 +177,7 @@ Authorization: Bearer <access_token>
 
 **Transport security (required baseline):**
 
-- All API endpoints **must** use TLS 1.2+ (TLS 1.3 recommended) with HTTPS only; **reject plain HTTP connections entirely** (do not listen on port 80 or redirect HTTP→HTTPS; close/refuse HTTP sockets).
+- All API endpoints **must** use TLS 1.2+ (TLS 1.3 recommended) with HTTPS; API clients must use HTTPS URLs, and HSTS should enforce HTTPS after first visit. Optional HTTP→HTTPS redirects may be provided for user convenience, but plaintext API requests must not be served.
 - Do not serve unencrypted JSON payloads under any circumstance.
 - **HSTS header (required)**: Serve `Strict-Transport-Security` header on all HTTPS responses to enforce HTTPS-only access in browsers:
 

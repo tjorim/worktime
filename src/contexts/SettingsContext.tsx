@@ -197,7 +197,24 @@ const migrations: Record<number, Migration> = {
         ? (va.yearlyAmounts as Record<string, unknown>)
         : {};
 
-    const currentYear = String(new Date().getFullYear());
+    // Attempt to use a timestamp field (if present) to derive target year; otherwise fallback to best-effort currentYear.
+    // This minimizes time-dependent behavior during migration.
+    const yearFromTimestamp =
+      typeof state.timestamp === "number" ? new Date(state.timestamp).getFullYear() : undefined;
+    const yearFromLastUpdated =
+      typeof state.lastUpdated === "string" ? new Date(state.lastUpdated).getFullYear() : undefined;
+    const fallbackYear = new Date().getFullYear();
+
+    const targetYear = String(
+      yearFromTimestamp !== undefined && Number.isFinite(yearFromTimestamp) && yearFromTimestamp > 0
+        ? yearFromTimestamp
+        : yearFromLastUpdated !== undefined &&
+            Number.isFinite(yearFromLastUpdated) &&
+            yearFromLastUpdated > 0
+          ? yearFromLastUpdated
+          : fallbackYear,
+    );
+
     const yearlyAmounts: Record<string, number> = {};
     for (const [key, val] of Object.entries(existingYearly)) {
       if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
@@ -206,9 +223,9 @@ const migrations: Record<number, Migration> = {
         console.warn(`Migration v2: skipped invalid yearlyAmounts entry "${key}":`, val);
       }
     }
-    // Only seed from old amount if there's no entry for the current year yet
-    if (oldAmount > 0 && !(currentYear in yearlyAmounts)) {
-      yearlyAmounts[currentYear] = oldAmount;
+    // Only seed from old amount if there's no entry for the target year yet
+    if (oldAmount > 0 && !(targetYear in yearlyAmounts)) {
+      yearlyAmounts[targetYear] = oldAmount;
     }
 
     const { amount: _amount, yearlyAmounts: _existingYearly, ...restVa } = va;

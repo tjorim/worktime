@@ -4,8 +4,8 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { useState } from "react";
-import type { TimeTrackingLabel } from "./constants";
+import { useMemo, useState } from "react";
+import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type DailyTaskListProps = {
@@ -27,11 +27,17 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const [editLabel, setEditLabel] = useState("");
   const [editStart, setEditStart] = useState("");
   const [editStop, setEditStop] = useState("");
+  const [editError, setEditError] = useState("");
 
-  const colorByLabel = labels.reduce<Record<string, string>>((map, label) => {
-    map[label.name] = label.color;
-    return map;
-  }, {});
+  const colorByLabelId = useMemo(
+    () =>
+      labels.reduce<Record<string, string>>((map, label) => {
+        map[label.id] = label.color;
+        return map;
+      }, {}),
+    [labels],
+  );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   const editingTask = editingTaskId
     ? (tasks.find((task) => task.id === editingTaskId) ?? null)
@@ -43,6 +49,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     setEditLabel("");
     setEditStart("");
     setEditStop("");
+    setEditError("");
   };
 
   const openEditModal = (task: StoredTimeTrackingTask) => {
@@ -57,6 +64,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     if (!editingTask) {
       return;
     }
+    setEditError("");
     // Only include stop if the task originally had one OR user entered a stop time
     const payload: {
       id: string;
@@ -74,11 +82,17 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     if (editStop || editingTask.stopTime) {
       payload.stop = editStop || null;
     }
-    const didUpdate = await onUpdateTask(payload);
-    if (!didUpdate) {
-      return;
+    try {
+      const didUpdate = await onUpdateTask(payload);
+      if (!didUpdate) {
+        setEditError("Unable to update task. Please review the changes and try again.");
+        return;
+      }
+      closeEditModal();
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      setEditError("Failed to update task. Please try again.");
     }
-    closeEditModal();
   };
 
   if (tasks.length === 0) {
@@ -95,6 +109,8 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
         const startDisplay = dayjs(task.startTime).format("HH:mm");
         const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
         const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
+        const labelBackground = colorByLabelId[task.label] ?? "#6c757d";
+        const labelTextColor = getContrastingTextColor(labelBackground);
         return (
           <ListGroup.Item key={task.id}>
             <div className="d-flex justify-content-between align-items-start gap-2">
@@ -103,11 +119,11 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                 <span
                   className="time-tracking-label"
                   style={{
-                    backgroundColor: colorByLabel[task.label] ?? "#6c757d",
-                    color: "#000",
+                    backgroundColor: labelBackground,
+                    color: labelTextColor,
                   }}
                 >
-                  {task.label}
+                  {labelNameById[task.label] ?? "Unknown label"}
                 </span>
               </div>
               <div className="d-flex gap-2">
@@ -130,6 +146,11 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
           <Modal.Title>Edit Task</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {editError && (
+            <Alert variant="danger" aria-live="polite">
+              {editError}
+            </Alert>
+          )}
           <Form>
             <Form.Group controlId="editTaskName" className="mb-3">
               <Form.Label>Task</Form.Label>
@@ -142,7 +163,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
               <Form.Label>Label</Form.Label>
               <Form.Select value={editLabel} onChange={(event) => setEditLabel(event.target.value)}>
                 {labels.map((label) => (
-                  <option key={label.name} value={label.name}>
+                  <option key={label.id} value={label.id}>
                     {label.name}
                   </option>
                 ))}

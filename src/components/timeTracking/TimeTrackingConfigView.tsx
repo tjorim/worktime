@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { isTimeTrackingLabel, normalizeLabelName, type TimeTrackingLabel } from "./constants";
-import { TemplateModal } from "./TemplateModal";
-import { isValidRange } from "./timeUtils";
-import type { TimeTrackingTemplate } from "./types";
+import type { TimeTrackingLabel } from "./constants";
+import { LabelsPanel } from "./LabelsPanel";
+import { TemplatesPanel } from "./TemplatesPanel";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 
 type ImportPayload = {
   tasks?: unknown[];
@@ -16,20 +15,10 @@ type ImportPayload = {
   labels?: unknown[];
 };
 
-type LabelsImportPayload = {
-  labels?: unknown[];
-};
-
-type TemplateFormState = {
-  text: string;
-  label: string;
-  start: string;
-  stop: string;
-};
-
 type TimeTrackingConfigViewProps = {
   labels: TimeTrackingLabel[];
   templates: TimeTrackingTemplate[];
+  tasks: StoredTimeTrackingTask[];
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
@@ -37,15 +26,6 @@ type TimeTrackingConfigViewProps = {
   onExportData: (date: string) => void;
   onImportData: (payload: ImportPayload) => void;
 };
-
-const EXAMPLE_LABELS_JSON = `{
-  "labels": [
-    { "name": "Support", "color": "#3B82F6" },
-    { "name": "Project", "color": "#10B981" },
-    { "name": "Meetings", "color": "#F59E0B" },
-    { "name": "Admin", "color": "#8B5CF6" }
-  ]
-}`;
 
 function validateImportPayload(parsed: unknown): parsed is ImportPayload {
   if (!parsed || typeof parsed !== "object") {
@@ -75,40 +55,10 @@ function validateImportPayload(parsed: unknown): parsed is ImportPayload {
   return true;
 }
 
-function validateLabelsImportPayload(parsed: unknown): parsed is LabelsImportPayload {
-  if (!parsed || typeof parsed !== "object") {
-    return false;
-  }
-  const payload = parsed as Record<string, unknown>;
-  return Array.isArray(payload.labels);
-}
-
-function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
-  const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
-
-  labels.forEach((label) => {
-    if (!isTimeTrackingLabel(label)) {
-      return;
-    }
-    const name = normalizeLabelName(label.name);
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    sanitized.push({ name, color: label.color });
-  });
-
-  return sanitized;
-}
-
 export function TimeTrackingConfigView({
   labels,
   templates,
+  tasks,
   onAddTemplate,
   onUpdateTemplate,
   onDeleteTemplate,
@@ -118,57 +68,7 @@ export function TimeTrackingConfigView({
 }: TimeTrackingConfigViewProps) {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
-  const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
-  const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
-  const [templateForm, setTemplateForm] = useState<TemplateFormState>({
-    text: "",
-    label: labels[0]?.name ?? "",
-    start: "",
-    stop: "",
-  });
-
-  const resetTemplateForm = () =>
-    setTemplateForm({
-      text: "",
-      label: labels[0]?.name ?? "",
-      start: "",
-      stop: "",
-    });
-
-  // Sync labelsJson state when labels prop changes
-  useEffect(() => {
-    setLabelsJson(JSON.stringify({ labels }, null, 2));
-  }, [labels]);
-
-  const handleCopyLabels = async () => {
-    setError("");
-    try {
-      await navigator.clipboard.writeText(JSON.stringify({ labels }, null, 2));
-      setStatus("Copied labels JSON to clipboard.");
-    } catch {
-      setError("Copy failed. Please copy the JSON manually from the text area.");
-      setStatus("");
-    }
-  };
-
-  const handleApplyLabelsJson = () => {
-    setError("");
-    setStatus("");
-
-    try {
-      const parsed = JSON.parse(labelsJson);
-      if (!validateLabelsImportPayload(parsed)) {
-        setError("Invalid labels JSON. Expected an object with a labels array.");
-        return;
-      }
-
-      onUpdateLabels(sanitizeLabels(parsed.labels ?? []));
-      setStatus("Labels updated.");
-    } catch {
-      setError("Invalid labels JSON. Please check the format and try again.");
-    }
-  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -194,47 +94,6 @@ export function TimeTrackingConfigView({
     }
   };
 
-  const handleSaveTemplate = () => {
-    setError("");
-    setStatus("");
-    if (!templateForm.text || !templateForm.start || !templateForm.stop) {
-      setError("Fill all template fields.");
-      return;
-    }
-    if (!templateForm.label) {
-      setError("Please configure at least one label.");
-      return;
-    }
-    if (!isValidRange(templateForm.start, templateForm.stop)) {
-      setError("Template stop time must be after start time.");
-      return;
-    }
-    if (templateModalMode === "edit") {
-      if (editTemplateId === null) {
-        return;
-      }
-      onUpdateTemplate({ id: editTemplateId, template: templateForm });
-      setStatus("Template updated.");
-    } else {
-      onAddTemplate(templateForm);
-      setStatus("Template added.");
-    }
-    resetTemplateForm();
-    setEditTemplateId(null);
-    setTemplateModalMode(null);
-  };
-
-  const handleEditTemplate = (template: TimeTrackingTemplate) => {
-    setEditTemplateId(template.id);
-    setTemplateForm({
-      text: template.text,
-      label: template.label,
-      start: template.start,
-      stop: template.stop,
-    });
-    setTemplateModalMode("edit");
-  };
-
   return (
     <div className="d-flex flex-column gap-3">
       {error && (
@@ -248,82 +107,21 @@ export function TimeTrackingConfigView({
         </Alert>
       )}
 
-      <div className="border rounded p-3">
-        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-          <div className="fw-semibold">Labels (JSON)</div>
-          <div className="d-flex flex-wrap gap-2">
-            <Button size="sm" variant="outline-secondary" onClick={handleCopyLabels}>
-              Copy Labels JSON
-            </Button>
-            <Button size="sm" variant="outline-primary" onClick={handleApplyLabelsJson}>
-              Apply Labels JSON
-            </Button>
-          </div>
-        </div>
-        <Form.Control
-          as="textarea"
-          rows={8}
-          className="textarea-mono"
-          value={labelsJson}
-          onChange={(event) => setLabelsJson(event.target.value)}
-          aria-label="Labels JSON"
-        />
-        <div className="small text-muted mt-2">
-          Format: <code>{`{"labels":[{"name":"Support","color":"#3B82F6"}]}`}</code>
-        </div>
-        {labels.length === 0 && (
-          <div className="small text-muted mt-1">No labels configured yet.</div>
-        )}
-        <details className="mt-3">
-          <summary className="small text-muted">Example labels JSON</summary>
-          <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
-            <code>{EXAMPLE_LABELS_JSON}</code>
-          </pre>
-        </details>
-      </div>
+      <LabelsPanel
+        labels={labels}
+        templates={templates}
+        tasks={tasks}
+        onUpdateLabels={onUpdateLabels}
+      />
 
-      <div className="border rounded p-3">
-        <div className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Templates</h5>
-          <Button
-            size="sm"
-            onClick={() => {
-              resetTemplateForm();
-              setEditTemplateId(null);
-              setTemplateModalMode("create");
-            }}
-          >
-            Add Template
-          </Button>
-        </div>
-        {templates.length === 0 ? (
-          <div className="small text-muted mt-2">No templates yet.</div>
-        ) : (
-          <ListGroup className="mt-2">
-            {templates.map((template) => (
-              <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
-                <span className="me-auto">
-                  {template.text} ({template.start}-{template.stop}) [{template.label}]
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline-secondary"
-                  onClick={() => handleEditTemplate(template)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => onDeleteTemplate(template.id)}
-                >
-                  Delete
-                </Button>
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        )}
-      </div>
+      <TemplatesPanel
+        labels={labels}
+        templates={templates}
+        onAddTemplate={onAddTemplate}
+        onUpdateTemplate={onUpdateTemplate}
+        onDeleteTemplate={onDeleteTemplate}
+        onApplyTemplatesJson={(sanitized) => onImportData({ templates: sanitized })}
+      />
 
       <div className="d-flex flex-wrap gap-2">
         <Button
@@ -333,26 +131,17 @@ export function TimeTrackingConfigView({
         >
           Export Data
         </Button>
-        <Form.Label className="btn btn-outline-secondary btn-sm mb-0">
+        <Button size="sm" variant="outline-secondary" onClick={() => fileInputRef.current?.click()}>
           Import Data
-          <Form.Control type="file" accept="application/json" onChange={handleImport} hidden />
-        </Form.Label>
+        </Button>
+        <Form.Control
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleImport}
+          hidden
+        />
       </div>
-
-      <TemplateModal
-        show={templateModalMode !== null}
-        title={templateModalMode === "edit" ? "Edit Template" : "Add New Template"}
-        submitLabel={templateModalMode === "edit" ? "Save Changes" : "Save Template"}
-        labels={labels}
-        value={templateForm}
-        onChange={setTemplateForm}
-        onClose={() => {
-          resetTemplateForm();
-          setEditTemplateId(null);
-          setTemplateModalMode(null);
-        }}
-        onSubmit={handleSaveTemplate}
-      />
     </div>
   );
 }

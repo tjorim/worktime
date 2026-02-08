@@ -6,8 +6,8 @@ import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 
 const TEST_LABELS = [
-  { name: "Development", color: "#198754" },
-  { name: "Support", color: "#c82333" },
+  { id: "Development", name: "Development", color: "#198754" },
+  { id: "Support", name: "Support", color: "#c82333" },
 ];
 
 let mockTasks: StoredTimeTrackingTask[] = [];
@@ -185,7 +185,7 @@ describe("TimeTrackingView", () => {
     it("should have proper heading structure", () => {
       renderWithSettings();
 
-      const header = screen.getByText("Daily Time Tracking");
+      const header = screen.getByRole("heading", { name: /Daily Time Tracking/i });
       expect(header).toBeInTheDocument();
     });
   });

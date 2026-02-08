@@ -8,10 +8,11 @@ import InputGroup from "react-bootstrap/InputGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
-import type { TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
 
@@ -58,27 +59,29 @@ export function TimeTrackingDailyView({
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
   const [text, setText] = useState("");
-  const [selectedLabel, setSelectedLabel] = useState<string>(labels[0]?.name ?? "");
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
   const [start, setStart] = useState("");
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
   const dailyDate = dayjs(date);
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
-  const colorByLabel = useMemo(
+  const colorByLabelId = useMemo(
     () =>
       labels.reduce<Record<string, string>>((map, label) => {
-        map[label.name] = label.color;
+        map[label.id] = label.color;
         return map;
       }, {}),
     [labels],
   );
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   useEffect(() => {
-    const fallback = labels[0]?.name ?? "";
-    if (!labels.some((item) => item.name === selectedLabel)) {
+    const fallback = labels[0]?.id ?? "";
+    if (!selectedLabel || !labels.some((item) => item.id === selectedLabel)) {
       setSelectedLabel(fallback);
     }
   }, [labels, selectedLabel]);
@@ -111,6 +114,15 @@ export function TimeTrackingDailyView({
     const start = dayjs(runningTask.startTime);
     return formatDuration(liveTime.diff(start, "second"));
   }, [liveTime, runningTask]);
+
+  const runningLabelBackground = useMemo(
+    () => (runningTask ? (colorByLabelId[runningTask.label] ?? "#6c757d") : "#6c757d"),
+    [runningTask, colorByLabelId],
+  );
+  const runningLabelTextColor = useMemo(
+    () => getContrastingTextColor(runningLabelBackground),
+    [runningLabelBackground],
+  );
 
   const totalHours = useMemo(
     () =>
@@ -230,6 +242,10 @@ export function TimeTrackingDailyView({
       setError("Stop time must be after start time.");
       return;
     }
+    if (now.diff(startDayjs, "minute") < 1) {
+      setShowDiscardConfirm(true);
+      return;
+    }
     const stopTime = now.format("YYYY-MM-DDTHH:mm");
     onUpdateTaskTimes({
       id: runningTask.id,
@@ -238,13 +254,13 @@ export function TimeTrackingDailyView({
     });
   };
 
-  const handleUpdateTask = (payload: {
+  const handleUpdateTask = async (payload: {
     id: string;
     text: string;
     label: string;
     start: string;
     stop?: string | null;
-  }): boolean => {
+  }): Promise<boolean> => {
     setError("");
     setStatus("");
     if (!payload.text.trim() || !payload.label || !payload.start) {
@@ -258,7 +274,7 @@ export function TimeTrackingDailyView({
         return false;
       }
     }
-    if (!labels.some((item) => item.name === payload.label)) {
+    if (!labels.some((item) => item.id === payload.label)) {
       setError("Please select a valid label.");
       return false;
     }
@@ -296,6 +312,7 @@ export function TimeTrackingDailyView({
       newStartTime,
       newStopTime,
     });
+    setStatus("Task updated successfully.");
     return true;
   };
 
@@ -309,6 +326,13 @@ export function TimeTrackingDailyView({
     const template = templates.find((item) => item.id === selectedTemplateId);
     if (!template) {
       setError("Selected template was not found.");
+      return;
+    }
+
+    const templateLabelExists = labels.some((label) => label.id === template.label);
+    if (!templateLabelExists) {
+      setSelectedLabel("");
+      setError("Template label is no longer available. Please choose another label.");
       return;
     }
 
@@ -371,7 +395,8 @@ export function TimeTrackingDailyView({
                 <option value="">Choose a template</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
-                    {template.text} ({template.start}-{template.stop}) [{template.label}]
+                    {template.text} ({template.start}-{template.stop}) [
+                    {labelNameById[template.label] ?? "Unknown label"}]
                   </option>
                 ))}
               </Form.Select>
@@ -403,11 +428,11 @@ export function TimeTrackingDailyView({
                     <span
                       className="time-tracking-label"
                       style={{
-                        backgroundColor: colorByLabel[runningTask.label] ?? "#6c757d",
-                        color: "#000",
+                        backgroundColor: runningLabelBackground,
+                        color: runningLabelTextColor,
                       }}
                     >
-                      {runningTask.label}
+                      {labelNameById[runningTask.label] ?? "Unknown label"}
                     </span>
                   </div>
                   <div className="small text-muted">
@@ -461,6 +486,24 @@ export function TimeTrackingDailyView({
           onRemoveTask={onRemoveTask}
         />
       </Card.Body>
+
+      <ConfirmationDialog
+        isOpen={showDiscardConfirm}
+        title="Discard Task"
+        message="This task ran for less than 1 minute. Discard it instead of saving?"
+        confirmLabel="Discard"
+        variant="danger"
+        onConfirm={() => {
+          if (runningTask) {
+            onRemoveTask(runningTask.id);
+            setStatus("Task discarded.");
+          }
+          setShowDiscardConfirm(false);
+        }}
+        onCancel={() => {
+          setShowDiscardConfirm(false);
+        }}
+      />
     </Card>
   );
 }

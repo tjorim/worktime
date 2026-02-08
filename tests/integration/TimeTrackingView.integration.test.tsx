@@ -6,8 +6,8 @@ import { TimeTrackingView } from "../../src/components/timeTracking/TimeTracking
 import type { StoredTimeTrackingTask } from "../../src/components/timeTracking/types";
 
 const TEST_LABELS = [
-  { name: "Development", color: "#198754" },
-  { name: "Support", color: "#c82333" },
+  { id: "Development", name: "Development", color: "#198754" },
+  { id: "Support", name: "Support", color: "#c82333" },
 ];
 
 let mockTasks: StoredTimeTrackingTask[] = [];

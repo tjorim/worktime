@@ -177,8 +177,9 @@ function AppContent() {
       payload?.vacationAllowance &&
       typeof payload.vacationAllowance.yearlyAmounts === "object" &&
       payload.vacationAllowance.yearlyAmounts !== null &&
-      Object.values(payload.vacationAllowance.yearlyAmounts).some(
-        (v) => typeof v === "number" && v > 0,
+      Object.values(payload.vacationAllowance.yearlyAmounts).length > 0 &&
+      Object.values(payload.vacationAllowance.yearlyAmounts).every(
+        (v) => typeof v === "number" && Number.isFinite(v) && v >= 0,
       ) &&
       isValidVacationAllowanceUnit(payload.vacationAllowance.unit)
     ) {
@@ -192,12 +193,17 @@ function AppContent() {
       // Invalid vacation allowance - show error for debugging
       const { yearlyAmounts, unit } = payload.vacationAllowance;
       const errors: string[] = [];
+      const yearlyValues =
+        typeof yearlyAmounts === "object" && yearlyAmounts !== null
+          ? Object.values(yearlyAmounts)
+          : [];
       if (
         typeof yearlyAmounts !== "object" ||
         yearlyAmounts === null ||
-        !Object.values(yearlyAmounts).some((v) => typeof v === "number" && v > 0)
+        yearlyValues.length === 0 ||
+        !yearlyValues.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0)
       ) {
-        errors.push("yearlyAmounts must contain at least one positive number");
+        errors.push("yearlyAmounts must contain only non-negative numbers");
       }
       if (!isValidVacationAllowanceUnit(unit)) {
         errors.push(`unit must be "days" or "hours", got "${unit}"`);

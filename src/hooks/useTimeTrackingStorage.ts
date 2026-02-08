@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
-  isTimeTrackingLabel,
-  normalizeLabelName,
+  sanitizeLabels,
   type TimeTrackingLabel,
 } from "../components/timeTracking/constants";
 import { isValidRange, isValidTimeString } from "../components/timeTracking/timeUtils";
@@ -74,7 +73,7 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return {
     id: raw.id,
     text: raw.text,
-    label: raw.label as StoredTimeTrackingTask["label"],
+    label: raw.label,
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
@@ -92,29 +91,6 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
     isValidTimeString(v.stop) &&
     isValidRange(v.start, v.stop)
   );
-}
-
-function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
-  const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
-
-  labels.forEach((value) => {
-    if (!isTimeTrackingLabel(value)) {
-      return;
-    }
-    const name = normalizeLabelName(value.name);
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    sanitized.push({ name, color: value.color });
-  });
-
-  return sanitized;
 }
 
 export function useTimeTrackingStorage() {
@@ -152,14 +128,36 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
-      const hasValidRunningTask = rawTasksRef.current.some(
-        (task) => isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
-      );
-      if (payload.stopTime === undefined && hasValidRunningTask) {
-        return Promise.resolve(false);
-      }
-      setRawTasks((prev) => [...prev, payload]);
-      return Promise.resolve(true);
+      // We resolve the Promise inside the setState updater to atomically check
+      // current state and signal success/failure. React calls the updater
+      // synchronously, so resolve() fires before microtask handlers run.
+      // The Promise resolves before the state update is committed to the DOM.
+      return new Promise((resolve) => {
+        setRawTasks((prev) => {
+          // Check if a running task already exists in the current state
+          const hasValidRunningTask = prev.some(
+            (task) =>
+              isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
+          );
+          // If user is trying to add an unstopped task and a running task exists, reject
+          if (payload.stopTime === undefined && hasValidRunningTask) {
+            resolve(false);
+            return prev; // No state change
+          }
+          // Otherwise append the new task
+          resolve(true);
+          return [
+            ...prev,
+            {
+              id: payload.id,
+              text: payload.text,
+              label: payload.label,
+              startTime: payload.startTime,
+              stopTime: payload.stopTime ?? null,
+            },
+          ];
+        });
+      });
     },
     [setRawTasks],
   );

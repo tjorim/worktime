@@ -93,6 +93,7 @@ export function TimeTrackingView() {
       {viewMode === "weekly" && (
         <TimeTrackingWeeklyView
           tasks={tasks}
+          labels={labels}
           selectedDate={selectedWeeklyDate}
           onSelectedDateChange={setSelectedWeeklyDate}
           weeklyTargetHours={weeklyTargetHours}
@@ -106,6 +107,7 @@ export function TimeTrackingView() {
             <TimeTrackingConfigView
               labels={labels}
               templates={templates}
+              tasks={tasks}
               onAddTemplate={addTemplate}
               onUpdateTemplate={updateTemplate}
               onDeleteTemplate={deleteTemplate}

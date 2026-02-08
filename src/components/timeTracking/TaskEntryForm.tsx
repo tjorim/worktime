@@ -85,15 +85,14 @@ export function TaskEntryForm({
             aria-required="true"
             disabled={labels.length === 0}
           >
-            {labels.length === 0 ? (
-              <option value="">Add labels first</option>
-            ) : (
-              labels.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))
-            )}
+            <option value="" disabled>
+              {labels.length === 0 ? "Add labels first" : "Choose a label"}
+            </option>
+            {labels.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </Form.Select>
         </Form.Group>
       </Col>

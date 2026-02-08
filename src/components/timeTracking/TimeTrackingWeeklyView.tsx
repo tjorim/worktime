@@ -5,6 +5,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type OverviewRow = {
@@ -17,6 +18,7 @@ type Summary = Record<string, number>;
 
 type TimeTrackingWeeklyViewProps = {
   tasks: StoredTimeTrackingTask[];
+  labels: TimeTrackingLabel[];
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;
@@ -41,6 +43,7 @@ function buildWeekDays(startIso: string) {
 
 export function TimeTrackingWeeklyView({
   tasks,
+  labels,
   selectedDate,
   onSelectedDateChange,
   weeklyTargetHours,
@@ -54,6 +57,8 @@ export function TimeTrackingWeeklyView({
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+
   const rows = useMemo<OverviewRow[]>(
     () =>
       tasks
@@ -64,16 +69,17 @@ export function TimeTrackingWeeklyView({
         .map((task) => {
           const startDayjs = dayjs(task.startTime);
           const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
+          const labelName = labelNameById[task.label] ?? "Unknown label";
           return {
             date: task.startTime.substring(0, 10),
-            label: task.label,
+            label: labelName,
             hours: Math.max(stopDayjs.diff(startDayjs, "hour", true), 0),
           };
         }),
-    [tasks, start, end],
+    [tasks, start, end, labelNameById],
   );
 
-  const { summary, dailyTotals, labels, weekTotal, weekDays } = useMemo(() => {
+  const { summary, dailyTotals, labelNames, weekTotal, weekDays } = useMemo(() => {
     const totals = rows.reduce<Summary>((acc, row) => {
       acc[row.label] = (acc[row.label] ?? 0) + row.hours;
       return acc;
@@ -96,7 +102,7 @@ export function TimeTrackingWeeklyView({
     return {
       summary: totals,
       dailyTotals: dayTotals,
-      labels: labelList,
+      labelNames: labelList,
       weekTotal: weekSum,
       weekDays: days,
     };
@@ -138,7 +144,7 @@ export function TimeTrackingWeeklyView({
             <thead>
               <tr>
                 <th scope="col">Day</th>
-                {labels.map((label) => (
+                {labelNames.map((label) => (
                   <th key={label} scope="col">
                     {label}
                   </th>
@@ -149,11 +155,14 @@ export function TimeTrackingWeeklyView({
             <tbody>
               {weekDays.map((day) => {
                 const daySummary = dailyTotals[day.iso] ?? {};
-                const dayTotal = labels.reduce((sum, label) => sum + (daySummary[label] ?? 0), 0);
+                const dayTotal = labelNames.reduce(
+                  (sum, label) => sum + (daySummary[label] ?? 0),
+                  0,
+                );
                 return (
                   <tr key={day.iso}>
                     <th scope="row">{day.label}</th>
-                    {labels.map((label) => (
+                    {labelNames.map((label) => (
                       <td key={`${day.iso}-${label}`}>{(daySummary[label] ?? 0).toFixed(2)}</td>
                     ))}
                     <td className="fw-semibold">{dayTotal.toFixed(2)}</td>
