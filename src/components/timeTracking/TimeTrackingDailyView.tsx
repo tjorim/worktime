@@ -231,7 +231,15 @@ export function TimeTrackingDailyView({
       return;
     }
     if (now.diff(startDayjs, "minute") < 1) {
-      setError("Task was not saved. Duration must be at least 1 minute.");
+      const shouldDiscard = window.confirm(
+        "This task ran for less than 1 minute. Discard it instead of saving?",
+      );
+      if (shouldDiscard) {
+        onRemoveTask(runningTask.id);
+        setStatus("Task discarded.");
+      } else {
+        setError("Task was not saved. Duration must be at least 1 minute.");
+      }
       return;
     }
     const stopTime = now.format("YYYY-MM-DDTHH:mm");
