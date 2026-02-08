@@ -339,57 +339,59 @@ export function TimeTrackingConfigView({
       <div className="border rounded p-3">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h5 className="mb-0">Labels</h5>
-          {editLabelName && (
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              onClick={() => {
-                setEditLabelName(null);
-                resetLabelForm();
-              }}
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
         <div className="d-flex flex-column gap-3">
-          <Form className="d-flex flex-column gap-3">
-            <Form.Group controlId="timeTrackingLabelName">
-              <Form.Label>Label name</Form.Label>
-              <Form.Control
-                value={labelForm.name}
-                onChange={(event) => setLabelForm({ ...labelForm, name: event.target.value })}
-                placeholder="e.g., Support"
-              />
-            </Form.Group>
-            <Form.Group controlId="timeTrackingLabelColor">
-              <Form.Label>Label color</Form.Label>
-              <div className="d-flex flex-wrap gap-2 align-items-center">
+          <Form>
+            <div className="d-flex flex-wrap gap-2 align-items-end">
+              <Form.Group controlId="timeTrackingLabelName" className="flex-grow-1">
+                <Form.Label className="mb-1">Label name</Form.Label>
                 <Form.Control
-                  type="color"
-                  value={labelForm.color}
-                  onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
-                  title="Select label color"
-                  className="form-control-color"
+                  value={labelForm.name}
+                  onChange={(event) => setLabelForm({ ...labelForm, name: event.target.value })}
+                  placeholder="e.g., Support"
                 />
-                <Form.Control
-                  value={labelForm.color}
-                  onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
-                  placeholder="#3B82F6"
-                />
-              </div>
-            </Form.Group>
-            <div className="d-flex flex-wrap gap-2 align-items-center">
-              <Button size="sm" onClick={handleSaveLabel}>
-                {editLabelName ? "Save Label" : "Add Label"}
-              </Button>
-              {labels.length > 0 && (
-                <div className="small text-muted">
-                  {labels.length} label{labels.length === 1 ? "" : "s"} configured.
+              </Form.Group>
+              <Form.Group controlId="timeTrackingLabelColor">
+                <Form.Label className="mb-1">Label color</Form.Label>
+                <div className="d-flex gap-2 align-items-center">
+                  <Form.Control
+                    type="color"
+                    value={labelForm.color}
+                    onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
+                    title="Select label color"
+                    className="form-control-color"
+                  />
+                  <Form.Control
+                    value={labelForm.color}
+                    onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
+                    placeholder="#3B82F6"
+                  />
                 </div>
-              )}
+              </Form.Group>
+              <div className="d-flex gap-2 align-items-center">
+                <Button size="sm" onClick={handleSaveLabel}>
+                  {editLabelName ? "Save Label" : "Add Label"}
+                </Button>
+                {editLabelName && (
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    onClick={() => {
+                      setEditLabelName(null);
+                      resetLabelForm();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
             </div>
           </Form>
+          {labels.length > 0 && (
+            <div className="small text-muted">
+              {labels.length} label{labels.length === 1 ? "" : "s"} configured.
+            </div>
+          )}
 
           {labels.length === 0 ? (
             <div className="small text-muted">No labels configured yet.</div>
