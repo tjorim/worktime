@@ -5,7 +5,12 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { isTimeTrackingLabel, normalizeLabelName, type TimeTrackingLabel } from "./constants";
+import {
+  isHexColor,
+  isTimeTrackingLabel,
+  normalizeLabelName,
+  type TimeTrackingLabel,
+} from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import { isValidRange } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
@@ -25,6 +30,11 @@ type TemplateFormState = {
   label: string;
   start: string;
   stop: string;
+};
+
+type LabelFormState = {
+  name: string;
+  color: string;
 };
 
 type TimeTrackingConfigViewProps = {
@@ -121,11 +131,16 @@ export function TimeTrackingConfigView({
   const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
+  const [editLabelName, setEditLabelName] = useState<string | null>(null);
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     text: "",
     label: labels[0]?.name ?? "",
     start: "",
     stop: "",
+  });
+  const [labelForm, setLabelForm] = useState<LabelFormState>({
+    name: "",
+    color: labels[0]?.color ?? "#3B82F6",
   });
 
   const resetTemplateForm = () =>
@@ -134,6 +149,12 @@ export function TimeTrackingConfigView({
       label: labels[0]?.name ?? "",
       start: "",
       stop: "",
+    });
+
+  const resetLabelForm = () =>
+    setLabelForm({
+      name: "",
+      color: labels[0]?.color ?? "#3B82F6",
     });
 
   // Sync labelsJson state when labels prop changes
@@ -167,6 +188,73 @@ export function TimeTrackingConfigView({
       setStatus("Labels updated.");
     } catch {
       setError("Invalid labels JSON. Please check the format and try again.");
+    }
+  };
+
+  const handleStartLabelEdit = (label: TimeTrackingLabel) => {
+    setEditLabelName(label.name);
+    setLabelForm({
+      name: label.name,
+      color: label.color,
+    });
+  };
+
+  const handleSaveLabel = () => {
+    setError("");
+    setStatus("");
+
+    const name = normalizeLabelName(labelForm.name);
+    if (!name) {
+      setError("Label name is required.");
+      return;
+    }
+    if (!isHexColor(labelForm.color)) {
+      setError("Label color must be a valid hex value like #3B82F6.");
+      return;
+    }
+
+    const key = name.toLowerCase();
+    const hasDuplicate = labels.some(
+      (label) =>
+        label.name.toLowerCase() === key && (editLabelName === null || label.name !== editLabelName),
+    );
+    if (hasDuplicate) {
+      setError("Label name must be unique.");
+      return;
+    }
+
+    if (editLabelName) {
+      const index = labels.findIndex((label) => label.name === editLabelName);
+      if (index === -1) {
+        return;
+      }
+      const nextLabels = [...labels];
+      nextLabels[index] = { name, color: labelForm.color };
+      onUpdateLabels(nextLabels);
+      setStatus("Label updated.");
+    } else {
+      onUpdateLabels([...labels, { name, color: labelForm.color }]);
+      setStatus("Label added.");
+    }
+
+    setEditLabelName(null);
+    resetLabelForm();
+  };
+
+  const handleDeleteLabel = (label: TimeTrackingLabel) => {
+    const usedByTemplates = templates.filter((template) => template.label === label.name).length;
+    const confirmMessage =
+      usedByTemplates > 0
+        ? `Delete "${label.name}"? ${usedByTemplates} template(s) use this label.`
+        : `Delete "${label.name}"?`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    onUpdateLabels(labels.filter((item) => item.name !== label.name));
+    setStatus("Label deleted.");
+    if (editLabelName === label.name) {
+      setEditLabelName(null);
+      resetLabelForm();
     }
   };
 
@@ -249,37 +337,138 @@ export function TimeTrackingConfigView({
       )}
 
       <div className="border rounded p-3">
-        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-          <div className="fw-semibold">Labels (JSON)</div>
-          <div className="d-flex flex-wrap gap-2">
-            <Button size="sm" variant="outline-secondary" onClick={handleCopyLabels}>
-              Copy Labels JSON
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <h5 className="mb-0">Labels</h5>
+          {editLabelName && (
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              onClick={() => {
+                setEditLabelName(null);
+                resetLabelForm();
+              }}
+            >
+              Cancel Edit
             </Button>
-            <Button size="sm" variant="outline-primary" onClick={handleApplyLabelsJson}>
-              Apply Labels JSON
-            </Button>
-          </div>
+          )}
         </div>
-        <Form.Control
-          as="textarea"
-          rows={8}
-          className="textarea-mono"
-          value={labelsJson}
-          onChange={(event) => setLabelsJson(event.target.value)}
-          aria-label="Labels JSON"
-        />
-        <div className="small text-muted mt-2">
-          Format: <code>{`{"labels":[{"name":"Support","color":"#3B82F6"}]}`}</code>
+        <div className="d-flex flex-column gap-3">
+          <Form className="d-flex flex-column gap-3">
+            <Form.Group controlId="timeTrackingLabelName">
+              <Form.Label>Label name</Form.Label>
+              <Form.Control
+                value={labelForm.name}
+                onChange={(event) => setLabelForm({ ...labelForm, name: event.target.value })}
+                placeholder="e.g., Support"
+              />
+            </Form.Group>
+            <Form.Group controlId="timeTrackingLabelColor">
+              <Form.Label>Label color</Form.Label>
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                <Form.Control
+                  type="color"
+                  value={labelForm.color}
+                  onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
+                  title="Select label color"
+                  className="form-control-color"
+                />
+                <Form.Control
+                  value={labelForm.color}
+                  onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
+                  placeholder="#3B82F6"
+                />
+              </div>
+            </Form.Group>
+            <div className="d-flex flex-wrap gap-2 align-items-center">
+              <Button size="sm" onClick={handleSaveLabel}>
+                {editLabelName ? "Save Label" : "Add Label"}
+              </Button>
+              {labels.length > 0 && (
+                <div className="small text-muted">
+                  {labels.length} label{labels.length === 1 ? "" : "s"} configured.
+                </div>
+              )}
+            </div>
+          </Form>
+
+          {labels.length === 0 ? (
+            <div className="small text-muted">No labels configured yet.</div>
+          ) : (
+            <ListGroup>
+              {labels.map((label) => {
+                const usedByTemplates = templates.filter(
+                  (template) => template.label === label.name,
+                ).length;
+                return (
+                  <ListGroup.Item
+                    key={label.name}
+                    className="d-flex flex-wrap gap-2 align-items-center"
+                  >
+                    <span
+                      className="time-tracking-label"
+                      style={{ backgroundColor: label.color }}
+                    >
+                      {label.name}
+                    </span>
+                    {usedByTemplates > 0 && (
+                      <span className="small text-muted">
+                        Used by {usedByTemplates} template{usedByTemplates === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    <div className="ms-auto d-flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => handleStartLabelEdit(label)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        onClick={() => handleDeleteLabel(label)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </ListGroup.Item>
+                );
+              })}
+            </ListGroup>
+          )}
+
+          <details>
+            <summary className="small text-muted">Raw labels JSON (import/export)</summary>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 my-2">
+              <div className="fw-semibold">Labels JSON</div>
+              <div className="d-flex flex-wrap gap-2">
+                <Button size="sm" variant="outline-secondary" onClick={handleCopyLabels}>
+                  Copy Labels JSON
+                </Button>
+                <Button size="sm" variant="outline-primary" onClick={handleApplyLabelsJson}>
+                  Apply Labels JSON
+                </Button>
+              </div>
+            </div>
+            <Form.Control
+              as="textarea"
+              rows={8}
+              className="textarea-mono"
+              value={labelsJson}
+              onChange={(event) => setLabelsJson(event.target.value)}
+              aria-label="Labels JSON"
+            />
+            <div className="small text-muted mt-2">
+              Format: <code>{`{"labels":[{"name":"Support","color":"#3B82F6"}]}`}</code>
+            </div>
+            <details className="mt-3">
+              <summary className="small text-muted">Example labels JSON</summary>
+              <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
+                <code>{EXAMPLE_LABELS_JSON}</code>
+              </pre>
+            </details>
+          </details>
         </div>
-        {labels.length === 0 && (
-          <div className="small text-muted mt-1">No labels configured yet.</div>
-        )}
-        <details className="mt-3">
-          <summary className="small text-muted">Example labels JSON</summary>
-          <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
-            <code>{EXAMPLE_LABELS_JSON}</code>
-          </pre>
-        </details>
       </div>
 
       <div className="border rounded p-3">
