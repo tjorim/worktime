@@ -11,6 +11,7 @@ import {
   normalizeLabelName,
   type TimeTrackingLabel,
 } from "./constants";
+import { LabelModal } from "./LabelModal";
 import { TemplateModal } from "./TemplateModal";
 import { isValidRange } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
@@ -179,6 +180,7 @@ export function TimeTrackingConfigView({
     JSON.stringify({ templates }, null, 2),
   );
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
+  const [labelModalMode, setLabelModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
   const labelNameById = useMemo(
@@ -290,6 +292,7 @@ export function TimeTrackingConfigView({
       name: label.name,
       color: label.color,
     });
+    setLabelModalMode("edit");
   };
 
   const handleSaveLabel = () => {
@@ -331,6 +334,7 @@ export function TimeTrackingConfigView({
 
     setEditLabelId(null);
     resetLabelForm();
+    setLabelModalMode(null);
   };
 
   const handleDeleteLabel = (label: TimeTrackingLabel) => {
@@ -347,6 +351,7 @@ export function TimeTrackingConfigView({
     if (editLabelId === label.id) {
       setEditLabelId(null);
       resetLabelForm();
+      setLabelModalMode(null);
     }
   };
 
@@ -434,54 +439,18 @@ export function TimeTrackingConfigView({
       <div className="border rounded p-3">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <h5 className="mb-0">Labels</h5>
+          <Button
+            size="sm"
+            onClick={() => {
+              resetLabelForm();
+              setEditLabelId(null);
+              setLabelModalMode("create");
+            }}
+          >
+            Add Label
+          </Button>
         </div>
         <div className="d-flex flex-column gap-3">
-          <Form>
-            <div className="d-flex flex-wrap gap-2 align-items-end">
-              <Form.Group controlId="timeTrackingLabelName" className="flex-grow-1">
-                <Form.Label className="mb-1">Label name</Form.Label>
-                <Form.Control
-                  value={labelForm.name}
-                  onChange={(event) => setLabelForm({ ...labelForm, name: event.target.value })}
-                  placeholder="e.g., Support"
-                />
-              </Form.Group>
-              <Form.Group controlId="timeTrackingLabelColor">
-                <Form.Label className="mb-1">Label color</Form.Label>
-                <div className="d-flex gap-2 align-items-center">
-                  <Form.Control
-                    type="color"
-                    value={labelForm.color}
-                    onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
-                    title="Select label color"
-                    className="form-control-color"
-                  />
-                  <Form.Control
-                    value={labelForm.color}
-                    onChange={(event) => setLabelForm({ ...labelForm, color: event.target.value })}
-                    placeholder="#3B82F6"
-                  />
-                </div>
-              </Form.Group>
-              <div className="d-flex gap-2 align-items-center">
-                <Button size="sm" onClick={handleSaveLabel}>
-                  {editLabelId ? "Save Label" : "Add Label"}
-                </Button>
-                {editLabelId && (
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    onClick={() => {
-                      setEditLabelId(null);
-                      resetLabelForm();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Form>
           {labels.length > 0 && (
             <div className="small text-muted">
               {labels.length} label{labels.length === 1 ? "" : "s"} configured.
@@ -668,6 +637,20 @@ export function TimeTrackingConfigView({
           setTemplateModalMode(null);
         }}
         onSubmit={handleSaveTemplate}
+      />
+
+      <LabelModal
+        show={labelModalMode !== null}
+        title={labelModalMode === "edit" ? "Edit Label" : "Add New Label"}
+        submitLabel={labelModalMode === "edit" ? "Save Changes" : "Save Label"}
+        value={labelForm}
+        onChange={setLabelForm}
+        onClose={() => {
+          resetLabelForm();
+          setEditLabelId(null);
+          setLabelModalMode(null);
+        }}
+        onSubmit={handleSaveLabel}
       />
     </div>
   );
