@@ -5,7 +5,10 @@ import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import type { RefObject } from "react";
 import { dayjs } from "../../utils/dateTimeUtils";
-import type { VacationAllowanceUnit } from "../../utils/vacationCalculations";
+import {
+  isValidVacationAllowanceUnit,
+  type VacationAllowanceUnit,
+} from "../../utils/vacationCalculations";
 
 interface Step5TimeOffSetupProps {
   isEnabled: boolean;
@@ -19,11 +22,6 @@ interface Step5TimeOffSetupProps {
   onNext: () => void;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
-
-// Type guard to validate VacationAllowanceUnit values
-const isValidVacationAllowanceUnit = (value: unknown): value is VacationAllowanceUnit => {
-  return typeof value === "string" && (value === "days" || value === "hours");
-};
 
 export function Step5TimeOffSetup({
   isEnabled,

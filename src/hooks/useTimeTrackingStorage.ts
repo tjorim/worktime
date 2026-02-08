@@ -233,11 +233,11 @@ export function useTimeTrackingStorage() {
     anchor.href = url;
     anchor.download = `worktime-time-tracking-${date}.json`;
     anchor.click();
-    // Delay revocation to ensure the browser has time to start the download
-    // before the object URL becomes invalid
-    setTimeout(() => {
+    // Revoke after the browser has started the download. A single rAF defers
+    // to the next paint, which is sufficient for the navigation to begin.
+    requestAnimationFrame(() => {
       URL.revokeObjectURL(url);
-    }, 100);
+    });
   }, []);
 
   const importData = useCallback(

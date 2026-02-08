@@ -10,6 +10,46 @@ export interface VacationAllowanceSettings {
   hoursPerDay: number;
 }
 
+export function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {
+  return typeof value === "string" && (value === "days" || value === "hours");
+}
+
+/**
+ * Validate a vacation allowance payload from untrusted sources (e.g. wizard completion).
+ * Returns `{ valid: true }` or `{ valid: false, errors: string[] }`.
+ */
+export function validateVacationAllowance(allowance: unknown): {
+  valid: boolean;
+  errors: string[];
+} {
+  if (typeof allowance !== "object" || allowance === null) {
+    return { valid: false, errors: ["vacationAllowance must be an object"] };
+  }
+
+  const { yearlyAmounts, unit } = allowance as Record<string, unknown>;
+  const errors: string[] = [];
+
+  const yearlyValues =
+    typeof yearlyAmounts === "object" && yearlyAmounts !== null
+      ? Object.values(yearlyAmounts as Record<string, unknown>)
+      : [];
+
+  if (
+    typeof yearlyAmounts !== "object" ||
+    yearlyAmounts === null ||
+    yearlyValues.length === 0 ||
+    !yearlyValues.every((v) => typeof v === "number" && Number.isFinite(v) && (v as number) >= 0)
+  ) {
+    errors.push("yearlyAmounts must contain only non-negative numbers");
+  }
+
+  if (!isValidVacationAllowanceUnit(unit)) {
+    errors.push(`unit must be "days" or "hours", got "${String(unit)}"`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 export type EventTypeKey =
   | "holiday"
   | "business"

@@ -49,7 +49,7 @@ function validateVacationAmount(amount: string) {
   };
 }
 
-type WizardCompletionPayload = {
+export type WizardCompletionPayload = {
   vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;

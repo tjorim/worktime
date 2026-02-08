@@ -5,24 +5,14 @@ import { CurrentStatus } from "./components/CurrentStatus";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
-import { WelcomeWizard } from "./components/WelcomeWizard";
+import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
-import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
-
-type WizardCompletionPayload = {
-  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
-  enableTimeOff?: boolean;
-  enableTimeTracking?: boolean;
-};
-
-function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {
-  return typeof value === "string" && (value === "days" || value === "hours");
-}
+import { validateVacationAllowance } from "./utils/vacationCalculations";
 
 /**
  * The main application component for team selection and shift management.
@@ -174,41 +164,15 @@ function AppContent() {
       }
     } else if (
       (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
-      payload?.vacationAllowance &&
-      typeof payload.vacationAllowance.yearlyAmounts === "object" &&
-      payload.vacationAllowance.yearlyAmounts !== null &&
-      Object.values(payload.vacationAllowance.yearlyAmounts).length > 0 &&
-      Object.values(payload.vacationAllowance.yearlyAmounts).every(
-        (v) => typeof v === "number" && Number.isFinite(v) && v >= 0,
-      ) &&
-      isValidVacationAllowanceUnit(payload.vacationAllowance.unit)
-    ) {
-      // Persist vacation allowance changes in change-team or change-schedule modes
-      updateVacationAllowance(payload.vacationAllowance);
-      showSuccess("Vacation allowance updated successfully.", "✅");
-    } else if (
-      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
       payload?.vacationAllowance
     ) {
-      // Invalid vacation allowance - show error for debugging
-      const { yearlyAmounts, unit } = payload.vacationAllowance;
-      const errors: string[] = [];
-      const yearlyValues =
-        typeof yearlyAmounts === "object" && yearlyAmounts !== null
-          ? Object.values(yearlyAmounts)
-          : [];
-      if (
-        typeof yearlyAmounts !== "object" ||
-        yearlyAmounts === null ||
-        yearlyValues.length === 0 ||
-        !yearlyValues.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0)
-      ) {
-        errors.push("yearlyAmounts must contain only non-negative numbers");
+      const result = validateVacationAllowance(payload.vacationAllowance);
+      if (result.valid) {
+        updateVacationAllowance(payload.vacationAllowance);
+        showSuccess("Vacation allowance updated successfully.", "✅");
+      } else {
+        showError(`Vacation allowance update failed: ${result.errors.join(", ")}`, "⚠️");
       }
-      if (!isValidVacationAllowanceUnit(unit)) {
-        errors.push(`unit must be "days" or "hours", got "${unit}"`);
-      }
-      showError(`Vacation allowance update failed: ${errors.join(", ")}`, "⚠️");
     }
     setShowTeamModal(false);
   };

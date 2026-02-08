@@ -167,7 +167,7 @@ describe("TimeTrackingDailyView", () => {
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
 
       expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
-        /This task started on 2025-01-01\. Please update the stop time manually\./i,
+        /This task started on 2025-01-01 and spans midnight/i,
       );
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
     });

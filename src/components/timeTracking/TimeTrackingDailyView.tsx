@@ -235,7 +235,9 @@ export function TimeTrackingDailyView({
     const startDate = startDayjs.format("YYYY-MM-DD");
     const now = dayjs();
     if (!now.isSame(startDayjs, "day")) {
-      setError(`This task started on ${startDate}. Please update the stop time manually.`);
+      setError(
+        `This task started on ${startDate} and spans midnight. Time tracking only supports same-day tasks. Navigate to ${startDate} and use the Edit button on the task to set a stop time.`,
+      );
       return;
     }
     if (now.isBefore(startDayjs)) {
