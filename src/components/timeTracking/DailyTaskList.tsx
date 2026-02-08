@@ -14,7 +14,7 @@ type DailyTaskListProps = {
   onUpdateTask: (payload: {
     id: string;
     text: string;
-    labelId: string;
+    label: string;
     start: string;
     stop?: string | null;
   }) => Promise<boolean> | boolean;
@@ -24,7 +24,7 @@ type DailyTaskListProps = {
 export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const [editLabelId, setEditLabelId] = useState("");
+  const [editLabel, setEditLabel] = useState("");
   const [editStart, setEditStart] = useState("");
   const [editStop, setEditStop] = useState("");
 
@@ -44,7 +44,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const closeEditModal = () => {
     setEditingTaskId(null);
     setEditText("");
-    setEditLabelId("");
+    setEditLabel("");
     setEditStart("");
     setEditStop("");
   };
@@ -52,7 +52,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   const openEditModal = (task: StoredTimeTrackingTask) => {
     setEditingTaskId(task.id);
     setEditText(task.text);
-    setEditLabelId(task.labelId);
+    setEditLabel(task.label);
     setEditStart(dayjs(task.startTime).format("HH:mm"));
     setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
   };
@@ -65,13 +65,13 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     const payload: {
       id: string;
       text: string;
-      labelId: string;
+      label: string;
       start: string;
       stop?: string | null;
     } = {
       id: editingTask.id,
       text: editText,
-      labelId: editLabelId,
+      label: editLabel,
       start: editStart,
     };
     // Include stop if user provided a value (stopped task) or if task was originally stopped
@@ -107,11 +107,11 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                 <span
                   className="time-tracking-label"
                   style={{
-                    backgroundColor: colorByLabelId[task.labelId] ?? "#6c757d",
+                    backgroundColor: colorByLabelId[task.label] ?? "#6c757d",
                     color: "#000",
                   }}
                 >
-                  {labelNameById[task.labelId] ?? "Unknown label"}
+                  {labelNameById[task.label] ?? "Unknown label"}
                 </span>
               </div>
               <div className="d-flex gap-2">
@@ -145,8 +145,8 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
             <Form.Group controlId="editTaskLabel" className="mb-3">
               <Form.Label>Label</Form.Label>
               <Form.Select
-                value={editLabelId}
-                onChange={(event) => setEditLabelId(event.target.value)}
+                value={editLabel}
+                onChange={(event) => setEditLabel(event.target.value)}
               >
                 {labels.map((label) => (
                   <option key={label.id} value={label.id}>

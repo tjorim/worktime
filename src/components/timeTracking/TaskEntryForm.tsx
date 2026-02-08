@@ -11,8 +11,8 @@ type TaskEntryFormProps = {
   labels: TimeTrackingLabel[];
   text: string;
   onTextChange: (text: string) => void;
-  labelId: string;
-  onLabelChange: (labelId: string) => void;
+  label: string;
+  onLabelChange: (label: string) => void;
   start: string;
   onStartChange: (start: string) => void;
   stop: string;
@@ -29,7 +29,7 @@ export function TaskEntryForm({
   labels,
   text,
   onTextChange,
-  labelId,
+  label,
   onLabelChange,
   start,
   onStartChange,
@@ -79,8 +79,8 @@ export function TaskEntryForm({
       <Col md={3}>
         <Form.Group controlId="timeTrackerLabel">
           <Form.Label>Label</Form.Label>
-            <Form.Select
-            value={labelId}
+          <Form.Select
+            value={label}
             onChange={(e) => onLabelChange(e.target.value)}
             aria-required="true"
             disabled={labels.length === 0}

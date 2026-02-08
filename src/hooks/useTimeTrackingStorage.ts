@@ -15,7 +15,7 @@ import type {
 type RawTask = {
   id: string;
   text: string;
-  labelId: string;
+  label: string;
   startTime: string;
   stopTime?: string | null;
 };
@@ -62,8 +62,8 @@ function isValidRawTask(value: unknown): value is RawTask {
   return (
     typeof v.id === "string" &&
     typeof v.text === "string" &&
-    typeof v.labelId === "string" &&
-    v.labelId.trim().length > 0 &&
+    typeof v.label === "string" &&
+    v.label.trim().length > 0 &&
     ISO_LOCAL_RE.test(startTime) &&
     isValidTaskDateRange(startTime, stopTime)
   );
@@ -74,7 +74,7 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return {
     id: raw.id,
     text: raw.text,
-    labelId: raw.labelId,
+    label: raw.label,
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
@@ -86,8 +86,8 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
   return (
     typeof v.id === "string" &&
     typeof v.text === "string" &&
-    typeof v.labelId === "string" &&
-    v.labelId.trim().length > 0 &&
+    typeof v.label === "string" &&
+    v.label.trim().length > 0 &&
     isValidTimeString(v.start) &&
     isValidTimeString(v.stop) &&
     isValidRange(v.start, v.stop)
@@ -170,7 +170,7 @@ export function useTimeTrackingStorage() {
         {
           id: payload.id,
           text: payload.text,
-          labelId: payload.labelId,
+          label: payload.label,
           startTime: payload.startTime,
           stopTime: payload.stopTime ?? null,
         },
@@ -186,7 +186,7 @@ export function useTimeTrackingStorage() {
       newStartTime: StoredTimeTrackingTask["startTime"];
       newStopTime: StoredTimeTrackingTask["stopTime"];
       newText?: string;
-      newLabelId?: string;
+      newLabel?: string;
     }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
@@ -194,7 +194,7 @@ export function useTimeTrackingStorage() {
             ? {
                 ...raw,
                 text: payload.newText ?? raw.text,
-                labelId: payload.newLabelId ?? raw.labelId,
+                label: payload.newLabel ?? raw.label,
                 startTime: payload.newStartTime,
                 stopTime: payload.newStopTime ?? null,
               }

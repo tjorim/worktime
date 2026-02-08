@@ -27,8 +27,7 @@ type TimeTrackingDailyViewProps = {
     newStartTime: string;
     newStopTime: string | null | undefined;
     newText?: string;
-    newLabelId?: string;
-    newLabelName?: string;
+    newLabel?: string;
   }) => void;
   onRemoveTask: (id: string) => void;
 };
@@ -59,7 +58,7 @@ export function TimeTrackingDailyView({
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
   const [text, setText] = useState("");
-  const [selectedLabelId, setSelectedLabelId] = useState<string>(labels[0]?.id ?? "");
+  const [selectedLabel, setSelectedLabel] = useState<string>(labels[0]?.id ?? "");
   const [start, setStart] = useState("");
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -87,10 +86,10 @@ export function TimeTrackingDailyView({
 
   useEffect(() => {
     const fallback = labels[0]?.id ?? "";
-    if (!labels.some((item) => item.id === selectedLabelId)) {
-      setSelectedLabelId(fallback);
+    if (!labels.some((item) => item.id === selectedLabel)) {
+      setSelectedLabel(fallback);
     }
-  }, [labels, selectedLabelId]);
+  }, [labels, selectedLabel]);
 
   const dailyTasks = useMemo(
     () =>
@@ -130,17 +129,17 @@ export function TimeTrackingDailyView({
       }, 0),
     [dailyTasks, liveTime],
   );
-  const hasTaskDetails = text.trim().length > 0 && selectedLabelId.trim().length > 0;
+  const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
   const canStartNow = !runningTask && hasTaskDetails;
   const startDisabledReason = runningTask
-    ? "A stopwatch is already running. Stop it before starting another."
-    : !text.trim()
-      ? "Enter a task name first."
-      : !selectedLabelId
-        ? "Select a label first."
-        : undefined;
+      ? "A stopwatch is already running. Stop it before starting another."
+      : !text.trim()
+        ? "Enter a task name first."
+        : !selectedLabel
+          ? "Select a label first."
+          : undefined;
   const addDisabledReason = !text.trim()
     ? "Enter a task name first."
     : !start.trim() || !stop.trim()
@@ -156,7 +155,7 @@ export function TimeTrackingDailyView({
       setError("Please fill in all fields.");
       return;
     }
-    if (!selectedLabelId) {
+    if (!selectedLabel) {
       setError("Please configure at least one label.");
       return;
     }
@@ -177,7 +176,7 @@ export function TimeTrackingDailyView({
     const added = await onAddTask({
       id: crypto.randomUUID(),
       text,
-      labelId: selectedLabelId,
+      label: selectedLabel,
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
@@ -201,7 +200,7 @@ export function TimeTrackingDailyView({
       setError("Please enter a task name to start.");
       return;
     }
-    if (!selectedLabelId) {
+    if (!selectedLabel) {
       setError("Please configure at least one label.");
       return;
     }
@@ -211,7 +210,7 @@ export function TimeTrackingDailyView({
     const added = await onAddTask({
       id: crypto.randomUUID(),
       text: text.trim(),
-      labelId: selectedLabelId,
+      label: selectedLabel,
       startTime,
     });
     if (!added) {
@@ -262,13 +261,13 @@ export function TimeTrackingDailyView({
   const handleUpdateTask = (payload: {
     id: string;
     text: string;
-    labelId: string;
+    label: string;
     start: string;
     stop?: string | null;
   }): boolean => {
     setError("");
     setStatus("");
-    if (!payload.text.trim() || !payload.labelId || !payload.start) {
+    if (!payload.text.trim() || !payload.label || !payload.start) {
       setError("Please fill in all fields.");
       return false;
     }
@@ -279,7 +278,7 @@ export function TimeTrackingDailyView({
         return false;
       }
     }
-    if (!labels.some((item) => item.id === payload.labelId)) {
+    if (!labels.some((item) => item.id === payload.label)) {
       setError("Please select a valid label.");
       return false;
     }
@@ -313,7 +312,7 @@ export function TimeTrackingDailyView({
     onUpdateTaskTimes({
       id: payload.id,
       newText: payload.text.trim(),
-      newLabelId: payload.labelId,
+      newLabel: payload.label,
       newStartTime,
       newStopTime,
     });
@@ -334,7 +333,7 @@ export function TimeTrackingDailyView({
     }
 
     setText(template.text);
-    setSelectedLabelId(template.labelId);
+    setSelectedLabel(template.label);
     setStart(template.start);
     setStop(template.stop);
     setStatus(`Template "${template.text}" applied.`);
@@ -393,7 +392,7 @@ export function TimeTrackingDailyView({
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.text} ({template.start}-{template.stop}) [
-                    {labelNameById[template.labelId] ?? "Unknown label"}
+                    {labelNameById[template.label] ?? "Unknown label"}
                     ]
                   </option>
                 ))}
@@ -426,11 +425,11 @@ export function TimeTrackingDailyView({
                     <span
                       className="time-tracking-label"
                       style={{
-                      backgroundColor: colorByLabelId[runningTask.labelId] ?? "#6c757d",
+                        backgroundColor: colorByLabelId[runningTask.label] ?? "#6c757d",
                         color: "#000",
                       }}
                     >
-                      {labelNameById[runningTask.labelId] ?? "Unknown label"}
+                      {labelNameById[runningTask.label] ?? "Unknown label"}
                     </span>
                   </div>
                   <div className="small text-muted">
@@ -461,8 +460,8 @@ export function TimeTrackingDailyView({
           labels={labels}
           text={text}
           onTextChange={setText}
-          labelId={selectedLabelId}
-          onLabelChange={setSelectedLabelId}
+          label={selectedLabel}
+          onLabelChange={setSelectedLabel}
           start={start}
           onStartChange={setStart}
           stop={stop}

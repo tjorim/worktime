@@ -1,7 +1,7 @@
 export type StoredTimeTrackingTask = {
   id: string;
   text: string;
-  labelId: string;
+  label: string;
   startTime: string;
   stopTime?: string | null;
 };
@@ -9,7 +9,7 @@ export type StoredTimeTrackingTask = {
 export type TimeTrackingTemplate = {
   id: string;
   text: string;
-  labelId: string;
+  label: string;
   start: string;
   stop: string;
 };

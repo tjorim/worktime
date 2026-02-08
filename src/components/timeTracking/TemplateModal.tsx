@@ -5,7 +5,7 @@ import type { TimeTrackingLabel } from "./constants";
 
 type TemplateForm = {
   text: string;
-  labelId: string;
+  label: string;
   start: string;
   stop: string;
 };
@@ -58,8 +58,8 @@ export function TemplateModal({
           <Form.Group controlId="templateLabel" className="mb-3">
             <Form.Label>Label</Form.Label>
             <Form.Select
-              value={value.labelId}
-              onChange={(event) => onChange({ ...value, labelId: event.target.value })}
+              value={value.label}
+              onChange={(event) => onChange({ ...value, label: event.target.value })}
               disabled={isLabelSelectionDisabled}
               aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
               aria-required="true"
