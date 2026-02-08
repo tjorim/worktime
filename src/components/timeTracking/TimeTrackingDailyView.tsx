@@ -13,7 +13,7 @@ import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import type { TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import { getReadableTextColor, isValidRange, overlaps } from "./timeUtils";
+import { isValidRange, overlaps } from "./timeUtils";
 
 type TimeTrackingDailyViewProps = {
   tasks: StoredTimeTrackingTask[];
@@ -244,23 +244,32 @@ export function TimeTrackingDailyView({
     label: string;
     start: string;
     stop?: string | null;
-  }) => {
+  }): boolean => {
     setError("");
     setStatus("");
     if (!payload.text.trim() || !payload.label || !payload.start) {
       setError("Please fill in all fields.");
-      return;
+      return false;
     }
     // Validate stop time if provided (for stopped tasks)
     if (payload.stop) {
       if (!isValidRange(payload.start, payload.stop)) {
         setError("Stop time must be after start time.");
-        return;
+        return false;
       }
     }
     if (!labels.some((item) => item.name === payload.label)) {
       setError("Please select a valid label.");
-      return;
+      return false;
+    }
+    if (payload.stop == null) {
+      const otherRunning = tasks.some(
+        (task) => (task.stopTime === undefined || task.stopTime === null) && task.id !== payload.id,
+      );
+      if (otherRunning) {
+        setError("A task is already running. Stop it before leaving another task running.");
+        return false;
+      }
     }
     const taskDate =
       dailyTasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
@@ -276,7 +285,7 @@ export function TimeTrackingDailyView({
       }));
       if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
         setError("Time range overlaps an existing task.");
-        return;
+        return false;
       }
     }
 
@@ -287,6 +296,7 @@ export function TimeTrackingDailyView({
       newStartTime,
       newStopTime,
     });
+    return true;
   };
 
   const handleApplyTemplate = () => {
@@ -394,7 +404,7 @@ export function TimeTrackingDailyView({
                       className="time-tracking-label"
                       style={{
                         backgroundColor: colorByLabel[runningTask.label] ?? "#6c757d",
-                        color: getReadableTextColor(colorByLabel[runningTask.label] ?? "#6c757d"),
+                        color: "#000",
                       }}
                     >
                       {runningTask.label}

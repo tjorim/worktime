@@ -68,7 +68,7 @@ export function WeekView({
   const startOfWeek = currentDate.startOf("isoWeek"); // Monday (ISO week)
   const weekDays = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
   const selectedWeekNumber = startOfWeek.add(0, "day").isoWeek();
-  const selectedWeekYear = startOfWeek.format("YYYY");
+  const selectedWeekYear = startOfWeek.isoWeekYear();
 
   // Check if we're viewing the current week
   const currentWeekStart = dayjs().startOf("isoWeek");

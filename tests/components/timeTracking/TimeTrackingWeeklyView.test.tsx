@@ -184,6 +184,33 @@ describe("TimeTrackingWeeklyView Component", () => {
     });
   });
 
+  describe("ISO Week Year Boundary", () => {
+    it("shows correct ISO week year when week 1 crosses into the previous calendar year", () => {
+      // Dec 29, 2025 (Monday) is ISO week 1 of 2026
+      vi.setSystemTime(new Date("2025-12-29T12:00:00Z"));
+      const tasks = [createTaskForDate("2025-12-29", "Support", "09:00", "12:00")];
+
+      renderPanel(tasks, "2025-12-29");
+
+      expect(screen.getByText(/Week 1 \(2026\)/)).toBeInTheDocument();
+    });
+
+    it("groups tasks correctly when ISO week spans two calendar years", () => {
+      vi.setSystemTime(new Date("2025-12-29T12:00:00Z"));
+      const tasks = [
+        createTaskForDate("2025-12-29", "Support", "09:00", "12:00"),
+        createTaskForDate("2025-12-31", "Meeting", "14:00", "16:00"),
+        createTaskForDate("2026-01-02", "Support", "09:00", "11:00"),
+      ];
+
+      renderPanel(tasks, "2025-12-29");
+
+      const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
+      expect(summarySection).toHaveTextContent("Support: 5.00 hours");
+      expect(summarySection).toHaveTextContent("Meeting: 2.00 hours");
+    });
+  });
+
   describe("Layout and Styling", () => {
     it("applies responsive table wrapper", () => {
       const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];

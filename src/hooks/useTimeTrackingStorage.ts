@@ -152,20 +152,15 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
-      return new Promise((resolve) => {
-        setRawTasks((prev) => {
-          const hasValidRunningTask = prev.some(
-            (task) =>
-              isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
-          );
-          if (payload.stopTime === undefined && hasValidRunningTask) {
-            resolve(false);
-            return prev;
-          }
-          resolve(true);
-          return [...prev, payload];
-        });
-      });
+      const hasValidRunningTask = rawTasksRef.current.some(
+        (task) =>
+          isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
+      );
+      if (payload.stopTime === undefined && hasValidRunningTask) {
+        return Promise.resolve(false);
+      }
+      setRawTasks((prev) => [...prev, payload]);
+      return Promise.resolve(true);
     },
     [setRawTasks],
   );

@@ -7,7 +7,6 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { useState } from "react";
 import type { TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
-import { getReadableTextColor } from "./timeUtils";
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
@@ -18,7 +17,7 @@ type DailyTaskListProps = {
     label: string;
     start: string;
     stop?: string | null;
-  }) => void;
+  }) => Promise<boolean> | boolean;
   onRemoveTask: (id: string) => void;
 };
 
@@ -54,7 +53,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
   };
 
-  const submitEditModal = () => {
+  const submitEditModal = async () => {
     if (!editingTask) {
       return;
     }
@@ -75,7 +74,10 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
     if (editStop || editingTask.stopTime) {
       payload.stop = editStop || null;
     }
-    onUpdateTask(payload);
+    const didUpdate = await onUpdateTask(payload);
+    if (!didUpdate) {
+      return;
+    }
     closeEditModal();
   };
 
@@ -102,7 +104,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                   className="time-tracking-label"
                   style={{
                     backgroundColor: colorByLabel[task.label] ?? "#6c757d",
-                    color: getReadableTextColor(colorByLabel[task.label] ?? "#6c757d"),
+                    color: "#000",
                   }}
                 >
                   {task.label}

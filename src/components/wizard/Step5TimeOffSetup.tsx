@@ -4,6 +4,7 @@ import Form from "react-bootstrap/Form";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import type { RefObject } from "react";
+import { dayjs } from "../../utils/dateTimeUtils";
 import type { VacationAllowanceUnit } from "../../utils/vacationCalculations";
 
 interface Step5TimeOffSetupProps {
@@ -36,7 +37,7 @@ export function Step5TimeOffSetup({
   onNext,
   firstButtonRef,
 }: Step5TimeOffSetupProps) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = dayjs().year();
 
   return (
     <>

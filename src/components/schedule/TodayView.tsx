@@ -203,6 +203,7 @@ export function TodayView({
   const today = dayjs();
   const displayDate = currentDate;
   const isToday = displayDate.isSame(today, "day");
+  const canSelectDate = Boolean(onDateSelect);
   const handleDateChange = (dateString: string) => {
     if (dateString && onDateSelect) {
       onDateSelect(dayjs(dateString));
@@ -219,10 +220,10 @@ export function TodayView({
             onPrevious={onPreviousDay}
             onCurrent={onTodayClick}
             onNext={onNextDay}
-            selectorLabel="Jump to date:"
-            selectorId={datePickerId}
-            selectorValue={displayDate.format("YYYY-MM-DD")}
-            onSelectorChange={handleDateChange}
+            selectorLabel={canSelectDate ? "Jump to date:" : undefined}
+            selectorId={canSelectDate ? datePickerId : undefined}
+            selectorValue={canSelectDate ? displayDate.format("YYYY-MM-DD") : undefined}
+            onSelectorChange={canSelectDate ? handleDateChange : undefined}
           />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">

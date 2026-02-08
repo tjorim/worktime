@@ -23,7 +23,7 @@ type TimeTrackingWeeklyViewProps = {
 };
 
 function getWeekDateRange(year: number, week: number): [string, string] {
-  const start = dayjs().year(year).isoWeek(week).startOf("isoWeek");
+  const start = dayjs().isoWeekYear(year).isoWeek(week).startOf("isoWeek");
   const end = start.endOf("isoWeek");
   return [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")];
 }
@@ -49,7 +49,7 @@ export function TimeTrackingWeeklyView({
   const isWeeklyCurrent = weekStart.isSame(dayjs().startOf("isoWeek"), "day");
 
   // Extract primitives for stable useMemo dependencies
-  const year = weekStart.year();
+  const year = weekStart.isoWeekYear();
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
@@ -124,7 +124,7 @@ export function TimeTrackingWeeklyView({
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="text-muted small">
-            Week {weekStart.isoWeek()} ({weekStart.format("YYYY")})
+            Week {weekStart.isoWeek()} ({weekStart.isoWeekYear()})
             {isWeeklyCurrent && (
               <Badge bg="success" className="ms-2" aria-label="Current week">
                 This Week

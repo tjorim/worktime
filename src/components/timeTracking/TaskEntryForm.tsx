@@ -51,9 +51,19 @@ export function TaskEntryForm({
       return button;
     }
 
+    const tooltipId = `${buttonKey}-tooltip`;
     return (
-      <OverlayTrigger overlay={<Tooltip id={`${buttonKey}-tooltip`}>{reason}</Tooltip>}>
-        <span className="w-100 d-inline-block">{button}</span>
+      <OverlayTrigger
+        trigger={["hover", "focus"]}
+        overlay={<Tooltip id={tooltipId}>{reason}</Tooltip>}
+      >
+        <span
+          className="w-100 d-inline-block"
+          tabIndex={0}
+          aria-describedby={tooltipId}
+        >
+          {button}
+        </span>
       </OverlayTrigger>
     );
   };
