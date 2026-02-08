@@ -1,32 +1,69 @@
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
-import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
+import Tooltip from "react-bootstrap/Tooltip";
+import type { ReactElement } from "react";
+import type { TimeTrackingLabel } from "./constants";
 
 type TaskEntryFormProps = {
+  labels: TimeTrackingLabel[];
   text: string;
   onTextChange: (text: string) => void;
-  tag: TimeTrackingTag;
-  onTagChange: (tag: TimeTrackingTag) => void;
+  label: string;
+  onLabelChange: (label: string) => void;
   start: string;
   onStartChange: (start: string) => void;
   stop: string;
   onStopChange: (stop: string) => void;
+  canSubmit: boolean;
+  canStartNow: boolean;
+  startDisabledReason?: string;
+  addDisabledReason?: string;
   onSubmit: () => void;
+  onStartNow: () => void;
 };
 
 export function TaskEntryForm({
+  labels,
   text,
   onTextChange,
-  tag,
-  onTagChange,
+  label,
+  onLabelChange,
   start,
   onStartChange,
   stop,
   onStopChange,
+  canSubmit,
+  canStartNow,
+  startDisabledReason,
+  addDisabledReason,
   onSubmit,
+  onStartNow,
 }: TaskEntryFormProps) {
+  const renderDisabledTooltipButton = (
+    buttonKey: string,
+    reason: string | undefined,
+    button: ReactElement,
+  ) => {
+    if (!reason) {
+      return button;
+    }
+
+    const tooltipId = `${buttonKey}-tooltip`;
+    return (
+      <OverlayTrigger
+        trigger={["hover", "focus"]}
+        overlay={<Tooltip id={tooltipId}>{reason}</Tooltip>}
+      >
+        <span className="w-100 d-inline-block" tabIndex={0} aria-describedby={tooltipId}>
+          {button}
+        </span>
+      </OverlayTrigger>
+    );
+  };
+
   return (
     <Row className="g-3 align-items-end">
       <Col md={3}>
@@ -40,18 +77,23 @@ export function TaskEntryForm({
         </Form.Group>
       </Col>
       <Col md={3}>
-        <Form.Group controlId="timeTrackerTag">
-          <Form.Label>Tag</Form.Label>
+        <Form.Group controlId="timeTrackerLabel">
+          <Form.Label>Label</Form.Label>
           <Form.Select
-            value={tag}
-            onChange={(e) => onTagChange(e.target.value as TimeTrackingTag)}
+            value={label}
+            onChange={(e) => onLabelChange(e.target.value)}
             aria-required="true"
+            disabled={labels.length === 0}
           >
-            {TIME_TRACKING_TAGS.map((item) => (
-              <option key={item} value={item}>
-                {item.replaceAll("-", " ")}
-              </option>
-            ))}
+            {labels.length === 0 ? (
+              <option value="">Add labels first</option>
+            ) : (
+              labels.map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name}
+                </option>
+              ))
+            )}
           </Form.Select>
         </Form.Group>
       </Col>
@@ -78,9 +120,27 @@ export function TaskEntryForm({
         </Form.Group>
       </Col>
       <Col md={2}>
-        <Button className="w-100" onClick={onSubmit}>
-          Add Task
-        </Button>
+        <div className="d-grid gap-2">
+          {renderDisabledTooltipButton(
+            "start-now",
+            !canStartNow ? startDisabledReason : undefined,
+            <Button
+              variant="success"
+              className="w-100"
+              onClick={onStartNow}
+              disabled={!canStartNow}
+            >
+              Start Now
+            </Button>,
+          )}
+          {renderDisabledTooltipButton(
+            "add-task",
+            !canSubmit ? addDisabledReason : undefined,
+            <Button className="w-100" onClick={onSubmit} disabled={!canSubmit}>
+              Add Task
+            </Button>,
+          )}
+        </div>
       </Col>
     </Row>
   );

@@ -65,53 +65,15 @@ body {
   height: 8px;
 }
 
-/* Time tracking tags */
-$tag-dark-text: #1b1b1b;
-
-.time-tracking-tag {
+/* Time tracking labels */
+.time-tracking-label {
   display: inline-flex;
   align-items: center;
   padding: 0.15rem 0.5rem;
   border-radius: 0.35rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #fff;
-}
-
-.time-tracking-tag-development {
-  background-color: #198754;
-}
-
-.time-tracking-tag-support {
-  background-color: #c82333;
-}
-
-.time-tracking-tag-meeting {
-  background-color: #6f42c1;
-}
-
-.time-tracking-tag-review {
-  background-color: #fd7e14;
-  color: $tag-dark-text;
-}
-
-.time-tracking-tag-documentation {
-  background-color: #0d6efd;
-}
-
-.time-tracking-tag-training {
-  background-color: #0dcaf0;
-  color: $tag-dark-text;
-}
-
-.time-tracking-tag-lunch {
-  background-color: #9ec5fe;
-  color: $tag-dark-text;
-}
-
-.time-tracking-tag-other {
-  background-color: #495057;
-  color: #fff;
+  border: 1px solid rgb(0 0 0 / 15%);
 }
 
 /* Text utilities */
@@ -119,6 +81,11 @@ $tag-dark-text: #1b1b1b;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
+}
+
+.time-tracking-codeblock {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
 }
 
 /* ============================================================================

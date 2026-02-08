@@ -10,9 +10,9 @@ import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { RawContentPanel } from "./timeOff/RawContentPanel";
-import { VacationStatsPanel } from "./timeOff/VacationStatsPanel";
-import { TimeOffTablePanel } from "./timeOff/TimeOffTablePanel";
+import { TimeOffRawView } from "./timeOff/TimeOffRawView";
+import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
+import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
@@ -50,6 +50,11 @@ interface TimeOffViewProps {
  */
 const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
 
+// Type guard to validate viewMode against TIMEOFF_VIEWS
+const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[number] => {
+  return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
+};
+
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
@@ -68,10 +73,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useState(lastUsed.timeOffView ?? DEFAULT_TIME_OFF_VIEW);
+  const [viewMode, setViewMode] = useState(
+    isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
+  );
 
   useEffect(() => {
-    updateLastTimeOffView(viewMode);
+    if (isValidTimeOffView(viewMode)) {
+      updateLastTimeOffView(viewMode);
+    }
   }, [updateLastTimeOffView, viewMode]);
 
   // Use custom hook for event form state management
@@ -406,7 +415,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       </div>
 
       {viewMode === "table" && (
-        <TimeOffTablePanel
+        <TimeOffTableView
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={handleUndo}
@@ -430,7 +439,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "stats" && (
         <div role="region" aria-label="Vacation statistics">
-          <VacationStatsPanel
+          <TimeOffStatsView
             events={events}
             allowance={settings.vacationAllowance}
             onUpdateAllowance={updateVacationAllowance}
@@ -440,7 +449,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "raw" && (
         <div role="region" aria-label="Raw .hday content editor">
-          <RawContentPanel
+          <TimeOffRawView
             rawText={rawEditorText}
             error={rawEditorError}
             isDirty={isRawEditorDirty}

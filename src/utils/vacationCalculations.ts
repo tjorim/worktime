@@ -5,7 +5,7 @@ import { dayjs } from "./dateTimeUtils";
 export type VacationAllowanceUnit = "days" | "hours";
 
 export interface VacationAllowanceSettings {
-  amount: number;
+  yearlyAmounts: Record<string, number>;
   unit: VacationAllowanceUnit;
   hoursPerDay: number;
 }
@@ -217,25 +217,35 @@ export const calculateVacationStats = (
   };
 };
 
-export const getAllowanceDays = (allowance: VacationAllowanceSettings): number => {
-  if (allowance.unit === "days") return allowance.amount;
+export const getEffectiveAmount = (allowance: VacationAllowanceSettings, year: number): number =>
+  allowance.yearlyAmounts[String(year)] ?? 0;
+
+export const getAllowanceDays = (allowance: VacationAllowanceSettings, year: number): number => {
+  const amount = getEffectiveAmount(allowance, year);
+  if (allowance.unit === "days") return amount;
   if (allowance.hoursPerDay <= 0) return 0;
-  return allowance.amount / allowance.hoursPerDay;
+  return amount / allowance.hoursPerDay;
 };
 
-export const getAllowanceHours = (allowance: VacationAllowanceSettings): number => {
-  if (allowance.unit === "hours") return allowance.amount;
-  return allowance.amount * allowance.hoursPerDay;
+export const getAllowanceHours = (allowance: VacationAllowanceSettings, year: number): number => {
+  const amount = getEffectiveAmount(allowance, year);
+  if (allowance.unit === "hours") return amount;
+  return amount * allowance.hoursPerDay;
 };
 
 export const sanitizeVacationAllowance = (
   allowance: Partial<VacationAllowanceSettings> | undefined,
   fallback: VacationAllowanceSettings,
 ): VacationAllowanceSettings => {
-  const amount =
-    typeof allowance?.amount === "number" && Number.isFinite(allowance.amount)
-      ? Math.max(0, allowance.amount)
-      : fallback.amount;
+  const rawYearly = allowance?.yearlyAmounts;
+  const yearlyAmounts: Record<string, number> = { ...fallback.yearlyAmounts };
+  if (typeof rawYearly === "object" && rawYearly !== null) {
+    for (const [key, val] of Object.entries(rawYearly)) {
+      if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
+        yearlyAmounts[key] = val;
+      }
+    }
+  }
   const unit =
     allowance?.unit === "hours" || allowance?.unit === "days" ? allowance.unit : fallback.unit;
   const hoursPerDay =
@@ -243,7 +253,7 @@ export const sanitizeVacationAllowance = (
       ? Math.max(1, allowance.hoursPerDay)
       : fallback.hoursPerDay;
 
-  return { amount, unit, hoursPerDay };
+  return { yearlyAmounts, unit, hoursPerDay };
 };
 
 export const formatVacationValue = (value: number): string => {

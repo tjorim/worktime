@@ -406,13 +406,15 @@ interface WorktimeUserState {
   scheduleType: ScheduleOption | null; // Identity/setup
   settings: UserSettings; // True user preferences (theme, time format, etc.)
   lastUsed: LastUsed; // Ephemeral view state (active tab, last viewed schedule, etc.)
+  hasMigrationError?: boolean; // Set when migration fails; signals need for user-facing alert
+  rawStateBackup?: Record<string, unknown>; // Preserved raw state when migration fails; aids recovery
 }
 ```
 
 **Three groups**:
 
 1. **Identity/setup** (top-level): `hasCompletedOnboarding`, `myTeam`, `scheduleType` — set during onboarding, rarely changed
-2. **`settings`**: User preferences — `timeFormat`, `theme`, `notifications`, `vacationAllowance`, `enableTimeOff`, `enableTimeTracking`, `timeTrackingWeeklyTargetHours`
+2. **`settings`**: User preferences — `timeFormat`, `theme`, `notifications`, `vacationAllowance`, `enableTimeOff`, `enableTimeTracking`
 3. **`lastUsed`**: Where the user left off — `activeTab`, `scheduleView`, `otherSchedule`, `timeOffView`, `timeTrackingView`, `otherTeam`
 
 ### Versioned Migrations
@@ -420,7 +422,7 @@ interface WorktimeUserState {
 The state schema is versioned via the `version` field. When the stored version is older than `CURRENT_VERSION`, sequential migrations run automatically on load.
 
 ```typescript
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 // Each key is the TARGET version. The function transforms state from (key-1) → key.
 type RawState = Record<string, unknown>;
@@ -429,6 +431,9 @@ type Migration = (state: RawState) => RawState;
 const migrations: Record<number, Migration> = {
   1: (state) => {
     /* move last* from settings → lastUsed, rename scheduleOption → scheduleType */
+  },
+  2: (state) => {
+    /* replace vacationAllowance.amount with yearlyAmounts[currentYear] */
   },
 };
 
@@ -461,10 +466,7 @@ function migrateState(state: RawState): RawState {
     try {
       state = migrate(state);
     } catch (error) {
-      console.error(
-        `Migration ${nextVersion} failed. Attempting recovery.`,
-        error,
-      );
+      console.error(`Migration ${nextVersion} failed. Attempting recovery.`, error);
       const rawStateBackup = state;
       const recovered = {
         myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
@@ -495,19 +497,23 @@ function migrateState(state: RawState): RawState {
 - Unversioned (legacy) data is treated as version 0
 - Migrations receive/return `RawState` (`Record<string, unknown>`) so they can reshape freely
 - After migration, `normalizeUserState` validates and sanitizes all fields
-- If a migration is missing, state resets to defaults with a console warning
-- If a migration is missing, the raw state is backed up to `rawStateBackup`, known fields are salvaged into the returned state, and an error flag (e.g., `hasMigrationError`) should be set so the UI can surface a user-facing alert
+- If a migration is missing, the raw state is backed up to `rawStateBackup`, known fields are salvaged into the returned state, and an error flag (`hasMigrationError`) is set so the UI can surface a user-facing alert
 
 **`normalizeUserState` (SettingsContext.tsx)**: Runs after migrations to validate and sanitize user settings. It verifies required keys, coerces types (booleans, numbers, enums), applies defaults for missing fields, strips unknown/unsafe values, and normalizes legacy field names so post-migration settings remain consistent and safe for the app.
 
 ### Adding a New Migration
 
-1. Bump `CURRENT_VERSION` (e.g., `1` → `2`)
-2. Add `migrations[2]` with a function that transforms the raw state from v1 → v2
+1. Bump `CURRENT_VERSION` (e.g., `2` → `3`)
+2. Add `migrations[3]` with a function that transforms the raw state from v2 → v3
 3. Update `defaultUserState`, interfaces, and `normalizeUserState` for the new shape
 4. Add a test in `tests/contexts/SettingsContext.test.tsx` verifying migration from old format
 
-**Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set an error flag to surface a user-facing warning.
+**Migration history**:
+
+- **v0 → v1**: Move last\* view fields from `settings` into dedicated `lastUsed` group. Rename `scheduleOption` → `scheduleType` for clarity.
+- **v1 → v2**: Replace `vacationAllowance.amount` (single number) with `yearlyAmounts[currentYear]` (per-year breakdown). If `amount` exists and current year has no entry, seed `yearlyAmounts[currentYear]` with the old `amount` value.
+
+**Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set `hasMigrationError: true` to surface a user-facing warning.
 
 ## Key Features
 

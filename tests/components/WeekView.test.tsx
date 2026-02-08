@@ -18,10 +18,9 @@ vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
         timeFormat: "24h",
         theme: "auto",
         notifications: "off",
-        vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+        vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: false,
         enableTimeTracking: false,
-        timeTrackingWeeklyTargetHours: 40,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -57,6 +56,7 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
           }),
           format: vi.fn(() => "Jan 13"),
           isSame: vi.fn(() => false),
+          isoWeekYear: vi.fn(() => 2025),
         })),
         format: vi.fn(() => "2025-01-15"),
         add: vi.fn(() => {
@@ -122,7 +122,9 @@ describe("WeekView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
       renderWithProviders(<WeekView {...defaultProps} />);
-      expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 6, name: /All Teams|Schedule/ }),
+      ).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {
@@ -228,9 +230,8 @@ describe("WeekView", () => {
     it("shows week information", () => {
       renderWithProviders(<WeekView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
 
-      // Should show week range (Jan 15 is in the week of Jan 13-19)
-      expect(screen.getByText(/Week of/)).toBeInTheDocument();
-      expect(screen.getByText(/Jan 13/)).toBeInTheDocument();
+      // Should show week number context
+      expect(screen.getAllByText(/Week\s+\d+/).length).toBeGreaterThan(0);
     });
   });
 });

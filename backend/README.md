@@ -6,15 +6,20 @@ sync state for users who opt in.
 
 ## Backend responsibilities (minimal)
 
-- Store a single JSON snapshot per user plus metadata (updatedAt, version, etag).
+- Store a single JSON snapshot per user plus metadata (updated_at, version, etag).
 - Provide auth/identity (account or device-link token).
 - Enforce basic rate limits and payload validation.
 - Expose simple CRUD endpoints for upload/download.
-- Support secure deletion of user snapshots and associated metadata (updatedAt, version, etag, tokens); honor authenticated deletion requests; return audit-safe responses (204 on success or 404 if already deleted); apply rate limiting and ownership validation to prevent unauthorized erasure.
+- Support secure deletion of user snapshots and associated metadata (updated_at, version, etag, tokens); honor authenticated deletion requests; return audit-safe responses (204 on success or 404 if already deleted); apply rate limiting and ownership validation to prevent unauthorized erasure.
 
 ## API surface (proposed)
 
-- `POST /v1/sync` (authenticated) to upload a snapshot (returns new version/etag). Requires `Authorization: Bearer <token>` header.
+- `POST /v1/sync` (authenticated) to upload a snapshot. Requires `Authorization: Bearer <token>` header. Request body must be JSON containing:
+  - `payload` (object): The complete user state snapshot to store
+  - `version` (integer) **or** `etag` (string): For conflict detection; must match server's current version/etag
+  - Example: `{"payload": {...}, "version": 5}` or `{"payload": {...}, "etag": "abc123"}`
+  - **Success response (200 OK)**: Returns new `version` and `etag` after write: `{"version": 6, "etag": "def456", "updated_at": "2026-02-08T12:34:56Z"}`
+  - **Conflict response (409 Conflict)**: Server detects divergence (version/etag mismatch); returns current server snapshot with metadata: `{"payload": {...}, "version": 6, "etag": "xyz789", "updated_at": "2026-02-08T11:00:00Z"}`. Client should merge server state with local changes and retry POST with updated version/etag.
 - `GET /v1/sync` (authenticated) to download the latest snapshot (supports `If-None-Match`). Requires `Authorization: Bearer <token>` header.
 - `DELETE /v1/sync` (authenticated) to erase all user data (GDPR/CCPA compliance). Requires `Authorization: Bearer <token>` header.
 - `GET /v1/health` (unauthenticated) for uptime checks and basic monitoring.
@@ -61,6 +66,34 @@ Content-Type: application/json
   "device_id": "dev-5f7d2b0c"
 }
 ```
+
+**Rate limiting and brute-force protections:**
+
+- **Default limits**: Enforce 5 attempts per IP address per minute and 10 attempts per `device_id` per hour to prevent token enumeration attacks.
+- **Failure tracking**: Track failed attempts independently by:
+  - **IP address**: Count invalid link_token submissions per IP (resets after successful exchange or 1-minute window).
+  - **device_id**: Count failed attempts per device_id (resets after successful exchange or 1-hour window).
+- **Exponential backoff**: After each failed attempt from the same IP or device_id, increase response delay:
+  - 1st failure: 0ms delay
+  - 2nd failure: 100ms delay
+  - 3rd failure: 500ms delay
+  - 4th failure: 1s delay
+  - 5th+ failure: 2s delay + temporary lockout
+- **Temporary lockout**: After 5 failed attempts within the rate-limit window:
+  - **IP lockout**: Block all `/v1/auth/link` requests from IP for 5 minutes.
+  - **Device lockout**: Reject all requests with the same `device_id` for 15 minutes.
+  - Return `429 Too Many Requests` with `Retry-After` header (e.g., `Retry-After: 300` for 5 minutes).
+- **Generic error responses**: On throttled or failed attempts, return consistent error messages to prevent information leakage:
+  - Success: `200 OK` with access token.
+  - Invalid token or rate-limited: `401 Unauthorized` with generic message: `{"error": "Invalid or expired link token"}`.
+  - Lockout/throttle: `429 Too Many Requests` with `{"error": "Too many attempts, try again later", "retry_after": 300}`.
+  - Never reveal whether link_token exists, is expired, or has been used.
+- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Include:
+  - Failed token validation attempts (log token prefix only, e.g., first 4 chars).
+  - Rate-limit triggers and lockout events.
+  - Anomaly detection flags (e.g., multiple device_ids from same IP, rapid token rotation).
+- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
+- **Implementation**: Apply rate-limiting as middleware before handler logic (e.g., Express rate-limiter, Cloudflare Workers rate-limit API, or custom Redis-based counter). Ensure limits are enforced atomically (check-and-increment) to prevent race conditions.
 
 **Token validation on authenticated endpoints:**
 
@@ -118,17 +151,21 @@ Authorization: Bearer <access_token>
 
 - All snapshots for the user are permanently erased from the main data table.
 - All version/etag history is removed (no rollback recovery available after deletion).
-- Any associated audit logs, soft-delete markers, or backup snapshots are purged within 30 days (comply with data retention windows).
+- Any associated operational logs (e.g., debug logs, soft-delete markers, backup snapshots) are purged within 30 days to comply with data retention and storage limits.
 - Device-link tokens and access tokens for that user are immediately invalidated (no new syncs possible).
-- Linked account data (if any) is also removed, including metadata (createdAt, updatedAt).
+- Linked account data (if any) is also removed, including metadata (created_at, updated_at).
 - Dependent records (e.g., rate-limit counters, sessions) should be cleaned up or anonymized.
 
 **Audit and logging:**
 
 - Log each deletion request with timestamp, authenticated user/token ID, IP address, and result code.
-- Maintain an immutable audit log (separate table) of deletions for compliance verification (kept for ≥7 years or per jurisdiction).
+- Maintain an immutable compliance audit log (separate table) of deletions for regulatory verification (kept for ≥7 years or per jurisdiction requirements such as GDPR Article 30 or SOC 2).
 - Do not log the actual deleted payload (privacy-first); only log that deletion occurred.
 - If using soft-deletes initially, transition to hard-delete after 30-day retention window.
+- **Log retention policy summary**:
+  - **Operational/debug logs**: Purged within 30 days (includes soft-delete markers, backup metadata, request logs).
+  - **Compliance audit logs**: Retained for ≥7 years minimum (includes deletion events, authentication events, security incidents).
+  - **Legal hold exception**: If user data is subject to litigation hold or investigation, all logs (operational + compliance) are preserved until hold is lifted, regardless of normal retention policy.
 
 **Interaction with snapshot sync:**
 
@@ -140,7 +177,39 @@ Authorization: Bearer <access_token>
 
 **Transport security (required baseline):**
 
-- All API endpoints **must** use TLS 1.2+ with HTTPS only; redirect HTTP to HTTPS; do not serve unencrypted JSON payloads.
+- All API endpoints **must** use TLS 1.2+ (TLS 1.3 recommended) with HTTPS only; **reject plain HTTP connections entirely** (do not listen on port 80 or redirect HTTP→HTTPS; close/refuse HTTP sockets).
+- Do not serve unencrypted JSON payloads under any circumstance.
+- **HSTS header (required)**: Serve `Strict-Transport-Security` header on all HTTPS responses to enforce HTTPS-only access in browsers:
+
+  ```
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  ```
+
+  - **max-age=31536000**: Enforce HTTPS for 1 year (31536000 seconds).
+  - **includeSubDomains**: Apply policy to all subdomains (e.g., api.example.com, sync.example.com).
+  - **preload**: Signal eligibility for browser HSTS preload lists (Chrome, Firefox, Safari). Only add after meeting [preload requirements](https://hstspreload.org): valid TLS cert, HTTPS on all subdomains, HSTS header on base domain, max-age ≥ 1 year.
+
+- **Configuration examples**:
+  - **Nginx**: Add to HTTPS server block:
+    ```nginx
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    ```
+  - **Node.js (Express/Fastify)**: Use middleware like `helmet`:
+    ```javascript
+    app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true }));
+    ```
+  - **Cloudflare Workers**: Add header in response:
+    ```javascript
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload",
+    );
+    ```
+  - **Caddy**: HSTS enabled by default when serving HTTPS; customize in Caddyfile:
+    ```
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    ```
+- **Preload submission**: After deployment with valid TLS cert and HSTS header, submit domain to [hstspreload.org](https://hstspreload.org) for inclusion in browser preload lists (typically takes 2-3 months for propagation). Do not submit until infrastructure is stable; preload is difficult to undo.
 
 **Database encryption (required baseline):**
 
@@ -174,6 +243,95 @@ Authorization: Bearer <access_token>
 - A backend means the app can no longer be purely GitHub Pages.
 - Vercel/Render/Fly.io or Cloudflare Workers are practical options.
 - Plan for backups (daily DB snapshots) and basic monitoring (latency/error rate).
+
+**CORS configuration (required for frontend access):**
+
+Cross-Origin Resource Sharing (CORS) must be configured to allow the frontend to make authenticated API requests from a different origin (e.g., frontend at `https://worktime.example.com`, API at `https://api.worktime.example.com`).
+
+- **Allowed origins**:
+  - **Production**: Explicitly list production frontend origin(s) in allowlist. **Never use `*` wildcard in production** (blocks credentials and exposes API to any site).
+    - Example: `https://worktime.example.com`, `https://app.worktime.example.com`
+  - **Development**: Include localhost ports for local dev/testing: `http://localhost:3000`, `http://localhost:5173`, `http://localhost:8000`
+  - **Dynamic origin validation**: If multiple origins are allowed, validate incoming `Origin` header against allowlist and echo the matching origin in response:
+    ```javascript
+    // Pseudocode
+    const allowedOrigins = ["https://worktime.example.com", "http://localhost:5173"];
+    const origin = request.headers.get("Origin");
+    if (allowedOrigins.includes(origin)) {
+      response.headers.set("Access-Control-Allow-Origin", origin);
+    }
+    ```
+- **Credentials handling**:
+  - If using cookies or `Authorization` header with credentials: set `Access-Control-Allow-Credentials: true` in all responses.
+  - **Critical**: When `Allow-Credentials: true` is set, `Access-Control-Allow-Origin` **must** be a specific origin (not `*`). Echo the exact validated origin from the request.
+  - If not using credentials (e.g., token in URL params only), omit `Allow-Credentials` header entirely.
+- **Preflight requests (OPTIONS)**:
+  - Browsers send OPTIONS preflight before POST/DELETE or when custom headers are present (e.g., `Authorization`).
+  - Server must respond to OPTIONS with:
+    - `Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS` (list all supported methods)
+    - `Access-Control-Allow-Headers: Content-Type, Authorization` (list all custom headers clients may send)
+    - `Access-Control-Max-Age: 86400` (cache preflight for 24 hours to reduce overhead)
+    - `Access-Control-Allow-Origin: <validated-origin>` (same validation as actual requests)
+    - `Access-Control-Allow-Credentials: true` (if credentials are used)
+  - Return `204 No Content` or `200 OK` with empty body for OPTIONS.
+- **Secure production defaults**:
+  - Enable CORS only for HTTPS origins in production (reject `http://` origins except localhost in dev).
+  - Use narrow origin allowlist (specific domains only, no wildcards or regex).
+  - Set `Access-Control-Max-Age` high (86400 seconds = 24 hours) to reduce preflight frequency.
+  - Do not expose sensitive headers via `Access-Control-Expose-Headers` unless necessary.
+- **Framework-specific middleware configuration**:
+  - **Express (Node.js)**: Use `cors` package:
+    ```javascript
+    const cors = require("cors");
+    app.use(
+      cors({
+        origin: (origin, callback) => {
+          const allowedOrigins = ["https://worktime.example.com", "http://localhost:5173"];
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+        credentials: true,
+        methods: ["GET", "POST", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        maxAge: 86400,
+      }),
+    );
+    ```
+  - **Fastify (Node.js)**: Use `@fastify/cors` plugin:
+    ```javascript
+    await fastify.register(require("@fastify/cors"), {
+      origin: ["https://worktime.example.com", "http://localhost:5173"],
+      credentials: true,
+      methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    });
+    ```
+  - **FastAPI (Python)**: Use `CORSMiddleware`:
+    ```python
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["https://worktime.example.com", "http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+        max_age=86400
+    )
+    ```
+  - **Cloudflare Workers**: Set headers manually in response:
+    ```javascript
+    response.headers.set("Access-Control-Allow-Origin", validatedOrigin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    ```
+- **Testing CORS**:
+  - Use browser DevTools Network tab to inspect preflight OPTIONS requests and CORS headers.
+  - Verify `Access-Control-Allow-Origin` matches frontend origin exactly (not `*`).
+  - Test authenticated requests (with `Authorization` header) to ensure preflight succeeds.
+  - Test from disallowed origins to confirm server rejects (no CORS headers → browser blocks).
 
 ## Open questions
 

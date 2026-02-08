@@ -15,10 +15,9 @@ import { getScheduleConfig } from "./utils/scheduleUtils";
 import type { VacationAllowanceUnit } from "./utils/vacationCalculations";
 
 type WizardCompletionPayload = {
-  vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
+  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
-  timeTrackingWeeklyTargetHours?: number;
 };
 
 function isValidVacationAllowanceUnit(value: unknown): value is VacationAllowanceUnit {
@@ -176,8 +175,11 @@ function AppContent() {
     } else if (
       (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
       payload?.vacationAllowance &&
-      typeof payload.vacationAllowance.amount === "number" &&
-      payload.vacationAllowance.amount > 0 &&
+      typeof payload.vacationAllowance.yearlyAmounts === "object" &&
+      payload.vacationAllowance.yearlyAmounts !== null &&
+      Object.values(payload.vacationAllowance.yearlyAmounts).some(
+        (v) => typeof v === "number" && v > 0,
+      ) &&
       isValidVacationAllowanceUnit(payload.vacationAllowance.unit)
     ) {
       // Persist vacation allowance changes in change-team or change-schedule modes
@@ -188,10 +190,14 @@ function AppContent() {
       payload?.vacationAllowance
     ) {
       // Invalid vacation allowance - show error for debugging
-      const { amount, unit } = payload.vacationAllowance;
+      const { yearlyAmounts, unit } = payload.vacationAllowance;
       const errors: string[] = [];
-      if (typeof amount !== "number" || amount <= 0) {
-        errors.push("amount must be a positive number");
+      if (
+        typeof yearlyAmounts !== "object" ||
+        yearlyAmounts === null ||
+        !Object.values(yearlyAmounts).some((v) => typeof v === "number" && v > 0)
+      ) {
+        errors.push("yearlyAmounts must contain at least one positive number");
       }
       if (!isValidVacationAllowanceUnit(unit)) {
         errors.push(`unit must be "days" or "hours", got "${unit}"`);

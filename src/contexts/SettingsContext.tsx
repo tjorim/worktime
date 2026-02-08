@@ -11,7 +11,7 @@ export type NotificationSetting = "on" | "off";
 export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "raw";
-export type TimeTrackingViewKey = "daily" | "weekly";
+export type TimeTrackingViewKey = "daily" | "weekly" | "config";
 
 export interface LastUsed {
   activeTab: TabKey;
@@ -29,7 +29,6 @@ interface UserSettings {
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
-  timeTrackingWeeklyTargetHours: number;
 }
 
 interface SettingsContextType {
@@ -41,7 +40,6 @@ interface SettingsContextType {
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
-  updateTimeTrackingWeeklyTargetHours: (hours: number) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -71,7 +69,6 @@ interface SettingsContextType {
       vacationAllowance?: Partial<VacationAllowanceSettings>;
       enableTimeOff?: boolean;
       enableTimeTracking?: boolean;
-      timeTrackingWeeklyTargetHours?: number;
     },
   ) => void;
 }
@@ -81,13 +78,12 @@ export const defaultSettings: UserSettings = {
   theme: "auto",
   notifications: "off",
   vacationAllowance: {
-    amount: 0,
+    yearlyAmounts: {},
     unit: "days",
     hoursPerDay: 8,
   },
   enableTimeOff: false,
   enableTimeTracking: false,
-  timeTrackingWeeklyTargetHours: 40,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -102,7 +98,7 @@ export const defaultLastUsed: LastUsed = {
 const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking"]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
-const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
+const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
 
 interface WorktimeUserState {
   version: number;
@@ -115,7 +111,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -175,6 +171,57 @@ const migrations: Record<number, Migration> = {
       scheduleType,
       settings: cleanSettings,
       lastUsed: migratedLastUsed,
+    };
+  },
+
+  // → v2: Replace vacationAllowance.amount with yearlyAmounts[currentYear].
+  2: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
+    const va = (
+      typeof settings.vacationAllowance === "object" && settings.vacationAllowance !== null
+        ? settings.vacationAllowance
+        : {}
+    ) as RawState;
+
+    const oldAmount =
+      typeof va.amount === "number" &&
+      Number.isFinite(va.amount as number) &&
+      (va.amount as number) >= 0
+        ? (va.amount as number)
+        : 0;
+
+    const existingYearly =
+      typeof va.yearlyAmounts === "object" && va.yearlyAmounts !== null
+        ? (va.yearlyAmounts as Record<string, unknown>)
+        : {};
+
+    const currentYear = String(new Date().getFullYear());
+    const yearlyAmounts: Record<string, number> = {};
+    for (const [key, val] of Object.entries(existingYearly)) {
+      if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
+        yearlyAmounts[key] = val;
+      } else if (val !== undefined) {
+        console.warn(`Migration v2: skipped invalid yearlyAmounts entry "${key}":`, val);
+      }
+    }
+    // Only seed from old amount if there's no entry for the current year yet
+    if (oldAmount > 0 && !(currentYear in yearlyAmounts)) {
+      yearlyAmounts[currentYear] = oldAmount;
+    }
+
+    const { amount: _amount, yearlyAmounts: _existingYearly, ...restVa } = va;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        vacationAllowance: {
+          ...restVa,
+          yearlyAmounts,
+        },
+      },
     };
   },
 };
@@ -266,12 +313,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.enableTimeTracking === "boolean"
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
-  const timeTrackingWeeklyTargetHours =
-    typeof settings.timeTrackingWeeklyTargetHours === "number" &&
-    Number.isFinite(settings.timeTrackingWeeklyTargetHours) &&
-    settings.timeTrackingWeeklyTargetHours >= 0
-      ? settings.timeTrackingWeeklyTargetHours
-      : defaultSettings.timeTrackingWeeklyTargetHours;
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -366,7 +407,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
-      timeTrackingWeeklyTargetHours,
     },
     lastUsed: {
       activeTab,
@@ -462,20 +502,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, enableTimeTracking: enabled },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateTimeTrackingWeeklyTargetHours = useCallback(
-    (hours: number) => {
-      const nextHours =
-        Number.isFinite(hours) && hours >= 0
-          ? hours
-          : defaultSettings.timeTrackingWeeklyTargetHours;
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, timeTrackingWeeklyTargetHours: nextHours },
       }));
     },
     [setUserState],
@@ -611,16 +637,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         vacationAllowance?: Partial<VacationAllowanceSettings>;
         enableTimeOff?: boolean;
         enableTimeTracking?: boolean;
-        timeTrackingWeeklyTargetHours?: number;
       },
     ) => {
-      const nextWeeklyTargetHours =
-        preferences?.timeTrackingWeeklyTargetHours !== undefined
-          ? Number.isFinite(preferences.timeTrackingWeeklyTargetHours) &&
-            preferences.timeTrackingWeeklyTargetHours >= 0
-            ? preferences.timeTrackingWeeklyTargetHours
-            : defaultSettings.timeTrackingWeeklyTargetHours
-          : undefined;
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
@@ -642,8 +660,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             preferences?.enableTimeTracking !== undefined
               ? preferences.enableTimeTracking
               : prev.settings.enableTimeTracking,
-          timeTrackingWeeklyTargetHours:
-            nextWeeklyTargetHours ?? prev.settings.timeTrackingWeeklyTargetHours,
         },
       }));
     },
@@ -660,7 +676,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
-      updateTimeTrackingWeeklyTargetHours,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -686,7 +701,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
-      updateTimeTrackingWeeklyTargetHours,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,

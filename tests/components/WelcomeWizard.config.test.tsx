@@ -27,14 +27,13 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const visibleSteps = getVisibleSteps(context);
-      expect(visibleSteps).toHaveLength(7);
+      expect(visibleSteps).toHaveLength(6);
       expect(visibleSteps.map((s) => s.id)).toEqual([
         "welcome",
         "features",
         "schedule-selection",
         "team-selection",
         "timeoff-setup",
-        "vacation-allowance",
         "time-tracking-setup",
       ]);
     });
@@ -47,13 +46,12 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const visibleSteps = getVisibleSteps(context);
-      expect(visibleSteps).toHaveLength(6);
+      expect(visibleSteps).toHaveLength(5);
       expect(visibleSteps.map((s) => s.id)).toEqual([
         "welcome",
         "features",
         "schedule-selection",
         "timeoff-setup",
-        "vacation-allowance",
         "time-tracking-setup",
       ]);
     });
@@ -132,7 +130,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBe("team-selection");
     });
 
-    it("should skip team-selection and go to time off setup when no team selection needed", () => {
+    it("should skip team-selection and go to time off setup when no team selection is needed", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
@@ -164,7 +162,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       // This step is not visible in change-team mode, but if evaluated directly
-      // it falls through to the onboarding path (time off setup)
+      // it falls through to the onboarding path and returns time off setup.
       const scheduleConfig = getStepConfig("schedule-selection");
       const nextStep = scheduleConfig.getNextStep(context);
       expect(nextStep).toBe("timeoff-setup");
@@ -194,15 +192,15 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBeNull();
     });
 
-    it("should continue to time tracking setup after vacation allowance in onboarding", () => {
+    it("should continue to time tracking setup after time off setup in onboarding", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
         enableTimeOff: true,
       };
 
-      const vacationConfig = getStepConfig("vacation-allowance");
-      const nextStep = vacationConfig.getNextStep(context);
+      const timeOffConfig = getStepConfig("timeoff-setup");
+      const nextStep = timeOffConfig.getNextStep(context);
       expect(nextStep).toBe("time-tracking-setup");
     });
   });
@@ -306,7 +304,7 @@ describe("WelcomeWizard Configuration System", () => {
   });
 
   describe("Step Configuration - Step Counting", () => {
-    it("should count 7 total steps in onboarding with team selection", () => {
+    it("should count 6 total steps in onboarding with team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
@@ -314,10 +312,10 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(7);
+      expect(totalSteps).toBe(6);
     });
 
-    it("should count 6 total steps in onboarding without team selection", () => {
+    it("should count 5 total steps in onboarding without team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
@@ -325,7 +323,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(6);
+      expect(totalSteps).toBe(5);
     });
 
     it("should count 1 step in change-team mode", () => {
@@ -375,8 +373,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(getStepIndex("schedule-selection", context)).toBe(3);
       expect(getStepIndex("team-selection", context)).toBe(4);
       expect(getStepIndex("timeoff-setup", context)).toBe(5);
-      expect(getStepIndex("vacation-allowance", context)).toBe(6);
-      expect(getStepIndex("time-tracking-setup", context)).toBe(7);
+      expect(getStepIndex("time-tracking-setup", context)).toBe(6);
     });
 
     it("should correctly index steps in onboarding without team selection", () => {
@@ -390,8 +387,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(getStepIndex("features", context)).toBe(2);
       expect(getStepIndex("schedule-selection", context)).toBe(3);
       expect(getStepIndex("timeoff-setup", context)).toBe(4);
-      expect(getStepIndex("vacation-allowance", context)).toBe(5);
-      expect(getStepIndex("time-tracking-setup", context)).toBe(6);
+      expect(getStepIndex("time-tracking-setup", context)).toBe(5);
     });
 
     it("should correctly index team-selection in change-team mode", () => {

@@ -6,6 +6,7 @@ import {
   getAllowanceDays,
   getAllowanceHours,
   getAvailableYears,
+  getEffectiveAmount,
   getHalfDayLabel,
   sanitizeVacationAllowance,
   type VacationAllowanceSettings,
@@ -304,76 +305,123 @@ describe("vacationCalculations", () => {
     });
   });
 
-  describe("getAllowanceDays", () => {
-    it("should return amount when unit is days", () => {
+  describe("getEffectiveAmount", () => {
+    it("should return amount for a year that has an entry", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 25,
+        yearlyAmounts: { "2025": 25 },
         unit: "days",
         hoursPerDay: 8,
       };
-      expect(getAllowanceDays(allowance)).toBe(25);
+      expect(getEffectiveAmount(allowance, 2025)).toBe(25);
+    });
+
+    it("should return 0 for a year without an entry", () => {
+      const allowance: VacationAllowanceSettings = {
+        yearlyAmounts: { "2025": 25 },
+        unit: "days",
+        hoursPerDay: 8,
+      };
+      expect(getEffectiveAmount(allowance, 2024)).toBe(0);
+    });
+
+    it("should return 0 for empty yearlyAmounts", () => {
+      const allowance: VacationAllowanceSettings = {
+        yearlyAmounts: {},
+        unit: "days",
+        hoursPerDay: 8,
+      };
+      expect(getEffectiveAmount(allowance, 2025)).toBe(0);
+    });
+  });
+
+  describe("getAllowanceDays", () => {
+    it("should return amount when unit is days", () => {
+      const allowance: VacationAllowanceSettings = {
+        yearlyAmounts: { "2025": 25 },
+        unit: "days",
+        hoursPerDay: 8,
+      };
+      expect(getAllowanceDays(allowance, 2025)).toBe(25);
     });
 
     it("should convert hours to days", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 200,
+        yearlyAmounts: { "2025": 200 },
         unit: "hours",
         hoursPerDay: 8,
       };
-      expect(getAllowanceDays(allowance)).toBe(25); // 200 / 8 = 25
+      expect(getAllowanceDays(allowance, 2025)).toBe(25); // 200 / 8 = 25
     });
 
     it("should handle decimal conversion", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 180,
+        yearlyAmounts: { "2025": 180 },
         unit: "hours",
         hoursPerDay: 8,
       };
-      expect(getAllowanceDays(allowance)).toBe(22.5); // 180 / 8 = 22.5
+      expect(getAllowanceDays(allowance, 2025)).toBe(22.5); // 180 / 8 = 22.5
     });
 
     it("should return 0 when hoursPerDay is 0 or negative", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 200,
+        yearlyAmounts: { "2025": 200 },
         unit: "hours",
         hoursPerDay: 0,
       };
-      expect(getAllowanceDays(allowance)).toBe(0);
+      expect(getAllowanceDays(allowance, 2025)).toBe(0);
+    });
+
+    it("should return 0 for a year without an entry", () => {
+      const allowance: VacationAllowanceSettings = {
+        yearlyAmounts: { "2025": 25 },
+        unit: "days",
+        hoursPerDay: 8,
+      };
+      expect(getAllowanceDays(allowance, 2024)).toBe(0);
     });
   });
 
   describe("getAllowanceHours", () => {
     it("should return amount when unit is hours", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 200,
+        yearlyAmounts: { "2025": 200 },
         unit: "hours",
         hoursPerDay: 8,
       };
-      expect(getAllowanceHours(allowance)).toBe(200);
+      expect(getAllowanceHours(allowance, 2025)).toBe(200);
     });
 
     it("should convert days to hours", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 25,
+        yearlyAmounts: { "2025": 25 },
         unit: "days",
         hoursPerDay: 8,
       };
-      expect(getAllowanceHours(allowance)).toBe(200); // 25 * 8 = 200
+      expect(getAllowanceHours(allowance, 2025)).toBe(200); // 25 * 8 = 200
     });
 
     it("should handle custom hoursPerDay", () => {
       const allowance: VacationAllowanceSettings = {
-        amount: 25,
+        yearlyAmounts: { "2025": 25 },
         unit: "days",
         hoursPerDay: 7.5,
       };
-      expect(getAllowanceHours(allowance)).toBe(187.5); // 25 * 7.5
+      expect(getAllowanceHours(allowance, 2025)).toBe(187.5); // 25 * 7.5
+    });
+
+    it("should return 0 for a year without an entry", () => {
+      const allowance: VacationAllowanceSettings = {
+        yearlyAmounts: { "2025": 200 },
+        unit: "hours",
+        hoursPerDay: 8,
+      };
+      expect(getAllowanceHours(allowance, 2024)).toBe(0);
     });
   });
 
   describe("sanitizeVacationAllowance", () => {
     const fallback: VacationAllowanceSettings = {
-      amount: 25,
+      yearlyAmounts: { "2025": 25 },
       unit: "days",
       hoursPerDay: 8,
     };
@@ -383,24 +431,30 @@ describe("vacationCalculations", () => {
       expect(result).toEqual(fallback);
     });
 
-    it("should sanitize negative amount to 0", () => {
-      const result = sanitizeVacationAllowance({ amount: -5 }, fallback);
-      expect(result.amount).toBe(0);
+    it("should skip negative values in yearlyAmounts", () => {
+      const result = sanitizeVacationAllowance({ yearlyAmounts: { "2025": -5 } }, fallback);
+      expect(result.yearlyAmounts["2025"]).toBe(25); // Keeps fallback
     });
 
-    it("should sanitize NaN amount to fallback", () => {
-      const result = sanitizeVacationAllowance({ amount: NaN }, fallback);
-      expect(result.amount).toBe(fallback.amount);
+    it("should skip NaN values in yearlyAmounts", () => {
+      const result = sanitizeVacationAllowance({ yearlyAmounts: { "2025": NaN } }, fallback);
+      expect(result.yearlyAmounts["2025"]).toBe(25); // Keeps fallback
     });
 
-    it("should sanitize Infinity amount to fallback", () => {
-      const result = sanitizeVacationAllowance({ amount: Infinity }, fallback);
-      expect(result.amount).toBe(fallback.amount);
+    it("should skip Infinity values in yearlyAmounts", () => {
+      const result = sanitizeVacationAllowance({ yearlyAmounts: { "2025": Infinity } }, fallback);
+      expect(result.yearlyAmounts["2025"]).toBe(25); // Keeps fallback
     });
 
-    it("should accept valid amount", () => {
-      const result = sanitizeVacationAllowance({ amount: 30 }, fallback);
-      expect(result.amount).toBe(30);
+    it("should accept valid yearlyAmounts entry", () => {
+      const result = sanitizeVacationAllowance({ yearlyAmounts: { "2025": 30 } }, fallback);
+      expect(result.yearlyAmounts["2025"]).toBe(30);
+    });
+
+    it("should merge yearlyAmounts with fallback", () => {
+      const result = sanitizeVacationAllowance({ yearlyAmounts: { "2026": 20 } }, fallback);
+      expect(result.yearlyAmounts["2025"]).toBe(25); // From fallback
+      expect(result.yearlyAmounts["2026"]).toBe(20); // New entry
     });
 
     it("should accept valid unit", () => {
@@ -430,18 +484,18 @@ describe("vacationCalculations", () => {
 
     it("should sanitize partial allowance with multiple invalid fields", () => {
       const result = sanitizeVacationAllowance(
-        { amount: -10, unit: "invalid" as any, hoursPerDay: -5 },
+        { yearlyAmounts: { "2025": -10 }, unit: "invalid" as any, hoursPerDay: -5 },
         fallback,
       );
-      expect(result.amount).toBe(0);
+      expect(result.yearlyAmounts["2025"]).toBe(25); // Keeps fallback (invalid skipped)
       expect(result.unit).toBe(fallback.unit);
       expect(result.hoursPerDay).toBe(1);
     });
 
-    it("should merge partial allowance with fallback", () => {
-      const result = sanitizeVacationAllowance({ amount: 30 }, fallback);
-      expect(result.amount).toBe(30);
-      expect(result.unit).toBe(fallback.unit);
+    it("should use fallback yearlyAmounts when yearlyAmounts not provided", () => {
+      const result = sanitizeVacationAllowance({ unit: "hours" }, fallback);
+      expect(result.yearlyAmounts).toEqual(fallback.yearlyAmounts);
+      expect(result.unit).toBe("hours");
       expect(result.hoursPerDay).toBe(fallback.hoursPerDay);
     });
   });

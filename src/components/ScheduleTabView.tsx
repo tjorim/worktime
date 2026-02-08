@@ -169,6 +169,7 @@ export function ScheduleTabView({
           onPreviousDay={handlePreviousDay}
           onNextDay={handleNextDay}
           onTodayClick={handleTodayClick}
+          onDateSelect={setCurrentDate}
           onTeamClick={onTeamClick}
           isActive={isActive}
           viewingScheduleType={viewingScheduleType}

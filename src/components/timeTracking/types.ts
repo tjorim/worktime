@@ -1,9 +1,7 @@
-import type { TimeTrackingTag } from "./constants";
-
 export type StoredTimeTrackingTask = {
   id: string;
   text: string;
-  tag: TimeTrackingTag;
+  label: string;
   startTime: string;
   stopTime?: string | null;
 };
@@ -11,7 +9,7 @@ export type StoredTimeTrackingTask = {
 export type TimeTrackingTemplate = {
   id: string;
   text: string;
-  tag: TimeTrackingTag;
+  label: string;
   start: string;
   stop: string;
 };

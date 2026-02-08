@@ -27,6 +27,7 @@ export type ShiftRosterConfig = {
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   referenceTeam: number; // 1-based team number for reference point
   // Optional fields
+  weeklyHours?: number | null; // Target working hours per week for this schedule (null/undefined = not yet determined)
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
 };
 
@@ -43,7 +44,8 @@ export type ScheduleRoster = {
  * Throws an error if validation fails.
  */
 function validateSchedulePattern(config: ShiftRosterConfig): void {
-  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam } = config;
+  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam, weeklyHours } =
+    config;
 
   // Validation 1: Pattern length matches cycle length
   if (schedulePattern.length !== cycleLengthDays) {
@@ -166,6 +168,13 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
         `Pattern must contain at least one working shift (all days are marked as "O" - off)`,
     );
   }
+
+  // Validation 9: Optional weekly hours must be a finite non-negative number when provided
+  if (weeklyHours != null && (!Number.isFinite(weeklyHours) || weeklyHours < 0)) {
+    throw new Error(
+      `Schedule pattern validation failed: weeklyHours must be a finite non-negative number when provided.`,
+    );
+  }
 }
 
 export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
@@ -198,6 +207,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Saturday
         "O", // Sunday
       ],
+      weeklyHours: 40,
       notes: "Weekday-only coverage.",
       // 9-5 uses "Day" shift - no overrides needed
     },
@@ -322,6 +332,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Saturday
         "L", // Sunday
       ],
+      weeklyHours: 25.5,
       notes: "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
     },
   },

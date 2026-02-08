@@ -3,10 +3,11 @@ export function timeToMinutes(time: string): number {
   if (parts.length !== 2) {
     throw new Error(`Invalid time format "${time}". Expected HH:MM.`);
   }
-  const [hoursRaw, minutesRaw] = parts;
+  const [hoursRaw, minutesRaw] = parts.map((segment) => segment.trim());
+
   const hours = Number(hoursRaw);
   const minutes = Number(minutesRaw);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+  if (!hoursRaw || !minutesRaw || Number.isNaN(hours) || Number.isNaN(minutes)) {
     throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
   }
   if (hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) {
@@ -63,18 +64,16 @@ export function overlaps(
     if (skipId && task.id === skipId) {
       return false;
     }
-    const taskStart = timeToMinutes(task.start);
-    const taskStop = timeToMinutes(task.stop);
-    if (taskStop <= taskStart) {
+    try {
+      const taskStart = timeToMinutes(task.start);
+      const taskStop = timeToMinutes(task.stop);
+      if (taskStop <= taskStart) {
+        return false;
+      }
+      return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
+    } catch (error) {
+      console.warn(`Failed to parse task times for task ${task.id}:`, task, error);
       return false;
     }
-    return segmentsOverlap(startMin, stopMin, taskStart, taskStop);
   });
-}
-
-export function tagToClass(tag: string): string {
-  return tag
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }

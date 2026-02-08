@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RawContentPanel } from "../../../src/components/timeOff/RawContentPanel";
+import { TimeOffRawView } from "../../../src/components/timeOff/TimeOffRawView";
 
-describe("RawContentPanel", () => {
+describe("TimeOffRawView", () => {
   const defaultProps = {
     rawText: "",
     error: undefined,
@@ -18,27 +18,27 @@ describe("RawContentPanel", () => {
   });
 
   it("should render the card with header", () => {
-    render(<RawContentPanel {...defaultProps} />);
+    render(<TimeOffRawView {...defaultProps} />);
 
     const header = screen.getByText("Raw .hday content", { selector: ".card-header" });
     expect(header).toBeInTheDocument();
   });
 
   it("should display textarea with correct value", () => {
-    const { rerender } = render(<RawContentPanel {...defaultProps} rawText="2025/01/15 # Test" />);
+    const { rerender } = render(<TimeOffRawView {...defaultProps} rawText="2025/01/15 # Test" />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveValue("2025/01/15 # Test");
 
     // Update props
-    rerender(<RawContentPanel {...defaultProps} rawText="2025/01/20 # Updated" />);
+    rerender(<TimeOffRawView {...defaultProps} rawText="2025/01/20 # Updated" />);
     expect(textarea).toHaveValue("2025/01/20 # Updated");
   });
 
   it("should call onChangeRawText when textarea value changes", async () => {
     const mockOnChange = vi.fn();
     const { rerender } = render(
-      <RawContentPanel {...defaultProps} onChangeRawText={mockOnChange} />,
+      <TimeOffRawView {...defaultProps} onChangeRawText={mockOnChange} />,
     );
 
     const user = userEvent.setup();
@@ -47,11 +47,11 @@ describe("RawContentPanel", () => {
 
     // Type 'a' and update the component
     await user.type(textarea, "a");
-    rerender(<RawContentPanel {...defaultProps} rawText="a" onChangeRawText={mockOnChange} />);
+    rerender(<TimeOffRawView {...defaultProps} rawText="a" onChangeRawText={mockOnChange} />);
 
     // Type 'b' and update the component
     await user.type(textarea, "b");
-    rerender(<RawContentPanel {...defaultProps} rawText="ab" onChangeRawText={mockOnChange} />);
+    rerender(<TimeOffRawView {...defaultProps} rawText="ab" onChangeRawText={mockOnChange} />);
 
     // Type 'c' and update the component
     await user.type(textarea, "c");
@@ -63,7 +63,7 @@ describe("RawContentPanel", () => {
 
   it("should call onApply when Apply button is clicked", async () => {
     const mockOnApply = vi.fn();
-    render(<RawContentPanel {...defaultProps} onApply={mockOnApply} />);
+    render(<TimeOffRawView {...defaultProps} onApply={mockOnApply} />);
 
     const user = userEvent.setup();
 
@@ -75,7 +75,7 @@ describe("RawContentPanel", () => {
 
   it("should call onReset when Reset button is clicked", async () => {
     const mockOnReset = vi.fn();
-    render(<RawContentPanel {...defaultProps} isDirty={true} onReset={mockOnReset} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={true} onReset={mockOnReset} />);
 
     const user = userEvent.setup();
 
@@ -86,34 +86,34 @@ describe("RawContentPanel", () => {
   });
 
   it("should disable Reset button when not dirty", () => {
-    render(<RawContentPanel {...defaultProps} isDirty={false} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={false} />);
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeDisabled();
   });
 
   it("should enable Reset button when dirty", () => {
-    render(<RawContentPanel {...defaultProps} isDirty={true} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={true} />);
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeEnabled();
   });
 
   it("should display error message when error prop is provided", () => {
-    render(<RawContentPanel {...defaultProps} error="Invalid .hday format" />);
+    render(<TimeOffRawView {...defaultProps} error="Invalid .hday format" />);
 
     const errorMessage = screen.getByRole("alert");
     expect(errorMessage).toHaveTextContent("Invalid .hday format");
   });
 
   it("should not display error message when error prop is undefined", () => {
-    render(<RawContentPanel {...defaultProps} error={undefined} />);
+    render(<TimeOffRawView {...defaultProps} error={undefined} />);
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("should have proper accessibility attributes", () => {
-    render(<RawContentPanel {...defaultProps} error="Parse error" />);
+    render(<TimeOffRawView {...defaultProps} error="Parse error" />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     const errorMessage = screen.getByRole("alert");
@@ -124,7 +124,7 @@ describe("RawContentPanel", () => {
   });
 
   it("should show placeholder text in textarea", () => {
-    render(<RawContentPanel {...defaultProps} />);
+    render(<TimeOffRawView {...defaultProps} />);
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveAttribute("placeholder");

@@ -1,27 +1,40 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import React from "react";
-import { TimeTrackerPanel } from "../../../src/components/timeTracking/TimeTrackerPanel";
+import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
 } from "../../../src/components/timeTracking/types";
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
-describe("TimeTrackerPanel", () => {
+const TEST_LABELS = [
+  { name: "Development", color: "#198754" },
+  { name: "Support", color: "#c82333" },
+  { name: "Meeting", color: "#6f42c1" },
+];
+
+const TEST_TEMPLATES: TimeTrackingTemplate[] = [
+  {
+    id: "tpl-1",
+    text: "Morning Support",
+    label: "Support",
+    start: "08:00",
+    stop: "12:00",
+  },
+];
+
+describe("TimeTrackingDailyView", () => {
   const mockProps = {
     tasks: [] as StoredTimeTrackingTask[],
-    templates: [] as TimeTrackingTemplate[],
+    labels: TEST_LABELS,
+    templates: TEST_TEMPLATES,
+    selectedDate: dayjs().format("YYYY-MM-DD"),
+    onSelectedDateChange: vi.fn(),
     onAddTask: vi.fn(),
     onUpdateTaskTimes: vi.fn(),
     onRemoveTask: vi.fn(),
-    onAddTemplate: vi.fn(),
-    onUpdateTemplate: vi.fn(),
-    onDeleteTemplate: vi.fn(),
-    onExportData: vi.fn(),
-    onImportData: vi.fn(),
   };
 
   beforeEach(() => {
@@ -37,32 +50,32 @@ describe("TimeTrackerPanel", () => {
     it("starts a timer when a task name is provided", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-01T10:15:30"));
-      vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as Crypto);
+      vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as unknown as Crypto);
       const onAddTask = vi.fn().mockReturnValue(true);
 
-      render(<TimeTrackerPanel {...mockProps} onAddTask={onAddTask} />);
+      render(<TimeTrackingDailyView {...mockProps} onAddTask={onAddTask} />);
 
       fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Focus work" } });
-      fireEvent.click(screen.getByRole("button", { name: /Start Timer/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Start Now/i }));
 
       expect(onAddTask).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "task-123",
           text: "Focus work",
-          tag: "Development",
+          label: "Development",
           startTime: "2025-01-01T10:15",
         }),
       );
     });
 
-    it("requires a task name before starting", async () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+    it("disables start-now until task details are entered", async () => {
+      render(<TimeTrackingDailyView {...mockProps} />);
 
-      fireEvent.click(screen.getByRole("button", { name: /Start Timer/i }));
+      const startNowButton = screen.getByRole("button", { name: /Start Now/i });
+      expect(startNowButton).toBeDisabled();
 
-      expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
-        /Please enter a task name to start/i,
-      );
+      fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Focus work" } });
+      expect(screen.getByRole("button", { name: /Start Now/i })).toBeEnabled();
     });
 
     it("renders the running task UI with elapsed time", () => {
@@ -71,11 +84,13 @@ describe("TimeTrackerPanel", () => {
       const runningTask: StoredTimeTrackingTask = {
         id: "running-1",
         text: "On call",
-        tag: "Support",
+        label: "Support",
         startTime: "2025-01-01T10:00",
       };
 
-      render(<TimeTrackerPanel {...mockProps} tasks={[runningTask]} />);
+      render(
+        <TimeTrackingDailyView {...mockProps} tasks={[runningTask]} selectedDate="2025-01-01" />,
+      );
 
       expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
       // Task title appears in both Quick Timer UI and the daily task list.
@@ -92,12 +107,12 @@ describe("TimeTrackerPanel", () => {
       const runningTask: StoredTimeTrackingTask = {
         id: "running-2",
         text: "Write notes",
-        tag: "Meeting",
+        label: "Meeting",
         startTime: "2025-01-01T10:00",
       };
 
       render(
-        <TimeTrackerPanel
+        <TimeTrackingDailyView
           {...mockProps}
           tasks={[runningTask]}
           onUpdateTaskTimes={onUpdateTaskTimes}
@@ -120,12 +135,12 @@ describe("TimeTrackerPanel", () => {
       const runningTask: StoredTimeTrackingTask = {
         id: "running-3",
         text: "Overnight support",
-        tag: "Support",
+        label: "Support",
         startTime: "2025-01-01T23:55",
       };
 
       render(
-        <TimeTrackerPanel
+        <TimeTrackingDailyView
           {...mockProps}
           tasks={[runningTask]}
           onUpdateTaskTimes={onUpdateTaskTimes}
@@ -143,57 +158,53 @@ describe("TimeTrackerPanel", () => {
 
   describe("Task Form Rendering", () => {
     it("should render all form input controls", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
 
-      expect(screen.getByLabelText(/Select Date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^Tag$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Start$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Stop$/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Add Task/i })).toBeInTheDocument();
     });
 
     it("should mark required fields appropriately", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveAttribute("aria-required", "true");
       expect(screen.getByLabelText(/^Start$/i)).toHaveAttribute("aria-required", "true");
       expect(screen.getByLabelText(/^Stop$/i)).toHaveAttribute("aria-required", "true");
     });
 
-    it("should provide date selection input", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+    it("applies a selected template to the task form", async () => {
+      const user = userEvent.setup();
+      render(<TimeTrackingDailyView {...mockProps} />);
 
-      const dateInput = screen.getByLabelText(/Select Date/i);
-      expect(dateInput).toHaveAttribute("type", "date");
+      await user.selectOptions(screen.getByLabelText(/Template selector/i), "tpl-1");
+      await user.click(screen.getByRole("button", { name: /Use Template/i }));
+
+      expect(screen.getByLabelText(/^Task$/i)).toHaveValue("Morning Support");
+      expect(screen.getByLabelText(/^Label$/i)).toHaveValue("Support");
+      expect(screen.getByLabelText(/^Start$/i)).toHaveValue("08:00");
+      expect(screen.getByLabelText(/^Stop$/i)).toHaveValue("12:00");
     });
   });
 
   describe("Input Validation", () => {
-    it("should validate all fields are filled", async () => {
-      const user = userEvent.setup();
-      render(<TimeTrackerPanel {...mockProps} />);
+    it("should keep add-task disabled until required fields are completed", async () => {
+      render(<TimeTrackingDailyView {...mockProps} />);
 
-      await user.click(screen.getByRole("button", { name: /Add Task/i }));
-
-      const alerts = screen.getAllByRole("alert");
-      const mainAlert = alerts[0]; // First alert is the main validation alert
-      expect(mainAlert.textContent).toMatch(/Please fill in all fields/i);
-      expect(mockProps.onAddTask).not.toHaveBeenCalled();
+      const addTaskButton = screen.getByRole("button", { name: /Add Task/i });
+      expect(addTaskButton).toBeDisabled();
     });
 
     it("should validate time range order", async () => {
       const user = userEvent.setup();
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
 
       await user.type(screen.getByLabelText(/^Task$/i), "Test");
       await user.type(screen.getByLabelText(/^Start$/i), "08:00");
       await user.type(screen.getByLabelText(/^Stop$/i), "08:00");
-      await user.click(screen.getByRole("button", { name: /Add Task/i }));
-
-      const alerts = screen.getAllByRole("alert");
-      const mainAlert = alerts[0]; // First alert is the main validation alert
-      expect(mainAlert.textContent).toMatch(/Stop time must be after start time/i);
+      expect(screen.getByRole("button", { name: /Add Task/i })).toBeDisabled();
     });
 
     it("should detect time conflicts", async () => {
@@ -203,13 +214,13 @@ describe("TimeTrackerPanel", () => {
         {
           id: "1",
           text: "Existing",
-          tag: "Support",
+          label: "Support",
           startTime: `${today}T08:00`,
           stopTime: `${today}T12:00`,
         },
       ];
 
-      render(<TimeTrackerPanel {...mockProps} tasks={existingTasks} />);
+      render(<TimeTrackingDailyView {...mockProps} tasks={existingTasks} />);
 
       await user.type(screen.getByLabelText(/^Task$/i), "New task");
       await user.type(screen.getByLabelText(/^Start$/i), "09:00");
@@ -224,7 +235,7 @@ describe("TimeTrackerPanel", () => {
 
   describe("Task Display", () => {
     it("shows empty state message", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
       expect(screen.getByText(/No time entries yet/i)).toBeInTheDocument();
     });
 
@@ -234,20 +245,20 @@ describe("TimeTrackerPanel", () => {
         {
           id: "1",
           text: "Task A",
-          tag: "Support",
+          label: "Support",
           startTime: `${today}T08:00`,
           stopTime: `${today}T12:00`,
         },
         {
           id: "2",
           text: "Task B",
-          tag: "Meeting",
+          label: "Meeting",
           startTime: `${today}T13:00`,
           stopTime: `${today}T14:00`,
         },
       ];
 
-      render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
+      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
 
       expect(screen.getByText("Task A")).toBeInTheDocument();
       expect(screen.getByText("Task B")).toBeInTheDocument();
@@ -259,13 +270,13 @@ describe("TimeTrackerPanel", () => {
         {
           id: "1",
           text: "Task",
-          tag: "Support",
+          label: "Support",
           startTime: `${today}T08:00`,
           stopTime: `${today}T12:00`,
         },
       ];
 
-      const { container } = render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
+      const { container } = render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
       expect(container.querySelector(".progress")).toBeInTheDocument();
     });
   });
@@ -277,13 +288,13 @@ describe("TimeTrackerPanel", () => {
         {
           id: "1",
           text: "Task",
-          tag: "Support",
+          label: "Support",
           startTime: `${today}T08:00`,
           stopTime: `${today}T12:00`,
         },
       ];
 
-      render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
+      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
       expect(screen.getAllByRole("button", { name: /Remove/i })).toHaveLength(1);
     });
 
@@ -294,71 +305,75 @@ describe("TimeTrackerPanel", () => {
         {
           id: "1",
           text: "Task",
-          tag: "Support",
+          label: "Support",
           startTime: `${today}T08:00`,
           stopTime: `${today}T12:00`,
         },
       ];
 
-      render(<TimeTrackerPanel {...mockProps} tasks={tasks} />);
+      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
       await user.click(screen.getByRole("button", { name: /Remove/i }));
 
       expect(mockProps.onRemoveTask).toHaveBeenCalledWith("1");
     });
-  });
 
-  describe("Template Features", () => {
-    it("provides template toggle button", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
-      expect(screen.getByRole("button", { name: /Show templates/i })).toBeInTheDocument();
-    });
-
-    it("displays templates when expanded", async () => {
+    it("updates task details via edit modal", async () => {
       const user = userEvent.setup();
-      const templates = [
-        { id: "t1", text: "Template A", tag: "Support" as const, start: "08:00", stop: "12:00" },
+      const onUpdateTaskTimes = vi.fn();
+      const today = dayjs().format("YYYY-MM-DD");
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "1",
+          text: "Task",
+          label: "Support",
+          startTime: `${today}T08:00`,
+          stopTime: `${today}T12:00`,
+        },
       ];
 
-      render(<TimeTrackerPanel {...mockProps} templates={templates} />);
-      await user.click(screen.getByRole("button", { name: /Show templates/i }));
+      render(
+        <TimeTrackingDailyView
+          {...mockProps}
+          tasks={tasks}
+          onUpdateTaskTimes={onUpdateTaskTimes}
+        />,
+      );
 
-      expect(screen.getByText(/Template A/i)).toBeInTheDocument();
-    });
-  });
+      await user.click(screen.getByRole("button", { name: /Edit/i }));
 
-  describe("Data Management", () => {
-    it("provides export functionality", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
-      expect(screen.getByRole("button", { name: /Export Data/i })).toBeInTheDocument();
-    });
+      const dialog = screen.getByRole("dialog");
+      const taskInput = within(dialog).getByLabelText(/^Task$/i);
+      await user.clear(taskInput);
+      await user.type(taskInput, "Updated Task");
+      await user.selectOptions(within(dialog).getByLabelText(/^Label$/i), "Meeting");
+      await user.clear(within(dialog).getByLabelText(/^Start$/i));
+      await user.type(within(dialog).getByLabelText(/^Start$/i), "09:00");
+      await user.clear(within(dialog).getByLabelText(/^Stop$/i));
+      await user.type(within(dialog).getByLabelText(/^Stop$/i), "11:00");
+      await user.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
 
-    it("provides import capability", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
-      expect(screen.getByText(/Import Data/i)).toBeInTheDocument();
-    });
-
-    it("triggers export on button click", async () => {
-      const user = userEvent.setup();
-      render(<TimeTrackerPanel {...mockProps} />);
-
-      await user.click(screen.getByRole("button", { name: /Export Data/i }));
-      expect(mockProps.onExportData).toHaveBeenCalled();
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "1",
+        newText: "Updated Task",
+        newLabel: "Meeting",
+        newStartTime: `${today}T09:00`,
+        newStopTime: `${today}T11:00`,
+      });
     });
   });
 
   describe("Accessibility Compliance", () => {
     it("maintains accessible button labels", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
 
       expect(screen.getByRole("button", { name: /Add Task/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Export Data/i })).toBeInTheDocument();
     });
 
     it("provides accessible form controls", () => {
-      render(<TimeTrackerPanel {...mockProps} />);
+      render(<TimeTrackingDailyView {...mockProps} />);
 
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^Tag$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Start$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Stop$/i)).toBeInTheDocument();
     });

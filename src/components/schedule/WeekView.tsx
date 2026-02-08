@@ -1,8 +1,7 @@
 import type { Dayjs } from "dayjs";
-import { useCallback, useId, useMemo } from "react";
-import Button from "react-bootstrap/Button";
+import { useCallback, useMemo } from "react";
+import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -14,6 +13,7 @@ import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import { calculateShift } from "../../utils/shiftCalculations";
 import { ShiftBadge } from "../shared/ShiftBadge";
+import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -41,7 +41,6 @@ export function WeekView({
   isActive = false,
   viewingScheduleType: propViewingScheduleType,
 }: WeekViewProps) {
-  const datePickerId = useId();
   const { scheduleType: userScheduleType } = useSettings();
 
   // Use prop if provided, otherwise fall back to user's schedule type
@@ -68,6 +67,8 @@ export function WeekView({
   // Generate Monday-Sunday week containing the current date
   const startOfWeek = currentDate.startOf("isoWeek"); // Monday (ISO week)
   const weekDays = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
+  const selectedWeekNumber = startOfWeek.add(0, "day").isoWeek();
+  const selectedWeekYear = startOfWeek.isoWeekYear();
 
   // Check if we're viewing the current week
   const currentWeekStart = dayjs().startOf("isoWeek");
@@ -121,51 +122,25 @@ export function WeekView({
     <Card>
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <h6 className="mb-0">📅 Schedule Overview</h6>
-          <div className="d-flex gap-2">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handlePrevious}
-              aria-label="Go to previous week"
-            >
-              <i className="bi bi-chevron-left" aria-hidden="true"></i>
-            </Button>
-            <Button
-              variant={isCurrentWeek ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={handleCurrent}
-              disabled={isCurrentWeek}
-              aria-label="Go to current week"
-            >
-              <i className="bi bi-house me-1" aria-hidden="true"></i>
-              This Week
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={handleNext}
-              aria-label="Go to next week"
-            >
-              <i className="bi bi-chevron-right" aria-hidden="true"></i>
-            </Button>
-          </div>
+          <h6 className="mb-0">{hasTeams ? "👥 All Teams" : "📅 Schedule"}</h6>
+          <WeekNavigationButtonGroup
+            isCurrent={isCurrentWeek}
+            onPrevious={handlePrevious}
+            onCurrent={handleCurrent}
+            onNext={handleNext}
+            selectorLabel="Jump to date:"
+            selectorValue={currentDate.format("YYYY-MM-DD")}
+            onSelectorChange={handleDateChange}
+          />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-          <div className="d-flex align-items-center gap-2 flex-wrap">
-            <div className="d-flex align-items-center gap-2">
-              <Form.Label htmlFor={datePickerId} className="mb-0 small text-muted">
-                🎯 Jump to date:
-              </Form.Label>
-              <Form.Control
-                type="date"
-                id={datePickerId}
-                size="sm"
-                value={currentDate.format("YYYY-MM-DD")}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="date-picker-auto"
-              />
-            </div>
+          <div className="text-muted small">
+            Week {selectedWeekNumber} ({selectedWeekYear})
+            {isCurrentWeek && (
+              <Badge bg="success" className="ms-2" aria-label="Current week">
+                This Week
+              </Badge>
+            )}
           </div>
           <div className="small text-muted d-none d-lg-block">
             ⌨️ Keyboard: ← → arrows, Ctrl+H (this week)
@@ -176,20 +151,14 @@ export function WeekView({
         {myTeam && hasTeams && (
           <div className="mb-3">
             <strong>👥 Team {myTeam} Schedule:</strong>
-            <div className="text-muted small">
-              Week of {startOfWeek.format("MMM D")} -{" "}
-              {startOfWeek.add(6, "day").format("MMM D, YYYY")}
-            </div>
+            <div className="text-muted small">Week {selectedWeekNumber}</div>
           </div>
         )}
 
         {!hasTeams && (
           <div className="mb-3">
             <strong>📅 Your Schedule:</strong>
-            <div className="text-muted small">
-              Week of {startOfWeek.format("MMM D")} -{" "}
-              {startOfWeek.add(6, "day").format("MMM D, YYYY")}
-            </div>
+            <div className="text-muted small">Week {selectedWeekNumber}</div>
           </div>
         )}
 
@@ -201,11 +170,11 @@ export function WeekView({
             <thead>
               <tr>
                 <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
-                {weekDays.map((day) => {
+                {weekDays.map((day, dayIndex) => {
                   const isToday = day.isSame(today, "day");
                   return (
                     <th
-                      key={day.format("YYYY-MM-DD")}
+                      key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
                       className={clsx("text-center", isToday && "today-column")}
                       aria-label={`${day.format("dddd, MMM D")}${isToday ? " (today)" : ""}`}
                     >
@@ -248,13 +217,13 @@ export function WeekView({
                   <td className="team-header">
                     <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
                   </td>
-                  {weekDays.map((day) => {
+                  {weekDays.map((day, dayIndex) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
                     const isToday = day.isSame(today, "day");
 
                     return (
                       <td
-                        key={day.format("YYYY-MM-DD")}
+                        key={`team-${teamNumber}-day-${dayIndex}-${day.format("YYYY-MM-DD")}`}
                         className={clsx("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams

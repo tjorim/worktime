@@ -24,7 +24,6 @@ import { Step2Features } from "./wizard/Step2Features";
 import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
 import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
 import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
-import { Step5VacationAllowance } from "./wizard/Step5VacationAllowance";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 
 /**
@@ -50,27 +49,10 @@ function validateVacationAmount(amount: string) {
   };
 }
 
-function validateWeeklyTargetHours(hours: string) {
-  const trimmedHours = hours.trim();
-  if (trimmedHours === "") {
-    return { isValid: false, isInvalid: false, parsedHours: null };
-  }
-  const parsed = Number(trimmedHours);
-  const isNotANumber = Number.isNaN(parsed);
-  const isNegative = parsed < 0;
-
-  return {
-    isValid: !isNotANumber && parsed >= 0,
-    isInvalid: isNotANumber || isNegative,
-    parsedHours: !isNotANumber ? parsed : null,
-  };
-}
-
 type WizardCompletionPayload = {
-  vacationAllowance?: { amount: number; unit: VacationAllowanceUnit };
+  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
-  timeTrackingWeeklyTargetHours?: number;
 };
 
 interface WelcomeWizardProps {
@@ -87,7 +69,7 @@ interface WelcomeWizardProps {
 
 /**
  * Present a multi-step onboarding modal that guides users through welcome, feature highlights, schedule selection,
- * optional team selection, and optional vacation allowance setup.
+ * optional team selection, and optional time off setup.
  *
  * @param show - Whether the wizard modal is visible
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
@@ -97,7 +79,7 @@ interface WelcomeWizardProps {
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param mode - Determines the wizard flow ("onboarding" | "change-team" | "change-schedule")
- * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "timeoff-setup" | "vacation-allowance" | "time-tracking-setup")
+ * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "timeoff-setup" | "time-tracking-setup")
  * @returns The WelcomeWizard React element
  */
 export function WelcomeWizard({
@@ -116,24 +98,25 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
+  const currentYear = String(new Date().getFullYear());
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Vacation allowance form state - initialize from settings
+  // Vacation allowance form state - initialize from settings for current year
   const [vacationAmount, setVacationAmount] = useState<string>(() => {
-    const amount = settings.vacationAllowance?.amount ?? 0;
+    const amount = settings.vacationAllowance?.yearlyAmounts?.[currentYear] ?? 0;
     return amount > 0 ? amount.toString() : "";
   });
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
     settings.vacationAllowance?.unit ?? "days",
   );
-  const [isTimeOffEnabled, setIsTimeOffEnabled] = useState(settings.enableTimeOff);
-  const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState(settings.enableTimeTracking);
-  const [weeklyTargetHours, setWeeklyTargetHours] = useState<string>(() => {
-    const hours = settings.timeTrackingWeeklyTargetHours;
-    return Number.isFinite(hours) && hours >= 0 ? hours.toString() : "40";
-  });
+  const [isTimeOffEnabled, setIsTimeOffEnabled] = useState<boolean>(
+    settings.enableTimeOff ?? false,
+  );
+  const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState<boolean>(
+    settings.enableTimeTracking ?? false,
+  );
 
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 
@@ -153,7 +136,6 @@ export function WelcomeWizard({
   const teamCount = resolvedSchedule ? getTeamCountForOption(resolvedSchedule) : 0;
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
   const vacationValidation = validateVacationAmount(vacationAmount);
-  const weeklyTargetValidation = validateWeeklyTargetHours(weeklyTargetHours);
 
   // Create wizard context for configuration functions
   const wizardContext: WizardContext = {
@@ -190,35 +172,22 @@ export function WelcomeWizard({
     nextStep();
   };
 
-  const handleVacationComplete = () => {
-    if (vacationValidation.isInvalid) {
+  const handleTimeOffComplete = () => {
+    if (isTimeOffEnabled && vacationValidation.isInvalid) {
       return;
     }
-    nextStep();
-  };
-
-  const handleVacationSkip = () => {
-    setVacationAmount("");
     nextStep();
   };
 
   const handleTimeTrackingComplete = () => {
-    if (isTimeTrackingEnabled && weeklyTargetValidation.isInvalid) {
-      return;
-    }
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
-        ? { amount: vacationValidation.parsedAmount, unit: vacationUnit }
-        : undefined;
-    const timeTrackingHours =
-      isTimeTrackingEnabled && weeklyTargetValidation.parsedHours !== null
-        ? weeklyTargetValidation.parsedHours
+        ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
         : undefined;
     onHide({
       vacationAllowance: vacationPayload,
       enableTimeOff: isTimeOffEnabled,
       enableTimeTracking: isTimeTrackingEnabled,
-      timeTrackingWeeklyTargetHours: timeTrackingHours,
     });
   };
 
@@ -345,34 +314,22 @@ export function WelcomeWizard({
               <Step5TimeOffSetup
                 isEnabled={isTimeOffEnabled}
                 onToggle={setIsTimeOffEnabled}
-                onPrev={prevStep}
-                onNext={nextStep}
-                firstButtonRef={firstButtonRef}
-              />
-            )}
-            {effectiveStep === "vacation-allowance" && (
-              <Step5VacationAllowance
                 vacationAmount={vacationAmount}
                 vacationUnit={vacationUnit}
                 onVacationAmountChange={setVacationAmount}
                 onVacationUnitChange={setVacationUnit}
-                onPrev={prevStep}
-                onSkip={handleVacationSkip}
-                onComplete={handleVacationComplete}
                 isInvalid={vacationValidation.isInvalid}
-                isValid={vacationValidation.isValid}
+                onPrev={prevStep}
+                onNext={handleTimeOffComplete}
                 firstButtonRef={firstButtonRef}
               />
             )}
             {effectiveStep === "time-tracking-setup" && (
               <Step6TimeTrackingSetup
                 isEnabled={isTimeTrackingEnabled}
-                weeklyTargetHours={weeklyTargetHours}
                 onToggle={setIsTimeTrackingEnabled}
-                onWeeklyTargetHoursChange={setWeeklyTargetHours}
                 onPrev={prevStep}
                 onComplete={handleTimeTrackingComplete}
-                isInvalid={weeklyTargetValidation.isInvalid}
                 firstButtonRef={firstButtonRef}
               />
             )}

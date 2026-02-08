@@ -30,7 +30,7 @@ export function Step3ScheduleSelection({
   return (
     <>
       <div className="text-center mb-4">
-        <h5 className="mb-2">Which roster matches your team?</h5>
+        <h5 className="mb-2">Which schedule matches your work pattern?</h5>
         <p className="text-muted">This helps us tailor your setup. You can change it later.</p>
       </div>
 
