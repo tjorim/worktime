@@ -26,6 +26,55 @@ export function isTimeTrackingLabel(value: unknown): value is TimeTrackingLabelI
   );
 }
 
+export function getContrastingTextColor(backgroundColor?: string): string {
+  if (!backgroundColor) {
+    return "#000";
+  }
+  const hex = backgroundColor.replace("#", "");
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : hex;
+  if (normalized.length !== 6) {
+    return "#000";
+  }
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+  return luminance > 0.6 ? "#000" : "#fff";
+}
+
+export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
+  const seen = new Set<string>();
+  const sanitized: TimeTrackingLabel[] = [];
+
+  labels.forEach((label) => {
+    if (!isTimeTrackingLabel(label)) {
+      return;
+    }
+    const name = normalizeLabelName(label.name);
+    if (!name) {
+      return;
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    sanitized.push({
+      id: typeof label.id === "string" ? label.id : crypto.randomUUID(),
+      name,
+      color: label.color,
+    });
+  });
+
+  return sanitized;
+}
+
 export function normalizeLabelName(value: string): string {
   return value.trim();
 }

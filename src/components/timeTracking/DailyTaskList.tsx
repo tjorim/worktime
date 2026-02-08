@@ -5,30 +5,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useState } from "react";
-import type { TimeTrackingLabel } from "./constants";
+import { getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
-
-const getContrastingTextColor = (backgroundColor?: string): string => {
-  if (!backgroundColor) {
-    return "#000";
-  }
-  const hex = backgroundColor.replace("#", "");
-  const normalized =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : hex;
-  if (normalized.length !== 6) {
-    return "#000";
-  }
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-  return luminance > 0.6 ? "#000" : "#fff";
-};
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];

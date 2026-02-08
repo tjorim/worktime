@@ -8,8 +8,8 @@ import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import {
   isHexColor,
-  isTimeTrackingLabel,
   normalizeLabelName,
+  sanitizeLabels,
   type TimeTrackingLabel,
 } from "./constants";
 import { LabelModal } from "./LabelModal";
@@ -42,33 +42,6 @@ function validateLabelsImportPayload(parsed: unknown): parsed is { labels?: unkn
   }
   const payload = parsed as Record<string, unknown>;
   return Array.isArray(payload.labels);
-}
-
-function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
-  const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
-
-  labels.forEach((label) => {
-    if (!isTimeTrackingLabel(label)) {
-      return;
-    }
-    const name = normalizeLabelName(label.name);
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    sanitized.push({
-      id: typeof label.id === "string" ? label.id : crypto.randomUUID(),
-      name,
-      color: label.color,
-    });
-  });
-
-  return sanitized;
 }
 
 export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: LabelsPanelProps) {

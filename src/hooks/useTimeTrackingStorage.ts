@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
-  isTimeTrackingLabel,
-  normalizeLabelName,
+  sanitizeLabels,
   type TimeTrackingLabel,
 } from "../components/timeTracking/constants";
 import { isValidRange, isValidTimeString } from "../components/timeTracking/timeUtils";
@@ -92,33 +91,6 @@ function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
     isValidTimeString(v.stop) &&
     isValidRange(v.start, v.stop)
   );
-}
-
-function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
-  const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
-
-  labels.forEach((value) => {
-    if (!isTimeTrackingLabel(value)) {
-      return;
-    }
-    const name = normalizeLabelName(value.name);
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    sanitized.push({
-      id: typeof value.id === "string" ? value.id : crypto.randomUUID(),
-      name,
-      color: value.color,
-    });
-  });
-
-  return sanitized;
 }
 
 export function useTimeTrackingStorage() {

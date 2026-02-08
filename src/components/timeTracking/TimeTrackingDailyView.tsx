@@ -12,7 +12,7 @@ import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
-import type { TimeTrackingLabel } from "./constants";
+import { getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
 
@@ -45,28 +45,6 @@ function formatDuration(totalSeconds: number) {
   return `${hours.toString().padStart(2, "0")}:${minutes
     .toString()
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-}
-
-function getContrastingTextColor(backgroundColor?: string): string {
-  if (!backgroundColor) {
-    return "#000";
-  }
-  const hex = backgroundColor.replace("#", "");
-  const normalized =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : hex;
-  if (normalized.length !== 6) {
-    return "#000";
-  }
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-  return luminance > 0.6 ? "#000" : "#fff";
 }
 
 export function TimeTrackingDailyView({
