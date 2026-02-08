@@ -8,7 +8,7 @@ describe("useTimeTrackingStorage", () => {
     window.localStorage.clear();
   });
 
-  it("does not block starting a task when only invalid open raw tasks exist", () => {
+  it("does not block starting a task when only invalid open raw tasks exist", async () => {
     window.localStorage.setItem(
       TIME_TRACKING_STORAGE_KEYS.tasks,
       JSON.stringify([
@@ -25,8 +25,8 @@ describe("useTimeTrackingStorage", () => {
     const { result } = renderHook(() => useTimeTrackingStorage());
     let added = false;
 
-    act(() => {
-      added = result.current.addTask({
+    await act(async () => {
+      added = await result.current.addTask({
         id: "new-running-task",
         text: "Start stopwatch",
         label: "Support",
@@ -37,7 +37,7 @@ describe("useTimeTrackingStorage", () => {
     expect(added).toBe(true);
   });
 
-  it("blocks starting a task when a valid running task already exists", () => {
+  it("blocks starting a task when a valid running task already exists", async () => {
     window.localStorage.setItem(
       TIME_TRACKING_STORAGE_KEYS.tasks,
       JSON.stringify([
@@ -54,8 +54,8 @@ describe("useTimeTrackingStorage", () => {
     const { result } = renderHook(() => useTimeTrackingStorage());
     let added = true;
 
-    act(() => {
-      added = result.current.addTask({
+    await act(async () => {
+      added = await result.current.addTask({
         id: "new-running-task",
         text: "Should be blocked",
         label: "Support",

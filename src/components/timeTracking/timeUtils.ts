@@ -5,14 +5,9 @@ export function timeToMinutes(time: string): number {
   }
   const [hoursRaw, minutesRaw] = parts.map((segment) => segment.trim());
 
-  // Validate that both segments are non-empty and purely numeric
-  if (!hoursRaw || !minutesRaw || !/^\d+$/.test(hoursRaw) || !/^\d+$/.test(minutesRaw)) {
-    throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
-  }
-
   const hours = Number(hoursRaw);
   const minutes = Number(minutesRaw);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+  if (!hoursRaw || !minutesRaw || Number.isNaN(hours) || Number.isNaN(minutes)) {
     throw new Error(`Invalid time value "${time}". Expected numeric hours and minutes.`);
   }
   if (hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) {
