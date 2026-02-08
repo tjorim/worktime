@@ -79,7 +79,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule") {
         return null;
       }
-      // In onboarding, continue to time off setup
+      // In onboarding, always show time off setup so users can opt in/out there
       return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
@@ -99,7 +99,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
-      // In onboarding, continue to time off setup
+      // In onboarding, always show time off setup so users can opt in/out there
       return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
@@ -112,7 +112,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   {
     id: "timeoff-setup",
     title: "Time Off & Vacation 🗓️",
-    isVisible: (ctx) => ctx.mode === "onboarding" && ctx.enableTimeOff,
+    isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "time-tracking-setup",
     getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },
@@ -121,7 +121,10 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     title: "Time Tracking ⏱️",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null, // Always closes wizard after time tracking setup
-    getPrevStep: () => "timeoff-setup",
+    getPrevStep: () => {
+      // In onboarding, time off setup is always part of the flow
+      return "timeoff-setup";
+    },
   },
 ];
 

@@ -1,6 +1,5 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
@@ -9,6 +8,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import type { Dayjs } from "dayjs";
 import { ShiftBadge } from "../shared/ShiftBadge";
+import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import type { ScheduleOption } from "../../data/rosters";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
@@ -23,6 +23,7 @@ interface TodayViewProps {
   onPreviousDay: () => void;
   onNextDay: () => void;
   onTodayClick: () => void;
+  onDateSelect?: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   viewingScheduleType: ScheduleOption;
@@ -165,10 +166,12 @@ export function TodayView({
   onPreviousDay,
   onNextDay,
   onTodayClick,
+  onDateSelect,
   onTeamClick,
   isActive = false,
   viewingScheduleType,
 }: TodayViewProps) {
+  const datePickerId = useId();
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
 
@@ -200,47 +203,34 @@ export function TodayView({
   const today = dayjs();
   const displayDate = currentDate;
   const isToday = displayDate.isSame(today, "day");
+  const handleDateChange = (dateString: string) => {
+    if (dateString && onDateSelect) {
+      onDateSelect(dayjs(dateString));
+    }
+  };
 
   return (
     <Card>
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h6 className="mb-0">{hasTeams ? "👥 All Teams" : "📅 Schedule"}</h6>
-          <div className="d-flex gap-2">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onPreviousDay}
-              aria-label="Go to previous day"
-            >
-              <i className="bi bi-chevron-left" aria-hidden="true"></i>
-            </Button>
-            <Button
-              variant={isToday ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={onTodayClick}
-              disabled={isToday}
-              aria-label="Go to today"
-            >
-              <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-              Today
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onNextDay}
-              aria-label="Go to next day"
-            >
-              <i className="bi bi-chevron-right" aria-hidden="true"></i>
-            </Button>
-          </div>
+          <DayNavigationButtonGroup
+            isCurrent={isToday}
+            onPrevious={onPreviousDay}
+            onCurrent={onTodayClick}
+            onNext={onNextDay}
+            selectorLabel="Jump to date:"
+            selectorId={datePickerId}
+            selectorValue={displayDate.format("YYYY-MM-DD")}
+            onSelectorChange={handleDateChange}
+          />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="text-muted small">
               {displayDate.format("dddd, MMMM D, YYYY")}
               {isToday && (
-                <Badge bg="success" className="ms-2">
+                <Badge bg="success" className="ms-2" aria-label="Current day">
                   Today
                 </Badge>
               )}

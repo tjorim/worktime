@@ -1,21 +1,31 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import { TimeTrackingView } from "../../../src/components/timeTracking/TimeTrackingView";
 import { SettingsProvider } from "../../../src/contexts/SettingsContext";
+import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
+
+const TEST_LABELS = [
+  { name: "Development", color: "#198754" },
+  { name: "Support", color: "#c82333" },
+];
+
+let mockTasks: StoredTimeTrackingTask[] = [];
 
 // Mock the hooks
 vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
   useTimeTrackingStorage: vi.fn(() => ({
-    tasks: [],
+    tasks: mockTasks,
     templates: [],
+    labels: TEST_LABELS,
     addTask: vi.fn(),
     updateTaskTimes: vi.fn(),
     removeTask: vi.fn(),
     addTemplate: vi.fn(),
     updateTemplate: vi.fn(),
     deleteTemplate: vi.fn(),
+    updateLabels: vi.fn(),
     exportData: vi.fn(),
     importData: vi.fn(),
   })),
@@ -24,6 +34,11 @@ vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
 describe("TimeTrackingView", () => {
   beforeEach(() => {
     localStorage.clear();
+    mockTasks = [];
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const renderWithSettings = () =>
@@ -39,9 +54,11 @@ describe("TimeTrackingView", () => {
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
+      const configButton = screen.getByRole("button", { name: /Config/i });
 
       expect(dailyButton).toBeInTheDocument();
       expect(weeklyButton).toBeInTheDocument();
+      expect(configButton).toBeInTheDocument();
     });
 
     it("should show daily view by default", () => {
@@ -55,28 +72,36 @@ describe("TimeTrackingView", () => {
 
       const dailyButton = screen.getByRole("button", { name: /Daily Log/i });
       const weeklyButton = screen.getByRole("button", { name: /Weekly Summary/i });
+      const configButton = screen.getByRole("button", { name: /Config/i });
 
       const dailyIcon = dailyButton.querySelector("i");
       const weeklyIcon = weeklyButton.querySelector("i");
+      const configIcon = configButton.querySelector("i");
 
       expect(dailyIcon).toHaveClass("bi-list-check");
       expect(weeklyIcon).toHaveClass("bi-bar-chart-line");
+      expect(configIcon).toHaveClass("bi-gear");
     });
   });
 
   describe("Daily View", () => {
-    it("should render TimeTrackerPanel in daily view", () => {
+    it("should render TimeTrackingDailyView in daily view", () => {
       renderWithSettings();
 
       expect(screen.getByText("Daily Time Tracking")).toBeInTheDocument();
+      expect(screen.getByLabelText(/Jump to date/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Go to previous day/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Go to today$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Go to next day/i })).toBeInTheDocument();
     });
   });
 
   describe("Weekly View", () => {
-    it("should render WeeklyOverviewPanel when weekly view is selected", () => {
+    it("should render TimeTrackingWeeklyView when weekly view is selected", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
+          version: 2,
           hasCompletedOnboarding: true,
           myTeam: null,
           scheduleType: "9-5",
@@ -102,6 +127,43 @@ describe("TimeTrackingView", () => {
       renderWithSettings();
 
       expect(screen.getByText("Weekly Overview")).toBeInTheDocument();
+      expect(screen.getByLabelText(/Jump to date/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Go to previous week/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Go to current week/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Go to next week/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("Config View", () => {
+    it("should render configuration panel when config view is selected", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: true,
+          },
+          lastUsed: {
+            activeTab: "timetracking",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "config",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      renderWithSettings();
+
+      expect(screen.getByText("Time Tracking Configuration")).toBeInTheDocument();
     });
   });
 
@@ -139,7 +201,7 @@ describe("TimeTrackingView", () => {
     it("should render buttons in a ButtonGroup", () => {
       renderWithSettings();
 
-      const buttonGroup = screen.getByRole("group");
+      const buttonGroup = screen.getByRole("group", { name: /Toggle time tracking view/i });
       expect(buttonGroup).toBeInTheDocument();
     });
   });

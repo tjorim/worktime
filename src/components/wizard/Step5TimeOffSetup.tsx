@@ -1,6 +1,8 @@
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
 import type { RefObject } from "react";
 import type { VacationAllowanceUnit } from "../../utils/vacationCalculations";
 
@@ -34,6 +36,8 @@ export function Step5TimeOffSetup({
   onNext,
   firstButtonRef,
 }: Step5TimeOffSetupProps) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <>
       <div className="text-center mb-4">
@@ -48,7 +52,7 @@ export function Step5TimeOffSetup({
         <ul className="mb-0">
           <li>See time off events directly on your calendar and Today view.</li>
           <li>Import or export .hday files to share with teammates.</li>
-          <li>Track vacation allowance to see your remaining balance.</li>
+          <li>Track vacation allowance to see your remaining balance by year.</li>
         </ul>
       </Alert>
 
@@ -63,42 +67,48 @@ export function Step5TimeOffSetup({
 
         {isEnabled ? (
           <>
-            <Form.Group className="mb-3 mt-4" controlId="vacationAmount">
-              <Form.Label>Vacation allowance (optional)</Form.Label>
-              <Form.Control
-                type="number"
-                min={0}
-                step={0.5}
-                placeholder="e.g., 25"
-                value={vacationAmount}
-                onChange={(e) => onVacationAmountChange(e.target.value)}
-                isInvalid={isInvalid}
-                aria-required={false}
-                aria-describedby="vacation-amount-help vacation-amount-error"
-              />
-              <Form.Control.Feedback type="invalid" id="vacation-amount-error">
-                Please enter a valid number (0 or greater)
-              </Form.Control.Feedback>
-              <Form.Text className="text-muted" id="vacation-amount-help">
-                Leave empty to skip vacation allowance tracking.
-              </Form.Text>
-            </Form.Group>
-
-            <Form.Group controlId="vacationUnit">
-              <Form.Label>Unit</Form.Label>
-              <Form.Select
-                value={vacationUnit}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (isValidVacationAllowanceUnit(value)) {
-                    onVacationUnitChange(value);
-                  }
-                }}
-              >
-                <option value="days">Days</option>
-                <option value="hours">Hours</option>
-              </Form.Select>
-            </Form.Group>
+            <Row className="g-3 mt-1">
+              <Col md={8}>
+                <Form.Group className="mb-0" controlId="vacationAmount">
+                  <Form.Label>{`Vacation allowance for ${currentYear} (optional)`}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="e.g., 25"
+                    value={vacationAmount}
+                    onChange={(e) => onVacationAmountChange(e.target.value)}
+                    isInvalid={isInvalid}
+                    aria-required={false}
+                    aria-describedby="vacation-amount-help vacation-amount-error"
+                  />
+                  <Form.Control.Feedback type="invalid" id="vacation-amount-error">
+                    Please enter a valid number (0 or greater)
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted" id="vacation-amount-help">
+                    This amount is saved for {currentYear}. Leave empty to skip vacation allowance
+                    tracking.
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group controlId="vacationUnit">
+                  <Form.Label>Unit</Form.Label>
+                  <Form.Select
+                    value={vacationUnit}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (isValidVacationAllowanceUnit(value)) {
+                        onVacationUnitChange(value);
+                      }
+                    }}
+                  >
+                    <option value="days">Days</option>
+                    <option value="hours">Hours</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
           </>
         ) : (
           <Form.Text className="text-muted d-block mt-2">

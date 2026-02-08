@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { VacationStatsPanel } from "../../../src/components/timeOff/VacationStatsPanel";
+import { TimeOffStatsView } from "../../../src/components/timeOff/TimeOffStatsView";
 import type { HdayEvent } from "../../../src/lib/hday/types";
 import type { VacationAllowanceSettings } from "../../../src/utils/vacationCalculations";
 
-describe("VacationStatsPanel", () => {
+describe("TimeOffStatsView", () => {
   const currentYear = new Date().getFullYear();
 
   const defaultAllowance: VacationAllowanceSettings = {
@@ -28,12 +28,12 @@ describe("VacationStatsPanel", () => {
 
   describe("Rendering", () => {
     it("should render the panel with header", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       expect(screen.getByText("Vacation Statistics")).toBeInTheDocument();
     });
 
     it("should display current year badge", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       // Badge is rendered in the header
       const badges = screen.getAllByText(currentYear.toString());
@@ -41,7 +41,7 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should render allowance settings form", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       expect(screen.getByText("Allowance Settings")).toBeInTheDocument();
       expect(screen.getByLabelText(`Allowance for ${currentYear}`)).toBeInTheDocument();
       expect(screen.getByLabelText("Unit")).toBeInTheDocument();
@@ -49,12 +49,12 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should render vacation usage section", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       expect(screen.getByText("Vacation usage")).toBeInTheDocument();
     });
 
     it("should display allowance values in form inputs", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
       const unitSelect = screen.getByLabelText("Unit") as HTMLSelectElement;
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
@@ -68,7 +68,7 @@ describe("VacationStatsPanel", () => {
   describe("Allowance Controls", () => {
     it("should call onUpdateAllowance when amount changes with valid value", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
 
@@ -85,7 +85,7 @@ describe("VacationStatsPanel", () => {
 
     it("should call onUpdateAllowance when unit changes", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const unitSelect = screen.getByLabelText("Unit");
       await user.selectOptions(unitSelect, "hours");
@@ -95,7 +95,7 @@ describe("VacationStatsPanel", () => {
 
     it("should call onUpdateAllowance when hours per day changes with valid value", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
 
@@ -110,7 +110,7 @@ describe("VacationStatsPanel", () => {
 
     it("should not update allowance with negative amount", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`);
       await user.clear(amountInput);
@@ -121,7 +121,7 @@ describe("VacationStatsPanel", () => {
 
     it("should not update allowance with invalid amount (letters)", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`);
 
@@ -138,7 +138,7 @@ describe("VacationStatsPanel", () => {
 
     it("should not update hours per day with value less than 1", async () => {
       const user = userEvent.setup();
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const hoursInput = screen.getByLabelText("Hours per day");
       await user.clear(hoursInput);
@@ -148,7 +148,7 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should render unit options correctly", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       const unitSelect = screen.getByLabelText("Unit");
       const options = within(unitSelect).getAllByRole("option");
 
@@ -160,7 +160,7 @@ describe("VacationStatsPanel", () => {
 
   describe("Vacation Statistics Display", () => {
     it("should show 0 usage when no events", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
       expect(screen.getByText("0 / 25 days")).toBeInTheDocument();
     });
 
@@ -173,7 +173,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
     });
 
@@ -186,7 +186,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
       // Check for Remaining section with proper value
       const remainingText = screen.getByText("Remaining");
       const remainingSection = remainingText.closest(".col-6");
@@ -199,7 +199,7 @@ describe("VacationStatsPanel", () => {
         unit: "hours",
         hoursPerDay: 8,
       };
-      render(<VacationStatsPanel {...defaultProps} allowance={hoursAllowance} />);
+      render(<TimeOffStatsView {...defaultProps} allowance={hoursAllowance} />);
       expect(screen.getByText("0 / 200 hours")).toBeInTheDocument();
     });
 
@@ -212,7 +212,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         }, // 5 days
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuenow", "20"); // 5/25 = 20%
@@ -239,7 +239,7 @@ describe("VacationStatsPanel", () => {
           flags: ["ill"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       expect(screen.getByText("Holiday")).toBeInTheDocument();
       expect(screen.getByText("Business trip")).toBeInTheDocument();
@@ -255,7 +255,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       expect(screen.getByText("Total time off")).toBeInTheDocument();
       expect(screen.getByText(/days \(24 h\)/)).toBeInTheDocument();
@@ -270,7 +270,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday", "half_am"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       expect(screen.getByText(/0\.5 \/ 25 days/)).toBeInTheDocument();
     });
@@ -290,14 +290,14 @@ describe("VacationStatsPanel", () => {
         hoursPerDay: 7,
       };
 
-      render(<VacationStatsPanel {...defaultProps} events={events} allowance={customAllowance} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} allowance={customAllowance} />);
       expect(screen.getByText(/days \(7 h\)/)).toBeInTheDocument();
     });
   });
 
   describe("Year Selection", () => {
     it("should default to current year", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       expect(yearSelect).toHaveValue(currentYear.toString());
@@ -308,7 +308,7 @@ describe("VacationStatsPanel", () => {
         { type: "range", start: `${currentYear - 1}/06/15`, end: `${currentYear - 1}/06/20` },
         { type: "range", start: `${currentYear}/01/10`, end: `${currentYear}/01/15` },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       const options = within(yearSelect).getAllByRole("option");
@@ -343,9 +343,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         },
       ];
-      render(
-        <VacationStatsPanel {...defaultProps} events={events} allowance={multiYearAllowance} />,
-      );
+      render(<TimeOffStatsView {...defaultProps} events={events} allowance={multiYearAllowance} />);
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       await user.selectOptions(yearSelect, (currentYear - 1).toString());
@@ -362,7 +360,7 @@ describe("VacationStatsPanel", () => {
         unit: "days",
         hoursPerDay: 8,
       };
-      render(<VacationStatsPanel {...defaultProps} allowance={zeroAllowance} />);
+      render(<TimeOffStatsView {...defaultProps} allowance={zeroAllowance} />);
 
       expect(screen.getByText("0 / 0 days")).toBeInTheDocument();
     });
@@ -381,7 +379,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         }, // 6 days
       ];
-      render(<VacationStatsPanel {...defaultProps} allowance={smallAllowance} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} events={events} />);
 
       // Check for Remaining section with 0
       expect(screen.getByText("Remaining")).toBeInTheDocument();
@@ -403,7 +401,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         }, // 6 days
       ];
-      render(<VacationStatsPanel {...defaultProps} allowance={smallAllowance} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} events={events} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuenow", "100");
@@ -413,7 +411,7 @@ describe("VacationStatsPanel", () => {
       const events: HdayEvent[] = [
         { type: "range", start: `${currentYear}/01/15`, end: `${currentYear}/01/17` },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
     });
@@ -433,7 +431,7 @@ describe("VacationStatsPanel", () => {
           flags: ["business"],
         },
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       // Only holiday days count toward allowance
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
@@ -442,7 +440,7 @@ describe("VacationStatsPanel", () => {
 
   describe("Accessibility", () => {
     it("should have proper labels on form controls", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       expect(screen.getByLabelText(`Allowance for ${currentYear}`)).toBeInTheDocument();
       expect(screen.getByLabelText("Unit")).toBeInTheDocument();
@@ -450,7 +448,7 @@ describe("VacationStatsPanel", () => {
     });
 
     it("should have valid input constraints", () => {
-      render(<VacationStatsPanel {...defaultProps} />);
+      render(<TimeOffStatsView {...defaultProps} />);
 
       const amountInput = screen.getByLabelText(`Allowance for ${currentYear}`) as HTMLInputElement;
       const hoursInput = screen.getByLabelText("Hours per day") as HTMLInputElement;
@@ -470,7 +468,7 @@ describe("VacationStatsPanel", () => {
           flags: ["holiday"],
         }, // 5 days
       ];
-      render(<VacationStatsPanel {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} events={events} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuemin", "0");

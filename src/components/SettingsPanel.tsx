@@ -3,14 +3,20 @@ import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
 import Offcanvas from "react-bootstrap/Offcanvas";
+import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { useEventStore } from "../contexts/EventStoreContext";
 import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
+
+const TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
 
 interface SettingsPanelProps {
   show: boolean;
@@ -39,7 +45,11 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
+  const [clearTimeOffData, setClearTimeOffData] = useState(false);
   const toast = useToast();
+  const { clearAll: clearTimeOffEvents } = useEventStore();
   const {
     settings,
     scheduleType,
@@ -68,12 +78,41 @@ export function SettingsPanel({
 
   // Clear/reset all settings
   const handleClearData = () => {
+    setShowResetConfirm(true);
+  };
+
+  const handleCloseResetModal = () => {
+    setShowResetConfirm(false);
+    setClearTimeTrackingData(false);
+    setClearTimeOffData(false);
+  };
+
+  const handleConfirmReset = () => {
     try {
       resetSettings();
+
+      if (clearTimeTrackingData) {
+        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.tasks);
+        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.templates);
+        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.labels);
+      }
+
+      if (clearTimeOffData) {
+        clearTimeOffEvents();
+        localStorage.removeItem(TIME_OFF_STORAGE_KEY);
+      }
+
+      handleCloseResetModal();
       onHide(); // Close the settings panel
-      toast.showSuccess("All data cleared", "🗑️");
+      toast.showSuccess(
+        clearTimeTrackingData || clearTimeOffData
+          ? "Settings and selected data cleared"
+          : "Settings reset",
+        "🗑️",
+      );
     } catch (error) {
       console.error("Failed to clear data:", error);
+      handleCloseResetModal();
       toast.showError("Could not clear all data. Please try again.", "⚠️");
     }
   };
@@ -348,6 +387,54 @@ export function SettingsPanel({
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal show={showShortcuts} onHide={handleShortcutsClose} />
+
+      {/* Reset Confirmation Modal */}
+      <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Reset Settings</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-3">This will reset your app preferences and onboarding state.</p>
+          <Form>
+            <Form.Check
+              id="reset-clear-time-tracking"
+              type="checkbox"
+              label="Also clear time tracking data (tasks, templates, labels)"
+              checked={clearTimeTrackingData}
+              onChange={(event) => setClearTimeTrackingData(event.target.checked)}
+            />
+            <Form.Check
+              id="reset-clear-time-off"
+              type="checkbox"
+              className="mt-2"
+              label="Also clear time off events (.hday data)"
+              checked={clearTimeOffData}
+              onChange={(event) => setClearTimeOffData(event.target.checked)}
+            />
+          </Form>
+          {(clearTimeTrackingData || clearTimeOffData) && (
+            <Alert variant="warning" className="mt-3 mb-0">
+              <div className="fw-semibold mb-1">
+                Warning: this data will be permanently removed.
+              </div>
+              {clearTimeTrackingData && (
+                <div>Time tracking tasks, templates, and labels will be deleted.</div>
+              )}
+              {clearTimeOffData && (
+                <div>All imported and created time off events (.hday content) will be deleted.</div>
+              )}
+            </Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={handleCloseResetModal}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleConfirmReset}>
+            Reset Now
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

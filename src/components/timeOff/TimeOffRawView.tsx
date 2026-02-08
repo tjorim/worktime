@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 
-type RawContentPanelProps = {
+type TimeOffRawViewProps = {
   rawText: string;
   error?: string;
   isDirty: boolean;
@@ -12,14 +12,14 @@ type RawContentPanelProps = {
   onReset: () => void;
 };
 
-export function RawContentPanel({
+export function TimeOffRawView({
   rawText,
   error,
   isDirty,
   onChangeRawText,
   onApply,
   onReset,
-}: RawContentPanelProps) {
+}: TimeOffRawViewProps) {
   const errorId = useId();
 
   return (

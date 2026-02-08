@@ -17,7 +17,32 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 // Test Helpers & Setup
 // ============================================================================
 
-const defaultUserState = {
+const defaultUserState: {
+  version: number;
+  hasCompletedOnboarding: boolean;
+  myTeam: number | null;
+  scheduleType: string | null;
+  settings: {
+    timeFormat: "24h";
+    theme: "auto";
+    notifications: "off";
+    vacationAllowance: {
+      yearlyAmounts: Record<string, number>;
+      unit: "days";
+      hoursPerDay: number;
+    };
+    enableTimeOff: boolean;
+    enableTimeTracking: boolean;
+  };
+  lastUsed: {
+    activeTab: "calendar";
+    scheduleView: "today";
+    otherSchedule: null;
+    timeOffView: "table";
+    timeTrackingView: "daily";
+    otherTeam: null;
+  };
+} = {
   version: 1,
   hasCompletedOnboarding: false,
   myTeam: null,
@@ -44,6 +69,10 @@ const defaultUserState = {
   },
 };
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
+};
+
 const defaultProps = {
   show: true,
   onTeamSelect: vi.fn(),
@@ -54,7 +83,7 @@ const defaultProps = {
 /**
  * Seeds localStorage with user state for testing.
  */
-function seedUserState(overrides?: Partial<typeof defaultUserState>) {
+function seedUserState(overrides?: DeepPartial<typeof defaultUserState>) {
   const state = {
     ...defaultUserState,
     ...overrides,
@@ -74,7 +103,10 @@ function seedUserState(overrides?: Partial<typeof defaultUserState>) {
 /**
  * Renders component with SettingsProvider and seeded state.
  */
-function renderWithProviders(ui: React.ReactElement, overrides?: Partial<typeof defaultUserState>) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  overrides?: DeepPartial<typeof defaultUserState>,
+) {
   seedUserState(overrides);
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
@@ -204,7 +236,7 @@ describe("WelcomeWizard Integration Tests", () => {
       await user.click(screen.getByLabelText(/Select Team 4/i));
 
       // Should call onTeamSelect and close
-      expect(onTeamSelect).toHaveBeenCalledWith(4);
+      await waitFor(() => expect(onTeamSelect).toHaveBeenCalledWith(4));
     });
 
     it("should close without changing team when cancel is clicked", async () => {
@@ -282,7 +314,9 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Should start at schedule selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Should show step progress (1 of whatever total is appropriate)
@@ -305,7 +339,9 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument(),
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument(),
       );
 
       const cancelButton = screen.getByRole("button", { name: /Cancel/i });
@@ -343,7 +379,7 @@ describe("WelcomeWizard Integration Tests", () => {
       expect(screen.getByRole("button", { name: /9-5/i })).toBeInTheDocument();
     });
 
-    it("should redirect from time off step when time off is disabled", async () => {
+    it("should keep users on time off step when time off is disabled", async () => {
       const user = userEvent.setup();
       render(<App />);
 
@@ -365,10 +401,9 @@ describe("WelcomeWizard Integration Tests", () => {
       const timeOffSwitch = screen.getByLabelText(/Enable time off/i);
       await user.click(timeOffSwitch);
 
-      // Disabling time off makes the timeoff-setup step invisible,
-      // so the wizard redirects away from it
+      // Disabling time off should keep this step visible so users can still continue explicitly
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Set Up Time Off/i })).not.toBeInTheDocument(),
+        expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument(),
       );
     });
 
@@ -436,7 +471,9 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument(),
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument(),
       );
       await waitFor(() => expect(screen.getByText(/Step 1 of 2/i)).toBeInTheDocument());
       unmount2();
@@ -453,7 +490,9 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await waitFor(() =>
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument(),
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument(),
       );
       await waitFor(() => expect(screen.getByText(/Step 1 of 1/i)).toBeInTheDocument());
     });

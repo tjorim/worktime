@@ -42,20 +42,51 @@ const defaultUserState = {
   },
 };
 
-const seedScheduleOption = (overrides?: Partial<typeof defaultUserState>) => {
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
+};
+
+// Deep merge utility for nested objects
+function deepMerge<T extends Record<string, unknown>>(target: T, source: DeepPartial<T>): T {
+  const result = { ...target };
+  for (const key in source) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      const sourceValue = source[key];
+      const targetValue = result[key];
+      if (
+        sourceValue &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue) &&
+        targetValue &&
+        typeof targetValue === "object" &&
+        !Array.isArray(targetValue)
+      ) {
+        result[key] = deepMerge(
+          targetValue as Record<string, unknown>,
+          sourceValue as Record<string, unknown>,
+        ) as T[Extract<keyof T, string>];
+      } else {
+        result[key] = sourceValue as T[Extract<keyof T, string>];
+      }
+    }
+  }
+  return result;
+}
+
+const seedScheduleOption = (overrides?: DeepPartial<typeof defaultUserState>) => {
   const nextState = {
     ...defaultUserState,
     ...overrides,
-    settings: {
-      ...defaultUserState.settings,
-      ...(overrides?.settings ?? {}),
-    },
+    settings: deepMerge(defaultUserState.settings, overrides?.settings ?? {}),
   };
   window.localStorage.setItem("worktime_user_state", JSON.stringify(nextState));
 };
 
 // Test wrapper with required providers
-function renderWithProviders(ui: React.ReactElement, overrides?: Partial<typeof defaultUserState>) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  overrides?: DeepPartial<typeof defaultUserState>,
+) {
   seedScheduleOption(overrides);
   return render(<SettingsProvider>{ui}</SettingsProvider>);
 }
@@ -238,7 +269,7 @@ describe("WelcomeWizard", () => {
       expect(mockOnHide).not.toHaveBeenCalled(); // Not completed yet
     });
 
-    it("should skip time off setup step when time off is disabled", () => {
+    it("should still show time off setup step when time off is disabled", () => {
       renderWithProviders(
         <WelcomeWizard
           show={true}
@@ -249,10 +280,8 @@ describe("WelcomeWizard", () => {
         { settings: { enableTimeOff: false } },
       );
 
-      // When enableTimeOff is false, the timeoff-setup step is not visible,
-      // so the wizard falls back to the first visible step
-      expect(screen.queryByRole("heading", { name: /Set Up Time Off/i })).not.toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Enable time off/i)).not.toBeChecked();
     });
 
     it("should carry vacation allowance when values entered", async () => {
@@ -476,6 +505,7 @@ describe("WelcomeWizard", () => {
       // Simulate reset
       fireEvent.click(screen.getByLabelText(/Settings/i));
       fireEvent.click(screen.getByText(/Reset Settings/i));
+      fireEvent.click(screen.getByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
       const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
@@ -514,6 +544,7 @@ describe("WelcomeWizard", () => {
       // Should be able to open settings and reset again
       await user.click(screen.getByLabelText(/Settings/i));
       await user.click(screen.getByText(/Reset Settings/i));
+      await user.click(screen.getByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
       const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
@@ -656,7 +687,9 @@ describe("WelcomeWizard", () => {
 
       // Should start directly at schedule selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Should show step 1 of 2 (schedule selection + team selection if needed)
@@ -694,7 +727,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for schedule selection to render
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Select a schedule that doesn't require team selection (9-5)
@@ -725,7 +760,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for schedule selection to render
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Select a schedule that requires team selection (5-shift)
@@ -788,7 +825,9 @@ describe("WelcomeWizard", () => {
 
       // Step 3: Schedule Selection -> Team Selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
@@ -830,7 +869,9 @@ describe("WelcomeWizard", () => {
 
       // Should open wizard in change-schedule mode
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -851,7 +892,9 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Select a schedule - should not crash
@@ -876,7 +919,9 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Find disabled schedule button (2-shift is marked as unavailable)
@@ -899,7 +944,9 @@ describe("WelcomeWizard", () => {
 
       // Navigate to schedule selection
       await waitFor(() => {
-        expect(screen.getByText(/Which roster matches your team\?/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Which schedule matches your work pattern\\?/i),
+        ).toBeInTheDocument();
       });
 
       // Find disabled schedule button

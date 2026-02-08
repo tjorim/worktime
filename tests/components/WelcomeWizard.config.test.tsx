@@ -130,7 +130,7 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBe("team-selection");
     });
 
-    it("should skip team-selection and go to time off setup when no team selection needed", () => {
+    it("should skip team-selection and go to time off setup when no team selection is needed", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
@@ -162,7 +162,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       // This step is not visible in change-team mode, but if evaluated directly
-      // it falls through to the onboarding path (time off setup)
+      // it falls through to the onboarding path and returns time off setup.
       const scheduleConfig = getStepConfig("schedule-selection");
       const nextStep = scheduleConfig.getNextStep(context);
       expect(nextStep).toBe("timeoff-setup");

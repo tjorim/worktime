@@ -10,9 +10,9 @@ import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { RawContentPanel } from "./timeOff/RawContentPanel";
-import { VacationStatsPanel } from "./timeOff/VacationStatsPanel";
-import { TimeOffTablePanel } from "./timeOff/TimeOffTablePanel";
+import { TimeOffRawView } from "./timeOff/TimeOffRawView";
+import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
+import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
@@ -415,7 +415,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       </div>
 
       {viewMode === "table" && (
-        <TimeOffTablePanel
+        <TimeOffTableView
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={handleUndo}
@@ -439,7 +439,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "stats" && (
         <div role="region" aria-label="Vacation statistics">
-          <VacationStatsPanel
+          <TimeOffStatsView
             events={events}
             allowance={settings.vacationAllowance}
             onUpdateAllowance={updateVacationAllowance}
@@ -449,7 +449,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "raw" && (
         <div role="region" aria-label="Raw .hday content editor">
-          <RawContentPanel
+          <TimeOffRawView
             rawText={rawEditorText}
             error={rawEditorError}
             isDirty={isRawEditorDirty}

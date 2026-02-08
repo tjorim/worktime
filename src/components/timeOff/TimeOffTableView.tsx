@@ -56,7 +56,7 @@ function formatEventDate(event: HdayEvent): React.ReactNode {
   return null;
 }
 
-type TimeOffTablePanelProps = {
+type TimeOffTableViewProps = {
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -77,7 +77,7 @@ type TimeOffTablePanelProps = {
   onDeleteEvent: (index: number) => void;
 };
 
-export function TimeOffTablePanel({
+export function TimeOffTableView({
   canUndo,
   canRedo,
   onUndo,
@@ -96,7 +96,7 @@ export function TimeOffTablePanel({
   onToggleSelection,
   onEditEvent,
   onDeleteEvent,
-}: TimeOffTablePanelProps) {
+}: TimeOffTableViewProps) {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

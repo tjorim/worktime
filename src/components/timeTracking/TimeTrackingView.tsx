@@ -3,15 +3,17 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import { useEffect, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
-import { TimeTrackerPanel } from "./TimeTrackerPanel";
+import { dayjs } from "../../utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
-import { WeeklyOverviewPanel } from "./WeeklyOverviewPanel";
 import { getWeeklyHours } from "../../utils/scheduleUtils";
+import { TimeTrackingConfigView } from "./TimeTrackingConfigView";
+import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
+import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
 
 /**
  * Valid time tracking view modes. Source of truth for all available views.
  */
-const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
+const TIME_TRACKING_VIEWS = ["daily", "weekly", "config"] as const;
 
 /**
  * Default time tracking view mode when no preference is stored or when stored value is invalid.
@@ -23,16 +25,20 @@ export function TimeTrackingView() {
   const {
     tasks,
     templates,
+    labels,
     addTask,
     updateTaskTimes,
     removeTask,
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    updateLabels,
     exportData,
     importData,
   } = useTimeTrackingStorage();
   const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
+  const [selectedDailyDate, setSelectedDailyDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedWeeklyDate, setSelectedWeeklyDate] = useState(dayjs().format("YYYY-MM-DD"));
 
   useEffect(() => {
     updateLastTimeTrackingView(viewMode);
@@ -60,34 +66,53 @@ export function TimeTrackingView() {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             Weekly Summary
           </Button>
+          <Button
+            variant={viewMode === "config" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("config")}
+          >
+            <i className="bi bi-gear me-1" aria-hidden="true"></i>
+            Config
+          </Button>
         </ButtonGroup>
       </div>
 
       {viewMode === "daily" && (
-        <Card className="shadow-sm">
-          <Card.Header className="fw-semibold">Daily Time Tracking</Card.Header>
-          <Card.Body>
-            <TimeTrackerPanel
-              tasks={tasks}
-              templates={templates}
-              onAddTask={addTask}
-              onUpdateTaskTimes={updateTaskTimes}
-              onRemoveTask={removeTask}
-              onAddTemplate={addTemplate}
-              onUpdateTemplate={updateTemplate}
-              onDeleteTemplate={deleteTemplate}
-              onExportData={exportData}
-              onImportData={importData}
-            />
-          </Card.Body>
-        </Card>
+        <TimeTrackingDailyView
+          tasks={tasks}
+          labels={labels}
+          templates={templates}
+          selectedDate={selectedDailyDate}
+          onSelectedDateChange={setSelectedDailyDate}
+          onAddTask={addTask}
+          onUpdateTaskTimes={updateTaskTimes}
+          onRemoveTask={removeTask}
+        />
       )}
 
       {viewMode === "weekly" && (
+        <TimeTrackingWeeklyView
+          tasks={tasks}
+          selectedDate={selectedWeeklyDate}
+          onSelectedDateChange={setSelectedWeeklyDate}
+          weeklyTargetHours={weeklyTargetHours}
+        />
+      )}
+
+      {viewMode === "config" && (
         <Card className="shadow-sm">
-          <Card.Header className="fw-semibold">Weekly Overview</Card.Header>
+          <Card.Header className="fw-semibold">Time Tracking Configuration</Card.Header>
           <Card.Body>
-            <WeeklyOverviewPanel tasks={tasks} weeklyTargetHours={weeklyTargetHours} />
+            <TimeTrackingConfigView
+              labels={labels}
+              templates={templates}
+              onAddTemplate={addTemplate}
+              onUpdateTemplate={updateTemplate}
+              onDeleteTemplate={deleteTemplate}
+              onUpdateLabels={updateLabels}
+              onExportData={exportData}
+              onImportData={importData}
+            />
           </Card.Body>
         </Card>
       )}

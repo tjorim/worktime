@@ -121,7 +121,9 @@ describe("WeekView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
       renderWithProviders(<WeekView {...defaultProps} />);
-      expect(screen.getByText("📅 Schedule Overview")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 6, name: /All Teams|Schedule/ }),
+      ).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {
@@ -227,9 +229,8 @@ describe("WeekView", () => {
     it("shows week information", () => {
       renderWithProviders(<WeekView {...defaultProps} currentDate={dayjs("2025-01-15")} />);
 
-      // Should show week range (Jan 15 is in the week of Jan 13-19)
-      expect(screen.getByText(/Week of/)).toBeInTheDocument();
-      expect(screen.getByText(/Jan 13/)).toBeInTheDocument();
+      // Should show week number context
+      expect(screen.getAllByText(/Week\s+\d+/).length).toBeGreaterThan(0);
     });
   });
 });

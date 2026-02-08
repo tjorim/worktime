@@ -494,8 +494,7 @@ function migrateState(state: RawState): RawState {
 - Unversioned (legacy) data is treated as version 0
 - Migrations receive/return `RawState` (`Record<string, unknown>`) so they can reshape freely
 - After migration, `normalizeUserState` validates and sanitizes all fields
-- If a migration is missing, state resets to defaults with a console warning
-- If a migration is missing, the raw state is backed up to `rawStateBackup`, known fields are salvaged into the returned state, and an error flag (e.g., `hasMigrationError`) should be set so the UI can surface a user-facing alert
+- If a migration is missing, the raw state is backed up to `rawStateBackup`, known fields are salvaged into the returned state, and an error flag (`hasMigrationError`) is set so the UI can surface a user-facing alert
 
 **`normalizeUserState` (SettingsContext.tsx)**: Runs after migrations to validate and sanitize user settings. It verifies required keys, coerces types (booleans, numbers, enums), applies defaults for missing fields, strips unknown/unsafe values, and normalizes legacy field names so post-migration settings remain consistent and safe for the app.
 
@@ -506,7 +505,7 @@ function migrateState(state: RawState): RawState {
 3. Update `defaultUserState`, interfaces, and `normalizeUserState` for the new shape
 4. Add a test in `tests/contexts/SettingsContext.test.tsx` verifying migration from old format
 
-**Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set an error flag to surface a user-facing warning.
+**Missing migration fallback:** When a migration is missing, preserve the original raw state in `rawStateBackup` so maintainers can recover user data. Attempt to salvage known fields (team selection, scheduleType, settings/time-off preferences) into the returned state and set `hasMigrationError: true` to surface a user-facing warning.
 
 ## Key Features
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -92,6 +92,7 @@ const defaultProps = {
   onPreviousDay: vi.fn(),
   onNextDay: vi.fn(),
   onTodayClick: vi.fn(),
+  onDateSelect: vi.fn(),
 };
 
 describe("TodayView", () => {
@@ -148,6 +149,20 @@ describe("TodayView", () => {
       await user.click(todayButton);
 
       expect(mockOnTodayClick).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Date selector", () => {
+    it("calls onDateSelect when direct date selector changes", async () => {
+      const onDateSelect = vi.fn();
+      renderWithProviders(<TodayView {...defaultProps} onDateSelect={onDateSelect} />);
+
+      const dateInput = screen.getByLabelText(/Jump to date/i);
+      fireEvent.change(dateInput, { target: { value: "2025-01-20" } });
+
+      expect(onDateSelect).toHaveBeenCalled();
+      const selected = onDateSelect.mock.calls.at(-1)?.[0];
+      expect(selected?.format("YYYY-MM-DD")).toBe("2025-01-20");
     });
   });
 

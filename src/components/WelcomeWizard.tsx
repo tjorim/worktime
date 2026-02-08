@@ -111,8 +111,12 @@ export function WelcomeWizard({
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
     settings.vacationAllowance?.unit ?? "days",
   );
-  const [isTimeOffEnabled, setIsTimeOffEnabled] = useState(settings.enableTimeOff);
-  const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState(settings.enableTimeTracking);
+  const [isTimeOffEnabled, setIsTimeOffEnabled] = useState<boolean>(
+    settings.enableTimeOff ?? false,
+  );
+  const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState<boolean>(
+    settings.enableTimeTracking ?? false,
+  );
 
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 

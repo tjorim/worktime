@@ -1,11 +1,11 @@
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import { TIME_TRACKING_TAGS, type TimeTrackingTag } from "./constants";
+import type { TimeTrackingLabel } from "./constants";
 
 type TemplateForm = {
   text: string;
-  tag: TimeTrackingTag;
+  label: string;
   start: string;
   stop: string;
 };
@@ -14,6 +14,7 @@ type TemplateModalProps = {
   show: boolean;
   title: string;
   submitLabel: string;
+  labels: TimeTrackingLabel[];
   value: TemplateForm;
   onChange: (value: TemplateForm) => void;
   onClose: () => void;
@@ -24,6 +25,7 @@ export function TemplateModal({
   show,
   title,
   submitLabel,
+  labels,
   value,
   onChange,
   onClose,
@@ -51,19 +53,22 @@ export function TemplateModal({
               required
             />
           </Form.Group>
-          <Form.Group controlId="templateTag" className="mb-3">
-            <Form.Label>Tag</Form.Label>
+          <Form.Group controlId="templateLabel" className="mb-3">
+            <Form.Label>Label</Form.Label>
             <Form.Select
-              value={value.tag}
-              onChange={(event) =>
-                onChange({ ...value, tag: event.target.value as TimeTrackingTag })
-              }
+              value={value.label}
+              onChange={(event) => onChange({ ...value, label: event.target.value })}
+              disabled={labels.length === 0}
             >
-              {TIME_TRACKING_TAGS.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag.replaceAll("-", " ")}
-                </option>
-              ))}
+              {labels.length === 0 ? (
+                <option value="">Add labels first</option>
+              ) : (
+                labels.map((label) => (
+                  <option key={label.name} value={label.name}>
+                    {label.name}
+                  </option>
+                ))
+              )}
             </Form.Select>
           </Form.Group>
           <div className="d-flex gap-3">

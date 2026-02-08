@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
@@ -24,13 +23,13 @@ import {
 /** Default hours per day for vacation allowance calculations */
 export const DEFAULT_HOURS_PER_DAY = 8;
 
-interface VacationStatsProps {
+interface TimeOffStatsViewProps {
   events: HdayEvent[];
   allowance: VacationAllowanceSettings;
   onUpdateAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
 }
 
-export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: VacationStatsProps) {
+export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
   const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
@@ -121,7 +120,19 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
           <i className="bi bi-graph-up-arrow me-2"></i>
           Vacation Statistics
         </div>
-        <Badge bg="primary">{selectedYear}</Badge>
+        <Form.Select
+          size="sm"
+          aria-label="Select year for vacation statistics"
+          value={selectedYear}
+          onChange={(event) => setSelectedYear(Number(event.target.value))}
+          className="w-auto"
+        >
+          {years.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </Form.Select>
       </Card.Header>
       <Card.Body>
         <Row className="g-3">
@@ -195,22 +206,7 @@ export function VacationStatsPanel({ events, allowance, onUpdateAllowance }: Vac
 
           <Col xs={12} lg={7}>
             <div className="h-100 border rounded p-3">
-              <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2 mb-2">
-                <div className="fw-semibold">Vacation usage</div>
-                <Form.Select
-                  size="sm"
-                  aria-label="Select year for vacation statistics"
-                  value={selectedYear}
-                  onChange={(event) => setSelectedYear(Number(event.target.value))}
-                  className="w-auto"
-                >
-                  {years.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </Form.Select>
-              </div>
+              <div className="fw-semibold mb-2">Vacation usage</div>
               <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
 
               <div className="mb-3">

@@ -11,7 +11,7 @@ export type NotificationSetting = "on" | "off";
 export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "raw";
-export type TimeTrackingViewKey = "daily" | "weekly";
+export type TimeTrackingViewKey = "daily" | "weekly" | "config";
 
 export interface LastUsed {
   activeTab: TabKey;
@@ -98,7 +98,7 @@ export const defaultLastUsed: LastUsed = {
 const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking"]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
-const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
+const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
 
 interface WorktimeUserState {
   version: number;
