@@ -25,6 +25,10 @@ type LabelsImportPayload = {
   labels?: unknown[];
 };
 
+type TemplatesImportPayload = {
+  templates?: unknown[];
+};
+
 type TemplateFormState = {
   text: string;
   label: string;
@@ -93,6 +97,14 @@ function validateLabelsImportPayload(parsed: unknown): parsed is LabelsImportPay
   return Array.isArray(payload.labels);
 }
 
+function validateTemplatesImportPayload(parsed: unknown): parsed is TemplatesImportPayload {
+  if (!parsed || typeof parsed !== "object") {
+    return false;
+  }
+  const payload = parsed as Record<string, unknown>;
+  return Array.isArray(payload.templates);
+}
+
 function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   const seen = new Set<string>();
   const sanitized: TimeTrackingLabel[] = [];
@@ -116,6 +128,35 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   return sanitized;
 }
 
+function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
+  const sanitized: TimeTrackingTemplate[] = [];
+
+  templates.forEach((template) => {
+    if (!template || typeof template !== "object") {
+      return;
+    }
+    const payload = template as Record<string, unknown>;
+    if (
+      typeof payload.id !== "string" ||
+      typeof payload.text !== "string" ||
+      typeof payload.label !== "string" ||
+      typeof payload.start !== "string" ||
+      typeof payload.stop !== "string"
+    ) {
+      return;
+    }
+    sanitized.push({
+      id: payload.id,
+      text: payload.text,
+      label: payload.label,
+      start: payload.start,
+      stop: payload.stop,
+    });
+  });
+
+  return sanitized;
+}
+
 export function TimeTrackingConfigView({
   labels,
   templates,
@@ -129,6 +170,9 @@ export function TimeTrackingConfigView({
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
+  const [templatesJson, setTemplatesJson] = useState(
+    JSON.stringify({ templates }, null, 2),
+  );
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const [editLabelName, setEditLabelName] = useState<string | null>(null);
@@ -162,11 +206,27 @@ export function TimeTrackingConfigView({
     setLabelsJson(JSON.stringify({ labels }, null, 2));
   }, [labels]);
 
+  // Sync templatesJson state when templates prop changes
+  useEffect(() => {
+    setTemplatesJson(JSON.stringify({ templates }, null, 2));
+  }, [templates]);
+
   const handleCopyLabels = async () => {
     setError("");
     try {
       await navigator.clipboard.writeText(JSON.stringify({ labels }, null, 2));
       setStatus("Copied labels JSON to clipboard.");
+    } catch {
+      setError("Copy failed. Please copy the JSON manually from the text area.");
+      setStatus("");
+    }
+  };
+
+  const handleCopyTemplates = async () => {
+    setError("");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify({ templates }, null, 2));
+      setStatus("Copied templates JSON to clipboard.");
     } catch {
       setError("Copy failed. Please copy the JSON manually from the text area.");
       setStatus("");
@@ -188,6 +248,24 @@ export function TimeTrackingConfigView({
       setStatus("Labels updated.");
     } catch {
       setError("Invalid labels JSON. Please check the format and try again.");
+    }
+  };
+
+  const handleApplyTemplatesJson = () => {
+    setError("");
+    setStatus("");
+
+    try {
+      const parsed = JSON.parse(templatesJson);
+      if (!validateTemplatesImportPayload(parsed)) {
+        setError("Invalid templates JSON. Expected an object with a templates array.");
+        return;
+      }
+
+      onImportData({ templates: sanitizeTemplates(parsed.templates ?? []) });
+      setStatus("Templates updated.");
+    } catch {
+      setError("Invalid templates JSON. Please check the format and try again.");
     }
   };
 
@@ -514,6 +592,33 @@ export function TimeTrackingConfigView({
             ))}
           </ListGroup>
         )}
+
+        <details className="mt-3">
+          <summary className="small text-muted">Raw templates JSON (import/export)</summary>
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 my-2">
+            <div className="fw-semibold">Templates JSON</div>
+            <div className="d-flex flex-wrap gap-2">
+              <Button size="sm" variant="outline-secondary" onClick={handleCopyTemplates}>
+                Copy Templates JSON
+              </Button>
+              <Button size="sm" variant="outline-primary" onClick={handleApplyTemplatesJson}>
+                Apply Templates JSON
+              </Button>
+            </div>
+          </div>
+          <Form.Control
+            as="textarea"
+            rows={8}
+            className="textarea-mono"
+            value={templatesJson}
+            onChange={(event) => setTemplatesJson(event.target.value)}
+            aria-label="Templates JSON"
+          />
+          <div className="small text-muted mt-2">
+            Format:{" "}
+            <code>{`{"templates":[{"id":"template-1","text":"Support","label":"Support","start":"09:00","stop":"11:00"}]}`}</code>
+          </div>
+        </details>
       </div>
 
       <div className="d-flex flex-wrap gap-2">
