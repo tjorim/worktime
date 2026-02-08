@@ -4,338 +4,388 @@ This document captures backend-focused considerations for adding optional multi-
 Worktime. The goal is to keep the app local-first while enabling a lightweight server that stores
 sync state for users who opt in.
 
-## Backend responsibilities (minimal)
+## Table of contents
+
+- [Backend responsibilities](#backend-responsibilities)
+- [API surface](#api-surface)
+- [Authentication](#authentication)
+- [Storage model](#storage-model)
+- [Data deletion (GDPR/CCPA)](#data-deletion-gdprccpa)
+- [Security](#security)
+- [CORS](#cors)
+- [Hosting and deployment](#hosting-and-deployment)
+- [WebPlanner feature analysis](#webplanner-feature-analysis)
+- [Resolved questions](#resolved-questions)
+- [Conclusions](#conclusions)
+
+## Backend responsibilities
 
 - Store a single JSON snapshot per user plus metadata (updated_at, version, etag).
-- Provide auth/identity (account or device-link token).
+- Provide auth/identity via device-link tokens (lightweight accounts added later if team features
+  are needed).
 - Enforce basic rate limits and payload validation.
-- Expose simple CRUD endpoints for upload/download.
-- Support secure deletion of user snapshots and associated metadata (updated_at, version, etag, tokens); honor authenticated deletion requests; return audit-safe responses (204 on success or 404 if already deleted); apply rate limiting and ownership validation to prevent unauthorized erasure.
+- Expose simple CRUD endpoints for snapshot upload/download.
+- Support secure deletion of user data for GDPR/CCPA compliance.
 
-## API surface (proposed)
+## API surface
 
-- `POST /v1/sync` (authenticated) to upload a snapshot. Requires `Authorization: Bearer <token>` header. Request body must be JSON containing:
-  - `payload` (object): The complete user state snapshot to store
-  - `version` (integer) **or** `etag` (string): For conflict detection; must match server's current version/etag
-  - Example: `{"payload": {...}, "version": 5}` or `{"payload": {...}, "etag": "abc123"}`
-  - **Success response (200 OK)**: Returns new `version` and `etag` after write: `{"version": 6, "etag": "def456", "updated_at": "2026-02-08T12:34:56Z"}`
-  - **Conflict response (409 Conflict)**: Server detects divergence (version/etag mismatch); returns current server snapshot with metadata: `{"payload": {...}, "version": 6, "etag": "xyz789", "updated_at": "2026-02-08T11:00:00Z"}`. Client should merge server state with local changes and retry POST with updated version/etag.
-- `GET /v1/sync` (authenticated) to download the latest snapshot (supports `If-None-Match`). Requires `Authorization: Bearer <token>` header.
-- `DELETE /v1/sync` (authenticated) to erase all user data (GDPR/CCPA compliance). Requires `Authorization: Bearer <token>` header.
-- `GET /v1/health` (unauthenticated) for uptime checks and basic monitoring.
-- `POST /v1/auth/link` (device-link flow) to exchange a link token for an access token. See "Authentication" section for token exchange details.
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/sync` | POST | Required | Upload snapshot (see [Sync upload](#sync-upload)) |
+| `/v1/sync` | GET | Required | Download latest snapshot (supports `If-None-Match`) |
+| `/v1/sync` | DELETE | Required | Erase all user data (see [Data deletion](#data-deletion-gdprccpa)) |
+| `/v1/health` | GET | None | Uptime checks and monitoring |
+| `/v1/auth/link` | POST | None | Exchange link token for access token (see [Authentication](#authentication)) |
+
+All authenticated endpoints require an `Authorization: Bearer <token>` header. Missing, malformed,
+or expired tokens receive `401 Unauthorized`. Insufficient permissions receive `403 Forbidden`.
+
+### Sync upload
+
+`POST /v1/sync` uploads a complete user state snapshot. Request body (JSON):
+
+- `payload` (object): The complete user state snapshot.
+- `version` (integer) **or** `etag` (string): Must match the server's current value for conflict
+  detection.
+
+**Responses:**
+
+- **200 OK**: Write succeeded. Returns `{"version": 6, "etag": "def456", "updated_at": "..."}`.
+- **409 Conflict**: Version/etag mismatch. Returns the current server snapshot with metadata so the
+  client can merge and retry.
 
 ## Authentication
 
-**Header format:**
+**Decision: Device-link tokens at launch.** No passwords, no email verification. If team features
+are added later, introduce a minimal account model (email grouping device tokens) without requiring
+a password.
 
-```
-Authorization: Bearer <access_token>
-```
+### Device-link exchange
 
-**Token types (choose one strategy):**
+`POST /v1/auth/link` exchanges a short-lived link token for a long-lived access token.
 
-- **Opaque tokens**: Server-generated random strings (stored in-DB for lookup). Simple, requires server state.
-- **JWT**: Self-contained, stateless tokens with embedded user_id and expiry. Reduces server lookups but requires key rotation.
-- **Device-specific tokens**: Scoped to a single device/client; enables revocation per device without invalidating all user tokens.
+**Request:**
 
-**Token lifecycle:**
-
-- **Lifetime**: Access tokens typically valid for 24 hours to 7 days. Short lives reduce compromise window; long lives reduce refresh burden.
-- **Expiry**: Server rejects tokens after expiry with `401 Unauthorized`; client must refresh or re-authenticate.
-- **Refresh flow (optional)**: If implemented, issue a separate long-lived refresh token (30–90 days). Client uses refresh token to obtain new access token without re-entering credentials.
-
-**Device-link exchange (POST /v1/auth/link):**
-
-- **Request**: Client sends a link token (short-lived, shared out-of-band, e.g., QR code or manual entry) and a device ID.
-  - **Body (JSON)**: `{"link_token":"...","device_id":"..."}`
-  - **Required**: `link_token` (string), `device_id` (string)
-  - **Format**: Treat as opaque strings; trim whitespace; reject empty values.
-- **Response**: Server validates `link_token`; if valid, returns an access token associated with the provided `device_id`, then invalidates the `link_token`.
-- **Linkage**: New access token is associated with the device/client ID, enabling per-device token revocation (device-specific invalidation).
-- **Link token lifetime**: Typically 1–5 minutes to reduce brute-force window. Once exchanged, link token is invalidated.
-- **Example flow**: User scans QR code on device → QR contains link token → device calls `POST /v1/auth/link` → server returns access token → device stores token locally and uses for sync.
-- **Example request**:
-
-```
-POST /v1/auth/link
-Content-Type: application/json
-
+```json
 {
   "link_token": "LT-abc123",
   "device_id": "dev-5f7d2b0c"
 }
 ```
 
-**Rate limiting and brute-force protections:**
+- Both fields are required opaque strings (trim whitespace, reject empty).
+- On success: server returns an access token associated with the `device_id`, then invalidates the
+  `link_token`.
+- Link tokens live 1-5 minutes. Once exchanged, they cannot be reused.
 
-- **Default limits**: Enforce 5 attempts per IP address per minute and 10 attempts per `device_id` per hour to prevent token enumeration attacks.
-- **Failure tracking**: Track failed attempts independently by:
-  - **IP address**: Count invalid link_token submissions per IP (resets after successful exchange or 1-minute window).
-  - **device_id**: Count failed attempts per device_id (resets after successful exchange or 1-hour window).
-- **Exponential backoff**: After each failed attempt from the same IP or device_id, increase response delay:
-  - 1st failure: 0ms delay
-  - 2nd failure: 100ms delay
-  - 3rd failure: 500ms delay
-  - 4th failure: 1s delay
-  - 5th+ failure: 2s delay + temporary lockout
-- **Temporary lockout**: After 5 failed attempts within the rate-limit window:
-  - **IP lockout**: Block all `/v1/auth/link` requests from IP for 5 minutes.
-  - **Device lockout**: Reject all requests with the same `device_id` for 15 minutes.
-  - Return `429 Too Many Requests` with `Retry-After` header (e.g., `Retry-After: 300` for 5 minutes).
-- **Generic error responses**: On throttled or failed attempts, return consistent error messages to prevent information leakage:
-  - Success: `200 OK` with access token.
-  - Invalid token or rate-limited: `401 Unauthorized` with generic message: `{"error": "Invalid or expired link token"}`.
-  - Lockout/throttle: `429 Too Many Requests` with `{"error": "Too many attempts, try again later", "retry_after": 300}`.
-  - Never reveal whether link_token exists, is expired, or has been used.
-- **Server-side logging**: Log all attempts (success and failure) with IP, device_id, timestamp, and result for fraud detection and auditing. Raw tokens or token prefixes must never be logged. Instead, generate an opaque `token_id` (e.g., keyed HMAC-SHA-256 digest of the token) at token creation time and store it alongside the token hash. Use this `token_id` in all log entries and audit trails. Include:
-  - Failed token validation attempts (identified by `token_id` only).
-  - Rate-limit triggers and lockout events.
-  - Anomaly detection flags (e.g., multiple device_ids from same IP, rapid token rotation).
-- **Link token invalidation**: On successful exchange, immediately invalidate the `link_token` in the database/cache. Log the invalidation event using the `token_id`, never the raw token or any prefix. On lockout or max attempts, consider invalidating the link_token as a security measure (configurable per deployment).
-- **Implementation**: Apply rate-limiting as middleware before handler logic (e.g., Express rate-limiter, Cloudflare Workers rate-limit API, or custom Redis-based counter). Ensure limits are enforced atomically (check-and-increment) to prevent race conditions.
+**Example flow:** User scans QR code on new device -> QR contains link token -> device calls
+`POST /v1/auth/link` -> server returns access token -> device stores token locally for sync.
 
-**Token validation on authenticated endpoints:**
+### Token lifecycle
 
-- All endpoints requiring auth (`POST /v1/sync`, `GET /v1/sync`, `DELETE /v1/sync`) must validate the `Authorization` header.
-- If header is missing, malformed, or token is invalid/expired, return `401 Unauthorized`.
-- If token is valid but user lacks permission for the action (e.g., read-only token on DELETE), return `403 Forbidden`.
+- **Type**: Device-specific opaque tokens stored server-side. Enables per-device revocation.
+- **Lifetime**: 24 hours to 7 days. Short lives reduce compromise window; long lives reduce refresh
+  burden.
+- **Expiry**: Server rejects expired tokens with `401 Unauthorized`.
+- **Refresh (optional)**: Separate long-lived refresh token (30-90 days) to obtain new access tokens
+  without re-linking.
+
+### Rate limiting and brute-force protection
+
+Applies to `POST /v1/auth/link` as middleware before handler logic.
+
+**Limits:**
+
+- 5 attempts per IP per minute; 10 attempts per `device_id` per hour.
+- Exponential backoff on failures: 0ms -> 100ms -> 500ms -> 1s -> 2s + lockout.
+- After 5 failures: IP locked for 5 minutes, `device_id` locked for 15 minutes.
+- Locked requests receive `429 Too Many Requests` with `Retry-After` header.
+
+**Security principles:**
+
+- Generic error responses only — never reveal whether a link token exists, is expired, or was used.
+- Log all attempts with IP, `device_id`, timestamp, and result. Never log raw tokens; use an opaque
+  `token_id` (keyed HMAC-SHA-256 digest generated at creation time) in all logs and audit trails.
+- On successful exchange, immediately invalidate the link token in the database. On lockout,
+  optionally invalidate it as a security measure (configurable per deployment).
 
 ## Storage model
 
-- Single table keyed by `user_id`:
-  - `user_id` (primary key)
-  - `payload` (JSON/blob)
-  - `updated_at` (timestamp)
-  - `version` (integer)
-  - `etag` (lowercase hex SHA-256 digest of the serialized payload concatenated with the version that will be stored, i.e., the post-increment/final version: `etag = SHA256(json_payload + stored_version.toString()).hex()`. Compute the etag immediately before persisting, using the final version value, to avoid circular dependency between etag and version.)
-- Optional audit table for last N writes if rollback is desired.
+Single table keyed by `user_id`:
 
-## Conflict handling
+| Column | Type | Notes |
+|--------|------|-------|
+| `user_id` | string (PK) | Unique user identifier |
+| `payload` | JSON/blob | Complete user state snapshot |
+| `updated_at` | timestamp | Last write time |
+| `version` | integer | Monotonically increasing; used for conflict detection |
+| `etag` | string | `SHA256(json_payload + stored_version.toString()).hex()` — computed immediately before persisting, using the final version value |
 
-- Assume last-write-wins for the minimal version.
-- Require client to send `version` or `etag` on write to detect divergence.
-- If mismatch: return `409 Conflict` with server snapshot and metadata.
+Optional audit table for last N writes if rollback is desired.
 
-## User data deletion (GDPR/CCPA)
+### Conflict handling
 
-The `DELETE /v1/sync` endpoint enables permanent account closure and erasure compliance:
+- Last-write-wins for the minimal version.
+- Client sends `version` or `etag` on write; server rejects on mismatch with `409 Conflict` and
+  returns the current server snapshot for client-side merge.
 
-**Request:**
+## Data deletion (GDPR/CCPA)
 
-```
-DELETE /v1/sync
-Authorization: Bearer <access_token>
-```
-
-**Authentication & Authorization:**
-
-- Requires valid `Authorization` header with access token (same auth as POST/GET).
-- Returns `401 Unauthorized` if token is missing or invalid.
-- Returns `403 Forbidden` if token lacks deletion rights (e.g., read-only or expired).
+`DELETE /v1/sync` enables permanent data erasure.
 
 **Response codes:**
 
-- `204 No Content` – User data successfully erased. Response body is empty. Subsequent GET/POST requests for this user will receive `404 Not Found` (no data exists).
-- `404 Not Found` – No data exists for this user (either already deleted or never created). Still considered success for idempotency.
-- `401 Unauthorized` – Missing or invalid authentication credential.
-- `403 Forbidden` – User is not authorized to delete this data (e.g., token has insufficient scope).
-- `429 Too Many Requests` – Rate limit exceeded; retry with exponential backoff.
+| Code | Meaning |
+|------|---------|
+| `204 No Content` | Data erased. Subsequent GET/POST returns `404`. |
+| `404 Not Found` | No data exists (already deleted or never created). Success for idempotency. |
+| `401 Unauthorized` | Missing or invalid token. |
+| `403 Forbidden` | Insufficient scope for deletion. |
+| `429 Too Many Requests` | Rate limited. |
 
-**Idempotency:**
+**Idempotency:** Calling DELETE multiple times with the same valid token always succeeds (204 or
+404). Safe to retry during network failures.
 
-- The DELETE operation is idempotent. Calling it multiple times with the same valid token always returns `204` (or `404` after first deletion) and never raises an error for repeating requests.
-- Useful for clients that may retry during network failures.
+**What gets deleted:**
 
-**Data removal semantics:**
+- User snapshot and all version/etag history (no rollback after deletion).
+- All device-link and access tokens for the user (immediate invalidation).
+- Associated metadata (created_at, updated_at) and dependent records (rate-limit counters,
+  sessions).
+- Operational logs (debug, soft-delete markers, backups): purged within 30 days.
 
-- All snapshots for the user are permanently erased from the main data table.
-- All version/etag history is removed (no rollback recovery available after deletion).
-- Any associated operational logs (e.g., debug logs, soft-delete markers, backup snapshots) are purged within 30 days to comply with data retention and storage limits.
-- Device-link tokens and access tokens for that user are immediately invalidated (no new syncs possible).
-- Linked account data (if any) is also removed, including metadata (created_at, updated_at).
-- Dependent records (e.g., rate-limit counters, sessions) should be cleaned up or anonymized.
+**What gets kept:**
 
-**Audit and logging:**
+- Compliance audit logs (deletion events, auth events, security incidents): retained for 7+ years
+  per GDPR Article 30 / SOC 2. These logs record _that_ deletion occurred, never the deleted
+  payload.
+- Legal hold exception: all logs preserved until hold is lifted, regardless of retention policy.
 
-- Log each deletion request with timestamp, authenticated user/token ID, IP address, and result code.
-- Maintain an immutable compliance audit log (separate table) of deletion events for regulatory verification; retain the audit logs of deletion events for ≥7 years or per jurisdiction requirements such as GDPR Article 30 (processing records) or SOC 2, while ensuring user data itself is deleted promptly to satisfy GDPR Article 17 (erasure).
-- Do not log the actual deleted payload (privacy-first); only log that deletion occurred.
-- If using soft-deletes initially, transition to hard-delete after 30-day retention window.
-- **Log retention policy summary**:
-  - **Operational/debug logs**: Purged within 30 days (includes soft-delete markers, backup metadata, request logs).
-  - **Compliance audit logs**: Retained for ≥7 years minimum (includes deletion events, authentication events, security incidents).
-  - **Legal hold exception**: If user data is subject to litigation hold or investigation, all logs (operational + compliance) are preserved until hold is lifted, regardless of normal retention policy.
+**Interaction with sync:** After deletion, `GET /v1/sync` returns `404`. A subsequent
+`POST /v1/sync` creates a new snapshot (version resets to 1).
 
-**Interaction with snapshot sync:**
+## Security
 
-- Unlike `GET /v1/sync` (which returns `304 Not Modified` with `If-None-Match`), DELETE has no conditional request form. It always attempts deletion if authorized.
-- After successful deletion, a subsequent `GET /v1/sync` returns `404 Not Found` and no etag/version (the snapshot no longer exists).
-- If a client attempts `POST /v1/sync` after deletion, the server treats it as a new snapshot creation for that user (version resets to 1, new etag computed).
+### Transport
 
-## Data visibility and encryption
+- **TLS 1.2+ required** (TLS 1.3 recommended). Never serve plaintext API responses.
+- **HSTS header** on all HTTPS responses:
+  `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+- Submit to [hstspreload.org](https://hstspreload.org) after infrastructure is stable.
 
-**Transport security (required baseline):**
+### Database encryption
 
-- All API endpoints **must** use TLS 1.2+ (TLS 1.3 recommended) with HTTPS; API clients must use HTTPS URLs, and HSTS should enforce HTTPS after first visit. Optional HTTP→HTTPS redirects may be provided for user convenience, but plaintext API requests must not be served.
-- Do not serve unencrypted JSON payloads under any circumstance.
-- **HSTS header (required)**: Serve `Strict-Transport-Security` header on all HTTPS responses to enforce HTTPS-only access in browsers:
+- At-rest encryption required (AES-256 or equivalent: SQLite cipher, cloud-managed keys, or
+  envelope encryption).
+- Encryption keys stored separately from the database (environment variable or secrets manager),
+  never committed to version control.
 
-  ```
-  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-  ```
+### Client-side encryption (E2EE)
 
-  - **max-age=31536000**: Enforce HTTPS for 1 year (31536000 seconds).
-  - **includeSubDomains**: Apply policy to all subdomains (e.g., api.example.com, sync.example.com).
-  - **preload**: Signal eligibility for browser HSTS preload lists (Chrome, Firefox, Safari). Only add after meeting [preload requirements](https://hstspreload.org): valid TLS cert, HTTPS on all subdomains, HSTS header on base domain, max-age ≥ 1 year.
+**Decision: No E2EE at launch.** TLS + at-rest encryption is the baseline.
 
-- **Configuration examples**:
-  - **Nginx**: Add to HTTPS server block:
-    ```nginx
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-    ```
-  - **Node.js (Express/Fastify)**: Use middleware like `helmet`:
-    ```javascript
-    app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true }));
-    ```
-  - **Cloudflare Workers**: Add header in response:
-    ```javascript
-    response.headers.set(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload",
-    );
-    ```
-  - **Caddy**: HSTS enabled by default when serving HTTPS; customize in Caddyfile:
-    ```
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-    ```
-- **Preload submission**: After deployment with valid TLS cert and HSTS header, submit domain to [hstspreload.org](https://hstspreload.org) for inclusion in browser preload lists (typically takes 2-3 months for propagation). Do not submit until infrastructure is stable; preload is difficult to undo.
+E2EE would block server-side reporting, export, and team summaries. The data categories in Worktime
+(schedule settings, time-off dates, time tracking entries) are not high-risk enough to justify this
+trade-off for the current user base.
 
-**Database encryption (required baseline):**
+If a future user population handles confidential project names, offer optional E2EE as an opt-in
+setting. Users who enable it accept that server-side features are unavailable for their encrypted
+data. Key management: client-generated per-user symmetric key stored locally (IndexedDB or OS
+credential store), never sent to the server.
 
-- Database fixtures (at-rest) **must** be encrypted using AES-256 or equivalent (e.g., SQLite `PRAGMA cipher`, cloud provider managed keys, or envelope encryption).
-- Encryption key must be stored separately from database (e.g., environment variable, secrets manager) and never committed to version control.
+## CORS
 
-**Client-side end-to-end encryption (E2EE):**
+Required for the frontend to make authenticated API requests from a different origin.
 
-- Plaintext server storage means operators can inspect user data; for stronger privacy, use client-side encryption (E2EE).
-- If E2EE: server only stores opaque encrypted blobs and metadata (no key material on server).
-- **Key management strategy**:
-  - **Key generation**: Client generates per-user symmetric key on first use (e.g., random 256-bit key derived from password or stored in IndexedDB).
-  - **Key storage**: Encrypted keys stored locally (device only) or wrapped with a password; never sent to server.
-  - **Key rotation**: Client-initiated on password change; old snapshots re-encrypted with new key before upload (or kept in archive).
-  - **Secrets protection**: Keys protected by local device security (secure enclave, hardware wallet, or OS credential store where available); no server-side key recovery.
+**Requirements:**
 
-## Transport and format
+- **Allowed origins**: Explicit allowlist only. Never use `*` in production.
+  - Production: `https://worktime.example.com` (and any app subdomains).
+  - Development: `http://localhost:3000`, `http://localhost:5173`, `http://localhost:8000`.
+- **Credentials**: Set `Access-Control-Allow-Credentials: true` (required for `Authorization`
+  header). When set, `Allow-Origin` must echo the validated request origin, not `*`.
+- **Preflight (OPTIONS)**: Respond with allowed methods (`GET, POST, DELETE, OPTIONS`), allowed
+  headers (`Content-Type, Authorization`), and `Max-Age: 86400` (24h cache). Return `204`.
+- **Production hardening**: Only allow HTTPS origins (except localhost in dev). Do not expose
+  sensitive headers via `Access-Control-Expose-Headers` unless necessary.
 
-- Prefer HTTP/JSON with gzip compression for payloads.
-- Consider protobuf only if payloads become large or frequent.
-- MQTT is possible but likely overkill for snapshot sync.
+Implementation: use the CORS middleware provided by your framework (e.g., `cors` for Express,
+`@fastify/cors` for Fastify, `CORSMiddleware` for FastAPI) or set headers manually in Workers.
 
-## Backend options (lightweight)
+## Hosting and deployment
 
-- Cloudflare Workers + D1 for low-ops SQL and global edge.
-- FastAPI (Python) or Fastify (Node) for a minimal REST service.
-- SQLite is sufficient for single-instance deployments; Postgres is better for growth.
+A backend means the app can no longer be purely GitHub Pages.
 
-## Hosting considerations
+**Platform options:**
 
-- A backend means the app can no longer be purely GitHub Pages.
-- Vercel/Render/Fly.io or Cloudflare Workers are practical options.
-- Plan for backups (daily DB snapshots) and basic monitoring (latency/error rate).
+- **Cloudflare Workers + D1**: Low-ops, global edge, SQL-based. Good fit for the minimal sync API.
+- **Fly.io / Render**: Lightweight container hosting. Good for FastAPI or Fastify.
+- **Vercel**: Serverless functions + edge. Simple deployment from Git.
 
-**CORS configuration (required for frontend access):**
+**Database:** SQLite is sufficient for single-instance deployments. Postgres for growth or
+multi-region.
 
-Cross-Origin Resource Sharing (CORS) must be configured to allow the frontend to make authenticated API requests from a different origin (e.g., frontend at `https://worktime.example.com`, API at `https://api.worktime.example.com`).
+**Transport format:** HTTP/JSON with gzip compression. Protobuf and MQTT are unnecessary for
+snapshot sync at this scale.
 
-- **Allowed origins**:
-  - **Production**: Explicitly list production frontend origin(s) in allowlist. **Never use `*` wildcard in production** (blocks credentials and exposes API to any site).
-    - Example: `https://worktime.example.com`, `https://app.worktime.example.com`
-  - **Development**: Include localhost ports for local dev/testing: `http://localhost:3000`, `http://localhost:5173`, `http://localhost:8000`
-  - **Dynamic origin validation**: If multiple origins are allowed, validate incoming `Origin` header against allowlist and echo the matching origin in response:
-    ```javascript
-    // Pseudocode
-    const allowedOrigins = ["https://worktime.example.com", "http://localhost:5173"];
-    const origin = request.headers.get("Origin");
-    if (allowedOrigins.includes(origin)) {
-      response.headers.set("Access-Control-Allow-Origin", origin);
-    }
-    ```
-- **Credentials handling**:
-  - If using cookies or `Authorization` header with credentials: set `Access-Control-Allow-Credentials: true` in all responses.
-  - **Critical**: When `Allow-Credentials: true` is set, `Access-Control-Allow-Origin` **must** be a specific origin (not `*`). Echo the exact validated origin from the request.
-  - If not using credentials (e.g., token in URL params only), omit `Allow-Credentials` header entirely.
-- **Preflight requests (OPTIONS)**:
-  - Browsers send OPTIONS preflight before POST/DELETE or when custom headers are present (e.g., `Authorization`).
-  - Server must respond to OPTIONS with:
-    - `Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS` (list all supported methods)
-    - `Access-Control-Allow-Headers: Content-Type, Authorization` (list all custom headers clients may send)
-    - `Access-Control-Max-Age: 86400` (cache preflight for 24 hours to reduce overhead)
-    - `Access-Control-Allow-Origin: <validated-origin>` (same validation as actual requests)
-    - `Access-Control-Allow-Credentials: true` (if credentials are used)
-  - Return `204 No Content` or `200 OK` with empty body for OPTIONS.
-- **Secure production defaults**:
-  - Enable CORS only for HTTPS origins in production (reject `http://` origins except localhost in dev).
-  - Use narrow origin allowlist (specific domains only, no wildcards or regex).
-  - Set `Access-Control-Max-Age` high (86400 seconds = 24 hours) to reduce preflight frequency.
-  - Do not expose sensitive headers via `Access-Control-Expose-Headers` unless necessary.
-- **Framework-specific middleware configuration**:
-  - **Express (Node.js)**: Use `cors` package:
-    ```javascript
-    const cors = require("cors");
-    app.use(
-      cors({
-        origin: (origin, callback) => {
-          const allowedOrigins = ["https://worktime.example.com", "http://localhost:5173"];
-          if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-          } else {
-            callback(new Error("Not allowed by CORS"));
-          }
-        },
-        credentials: true,
-        methods: ["GET", "POST", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-        maxAge: 86400,
-      }),
-    );
-    ```
-  - **Fastify (Node.js)**: Use `@fastify/cors` plugin:
-    ```javascript
-    await fastify.register(require("@fastify/cors"), {
-      origin: ["https://worktime.example.com", "http://localhost:5173"],
-      credentials: true,
-      methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    });
-    ```
-  - **FastAPI (Python)**: Use `CORSMiddleware`:
-    ```python
-    from fastapi.middleware.cors import CORSMiddleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["https://worktime.example.com", "http://localhost:5173"],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization"],
-        max_age=86400
-    )
-    ```
-  - **Cloudflare Workers**: Set headers manually in response:
-    ```javascript
-    response.headers.set("Access-Control-Allow-Origin", validatedOrigin);
-    response.headers.set("Access-Control-Allow-Credentials", "true");
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    ```
-- **Testing CORS**:
-  - Use browser DevTools Network tab to inspect preflight OPTIONS requests and CORS headers.
-  - Verify `Access-Control-Allow-Origin` matches frontend origin exactly (not `*`).
-  - Test authenticated requests (with `Authorization` header) to ensure preflight succeeds.
-  - Test from disallowed origins to confirm server rejects (no CORS headers → browser blocks).
+**Operational basics:**
 
-## Open questions
+- Daily database backups.
+- Basic monitoring: latency, error rate, sync volume.
 
-- Do we need accounts, or will device-link tokens be enough?
-- Is end-to-end encryption required for any data categories?
-- Should sync be opt-in per feature (schedule vs time tracking)?
-- How long should inactive accounts/snapshots be retained?
+## WebPlanner feature analysis
+
+The `webplanner/` folder contained a Flask-based time tracking prototype (by MDKW) that logged
+daily tasks with start/stop times, project tags, reusable templates, a daily progress bar, and
+weekly hour aggregation. It stored everything in flat JSON files on the server. The folder has been
+removed, but the feature analysis below informed the backend design.
+
+### Features that stay client-side
+
+| Feature | Worktime approach |
+|---------|-------------------|
+| **Daily task entry** | localStorage, synced via snapshot. Tasks are small and personal. |
+| **Task templates** | Stored in `WorktimeUserState`. User-specific, synced as part of snapshot. |
+| **Progress bar** | Client computation: sum durations, compare to configurable daily target. |
+| **Date navigation** | Client filters localStorage by date. No server round-trip needed. |
+| **Project tags** | App config or user settings. Revisit if tags become team-shared. |
+
+### Features where a backend adds value
+
+| Feature | Why | Proposed endpoint |
+|---------|-----|-------------------|
+| **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline. | `GET /v1/reports/weekly`, `GET /v1/reports/monthly` |
+| **Team time summaries** | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in. | `GET /v1/reports/team` (manager auth) |
+| **Data export** | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile. | `GET /v1/export?format=csv&from=...&to=...` |
+| **Audit trail** | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention. | Server-side event log (not a public endpoint) |
+
+### Hybrid features
+
+| Feature | Client | Backend enhancement |
+|---------|--------|---------------------|
+| **Template sharing** | Local create/apply. | `POST /v1/templates/share` and `GET /v1/templates/shared?team=N` for team template pools. |
+| **Configurable targets** | Daily/weekly targets in user settings. | Optional backend validation against team/org policies. |
+| **Push notifications** | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority). |
+
+### What not to port
+
+- **File-based storage** — use database, not JSON/list files on disk.
+- **Hardcoded paths** — use environment variables or relative paths.
+- **Server-side rendering** — Worktime is a React SPA; backend is API-only.
+- **Bundled dependencies** — use proper package management.
+- **Shutdown endpoint** — not applicable to a hosted service.
+- **No authentication** — Worktime backend requires token-based auth.
+
+### Impact on sync API
+
+- **Payload growth**: ~2 KB/day for time tracking, ~700 KB/year. Well within single-snapshot size.
+- **Partial sync**: If snapshots grow large, split into sync channels later. Not a launch concern.
+- **Conflict granularity**: Whole-snapshot last-write-wins may lose concurrent edits from two
+  devices on the same day. Per-entry merge logic is a future enhancement.
+
+### Phase 2-3 endpoints
+
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/reports/weekly` | GET | Required | Weekly hours by project |
+| `/v1/reports/monthly` | GET | Required | Monthly hours by project |
+| `/v1/reports/team` | GET | Required (manager) | Team aggregated hours |
+| `/v1/export` | GET | Required | Export time entries (CSV/JSON) |
+| `/v1/templates/share` | POST | Required | Share template with team |
+| `/v1/templates/shared` | GET | Required | Fetch team-shared templates |
+
+These are additive; the core sync/auth/health endpoints remain unchanged.
+
+## Resolved questions
+
+### Do we need accounts, or will device-link tokens be enough?
+
+**Device-link tokens at launch.** Worktime is a personal tool, not enterprise SaaS. Device-link
+tokens avoid password management and account recovery complexity. If team reporting is added later,
+introduce a minimal account model (email grouping device tokens) without requiring a password.
+
+### Is end-to-end encryption required?
+
+**No E2EE at launch.** TLS + at-rest encryption is sufficient. E2EE would block server-side
+reporting and export. Offer optional E2EE later as an opt-in if confidential project names become a
+concern.
+
+### Should sync be per-feature?
+
+**Single snapshot.** All data syncs together. Per-feature channels add complexity for negligible
+benefit at current scale (~700 KB/year). Split into channels later if payload size becomes a
+problem.
+
+### How long should inactive data be retained?
+
+**12 months** after last sync, with a reminder at 10 months and a 30-day soft-delete grace period
+before hard deletion at 13 months. Compliance audit logs retained separately (7+ years).
+
+### Same snapshot or separate sync channel for time tracking?
+
+**Same snapshot.** Time tracking entries live in `WorktimeUserState` alongside schedule and time-off
+data. Extract into a separate channel only if splitting becomes necessary.
+
+### Is team-level reporting needed at launch?
+
+**No.** Ship individual sync first. Team reporting (requiring user-to-team mapping, manager roles,
+privacy opt-in) is Phase 3.
+
+### Do time entries need immutability after a cutoff?
+
+**No enforcement at launch.** The audit trail provides accountability. If payroll integration is
+added later, introduce a configurable `lockBeforeDate` per user or team.
+
+### Should shared templates be team-scoped or organization-wide?
+
+**Team-scoped initially.** Different teams have different recurring tasks. Org-wide templates can be
+added later as a separate global pool.
+
+## Conclusions
+
+### Architecture summary
+
+Worktime remains a **local-first application**. The browser is the primary runtime; localStorage is
+the primary data store. The backend is an optional enhancement for multi-device sync, and later,
+team-level features.
+
+The WebPlanner prototype validated that time tracking is a useful companion to shift scheduling. Its
+implementation patterns (server rendering, file storage, no auth) do not carry over, but the feature
+set is directly relevant:
+
+- **Task entry, templates, progress tracking, date navigation** stay client-side.
+- **Reporting, export, audit trails** justify backend involvement.
+- **Template sharing, push notifications** are hybrid — useful but not essential at launch.
+
+### Phased rollout
+
+**Phase 1 — Individual sync** (minimum viable backend)
+
+- Core sync API: `POST /v1/sync`, `GET /v1/sync`, `DELETE /v1/sync`, `GET /v1/health`.
+- Device-link authentication: `POST /v1/auth/link`.
+- Single snapshot model: entire `WorktimeUserState` syncs as one JSON payload.
+- Deploy on Cloudflare Workers + D1 or equivalent.
+
+**Phase 2 — Export and audit**
+
+- `GET /v1/export` for CSV/JSON export of time entries.
+- Server-side audit trail (append-only event log for time entry changes).
+- Individual user data only — no cross-user access.
+
+**Phase 3 — Team features**
+
+- Lightweight accounts (email + device tokens) for stable user identity.
+- Server-side team mapping (user -> team number).
+- Reporting endpoints: `/v1/reports/weekly`, `/v1/reports/monthly`, `/v1/reports/team`.
+- Template sharing: `/v1/templates/share`, `/v1/templates/shared`.
+- User opt-in required for team data visibility.
+
+### Design principles
+
+1. **Offline-first**: Every feature works without a backend. The server enhances; it never gates.
+2. **Single snapshot**: One payload, one version counter, one sync operation. No premature channel
+   splitting.
+3. **Privacy by default**: No data shared with teammates or managers unless the user opts in.
+4. **API-only backend**: JSON API. No HTML, no template engines, no UI state management.
+5. **Incremental complexity**: Each phase stands alone. Do not build Phase 3 infrastructure during
+   Phase 1.
