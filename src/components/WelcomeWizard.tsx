@@ -98,13 +98,13 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
+  const currentYear = String(new Date().getFullYear());
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
   // Vacation allowance form state - initialize from settings for current year
   const [vacationAmount, setVacationAmount] = useState<string>(() => {
-    const currentYear = String(new Date().getFullYear());
     const amount = settings.vacationAllowance?.yearlyAmounts?.[currentYear] ?? 0;
     return amount > 0 ? amount.toString() : "";
   });
@@ -180,7 +180,6 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
-    const currentYear = String(new Date().getFullYear());
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }

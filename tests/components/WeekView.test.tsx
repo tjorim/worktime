@@ -56,6 +56,7 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
           }),
           format: vi.fn(() => "Jan 13"),
           isSame: vi.fn(() => false),
+          isoWeekYear: vi.fn(() => 2025),
         })),
         format: vi.fn(() => "2025-01-15"),
         add: vi.fn(() => {

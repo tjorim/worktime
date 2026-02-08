@@ -44,7 +44,8 @@ export type ScheduleRoster = {
  * Throws an error if validation fails.
  */
 function validateSchedulePattern(config: ShiftRosterConfig): void {
-  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam } = config;
+  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam, weeklyHours } =
+    config;
 
   // Validation 1: Pattern length matches cycle length
   if (schedulePattern.length !== cycleLengthDays) {
@@ -165,6 +166,13 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     throw new Error(
       `Schedule pattern validation failed: ` +
         `Pattern must contain at least one working shift (all days are marked as "O" - off)`,
+    );
+  }
+
+  // Validation 9: Optional weekly hours must be a finite non-negative number when provided
+  if (weeklyHours != null && (!Number.isFinite(weeklyHours) || weeklyHours < 0)) {
+    throw new Error(
+      `Schedule pattern validation failed: weeklyHours must be a finite non-negative number when provided.`,
     );
   }
 }

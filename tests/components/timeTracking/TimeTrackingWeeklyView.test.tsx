@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import React from "react";
 import { TimeTrackingWeeklyView } from "../../../src/components/timeTracking/TimeTrackingWeeklyView";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 
@@ -32,7 +31,13 @@ describe("TimeTrackingWeeklyView Component", () => {
   });
 
   const renderPanel = (tasks: StoredTimeTrackingTask[], selectedDate = "2025-01-06") =>
-    render(<TimeTrackingWeeklyView tasks={tasks} selectedDate={selectedDate} />);
+    render(
+      <TimeTrackingWeeklyView
+        tasks={tasks}
+        selectedDate={selectedDate}
+        onSelectedDateChange={vi.fn()}
+      />,
+    );
 
   describe("Empty State Handling", () => {
     it("shows informative message when week has no data", () => {
@@ -103,6 +108,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         <TimeTrackingWeeklyView
           tasks={weekTasks}
           selectedDate="2025-01-06"
+          onSelectedDateChange={vi.fn()}
           weeklyTargetHours={40}
         />,
       );
@@ -110,26 +116,15 @@ describe("TimeTrackingWeeklyView Component", () => {
       expect(screen.getByText(/Total for the week:.*4\.00.*\/ 40\.0 hours/i)).toBeInTheDocument();
     });
 
-    it("excludes lunch category from work hour totals", () => {
+    it("includes all labels in work hour totals", () => {
       const weekTasks = [
         createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
-        createTaskForDate(mondayDate, "Lunch", "12:00", "12:30"),
+        createTaskForDate(mondayDate, "Break", "12:00", "12:30"),
       ];
 
       renderPanel(weekTasks);
 
-      expect(screen.getByText(/Total for the week:.*3\.00.*hours/i)).toBeInTheDocument();
-    });
-
-    it("reports lunch hours separately when present", () => {
-      const weekTasks = [
-        createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
-        createTaskForDate(mondayDate, "Lunch", "12:00", "12:45"),
-      ];
-
-      renderPanel(weekTasks);
-
-      expect(screen.getByText(/Lunch:.*0\.75.*h$/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total for the week:.*3\.50.*hours/i)).toBeInTheDocument();
     });
   });
 

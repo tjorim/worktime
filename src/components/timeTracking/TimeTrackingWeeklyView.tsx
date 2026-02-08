@@ -23,7 +23,8 @@ type TimeTrackingWeeklyViewProps = {
 };
 
 function getWeekDateRange(year: number, week: number): [string, string] {
-  const start = dayjs().isoWeekYear(year).isoWeek(week).startOf("isoWeek");
+  // Jan 4 is always in ISO week 1 of its calendar year
+  const start = dayjs(`${year}-01-04`).isoWeek(week).startOf("isoWeek");
   const end = start.endOf("isoWeek");
   return [start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")];
 }
@@ -72,7 +73,7 @@ export function TimeTrackingWeeklyView({
     [tasks, start, end],
   );
 
-  const { summary, dailyTotals, labels, weekTotal, lunchTotal, weekDays } = useMemo(() => {
+  const { summary, dailyTotals, labels, weekTotal, weekDays } = useMemo(() => {
     const totals = rows.reduce<Summary>((acc, row) => {
       acc[row.label] = (acc[row.label] ?? 0) + row.hours;
       return acc;
@@ -90,17 +91,13 @@ export function TimeTrackingWeeklyView({
     });
 
     const labelList = Object.keys(totals).sort();
-    const lunch = totals["Lunch"] ?? 0;
-    const weekSum = labelList
-      .filter((label) => label !== "Lunch")
-      .reduce((sum, label) => sum + (totals[label] ?? 0), 0);
+    const weekSum = labelList.reduce((sum, label) => sum + (totals[label] ?? 0), 0);
 
     return {
       summary: totals,
       dailyTotals: dayTotals,
       labels: labelList,
       weekTotal: weekSum,
-      lunchTotal: lunch,
       weekDays: days,
     };
   }, [rows, start]);
@@ -141,28 +138,22 @@ export function TimeTrackingWeeklyView({
             <thead>
               <tr>
                 <th scope="col">Day</th>
-                {labels
-                  .filter((label) => label !== "Lunch")
-                  .map((label) => (
-                    <th key={label} scope="col">
-                      {label}
-                    </th>
-                  ))}
+                {labels.map((label) => (
+                  <th key={label} scope="col">
+                    {label}
+                  </th>
+                ))}
                 <th scope="col">Total Hours</th>
               </tr>
             </thead>
             <tbody>
               {weekDays.map((day) => {
                 const daySummary = dailyTotals[day.iso] ?? {};
-                const workLabels = labels.filter((label) => label !== "Lunch");
-                const dayTotal = workLabels.reduce(
-                  (sum, label) => sum + (daySummary[label] ?? 0),
-                  0,
-                );
+                const dayTotal = labels.reduce((sum, label) => sum + (daySummary[label] ?? 0), 0);
                 return (
                   <tr key={day.iso}>
                     <th scope="row">{day.label}</th>
-                    {workLabels.map((label) => (
+                    {labels.map((label) => (
                       <td key={`${day.iso}-${label}`}>{(daySummary[label] ?? 0).toFixed(2)}</td>
                     ))}
                     <td className="fw-semibold">{dayTotal.toFixed(2)}</td>
@@ -187,7 +178,6 @@ export function TimeTrackingWeeklyView({
               Total for the week: {weekTotal.toFixed(2)}
               {weeklyTargetHours !== undefined ? ` / ${weeklyTargetHours.toFixed(1)}` : ""} hours
             </div>
-            {lunchTotal > 0 && <div className="text-muted">Lunch: {lunchTotal.toFixed(2)} h</div>}
           </div>
         )}
       </Card.Body>

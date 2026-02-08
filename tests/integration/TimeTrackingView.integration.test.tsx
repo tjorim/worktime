@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import React from "react";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { TimeTrackingView } from "../../src/components/timeTracking/TimeTrackingView";
 import type { StoredTimeTrackingTask } from "../../src/components/timeTracking/types";

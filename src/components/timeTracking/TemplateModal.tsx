@@ -31,6 +31,8 @@ export function TemplateModal({
   onClose,
   onSubmit,
 }: TemplateModalProps) {
+  const isLabelSelectionDisabled = labels.length === 0;
+
   return (
     <Modal show={show} onHide={onClose} centered>
       <Modal.Header closeButton>
@@ -58,11 +60,12 @@ export function TemplateModal({
             <Form.Select
               value={value.label}
               onChange={(event) => onChange({ ...value, label: event.target.value })}
-              disabled={labels.length === 0}
+              disabled={isLabelSelectionDisabled}
+              aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
               aria-required="true"
               required
             >
-              {labels.length === 0 ? (
+              {isLabelSelectionDisabled ? (
                 <option value="">Add labels first</option>
               ) : (
                 <>
@@ -77,6 +80,11 @@ export function TemplateModal({
                 </>
               )}
             </Form.Select>
+            {isLabelSelectionDisabled ? (
+              <Form.Text id="templateLabelHelp" muted>
+                Add at least one label in Time Tracking Settings before creating templates.
+              </Form.Text>
+            ) : null}
           </Form.Group>
           <div className="d-flex gap-3">
             <Form.Group controlId="templateStart" className="flex-fill">

@@ -202,6 +202,8 @@ const migrations: Record<number, Migration> = {
     for (const [key, val] of Object.entries(existingYearly)) {
       if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
         yearlyAmounts[key] = val;
+      } else if (val !== undefined) {
+        console.warn(`Migration v2: skipped invalid yearlyAmounts entry "${key}":`, val);
       }
     }
     // Only seed from old amount if there's no entry for the current year yet

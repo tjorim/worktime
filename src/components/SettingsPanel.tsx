@@ -8,15 +8,13 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { useEventStore } from "../contexts/EventStoreContext";
+import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
-
-const TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
 
 interface SettingsPanelProps {
   show: boolean;

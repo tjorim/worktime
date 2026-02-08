@@ -30,6 +30,10 @@ describe("Schedule pattern validation", () => {
       expect(config.referenceTeam).toBeLessThanOrEqual(config.teamCount);
       expect(config.schedulePattern).toBeDefined();
       expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
+      if (config.weeklyHours != null) {
+        expect(Number.isFinite(config.weeklyHours)).toBe(true);
+        expect(config.weeklyHours).toBeGreaterThanOrEqual(0);
+      }
     });
   });
 
@@ -69,15 +73,21 @@ describe("Schedule pattern validation", () => {
           return;
         }
 
-        expect(definition.start).toBeGreaterThanOrEqual(0);
-        expect(definition.start).toBeLessThanOrEqual(24);
-        expect(definition.end).toBeGreaterThanOrEqual(0);
-        expect(definition.end).toBeLessThanOrEqual(24);
+        const start = definition.start;
+        const end = definition.end;
+        expect(start).not.toBeNull();
+        expect(end).not.toBeNull();
+        if (start == null || end == null) return;
+
+        expect(start).toBeGreaterThanOrEqual(0);
+        expect(start).toBeLessThanOrEqual(24);
+        expect(end).toBeGreaterThanOrEqual(0);
+        expect(end).toBeLessThanOrEqual(24);
 
         if (shift === "N") {
-          expect(definition.start).toBeGreaterThan(definition.end);
+          expect(start).toBeGreaterThan(end);
         } else {
-          expect(definition.start).toBeLessThan(definition.end);
+          expect(start).toBeLessThan(end);
         }
       });
     });
