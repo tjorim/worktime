@@ -230,6 +230,10 @@ export function TimeTrackingDailyView({
       setError("Stop time must be after start time.");
       return;
     }
+    if (now.diff(startDayjs, "minute") < 1) {
+      setError("Task was not saved. Duration must be at least 1 minute.");
+      return;
+    }
     const stopTime = now.format("YYYY-MM-DDTHH:mm");
     onUpdateTaskTimes({
       id: runningTask.id,
