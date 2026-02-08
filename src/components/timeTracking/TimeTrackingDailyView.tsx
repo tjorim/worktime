@@ -8,6 +8,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
 import { ProgressBar } from "./ProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
@@ -64,6 +65,7 @@ export function TimeTrackingDailyView({
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
   const dailyDate = dayjs(date);
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
@@ -239,15 +241,7 @@ export function TimeTrackingDailyView({
       return;
     }
     if (now.diff(startDayjs, "minute") < 1) {
-      const shouldDiscard = window.confirm(
-        "This task ran for less than 1 minute. Discard it instead of saving?",
-      );
-      if (shouldDiscard) {
-        onRemoveTask(runningTask.id);
-        setStatus("Task discarded.");
-      } else {
-        setError("Task was not saved. Duration must be at least 1 minute.");
-      }
+      setShowDiscardConfirm(true);
       return;
     }
     const stopTime = now.format("YYYY-MM-DDTHH:mm");
@@ -483,6 +477,25 @@ export function TimeTrackingDailyView({
           onRemoveTask={onRemoveTask}
         />
       </Card.Body>
+
+      <ConfirmationDialog
+        isOpen={showDiscardConfirm}
+        title="Discard Task"
+        message="This task ran for less than 1 minute. Discard it instead of saving?"
+        confirmLabel="Discard"
+        variant="danger"
+        onConfirm={() => {
+          if (runningTask) {
+            onRemoveTask(runningTask.id);
+            setStatus("Task discarded.");
+          }
+          setShowDiscardConfirm(false);
+        }}
+        onCancel={() => {
+          setError("Task was not saved. Duration must be at least 1 minute.");
+          setShowDiscardConfirm(false);
+        }}
+      />
     </Card>
   );
 }

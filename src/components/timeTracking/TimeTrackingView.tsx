@@ -107,6 +107,7 @@ export function TimeTrackingView() {
             <TimeTrackingConfigView
               labels={labels}
               templates={templates}
+              tasks={tasks}
               onAddTemplate={addTemplate}
               onUpdateTemplate={updateTemplate}
               onDeleteTemplate={deleteTemplate}
