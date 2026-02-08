@@ -10,9 +10,9 @@ import type {
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 const TEST_LABELS = [
-  { name: "Development", color: "#198754" },
-  { name: "Support", color: "#c82333" },
-  { name: "Meeting", color: "#6f42c1" },
+  { id: "Development", name: "Development", color: "#198754" },
+  { id: "Support", name: "Support", color: "#c82333" },
+  { id: "Meeting", name: "Meeting", color: "#6f42c1" },
 ];
 
 const TEST_TEMPLATES: TimeTrackingTemplate[] = [
@@ -26,19 +26,35 @@ const TEST_TEMPLATES: TimeTrackingTemplate[] = [
 ];
 
 describe("TimeTrackingDailyView", () => {
-  const mockProps = {
-    tasks: [] as StoredTimeTrackingTask[],
-    labels: TEST_LABELS,
-    templates: TEST_TEMPLATES,
-    selectedDate: dayjs().format("YYYY-MM-DD"),
-    onSelectedDateChange: vi.fn(),
-    onAddTask: vi.fn(),
-    onUpdateTaskTimes: vi.fn(),
-    onRemoveTask: vi.fn(),
+  let mockProps: {
+    tasks: StoredTimeTrackingTask[];
+    labels: typeof TEST_LABELS;
+    templates: TimeTrackingTemplate[];
+    selectedDate: string;
+    onSelectedDateChange: (date: string) => void;
+    onAddTask: (payload: StoredTimeTrackingTask) => Promise<boolean>;
+    onUpdateTaskTimes: (payload: {
+      id: string;
+      newStartTime: string;
+      newStopTime: string | null | undefined;
+      newText?: string;
+      newLabel?: string;
+    }) => void;
+    onRemoveTask: (id: string) => void;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockProps = {
+      tasks: [] as StoredTimeTrackingTask[],
+      labels: TEST_LABELS,
+      templates: TEST_TEMPLATES,
+      selectedDate: dayjs().format("YYYY-MM-DD"),
+      onSelectedDateChange: vi.fn(),
+      onAddTask: vi.fn(),
+      onUpdateTaskTimes: vi.fn(),
+      onRemoveTask: vi.fn(),
+    };
   });
 
   afterEach(() => {
@@ -139,6 +155,7 @@ describe("TimeTrackingDailyView", () => {
         startTime: "2025-01-01T23:55",
       };
 
+      mockProps.selectedDate = "2025-01-02";
       render(
         <TimeTrackingDailyView
           {...mockProps}

@@ -6,8 +6,8 @@ import { TimeTrackingView } from "../../src/components/timeTracking/TimeTracking
 import type { StoredTimeTrackingTask } from "../../src/components/timeTracking/types";
 
 const TEST_LABELS = [
-  { name: "Development", color: "#198754" },
-  { name: "Support", color: "#c82333" },
+  { id: "Development", name: "Development", color: "#198754" },
+  { id: "Support", name: "Support", color: "#c82333" },
 ];
 
 let mockTasks: StoredTimeTrackingTask[] = [];
@@ -55,15 +55,15 @@ describe("TimeTrackingView Integration Tests", () => {
         id: "today-task",
         text: "Today Task",
         label: "Support",
-        startTime: "2025-01-06T09:00",
-        stopTime: "2025-01-06T10:00",
+        startTime: "2025-01-06T09:00Z",
+        stopTime: "2025-01-06T10:00Z",
       },
       {
         id: "yesterday-task",
         text: "Yesterday Task",
         label: "Support",
-        startTime: "2025-01-05T09:00",
-        stopTime: "2025-01-05T10:00",
+        startTime: "2025-01-05T09:00Z",
+        stopTime: "2025-01-05T10:00Z",
       },
     ];
 
@@ -86,15 +86,15 @@ describe("TimeTrackingView Integration Tests", () => {
         id: "current-week-task",
         text: "Current Week",
         label: "Support",
-        startTime: "2025-01-13T09:00",
-        stopTime: "2025-01-13T11:00",
+        startTime: "2025-01-13T09:00Z",
+        stopTime: "2025-01-13T11:00Z",
       },
       {
         id: "previous-week-task",
         text: "Previous Week",
         label: "Development",
-        startTime: "2025-01-06T10:00",
-        stopTime: "2025-01-06T12:00",
+        startTime: "2025-01-06T10:00Z",
+        stopTime: "2025-01-06T12:00Z",
       },
     ];
 

@@ -106,7 +106,12 @@ export function TimeTrackingConfigView({
         </Alert>
       )}
 
-      <LabelsPanel labels={labels} templates={templates} tasks={tasks} onUpdateLabels={onUpdateLabels} />
+      <LabelsPanel
+        labels={labels}
+        templates={templates}
+        tasks={tasks}
+        onUpdateLabels={onUpdateLabels}
+      />
 
       <TemplatesPanel
         labels={labels}

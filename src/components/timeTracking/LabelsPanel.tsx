@@ -229,9 +229,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               const usedByTemplates = templates.filter(
                 (template) => template.label === label.id,
               ).length;
-              const usedByTasks = tasks.filter(
-                (task) => task.label === label.id,
-              ).length;
+              const usedByTasks = tasks.filter((task) => task.label === label.id).length;
               const isInUse = usedByTemplates > 0 || usedByTasks > 0;
               const usageParts: string[] = [];
               if (usedByTemplates > 0) {
@@ -245,16 +243,11 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                   key={label.id}
                   className="d-flex flex-wrap gap-2 align-items-center"
                 >
-                  <span
-                    className="time-tracking-label"
-                    style={{ backgroundColor: label.color }}
-                  >
+                  <span className="time-tracking-label" style={{ backgroundColor: label.color }}>
                     {label.name}
                   </span>
                   {isInUse && (
-                    <span className="small text-muted">
-                      Used by {usageParts.join(" and ")}
-                    </span>
+                    <span className="small text-muted">Used by {usageParts.join(" and ")}</span>
                   )}
                   <div className="ms-auto d-flex gap-2">
                     <Button
@@ -334,9 +327,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <ConfirmationDialog
         isOpen={pendingDeleteLabel !== null}
         title="Delete Label"
-        message={
-          pendingDeleteLabel ? `Delete "${pendingDeleteLabel.name}"?` : ""
-        }
+        message={pendingDeleteLabel ? `Delete "${pendingDeleteLabel.name}"?` : ""}
         confirmLabel="Delete"
         variant="danger"
         onConfirm={handleConfirmDelete}

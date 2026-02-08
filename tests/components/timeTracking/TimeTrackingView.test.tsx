@@ -185,7 +185,7 @@ describe("TimeTrackingView", () => {
     it("should have proper heading structure", () => {
       renderWithSettings();
 
-      const header = screen.getByText("Daily Time Tracking");
+      const header = screen.getByRole("heading", { name: /Daily Time Tracking/i });
       expect(header).toBeInTheDocument();
     });
   });

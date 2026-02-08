@@ -32,6 +32,7 @@ export function TemplateModal({
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
+  const isSubmitDisabled = isLabelSelectionDisabled || !value.label;
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -43,6 +44,9 @@ export function TemplateModal({
           id="templateForm"
           onSubmit={(event) => {
             event.preventDefault();
+            if (isSubmitDisabled) {
+              return;
+            }
             onSubmit();
           }}
         >
@@ -114,7 +118,7 @@ export function TemplateModal({
         <Button variant="outline-secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" form="templateForm" variant="primary">
+        <Button type="submit" form="templateForm" variant="primary" disabled={isSubmitDisabled}>
           {submitLabel}
         </Button>
       </Modal.Footer>

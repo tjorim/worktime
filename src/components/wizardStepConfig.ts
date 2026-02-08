@@ -39,7 +39,7 @@ export interface StepConfig {
 export interface WizardContext {
   mode: WizardMode;
   shouldShowTeamSelection: boolean;
-  enableTimeOff: boolean;
+  enableTimeOff: boolean; // Currently always true in onboarding; reserved for future use or per-step control
 }
 
 /**

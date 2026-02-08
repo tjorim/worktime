@@ -30,10 +30,17 @@ describe("TimeTrackingWeeklyView Component", () => {
     stopTime: `${date}T${endTime}`,
   });
 
+  const TEST_LABELS = [
+    { id: "Development", name: "Development", color: "#198754" },
+    { id: "Support", name: "Support", color: "#c82333" },
+    { id: "Meeting", name: "Meeting", color: "#6f42c1" },
+  ];
+
   const renderPanel = (tasks: StoredTimeTrackingTask[], selectedDate = "2025-01-06") =>
     render(
       <TimeTrackingWeeklyView
         tasks={tasks}
+        labels={TEST_LABELS}
         selectedDate={selectedDate}
         onSelectedDateChange={vi.fn()}
       />,
@@ -107,6 +114,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       render(
         <TimeTrackingWeeklyView
           tasks={weekTasks}
+          labels={TEST_LABELS}
           selectedDate="2025-01-06"
           onSelectedDateChange={vi.fn()}
           weeklyTargetHours={40}

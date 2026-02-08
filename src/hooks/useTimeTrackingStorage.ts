@@ -134,10 +134,7 @@ export function useTimeTrackingStorage() {
 
   const labels = useMemo(() => sanitizeLabels(rawLabels), [rawLabels]);
 
-  const tasks = useMemo(
-    () => rawTasks.filter(isValidRawTask).map(convertToTask),
-    [rawTasks],
-  );
+  const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(convertToTask), [rawTasks]);
 
   // Refs for stable exportData callback
   const rawTasksRef = useRef(rawTasks);
@@ -159,23 +156,32 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
-      const hasValidRunningTask = rawTasksRef.current.some(
-        (task) => isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
-      );
-      if (payload.stopTime === undefined && hasValidRunningTask) {
-        return Promise.resolve(false);
-      }
-      setRawTasks((prev) => [
-        ...prev,
-        {
-          id: payload.id,
-          text: payload.text,
-          label: payload.label,
-          startTime: payload.startTime,
-          stopTime: payload.stopTime ?? null,
-        },
-      ]);
-      return Promise.resolve(true);
+      return new Promise((resolve) => {
+        setRawTasks((prev) => {
+          // Check if a running task already exists in the current state
+          const hasValidRunningTask = prev.some(
+            (task) =>
+              isValidRawTask(task) && (task.stopTime === undefined || task.stopTime === null),
+          );
+          // If user is trying to add an unstopped task and a running task exists, reject
+          if (payload.stopTime === undefined && hasValidRunningTask) {
+            resolve(false);
+            return prev; // No state change
+          }
+          // Otherwise append the new task
+          resolve(true);
+          return [
+            ...prev,
+            {
+              id: payload.id,
+              text: payload.text,
+              label: payload.label,
+              startTime: payload.startTime,
+              stopTime: payload.stopTime ?? null,
+            },
+          ];
+        });
+      });
     },
     [setRawTasks],
   );

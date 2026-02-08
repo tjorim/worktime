@@ -241,6 +241,16 @@ export const sanitizeVacationAllowance = (
   const yearlyAmounts: Record<string, number> = { ...fallback.yearlyAmounts };
   if (typeof rawYearly === "object" && rawYearly !== null) {
     for (const [key, val] of Object.entries(rawYearly)) {
+      // Only accept keys that are well-formed positive integer year strings
+      if (!/^\d+$/.test(key)) {
+        console.warn(`sanitizeVacationAllowance: skipped non-numeric year key "${key}"`);
+        continue;
+      }
+      const parsedKey = Number.parseInt(key, 10);
+      if (parsedKey <= 0) {
+        console.warn(`sanitizeVacationAllowance: skipped invalid year "${key}"`);
+        continue;
+      }
       if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
         yearlyAmounts[key] = val;
       }

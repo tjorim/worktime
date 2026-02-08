@@ -71,9 +71,7 @@ export function TemplatesPanel({
 }: TemplatesPanelProps) {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const [templatesJson, setTemplatesJson] = useState(
-    JSON.stringify({ templates }, null, 2),
-  );
+  const [templatesJson, setTemplatesJson] = useState(JSON.stringify({ templates }, null, 2));
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
   const labelNameById = useMemo(
@@ -210,14 +208,9 @@ export function TemplatesPanel({
             <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
               <span className="me-auto">
                 {template.text} ({template.start}-{template.stop}) [
-                {labelNameById[template.label] ?? "Unknown label"}
-                ]
+                {labelNameById[template.label] ?? "Unknown label"}]
               </span>
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                onClick={() => handleEdit(template)}
-              >
+              <Button size="sm" variant="outline-secondary" onClick={() => handleEdit(template)}>
                 Edit
               </Button>
               <Button

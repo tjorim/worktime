@@ -78,6 +78,7 @@ const seedScheduleOption = (overrides?: DeepPartial<typeof defaultUserState>) =>
     ...defaultUserState,
     ...overrides,
     settings: deepMerge(defaultUserState.settings, overrides?.settings ?? {}),
+    lastUsed: deepMerge(defaultUserState.lastUsed, overrides?.lastUsed ?? {}),
   };
   window.localStorage.setItem("worktime_user_state", JSON.stringify(nextState));
 };
