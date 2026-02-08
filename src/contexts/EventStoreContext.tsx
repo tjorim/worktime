@@ -13,7 +13,7 @@ import { hdayToCalendarEvents, filterEventsInRange } from "../lib/events/convert
 import type { CalendarEvent } from "../lib/events/types";
 import { dayjs } from "../utils/dateTimeUtils";
 
-const STORAGE_KEY = "worktime_hday_raw";
+export const TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
 
 /**
  * Action types for event store reducer
@@ -214,7 +214,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         return { events: [], history: [], future: [] };
       }
       try {
-        const stored = localStorage.getItem(STORAGE_KEY) || "";
+        const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY) || "";
         return {
           events: stored.trim() ? parseHday(stored) : [],
           history: [],
@@ -243,9 +243,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     if (typeof window === "undefined") return;
     try {
       if (rawText) {
-        localStorage.setItem(STORAGE_KEY, rawText);
+        localStorage.setItem(TIME_OFF_STORAGE_KEY, rawText);
       } else {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(TIME_OFF_STORAGE_KEY);
       }
     } catch (error) {
       console.error("Failed to save .hday content to localStorage:", error);

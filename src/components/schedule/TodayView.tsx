@@ -1,7 +1,5 @@
-import { useMemo } from "react";
-import Alert from "react-bootstrap/Alert";
+import { useId, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
@@ -10,8 +8,8 @@ import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import type { Dayjs } from "dayjs";
 import { ShiftBadge } from "../shared/ShiftBadge";
+import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import type { ScheduleOption } from "../../data/rosters";
-import { useEventStore } from "../../contexts/EventStoreContext";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
@@ -25,6 +23,7 @@ interface TodayViewProps {
   onPreviousDay: () => void;
   onNextDay: () => void;
   onTodayClick: () => void;
+  onDateSelect?: (date: Dayjs) => void;
   onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
   isActive?: boolean;
   viewingScheduleType: ScheduleOption;
@@ -167,11 +166,12 @@ export function TodayView({
   onPreviousDay,
   onNextDay,
   onTodayClick,
+  onDateSelect,
   onTeamClick,
   isActive = false,
   viewingScheduleType,
 }: TodayViewProps) {
-  const { getEventsInRange } = useEventStore();
+  const datePickerId = useId();
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
 
@@ -200,54 +200,38 @@ export function TodayView({
     return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
   };
 
-  // Get events for the current date
   const today = dayjs();
   const displayDate = currentDate;
   const isToday = displayDate.isSame(today, "day");
-  const todayStart = displayDate.toDate();
-  const todayEnd = displayDate.toDate();
-  const todayEvents = getEventsInRange(todayStart, todayEnd);
+  const canSelectDate = Boolean(onDateSelect);
+  const handleDateChange = (dateString: string) => {
+    if (dateString && onDateSelect) {
+      onDateSelect(dayjs(dateString));
+    }
+  };
 
   return (
     <Card>
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h6 className="mb-0">{hasTeams ? "👥 All Teams" : "📅 Schedule"}</h6>
-          <div className="d-flex gap-2">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onPreviousDay}
-              aria-label="Go to previous day"
-            >
-              <i className="bi bi-chevron-left" aria-hidden="true"></i>
-            </Button>
-            <Button
-              variant={isToday ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={onTodayClick}
-              disabled={isToday}
-              aria-label="Go to today"
-            >
-              <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-              Today
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={onNextDay}
-              aria-label="Go to next day"
-            >
-              <i className="bi bi-chevron-right" aria-hidden="true"></i>
-            </Button>
-          </div>
+          <DayNavigationButtonGroup
+            isCurrent={isToday}
+            onPrevious={onPreviousDay}
+            onCurrent={onTodayClick}
+            onNext={onNextDay}
+            selectorLabel={canSelectDate ? "Jump to date:" : undefined}
+            selectorId={canSelectDate ? datePickerId : undefined}
+            selectorValue={canSelectDate ? displayDate.format("YYYY-MM-DD") : undefined}
+            onSelectorChange={canSelectDate ? handleDateChange : undefined}
+          />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="text-muted small">
               {displayDate.format("dddd, MMMM D, YYYY")}
               {isToday && (
-                <Badge bg="success" className="ms-2">
+                <Badge bg="success" className="ms-2" aria-label="Current day">
                   Today
                 </Badge>
               )}
@@ -259,17 +243,6 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {todayEvents.length > 0 && (
-          <Alert variant="info" className="mb-3">
-            <i className="bi bi-calendar-check me-2"></i>
-            <strong>Time-off event{todayEvents.length > 1 ? "s" : ""} today:</strong>
-            <ul className="mb-0 mt-2">
-              {todayEvents.map((event) => (
-                <li key={event.id}>{event.label || "Time off"}</li>
-              ))}
-            </ul>
-          </Alert>
-        )}
         <Row className="g-2">
           {todayShifts.map((shiftResult) => (
             <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>

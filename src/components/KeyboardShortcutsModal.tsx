@@ -12,8 +12,8 @@ const SHORTCUTS = [
     items: [
       { keys: ["C"], description: "Calendar tab" },
       { keys: ["S"], description: "Schedule tab" },
-      { keys: ["T"], description: "Transfers tab" },
       { keys: ["O"], description: "Time Off tab" },
+      { keys: ["T"], description: "Time Tracking tab" },
       { keys: ["←", "→"], description: "Previous / next date" },
       { keys: ["Ctrl", ","], description: "Open settings" },
     ],

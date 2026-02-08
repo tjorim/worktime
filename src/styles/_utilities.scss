@@ -65,11 +65,27 @@ body {
   height: 8px;
 }
 
+/* Time tracking labels */
+.time-tracking-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgb(0 0 0 / 15%);
+}
+
 /* Text utilities */
 .textarea-mono {
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
+}
+
+.time-tracking-codeblock {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
 }
 
 /* ============================================================================

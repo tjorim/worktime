@@ -10,7 +10,8 @@ export type WizardStep =
   | "features"
   | "schedule-selection"
   | "team-selection"
-  | "vacation-allowance";
+  | "timeoff-setup"
+  | "time-tracking-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
 
@@ -38,6 +39,7 @@ export interface StepConfig {
 export interface WizardContext {
   mode: WizardMode;
   shouldShowTeamSelection: boolean;
+  enableTimeOff: boolean; // Currently always true in onboarding; reserved for future use or per-step control
 }
 
 /**
@@ -77,8 +79,8 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule") {
         return null;
       }
-      // In onboarding, continue to vacation allowance
-      return "vacation-allowance";
+      // In onboarding, always show time off setup so users can opt in/out there
+      return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
       // In change-schedule mode, close wizard when going back
@@ -97,8 +99,8 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
       if (ctx.mode === "change-schedule" || ctx.mode === "change-team") {
         return null;
       }
-      // In onboarding, continue to vacation allowance
-      return "vacation-allowance";
+      // In onboarding, always show time off setup so users can opt in/out there
+      return "timeoff-setup";
     },
     getPrevStep: (ctx) => {
       if (ctx.mode === "change-team") {
@@ -108,11 +110,21 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     },
   },
   {
-    id: "vacation-allowance",
-    title: "Vacation Tracking ✈️",
+    id: "timeoff-setup",
+    title: "Time Off & Vacation 🗓️",
     isVisible: (ctx) => ctx.mode === "onboarding",
-    getNextStep: () => null, // Always closes wizard after vacation setup
+    getNextStep: () => "time-tracking-setup",
     getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
+  },
+  {
+    id: "time-tracking-setup",
+    title: "Time Tracking ⏱️",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => null, // Always closes wizard after time tracking setup
+    getPrevStep: () => {
+      // In onboarding, time off setup is always part of the flow
+      return "timeoff-setup";
+    },
   },
 ];
 

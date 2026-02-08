@@ -1,0 +1,525 @@
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { useTimeTrackingStorage } from "../../src/hooks/useTimeTrackingStorage";
+import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
+
+describe("useTimeTrackingStorage", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  describe("addTask", () => {
+    it("does not block starting a task when only invalid open raw tasks exist", async () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "invalid-open",
+            text: "Broken legacy entry",
+            label: "Support",
+            startTime: "not-a-date",
+            stopTime: null,
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+      let added = false;
+
+      await act(async () => {
+        added = await result.current.addTask({
+          id: "new-running-task",
+          text: "Start stopwatch",
+          label: "Support",
+          startTime: "2026-02-07T08:00",
+        });
+      });
+
+      expect(added).toBe(true);
+    });
+
+    it("blocks starting a task when a valid running task already exists", async () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "running-task",
+            text: "Already running",
+            label: "Support",
+            startTime: "2026-02-07T07:30",
+            stopTime: null,
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+      let added = true;
+
+      await act(async () => {
+        added = await result.current.addTask({
+          id: "new-running-task",
+          text: "Should be blocked",
+          label: "Support",
+          startTime: "2026-02-07T08:00",
+        });
+      });
+
+      expect(added).toBe(false);
+    });
+
+    it("allows adding a completed task even when a running task exists", async () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "running-task",
+            text: "Already running",
+            label: "Support",
+            startTime: "2026-02-07T07:30",
+            stopTime: null,
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+      let added = false;
+
+      await act(async () => {
+        added = await result.current.addTask({
+          id: "completed-task",
+          text: "Finished task",
+          label: "Support",
+          startTime: "2026-02-07T09:00",
+          stopTime: "2026-02-07T10:00",
+        });
+      });
+
+      expect(added).toBe(true);
+      expect(result.current.tasks).toHaveLength(2);
+    });
+  });
+
+  describe("updateTaskTimes", () => {
+    it("updates start and stop times for an existing task", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "task-1",
+            text: "Original task",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T10:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateTaskTimes({
+          id: "task-1",
+          newStartTime: "2026-02-07T09:00",
+          newStopTime: "2026-02-07T11:00",
+        });
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0].startTime).toBe("2026-02-07T09:00");
+      expect(result.current.tasks[0].stopTime).toBe("2026-02-07T11:00");
+    });
+
+    it("updates text and label alongside times", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "task-1",
+            text: "Original",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T10:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateTaskTimes({
+          id: "task-1",
+          newStartTime: "2026-02-07T08:00",
+          newStopTime: "2026-02-07T10:00",
+          newText: "Renamed",
+          newLabel: "Dev",
+        });
+      });
+
+      expect(result.current.tasks[0].text).toBe("Renamed");
+      expect(result.current.tasks[0].label).toBe("Dev");
+    });
+
+    it("does not affect other tasks when updating one", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "task-1",
+            text: "First",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+          {
+            id: "task-2",
+            text: "Second",
+            label: "Dev",
+            startTime: "2026-02-07T10:00",
+            stopTime: "2026-02-07T11:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateTaskTimes({
+          id: "task-1",
+          newStartTime: "2026-02-07T08:30",
+          newStopTime: "2026-02-07T09:30",
+        });
+      });
+
+      expect(result.current.tasks).toHaveLength(2);
+      expect(result.current.tasks[1].text).toBe("Second");
+      expect(result.current.tasks[1].startTime).toBe("2026-02-07T10:00");
+    });
+  });
+
+  describe("removeTask", () => {
+    it("removes a task by id", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "task-1",
+            text: "Keep me",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+          {
+            id: "task-2",
+            text: "Remove me",
+            label: "Dev",
+            startTime: "2026-02-07T10:00",
+            stopTime: "2026-02-07T11:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.removeTask("task-2");
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0].id).toBe("task-1");
+    });
+
+    it("is a no-op when the id does not match any task", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "task-1",
+            text: "Only task",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.removeTask("nonexistent");
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+    });
+  });
+
+  describe("task validation", () => {
+    it("filters out tasks with invalid startTime format", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "bad", text: "Bad", label: "Support", startTime: "invalid", stopTime: null },
+          {
+            id: "good",
+            text: "Good",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0].id).toBe("good");
+    });
+
+    it("filters out tasks with cross-day date ranges", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "cross-day",
+            text: "Cross day",
+            label: "Support",
+            startTime: "2026-02-07T23:00",
+            stopTime: "2026-02-08T01:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      expect(result.current.tasks).toHaveLength(0);
+    });
+
+    it("filters out tasks with empty label", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "no-label",
+            text: "No label",
+            label: "  ",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      expect(result.current.tasks).toHaveLength(0);
+    });
+  });
+
+  describe("template CRUD", () => {
+    it("adds a template", () => {
+      vi.stubGlobal("crypto", {
+        randomUUID: () => "tpl-uuid",
+      } as unknown as Crypto);
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.addTemplate({
+          text: "Morning standup",
+          label: "Meeting",
+          start: "09:00",
+          stop: "09:30",
+        });
+      });
+
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.templates[0]).toEqual({
+        id: "tpl-uuid",
+        text: "Morning standup",
+        label: "Meeting",
+        start: "09:00",
+        stop: "09:30",
+      });
+
+      vi.unstubAllGlobals();
+    });
+
+    it("updates an existing template", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.templates,
+        JSON.stringify([
+          { id: "tpl-1", text: "Old name", label: "Support", start: "08:00", stop: "09:00" },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateTemplate({
+          id: "tpl-1",
+          template: { text: "New name", label: "Dev", start: "10:00", stop: "11:00" },
+        });
+      });
+
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.templates[0].text).toBe("New name");
+      expect(result.current.templates[0].label).toBe("Dev");
+    });
+
+    it("deletes a template by id", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.templates,
+        JSON.stringify([
+          { id: "tpl-1", text: "Keep", label: "Support", start: "08:00", stop: "09:00" },
+          { id: "tpl-2", text: "Delete", label: "Dev", start: "10:00", stop: "11:00" },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.deleteTemplate("tpl-2");
+      });
+
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.templates[0].id).toBe("tpl-1");
+    });
+  });
+
+  describe("label management", () => {
+    it("updates labels via updateLabels", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateLabels([
+          { id: "lbl-1", name: "Support", color: "#3B82F6" },
+          { id: "lbl-2", name: "Dev", color: "#10B981" },
+        ]);
+      });
+
+      expect(result.current.labels).toHaveLength(2);
+      expect(result.current.labels[0].name).toBe("Support");
+      expect(result.current.labels[1].name).toBe("Dev");
+    });
+
+    it("sanitizes duplicate label names on update", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateLabels([
+          { id: "lbl-1", name: "Support", color: "#3B82F6" },
+          { id: "lbl-2", name: "support", color: "#10B981" },
+        ]);
+      });
+
+      // sanitizeLabels deduplicates case-insensitively, keeping the first
+      expect(result.current.labels).toHaveLength(1);
+      expect(result.current.labels[0].name).toBe("Support");
+    });
+  });
+
+  describe("importData", () => {
+    it("imports valid tasks, templates, and labels", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.importData({
+          tasks: [
+            {
+              id: "t1",
+              text: "Task",
+              label: "Support",
+              startTime: "2026-02-07T08:00",
+              stopTime: "2026-02-07T09:00",
+            },
+          ],
+          templates: [
+            { id: "tpl-1", text: "Template", label: "Support", start: "08:00", stop: "09:00" },
+          ],
+          labels: [{ id: "lbl-1", name: "Support", color: "#3B82F6" }],
+        });
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.labels).toHaveLength(1);
+    });
+
+    it("filters out invalid tasks during import", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.importData({
+          tasks: [
+            { id: "bad", text: "Bad", label: "Support", startTime: "invalid" },
+            {
+              id: "good",
+              text: "Good",
+              label: "Support",
+              startTime: "2026-02-07T08:00",
+              stopTime: "2026-02-07T09:00",
+            },
+          ],
+          templates: [],
+          labels: [],
+        });
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0].id).toBe("good");
+    });
+
+    it("filters out invalid templates during import", () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.importData({
+          tasks: [],
+          templates: [
+            { id: "bad", text: "Bad", label: "Support", start: "invalid", stop: "09:00" },
+            { id: "good", text: "Good", label: "Support", start: "08:00", stop: "09:00" },
+          ],
+          labels: [],
+        });
+      });
+
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.templates[0].id).toBe("good");
+    });
+
+    it("replaces all existing data on import", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          {
+            id: "old",
+            text: "Old",
+            label: "Support",
+            startTime: "2026-02-07T08:00",
+            stopTime: "2026-02-07T09:00",
+          },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+      expect(result.current.tasks).toHaveLength(1);
+
+      act(() => {
+        result.current.importData({
+          tasks: [
+            {
+              id: "new",
+              text: "New",
+              label: "Dev",
+              startTime: "2026-02-08T10:00",
+              stopTime: "2026-02-08T11:00",
+            },
+          ],
+          templates: [],
+          labels: [],
+        });
+      });
+
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0].id).toBe("new");
+    });
+  });
+});

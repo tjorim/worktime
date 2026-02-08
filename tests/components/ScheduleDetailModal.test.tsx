@@ -26,6 +26,17 @@ describe("ScheduleDetailModal", () => {
           timeFormat: "24h",
           theme: "auto",
           notifications: "off",
+          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: false,
+          enableTimeTracking: false,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
         },
       }),
     );

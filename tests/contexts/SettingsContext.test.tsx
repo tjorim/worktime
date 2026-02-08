@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
 
 describe("SettingsContext unified user state", () => {
@@ -11,6 +11,7 @@ describe("SettingsContext unified user state", () => {
   afterEach(() => {
     window.localStorage.clear();
     document.body.removeAttribute("data-bs-theme");
+    vi.restoreAllMocks();
   });
 
   it("provides default values and mutators", () => {
@@ -19,7 +20,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.theme).toBe("auto");
     expect(result.current.settings.notifications).toBe("off");
     expect(result.current.settings.vacationAllowance).toEqual({
-      amount: 0,
+      yearlyAmounts: {},
       unit: "days",
       hoursPerDay: 8,
     });
@@ -43,10 +44,10 @@ describe("SettingsContext unified user state", () => {
     });
     expect(result.current.settings.notifications).toBe("on");
     await act(async () => {
-      result.current.updateVacationAllowance({ amount: 28, unit: "hours" });
+      result.current.updateVacationAllowance({ yearlyAmounts: { "2025": 28 }, unit: "hours" });
     });
     expect(result.current.settings.vacationAllowance).toEqual({
-      amount: 28,
+      yearlyAmounts: { "2025": 28 },
       unit: "hours",
       hoursPerDay: 8,
     });
@@ -134,6 +135,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
+      version: 2,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -142,10 +144,20 @@ describe("SettingsContext unified user state", () => {
         theme: "auto",
         notifications: "off",
         vacationAllowance: {
-          amount: 0,
+          yearlyAmounts: {},
           unit: "days",
           hoursPerDay: 8,
         },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+      },
+      lastUsed: {
+        activeTab: "calendar",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
       },
     });
 
@@ -181,18 +193,18 @@ describe("SettingsContext unified user state", () => {
     it("should have default vacation allowance on initialization", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       expect(result.current.settings.vacationAllowance).toEqual({
-        amount: 0,
+        yearlyAmounts: {},
         unit: "days",
         hoursPerDay: 8,
       });
     });
 
-    it("should update vacation allowance amount", async () => {
+    it("should update vacation allowance yearlyAmounts", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: 25 });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": 25 } });
       });
-      expect(result.current.settings.vacationAllowance.amount).toBe(25);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
       expect(result.current.settings.vacationAllowance.unit).toBe("days");
       expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(8);
     });
@@ -203,7 +215,7 @@ describe("SettingsContext unified user state", () => {
         result.current.updateVacationAllowance({ unit: "hours" });
       });
       expect(result.current.settings.vacationAllowance.unit).toBe("hours");
-      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
     });
 
     it("should update vacation allowance hoursPerDay", async () => {
@@ -217,21 +229,25 @@ describe("SettingsContext unified user state", () => {
     it("should update multiple vacation allowance properties at once", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: 200, unit: "hours", hoursPerDay: 7 });
+        result.current.updateVacationAllowance({
+          yearlyAmounts: { "2025": 200 },
+          unit: "hours",
+          hoursPerDay: 7,
+        });
       });
       expect(result.current.settings.vacationAllowance).toEqual({
-        amount: 200,
+        yearlyAmounts: { "2025": 200 },
         unit: "hours",
         hoursPerDay: 7,
       });
     });
 
-    it("should sanitize negative amount to 0", async () => {
+    it("should skip negative values in yearlyAmounts", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: -10 });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": -10 } });
       });
-      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBeUndefined();
     });
 
     it("should sanitize hoursPerDay less than 1 to 1", async () => {
@@ -242,26 +258,26 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(1);
     });
 
-    it("should sanitize NaN amount to fallback value", async () => {
+    it("should skip NaN values in yearlyAmounts", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       // First set a valid value
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: 25 });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": 25 } });
       });
       // Then try to set NaN
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: NaN });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": NaN } });
       });
       // Should keep the previous valid value
-      expect(result.current.settings.vacationAllowance.amount).toBe(25);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
     });
 
-    it("should sanitize Infinity amount to fallback value", async () => {
+    it("should skip Infinity values in yearlyAmounts", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: Infinity });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": Infinity } });
       });
-      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBeUndefined();
     });
 
     it("should sanitize invalid unit to fallback value", async () => {
@@ -275,14 +291,18 @@ describe("SettingsContext unified user state", () => {
     it("should persist vacation allowance to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateVacationAllowance({ amount: 30, unit: "days", hoursPerDay: 8 });
+        result.current.updateVacationAllowance({
+          yearlyAmounts: { "2025": 30 },
+          unit: "days",
+          hoursPerDay: 8,
+        });
       });
 
       const stored = window.localStorage.getItem("worktime_user_state");
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.vacationAllowance).toEqual({
-        amount: 30,
+        yearlyAmounts: { "2025": 30 },
         unit: "days",
         hoursPerDay: 8,
       });
@@ -291,14 +311,316 @@ describe("SettingsContext unified user state", () => {
     it("should reset vacation allowance with resetSettings", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       act(() => {
-        result.current.updateVacationAllowance({ amount: 25, unit: "hours" });
+        result.current.updateVacationAllowance({ yearlyAmounts: { "2025": 25 }, unit: "hours" });
         result.current.resetSettings();
       });
       expect(result.current.settings.vacationAllowance).toEqual({
-        amount: 0,
+        yearlyAmounts: {},
         unit: "days",
         hoursPerDay: 8,
       });
+    });
+  });
+
+  describe("lastUsed migration and updaters", () => {
+    it("migrates last* fields from settings to lastUsed", () => {
+      // Simulate old-format state with last* fields inside settings
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 25, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "schedule",
+            lastScheduleView: "week",
+            lastTimeOffView: "stats",
+            lastTimeTrackingView: "weekly",
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      // Values should have been migrated to lastUsed
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+      expect(result.current.lastUsed.scheduleView).toBe("week");
+      expect(result.current.lastUsed.timeOffView).toBe("stats");
+      expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
+      // New fields should have defaults
+      expect(result.current.lastUsed.otherSchedule).toBe(null);
+      expect(result.current.lastUsed.otherTeam).toBe(null);
+    });
+
+    it("prefers lastUsed over settings when both present", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+            lastActiveTab: "calendar",
+            lastScheduleView: "today",
+            lastTimeOffView: "table",
+            lastTimeTrackingView: "daily",
+          },
+          lastUsed: {
+            activeTab: "schedule",
+            scheduleView: "week",
+            otherSchedule: "9-5",
+            timeOffView: "raw",
+            timeTrackingView: "weekly",
+            otherTeam: 3,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+      expect(result.current.lastUsed.scheduleView).toBe("week");
+      expect(result.current.lastUsed.otherSchedule).toBe("9-5");
+      expect(result.current.lastUsed.timeOffView).toBe("raw");
+      expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
+      expect(result.current.lastUsed.otherTeam).toBe(3);
+    });
+
+    it("updates lastUsed.activeTab via updateLastActiveTab", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastActiveTab("schedule");
+      });
+      expect(result.current.lastUsed.activeTab).toBe("schedule");
+    });
+
+    it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastOtherSchedule("9-5");
+      });
+      expect(result.current.lastUsed.otherSchedule).toBe("9-5");
+
+      await act(async () => {
+        result.current.updateLastOtherSchedule(null);
+      });
+      expect(result.current.lastUsed.otherSchedule).toBe(null);
+    });
+
+    it("updates lastUsed.otherTeam via updateLastOtherTeam", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastOtherTeam(3);
+      });
+      expect(result.current.lastUsed.otherTeam).toBe(3);
+
+      await act(async () => {
+        result.current.updateLastOtherTeam(null);
+      });
+      expect(result.current.lastUsed.otherTeam).toBe(null);
+    });
+
+    it("provides default lastUsed on fresh state", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.lastUsed).toEqual({
+        activeTab: "calendar",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
+      });
+    });
+
+    it("recovers with salvaged values when a migration is missing", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: -1,
+          myTeam: 4,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 20, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: true,
+            timeTrackingWeeklyTargetHours: 36,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.myTeam).toBe(4);
+      expect(result.current.scheduleType).toBe("9-5");
+      expect(result.current.settings.timeFormat).toBe("12h");
+      expect(result.current.settings.theme).toBe("dark");
+      // Recovery resets non-salvaged values to defaults
+      expect(result.current.hasCompletedOnboarding).toBe(false);
+      expect(result.current.lastUsed.activeTab).toBe("calendar");
+    });
+
+    it("recovers with salvaged values when a migration throws", () => {
+      const parsedState = new Proxy(
+        {
+          version: 0,
+          myTeam: 3,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { amount: 10, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+            timeTrackingWeeklyTargetHours: 40,
+          },
+        },
+        {
+          get(target, prop, receiver) {
+            if (prop === "lastUsed") {
+              throw new Error("forced migration failure");
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        },
+      );
+
+      vi.spyOn(JSON, "parse").mockImplementation(() => parsedState as any);
+      window.localStorage.setItem("worktime_user_state", "{}");
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.myTeam).toBe(3);
+      expect(result.current.scheduleType).toBe("5-shift");
+      expect(result.current.settings.timeFormat).toBe("12h");
+      expect(result.current.lastUsed.activeTab).toBe("calendar");
+    });
+  });
+
+  describe("v1 to v2 migration (yearlyAmounts)", () => {
+    it("migrates vacationAllowance.amount to yearlyAmounts[currentYear]", () => {
+      const currentYear = String(new Date().getFullYear());
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 1,
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 30, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.vacationAllowance.yearlyAmounts[currentYear]).toBe(30);
+      expect(result.current.settings.vacationAllowance.unit).toBe("days");
+      expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(8);
+      // amount should no longer exist
+      expect((result.current.settings.vacationAllowance as any).amount).toBeUndefined();
+    });
+
+    it("does not overwrite existing yearlyAmounts entry for current year", () => {
+      const currentYear = String(new Date().getFullYear());
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 1,
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: {
+              amount: 20,
+              yearlyAmounts: { [currentYear]: 35 },
+              unit: "hours",
+              hoursPerDay: 7.5,
+            },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      // Existing entry should be preserved, not overwritten by old amount
+      expect(result.current.settings.vacationAllowance.yearlyAmounts[currentYear]).toBe(35);
+    });
+
+    it("handles zero amount gracefully (does not seed yearlyAmounts)", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 1,
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
     });
   });
 
@@ -309,17 +631,20 @@ describe("SettingsContext unified user state", () => {
       // Start with default state
       expect(result.current.hasCompletedOnboarding).toBe(false);
       expect(result.current.myTeam).toBe(null);
-      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
 
       // Complete onboarding with team and vacation allowance in one atomic operation
       await act(async () => {
-        result.current.completeOnboardingWithVacation(3, { amount: 35, unit: "days" });
+        result.current.completeOnboardingWithVacation(3, {
+          yearlyAmounts: { "2025": 35 },
+          unit: "days",
+        });
       });
 
       // All values should be updated atomically
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(3);
-      expect(result.current.settings.vacationAllowance.amount).toBe(35);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(35);
       expect(result.current.settings.vacationAllowance.unit).toBe("days");
     });
 
@@ -328,12 +653,15 @@ describe("SettingsContext unified user state", () => {
 
       // Complete onboarding without team (browsing all teams) but with vacation allowance
       await act(async () => {
-        result.current.completeOnboardingWithVacation(null, { amount: 28, unit: "hours" });
+        result.current.completeOnboardingWithVacation(null, {
+          yearlyAmounts: { "2025": 28 },
+          unit: "hours",
+        });
       });
 
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(null);
-      expect(result.current.settings.vacationAllowance.amount).toBe(28);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(28);
       expect(result.current.settings.vacationAllowance.unit).toBe("hours");
     });
 
@@ -347,7 +675,7 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.hasCompletedOnboarding).toBe(true);
       expect(result.current.myTeam).toBe(2);
-      expect(result.current.settings.vacationAllowance.amount).toBe(0);
+      expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
       expect(result.current.settings.vacationAllowance.unit).toBe("days");
     });
 
@@ -355,7 +683,10 @@ describe("SettingsContext unified user state", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
       await act(async () => {
-        result.current.completeOnboardingWithVacation(4, { amount: 25.5, unit: "days" });
+        result.current.completeOnboardingWithVacation(4, {
+          yearlyAmounts: { "2025": 25.5 },
+          unit: "days",
+        });
       });
 
       const stored = window.localStorage.getItem("worktime_user_state");
@@ -364,7 +695,7 @@ describe("SettingsContext unified user state", () => {
 
       expect(parsed.hasCompletedOnboarding).toBe(true);
       expect(parsed.myTeam).toBe(4);
-      expect(parsed.settings.vacationAllowance.amount).toBe(25.5);
+      expect(parsed.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25.5);
       expect(parsed.settings.vacationAllowance.unit).toBe("days");
     });
   });

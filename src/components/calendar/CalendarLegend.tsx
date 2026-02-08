@@ -28,35 +28,43 @@ const INDICATOR_LEGEND = [
   { emoji: "📘", label: "Course/Training" },
 ] as const;
 
-const legendPopover = (
-  <Popover id="calendar-legend-popover">
-    <Popover.Header as="h3">Legend</Popover.Header>
-    <Popover.Body>
-      <div className="mb-2">
-        <strong className="small">Event Types</strong>
-        <div className="d-flex flex-wrap gap-2 mt-1">
-          {EVENT_TYPE_LEGEND.map(({ colorClass, label }) => (
-            <span key={colorClass} className="d-inline-flex align-items-center gap-1">
-              <span className={clsx("month-calendar-event-color", colorClass)} />
-              <small>{label}</small>
-            </span>
-          ))}
+type CalendarLegendProps = {
+  showEventTypes?: boolean;
+};
+
+function buildLegendPopover(showEventTypes: boolean) {
+  return (
+    <Popover id="calendar-legend-popover">
+      <Popover.Header as="h3">Legend</Popover.Header>
+      <Popover.Body>
+        {showEventTypes && (
+          <div className="mb-2">
+            <strong className="small">Event Types</strong>
+            <div className="d-flex flex-wrap gap-2 mt-1">
+              {EVENT_TYPE_LEGEND.map(({ colorClass, label }) => (
+                <span key={colorClass} className="d-inline-flex align-items-center gap-1">
+                  <span className={clsx("month-calendar-event-color", colorClass)} />
+                  <small>{label}</small>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <strong className="small">Day Indicators</strong>
+          <div className="d-flex flex-wrap gap-2 mt-1">
+            {INDICATOR_LEGEND.map(({ emoji, label }) => (
+              <span key={emoji} className="d-inline-flex align-items-center gap-1">
+                <span className="calendar-legend-emoji">{emoji}</span>
+                <small>{label}</small>
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
-      <div>
-        <strong className="small">Day Indicators</strong>
-        <div className="d-flex flex-wrap gap-2 mt-1">
-          {INDICATOR_LEGEND.map(({ emoji, label }) => (
-            <span key={emoji} className="d-inline-flex align-items-center gap-1">
-              <span className="calendar-legend-emoji">{emoji}</span>
-              <small>{label}</small>
-            </span>
-          ))}
-        </div>
-      </div>
-    </Popover.Body>
-  </Popover>
-);
+      </Popover.Body>
+    </Popover>
+  );
+}
 
 /**
  * CalendarLegend displays a popover legend explaining event colors and indicators.
@@ -65,7 +73,8 @@ const legendPopover = (
  * - Event type color dots with labels
  * - Day indicator emojis with explanations
  */
-export function CalendarLegend() {
+export function CalendarLegend({ showEventTypes = true }: CalendarLegendProps) {
+  const legendPopover = buildLegendPopover(showEventTypes);
   return (
     <OverlayTrigger trigger="click" placement="left-end" overlay={legendPopover} rootClose>
       <Button variant="link" size="sm" className="text-muted p-0 text-decoration-none">

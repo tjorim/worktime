@@ -3,6 +3,7 @@ import {
   getEffectiveTeam,
   getScheduleConfig,
   getTeamCountForOption,
+  getWeeklyHours,
 } from "../../src/utils/scheduleUtils";
 
 describe("scheduleUtils", () => {
@@ -200,6 +201,28 @@ describe("scheduleUtils", () => {
           "Schedule configuration not found",
         );
       });
+    });
+  });
+
+  describe("getWeeklyHours", () => {
+    it("should return 40 for 9-5 schedule", () => {
+      expect(getWeeklyHours("9-5")).toBe(40);
+    });
+
+    it("should return 25.5 for weekend-shift schedule", () => {
+      expect(getWeeklyHours("weekend-shift")).toBe(25.5);
+    });
+
+    it("should return null for 5-shift schedule", () => {
+      expect(getWeeklyHours("5-shift")).toBeNull();
+    });
+
+    it("should return null for 2-shift schedule", () => {
+      expect(getWeeklyHours("2-shift")).toBeNull();
+    });
+
+    it("should fall back to 5-shift when null is provided", () => {
+      expect(getWeeklyHours(null)).toBeNull();
     });
   });
 });

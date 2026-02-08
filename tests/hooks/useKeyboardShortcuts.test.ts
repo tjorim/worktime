@@ -8,6 +8,7 @@ describe("useKeyboardShortcuts", () => {
     onPrevious: vi.fn(),
     onNext: vi.fn(),
     onTeamSelect: vi.fn(),
+    onTabTimeTracking: vi.fn(),
   };
 
   beforeEach(() => {
@@ -95,5 +96,23 @@ describe("useKeyboardShortcuts", () => {
     // Should not throw when other callbacks are missing
     const event = new KeyboardEvent("keydown", { key: "ArrowLeft" });
     expect(() => document.dispatchEvent(event)).not.toThrow();
+  });
+
+  it("triggers onTabTimeTracking when T is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "t" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTabTimeTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trigger onTabTimeTracking when W is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "w" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTabTimeTracking).not.toHaveBeenCalled();
   });
 });

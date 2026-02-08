@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Card from "react-bootstrap/Card";
+import Button from "react-bootstrap/Button";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { useViewMode } from "../hooks/useViewMode";
 import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
-import { RawContentPanel } from "./timeoff/RawContentPanel";
-import { VacationStatsPanel } from "./timeoff/VacationStatsPanel";
-import { EventTable } from "./timeoff/EventTable";
-import { TimeOffToolbar } from "./timeoff/TimeOffToolbar";
+import { TimeOffRawView } from "./timeOff/TimeOffRawView";
+import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
+import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
   TYPE_FLAG_OPTIONS,
   TIME_LOCATION_FLAG_OPTIONS,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
+  VIEW_MODE_HELP_TEXT,
   TIMEOFF_VIEWS,
 } from "../data/timeoffConstants";
 
@@ -43,10 +43,19 @@ import {
  */
 interface TimeOffViewProps {
   isActive?: boolean;
-  initialView?: string; // Initial view mode from URL parameter ("table", "stats", or "raw")
 }
 
-export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps) {
+/**
+ * Default view mode for Time Off tab when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
+
+// Type guard to validate viewMode against TIMEOFF_VIEWS
+const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[number] => {
+  return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
+};
+
+export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
     events,
@@ -61,10 +70,18 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
     undo,
     redo,
   } = useEventStore();
-  const { settings, updateVacationAllowance } = useSettings();
+  const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const toast = useToast();
 
-  const [viewMode, setViewMode] = useViewMode(initialView, TIMEOFF_VIEWS, "table");
+  const [viewMode, setViewMode] = useState(
+    isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
+  );
+
+  useEffect(() => {
+    if (isValidTimeOffView(viewMode)) {
+      updateLastTimeOffView(viewMode);
+    }
+  }, [updateLastTimeOffView, viewMode]);
 
   // Use custom hook for event form state management
   const {
@@ -362,8 +379,43 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
 
   return (
     <div className="time-off-view py-3">
-      <Card>
-        <TimeOffToolbar
+      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+        <ButtonGroup aria-label="Toggle time off view">
+          <Button
+            variant={viewMode === "table" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+          >
+            <i className="bi bi-table me-1" aria-hidden="true"></i>
+            Table
+          </Button>
+          <Button
+            variant={viewMode === "stats" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("stats")}
+          >
+            <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
+            Statistics
+          </Button>
+          <Button
+            variant={viewMode === "raw" ? "primary" : "outline-primary"}
+            size="sm"
+            onClick={() => setViewMode("raw")}
+          >
+            <i className="bi bi-code-slash me-1" aria-hidden="true"></i>
+            Raw .hday
+            {isRawEditorDirty && viewMode !== "raw" && (
+              <span className="badge bg-warning text-dark ms-1">•</span>
+            )}
+          </Button>
+        </ButtonGroup>
+        <span className="text-muted small">
+          {VIEW_MODE_HELP_TEXT[viewMode] ?? VIEW_MODE_HELP_TEXT[DEFAULT_TIME_OFF_VIEW]}
+        </span>
+      </div>
+
+      {viewMode === "table" && (
+        <TimeOffTableView
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={handleUndo}
@@ -377,56 +429,36 @@ export function TimeOffView({ isActive = false, initialView }: TimeOffViewProps)
           onExport={handleExport}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          isRawEditorDirty={isRawEditorDirty}
+          events={events}
+          selectedIndices={selectedIndices}
+          onToggleSelection={handleToggleSelection}
+          onEditEvent={handleOpenEditModal}
+          onDeleteEvent={handleDeleteClick}
         />
-        <Card.Body>
-          {viewMode === "table" &&
-            (events.length === 0 ? (
-              <div className="text-center text-muted py-5">
-                <i className="bi bi-calendar-x display-4 d-block mb-3" aria-hidden="true"></i>
-                <p>No time-off events yet.</p>
-                <p className="small">
-                  Click "Add Event" to create your first event, or "Import" to load an existing
-                  .hday file.
-                </p>
-              </div>
-            ) : (
-              <EventTable
-                events={events}
-                selectedIndices={selectedIndices}
-                onToggleSelection={handleToggleSelection}
-                onSelectAll={handleSelectAll}
-                onClearSelection={handleClearSelection}
-                onEditEvent={handleOpenEditModal}
-                onDeleteEvent={handleDeleteClick}
-              />
-            ))}
+      )}
 
-          {viewMode === "stats" && (
-            <div role="region" aria-label="Vacation statistics">
-              <VacationStatsPanel
-                events={events}
-                allowance={settings.vacationAllowance}
-                onUpdateAllowance={updateVacationAllowance}
-              />
-            </div>
-          )}
+      {viewMode === "stats" && (
+        <div role="region" aria-label="Vacation statistics">
+          <TimeOffStatsView
+            events={events}
+            allowance={settings.vacationAllowance}
+            onUpdateAllowance={updateVacationAllowance}
+          />
+        </div>
+      )}
 
-          {viewMode === "raw" && (
-            <div role="region" aria-label="Raw .hday content editor">
-              <RawContentPanel
-                rawText={rawEditorText}
-                error={rawEditorError}
-                isDirty={isRawEditorDirty}
-                onChangeRawText={handleRawEditorChange}
-                onApply={handleParseRawEditor}
-                onReset={handleResetRawEditor}
-              />
-            </div>
-          )}
-        </Card.Body>
-      </Card>
+      {viewMode === "raw" && (
+        <div role="region" aria-label="Raw .hday content editor">
+          <TimeOffRawView
+            rawText={rawEditorText}
+            error={rawEditorError}
+            isDirty={isRawEditorDirty}
+            onChangeRawText={handleRawEditorChange}
+            onApply={handleParseRawEditor}
+            onReset={handleResetRawEditor}
+          />
+        </div>
+      )}
 
       {/* Hidden file input for import */}
       <input

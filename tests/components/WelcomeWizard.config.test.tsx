@@ -19,10 +19,30 @@ import {
 
 describe("WelcomeWizard Configuration System", () => {
   describe("Step Configuration - Visibility Rules", () => {
-    it("should show all 5 steps in onboarding mode with team selection", () => {
+    it("should show all steps in onboarding mode with team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: true,
+      };
+
+      const visibleSteps = getVisibleSteps(context);
+      expect(visibleSteps).toHaveLength(6);
+      expect(visibleSteps.map((s) => s.id)).toEqual([
+        "welcome",
+        "features",
+        "schedule-selection",
+        "team-selection",
+        "timeoff-setup",
+        "time-tracking-setup",
+      ]);
+    });
+
+    it("should show all steps in onboarding mode without team selection", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -31,24 +51,8 @@ describe("WelcomeWizard Configuration System", () => {
         "welcome",
         "features",
         "schedule-selection",
-        "team-selection",
-        "vacation-allowance",
-      ]);
-    });
-
-    it("should show 4 steps in onboarding mode without team selection", () => {
-      const context: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: false,
-      };
-
-      const visibleSteps = getVisibleSteps(context);
-      expect(visibleSteps).toHaveLength(4);
-      expect(visibleSteps.map((s) => s.id)).toEqual([
-        "welcome",
-        "features",
-        "schedule-selection",
-        "vacation-allowance",
+        "timeoff-setup",
+        "time-tracking-setup",
       ]);
     });
 
@@ -56,6 +60,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -67,6 +72,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -78,6 +84,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const visibleSteps = getVisibleSteps(context);
@@ -91,6 +98,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const welcomeConfig = getStepConfig("welcome");
@@ -102,6 +110,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const featuresConfig = getStepConfig("features");
@@ -113,6 +122,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -120,21 +130,23 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBe("team-selection");
     });
 
-    it("should skip team-selection and go to vacation when no team selection needed", () => {
+    it("should skip team-selection and go to time off setup when no team selection is needed", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
       const nextStep = scheduleConfig.getNextStep(context);
-      expect(nextStep).toBe("vacation-allowance");
+      expect(nextStep).toBe("timeoff-setup");
     });
 
     it("should close wizard after schedule selection in change-schedule mode (no team)", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -142,23 +154,25 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBeNull();
     });
 
-    it("should continue to vacation-allowance when schedule-selection is evaluated in change-team mode (hidden step)", () => {
+    it("should continue to time off setup when schedule-selection is evaluated in change-team mode (hidden step)", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       // This step is not visible in change-team mode, but if evaluated directly
-      // it falls through to the onboarding path (vacation-allowance)
+      // it falls through to the onboarding path and returns time off setup.
       const scheduleConfig = getStepConfig("schedule-selection");
       const nextStep = scheduleConfig.getNextStep(context);
-      expect(nextStep).toBe("vacation-allowance");
+      expect(nextStep).toBe("timeoff-setup");
     });
 
     it("should go to team-selection after schedule in change-schedule mode (with team)", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -170,6 +184,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -177,15 +192,16 @@ describe("WelcomeWizard Configuration System", () => {
       expect(nextStep).toBeNull();
     });
 
-    it("should close wizard after vacation allowance in onboarding", () => {
+    it("should continue to time tracking setup after time off setup in onboarding", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: true,
       };
 
-      const vacationConfig = getStepConfig("vacation-allowance");
-      const nextStep = vacationConfig.getNextStep(context);
-      expect(nextStep).toBeNull();
+      const timeOffConfig = getStepConfig("timeoff-setup");
+      const nextStep = timeOffConfig.getNextStep(context);
+      expect(nextStep).toBe("time-tracking-setup");
     });
   });
 
@@ -194,6 +210,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const featuresConfig = getStepConfig("features");
@@ -205,6 +222,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -216,6 +234,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const scheduleConfig = getStepConfig("schedule-selection");
@@ -227,6 +246,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -238,6 +258,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -249,6 +270,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const teamConfig = getStepConfig("team-selection");
@@ -256,54 +278,59 @@ describe("WelcomeWizard Configuration System", () => {
       expect(prevStep).toBe("schedule-selection");
     });
 
-    it("should go back from vacation to team when team selection shown", () => {
+    it("should go back from time off setup to team when team selection shown", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: true,
       };
 
-      const vacationConfig = getStepConfig("vacation-allowance");
-      const prevStep = vacationConfig.getPrevStep(context);
+      const timeOffConfig = getStepConfig("timeoff-setup");
+      const prevStep = timeOffConfig.getPrevStep(context);
       expect(prevStep).toBe("team-selection");
     });
 
-    it("should go back from vacation to schedule when no team selection", () => {
+    it("should go back from time off setup to schedule when no team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: true,
       };
 
-      const vacationConfig = getStepConfig("vacation-allowance");
-      const prevStep = vacationConfig.getPrevStep(context);
+      const timeOffConfig = getStepConfig("timeoff-setup");
+      const prevStep = timeOffConfig.getPrevStep(context);
       expect(prevStep).toBe("schedule-selection");
     });
   });
 
   describe("Step Configuration - Step Counting", () => {
-    it("should count 5 total steps in onboarding with team selection", () => {
+    it("should count 6 total steps in onboarding with team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: true,
+      };
+
+      const totalSteps = getTotalSteps(context);
+      expect(totalSteps).toBe(6);
+    });
+
+    it("should count 5 total steps in onboarding without team selection", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
       };
 
       const totalSteps = getTotalSteps(context);
       expect(totalSteps).toBe(5);
     });
 
-    it("should count 4 total steps in onboarding without team selection", () => {
-      const context: WizardContext = {
-        mode: "onboarding",
-        shouldShowTeamSelection: false,
-      };
-
-      const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(4);
-    });
-
     it("should count 1 step in change-team mode", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -314,6 +341,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: true,
+        enableTimeOff: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -324,6 +352,7 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "change-schedule",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       const totalSteps = getTotalSteps(context);
@@ -336,31 +365,36 @@ describe("WelcomeWizard Configuration System", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
+        enableTimeOff: true,
       };
 
       expect(getStepIndex("welcome", context)).toBe(1);
       expect(getStepIndex("features", context)).toBe(2);
       expect(getStepIndex("schedule-selection", context)).toBe(3);
       expect(getStepIndex("team-selection", context)).toBe(4);
-      expect(getStepIndex("vacation-allowance", context)).toBe(5);
+      expect(getStepIndex("timeoff-setup", context)).toBe(5);
+      expect(getStepIndex("time-tracking-setup", context)).toBe(6);
     });
 
     it("should correctly index steps in onboarding without team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
+        enableTimeOff: true,
       };
 
       expect(getStepIndex("welcome", context)).toBe(1);
       expect(getStepIndex("features", context)).toBe(2);
       expect(getStepIndex("schedule-selection", context)).toBe(3);
-      expect(getStepIndex("vacation-allowance", context)).toBe(4);
+      expect(getStepIndex("timeoff-setup", context)).toBe(4);
+      expect(getStepIndex("time-tracking-setup", context)).toBe(5);
     });
 
     it("should correctly index team-selection in change-team mode", () => {
       const context: WizardContext = {
         mode: "change-team",
         shouldShowTeamSelection: false,
+        enableTimeOff: false,
       };
 
       expect(getStepIndex("team-selection", context)).toBe(1);

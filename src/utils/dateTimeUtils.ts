@@ -1,9 +1,13 @@
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
+import isoWeeksInYear from "dayjs/plugin/isoWeeksInYear";
+import isLeapYear from "dayjs/plugin/isLeapYear";
 import "dayjs/locale/en-gb";
 
 // Configure dayjs with plugins and locale
 dayjs.extend(isoWeek);
+dayjs.extend(isLeapYear);
+dayjs.extend(isoWeeksInYear);
 dayjs.locale("en-gb");
 
 // Export the configured dayjs instance

@@ -23,7 +23,8 @@ import { Step1Welcome } from "./wizard/Step1Welcome";
 import { Step2Features } from "./wizard/Step2Features";
 import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
 import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
-import { Step5VacationAllowance } from "./wizard/Step5VacationAllowance";
+import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
+import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 
 /**
  * Validates vacation amount input.
@@ -48,12 +49,18 @@ function validateVacationAmount(amount: string) {
   };
 }
 
+export type WizardCompletionPayload = {
+  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
+  enableTimeOff?: boolean;
+  enableTimeTracking?: boolean;
+};
+
 interface WelcomeWizardProps {
   show: boolean;
   onTeamSelect: (team: number) => void;
   onScheduleSelect?: (schedule: ScheduleOption) => void;
   onSkip?: () => void;
-  onHide: (vacationAllowance?: { amount: number; unit: VacationAllowanceUnit }) => void;
+  onHide: (payload?: WizardCompletionPayload) => void;
   onDefer?: () => void;
   isLoading?: boolean;
   mode?: "onboarding" | "change-team" | "change-schedule";
@@ -62,7 +69,7 @@ interface WelcomeWizardProps {
 
 /**
  * Present a multi-step onboarding modal that guides users through welcome, feature highlights, schedule selection,
- * optional team selection, and optional vacation allowance setup.
+ * optional team selection, and optional time off setup.
  *
  * @param show - Whether the wizard modal is visible
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
@@ -72,7 +79,7 @@ interface WelcomeWizardProps {
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param mode - Determines the wizard flow ("onboarding" | "change-team" | "change-schedule")
- * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "vacation-allowance")
+ * @param startStep - Initial step to show when the wizard opens ("welcome" | "features" | "schedule-selection" | "team-selection" | "timeoff-setup" | "time-tracking-setup")
  * @returns The WelcomeWizard React element
  */
 export function WelcomeWizard({
@@ -91,17 +98,24 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
+  const currentYear = String(new Date().getFullYear());
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Vacation allowance form state - initialize from settings
+  // Vacation allowance form state - initialize from settings for current year
   const [vacationAmount, setVacationAmount] = useState<string>(() => {
-    const amount = settings.vacationAllowance?.amount ?? 0;
+    const amount = settings.vacationAllowance?.yearlyAmounts?.[currentYear] ?? 0;
     return amount > 0 ? amount.toString() : "";
   });
   const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
     settings.vacationAllowance?.unit ?? "days",
+  );
+  const [isTimeOffEnabled, setIsTimeOffEnabled] = useState<boolean>(
+    settings.enableTimeOff ?? false,
+  );
+  const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState<boolean>(
+    settings.enableTimeTracking ?? false,
   );
 
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
@@ -127,6 +141,7 @@ export function WelcomeWizard({
   const wizardContext: WizardContext = {
     mode,
     shouldShowTeamSelection,
+    enableTimeOff: isTimeOffEnabled,
   };
 
   // Derive an effective step that is guaranteed to be visible in the current context.
@@ -157,26 +172,23 @@ export function WelcomeWizard({
     nextStep();
   };
 
-  const handleVacationComplete = () => {
-    // Pass vacation allowance data to onHide for atomic update
-    const validation = validateVacationAmount(vacationAmount);
-
-    if (!validation.isValid || validation.parsedAmount === null) {
-      // No valid vacation data to save
-      onHide();
+  const handleTimeOffComplete = () => {
+    if (isTimeOffEnabled && vacationValidation.isInvalid) {
       return;
     }
-
-    // All valid amounts (including 0 which disables vacation tracking) are saved
-    onHide({
-      amount: validation.parsedAmount,
-      unit: vacationUnit,
-    });
+    nextStep();
   };
 
-  const handleVacationSkip = () => {
-    // User chose to skip - no vacation data to save
-    onHide();
+  const handleTimeTrackingComplete = () => {
+    const vacationPayload =
+      isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
+        ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
+        : undefined;
+    onHide({
+      vacationAllowance: vacationPayload,
+      enableTimeOff: isTimeOffEnabled,
+      enableTimeTracking: isTimeTrackingEnabled,
+    });
   };
 
   const nextStep = () => {
@@ -298,17 +310,26 @@ export function WelcomeWizard({
                 firstButtonRef={firstButtonRef}
               />
             )}
-            {effectiveStep === "vacation-allowance" && (
-              <Step5VacationAllowance
+            {effectiveStep === "timeoff-setup" && (
+              <Step5TimeOffSetup
+                isEnabled={isTimeOffEnabled}
+                onToggle={setIsTimeOffEnabled}
                 vacationAmount={vacationAmount}
                 vacationUnit={vacationUnit}
                 onVacationAmountChange={setVacationAmount}
                 onVacationUnitChange={setVacationUnit}
-                onPrev={prevStep}
-                onSkip={handleVacationSkip}
-                onComplete={handleVacationComplete}
                 isInvalid={vacationValidation.isInvalid}
-                isValid={vacationValidation.isValid}
+                onPrev={prevStep}
+                onNext={handleTimeOffComplete}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {effectiveStep === "time-tracking-setup" && (
+              <Step6TimeTrackingSetup
+                isEnabled={isTimeTrackingEnabled}
+                onToggle={setIsTimeTrackingEnabled}
+                onPrev={prevStep}
+                onComplete={handleTimeTrackingComplete}
                 firstButtonRef={firstButtonRef}
               />
             )}

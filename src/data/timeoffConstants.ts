@@ -57,7 +57,7 @@ export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
 
 /**
  * Valid view modes for the Time Off tab.
- * Hoisted to module level to prevent unnecessary re-renders when used in useViewMode.
+ * Defined at module level as a single source of truth for valid view modes.
  * Note: Calendar view has been moved to its own main tab.
  */
 export const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
