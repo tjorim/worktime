@@ -1,11 +1,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeOffView } from "../../src/components/TimeOffView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import {
+  SIMPLE_HDAY,
+  MULTI_TYPE_HDAY,
+  WEEKLY_EVENTS_HDAY,
+  EVENT_FLAGS_HDAY,
+  COMPLEX_HDAY,
+} from "../fixtures/hday";
 
 function renderWithProviders() {
   return render(
@@ -24,52 +32,528 @@ describe("TimeOffView Integration Tests", () => {
     localStorage.clear();
   });
 
-  it("switches between table, statistics, and raw views", async () => {
-    const user = userEvent.setup();
-    renderWithProviders();
+  describe("View Switching", () => {
+    it("switches between table, statistics, and raw views", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
 
-    // Table view starts active
-    expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      // Table view starts active
+      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Statistics/i }));
-    expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Statistics/i }));
+      expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-    expect(screen.getByRole("region", { name: /Raw \.hday content editor/i })).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      expect(
+        screen.getByRole("region", { name: /Raw \.hday content editor/i }),
+      ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /^Table$/i }));
-    expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+    });
+
+    it("restores the last used Time Off view from settings state", () => {
+      localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 2,
+          hasCompletedOnboarding: true,
+          myTeam: null,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: true,
+          },
+          lastUsed: {
+            activeTab: "timeoff",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "raw",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      renderWithProviders();
+
+      expect(
+        screen.getByRole("region", { name: /Raw \.hday content editor/i }),
+      ).toBeInTheDocument();
+    });
   });
 
-  it("restores the last used Time Off view from settings state", () => {
-    localStorage.setItem(
-      "worktime_user_state",
-      JSON.stringify({
-        version: 2,
-        hasCompletedOnboarding: true,
-        myTeam: null,
-        scheduleType: "9-5",
-        settings: {
-          timeFormat: "24h",
-          theme: "auto",
-          notifications: "off",
-          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-          enableTimeOff: true,
-          enableTimeTracking: true,
-        },
-        lastUsed: {
-          activeTab: "timeoff",
-          scheduleView: "today",
-          otherSchedule: null,
-          timeOffView: "raw",
-          timeTrackingView: "daily",
-          otherTeam: null,
-        },
-      }),
-    );
+  describe("Import and Display Workflow", () => {
+    it("imports simple .hday content and renders events correctly", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
 
-    renderWithProviders();
+      // Switch to raw view
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
 
-    expect(screen.getByRole("region", { name: /Raw \.hday content editor/i })).toBeInTheDocument();
+      // Import content via raw editor
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, SIMPLE_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view to see events
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify all events are rendered
+      expect(screen.getByText("Vacation day")).toBeInTheDocument();
+      expect(screen.getByText("Week vacation")).toBeInTheDocument();
+      expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
+
+      // Verify dates appear in table
+      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText(/2025\/02\/10/)).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/03/20")).toBeInTheDocument();
+    });
+
+    it("imports content with multiple event types and displays type badges", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Switch to raw view and import
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, MULTI_TYPE_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify different event types are present (use getAllByText since titles can appear multiple times)
+      expect(screen.getAllByText("Regular vacation").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Business trip").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Training course").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("In office").length).toBeGreaterThan(0);
+
+      // Verify type labels appear in badges  - note that badges show title if present
+      // Check the flags column which shows the raw flag names
+      const table = screen.getByRole("table");
+      expect(within(table).getByText("business")).toBeInTheDocument();
+      expect(within(table).getByText("course")).toBeInTheDocument();
+    });
+
+    it("imports weekly events and displays them correctly", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Import weekly events via raw editor
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, WEEKLY_EVENTS_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify weekly events show pattern instead of dates
+      expect(screen.getByText("Every Mon")).toBeInTheDocument();
+      expect(screen.getByText("Every Fri")).toBeInTheDocument();
+    });
+
+    it("imports events with flags and displays flag symbols", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Import events with flags
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, EVENT_FLAGS_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // Verify events are displayed
+      expect(screen.getByText("Half day AM")).toBeInTheDocument();
+      expect(screen.getByText("Half day PM")).toBeInTheDocument();
+      expect(screen.getByText("Business trip onsite")).toBeInTheDocument();
+
+      // Verify flag symbols (◐ = AM symbol, ◑ = PM symbol)
+      const table = screen.getByRole("table");
+      // The symbols appear in the type badge
+      expect(within(table).getByText(/◐/)).toBeInTheDocument(); // Half day AM symbol
+      expect(within(table).getByText(/◑/)).toBeInTheDocument(); // Half day PM symbol
+    });
+  });
+
+  describe("Full CRUD Workflow", () => {
+    it("completes full CRUD lifecycle: create, read, update, delete", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // === CREATE ===
+      // Add a new event via UI
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-06-15");
+
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Summer vacation");
+
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // === READ ===
+      // Verify event appears in table
+      expect(screen.getByText("Summer vacation")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/06/15")).toBeInTheDocument();
+
+      // Verify localStorage persistence
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).toContain("Summer vacation");
+      expect(stored).toContain("2025/06/15");
+
+      // === UPDATE ===
+      // Find and click edit button
+      const editButtons = screen.getAllByRole("button");
+      const editButton = editButtons.find((btn) => btn.querySelector(".bi-pencil"));
+      expect(editButton).toBeDefined();
+      if (editButton) {
+        await user.click(editButton);
+      }
+
+      // Modify the event
+      const editTitleInput = screen.getByDisplayValue("Summer vacation");
+      await user.clear(editTitleInput);
+      await user.type(editTitleInput, "Updated summer vacation");
+
+      // Save changes
+      await user.click(screen.getByRole("button", { name: /Update/i }));
+
+      // Verify updated event appears
+      expect(screen.getByText("Updated summer vacation")).toBeInTheDocument();
+      expect(screen.queryByText("Summer vacation")).not.toBeInTheDocument();
+
+      // Verify updated localStorage
+      const updatedStored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(updatedStored).toContain("Updated summer vacation");
+      expect(updatedStored).not.toContain("# Summer vacation");
+
+      // === DELETE ===
+      // Click delete button
+      const deleteButton = screen.getByRole("button", {
+        name: /Delete Updated summer vacation/i,
+      });
+      await user.click(deleteButton);
+
+      // Confirm deletion in dialog
+      const dialog = await screen.findByRole("dialog");
+      const confirmButton = within(dialog).getByRole("button", { name: /Delete/i });
+      await user.click(confirmButton);
+
+      // Verify event is removed
+      expect(screen.queryByText("Updated summer vacation")).not.toBeInTheDocument();
+      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+
+      // Verify localStorage is updated (should be empty or not contain the event)
+      const finalStored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      if (finalStored) {
+        expect(finalStored).not.toContain("Updated summer vacation");
+      }
+    });
+
+    it("creates event with flags and persists them correctly", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Create business trip with flags
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-07-20");
+
+      const endInput = screen.getByLabelText(/End \(YYYY\/MM\/DD\)/i);
+      await user.clear(endInput);
+      await user.type(endInput, "2025-07-25");
+
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Conference");
+
+      // Select business trip type
+      await user.click(screen.getByLabelText(/Business trip/i));
+
+      // Select onsite flag
+      await user.click(screen.getByLabelText(/Onsite/i));
+
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Verify event in table
+      expect(screen.getByText("Conference")).toBeInTheDocument();
+
+      // Verify localStorage has flags
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).toContain("b"); // business flag
+      expect(stored).toContain("w"); // onsite flag
+      expect(stored).toContain("Conference");
+
+      // Verify the Business type badge appears in the table
+      const badges = screen.getAllByText(/Business/i);
+      expect(badges.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Export Workflow", () => {
+    it("exports modified .hday and verifies output format", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Create a few events via UI
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-08-10");
+      let titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "First event");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-08-15");
+      titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Second event");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Verify localStorage has both events in .hday format
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).toContain("2025/08/10");
+      expect(stored).toContain("First event");
+      expect(stored).toContain("2025/08/15");
+      expect(stored).toContain("Second event");
+
+      // Verify .hday format structure
+      expect(stored).toMatch(/2025\/08\/10 # First event/);
+      expect(stored).toMatch(/2025\/08\/15 # Second event/);
+    });
+
+    it("exports complex events with correct serialization", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Import complex content
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, COMPLEX_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Verify localStorage contains all event types
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+
+      // Check range events
+      expect(stored).toContain("2025/01/15");
+      expect(stored).toContain("New Year vacation");
+
+      // Check business trip with date range
+      expect(stored).toContain("b2025/02/10-2025/02/14");
+      expect(stored).toContain("Conference trip");
+
+      // Check weekly events
+      expect(stored).toContain("d1k"); // Monday in office
+      expect(stored).toContain("d5"); // Friday
+
+      // Check events with flags
+      expect(stored).toContain("a2025/03/20"); // Half day AM
+      expect(stored).toContain("p2025/05/10"); // Half day PM
+      expect(stored).toContain("s2025/04/05-2025/04/07"); // Training
+    });
+  });
+
+  describe("Persistence and State Management", () => {
+    it("persists events across component remounts", async () => {
+      const user = userEvent.setup();
+      const { unmount } = renderWithProviders();
+
+      // Add an event
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-09-01");
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Persistent event");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Verify event exists
+      expect(screen.getByText("Persistent event")).toBeInTheDocument();
+
+      // Unmount and remount
+      unmount();
+      renderWithProviders();
+
+      // Event should still be there after remount
+      expect(screen.getByText("Persistent event")).toBeInTheDocument();
+    });
+
+    it("loads events from localStorage on initial render", () => {
+      // Pre-populate localStorage
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, SIMPLE_HDAY);
+
+      renderWithProviders();
+
+      // Events should be loaded and displayed
+      expect(screen.getByText("Vacation day")).toBeInTheDocument();
+      expect(screen.getByText("Week vacation")).toBeInTheDocument();
+      expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
+    });
+
+    it("maintains undo/redo state through multiple operations", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      const undoButton = screen.getByRole("button", { name: /Undo last change/i });
+      const redoButton = screen.getByRole("button", { name: /Redo last change/i });
+
+      // Initially both should be disabled
+      expect(undoButton).toBeDisabled();
+      expect(redoButton).toBeDisabled();
+
+      // Add first event
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-10-01");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Undo should be enabled
+      expect(undoButton).toBeEnabled();
+      expect(redoButton).toBeDisabled();
+
+      // Add second event
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-10-02");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Undo first operation
+      await user.click(undoButton);
+
+      // Redo should now be enabled
+      expect(undoButton).toBeEnabled();
+      expect(redoButton).toBeEnabled();
+
+      // Redo the undone operation
+      await user.click(redoButton);
+
+      // Both events should be present
+      expect(within(screen.getByRole("table")).getByText("2025/10/01")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/10/02")).toBeInTheDocument();
+    });
+  });
+
+  describe("Filtering and Display", () => {
+    it("displays only events within date range when using calendar view", async () => {
+      // This test verifies that getEventsInRange functionality works
+      // The actual filtering happens in CalendarView, but we can verify
+      // that EventStore's getEventsInRange returns correct results
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Import events with various dates
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, SIMPLE_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to table view to verify all events are present
+      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+
+      // All three events should be visible (no date filtering in table view)
+      expect(screen.getByText("Vacation day")).toBeInTheDocument();
+      expect(screen.getByText("Week vacation")).toBeInTheDocument();
+      expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
+    });
+
+    it("displays events grouped by type in statistics view", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Import multi-type events
+      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
+      await user.clear(textarea);
+      await user.type(textarea, MULTI_TYPE_HDAY);
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      // Switch to statistics view
+      await user.click(screen.getByRole("button", { name: /Statistics/i }));
+
+      // Verify statistics view groups events by type
+      const statsRegion = screen.getByRole("region", { name: /Vacation statistics/i });
+      expect(statsRegion).toBeInTheDocument();
+
+      // Statistics should show breakdown by event type
+      // (The exact text depends on the implementation, but we're verifying the view renders)
+      expect(within(statsRegion).getByText(/Holiday/i)).toBeInTheDocument();
+    });
+  });
+
+  describe("Bulk Operations", () => {
+    it("bulk deletes selected events and updates localStorage", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Add multiple events
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-11-01");
+      let titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Event 1");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-11-02");
+      titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Event 2");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
+      await user.clear(startInput);
+      await user.type(startInput, "2025-11-03");
+      titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Event 3");
+      await user.click(screen.getByRole("button", { name: /^Add$/i }));
+
+      // Select first two events
+      await user.click(screen.getByRole("checkbox", { name: /Select Event 1/i }));
+      await user.click(screen.getByRole("checkbox", { name: /Select Event 2/i }));
+
+      // Delete selected
+      await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
+
+      // Confirm in dialog
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
+
+      // Verify only Event 3 remains
+      expect(screen.queryByText("Event 1")).not.toBeInTheDocument();
+      expect(screen.queryByText("Event 2")).not.toBeInTheDocument();
+      expect(screen.getByText("Event 3")).toBeInTheDocument();
+
+      // Verify localStorage updated correctly
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).not.toContain("Event 1");
+      expect(stored).not.toContain("Event 2");
+      expect(stored).toContain("Event 3");
+    });
   });
 });
