@@ -76,8 +76,7 @@ export function TimeTrackingWeeklyView({
         .map((task) => {
           const startDayjs = dayjs(task.startTime);
           const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
-          const labelName =
-            labelNameById[task.labelId] ?? task.labelName ?? "Unknown label";
+          const labelName = labelNameById[task.labelId] ?? "Unknown label";
           return {
             date: task.startTime.substring(0, 10),
             label: labelName,

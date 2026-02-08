@@ -132,11 +132,7 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
   return sanitized;
 }
 
-function sanitizeTemplates(
-  templates: unknown[],
-  labelsByName: Map<string, TimeTrackingLabel>,
-  labelsById: Map<string, TimeTrackingLabel>,
-): TimeTrackingTemplate[] {
+function sanitizeTemplates(templates: unknown[]): TimeTrackingTemplate[] {
   const sanitized: TimeTrackingTemplate[] = [];
 
   templates.forEach((template) => {
@@ -144,18 +140,7 @@ function sanitizeTemplates(
       return;
     }
     const payload = template as Record<string, unknown>;
-    const labelId =
-      typeof payload.labelId === "string"
-        ? payload.labelId
-        : typeof payload.label === "string"
-          ? labelsByName.get(payload.label.toLowerCase())?.id
-          : undefined;
-    const labelName =
-      typeof payload.labelId === "string"
-        ? labelsById.get(payload.labelId)?.name
-        : typeof payload.label === "string"
-          ? payload.label
-          : undefined;
+    const labelId = typeof payload.labelId === "string" ? payload.labelId : undefined;
     if (
       typeof payload.id !== "string" ||
       typeof payload.text !== "string" ||
@@ -169,7 +154,6 @@ function sanitizeTemplates(
       id: payload.id,
       text: payload.text,
       labelId,
-      labelName,
       start: payload.start,
       stop: payload.stop,
     });
@@ -291,10 +275,8 @@ export function TimeTrackingConfigView({
         return;
       }
 
-      const labelsByName = new Map(labels.map((label) => [label.name.toLowerCase(), label]));
-      const labelsById = new Map(labels.map((label) => [label.id, label]));
       onImportData({
-        templates: sanitizeTemplates(parsed.templates ?? [], labelsByName, labelsById),
+        templates: sanitizeTemplates(parsed.templates ?? []),
       });
       setStatus("Templates updated.");
     } catch {
@@ -409,7 +391,6 @@ export function TimeTrackingConfigView({
     }
     const templatePayload: Omit<TimeTrackingTemplate, "id"> = {
       ...templateForm,
-      labelName: labelNameById[templateForm.labelId],
     };
     if (templateModalMode === "edit") {
       if (editTemplateId === null) {
@@ -610,9 +591,7 @@ export function TimeTrackingConfigView({
               <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
                 <span className="me-auto">
                   {template.text} ({template.start}-{template.stop}) [
-                  {labelNameById[template.labelId] ??
-                    template.labelName ??
-                    "Unknown label"}
+                  {labelNameById[template.labelId] ?? "Unknown label"}
                   ]
                 </span>
                 <Button

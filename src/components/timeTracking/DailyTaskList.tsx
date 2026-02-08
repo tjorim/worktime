@@ -111,7 +111,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
                     color: "#000",
                   }}
                 >
-                  {labelNameById[task.labelId] ?? task.labelName ?? "Unknown label"}
+                  {labelNameById[task.labelId] ?? "Unknown label"}
                 </span>
               </div>
               <div className="d-flex gap-2">

@@ -178,7 +178,6 @@ export function TimeTrackingDailyView({
       id: crypto.randomUUID(),
       text,
       labelId: selectedLabelId,
-      labelName: labelNameById[selectedLabelId],
       startTime: `${date}T${start}`,
       stopTime: `${date}T${stop}`,
     });
@@ -213,7 +212,6 @@ export function TimeTrackingDailyView({
       id: crypto.randomUUID(),
       text: text.trim(),
       labelId: selectedLabelId,
-      labelName: labelNameById[selectedLabelId],
       startTime,
     });
     if (!added) {
@@ -316,7 +314,6 @@ export function TimeTrackingDailyView({
       id: payload.id,
       newText: payload.text.trim(),
       newLabelId: payload.labelId,
-      newLabelName: labelNameById[payload.labelId],
       newStartTime,
       newStopTime,
     });
@@ -396,9 +393,7 @@ export function TimeTrackingDailyView({
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.text} ({template.start}-{template.stop}) [
-                    {labelNameById[template.labelId] ??
-                      template.labelName ??
-                      "Unknown label"}
+                    {labelNameById[template.labelId] ?? "Unknown label"}
                     ]
                   </option>
                 ))}
@@ -435,9 +430,7 @@ export function TimeTrackingDailyView({
                         color: "#000",
                       }}
                     >
-                      {labelNameById[runningTask.labelId] ??
-                        runningTask.labelName ??
-                        "Unknown label"}
+                      {labelNameById[runningTask.labelId] ?? "Unknown label"}
                     </span>
                   </div>
                   <div className="small text-muted">

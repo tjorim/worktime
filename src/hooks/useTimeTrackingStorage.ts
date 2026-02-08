@@ -15,8 +15,7 @@ import type {
 type RawTask = {
   id: string;
   text: string;
-  label?: string;
-  labelId?: string;
+  labelId: string;
   startTime: string;
   stopTime?: string | null;
 };
@@ -26,8 +25,6 @@ type ImportPayload = {
   templates?: unknown[];
   labels?: unknown[];
 };
-
-type StoredTemplate = TimeTrackingTemplate & { label?: string };
 
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
@@ -62,37 +59,22 @@ function isValidRawTask(value: unknown): value is RawTask {
   const startTime = typeof v.startTime === "string" ? v.startTime : "";
   const stopTime = typeof v.stopTime === "string" ? v.stopTime : null;
 
-  const labelId = typeof v.labelId === "string" ? v.labelId.trim() : "";
-  const labelName = typeof v.label === "string" ? v.label.trim() : "";
-
   return (
     typeof v.id === "string" &&
     typeof v.text === "string" &&
-    (labelId.length > 0 || labelName.length > 0) &&
+    typeof v.labelId === "string" &&
+    v.labelId.trim().length > 0 &&
     ISO_LOCAL_RE.test(startTime) &&
     isValidTaskDateRange(startTime, stopTime)
   );
 }
 
 // StoredTimeTrackingTask now has string timestamps, so it matches RawTask structure
-function convertToTask(
-  raw: RawTask,
-  labelsById: Map<string, TimeTrackingLabel>,
-  labelsByName: Map<string, TimeTrackingLabel>,
-): StoredTimeTrackingTask {
-  const rawLabelId = raw.labelId?.trim() ?? "";
-  const rawLabelName = raw.label?.trim() ?? "";
-  const labelById = rawLabelId ? labelsById.get(rawLabelId) : undefined;
-  const labelByName = rawLabelName ? labelsByName.get(rawLabelName.toLowerCase()) : undefined;
-  const resolvedLabel = labelById ?? labelByName;
-  const resolvedLabelId = resolvedLabel?.id ?? rawLabelId ?? rawLabelName ?? "unknown-label";
-  const resolvedLabelName = resolvedLabel?.name ?? rawLabelName;
-
+function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return {
     id: raw.id,
     text: raw.text,
-    labelId: resolvedLabelId,
-    labelName: resolvedLabelName,
+    labelId: raw.labelId,
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
@@ -101,12 +83,11 @@ function convertToTask(
 function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  const labelId = typeof v.labelId === "string" ? v.labelId.trim() : "";
-  const labelName = typeof v.label === "string" ? v.label.trim() : "";
   return (
     typeof v.id === "string" &&
     typeof v.text === "string" &&
-    (labelId.length > 0 || labelName.length > 0) &&
+    typeof v.labelId === "string" &&
+    v.labelId.trim().length > 0 &&
     isValidTimeString(v.start) &&
     isValidTimeString(v.stop) &&
     isValidRange(v.start, v.stop)
@@ -142,7 +123,7 @@ function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
 
 export function useTimeTrackingStorage() {
   const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);
-  const [templates, setTemplates] = useLocalStorage<StoredTemplate[]>(
+  const [templates, setTemplates] = useLocalStorage<TimeTrackingTemplate[]>(
     TIME_TRACKING_STORAGE_KEYS.templates,
     [],
   );
@@ -153,109 +134,14 @@ export function useTimeTrackingStorage() {
 
   const labels = useMemo(() => sanitizeLabels(rawLabels), [rawLabels]);
 
-  const labelsById = useMemo(
-    () => new Map(labels.map((label) => [label.id, label])),
-    [labels],
-  );
-  const labelsByName = useMemo(
-    () => new Map(labels.map((label) => [label.name.toLowerCase(), label])),
-    [labels],
-  );
-
   const tasks = useMemo(
-    () =>
-      rawTasks
-        .filter(isValidRawTask)
-        .map((raw) => convertToTask(raw, labelsById, labelsByName)),
-    [rawTasks, labelsById, labelsByName],
+    () => rawTasks.filter(isValidRawTask).map(convertToTask),
+    [rawTasks],
   );
-
-  const normalizedTemplates = useMemo(() => {
-    return templates
-      .filter(isValidTemplate)
-      .map((template) => {
-        const record = template as Record<string, unknown>;
-        const labelId =
-          typeof record.labelId === "string"
-            ? record.labelId
-            : typeof record.label === "string"
-              ? labelsByName.get(record.label.toLowerCase())?.id
-              : undefined;
-        const labelName =
-          typeof record.labelId === "string"
-            ? labelsById.get(record.labelId)?.name
-            : typeof record.label === "string"
-              ? record.label
-              : undefined;
-        if (!labelId) {
-          return null;
-        }
-        return {
-          id: record.id as string,
-          text: record.text as string,
-          labelId,
-          labelName,
-          start: record.start as string,
-          stop: record.stop as string,
-        };
-      })
-      .filter((template): template is TimeTrackingTemplate => template !== null);
-  }, [templates, labelsByName, labelsById]);
-
-  useEffect(() => {
-    setRawTasks((prev) => {
-      let changed = false;
-      const next = prev.map((raw) => {
-        if (!isValidRawTask(raw)) {
-          return raw;
-        }
-        if (typeof raw.labelId === "string" && raw.labelId.trim().length > 0) {
-          return raw;
-        }
-        const rawLabel = typeof raw.label === "string" ? raw.label.trim() : "";
-        if (!rawLabel) {
-          return raw;
-        }
-        const resolved = labelsByName.get(rawLabel.toLowerCase());
-        if (!resolved) {
-          return raw;
-        }
-        changed = true;
-        return { ...raw, labelId: resolved.id };
-      });
-      return changed ? next : prev;
-    });
-  }, [labelsByName, setRawTasks]);
-
-  useEffect(() => {
-    setTemplates((prev) => {
-      let changed = false;
-      const next = prev.map((template) => {
-        if (template.labelId && template.labelId.trim().length > 0) {
-          return template;
-        }
-        const rawLabel = typeof template.label === "string" ? template.label.trim() : "";
-        if (!rawLabel) {
-          return template;
-        }
-        const resolved = labelsByName.get(rawLabel.toLowerCase());
-        if (!resolved) {
-          return template;
-        }
-        changed = true;
-        return {
-          ...template,
-          labelId: resolved.id,
-          labelName: resolved.name,
-        };
-      });
-      return changed ? next : prev;
-    });
-  }, [labelsByName, setTemplates]);
 
   // Refs for stable exportData callback
   const rawTasksRef = useRef(rawTasks);
-  const templatesRef = useRef(normalizedTemplates);
+  const templatesRef = useRef(templates);
   const labelsRef = useRef(labels);
 
   // Synchronize refs with committed state to maintain stable references for callbacks
@@ -264,8 +150,8 @@ export function useTimeTrackingStorage() {
   }, [rawTasks]);
 
   useEffect(() => {
-    templatesRef.current = normalizedTemplates;
-  }, [normalizedTemplates]);
+    templatesRef.current = templates;
+  }, [templates]);
 
   useEffect(() => {
     labelsRef.current = labels;
@@ -285,7 +171,6 @@ export function useTimeTrackingStorage() {
           id: payload.id,
           text: payload.text,
           labelId: payload.labelId,
-          label: payload.labelName,
           startTime: payload.startTime,
           stopTime: payload.stopTime ?? null,
         },
@@ -302,7 +187,6 @@ export function useTimeTrackingStorage() {
       newStopTime: StoredTimeTrackingTask["stopTime"];
       newText?: string;
       newLabelId?: string;
-      newLabelName?: string;
     }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
@@ -311,7 +195,6 @@ export function useTimeTrackingStorage() {
                 ...raw,
                 text: payload.newText ?? raw.text,
                 labelId: payload.newLabelId ?? raw.labelId,
-                label: payload.newLabelName ?? raw.label,
                 startTime: payload.newStartTime,
                 stopTime: payload.newStopTime ?? null,
               }
@@ -383,41 +266,13 @@ export function useTimeTrackingStorage() {
       }
       if (Array.isArray(payload.templates)) {
         const validTemplates = payload.templates.filter(isValidTemplate);
-        const mappedTemplates = validTemplates
-          .map((template) => {
-            const record = template as Record<string, unknown>;
-            const labelId =
-              typeof record.labelId === "string"
-                ? record.labelId
-                : typeof record.label === "string"
-                  ? labelsByName.get(record.label.toLowerCase())?.id
-                  : undefined;
-            const labelName =
-              typeof record.labelId === "string"
-                ? labelsById.get(record.labelId)?.name
-                : typeof record.label === "string"
-                  ? record.label
-                  : undefined;
-            if (!labelId) {
-              return null;
-            }
-            return {
-              id: record.id as string,
-              text: record.text as string,
-              labelId,
-              labelName,
-              start: record.start as string,
-              stop: record.stop as string,
-            };
-          })
-          .filter((template): template is TimeTrackingTemplate => template !== null);
-        setTemplates(mappedTemplates);
+        setTemplates(validTemplates);
       }
       if (Array.isArray(payload.labels)) {
         setRawLabels(sanitizeLabels(payload.labels));
       }
     },
-    [setRawTasks, setTemplates, setRawLabels, labelsById, labelsByName],
+    [setRawTasks, setTemplates, setRawLabels],
   );
 
   const updateLabels = useCallback(
@@ -429,7 +284,7 @@ export function useTimeTrackingStorage() {
 
   return {
     tasks,
-    templates: normalizedTemplates,
+    templates,
     labels,
     addTask,
     updateTaskTimes,
