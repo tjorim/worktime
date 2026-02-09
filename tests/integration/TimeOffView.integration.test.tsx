@@ -88,7 +88,7 @@ describe("TimeOffView Integration Tests", () => {
   });
 
   describe("Import and Display Workflow", () => {
-    it("imports simple .hday content and renders events correctly", async () => {
+    it("imports simple .hday content via raw editor and renders events correctly", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
@@ -113,6 +113,30 @@ describe("TimeOffView Integration Tests", () => {
       expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
       expect(within(screen.getByRole("table")).getByText(/2025\/02\/10/)).toBeInTheDocument();
       expect(within(screen.getByRole("table")).getByText("2025/03/20")).toBeInTheDocument();
+    });
+
+    it("imports .hday content via file upload and renders events correctly", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      // Create a mock file with .hday content
+      const fileContent = SIMPLE_HDAY;
+      const file = new File([fileContent], "test.hday", { type: "text/plain" });
+
+      // Find the hidden file input and upload the file
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeTruthy();
+      if (fileInput) {
+        await user.upload(fileInput, file);
+      }
+
+      // Wait for import toast
+      await screen.findByText(/Imported test.hday/i);
+
+      // Verify events are rendered in table
+      expect(screen.getByText("Vacation day")).toBeInTheDocument();
+      expect(screen.getByText("Week vacation")).toBeInTheDocument();
+      expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
     });
 
     it("imports content with multiple event types and displays type badges", async () => {
@@ -217,13 +241,9 @@ describe("TimeOffView Integration Tests", () => {
       expect(stored).toContain("2025/06/15");
 
       // === UPDATE ===
-      // Find and click edit button
-      const editButtons = screen.getAllByRole("button");
-      const editButton = editButtons.find((btn) => btn.querySelector(".bi-pencil"));
-      expect(editButton).toBeDefined();
-      if (editButton) {
-        await user.click(editButton);
-      }
+      // Find and click edit button using accessible name
+      const editButton = screen.getByRole("button", { name: /Edit Summer vacation/i });
+      await user.click(editButton);
 
       // Modify the event
       const editTitleInput = screen.getByDisplayValue("Summer vacation");
@@ -294,11 +314,11 @@ describe("TimeOffView Integration Tests", () => {
       // Verify event in table
       expect(screen.getByText("Conference")).toBeInTheDocument();
 
-      // Verify localStorage has flags
+      // Verify localStorage has correctly persisted flags in .hday format
       const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toContain("b"); // business flag
-      expect(stored).toContain("w"); // onsite flag
-      expect(stored).toContain("Conference");
+      expect(stored).toBeTruthy();
+      // The event should be serialized as: bw2025/07/20-2025/07/25 # Conference
+      expect(stored).toMatch(/bw2025\/07\/20-2025\/07\/25 # Conference/);
 
       // Verify the Business type badge appears in the table
       const badges = screen.getAllByText(/Business/i);
@@ -306,8 +326,8 @@ describe("TimeOffView Integration Tests", () => {
     });
   });
 
-  describe("Export Workflow", () => {
-    it("exports modified .hday and verifies output format", async () => {
+  describe("Persistence and Serialization", () => {
+    it("persists modified events to localStorage in .hday format", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
@@ -328,19 +348,19 @@ describe("TimeOffView Integration Tests", () => {
       await user.type(titleInput, "Second event");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      // Verify localStorage has both events in .hday format
+      // Verify localStorage has both events in correct .hday format
       const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
       expect(stored).toContain("2025/08/10");
       expect(stored).toContain("First event");
       expect(stored).toContain("2025/08/15");
       expect(stored).toContain("Second event");
 
-      // Verify .hday format structure
+      // Verify .hday format structure (date # comment)
       expect(stored).toMatch(/2025\/08\/10 # First event/);
       expect(stored).toMatch(/2025\/08\/15 # Second event/);
     });
 
-    it("exports complex events with correct serialization", async () => {
+    it("serializes complex events with correct .hday format", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
@@ -351,7 +371,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.type(textarea, COMPLEX_HDAY);
       await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
 
-      // Verify localStorage contains all event types
+      // Verify localStorage contains all event types in correct format
       const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
 
       // Check range events
@@ -373,7 +393,7 @@ describe("TimeOffView Integration Tests", () => {
     });
   });
 
-  describe("Persistence and State Management", () => {
+  describe("State Management", () => {
     it("persists events across component remounts", async () => {
       const user = userEvent.setup();
       const { unmount } = renderWithProviders();
@@ -455,11 +475,10 @@ describe("TimeOffView Integration Tests", () => {
     });
   });
 
-  describe("Filtering and Display", () => {
-    it("displays only events within date range when using calendar view", async () => {
-      // This test verifies that getEventsInRange functionality works
-      // The actual filtering happens in CalendarView, but we can verify
-      // that EventStore's getEventsInRange returns correct results
+  describe("Display and Grouping", () => {
+    it("displays all imported events in table view without date filtering", async () => {
+      // Table view shows all events without date-range filtering.
+      // Date-range filtering is handled by CalendarView when using getEventsInRange.
       const user = userEvent.setup();
       renderWithProviders();
 
