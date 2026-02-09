@@ -158,7 +158,7 @@ export function PersonalizedStatusContent({
                 <EmptyState
                   icon="bi-calendar-x"
                   title="No Next Shift"
-                  description="Next shift information not available"
+                  description="No upcoming shifts found for your team."
                 />
               )}
             </div>
