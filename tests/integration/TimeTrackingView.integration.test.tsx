@@ -50,7 +50,7 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("Timer Workflow", () => {
     it("shows running task with elapsed time when task is active", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
       // Set up a running task
       mockTasks = [
@@ -58,7 +58,7 @@ describe("TimeTrackingView Integration Tests", () => {
           id: "running-task",
           text: "Active Task",
           label: "Development",
-          startTime: "2025-01-06T08:30",
+          startTime: "2025-01-06T08:30:00Z",
           stopTime: undefined,
         },
       ];
@@ -77,7 +77,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("prevents starting a second timer when one is already running", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
       // Set up a running task
       mockTasks = [
@@ -85,7 +85,7 @@ describe("TimeTrackingView Integration Tests", () => {
           id: "running-task",
           text: "Already Running",
           label: "Support",
-          startTime: "2025-01-06T08:30",
+          startTime: "2025-01-06T08:30:00Z",
           stopTime: undefined,
         },
       ];
@@ -99,7 +99,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("shows completed tasks in daily log with duration", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T14:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T14:00:00Z"));
 
       // Set up completed tasks
       mockTasks = [
@@ -107,15 +107,15 @@ describe("TimeTrackingView Integration Tests", () => {
           id: "task-1",
           text: "Morning work",
           label: "Development",
-          startTime: "2025-01-06T09:00",
-          stopTime: "2025-01-06T11:00", // 2 hours
+          startTime: "2025-01-06T09:00:00Z",
+          stopTime: "2025-01-06T11:00:00Z", // 2 hours
         },
         {
           id: "task-2",
           text: "Afternoon support",
           label: "Support",
-          startTime: "2025-01-06T13:00",
-          stopTime: "2025-01-06T14:00", // 1 hour
+          startTime: "2025-01-06T13:00:00Z",
+          stopTime: "2025-01-06T14:00:00Z", // 1 hour
         },
       ];
 
@@ -133,7 +133,7 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("Weekly Summary Updates", () => {
     it("displays correct weekly totals for multiple tasks across the week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00")); // Monday
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z")); // Monday
 
       // Set up tasks across the week
       mockTasks = [
@@ -141,22 +141,22 @@ describe("TimeTrackingView Integration Tests", () => {
           id: "mon-dev",
           text: "Monday Dev",
           label: "Development",
-          startTime: "2025-01-06T09:00",
-          stopTime: "2025-01-06T11:00", // 2 hours
+          startTime: "2025-01-06T09:00:00Z",
+          stopTime: "2025-01-06T11:00:00Z", // 2 hours
         },
         {
           id: "tue-dev",
           text: "Tuesday Dev",
           label: "Development",
-          startTime: "2025-01-07T09:00",
-          stopTime: "2025-01-07T13:00", // 4 hours
+          startTime: "2025-01-07T09:00:00Z",
+          stopTime: "2025-01-07T13:00:00Z", // 4 hours
         },
         {
           id: "wed-support",
           text: "Wednesday Support",
           label: "Support",
-          startTime: "2025-01-08T10:00",
-          stopTime: "2025-01-08T13:00", // 3 hours
+          startTime: "2025-01-08T10:00:00Z",
+          stopTime: "2025-01-08T13:00:00Z", // 3 hours
         },
       ];
 
@@ -202,7 +202,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("shows empty state when no tasks exist for the week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
       // No tasks
       mockTasks = [];
@@ -244,7 +244,7 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("View Navigation & Persistence", () => {
     it("switches between daily, weekly, and config views", async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
       renderWithSettings();
 
@@ -272,7 +272,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("restores last used view mode from localStorage on mount", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
 
       // Set localStorage to config view
       localStorage.setItem(
@@ -311,21 +311,21 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("Day Navigation", () => {
     it("updates Daily Log content when header day navigation changes date", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
       mockTasks = [
         {
           id: "today-task",
           text: "Today Task",
           label: "Support",
-          startTime: "2025-01-06T09:00",
-          stopTime: "2025-01-06T10:00",
+          startTime: "2025-01-06T09:00:00Z",
+          stopTime: "2025-01-06T10:00:00Z",
         },
         {
           id: "yesterday-task",
           text: "Yesterday Task",
           label: "Support",
-          startTime: "2025-01-05T09:00",
-          stopTime: "2025-01-05T10:00",
+          startTime: "2025-01-05T09:00:00Z",
+          stopTime: "2025-01-05T10:00:00Z",
         },
       ];
 
@@ -342,21 +342,21 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("updates Weekly Summary content when header week navigation changes week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-13T09:00:00"));
+      vi.setSystemTime(new Date("2025-01-13T09:00:00Z"));
       mockTasks = [
         {
           id: "current-week-task",
           text: "Current Week",
           label: "Support",
-          startTime: "2025-01-13T09:00",
-          stopTime: "2025-01-13T11:00",
+          startTime: "2025-01-13T09:00:00Z",
+          stopTime: "2025-01-13T11:00:00Z",
         },
         {
           id: "previous-week-task",
           text: "Previous Week",
           label: "Development",
-          startTime: "2025-01-06T10:00",
-          stopTime: "2025-01-06T12:00",
+          startTime: "2025-01-06T10:00:00Z",
+          stopTime: "2025-01-06T12:00:00Z",
         },
       ];
 
