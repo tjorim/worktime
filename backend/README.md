@@ -1,17 +1,19 @@
 # Backend
 
-This document captures backend-focused considerations for adding optional multi-device sync to
-Worktime. The goal is to keep the app local-first while enabling a lightweight server that stores
-sync state for users who opt in.
+This document describes the backend for Worktime: a lightweight API server that bridges the web
+frontend with .hday files and team configuration stored on a shared network drive (NFS/SMB). The
+goal is to keep the app local-first while enabling shared team data for users on the same network.
 
 ## Table of contents
 
 - [Backend responsibilities](#backend-responsibilities)
+- [File share structure](#file-share-structure)
 - [API surface](#api-surface)
 - [iCal subscription feed](#ical-subscription-feed)
-- [Authentication](#authentication)
-- [Storage model](#storage-model)
-- [Data deletion (GDPR/CCPA)](#data-deletion-gdprccpa)
+- [Server-side .hday parser](#server-side-hday-parser)
+- [In-memory cache](#in-memory-cache)
+- [Concurrency and conflict handling](#concurrency-and-conflict-handling)
+- [Audit logging](#audit-logging)
 - [Security](#security)
 - [CORS](#cors)
 - [Hosting and deployment](#hosting-and-deployment)
@@ -21,46 +23,356 @@ sync state for users who opt in.
 
 ## Backend responsibilities
 
-- Store a single JSON snapshot per user plus metadata (updated_at, version, etag).
-- Provide auth/identity via device-link tokens (lightweight accounts added later if team features
-  are needed).
-- Enforce basic rate limits and payload validation.
-- Expose simple CRUD endpoints for snapshot upload/download.
-- Support secure deletion of user data for GDPR/CCPA compliance.
+- Serve as an HTTP bridge between the Worktime web frontend and .hday files on a mounted network
+  share (NFS/SMB).
+- Read team configuration and membership from config/people files on the share.
+- Read .hday files from the share, optionally parsing them server-side for structured responses.
+- Write .hday files from either raw text or structured JSON events.
+- Cache all file data in memory for fast responses, with write-through invalidation and TTL-based
+  refresh for external changes.
+- Detect and handle concurrent edits (web app and direct file edits on the share).
+- Provide an append-only audit log for write operations.
+
+No authentication is required — the backend runs on a trusted internal network. The host OS handles
+share access via its logged-in user credentials.
+
+## File share structure
+
+The network share contains team configuration and per-user .hday files:
+
+```text
+<share>/
+├── config              # Team name
+├── people              # Team members: username,Full Name (one per line)
+├── alice.hday          # Alice's time-off events
+├── bob.hday            # Bob's time-off events
+└── charlie.hday        # Charlie's time-off events
+```
+
+### Config file
+
+Contains the team name. Exact format to be confirmed with an actual file copy.
+
+### People file
+
+Lists team members, one per line:
+
+```text
+alice,Alice Johnson
+bob,Bob Smith
+charlie,Charlie Brown
+```
+
+The `username` field maps directly to `{username}.hday` on the same share. The `Full Name` is used
+in the UI for display.
+
+### .hday files
+
+Per-user time-off event files in the .hday format. See the main project's AGENTS.md for format
+documentation. The backend reads and writes these files, optionally parsing them server-side when
+`?format=parsed` is requested (see [Response format](#response-format-formatrawparsed)).
 
 ## API surface
 
-| Endpoint             | Method | Auth         | Purpose                                                                        |
-| -------------------- | ------ | ------------ | ------------------------------------------------------------------------------ |
-| `/v1/sync`           | POST   | Required     | Upload snapshot (see [Sync upload](#sync-upload))                              |
-| `/v1/sync`           | GET    | Required     | Download latest snapshot (supports `If-None-Match`)                            |
-| `/v1/sync`           | DELETE | Required     | Erase all user data (see [Data deletion](#data-deletion-gdprccpa))             |
-| `/v1/health`         | GET    | None         | Uptime checks and monitoring                                                   |
-| `/v1/cal/:token.ics` | GET    | Token in URL | iCal subscription feed (see [iCal subscription feed](#ical-subscription-feed)) |
-| `/v1/auth/link`      | POST   | None         | Exchange link token for access token (see [Authentication](#authentication))   |
+| Endpoint              | Method | Purpose                                        |
+| --------------------- | ------ | ---------------------------------------------- |
+| `/v1/hday/:username`  | GET    | Read a user's .hday file                       |
+| `/v1/hday/:username`  | PUT    | Write a user's .hday file                      |
+| `/v1/team/:id`        | GET    | Read team config (name + member list)          |
+| `/v1/team/:id/hday`   | GET    | Read all team members' .hday files in one call |
+| `/v1/health`          | GET    | Health check and share accessibility status    |
+| `/v1/debug/benchmark` | GET    | Performance comparison of raw vs parsed modes  |
 
-All authenticated endpoints require an `Authorization: Bearer <token>` header. Missing, malformed,
-or expired tokens receive `401 Unauthorized`. Insufficient permissions receive `403 Forbidden`.
+No authentication required on any endpoint (trusted network).
 
-### Sync upload
+### Response format: `?format=raw|parsed`
 
-`POST /v1/sync` uploads a complete user state snapshot. Request body (JSON):
+All `.hday` read endpoints (`GET /v1/hday/:username` and `GET /v1/team/:id/hday`) support a
+`format` query parameter to control whether the server returns raw .hday text or server-parsed
+events:
 
-- `payload` (object): The complete user state snapshot.
-- `version` (integer) **or** `etag` (string): Must match the server's current value for conflict
-  detection.
+- **`?format=raw`** — Returns raw .hday text. The frontend's own parser handles structuring the
+  data. No server-side parser needed.
+- **`?format=parsed`** — Returns server-parsed events as structured JSON. The server needs a .hday
+  parser that matches the frontend's output.
 
-**Responses:**
+The default will be determined by benchmarking (see
+[Performance benchmarking](#performance-benchmarking)). The goal is to measure whether server-side
+parsing or client-side parsing is more performant end-to-end, especially for the bulk team endpoint.
 
-- **200 OK**: Write succeeded. Returns `{"version": 6, "etag": "def456", "updated_at": "..."}`.
-- **409 Conflict**: Version/etag mismatch. Returns the current server snapshot with metadata so the
-  client can merge and retry.
+When `format=parsed` or when both formats are returned, all responses include timing headers:
+
+- `X-File-Read-Ms` — Time spent reading the file(s) from the share.
+- `X-Parse-Time-Ms` — Time spent parsing .hday content (0 for `format=raw`).
+- `X-Total-Ms` — Total server-side processing time.
+
+### `GET /v1/hday/:username`
+
+Reads `{username}.hday` from the share. The `etag` is a content hash used for conflict detection on
+subsequent writes.
+
+**Response with `?format=raw` (200 OK):**
+
+```json
+{
+  "username": "alice",
+  "raw": "2025/01/15 # Vacation day\n2025/12/23-2025/12/27 # Christmas",
+  "etag": "sha256:abc123..."
+}
+```
+
+**Response with `?format=parsed` (200 OK):**
+
+```json
+{
+  "username": "alice",
+  "raw": "2025/01/15 # Vacation day\n2025/12/23-2025/12/27 # Christmas",
+  "events": [
+    {
+      "type": "range",
+      "start": "2025/01/15",
+      "end": "2025/01/15",
+      "flags": ["holiday"],
+      "title": "Vacation day"
+    }
+  ],
+  "etag": "sha256:abc123..."
+}
+```
+
+Both modes always include `raw` so the frontend can edit and PUT back the original text.
+
+**Error responses:**
+
+- **404 Not Found**: No .hday file exists for this username. This is valid — the user may not have
+  any events yet.
+- **503 Service Unavailable**: Share is not accessible.
+
+### `PUT /v1/hday/:username`
+
+Writes the .hday file. The client can send either raw .hday text or structured JSON events — the
+server accepts both formats.
+
+**Request body (raw text):**
+
+```json
+{
+  "raw": "2025/01/15 # Vacation day\n2025/12/23-2025/12/27 # Christmas",
+  "etag": "sha256:abc123..."
+}
+```
+
+When `raw` is provided, the server writes it to the file as-is. Useful for paste/import workflows
+or when the frontend has the .hday text ready.
+
+**Request body (structured events):**
+
+```json
+{
+  "events": [
+    {
+      "type": "range",
+      "start": "2025/01/15",
+      "end": "2025/01/15",
+      "flags": ["holiday"],
+      "title": "Vacation day"
+    },
+    {
+      "type": "range",
+      "start": "2025/12/23",
+      "end": "2025/12/27",
+      "flags": ["holiday"],
+      "title": "Christmas"
+    }
+  ],
+  "etag": "sha256:abc123..."
+}
+```
+
+When `events` is provided, the server serializes them to .hday format (`to_text()`) before writing.
+This is the natural path for UI edits where the frontend works with structured event objects.
+
+If both `raw` and `events` are provided, `events` takes precedence (the structured format is the
+canonical representation from the UI).
+
+**Response (200 OK):**
+
+```json
+{
+  "etag": "sha256:def456..."
+}
+```
+
+**Error responses:**
+
+- **409 Conflict**: File was modified since the client's last read (etag mismatch). Returns the
+  current file content and new etag so the client can merge.
+- **422 Unprocessable Entity**: Neither `raw` nor `events` provided, or `events` contains invalid
+  data.
+- **503 Service Unavailable**: Share is not accessible.
+
+**Creating new files:** When a user has no existing .hday file (previous GET returned 404), the
+client sends a PUT with `"etag": null`. If a file was created between the GET and PUT (by another
+source), the server detects this and returns 409.
+
+### `GET /v1/team/:id`
+
+Reads the `config` and `people` files for the given team identifier from the share. The `:id`
+corresponds to the team's directory or identifier on the share.
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "alpha",
+  "name": "Team Alpha",
+  "members": [
+    { "username": "alice", "displayName": "Alice Johnson" },
+    { "username": "bob", "displayName": "Bob Smith" }
+  ]
+}
+```
+
+**Error responses:**
+
+- **404 Not Found**: No team with this identifier exists on the share.
+- **503 Service Unavailable**: Share is not mounted or config/people files are missing.
+
+### `GET /v1/team/:id/hday`
+
+Returns all team members' .hday data in a single response. This avoids N+1 requests when the
+frontend needs to display the full team's time-off overview. Supports the same `?format=raw|parsed`
+parameter.
+
+**Response with `?format=raw` (200 OK):**
+
+```json
+{
+  "id": "alpha",
+  "name": "Team Alpha",
+  "members": [
+    {
+      "username": "alice",
+      "displayName": "Alice Johnson",
+      "raw": "2025/01/15 # Vacation day\n2025/12/23-2025/12/27 # Christmas",
+      "etag": "sha256:abc123..."
+    },
+    {
+      "username": "bob",
+      "displayName": "Bob Smith",
+      "raw": "",
+      "etag": null
+    }
+  ]
+}
+```
+
+**Response with `?format=parsed` (200 OK):**
+
+```json
+{
+  "id": "alpha",
+  "name": "Team Alpha",
+  "members": [
+    {
+      "username": "alice",
+      "displayName": "Alice Johnson",
+      "raw": "2025/01/15 # Vacation day\n2025/12/23-2025/12/27 # Christmas",
+      "events": [
+        {
+          "type": "range",
+          "start": "2025/01/15",
+          "end": "2025/01/15",
+          "flags": ["holiday"],
+          "title": "Vacation day"
+        }
+      ],
+      "etag": "sha256:abc123..."
+    },
+    {
+      "username": "bob",
+      "displayName": "Bob Smith",
+      "raw": "",
+      "events": [],
+      "etag": null
+    }
+  ]
+}
+```
+
+Members without a .hday file get empty `raw`/`events` and `"etag": null` — they are valid team
+members who simply have no time-off events yet.
+
+**Error responses:**
+
+- **404 Not Found**: No team with this identifier exists on the share.
+- **503 Service Unavailable**: Share is not accessible.
+
+### `GET /v1/health`
+
+Returns basic health status including share accessibility.
+
+**Response (200 OK):**
+
+```json
+{
+  "status": "ok",
+  "share": "accessible"
+}
+```
+
+Alias: `/healthz` for container orchestration compatibility.
+
+### Performance benchmarking
+
+`GET /v1/debug/benchmark` runs both raw and parsed modes against the same data and reports timing
+comparisons. This helps decide whether server-side parsing is worth the cost or whether the frontend
+should always parse client-side.
+
+**Response (200 OK):**
+
+```json
+{
+  "file": "testuser.hday",
+  "fileSize": 4200,
+  "eventCount": 87,
+  "iterations": 100,
+  "raw": {
+    "avgMs": 0.8,
+    "p95Ms": 1.2,
+    "responseSizeBytes": 4350
+  },
+  "parsed": {
+    "avgMs": 3.1,
+    "p95Ms": 4.8,
+    "responseSizeBytes": 12400
+  },
+  "teamBulk": {
+    "memberCount": 15,
+    "raw": { "avgMs": 12.0, "p95Ms": 18.5 },
+    "parsed": { "avgMs": 45.2, "p95Ms": 62.1 }
+  }
+}
+```
+
+This endpoint is for development and evaluation only. It should be disabled or removed in
+production.
+
+**What to measure end-to-end:** The benchmark above only covers server time. A complete comparison
+should also measure client-side parse time in the browser (frontend can log
+`performance.now()` around the parser call) to determine total time for each approach:
+
+- **Raw mode**: server file I/O time + network transfer + client parse time.
+- **Parsed mode**: server file I/O time + server parse time + network transfer (larger payload).
 
 ## iCal subscription feed
 
-`GET /v1/cal/:token.ics` serves a personalized iCalendar (RFC 5545) feed that calendar apps can
+`GET /v1/cal/:token.ics` would serve a personalized iCalendar (RFC 5545) feed that calendar apps can
 subscribe to. Users add a `webcal://` URL to Google Calendar, Outlook, Apple Calendar, etc. and the
 app periodically polls for updates — no manual re-export needed.
+
+This endpoint is a **future enhancement**, not part of the initial implementation. It is documented
+here because the design was explored in the original backend plan and remains relevant.
 
 ### Why a subscription link instead of file export
 
@@ -70,22 +382,22 @@ without user intervention.
 
 ### URL format
 
-```
-webcal://api.worktime.example.com/v1/cal/<feed-token>.ics
+```text
+webcal://worktime.internal:8000/v1/cal/<feed-token>.ics
 ```
 
 The `feed-token` is a long-lived, per-user opaque token generated when the user requests a
-subscription link. It is separate from the access token used for sync — feed tokens are embedded in
-URLs that calendar apps store, so they must not expire on the same short schedule.
+subscription link. On a trusted network this is mainly for URL uniqueness and user identification
+rather than strict security.
 
 ### Feed contents
 
-The feed combines data from the user's synced snapshot:
+The feed combines data from the user's .hday file and roster configuration:
 
 | Source              | VEVENT fields                                                                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Shifts**          | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type.         |
-| **Time-off events** | From .hday data. `SUMMARY`: event comment or type name. `DTSTART`/`DTEND`: event date(s). `CATEGORIES`: event type flag (holiday, business, sick, etc.). |
+| **Time-off events** | From .hday data on the share. `SUMMARY`: event comment or type name. `DTSTART`/`DTEND`: event date(s). `CATEGORIES`: event type flag (holiday, business, sick, etc.). |
 | **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT.                                                                                                |
 
 ### Response headers
@@ -96,7 +408,7 @@ Cache-Control: no-cache, no-store, must-revalidate
 ```
 
 No caching headers — calendar apps manage their own poll interval. The server always returns the
-current state.
+current state by reading the .hday file from the share on each request.
 
 ### Security considerations
 
@@ -105,202 +417,345 @@ current state.
 - **Feed token properties**: 256-bit random, URL-safe (base64url). Revocable per user. One active
   feed token per user (generating a new one invalidates the previous).
 - **Rate limiting**: 60 requests per token per hour. Returns `429` with `Retry-After` if exceeded.
-- **Privacy**: Feed URLs are secret — treat them like API keys. The settings UI should warn users
-  not to share their subscription link publicly.
+- **Privacy**: Feed URLs should be treated as personal — the settings UI should warn users not to
+  share their subscription link publicly.
 - **Revocation**: User can regenerate their feed token from settings, which immediately invalidates
   the old URL.
 
 ### Frontend integration
 
-The settings panel shows a "Subscribe to calendar" section with:
+The settings panel would show a "Subscribe to calendar" section with:
 
 1. A generated `webcal://` link the user can copy or click to open in their default calendar app.
 2. A "Regenerate link" button that revokes the old token and creates a new one.
 3. A brief explanation that the link is personal and should not be shared.
 
-### Phase
+### Calendar import (reverse direction)
 
-This endpoint is part of **Phase 2** (after basic sync is operational), since it requires server
-access to the user's snapshot to generate the feed.
+The hdayplanner prototype included a Microsoft Graph sync stub (`backend/hdayplanner/app/graph/sync.py`)
+that demonstrated importing time-off events from Outlook calendars into .hday format:
 
-## Authentication
+- Query out-of-office events for the signed-in user via Microsoft Graph API.
+- Map event subjects to .hday flags: "vakantie"/"vacation"/"holiday" → default, "cursus"/"training"
+  → course, else → business.
+- Respect event privacy: mask titles for events marked as private.
+- Return proposed events for user review before merging — never write directly.
 
-**Decision: Device-link tokens at launch.** No passwords, no email verification. If team features
-are added later, introduce a minimal account model (email grouping device tokens) without requiring
-a password.
+This could also apply to Google Calendar API. Both are future enhancements, not currently planned.
 
-### Device-link exchange
+## Server-side .hday parser
 
-`POST /v1/auth/link` exchanges a short-lived link token for a long-lived access token.
+The server needs .hday processing in two directions:
 
-**Request:**
+- **Parser** (`parse_text`): Only needed when `?format=parsed` is requested on GET endpoints. In
+  `?format=raw` mode, the server is a pure file I/O bridge and does not parse.
+- **Serializer** (`to_text`): Needed when the client PUTs structured `events` JSON. Converts event
+  objects to .hday text format for writing to the share.
 
-```json
-{
-  "link_token": "LT-abc123",
-  "device_id": "dev-5f7d2b0c"
-}
+Whether to use the server-side parser by default on reads is an open question — the
+[performance benchmarking](#performance-benchmarking) endpoint exists to help answer it.
+
+The hdayplanner prototype (`backend/hdayplanner/app/hday/parser.py`) provides a working starting
+point for both parser and serializer in Python.
+
+### Responsibilities
+
+- **Structured reads** (parsed mode only): Return parsed events alongside raw text so the frontend
+  can skip parsing on initial load from the backend.
+- **Structured writes**: Serialize JSON events to .hday format when the client sends `events`
+  instead of `raw`.
+- **Round-trip fidelity**: The `raw` field is always included in GET responses regardless of mode.
+  When the client sends `raw` on PUT, the server writes it as-is without reformatting.
+
+### Parser parity
+
+If the server-side parser is used, it must stay in sync with the frontend parser
+(`src/lib/hday/parser.ts`, 139 test cases). Share test vectors between the two implementations to
+catch divergence. The frontend parser is the reference implementation.
+
+If the backend is implemented in Node.js/TypeScript, the frontend parser can be shared directly,
+eliminating this concern entirely.
+
+### Flag handling
+
+Use a loose allowlist for event flags rather than a strict enum. The hdayplanner prototype's
+`models.py` defined `Flag` with only 6 values while its `parser.py` handled 12+ flags — this
+mismatch caused silent validation errors. Accept all flags defined in the frontend's type system and
+pass through unknown flags without error.
+
+### What the prototype got right
+
+- Regex-based parsing with separate patterns for range and weekly events.
+- Flag normalization (mutual exclusivity of type and time/location flags).
+- `to_text()` round-trip serialization preserving original flag order.
+- Defaulting to `holiday` type when no explicit type flag is present.
+- Marking unparseable lines as `unknown` type rather than discarding them.
+
+### What to change from the prototype
+
+- Fix the `Flag` type to include all flags the parser actually handles.
+- The server should write raw client text, not `to_text(events)` — avoids reformatting.
+- Add test vectors shared with the frontend's 139-case test suite.
+
+## In-memory cache
+
+The backend can cache all file data in RAM for a significant speed boost. The files are small (a few
+KB each), the team is small, and NFS/SMB network latency is the main bottleneck. Serving from memory
+eliminates file I/O on the hot path entirely.
+
+### What to cache
+
+| Data                | Source                          | Memory cost             |
+| ------------------- | ------------------------------- | ----------------------- |
+| Raw .hday text      | Per-user `.hday` files          | ~2-5 KB per user        |
+| Parsed events       | Result of `parse_text()`        | ~5-15 KB per user       |
+| Precomputed etags   | SHA-256 of raw file bytes       | 64 bytes per user       |
+| Team config         | `config` + `people` files       | < 1 KB                  |
+
+For a 20-person team, total memory footprint is well under 1 MB.
+
+### Cache invalidation strategy
+
+The challenge is that files can change outside the backend (direct edits on the share). Four
+strategies were considered:
+
+| Strategy              | How it works                                                      | Trade-off                                           |
+| --------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
+| **Polling with mtime** | Periodically check file modification times, reload on change     | Simple, small staleness window (e.g., 5-10s)        |
+| **File watcher**       | OS-level notifications (inotify/fsnotify)                        | Instant, but unreliable on NFS/SMB                  |
+| **TTL + write-through** | Cache expires after N seconds; API writes invalidate immediately | Simple, predictable, good fit for this use case     |
+| **Etag on read**       | Check file hash on each request, serve cached if unchanged       | Always fresh, but still hits the share for stat/hash |
+
+**Recommendation: TTL + write-through.** Most writes go through the API, which invalidates the
+cache instantly. A short TTL (5-30 seconds, configurable) catches the rare direct file edit on the
+share. This provides near-instant responses for the common case while keeping staleness bounded.
+
+### Cache lifecycle
+
+```text
+Startup:
+  1. Read all files from share (config, people, *.hday)
+  2. Parse all .hday files
+  3. Compute etags
+  4. Store everything in memory
+
+On GET request:
+  1. Check if cache entry has expired (TTL)
+  2. If fresh → serve from memory (no file I/O)
+  3. If stale → check file mtime on share
+     a. If unchanged → refresh TTL, serve from memory
+     b. If changed → re-read file, re-parse, update cache, serve
+
+On PUT request (write-through):
+  1. Write file to share
+  2. Immediately update cache entry (raw text, parsed events, new etag)
+  3. Reset TTL
+
+On external file change (detected by TTL expiry):
+  1. Next GET triggers re-read from share
+  2. Cache entry updated transparently
 ```
 
-- Both fields are required opaque strings (trim whitespace, reject empty).
-- On success: server returns an access token associated with the `device_id`, then invalidates the
-  `link_token`.
-- Link tokens live 1-5 minutes. Once exchanged, they cannot be reused.
+### Impact on `?format=raw` vs `?format=parsed`
 
-**Example flow:** User scans QR code on new device -> QR contains link token -> device calls
-`POST /v1/auth/link` -> server returns access token -> device stores token locally for sync.
+With caching, the performance comparison changes significantly:
 
-### Token lifecycle
+- **Without cache**: `?format=parsed` adds server parse time on every request.
+- **With cache**: Parsed events are computed once and served from memory. Both `?format=raw` and
+  `?format=parsed` are essentially the same speed — just serializing from memory to JSON.
 
-- **Type**: Device-specific opaque tokens stored server-side. Enables per-device revocation.
-- **Lifetime**: 24 hours to 7 days. Short lives reduce compromise window; long lives reduce refresh
-  burden.
-- **Expiry**: Server rejects expired tokens with `401 Unauthorized`.
-- **Refresh (optional)**: Separate long-lived refresh token (30-90 days) to obtain new access tokens
-  without re-linking.
+This means `?format=parsed` becomes effectively free after the first request (or after cache
+refresh). The [performance benchmarking](#performance-benchmarking) endpoint should measure both
+cold-cache and warm-cache scenarios to capture this.
 
-### Rate limiting and brute-force protection
+### Configuration
 
-Applies to `POST /v1/auth/link` as middleware before handler logic.
+| Variable          | Description                                   | Default |
+| ----------------- | --------------------------------------------- | ------- |
+| `CACHE_TTL`       | Seconds before a cache entry is considered stale | `10`  |
+| `CACHE_ENABLED`   | Enable/disable in-memory caching              | `true`  |
 
-**Limits:**
+Disabling the cache (`CACHE_ENABLED=false`) makes every request read from the share directly. Useful
+for debugging or when the share is local and fast.
 
-- 5 attempts per IP per minute; 10 attempts per `device_id` per hour.
-- Exponential backoff on failures: 0ms -> 100ms -> 500ms -> 1s -> 2s + lockout.
-- After 5 failures: IP locked for 5 minutes, `device_id` locked for 15 minutes.
-- Locked requests receive `429 Too Many Requests` with `Retry-After` header.
+## Concurrency and conflict handling
 
-**Security principles:**
+Since .hday files live on a shared network drive, they can be edited both through the web app and
+directly on the file system (e.g., with a text editor). The backend must handle this gracefully.
 
-- Generic error responses only — never reveal whether a link token exists, is expired, or was used.
-- Log all attempts with IP, `device_id`, timestamp, and result. Never log raw tokens; use an opaque
-  `token_id` (keyed HMAC-SHA-256 digest generated at creation time) in all logs and audit trails.
-- On successful exchange, immediately invalidate the link token in the database. On lockout,
-  optionally invalidate it as a security measure (configurable per deployment).
+### Conflict detection via content hashing
 
-## Storage model
+- On `GET`, the server returns the etag (from cache or computed from the raw file bytes).
+- On `PUT`, the client sends the `etag` it received on its last read.
+- The server checks the current etag (from cache if fresh, otherwise re-read from share) and
+  compares:
+  - **Match**: Write proceeds. Cache entry and etag updated.
+  - **Mismatch**: `409 Conflict`. Current file content + new etag returned for client-side merge.
+- If the file was created between the client's 404 and PUT (client sends `etag: null` but file now
+  exists), the server returns 409.
 
-Single table keyed by `user_id`:
+### Why not file locking
 
-| Column       | Type        | Notes                                                                                                                            |
-| ------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `user_id`    | string (PK) | Unique user identifier                                                                                                           |
-| `payload`    | JSON/blob   | Complete user state snapshot                                                                                                     |
-| `updated_at` | timestamp   | Last write time                                                                                                                  |
-| `version`    | integer     | Monotonically increasing; used for conflict detection                                                                            |
-| `etag`       | string      | `SHA256(json_payload + stored_version.toString()).hex()` — computed immediately before persisting, using the final version value |
+File locking on NFS/SMB is unreliable across platforms and can leave stale locks if a client
+disconnects. Content hashing (optimistic concurrency) is simpler, more portable, and does not block
+direct file edits on the share.
 
-Optional audit table for last N writes if rollback is desired.
+### Write atomicity
 
-### Conflict handling
+Writes use a temporary file + rename pattern to prevent partial writes:
 
-- Last-write-wins for the minimal version.
-- Client sends `version` or `etag` on write; server rejects on mismatch with `409 Conflict` and
-  returns the current server snapshot for client-side merge.
+1. Write to `{username}.hday.tmp` on the same share.
+2. Rename (`os.replace()`) to overwrite the original. This is atomic on the same filesystem.
+3. If the rename fails, clean up the temp file.
 
-## Data deletion (GDPR/CCPA)
+**Note:** Atomic rename on NFS/SMB is best-effort — some NFS implementations do not guarantee
+atomicity for cross-client renames. For the expected usage pattern (single backend writer + rare
+direct edits), this is acceptable.
 
-`DELETE /v1/sync` enables permanent data erasure.
+## Audit logging
 
-**Response codes:**
+All write operations are logged for accountability.
 
-| Code                    | Meaning                                                                     |
-| ----------------------- | --------------------------------------------------------------------------- |
-| `204 No Content`        | Data erased. Subsequent GET/POST returns `404`.                             |
-| `404 Not Found`         | No data exists (already deleted or never created). Success for idempotency. |
-| `401 Unauthorized`      | Missing or invalid token.                                                   |
-| `403 Forbidden`         | Insufficient scope for deletion.                                            |
-| `429 Too Many Requests` | Rate limited.                                                               |
+### Format
 
-**Idempotency:** Calling DELETE multiple times with the same valid token always succeeds (204 or
-404). Safe to retry during network failures.
+JSON Lines (one JSON object per line), appended to an audit log file:
 
-**What gets deleted:**
+```json
+{"ts": "2025-07-16T10:30:00Z", "target": "alice", "action": "write_hday", "details": "24 events"}
+```
 
-- User snapshot and all version/etag history (no rollback after deletion).
-- All device-link and access tokens for the user (immediate invalidation).
-- Associated metadata (created_at, updated_at) and dependent records (rate-limit counters,
-  sessions).
-- Operational logs (debug, soft-delete markers, backups): purged within 30 days.
+### Fields
 
-**What gets kept:**
+| Field     | Description                                                       |
+| --------- | ----------------------------------------------------------------- |
+| `ts`      | UTC ISO 8601 timestamp                                            |
+| `target`  | Which user's .hday file was affected                              |
+| `action`  | Operation type: `write_hday`, `create_hday`                      |
+| `details` | Human-readable context (event count, conflict detected, etc.)     |
 
-- Compliance audit logs (deletion events, auth events, security incidents): retained for 7+ years
-  per GDPR Article 30 / SOC 2. These logs record _that_ deletion occurred, never the deleted
-  payload.
-- Legal hold exception: all logs preserved until hold is lifted, regardless of retention policy.
+### Storage
 
-**Interaction with sync:** After deletion, `GET /v1/sync` returns `404`. A subsequent
-`POST /v1/sync` creates a new snapshot (version resets to 1).
+File-based (JSON Lines) is sufficient for the trusted-network deployment. The log file lives on the
+backend host, not on the shared drive, to avoid permission issues and keep audit data separate from
+user data.
+
+The hdayplanner prototype's `audit/log.py` provides a working implementation of this pattern.
 
 ## Security
 
 ### Transport
 
-- **TLS 1.2+ required** (TLS 1.3 recommended). Never serve plaintext API responses.
+The backend runs on a trusted internal network, so TLS is not strictly required. However, if the
+backend is ever exposed beyond the local network (e.g., via VPN or reverse proxy):
+
+- **TLS 1.2+ required** (TLS 1.3 recommended). Never serve plaintext API responses over untrusted
+  networks.
 - **HSTS header** on all HTTPS responses:
   `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
-- Submit to [hstspreload.org](https://hstspreload.org) after infrastructure is stable.
 
-### Database encryption
+### Data at rest
 
-- At-rest encryption required (AES-256 or equivalent: SQLite cipher, cloud-managed keys, or
-  envelope encryption).
-- Encryption keys stored separately from the database (environment variable or secrets manager),
-  never committed to version control.
+The .hday files and team configuration on the network share are protected by the share's own access
+controls (OS-level permissions, SMB/NFS ACLs). The backend does not add an additional encryption
+layer — it relies on the share infrastructure for access control.
+
+If at-rest encryption is needed (e.g., for compliance), it should be configured at the share/volume
+level (e.g., BitLocker, LUKS, or storage-level encryption), not in the application.
 
 ### Client-side encryption (E2EE)
 
-**Decision: No E2EE at launch.** TLS + at-rest encryption is the baseline.
+**Not planned.** E2EE would block the server-side parser, the iCal feed, and team-wide .hday
+reads. The data categories in Worktime (schedule settings, time-off dates) are not high-risk enough
+to justify this trade-off. If a future deployment handles confidential project names in event
+titles, offer optional E2EE as an opt-in setting where users accept that server-side features are
+unavailable for their encrypted data.
 
-E2EE would block server-side reporting, export, and team summaries. The data categories in Worktime
-(schedule settings, time-off dates, time tracking entries) are not high-risk enough to justify this
-trade-off for the current user base.
+### Authentication
 
-If a future user population handles confidential project names, offer optional E2EE as an opt-in
-setting. Users who enable it accept that server-side features are unavailable for their encrypted
-data. Key management: client-generated per-user symmetric key stored locally (IndexedDB or OS
-credential store), never sent to the server.
+**Not required at launch** — the backend is only accessible on the trusted internal network. If the
+backend is later exposed beyond the trusted network, add an auth layer. Two options were explored in
+the original backend plan:
+
+- **Device-link tokens**: No passwords, no email verification. Short-lived link tokens (1-5 min)
+  exchanged for long-lived access tokens (24h-7d) per device. Good for personal use.
+- **Enterprise SSO (OIDC/SAML)**: Azure AD, Google Workspace, or similar. Good for corporate
+  deployments where users are already authenticated on the domain.
+
+If auth is added, all endpoints except `GET /v1/health` would require an `Authorization: Bearer
+<token>` header.
+
+### Rate limiting
+
+Not required on a trusted internal network. If the backend is exposed externally, add rate limiting
+as middleware:
+
+- Auth endpoints (if added): 5 attempts per IP per minute with exponential backoff.
+- iCal feed (if added): 60 requests per token per hour.
+- General API: 100 requests per IP per minute.
 
 ## CORS
 
-Required for the frontend to make authenticated API requests from a different origin.
+Required when the frontend and backend are served from different origins (e.g., frontend on
+`localhost:8000`, backend on `localhost:8001`).
 
 **Requirements:**
 
-- **Allowed origins**: Explicit allowlist only. Never use `*` in production.
-  - Production: `https://worktime.example.com` (and any app subdomains).
+- **Allowed origins**: Explicit allowlist from environment variable. Never use `*` in production.
+  - Production: The origin where Worktime is served (e.g., `http://worktime.internal:8000`).
   - Development: `http://localhost:3000`, `http://localhost:5173`, `http://localhost:8000`.
-- **Credentials**: Set `Access-Control-Allow-Credentials: true` (required for `Authorization`
-  header). When set, `Allow-Origin` must echo the validated request origin, not `*`.
-- **Preflight (OPTIONS)**: Respond with allowed methods (`GET, POST, DELETE, OPTIONS`), allowed
-  headers (`Content-Type, Authorization`), and `Max-Age: 86400` (24h cache). Return `204`.
-- **Production hardening**: Only allow HTTPS origins (except localhost in dev). Do not expose
-  sensitive headers via `Access-Control-Expose-Headers` unless necessary.
+- **Preflight (OPTIONS)**: Respond with allowed methods (`GET, PUT, OPTIONS`), allowed headers
+  (`Content-Type`), and `Max-Age: 86400` (24h cache). Return `204`.
 
-Implementation: use the CORS middleware provided by your framework (e.g., `cors` for Express,
-`@fastify/cors` for Fastify, `CORSMiddleware` for FastAPI) or set headers manually in Workers.
+Implementation: use the CORS middleware provided by the framework (`CORSMiddleware` for FastAPI).
+
+The hdayplanner prototype's `get_cors_origins()` function is a working reference — it blocks
+wildcard in production and falls back to localhost in development.
 
 ## Hosting and deployment
 
-A backend means the app can no longer be purely GitHub Pages.
+### Runtime
 
-**Platform options:**
+The backend runs on a machine (server or Windows laptop) that has the network share mounted as a
+local path. The backend process runs under a user account with read/write access to the share.
 
-- **Cloudflare Workers + D1**: Low-ops, global edge, SQL-based. Good fit for the minimal sync API.
-- **Fly.io / Render**: Lightweight container hosting. Good for FastAPI or Fastify.
-- **Vercel**: Serverless functions + edge. Simple deployment from Git.
+### Configuration
 
-**Database:** SQLite is sufficient for single-instance deployments. Postgres for growth or
-multi-region.
+Environment variables:
 
-**Transport format:** HTTP/JSON with gzip compression. Protobuf and MQTT are unnecessary for
-snapshot sync at this scale.
+| Variable        | Description                                       | Default                 |
+| --------------- | ------------------------------------------------- | ----------------------- |
+| `SHARE_DIR`     | Path to mounted share directory                   | `./data/hday_files`     |
+| `CORS_ORIGINS`  | Comma-separated allowed origins                   | `http://localhost:5173` |
+| `ENVIRONMENT`   | `development` or `production`                     | `development`           |
+| `HOST`          | Bind address                                      | `0.0.0.0`               |
+| `PORT`          | Bind port                                         | `8000`                  |
+| `CACHE_TTL`     | Seconds before a cache entry is considered stale  | `10`                    |
+| `CACHE_ENABLED` | Enable/disable in-memory caching                  | `true`                  |
 
-**Operational basics:**
+### Deployment options
 
-- Daily database backups.
-- Basic monitoring: latency, error rate, sync volume.
+- **Direct**: `uvicorn app.main:app` on the host machine.
+- **Docker**: Mount the network share into the container. The hdayplanner prototype's Dockerfile
+  (python:3.11-slim + uvicorn) is a working starting point.
+- **Windows service**: For long-running deployment on a Windows laptop with share access.
+
+### Technology
+
+Two implementation options are under consideration:
+
+- **Python (FastAPI + Pydantic)**: The `backend/hdayplanner/` folder contains a working prototype
+  that validated the core patterns (CORS, file I/O, .hday parsing, audit logging). Requires
+  maintaining a separate Python .hday parser alongside the frontend's TypeScript parser.
+- **Node.js (TypeScript)**: Would share the .hday parser with the frontend
+  (`src/lib/hday/parser.ts`), eliminating parser duplication. Frameworks like Fastify or Hono
+  provide equivalent capabilities to FastAPI.
+
+Regardless of language choice:
+
+- **No database**: All data lives on the file share. No migration tooling or database management
+  needed.
+- **Transport**: HTTP/JSON. No TLS required on a trusted internal network, though it can be added
+  behind a reverse proxy if needed.
 
 ## WebPlanner feature analysis
 
@@ -313,93 +768,85 @@ removed, but the feature analysis below informed the backend design.
 
 | Feature              | Worktime approach                                                         |
 | -------------------- | ------------------------------------------------------------------------- |
-| **Daily task entry** | localStorage, synced via snapshot. Tasks are small and personal.          |
-| **Task templates**   | Stored in `WorktimeUserState`. User-specific, synced as part of snapshot. |
+| **Daily task entry** | localStorage, no backend needed. Tasks are small and personal.            |
+| **Task templates**   | Stored in `WorktimeUserState`. User-specific, local to the browser.       |
 | **Progress bar**     | Client computation: sum durations, compare to configurable daily target.  |
 | **Date navigation**  | Client filters localStorage by date. No server round-trip needed.         |
 | **Project tags**     | App config or user settings. Revisit if tags become team-shared.          |
 
 ### Features where a backend adds value
 
-| Feature                      | Why                                                                                                                                  | Proposed endpoint                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline. | `GET /v1/reports/weekly`, `GET /v1/reports/monthly` |
-| **Team time summaries**      | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in.                                        | `GET /v1/reports/team` (manager auth)               |
-| **Data export**              | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile.                                                        | `GET /v1/export?format=csv&from=...&to=...`         |
-| **Audit trail**              | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention.                                    | Server-side event log (not a public endpoint)       |
+| Feature                      | Why                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Team time-off overview**   | Requires reading multiple users' .hday files from the share. The `/v1/team/:id/hday` endpoint serves this.                          |
+| **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline.  |
+| **Team time summaries**      | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in.                                        |
+| **Data export**              | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile.                                                        |
+| **Audit trail**              | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention.                                    |
 
 ### Hybrid features
 
-| Feature                  | Client                                   | Backend enhancement                                                                       |
-| ------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Template sharing**     | Local create/apply.                      | `POST /v1/templates/share` and `GET /v1/templates/shared?team=N` for team template pools. |
-| **Configurable targets** | Daily/weekly targets in user settings.   | Optional backend validation against team/org policies.                                    |
-| **Push notifications**   | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority).               |
+| Feature                  | Client                                   | Backend enhancement                                                             |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| **Template sharing**     | Local create/apply.                      | Share templates via config files on the network share for team template pools.   |
+| **Configurable targets** | Daily/weekly targets in user settings.   | Optional backend validation against team/org policies.                          |
+| **Push notifications**   | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority).     |
 
-### What not to port
+### What not to port from WebPlanner
 
-- **File-based storage** — use database, not JSON/list files on disk.
 - **Hardcoded paths** — use environment variables or relative paths.
 - **Server-side rendering** — Worktime is a React SPA; backend is API-only.
 - **Bundled dependencies** — use proper package management.
 - **Shutdown endpoint** — not applicable to a hosted service.
-- **No authentication** — Worktime backend requires token-based auth.
-
-### Impact on sync API
-
-- **Payload growth**: ~2 KB/day for time tracking, ~700 KB/year. Well within single-snapshot size.
-- **Partial sync**: If snapshots grow large, split into sync channels later. Not a launch concern.
-- **Conflict granularity**: Whole-snapshot last-write-wins may lose concurrent edits from two
-  devices on the same day. Per-entry merge logic is a future enhancement.
-
-### Phase 2-3 endpoints
-
-| Endpoint               | Method | Auth               | Purpose                                               |
-| ---------------------- | ------ | ------------------ | ----------------------------------------------------- |
-| `/v1/cal/:token.ics`   | GET    | Token in URL       | iCal subscription feed (shifts + time-off + holidays) |
-| `/v1/reports/weekly`   | GET    | Required           | Weekly hours by project                               |
-| `/v1/reports/monthly`  | GET    | Required           | Monthly hours by project                              |
-| `/v1/reports/team`     | GET    | Required (manager) | Team aggregated hours                                 |
-| `/v1/export`           | GET    | Required           | Export time entries (CSV/JSON)                        |
-| `/v1/templates/share`  | POST   | Required           | Share template with team                              |
-| `/v1/templates/shared` | GET    | Required           | Fetch team-shared templates                           |
-
-These are additive; the core sync/auth/health endpoints remain unchanged.
 
 ## Resolved questions
 
-### Do we need accounts, or will device-link tokens be enough?
+### Why not the cloud sync architecture?
 
-**Device-link tokens at launch.** Worktime is a personal tool, not enterprise SaaS. Device-link
-tokens avoid password management and account recovery complexity. If team reporting is added later,
-introduce a minimal account model (email grouping device tokens) without requiring a password.
+The original backend plan (snapshot sync, device-link tokens, database storage) was designed for a
+different deployment model — personal cloud sync across devices over the internet. The actual
+requirement is a bridge to an existing file share on a corporate network. The file share is the
+source of truth, not a database.
 
-### Is end-to-end encryption required?
+Cloud sync remains a valid future option for users outside the corporate network, but it would be a
+separate deployment mode, not the primary architecture.
 
-**No E2EE at launch.** TLS + at-rest encryption is sufficient. E2EE would block server-side
-reporting and export. Offer optional E2EE later as an opt-in if confidential project names become a
-concern.
+### Does the server need its own .hday parser?
 
-### Should sync be per-feature?
+**Yes.** Unlike the cloud sync model (where the server stores opaque JSON snapshots), the file share
+model requires the server to read .hday files and return structured data. The server also validates
+content on write to prevent malformed files from reaching the share.
 
-**Single snapshot.** All data syncs together. Per-feature channels add complexity for negligible
-benefit at current scale (~700 KB/year). Split into channels later if payload size becomes a
-problem.
+### Should the server reformat .hday content on write?
+
+**No.** The server validates by parsing, but writes the raw client text as-is. This preserves
+formatting, comments, and whitespace. The hdayplanner prototype used `to_text(events)` to serialize
+on write, which risks reformatting — the new design avoids this.
+
+### Is authentication needed?
+
+**Not at launch.** The backend runs on a trusted internal network. The host OS handles share access
+credentials. If the backend is later exposed beyond the trusted network, add an auth layer then
+(token-based or OIDC/SAML for enterprise SSO).
+
+### How should concurrent edits be handled?
+
+**Optimistic concurrency via content hashing.** File locking on NFS/SMB is unreliable. The backend
+computes SHA-256 hashes of file content and uses them as etags. Conflicts surface to the client for
+resolution.
 
 ### How long should inactive data be retained?
 
-**12 months** after last sync, with a reminder at 10 months and a 30-day soft-delete grace period
-before hard deletion at 13 months. Compliance audit logs retained separately (7+ years).
-
-### Same snapshot or separate sync channel for time tracking?
-
-**Same snapshot.** Time tracking entries live in `WorktimeUserState` alongside schedule and time-off
-data. Extract into a separate channel only if splitting becomes necessary.
+**Not applicable for the file share model.** The .hday files live on the network share and are
+managed by whoever administers that share. The backend does not delete user data autonomously. If
+cloud sync is added later, consider 12 months of inactivity before soft-delete with a 30-day grace
+period.
 
 ### Is team-level reporting needed at launch?
 
-**No.** Ship individual sync first. Team reporting (requiring user-to-team mapping, manager roles,
-privacy opt-in) is Phase 3.
+**No.** The initial backend provides read access to team .hday files. Aggregated reporting
+(cross-user summaries, manager dashboards) is a future enhancement that would build on the existing
+`/v1/team/:id/hday` endpoint.
 
 ### Do time entries need immutability after a cutoff?
 
@@ -409,54 +856,74 @@ added later, introduce a configurable `lockBeforeDate` per user or team.
 ### Should shared templates be team-scoped or organization-wide?
 
 **Team-scoped initially.** Different teams have different recurring tasks. Org-wide templates can be
-added later as a separate global pool.
+added later as a separate global pool. Templates could be stored as config files on the network
+share alongside the people and config files.
 
 ## Conclusions
 
 ### Architecture summary
 
 Worktime remains a **local-first application**. The browser is the primary runtime; localStorage is
-the primary data store. The backend is an optional enhancement for multi-device sync, and later,
-team-level features.
+the primary data store. The backend is an optional enhancement that provides access to shared team
+data on a network drive.
 
-The WebPlanner prototype validated that time tracking is a useful companion to shift scheduling. Its
-implementation patterns (server rendering, file storage, no auth) do not carry over, but the feature
-set is directly relevant:
+The hdayplanner prototype validated key patterns that carry forward:
 
-- **Task entry, templates, progress tracking, date navigation** stay client-side.
-- **Reporting, export, audit trails** justify backend involvement.
-- **Template sharing, push notifications** are hybrid — useful but not essential at launch.
+- **FastAPI + Pydantic** as the server framework and validation layer.
+- **Server-side .hday parser** for structured reads and write validation.
+- **File-based storage** via a mounted network share (the prototype's `SHARE_DIR` pattern).
+- **CORS handling** with production safety (wildcard blocking, environment-based config).
+- **Audit logging** as JSON Lines for write accountability.
 
-### Phased rollout
+The prototype's patterns that do not carry forward:
 
-**Phase 1 — Individual sync** (minimum viable backend)
-
-- Core sync API: `POST /v1/sync`, `GET /v1/sync`, `DELETE /v1/sync`, `GET /v1/health`.
-- Device-link authentication: `POST /v1/auth/link`.
-- Single snapshot model: entire `WorktimeUserState` syncs as one JSON payload.
-- Deploy on Cloudflare Workers + D1 or equivalent.
-
-**Phase 2 — Calendar feed, export, and audit**
-
-- `GET /v1/cal/:token.ics` iCal subscription feed for calendar app integration.
-- `GET /v1/export` for CSV/JSON export of time entries.
-- Server-side audit trail (append-only event log for time entry changes).
-- Individual user data only — no cross-user access.
-
-**Phase 3 — Team features**
-
-- Lightweight accounts (email + device tokens) for stable user identity.
-- Server-side team mapping (user -> team number).
-- Reporting endpoints: `/v1/reports/weekly`, `/v1/reports/monthly`, `/v1/reports/team`.
-- Template sharing: `/v1/templates/share`, `/v1/templates/shared`.
-- User opt-in required for team data visibility.
+- **`to_text()` serialization on write** — the server should write raw client text, not reformat.
+- **Incomplete flag types** — use a loose allowlist, not a restrictive enum.
+- **Azure AD auth placeholder** — not needed on a trusted network.
+- **Microsoft Graph sync stub** — interesting concept for calendar import, but not in scope.
 
 ### Design principles
 
-1. **Offline-first**: Every feature works without a backend. The server enhances; it never gates.
-2. **Single snapshot**: One payload, one version counter, one sync operation. No premature channel
-   splitting.
-3. **Privacy by default**: No data shared with teammates or managers unless the user opts in.
-4. **API-only backend**: JSON API. No HTML, no template engines, no UI state management.
-5. **Incremental complexity**: Each phase stands alone. Do not build Phase 3 infrastructure during
-   Phase 1.
+1. **File share is the source of truth**: The in-memory cache is a performance optimization, not a
+   data store. Writes always go to the share first, and the cache refreshes from the share on TTL
+   expiry. If the cache is lost (process restart), it rebuilds from the share on startup.
+2. **Bridge, not gateway**: The backend translates HTTP to file operations. It adds caching,
+   conflict detection, and audit logging — but it does not own the data.
+3. **Offline-resilient frontend**: The Worktime frontend continues to work offline with
+   localStorage. The backend enhances with shared team data; it never gates core functionality.
+4. **Parser parity**: The server-side .hday parser must produce the same results as the frontend
+   parser. Shared test vectors enforce this.
+5. **Graceful concurrency**: Optimistic concurrency via content hashing. No file locking. Conflicts
+   surface to the user for resolution.
+6. **API-only backend**: JSON API. No HTML, no template engines, no UI state management.
+
+### Phased approach
+
+**Phase 1 — File share bridge** (current scope)
+
+- Core .hday API: `GET /v1/hday/:username`, `PUT /v1/hday/:username`.
+- Team endpoints: `GET /v1/team/:id`, `GET /v1/team/:id/hday`.
+- Response format toggle: `?format=raw|parsed` on GET endpoints.
+- Health check: `GET /v1/health`.
+- Performance benchmarking: `GET /v1/debug/benchmark`.
+- In-memory cache with TTL + write-through invalidation.
+- Server-side .hday parser and serializer.
+- Optimistic concurrency via content hashing (etags).
+- Audit logging for write operations.
+- No authentication (trusted network).
+
+**Future enhancements** (not currently planned, but explored in design)
+
+These ideas were brainstormed during backend planning and are documented here for reference. They are
+not prioritized or scheduled.
+
+| Feature                     | Description                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **iCal subscription feed**  | `GET /v1/cal/:token.ics` — personalized calendar feed combining shifts + time-off + holidays. See [iCal subscription feed](#ical-subscription-feed) for full spec. |
+| **Calendar import**         | Pull time-off from Microsoft Graph (Outlook) or Google Calendar into .hday format. Prototype's `graph/sync.py` demonstrated this.           |
+| **Data export**             | `GET /v1/export?format=csv&from=...&to=...` — CSV/JSON export of time-off events for HR or reporting.                                      |
+| **Team reporting**          | `GET /v1/reports/weekly`, `GET /v1/reports/monthly`, `GET /v1/reports/team` — cross-user aggregated time-off summaries for managers.         |
+| **Template sharing**        | Share task/event templates via config files on the network share for team template pools.                                                    |
+| **Authentication**          | If exposed beyond the trusted network: device-link tokens for personal use, or OIDC/SAML for enterprise SSO.                                |
+| **Cloud sync**              | For users outside the corporate network: optional snapshot-based sync to a cloud database as a separate deployment mode.                     |
+| **Push notifications**      | Server-triggered reminders (e.g., "you haven't logged hours today"). Low priority.                                                          |
