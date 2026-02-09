@@ -91,9 +91,7 @@ function NavigationButtonGroup({
   );
 }
 
-export function DayNavigationButtonGroup(
-  props: Omit<NavigationButtonGroupProps, "currentIcon">,
-) {
+export function DayNavigationButtonGroup(props: Omit<NavigationButtonGroupProps, "currentIcon">) {
   return <NavigationButtonGroup currentIcon="bi-calendar-check" {...props} />;
 }
 

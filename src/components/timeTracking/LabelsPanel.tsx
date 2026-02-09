@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import { useToast } from "../../contexts/ToastContext";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -48,7 +49,7 @@ function validateLabelsImportPayload(parsed: unknown): parsed is { labels?: unkn
 
 export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: LabelsPanelProps) {
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
+  const toast = useToast();
   const [labelsJson, setLabelsJson] = useState(JSON.stringify({ labels }, null, 2));
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editLabelId, setEditLabelId] = useState<string | null>(null);
@@ -92,16 +93,14 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     setError("");
     try {
       await navigator.clipboard.writeText(JSON.stringify({ labels }, null, 2));
-      setStatus("Copied labels JSON to clipboard.");
+      toast.showSuccess("Copied labels JSON to clipboard.");
     } catch {
       setError("Copy failed. Please copy the JSON manually from the text area.");
-      setStatus("");
     }
   };
 
   const handleApplyJson = () => {
     setError("");
-    setStatus("");
 
     try {
       const parsed = JSON.parse(labelsJson);
@@ -111,7 +110,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       }
 
       onUpdateLabels(sanitizeLabels(parsed.labels ?? []));
-      setStatus("Labels updated.");
+      toast.showSuccess("Labels updated.");
     } catch {
       setError("Invalid labels JSON. Please check the format and try again.");
     }
@@ -128,7 +127,6 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
 
   const handleSave = () => {
     setError("");
-    setStatus("");
 
     const name = normalizeLabelName(labelForm.name);
     if (!name) {
@@ -158,10 +156,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       const nextLabels = [...labels];
       nextLabels[index] = { id: editLabelId, name, color: labelForm.color };
       onUpdateLabels(nextLabels);
-      setStatus("Label updated.");
+      toast.showSuccess("Label updated.");
     } else {
       onUpdateLabels([...labels, { id: crypto.randomUUID(), name, color: labelForm.color }]);
-      setStatus("Label added.");
+      toast.showSuccess("Label added.");
     }
 
     setEditLabelId(null);
@@ -174,7 +172,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       return;
     }
     onUpdateLabels(labels.filter((item) => item.id !== pendingDeleteLabel.id));
-    setStatus("Label deleted.");
+    toast.showSuccess("Label deleted.");
     if (editLabelId === pendingDeleteLabel.id) {
       setEditLabelId(null);
       resetForm();
@@ -190,14 +188,11 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           {error}
         </Alert>
       )}
-      {status && (
-        <Alert variant="success" aria-live="polite">
-          {status}
-        </Alert>
-      )}
-
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h5 className="mb-0">Labels</h5>
+        <h5 className="mb-0">
+          <i className="bi bi-tags me-2" aria-hidden="true"></i>
+          Labels
+        </h5>
         <Button
           size="sm"
           onClick={() => {

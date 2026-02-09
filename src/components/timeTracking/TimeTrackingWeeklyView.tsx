@@ -203,7 +203,10 @@ export function TimeTrackingWeeklyView({
                   <span className="fw-semibold">Weekly Progress</span>
                   <span className="text-muted">
                     {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
-                    <Badge bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"} className="ms-2">
+                    <Badge
+                      bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
+                      className="ms-2"
+                    >
                       {weekTotal >= weeklyTargetHours
                         ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
                         : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
@@ -249,9 +252,7 @@ export function TimeTrackingWeeklyView({
                 <Card className="text-center h-100">
                   <Card.Body>
                     <div className="text-muted small text-uppercase mb-1">Top Category</div>
-                    <div className="h4 mb-0 text-truncate">
-                      {labelPercentages[0]?.label ?? "-"}
-                    </div>
+                    <div className="h4 mb-0 text-truncate">{labelPercentages[0]?.label ?? "-"}</div>
                   </Card.Body>
                 </Card>
               </div>
@@ -277,7 +278,11 @@ export function TimeTrackingWeeklyView({
                           className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}
                         >
                           {day.label.substring(0, 3)}
-                          {isToday && <Badge bg="primary" className="ms-1">Today</Badge>}
+                          {isToday && (
+                            <Badge bg="primary" className="ms-1">
+                              Today
+                            </Badge>
+                          )}
                         </div>
                         <div className="mb-1">
                           <div

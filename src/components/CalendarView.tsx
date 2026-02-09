@@ -271,10 +271,10 @@ export function CalendarView({
 
     if (modalMode === "edit" && editIndex >= 0) {
       updateEvent(editIndex, newEvent);
-      toast.showSuccess("Event updated successfully", "✏️");
+      toast.showSuccess("Event updated successfully", "bi-pencil-fill");
     } else {
       addEvent(newEvent);
-      toast.showSuccess("Event added successfully", "✅");
+      toast.showSuccess("Event added successfully");
     }
 
     setShowEventModal(false);

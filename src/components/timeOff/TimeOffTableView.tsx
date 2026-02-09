@@ -129,7 +129,9 @@ export function TimeOffTableView({
           <EmptyState
             icon="bi-calendar-x"
             title="No time-off events yet"
-            description={'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'}
+            description={
+              'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
+            }
           />
         ) : (
           <Table responsive hover>

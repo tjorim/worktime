@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
+import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
@@ -62,6 +63,13 @@ describe("TimeTrackingDailyView", () => {
     vi.unstubAllGlobals();
   });
 
+  const renderView = (overrides: Partial<typeof mockProps> = {}) =>
+    render(
+      <ToastProvider>
+        <TimeTrackingDailyView {...mockProps} {...overrides} />
+      </ToastProvider>,
+    );
+
   describe("Quick Timer", () => {
     it("starts a timer when a task name is provided", async () => {
       vi.useFakeTimers();
@@ -69,7 +77,7 @@ describe("TimeTrackingDailyView", () => {
       vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as unknown as Crypto);
       const onAddTask = vi.fn().mockReturnValue(true);
 
-      render(<TimeTrackingDailyView {...mockProps} onAddTask={onAddTask} />);
+      renderView({ onAddTask });
 
       fireEvent.change(screen.getByLabelText(/^Task$/i), { target: { value: "Focus work" } });
       fireEvent.click(screen.getByRole("button", { name: /Start Now/i }));
@@ -85,7 +93,7 @@ describe("TimeTrackingDailyView", () => {
     });
 
     it("disables start-now until task details are entered", async () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       const startNowButton = screen.getByRole("button", { name: /Start Now/i });
       expect(startNowButton).toBeDisabled();
@@ -104,9 +112,7 @@ describe("TimeTrackingDailyView", () => {
         startTime: "2025-01-01T10:00",
       };
 
-      render(
-        <TimeTrackingDailyView {...mockProps} tasks={[runningTask]} selectedDate="2025-01-01" />,
-      );
+      renderView({ tasks: [runningTask], selectedDate: "2025-01-01" });
 
       expect(screen.getByText("Running", { selector: "span" })).toBeInTheDocument();
       // Task title appears in both Quick Timer UI and the daily task list.
@@ -127,13 +133,7 @@ describe("TimeTrackingDailyView", () => {
         startTime: "2025-01-01T10:00",
       };
 
-      render(
-        <TimeTrackingDailyView
-          {...mockProps}
-          tasks={[runningTask]}
-          onUpdateTaskTimes={onUpdateTaskTimes}
-        />,
-      );
+      renderView({ tasks: [runningTask], onUpdateTaskTimes });
 
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
 
@@ -156,13 +156,7 @@ describe("TimeTrackingDailyView", () => {
       };
 
       mockProps.selectedDate = "2025-01-02";
-      render(
-        <TimeTrackingDailyView
-          {...mockProps}
-          tasks={[runningTask]}
-          onUpdateTaskTimes={onUpdateTaskTimes}
-        />,
-      );
+      renderView({ tasks: [runningTask], onUpdateTaskTimes });
 
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
 
@@ -175,7 +169,7 @@ describe("TimeTrackingDailyView", () => {
 
   describe("Task Form Rendering", () => {
     it("should render all form input controls", () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();
@@ -185,7 +179,7 @@ describe("TimeTrackingDailyView", () => {
     });
 
     it("should mark required fields appropriately", () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveAttribute("aria-required", "true");
       expect(screen.getByLabelText(/^Start$/i)).toHaveAttribute("aria-required", "true");
@@ -194,7 +188,7 @@ describe("TimeTrackingDailyView", () => {
 
     it("applies a selected template to the task form", async () => {
       const user = userEvent.setup();
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       await user.selectOptions(screen.getByLabelText(/Template selector/i), "tpl-1");
       await user.click(screen.getByRole("button", { name: /Use Template/i }));
@@ -208,7 +202,7 @@ describe("TimeTrackingDailyView", () => {
 
   describe("Input Validation", () => {
     it("should keep add-task disabled until required fields are completed", async () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       const addTaskButton = screen.getByRole("button", { name: /Add Task/i });
       expect(addTaskButton).toBeDisabled();
@@ -216,7 +210,7 @@ describe("TimeTrackingDailyView", () => {
 
     it("should validate time range order", async () => {
       const user = userEvent.setup();
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       await user.type(screen.getByLabelText(/^Task$/i), "Test");
       await user.type(screen.getByLabelText(/^Start$/i), "08:00");
@@ -237,7 +231,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      render(<TimeTrackingDailyView {...mockProps} tasks={existingTasks} />);
+      renderView({ tasks: existingTasks });
 
       await user.type(screen.getByLabelText(/^Task$/i), "New task");
       await user.type(screen.getByLabelText(/^Start$/i), "09:00");
@@ -252,7 +246,7 @@ describe("TimeTrackingDailyView", () => {
 
   describe("Task Display", () => {
     it("shows empty state message", () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
       expect(screen.getByText(/No time entries yet/i)).toBeInTheDocument();
     });
 
@@ -275,7 +269,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
+      renderView({ tasks });
 
       // Tasks now appear in both timeline and task list
       expect(screen.getAllByText("Task A").length).toBeGreaterThan(0);
@@ -294,7 +288,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      const { container } = render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
+      const { container } = renderView({ tasks });
       // TimelineProgressBar uses React Bootstrap .progress class
       expect(container.querySelector(".progress")).toBeInTheDocument();
     });
@@ -313,7 +307,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
+      renderView({ tasks });
       expect(screen.getAllByRole("button", { name: /Remove/i })).toHaveLength(1);
     });
 
@@ -330,7 +324,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
+      renderView({ tasks });
       await user.click(screen.getByRole("button", { name: /Remove/i }));
 
       expect(mockProps.onRemoveTask).toHaveBeenCalledWith("1");
@@ -350,13 +344,7 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      render(
-        <TimeTrackingDailyView
-          {...mockProps}
-          tasks={tasks}
-          onUpdateTaskTimes={onUpdateTaskTimes}
-        />,
-      );
+      renderView({ tasks, onUpdateTaskTimes });
 
       await user.click(screen.getByRole("button", { name: /Edit/i }));
 
@@ -383,13 +371,13 @@ describe("TimeTrackingDailyView", () => {
 
   describe("Accessibility Compliance", () => {
     it("maintains accessible button labels", () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       expect(screen.getByRole("button", { name: /Add Task/i })).toBeInTheDocument();
     });
 
     it("provides accessible form controls", () => {
-      render(<TimeTrackingDailyView {...mockProps} />);
+      renderView();
 
       expect(screen.getByLabelText(/^Task$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Label$/i)).toBeInTheDocument();

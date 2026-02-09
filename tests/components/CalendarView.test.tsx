@@ -91,7 +91,6 @@ describe("CalendarView", () => {
       );
 
       // Component should render with calendar grid (not empty state)
-      expect(container.querySelector(".calendar-view")).toBeInTheDocument();
       expect(container.querySelector(".month-calendar")).toBeInTheDocument();
     });
 

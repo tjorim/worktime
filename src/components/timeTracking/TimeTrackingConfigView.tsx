@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import { useToast } from "../../contexts/ToastContext";
 import Form from "react-bootstrap/Form";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { TimeTrackingLabel } from "./constants";
@@ -67,7 +68,7 @@ export function TimeTrackingConfigView({
   onImportData,
 }: TimeTrackingConfigViewProps) {
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -80,15 +81,13 @@ export function TimeTrackingConfigView({
       const parsed = JSON.parse(text);
       if (!validateImportPayload(parsed)) {
         setError("Import failed. Please select a valid export file.");
-        setStatus("");
         return;
       }
       onImportData(parsed);
       setError("");
-      setStatus("Imported time tracking data.");
+      toast.showSuccess("Imported time tracking data.");
     } catch {
       setError("Import failed. Please select a valid export file.");
-      setStatus("");
     } finally {
       event.target.value = "";
     }
@@ -101,12 +100,6 @@ export function TimeTrackingConfigView({
           {error}
         </Alert>
       )}
-      {status && (
-        <Alert variant="success" aria-live="polite">
-          {status}
-        </Alert>
-      )}
-
       <LabelsPanel
         labels={labels}
         templates={templates}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import { useToast } from "../../contexts/ToastContext";
 import ListGroup from "react-bootstrap/ListGroup";
 import { EmptyState } from "../shared/EmptyState";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -73,7 +74,7 @@ export function TemplatesPanel({
   onApplyTemplatesJson,
 }: TemplatesPanelProps) {
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
+  const toast = useToast();
   const [templatesJson, setTemplatesJson] = useState(JSON.stringify({ templates }, null, 2));
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editTemplateId, setEditTemplateId] = useState<string | null>(null);
@@ -104,16 +105,14 @@ export function TemplatesPanel({
     setError("");
     try {
       await navigator.clipboard.writeText(JSON.stringify({ templates }, null, 2));
-      setStatus("Copied templates JSON to clipboard.");
+      toast.showSuccess("Copied templates JSON to clipboard.");
     } catch {
       setError("Copy failed. Please copy the JSON manually from the text area.");
-      setStatus("");
     }
   };
 
   const handleApplyJson = () => {
     setError("");
-    setStatus("");
 
     try {
       const parsed = JSON.parse(templatesJson);
@@ -123,7 +122,7 @@ export function TemplatesPanel({
       }
 
       onApplyTemplatesJson(sanitizeTemplates(parsed.templates ?? []));
-      setStatus("Templates updated.");
+      toast.showSuccess("Templates updated.");
     } catch {
       setError("Invalid templates JSON. Please check the format and try again.");
     }
@@ -131,7 +130,6 @@ export function TemplatesPanel({
 
   const handleSave = () => {
     setError("");
-    setStatus("");
     if (!templateForm.text || !templateForm.start || !templateForm.stop) {
       setError("Fill all template fields.");
       return;
@@ -156,10 +154,10 @@ export function TemplatesPanel({
         return;
       }
       onUpdateTemplate({ id: editTemplateId, template: templatePayload });
-      setStatus("Template updated.");
+      toast.showSuccess("Template updated.");
     } else {
       onAddTemplate(templatePayload);
-      setStatus("Template added.");
+      toast.showSuccess("Template added.");
     }
     resetForm();
     setEditTemplateId(null);
@@ -184,14 +182,11 @@ export function TemplatesPanel({
           {error}
         </Alert>
       )}
-      {status && (
-        <Alert variant="success" aria-live="polite">
-          {status}
-        </Alert>
-      )}
-
       <div className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Templates</h5>
+        <h5 className="mb-0">
+          <i className="bi bi-clipboard-check me-2" aria-hidden="true"></i>
+          Templates
+        </h5>
         <Button
           size="sm"
           onClick={() => {
@@ -282,7 +277,7 @@ export function TemplatesPanel({
         onConfirm={() => {
           if (pendingDeleteTemplate) {
             onDeleteTemplate(pendingDeleteTemplate.id);
-            setStatus("Template deleted.");
+            toast.showSuccess("Template deleted.");
           }
           setPendingDeleteTemplate(null);
         }}

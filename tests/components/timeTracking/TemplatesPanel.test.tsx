@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TemplatesPanel } from "../../../src/components/timeTracking/TemplatesPanel";
+import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
 import type { TimeTrackingTemplate } from "../../../src/components/timeTracking/types";
 
@@ -23,15 +24,17 @@ function renderPanel(overrides: Partial<Parameters<typeof TemplatesPanel>[0]> = 
   const onApplyTemplatesJson = vi.fn();
 
   const result = render(
-    <TemplatesPanel
-      labels={TEST_LABELS}
-      templates={TEST_TEMPLATES}
-      onAddTemplate={onAddTemplate}
-      onUpdateTemplate={onUpdateTemplate}
-      onDeleteTemplate={onDeleteTemplate}
-      onApplyTemplatesJson={onApplyTemplatesJson}
-      {...overrides}
-    />,
+    <ToastProvider>
+      <TemplatesPanel
+        labels={TEST_LABELS}
+        templates={TEST_TEMPLATES}
+        onAddTemplate={onAddTemplate}
+        onUpdateTemplate={onUpdateTemplate}
+        onDeleteTemplate={onDeleteTemplate}
+        onApplyTemplatesJson={onApplyTemplatesJson}
+        {...overrides}
+      />
+    </ToastProvider>,
   );
 
   return { onAddTemplate, onUpdateTemplate, onDeleteTemplate, onApplyTemplatesJson, ...result };

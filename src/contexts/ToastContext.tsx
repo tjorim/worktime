@@ -123,9 +123,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             bg={toast.variant}
           >
             <Toast.Body className="d-flex align-items-center">
-              {toast.icon && (
-                <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>
-              )}
+              {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
               <span className={toast.variant === "warning" ? "text-dark" : "text-white"}>
                 {toast.message}
               </span>

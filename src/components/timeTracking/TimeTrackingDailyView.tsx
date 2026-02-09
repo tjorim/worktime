@@ -5,6 +5,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
+import { useToast } from "../../contexts/ToastContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
@@ -69,7 +70,7 @@ export function TimeTrackingDailyView({
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
+  const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
   const dailyDate = dayjs(date);
@@ -143,7 +144,6 @@ export function TimeTrackingDailyView({
 
   const handleAddTask = async () => {
     setError("");
-    setStatus("");
     if (!text || !date || !start || !stop) {
       setError("Please fill in all fields.");
       return;
@@ -184,7 +184,6 @@ export function TimeTrackingDailyView({
 
   const handleStartNow = async () => {
     setError("");
-    setStatus("");
     if (runningTask) {
       setError("A task is already running. Stop it before starting another.");
       return;
@@ -219,7 +218,6 @@ export function TimeTrackingDailyView({
       return;
     }
     setError("");
-    setStatus("");
     const startDayjs = dayjs(runningTask.startTime);
     const startDate = startDayjs.format("YYYY-MM-DD");
     const now = dayjs();
@@ -253,7 +251,6 @@ export function TimeTrackingDailyView({
     stop?: string | null;
   }): Promise<boolean> => {
     setError("");
-    setStatus("");
     if (!payload.text.trim() || !payload.label || !payload.start) {
       setError("Please fill in all fields.");
       return false;
@@ -303,13 +300,12 @@ export function TimeTrackingDailyView({
       newStartTime,
       newStopTime,
     });
-    setStatus("Task updated successfully.");
+    toast.showSuccess("Task updated successfully.");
     return true;
   };
 
   const handleApplyTemplate = () => {
     setError("");
-    setStatus("");
     if (!selectedTemplateId) {
       setError("Please select a template first.");
       return;
@@ -331,7 +327,7 @@ export function TimeTrackingDailyView({
     setSelectedLabel(template.label);
     setStart(template.start);
     setStop(template.stop);
-    setStatus(`Template "${template.text}" applied.`);
+    toast.showSuccess(`Template "${template.text}" applied.`);
   };
 
   return (
@@ -371,12 +367,6 @@ export function TimeTrackingDailyView({
             {error}
           </Alert>
         )}
-        {status && (
-          <Alert variant="success" aria-live="polite">
-            {status}
-          </Alert>
-        )}
-
         {templates.length > 0 && (
           <Form.Group className="mb-2" controlId="timeTrackerTemplate">
             <Form.Label className="visually-hidden">Template</Form.Label>
@@ -490,7 +480,7 @@ export function TimeTrackingDailyView({
         onConfirm={() => {
           if (runningTask) {
             onRemoveTask(runningTask.id);
-            setStatus("Task discarded.");
+            toast.showSuccess("Task discarded.");
           }
           setShowDiscardConfirm(false);
         }}
