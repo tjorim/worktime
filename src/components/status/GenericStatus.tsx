@@ -12,6 +12,7 @@ import { getAllTeamsShifts, getCurrentWorkingTeam } from "../../utils/shiftCalcu
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
+import { EmptyState } from "../shared/EmptyState";
 
 interface GenericStatusContentProps {
   scheduleType: ScheduleOption;
@@ -158,12 +159,11 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   )}
                 </div>
               ) : (
-                <div>
-                  <div className="fw-semibold">No upcoming shifts found</div>
-                  <div className="small text-muted">
-                    View the schedule in other tabs for detailed timing
-                  </div>
-                </div>
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title="No Upcoming Shifts"
+                  description="View the schedule in other tabs for detailed timing"
+                />
               )}
             </div>
           </Card.Body>

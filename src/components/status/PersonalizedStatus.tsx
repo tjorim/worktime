@@ -24,6 +24,7 @@ import {
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
+import { EmptyState } from "../shared/EmptyState";
 
 interface PersonalizedStatusContentProps {
   myTeam: number;
@@ -154,7 +155,11 @@ export function PersonalizedStatusContent({
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
                 </div>
               ) : (
-                <div>Next shift information not available</div>
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title="No Next Shift"
+                  description="Next shift information not available"
+                />
               )}
             </div>
           </Card.Body>
