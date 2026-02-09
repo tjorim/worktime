@@ -1,6 +1,6 @@
 # Worktime Development Roadmap
 
-**Current Version**: 4.5.1
+**Current Version**: 4.6.0
 **Branch**: `main`
 **Status**: Active Development
 
@@ -14,45 +14,7 @@ This document serves as a general to-do list and development roadmap for Worktim
 
 Critical features and improvements that significantly impact user experience.
 
-#### 1. Export Schedule Feature
-
-- **Component**: Calendar export functionality
-- **Use Cases**:
-  - Download shift schedule as .ics calendar file
-  - Integration with external calendar apps
-  - Team schedule sharing
-- **Implementation**: Add calendar generation utility and activate export buttons
-- **Files to Modify**:
-  - `src/components/SettingsPanel.tsx` - Remove "Coming Soon" badge and enable button
-  - `src/components/ScheduleDetailModal.tsx` - Enable export button
-  - `src/utils/exportCalendar.ts` – Add calendar export utility
-- **Estimated Effort**: 3–4 hours
-- **Status**: 🔲 Planned
-
-#### 2. Version Sync Fix
-
-- **Component**: Changelog version alignment
-- **Use Cases**:
-  - Accurate "Coming Soon" version display
-  - Proper future planning version numbers
-- **Implementation**: Update futurePlans in changelog.ts
-- **Files to Modify**:
-  - `src/data/changelog.ts` - Update version numbers in futurePlans
-- **Estimated Effort**: 30 minutes
-- **Status**: 🔲 Planned
-
-#### 4. Missing HdayPlanner Features (v4.0 Integration Gaps) ⚠️
-
-**CRITICAL**: Features from HdayPlanner that were NOT merged into Worktime during the v4.0 rebrand/integration. These features are essential for users migrating from HdayPlanner.
-
-**Integration Status:**
-
-- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all event flags/types (holiday, business, sick, training, etc.), undo/redo (v4.1.0), bulk operations (v4.1.0), event duplication (v4.1.0), raw .hday editor (v4.3.0), vacation statistics dashboard (v4.4.0)
-- 📊 **Total Effort to Achieve Parity**: ~2–3 hours
-
----
-
-**4.2 Missing Utility Functions**
+#### 1. Missing HdayPlanner Utility Functions
 
 - **Component**: Helper functions from HdayPlanner
 - **Source**: `HdayPlanner/frontend/src/lib/hday.ts`
@@ -66,15 +28,6 @@ Critical features and improvements that significantly impact user experience.
   - `src/components/TimeOffView.tsx` - Use sortEvents for table display
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Planned
-
-**Summary of HdayPlanner Integration Gaps:**
-
-- ✅ **Successfully Merged**: .hday parser (139 tests), import/export files, event modal (create/edit/delete), all flags/types
-- ✅ **Restored in Worktime**: Undo/redo with history tracking, bulk operations (multi-select, bulk delete/duplicate, select all)
-- ✅ **Completed in v4.3.0**: Raw .hday content editor/viewer with dedicated tab view
-- ✅ **Completed in v4.4.0**: Vacation statistics dashboard with allowance tracking and analytics
-- ✅ **Completed in v4.5.1**: Calendar view with working day integration, calendar legend
-- 📊 **HdayPlanner Feature Parity**: Achieved
 
 ### 🎯 Medium-Priority Items
 
@@ -147,56 +100,31 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 9. Time-Off Visual Integration
+#### 9. Time-Off TransferView Overlays
 
-- **Component**: Comprehensive time-off event visualization across all views
+- **Component**: Time-off event visualization on TransferView
 - **Use Cases**:
-  - **TimeOffView Enhancements**:
-    - Color-coded calendar events matching .hday flag colors
-    - Auto-load and highlight current month
-    - Visual indicator for today's date
-    - Weekly recurring event indicators (d1-d7) on appropriate weekdays
-    - Auto-sort events by date in event table
-  - **Schedule & Transfer View Overlays**:
-    - Time-off overlay indicators (dots/badges) on ScheduleView grid cells
-    - Time-off overlay indicators on TransferView
-    - At-a-glance visibility of vacation/business trips on schedule grid
-    - Visual hierarchy showing both shifts and time-off events
-    - Define merge/priority rules for overlapping indicators
-- **Implementation**:
-  - Enhance TimeOffView calendar rendering
-  - Add event indicator overlays to ScheduleView grid cells
-  - Add event indicators to TransferView
-  - Define and implement overlay semantics (priority, color, positioning)
-- **Estimated Effort**: 5–6 hours
+  - Time-off overlay indicators on TransferView
+  - At-a-glance visibility of vacation/business trips alongside transfer points
+  - Visual hierarchy showing both transfers and time-off events
+- **Implementation**: Add event indicator overlays to TransferView
+- **Note**: TimeOffView calendar enhancements (color-coded events, today indicator, month navigation, weekly recurring events) and ScheduleView overlay dots are already complete
+- **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 10. Time-Off Bulk Operations
+#### 10. iCal Subscription Link (Backend Required)
 
-- **Component**: Multi-event management
+- **Component**: Server-side iCal feed for calendar app integration
 - **Use Cases**:
-  - Select multiple events for deletion
-  - Copy/duplicate events to different dates
-  - Import and merge events from another .hday file
-- **Implementation**: Add selection state and bulk action toolbar
-- **Estimated Effort**: 3–4 hours
-- **Status**: 🔲 Future
-
-#### 11. Calendar Export Formats
-
-- **Component**: Multi-format export functionality
-- **Use Cases**:
-  - Export shift schedule as .ics calendar file
-  - Export time-off events to iCal/ICS format
-  - Export to CSV for spreadsheet analysis
-  - Integration with external calendar apps (Google Calendar, Outlook)
-- **Implementation**: Create export utilities for multiple formats
-- **Files to Modify**:
-  - `src/utils/exportCalendar.ts` - Add calendar generation utility
-  - `src/components/SettingsPanel.tsx` - Enable export buttons
-  - `src/components/TimeOffView.tsx` - Add export options
-- **Estimated Effort**: 4–5 hours
-- **Status**: 🔲 Future
+  - Subscribe to shift schedule in Google Calendar, Outlook, Apple Calendar, etc.
+  - Auto-refreshing feed — calendar app polls the URL periodically
+  - Combined feed with shifts and time-off events
+  - Per-user personalized feed (user's team, schedule type, time-off)
+- **Implementation**: Backend endpoint serving RFC 5545 iCalendar (.ics) format
+- **Prerequisite**: Backend sync (item 15) must be in place first
+- **Note**: Replaces the previous client-side .ics file export approach — a subscription link is more useful than a one-time download
+- **Status**: 🔲 Future (blocked on backend)
+- **See also**: `backend/README.md` for endpoint specification
 
 ### 🎨 Future Enhancements
 
@@ -245,30 +173,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 16. Multi-Roster Pattern Support
-
-- **Component**: Configurable shift patterns beyond 5-team 2-2-2-4 cycle
-- **Use Cases**:
-  - Support 3-team, 4-team, 6-team rosters
-  - Different shift patterns (3-3-3-3, 4-4-4-4, custom patterns)
-  - Multiple roster types in same organization
-  - Dynamic team count and shift cycle configuration
-- **Implementation**: Extract hardcoded pattern logic into configurable system
-- **Files to Modify**:
-  - `src/utils/shiftCalculations.ts` - Make SHIFTS and cycle logic configurable
-  - `src/utils/config.ts` - Add roster pattern configuration
-  - `src/components/WelcomeWizard.tsx` - Dynamic team count references
-  - `src/components/AboutModal.tsx` - Dynamic roster description
-  - `CLAUDE.md` - Update documentation for multiple patterns
-- **Technical Requirements**:
-  - Roster pattern schema (teams, shifts per team, cycle length)
-  - Migration system for existing localStorage data
-  - UI for roster selection/configuration
-  - Backward compatibility with current 5-team setup
-- **Estimated Effort**: 8–12 hours (Major feature)
-- **Status**: 🔲 Future
-
-#### 17. Floating Action Button
+#### 16. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -280,27 +185,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 18. Roster-Specific Shift Times for Live Features
-
-- **Component**: Support different actual start/end times per roster for live status calculations
-- **Current Limitation**: `displayHours` in `ShiftDisplayOverride` is display-only (string format). Live features (LIVE badge, countdown timers, "currently working" detection) use global SHIFTS constants (MORNING: 7-15, LATE: 15-23, etc.) which causes incorrect live status for rosters with non-standard hours.
-- **Example Issue**: Weekend roster has Early: 06:00-14:30, Late: 13:30-22:00, Day: 08:00-16:30, but live features use the global 07:00-15:00 and 15:00-23:00 times, resulting in wrong LIVE badges and countdowns.
-- **Use Cases**:
-  - Accurate LIVE badge display for rosters with different shift times
-  - Correct countdown timers for next shift
-  - Proper "currently working" detection across all roster types
-  - Support organizations with multiple roster patterns that have different shift hours
-- **Implementation**: Extend `ShiftDisplayOverride` to include numeric start/end time overrides that apply to both display AND live calculations
-- **Files to Modify**:
-  - `src/data/rosters.ts` - Add start/end time overrides to ShiftDisplayOverride type
-  - `src/utils/shiftCalculations.ts` - Update calculateShift to use roster-specific times
-  - `src/utils/dateTimeUtils.ts` - Update time formatting to handle roster-specific times
-  - `src/components/CurrentStatus.tsx` - Use roster-specific times for live status
-  - `src/hooks/useCountdown.ts` - Use roster-specific times for countdown calculations
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future (Low Priority)
-
-#### 19. Backend with Shared .hday Files (Team Collaboration)
+#### 17. Backend with Shared .hday Files (Team Collaboration)
 
 - **Component**: Backend API + shared network storage for multi-user .hday time-off collaboration
 - **Current State**: Offline-first localStorage, single-user only
@@ -408,9 +293,8 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **Export Schedule Feature** - Calendar export functionality (user-facing)
+1. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
 2. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
-3. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
 
 ### 📋 Backlog (Code Quality)
 
@@ -424,22 +308,20 @@ Advanced features for future development phases.
 
 ### 📋 Backlog (Time-Off Management)
 
-8. **Time-Off Visual Integration** - Calendar enhancements, schedule/transfer overlays, event indicators
-9. **Time-Off Bulk Operations** - Multi-select, copy/duplicate, merge imports
-10. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
+8. **Time-Off TransferView Overlays** - Event indicators on transfer view
+9. **iCal Subscription Link** - Server-side calendar feed (blocked on backend)
 
 ### 📋 Backlog (UI/UX)
 
-11. **Mobile Carousel** - Improved mobile navigation
-12. **Transfer History Accordion** - Organized historical data
-13. **Notification System** - Browser notifications for shifts and time-off
-14. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-15. **Multi-Roster Pattern Support** - Support 3/4/6-team rosters and custom patterns
-16. **Floating Action Button** - Quick actions overlay
+10. **Mobile Carousel** - Improved mobile navigation
+11. **Transfer History Accordion** - Organized historical data
+12. **Notification System** - Browser notifications for shifts and time-off
+13. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
+14. **Floating Action Button** - Quick actions overlay
 
 ### 📋 Aspirational (Long-Term Vision)
 
-17. **Backend with Shared Files** - Team collaboration with real-time .hday sync (40-60 hours, major undertaking, includes optional unified store)
+15. **Backend with Shared Files** - Team collaboration with real-time .hday sync (40-60 hours, major undertaking, includes optional unified store)
 
 ## Technical Requirements
 
@@ -518,10 +400,8 @@ Advanced features for future development phases.
 
 ### Potential Extensions
 
-- Customizable themes
 - Advanced notification preferences
 - Export/import settings
-- Integration with calendar apps
 
 ### User Account System (Future Phase)
 
@@ -564,5 +444,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2026-01-27
-**Next Review**: After v4.6.0 (Export Schedule Feature)
+**Last Updated**: 2026-02-09
+**Next Review**: After v4.7.0
