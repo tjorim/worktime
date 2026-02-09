@@ -386,7 +386,7 @@ describe("CurrentStatus Component", () => {
 
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText("Next shift information not available")).toBeInTheDocument();
+      expect(screen.getByText("No upcoming shifts found for your team.")).toBeInTheDocument();
     });
 
     it("should handle undefined shift start time", () => {
