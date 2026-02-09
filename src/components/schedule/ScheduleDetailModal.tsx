@@ -162,7 +162,7 @@ export function ScheduleDetailModal({
           {/* Desktop table view */}
           <div className="d-none d-md-block">
             <div className="table-responsive">
-              <Table hover className="mb-0 schedule-detail-table">
+              <Table className="mb-0 schedule-detail-table">
                 <thead>
                   <tr>
                     <th>Date</th>
