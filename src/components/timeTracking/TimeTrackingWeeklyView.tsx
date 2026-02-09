@@ -420,26 +420,26 @@ export function TimeTrackingWeeklyView({
                   <i className="bi bi-list-check me-2" aria-hidden="true"></i>
                   Weekly Summary
                 </h6>
-              <div className="row">
-                <div className="col-md-6">
-                  <ul className="list-unstyled mb-0">
-                    {Object.entries(summary).map(([label, hours]) => (
-                      <li key={label} className="mb-2">
-                        <span className="text-muted">{label}:</span>{" "}
-                        <span className="fw-semibold">{hours.toFixed(2)} hours</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="col-md-6">
-                  <div className="h5 mb-0">
-                    Total: <span className="text-primary">{weekTotal.toFixed(2)} hours</span>
+                <div className="row">
+                  <div className="col-md-6">
+                    <ul className="list-unstyled mb-0">
+                      {Object.entries(summary).map(([label, hours]) => (
+                        <li key={label} className="mb-2">
+                          <span className="text-muted">{label}:</span>{" "}
+                          <span className="fw-semibold">{hours.toFixed(2)} hours</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  {weeklyTargetHours !== undefined && (
-                    <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} hours</div>
-                  )}
+                  <div className="col-md-6">
+                    <div className="h5 mb-0">
+                      Total: <span className="text-primary">{weekTotal.toFixed(2)} hours</span>
+                    </div>
+                    {weeklyTargetHours !== undefined && (
+                      <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} hours</div>
+                    )}
+                  </div>
                 </div>
-              </div>
               </Card.Body>
             </Card>
           </>
