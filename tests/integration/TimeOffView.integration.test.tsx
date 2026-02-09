@@ -123,12 +123,9 @@ describe("TimeOffView Integration Tests", () => {
       const fileContent = SIMPLE_HDAY;
       const file = new File([fileContent], "test.hday", { type: "text/plain" });
 
-      // Find the hidden file input and upload the file
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toBeTruthy();
-      if (fileInput) {
-        await user.upload(fileInput, file);
-      }
+      // Find the file input by its accessible name and upload the file
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      await user.upload(fileInput, file);
 
       // Wait for import toast
       await screen.findByText(/Imported test.hday/i);
