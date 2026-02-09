@@ -148,68 +148,68 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   <i className="bi bi-sliders me-2" aria-hidden="true"></i>
                   Allowance Settings
                 </h6>
-              <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
-                <Form.Label>Allowance for {selectedYear}</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={amountInput}
-                  onChange={handleAmountChange}
-                  placeholder="e.g., 25"
-                  isInvalid={isAmountInvalid}
-                  required
-                  aria-required="true"
-                  aria-describedby={
-                    isAmountInvalid
-                      ? "vacationAllowanceAmount-feedback vacationAllowanceAmountHelp"
-                      : "vacationAllowanceAmountHelp"
-                  }
-                />
-                <Form.Control.Feedback type="invalid" id="vacationAllowanceAmount-feedback">
-                  Please enter a valid number (0 or greater)
-                </Form.Control.Feedback>
-                <Form.Text className="text-muted" id="vacationAllowanceAmountHelp">
-                  Vacation allowance for {selectedYear} (0 to disable tracking)
-                </Form.Text>
-              </Form.Group>
-              <Row className="g-2">
-                <Col xs={12} md={6}>
-                  <Form.Group controlId="vacationAllowanceUnit">
-                    <Form.Label>Unit</Form.Label>
-                    <Form.Select value={allowance.unit} onChange={handleUnitChange}>
-                      <option value="days">Days</option>
-                      <option value="hours">Hours</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col xs={12} md={6}>
-                  <Form.Group controlId="vacationHoursPerDay">
-                    <Form.Label>Hours per day</Form.Label>
-                    <Form.Control
-                      type="number"
-                      min={1}
-                      step={0.5}
-                      value={hoursPerDayInput}
-                      onChange={handleHoursPerDayChange}
-                      isInvalid={isHoursPerDayInvalid}
-                      required
-                      aria-required="true"
-                      aria-describedby={
-                        isHoursPerDayInvalid
-                          ? "vacationHoursPerDay-feedback vacationHoursPerDayHelp"
-                          : "vacationHoursPerDayHelp"
-                      }
-                    />
-                    <Form.Control.Feedback type="invalid" id="vacationHoursPerDay-feedback">
-                      Please enter a value of at least 1
-                    </Form.Control.Feedback>
-                    <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
-                      Used for converting between days and hours
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              </Row>
+                <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
+                  <Form.Label>Allowance for {selectedYear}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={amountInput}
+                    onChange={handleAmountChange}
+                    placeholder="e.g., 25"
+                    isInvalid={isAmountInvalid}
+                    required
+                    aria-required="true"
+                    aria-describedby={
+                      isAmountInvalid
+                        ? "vacationAllowanceAmount-feedback vacationAllowanceAmountHelp"
+                        : "vacationAllowanceAmountHelp"
+                    }
+                  />
+                  <Form.Control.Feedback type="invalid" id="vacationAllowanceAmount-feedback">
+                    Please enter a valid number (0 or greater)
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted" id="vacationAllowanceAmountHelp">
+                    Vacation allowance for {selectedYear} (0 to disable tracking)
+                  </Form.Text>
+                </Form.Group>
+                <Row className="g-2">
+                  <Col xs={12} md={6}>
+                    <Form.Group controlId="vacationAllowanceUnit">
+                      <Form.Label>Unit</Form.Label>
+                      <Form.Select value={allowance.unit} onChange={handleUnitChange}>
+                        <option value="days">Days</option>
+                        <option value="hours">Hours</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col xs={12} md={6}>
+                    <Form.Group controlId="vacationHoursPerDay">
+                      <Form.Label>Hours per day</Form.Label>
+                      <Form.Control
+                        type="number"
+                        min={1}
+                        step={0.5}
+                        value={hoursPerDayInput}
+                        onChange={handleHoursPerDayChange}
+                        isInvalid={isHoursPerDayInvalid}
+                        required
+                        aria-required="true"
+                        aria-describedby={
+                          isHoursPerDayInvalid
+                            ? "vacationHoursPerDay-feedback vacationHoursPerDayHelp"
+                            : "vacationHoursPerDayHelp"
+                        }
+                      />
+                      <Form.Control.Feedback type="invalid" id="vacationHoursPerDay-feedback">
+                        Please enter a value of at least 1
+                      </Form.Control.Feedback>
+                      <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
+                        Used for converting between days and hours
+                      </Form.Text>
+                    </Form.Group>
+                  </Col>
+                </Row>
               </Card.Body>
             </Card>
           </Col>
