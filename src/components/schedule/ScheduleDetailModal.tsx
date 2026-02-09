@@ -174,8 +174,7 @@ export function ScheduleDetailModal({
                     <tr
                       key={day.date.format("YYYY-MM-DD")}
                       className={clsx(
-                        day.isToday && "today-row",
-                        "schedule-detail-row"
+                        day.isToday && "today-row"
                       )}
                     >
                       <td>
