@@ -166,12 +166,13 @@
   }
 
   tbody tr {
-    transition: background-color 0.2s ease, transform 0.2s ease, border-left-color 0.2s ease;
+    transition: background-color 0.2s ease, border-left-color 0.2s ease;
     border-left: 4px solid transparent;
 
     &:hover {
       background-color: var(--bs-secondary-bg);
       transform: translateX(2px);
+      will-change: transform;
     }
 
     &.today-row {

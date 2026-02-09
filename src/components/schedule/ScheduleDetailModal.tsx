@@ -16,6 +16,9 @@ import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
 import { calculateShift } from "../../utils/shiftCalculations";
 
+// Icon size for small decorative icons (e.g., live indicator dot)
+const SMALL_ICON_SIZE = "0.5rem";
+
 interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
@@ -181,7 +184,7 @@ export function ScheduleDetailModal({
                         <strong>{day.date.format("MMM D")}</strong>
                         {day.isToday && (
                           <Badge bg="primary" className="ms-2">
-                            <i className="bi bi-circle-fill me-1" style={{ fontSize: "0.5rem" }} aria-hidden="true"></i>
+                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
                             Today
                           </Badge>
                         )}
@@ -249,7 +252,7 @@ export function ScheduleDetailModal({
                         {day.date.format("dddd")}
                         {day.isToday && (
                           <Badge bg="primary" className="ms-2">
-                            <i className="bi bi-circle-fill me-1" style={{ fontSize: "0.5rem" }} aria-hidden="true"></i>
+                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
                             Today
                           </Badge>
                         )}
