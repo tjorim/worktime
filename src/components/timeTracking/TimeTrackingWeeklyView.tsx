@@ -6,7 +6,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import { buildLabelColorMap, buildLabelNameMap, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type OverviewRow = {
@@ -62,7 +62,14 @@ export function TimeTrackingWeeklyView({
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
-  const labelColorById = useMemo(() => buildLabelColorMap(labels), [labels]);
+  // Build label name to color map for efficient lookup
+  const labelNameToColor = useMemo(() => {
+    const map: Record<string, string> = {};
+    labels.forEach((label) => {
+      map[label.name] = label.color;
+    });
+    return map;
+  }, [labels]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>
@@ -135,16 +142,19 @@ export function TimeTrackingWeeklyView({
         label,
         hours,
         percentage: (hours / weekTotal) * 100,
-        color: labelColorById[labels.find((l) => l.name === label)?.id ?? ""] ?? "#6c757d",
+        color: labelNameToColor[label] ?? "#6c757d",
       }))
       .sort((a, b) => b.hours - a.hours);
-  }, [summary, weekTotal, labelColorById, labels]);
+  }, [summary, weekTotal, labelNameToColor]);
 
   return (
     <Card className="shadow-sm">
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <h6 className="mb-0">Weekly Overview</h6>
+          <div className="d-flex align-items-center">
+            <i className="bi bi-bar-chart me-2"></i>
+            <h6 className="mb-0">Weekly Overview</h6>
+          </div>
           <WeekNavigationButtonGroup
             isCurrent={isWeeklyCurrent}
             onPrevious={() =>
@@ -259,7 +269,8 @@ export function TimeTrackingWeeklyView({
                 {weekDays.map((day, index) => {
                   const dayTotal = dailyHourTotals[index] ?? 0;
                   const isToday = day.iso === todayIso;
-                  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / 7 : 8;
+                  // Divide by 5 working days instead of 7 to show realistic daily targets
+                  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / 5 : 8;
                   const percentage = Math.min((dayTotal / targetDaily) * 100, 100);
 
                   return (

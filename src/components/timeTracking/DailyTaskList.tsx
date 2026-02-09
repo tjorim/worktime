@@ -5,6 +5,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useMemo, useState } from "react";
+import { EmptyState } from "../shared/EmptyState";
 import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
@@ -97,19 +98,11 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
 
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-4 mt-3">
-        <div className="mb-3">
-          <i
-            className="bi bi-clock-history"
-            style={{ fontSize: "3rem", color: "#6c757d" }}
-            aria-hidden="true"
-          ></i>
-        </div>
-        <h6 className="text-muted mb-2">No Time Entries Yet</h6>
-        <p className="text-muted small mb-0">
-          Use the form above to start tracking time or add a completed task.
-        </p>
-      </div>
+      <EmptyState
+        icon="bi-clock-history"
+        title="No Time Entries Yet"
+        description="Use the form above to start tracking time or add a completed task."
+      />
     );
   }
 
