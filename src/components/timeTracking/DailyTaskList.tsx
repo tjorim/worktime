@@ -97,9 +97,15 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
 
   if (tasks.length === 0) {
     return (
-      <Alert className="mt-3" variant="secondary">
-        No time entries yet for this date.
-      </Alert>
+      <div className="text-center py-4 mt-3">
+        <div className="mb-3">
+          <i className="bi bi-clock-history" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+        </div>
+        <h6 className="text-muted mb-2">No Time Entries Yet</h6>
+        <p className="text-muted small mb-0">
+          Use the form above to start tracking time or add a completed task.
+        </p>
+      </div>
     );
   }
 

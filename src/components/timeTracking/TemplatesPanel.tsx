@@ -203,7 +203,26 @@ export function TemplatesPanel({
         </Button>
       </div>
       {templates.length === 0 ? (
-        <div className="small text-muted mt-2">No templates yet.</div>
+        <div className="text-center py-4 mt-3 border rounded bg-light">
+          <div className="mb-3">
+            <i className="bi bi-file-earmark-text" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+          </div>
+          <h6 className="text-muted mb-2">No Templates Yet</h6>
+          <p className="text-muted small mb-3">
+            Templates let you quickly add recurring tasks. Create a template for tasks you log regularly.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => {
+              resetForm();
+              setEditTemplateId(null);
+              setModalMode("create");
+            }}
+          >
+            <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+            Add Your First Template
+          </Button>
+        </div>
       ) : (
         <ListGroup className="mt-2">
           {templates.map((template) => (
