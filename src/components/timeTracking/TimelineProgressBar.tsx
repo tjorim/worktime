@@ -8,6 +8,8 @@ import {
 } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
+const DEFAULT_TARGET_HOURS = 8.5;
+
 type TimelineProgressBarProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
@@ -27,11 +29,12 @@ type TaskSegment = {
 export function TimelineProgressBar({
   tasks,
   labels,
-  targetHours = 8.5,
+  targetHours = DEFAULT_TARGET_HOURS,
   liveTime,
 }: TimelineProgressBarProps) {
   // Validate and sanitize targetHours: ensure it's finite and > 0
-  const sanitizedTargetHours = Number.isFinite(targetHours) && targetHours > 0 ? targetHours : 8.5;
+  const sanitizedTargetHours =
+    Number.isFinite(targetHours) && targetHours > 0 ? targetHours : DEFAULT_TARGET_HOURS;
 
   // Build color map from labels using shared helper
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
@@ -42,6 +45,7 @@ export function TimelineProgressBar({
       const startDayjs = dayjs(task.startTime);
       const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime ?? dayjs();
       const durationHours = stopDayjs.diff(startDayjs, "hour", true);
+      const nonNegativeDurationHours = Math.max(0, durationHours);
       const color = colorByLabelId[task.label] ?? "#6c757d";
       const textColor = getContrastingTextColor(color);
 
@@ -50,8 +54,8 @@ export function TimelineProgressBar({
         text: task.text,
         color,
         textColor,
-        durationHours: Math.max(0, durationHours),
-        percentage: (Math.max(0, durationHours) / sanitizedTargetHours) * 100,
+        durationHours: nonNegativeDurationHours,
+        percentage: (nonNegativeDurationHours / sanitizedTargetHours) * 100,
       };
     });
   }, [tasks, colorByLabelId, liveTime, sanitizedTargetHours]);
@@ -81,13 +85,12 @@ export function TimelineProgressBar({
                 ? (segment.percentage / totalPercentage) * 100
                 : segment.percentage;
 
-            const displayPercent = Math.min(normalizedPercent, 100);
             const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
 
             return (
               <BootstrapProgressBar
                 key={segment.id}
-                now={displayPercent}
+                now={normalizedPercent}
                 style={{
                   backgroundColor: segment.color,
                   color: segment.textColor,
@@ -121,7 +124,7 @@ export function TimelineProgressBar({
       {/* Summary text */}
       <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
         <span>
-          {totalHours.toFixed(2)}h ({(totalHours / sanitizedTargetHours * 100).toFixed(1)}%)
+          {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
         {isOvertime && (
           <span className="badge bg-warning text-dark">
