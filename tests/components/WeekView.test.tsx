@@ -122,9 +122,7 @@ describe("WeekView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
       renderWithProviders(<WeekView {...defaultProps} />);
-      expect(
-        screen.getByRole("heading", { level: 6, name: /All Teams|Schedule/ }),
-      ).toBeInTheDocument();
+      expect(screen.getByText("All Teams")).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {

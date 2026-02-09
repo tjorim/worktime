@@ -106,7 +106,10 @@ export function TimeTrackingView() {
 
       {viewMode === "config" && (
         <Card className="shadow-sm">
-          <Card.Header className="fw-semibold">Time Tracking Configuration</Card.Header>
+          <Card.Header className="fw-semibold">
+            <i className="bi bi-gear me-2" aria-hidden="true"></i>
+            Time Tracking Configuration
+          </Card.Header>
           <Card.Body>
             <TimeTrackingConfigView
               labels={labels}

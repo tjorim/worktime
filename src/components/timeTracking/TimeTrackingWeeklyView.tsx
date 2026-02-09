@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
@@ -8,6 +7,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
+import { EmptyState } from "../shared/EmptyState";
 
 type OverviewRow = {
   label: string;
@@ -151,10 +151,10 @@ export function TimeTrackingWeeklyView({
     <Card className="shadow-sm">
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <div className="d-flex align-items-center">
-            <i className="bi bi-bar-chart me-2"></i>
-            <h6 className="mb-0">Weekly Overview</h6>
-          </div>
+          <span className="fw-semibold">
+            <i className="bi bi-bar-chart me-2" aria-hidden="true"></i>
+            Weekly Overview
+          </span>
           <WeekNavigationButtonGroup
             isCurrent={isWeeklyCurrent}
             onPrevious={() =>
@@ -179,23 +179,18 @@ export function TimeTrackingWeeklyView({
         </div>
       </Card.Header>
       <Card.Body>
-        {/* Enhanced Empty State */}
+        {/* Empty State */}
         {rows.length === 0 && (
-          <div className="text-center py-5">
-            <div className="mb-4">
-              <i className="bi bi-bar-chart text-muted" style={{ fontSize: "4rem" }} aria-hidden="true"></i>
-            </div>
-            <h5 className="text-muted mb-3">No Time Tracking Data Yet</h5>
-            <p className="text-muted mb-4">
-              Start tracking your time in the Daily Log to see your weekly breakdown here.
-            </p>
-            {onSwitchToDaily && (
-              <Button variant="primary" onClick={onSwitchToDaily}>
-                <i className="bi bi-plus-circle me-2" aria-hidden="true"></i>
-                Go to Daily Log
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            icon="bi-bar-chart"
+            title="No Time Tracking Data Yet"
+            description="Start tracking your time in the Daily Log to see your weekly breakdown here."
+            ctaButton={
+              onSwitchToDaily
+                ? { label: "Go to Daily Log", onClick: onSwitchToDaily, icon: "bi-plus-circle" }
+                : undefined
+            }
+          />
         )}
 
         {/* Enhanced Data View */}
@@ -208,7 +203,10 @@ export function TimeTrackingWeeklyView({
                   <span className="fw-semibold">Weekly Progress</span>
                   <span className="text-muted">
                     {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
-                    <Badge bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"} className="ms-2">
+                    <Badge
+                      bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
+                      className="ms-2"
+                    >
                       {weekTotal >= weeklyTargetHours
                         ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
                         : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
@@ -254,9 +252,7 @@ export function TimeTrackingWeeklyView({
                 <Card className="text-center h-100">
                   <Card.Body>
                     <div className="text-muted small text-uppercase mb-1">Top Category</div>
-                    <div className="h4 mb-0 text-truncate">
-                      {labelPercentages[0]?.label ?? "-"}
-                    </div>
+                    <div className="h4 mb-0 text-truncate">{labelPercentages[0]?.label ?? "-"}</div>
                   </Card.Body>
                 </Card>
               </div>
@@ -282,7 +278,11 @@ export function TimeTrackingWeeklyView({
                           className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}
                         >
                           {day.label.substring(0, 3)}
-                          {isToday && <Badge bg="primary" className="ms-1">Today</Badge>}
+                          {isToday && (
+                            <Badge bg="primary" className="ms-1">
+                              Today
+                            </Badge>
+                          )}
                         </div>
                         <div className="mb-1">
                           <div

@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { LabelsPanel } from "../../../src/components/timeTracking/LabelsPanel";
+import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
 import type {
   StoredTimeTrackingTask,
@@ -20,13 +21,15 @@ const EMPTY_TASKS: StoredTimeTrackingTask[] = [];
 function renderPanel(overrides: Partial<Parameters<typeof LabelsPanel>[0]> = {}) {
   const onUpdateLabels = vi.fn();
   const result = render(
-    <LabelsPanel
-      labels={TEST_LABELS}
-      templates={EMPTY_TEMPLATES}
-      tasks={EMPTY_TASKS}
-      onUpdateLabels={onUpdateLabels}
-      {...overrides}
-    />,
+    <ToastProvider>
+      <LabelsPanel
+        labels={TEST_LABELS}
+        templates={EMPTY_TEMPLATES}
+        tasks={EMPTY_TASKS}
+        onUpdateLabels={onUpdateLabels}
+        {...overrides}
+      />
+    </ToastProvider>,
   );
   return { onUpdateLabels, ...result };
 }
@@ -50,9 +53,7 @@ describe("LabelsPanel", () => {
       renderPanel({ labels: [] });
 
       expect(screen.getByText("No Labels Yet")).toBeInTheDocument();
-      expect(
-        screen.getByText(/Labels help categorize your time entries/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Labels help categorize your time entries/i)).toBeInTheDocument();
     });
 
     it("shows Add Label button", () => {

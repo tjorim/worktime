@@ -99,4 +99,3 @@ export const TIME_TRACKING_STORAGE_KEYS = {
   templates: "worktime_time_tracking_templates",
   labels: "worktime_time_tracking_labels",
 };
-

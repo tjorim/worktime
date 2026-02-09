@@ -87,7 +87,11 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
-              {hasTeams ? "👥 Current Status" : "📅 Current Status"}
+              <i
+                className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-1`}
+                aria-hidden="true"
+              ></i>
+              Current Status
             </Card.Title>
             <div className="flex-grow-1">
               {currentWorkingTeam ? (
@@ -105,7 +109,10 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                     shift={currentWorkingTeam.shift}
                     className="small text-muted mt-1"
                   />
-                  <div className="small text-success mt-2">✅ Currently working</div>
+                  <div className="small text-success mt-2">
+                    <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
+                    Currently working
+                  </div>
                 </div>
               ) : (
                 <div className="text-muted">
@@ -118,7 +125,8 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               <hr className="my-3" />
               {hasTeams && teamCount > 1 && (
                 <div className="small text-muted">
-                  💡 Select your team above for personalized shift tracking and countdown timers
+                  <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
+                  Select your team above for personalized shift tracking and countdown timers
                 </div>
               )}
             </div>
@@ -129,7 +137,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
-              <i className="bi bi-arrow-right-circle me-1"></i>
+              <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
               Next Activity
             </Card.Title>
             <div className="text-muted flex-grow-1">
@@ -144,7 +152,8 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   <hr className="my-3" />
                   {hasTeams && teamCount > 1 && (
                     <div className="small text-muted">
-                      💡 Select your team above for personalized shift tracking
+                      <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
+                      Select your team above for personalized shift tracking
                     </div>
                   )}
                 </div>

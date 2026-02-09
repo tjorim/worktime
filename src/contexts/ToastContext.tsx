@@ -70,29 +70,29 @@ export function ToastProvider({ children }: ToastProviderProps) {
   }, []);
 
   const showSuccess = useCallback(
-    (message: string, icon = "✅") => {
-      addToast({ message, variant: "success", icon });
+    (message: string, icon?: string) => {
+      addToast({ message, variant: "success", icon: icon ?? "bi-check-circle-fill" });
     },
     [addToast],
   );
 
   const showError = useCallback(
-    (message: string, icon = "❌") => {
-      addToast({ message, variant: "danger", icon });
+    (message: string, icon?: string) => {
+      addToast({ message, variant: "danger", icon: icon ?? "bi-x-circle-fill" });
     },
     [addToast],
   );
 
   const showWarning = useCallback(
-    (message: string, icon = "⚠️") => {
-      addToast({ message, variant: "warning", icon });
+    (message: string, icon?: string) => {
+      addToast({ message, variant: "warning", icon: icon ?? "bi-exclamation-triangle-fill" });
     },
     [addToast],
   );
 
   const showInfo = useCallback(
-    (message: string, icon = "ℹ️") => {
-      addToast({ message, variant: "info", icon });
+    (message: string, icon?: string) => {
+      addToast({ message, variant: "info", icon: icon ?? "bi-info-circle-fill" });
     },
     [addToast],
   );
@@ -123,7 +123,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             bg={toast.variant}
           >
             <Toast.Body className="d-flex align-items-center">
-              {toast.icon && <span className="me-2 toast-icon">{toast.icon}</span>}
+              {toast.icon && <i className={`bi ${toast.icon} me-2`} aria-hidden="true"></i>}
               <span className={toast.variant === "warning" ? "text-dark" : "text-white"}>
                 {toast.message}
               </span>

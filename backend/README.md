@@ -30,14 +30,14 @@ sync state for users who opt in.
 
 ## API surface
 
-| Endpoint | Method | Auth | Purpose |
-|----------|--------|------|---------|
-| `/v1/sync` | POST | Required | Upload snapshot (see [Sync upload](#sync-upload)) |
-| `/v1/sync` | GET | Required | Download latest snapshot (supports `If-None-Match`) |
-| `/v1/sync` | DELETE | Required | Erase all user data (see [Data deletion](#data-deletion-gdprccpa)) |
-| `/v1/health` | GET | None | Uptime checks and monitoring |
-| `/v1/cal/:token.ics` | GET | Token in URL | iCal subscription feed (see [iCal subscription feed](#ical-subscription-feed)) |
-| `/v1/auth/link` | POST | None | Exchange link token for access token (see [Authentication](#authentication)) |
+| Endpoint             | Method | Auth         | Purpose                                                                        |
+| -------------------- | ------ | ------------ | ------------------------------------------------------------------------------ |
+| `/v1/sync`           | POST   | Required     | Upload snapshot (see [Sync upload](#sync-upload))                              |
+| `/v1/sync`           | GET    | Required     | Download latest snapshot (supports `If-None-Match`)                            |
+| `/v1/sync`           | DELETE | Required     | Erase all user data (see [Data deletion](#data-deletion-gdprccpa))             |
+| `/v1/health`         | GET    | None         | Uptime checks and monitoring                                                   |
+| `/v1/cal/:token.ics` | GET    | Token in URL | iCal subscription feed (see [iCal subscription feed](#ical-subscription-feed)) |
+| `/v1/auth/link`      | POST   | None         | Exchange link token for access token (see [Authentication](#authentication))   |
 
 All authenticated endpoints require an `Authorization: Bearer <token>` header. Missing, malformed,
 or expired tokens receive `401 Unauthorized`. Insufficient permissions receive `403 Forbidden`.
@@ -82,11 +82,11 @@ URLs that calendar apps store, so they must not expire on the same short schedul
 
 The feed combines data from the user's synced snapshot:
 
-| Source | VEVENT fields |
-|--------|---------------|
-| **Shifts** | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type. |
+| Source              | VEVENT fields                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shifts**          | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type.         |
 | **Time-off events** | From .hday data. `SUMMARY`: event comment or type name. `DTSTART`/`DTEND`: event date(s). `CATEGORIES`: event type flag (holiday, business, sick, etc.). |
-| **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT. |
+| **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT.                                                                                                |
 
 ### Response headers
 
@@ -182,13 +182,13 @@ Applies to `POST /v1/auth/link` as middleware before handler logic.
 
 Single table keyed by `user_id`:
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `user_id` | string (PK) | Unique user identifier |
-| `payload` | JSON/blob | Complete user state snapshot |
-| `updated_at` | timestamp | Last write time |
-| `version` | integer | Monotonically increasing; used for conflict detection |
-| `etag` | string | `SHA256(json_payload + stored_version.toString()).hex()` — computed immediately before persisting, using the final version value |
+| Column       | Type        | Notes                                                                                                                            |
+| ------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `user_id`    | string (PK) | Unique user identifier                                                                                                           |
+| `payload`    | JSON/blob   | Complete user state snapshot                                                                                                     |
+| `updated_at` | timestamp   | Last write time                                                                                                                  |
+| `version`    | integer     | Monotonically increasing; used for conflict detection                                                                            |
+| `etag`       | string      | `SHA256(json_payload + stored_version.toString()).hex()` — computed immediately before persisting, using the final version value |
 
 Optional audit table for last N writes if rollback is desired.
 
@@ -204,13 +204,13 @@ Optional audit table for last N writes if rollback is desired.
 
 **Response codes:**
 
-| Code | Meaning |
-|------|---------|
-| `204 No Content` | Data erased. Subsequent GET/POST returns `404`. |
-| `404 Not Found` | No data exists (already deleted or never created). Success for idempotency. |
-| `401 Unauthorized` | Missing or invalid token. |
-| `403 Forbidden` | Insufficient scope for deletion. |
-| `429 Too Many Requests` | Rate limited. |
+| Code                    | Meaning                                                                     |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `204 No Content`        | Data erased. Subsequent GET/POST returns `404`.                             |
+| `404 Not Found`         | No data exists (already deleted or never created). Success for idempotency. |
+| `401 Unauthorized`      | Missing or invalid token.                                                   |
+| `403 Forbidden`         | Insufficient scope for deletion.                                            |
+| `429 Too Many Requests` | Rate limited.                                                               |
 
 **Idempotency:** Calling DELETE multiple times with the same valid token always succeeds (204 or
 404). Safe to retry during network failures.
@@ -311,30 +311,30 @@ removed, but the feature analysis below informed the backend design.
 
 ### Features that stay client-side
 
-| Feature | Worktime approach |
-|---------|-------------------|
-| **Daily task entry** | localStorage, synced via snapshot. Tasks are small and personal. |
-| **Task templates** | Stored in `WorktimeUserState`. User-specific, synced as part of snapshot. |
-| **Progress bar** | Client computation: sum durations, compare to configurable daily target. |
-| **Date navigation** | Client filters localStorage by date. No server round-trip needed. |
-| **Project tags** | App config or user settings. Revisit if tags become team-shared. |
+| Feature              | Worktime approach                                                         |
+| -------------------- | ------------------------------------------------------------------------- |
+| **Daily task entry** | localStorage, synced via snapshot. Tasks are small and personal.          |
+| **Task templates**   | Stored in `WorktimeUserState`. User-specific, synced as part of snapshot. |
+| **Progress bar**     | Client computation: sum durations, compare to configurable daily target.  |
+| **Date navigation**  | Client filters localStorage by date. No server round-trip needed.         |
+| **Project tags**     | App config or user settings. Revisit if tags become team-shared.          |
 
 ### Features where a backend adds value
 
-| Feature | Why | Proposed endpoint |
-|---------|-----|-------------------|
+| Feature                      | Why                                                                                                                                  | Proposed endpoint                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
 | **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline. | `GET /v1/reports/weekly`, `GET /v1/reports/monthly` |
-| **Team time summaries** | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in. | `GET /v1/reports/team` (manager auth) |
-| **Data export** | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile. | `GET /v1/export?format=csv&from=...&to=...` |
-| **Audit trail** | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention. | Server-side event log (not a public endpoint) |
+| **Team time summaries**      | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in.                                        | `GET /v1/reports/team` (manager auth)               |
+| **Data export**              | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile.                                                        | `GET /v1/export?format=csv&from=...&to=...`         |
+| **Audit trail**              | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention.                                    | Server-side event log (not a public endpoint)       |
 
 ### Hybrid features
 
-| Feature | Client | Backend enhancement |
-|---------|--------|---------------------|
-| **Template sharing** | Local create/apply. | `POST /v1/templates/share` and `GET /v1/templates/shared?team=N` for team template pools. |
-| **Configurable targets** | Daily/weekly targets in user settings. | Optional backend validation against team/org policies. |
-| **Push notifications** | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority). |
+| Feature                  | Client                                   | Backend enhancement                                                                       |
+| ------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Template sharing**     | Local create/apply.                      | `POST /v1/templates/share` and `GET /v1/templates/shared?team=N` for team template pools. |
+| **Configurable targets** | Daily/weekly targets in user settings.   | Optional backend validation against team/org policies.                                    |
+| **Push notifications**   | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority).               |
 
 ### What not to port
 
@@ -354,15 +354,15 @@ removed, but the feature analysis below informed the backend design.
 
 ### Phase 2-3 endpoints
 
-| Endpoint | Method | Auth | Purpose |
-|----------|--------|------|---------|
-| `/v1/cal/:token.ics` | GET | Token in URL | iCal subscription feed (shifts + time-off + holidays) |
-| `/v1/reports/weekly` | GET | Required | Weekly hours by project |
-| `/v1/reports/monthly` | GET | Required | Monthly hours by project |
-| `/v1/reports/team` | GET | Required (manager) | Team aggregated hours |
-| `/v1/export` | GET | Required | Export time entries (CSV/JSON) |
-| `/v1/templates/share` | POST | Required | Share template with team |
-| `/v1/templates/shared` | GET | Required | Fetch team-shared templates |
+| Endpoint               | Method | Auth               | Purpose                                               |
+| ---------------------- | ------ | ------------------ | ----------------------------------------------------- |
+| `/v1/cal/:token.ics`   | GET    | Token in URL       | iCal subscription feed (shifts + time-off + holidays) |
+| `/v1/reports/weekly`   | GET    | Required           | Weekly hours by project                               |
+| `/v1/reports/monthly`  | GET    | Required           | Monthly hours by project                              |
+| `/v1/reports/team`     | GET    | Required (manager) | Team aggregated hours                                 |
+| `/v1/export`           | GET    | Required           | Export time entries (CSV/JSON)                        |
+| `/v1/templates/share`  | POST   | Required           | Share template with team                              |
+| `/v1/templates/shared` | GET    | Required           | Fetch team-shared templates                           |
 
 These are additive; the core sync/auth/health endpoints remain unchanged.
 

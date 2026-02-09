@@ -106,12 +106,10 @@ function AppContent() {
           if (scheduleChanged) {
             showInfo(
               "Your team selection has been reset because you changed schedules. Please select your team again.",
-              "ℹ️",
             );
           } else {
             showInfo(
               "Your team selection has been reset because the selected schedule does not use team assignments.",
-              "ℹ️",
             );
           }
         }
@@ -119,7 +117,7 @@ function AppContent() {
       setScheduleType(schedule);
     } catch (error) {
       console.error("Failed to change schedule:", error);
-      showError("Failed to change schedule. Please try again.", "❌");
+      showError("Failed to change schedule. Please try again.");
     }
   };
 
@@ -139,7 +137,7 @@ function AppContent() {
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
       // Ensure a schedule has been selected before completing onboarding
       if (!scheduleType) {
-        showError("Please select a schedule before completing setup.", "⚠️");
+        showError("Please select a schedule before completing setup.");
         return;
       }
       const selectedScheduleConfig = SCHEDULE_OPTIONS.find(
@@ -152,7 +150,6 @@ function AppContent() {
         // onboarding with inconsistent schedule data.
         showError(
           "An internal configuration error occurred: the selected schedule could not be found. Please try again or contact support.",
-          "⚠️",
         );
         return;
       }
@@ -160,7 +157,10 @@ function AppContent() {
       const teamForCompletion = requiresTeam ? myTeam : null;
       completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
-        showSuccess(`Team ${teamForCompletion} selected! Your shifts are now personalized.`, "🎯");
+        showSuccess(
+          `Team ${teamForCompletion} selected! Your shifts are now personalized.`,
+          "bi-people-fill",
+        );
       }
     } else if (
       (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
@@ -169,9 +169,9 @@ function AppContent() {
       const result = validateVacationAllowance(payload.vacationAllowance);
       if (result.valid) {
         updateVacationAllowance(payload.vacationAllowance);
-        showSuccess("Vacation allowance updated successfully.", "✅");
+        showSuccess("Vacation allowance updated successfully.");
       } else {
-        showError(`Vacation allowance update failed: ${result.errors.join(", ")}`, "⚠️");
+        showError(`Vacation allowance update failed: ${result.errors.join(", ")}`);
       }
     }
     setShowTeamModal(false);

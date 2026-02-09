@@ -139,19 +139,18 @@ export function SettingsPanel({
       if (settingsCleared) parts.push("Settings");
       if (timeTrackingCleared) parts.push("time tracking data");
       if (timeOffCleared) parts.push("time off data");
-      toast.showSuccess(`${parts.join(" and ")} cleared`, "🗑️");
+      toast.showSuccess(`${parts.join(" and ")} cleared`, "bi-trash");
     } else if (!anythingSucceeded && somethingFailed) {
       // All attempted operations failed
-      toast.showError(`Failed to clear ${errors.join(", ")}. Please try again.`, "⚠️");
+      toast.showWarning(`Failed to clear ${errors.join(", ")}. Please try again.`);
     } else if (anythingSucceeded && somethingFailed) {
       // Mixed results: some succeeded, some failed
       const successParts: string[] = [];
       if (settingsCleared) successParts.push("settings");
       if (timeTrackingCleared) successParts.push("time tracking data");
       if (timeOffCleared) successParts.push("time off data");
-      toast.showError(
+      toast.showWarning(
         `Cleared ${successParts.join(", ")} but failed to clear ${errors.join(", ")}`,
-        "⚠️",
       );
     }
   };

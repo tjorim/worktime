@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Button from "react-bootstrap/Button";
 
 interface EmptyStateProps {
@@ -6,18 +7,20 @@ interface EmptyStateProps {
   /** Main heading text */
   title: string;
   /** Description/help text */
-  description: string;
+  description: ReactNode;
   /** Optional call-to-action button */
   ctaButton?: {
     label: string;
     onClick: () => void;
+    icon?: string;
+    variant?: string;
   };
   /** Optional icon size (default: "3rem") */
   iconSize?: string;
 }
 
 /**
- * Reusable empty state component for Time Tracking views.
+ * Reusable empty state component for views with no data.
  * Provides consistent styling and accessibility across all panels.
  */
 export function EmptyState({
@@ -39,8 +42,8 @@ export function EmptyState({
       <h6 className="text-muted mb-2">{title}</h6>
       <p className="text-muted small mb-3">{description}</p>
       {ctaButton && (
-        <Button size="sm" onClick={ctaButton.onClick}>
-          <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
+        <Button size="sm" variant={ctaButton.variant} onClick={ctaButton.onClick}>
+          <i className={`bi ${ctaButton.icon ?? "bi-plus-circle"} me-1`} aria-hidden="true"></i>
           {ctaButton.label}
         </Button>
       )}

@@ -271,10 +271,10 @@ export function CalendarView({
 
     if (modalMode === "edit" && editIndex >= 0) {
       updateEvent(editIndex, newEvent);
-      toast.showSuccess("Event updated successfully", "✏️");
+      toast.showSuccess("Event updated successfully", "bi-pencil-fill");
     } else {
       addEvent(newEvent);
-      toast.showSuccess("Event added successfully", "✅");
+      toast.showSuccess("Event added successfully");
     }
 
     setShowEventModal(false);
@@ -291,7 +291,7 @@ export function CalendarView({
     if (!timeOffEnabled) return;
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
-      toast.showSuccess("Event deleted successfully", "🗑️");
+      toast.showSuccess("Event deleted successfully", "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
@@ -349,13 +349,13 @@ export function CalendarView({
   });
 
   return (
-    <div className="calendar-view py-3">
+    <div className="py-3">
       <Card>
         <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <Card.Title className="fw-semibold mb-0">
+          <span className="fw-semibold">
             <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
             My Working Calendar
-          </Card.Title>
+          </span>
           {!getShiftForDate ? (
             <small className="text-muted">
               <i className="bi bi-info-circle me-1" aria-hidden="true"></i>

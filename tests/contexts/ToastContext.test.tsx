@@ -8,16 +8,16 @@ function TestComponent() {
 
   return (
     <div>
-      <button type="button" onClick={() => showSuccess("Success message", "✅")}>
+      <button type="button" onClick={() => showSuccess("Success message")}>
         Show Success
       </button>
-      <button type="button" onClick={() => showError("Error message", "❌")}>
+      <button type="button" onClick={() => showError("Error message")}>
         Show Error
       </button>
-      <button type="button" onClick={() => showWarning("Warning message", "⚠️")}>
+      <button type="button" onClick={() => showWarning("Warning message")}>
         Show Warning
       </button>
-      <button type="button" onClick={() => showInfo("Info message", "ℹ️")}>
+      <button type="button" onClick={() => showInfo("Info message")}>
         Show Info
       </button>
       <button
@@ -26,7 +26,7 @@ function TestComponent() {
           addToast({
             message: "Custom toast",
             variant: "success",
-            icon: "🎉",
+            icon: "bi-star-fill",
             autohide: false,
           })
         }
@@ -72,7 +72,9 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Success message")).toBeInTheDocument();
-    expect(screen.getByText("✅")).toBeInTheDocument();
+    // Check for Bootstrap icon class
+    const icon = document.querySelector(".bi-check-circle-fill");
+    expect(icon).toBeInTheDocument();
   });
 
   it("should show error toast when showError is called", async () => {
@@ -89,7 +91,9 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Error message")).toBeInTheDocument();
-    expect(screen.getByText("❌")).toBeInTheDocument();
+    // Check for Bootstrap icon class
+    const icon = document.querySelector(".bi-x-circle-fill");
+    expect(icon).toBeInTheDocument();
   });
 
   it("should show warning toast when showWarning is called", async () => {
@@ -106,7 +110,9 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Warning message")).toBeInTheDocument();
-    expect(screen.getByText("⚠️")).toBeInTheDocument();
+    // Check for Bootstrap icon class
+    const icon = document.querySelector(".bi-exclamation-triangle-fill");
+    expect(icon).toBeInTheDocument();
   });
 
   it("should show info toast when showInfo is called", async () => {
@@ -123,7 +129,9 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Info message")).toBeInTheDocument();
-    expect(screen.getByText("ℹ️")).toBeInTheDocument();
+    // Check for Bootstrap icon class
+    const icon = document.querySelector(".bi-info-circle-fill");
+    expect(icon).toBeInTheDocument();
   });
 
   it("should show custom toast with addToast", async () => {
@@ -140,7 +148,9 @@ describe("ToastContext", () => {
     });
 
     expect(screen.getByText("Custom toast")).toBeInTheDocument();
-    expect(screen.getByText("🎉")).toBeInTheDocument();
+    // Check for Bootstrap icon class
+    const icon = document.querySelector(".bi-star-fill");
+    expect(icon).toBeInTheDocument();
   });
 
   it("should handle multiple toasts", async () => {

@@ -98,8 +98,8 @@ export function ScheduleTabView({
   };
 
   return (
-    <div className="schedule-tab-view py-3">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+    <div className="schedule-tab-view py-3 d-flex flex-column gap-3">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
         <ButtonGroup aria-label="Toggle schedule view">
           <Button
             variant={viewMode === "today" ? "primary" : "outline-primary"}
@@ -129,7 +129,8 @@ export function ScheduleTabView({
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
-            📋 View schedule:
+            <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
+            View schedule:
           </Form.Label>
           <Form.Select
             id={scheduleSelectId}

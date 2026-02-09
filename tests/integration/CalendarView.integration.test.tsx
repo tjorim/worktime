@@ -77,16 +77,14 @@ const createTestFixtures = () => {
 /**
  * Configures localStorage with a valid user state for testing.
  */
-const setupUserState = (overrides: {
-  myTeam?: number | null;
-  scheduleType?: string | null;
-  enableTimeOff?: boolean;
-} = {}) => {
-  const {
-    myTeam = 1,
-    scheduleType = "5-shift",
-    enableTimeOff = true,
-  } = overrides;
+const setupUserState = (
+  overrides: {
+    myTeam?: number | null;
+    scheduleType?: string | null;
+    enableTimeOff?: boolean;
+  } = {},
+) => {
+  const { myTeam = 1, scheduleType = "5-shift", enableTimeOff = true } = overrides;
 
   localStorage.setItem(
     "worktime_user_state",
@@ -547,7 +545,7 @@ describe("CalendarView Integration Tests", () => {
 
       // 9-5 schedule doesn't require team selection - should show calendar
       expect(screen.queryByText(/Welcome to Your Working Calendar/i)).not.toBeInTheDocument();
-      
+
       // Should show calendar with day shifts
       const shiftBadges = screen.getAllByText(/^[DO]$/);
       expect(shiftBadges.length).toBeGreaterThan(0);

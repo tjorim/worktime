@@ -95,7 +95,8 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                   }
                 >
                   <small className="help-underline">
-                    📅 {formatYYWWD(currentShiftDay)} • {liveTime.format("dddd, MMM D")} •{" "}
+                    <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
+                    {formatYYWWD(currentShiftDay)} • {liveTime.format("dddd, MMM D")} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </OverlayTrigger>

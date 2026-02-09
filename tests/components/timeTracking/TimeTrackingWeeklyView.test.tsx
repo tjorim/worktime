@@ -50,9 +50,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       renderPanel([]);
 
       expect(screen.getByText(/No Time Tracking Data Yet/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Start tracking your time in the Daily Log/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Start tracking your time in the Daily Log/i)).toBeInTheDocument();
     });
 
     it("shows call-to-action button in empty state when callback provided", () => {

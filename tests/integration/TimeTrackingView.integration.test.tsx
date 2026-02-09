@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 import { TimeTrackingView } from "../../src/components/timeTracking/TimeTrackingView";
 import type { StoredTimeTrackingTask } from "../../src/components/timeTracking/types";
 
@@ -32,7 +33,9 @@ vi.mock("../../src/hooks/useTimeTrackingStorage", () => ({
 function renderWithSettings() {
   return render(
     <SettingsProvider>
-      <TimeTrackingView />
+      <ToastProvider>
+        <TimeTrackingView />
+      </ToastProvider>
     </SettingsProvider>,
   );
 }

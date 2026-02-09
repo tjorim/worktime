@@ -187,10 +187,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     if (editIndex >= 0) {
       updateEvent(editIndex, newEvent);
-      toast.showSuccess(`Event updated successfully`, "✓");
+      toast.showSuccess(`Event updated successfully`, "bi-pencil-fill");
     } else {
       addEvent(newEvent);
-      toast.showSuccess(`Event added successfully`, "✓");
+      toast.showSuccess(`Event added successfully`);
     }
 
     setShowEventModal(false);
@@ -206,7 +206,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
       setSelectedIndices(new Set());
-      toast.showSuccess("Event deleted successfully", "🗑️");
+      toast.showSuccess("Event deleted successfully", "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
@@ -235,7 +235,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleBulkDeleteConfirm = () => {
     if (selectedIndices.size > 0) {
       deleteEvents(Array.from(selectedIndices));
-      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "🗑️");
+      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "bi-trash");
     }
     setSelectedIndices(new Set());
     setShowBulkDeleteConfirm(false);
@@ -276,7 +276,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       setSelectedIndices(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
       setRawEditorError(""); // Clear any raw editor errors
-      toast.showSuccess(`Imported ${file.name}`, "📥");
+      toast.showSuccess(`Imported ${file.name}`, "bi-download");
     } catch (error) {
       console.error("Failed to import .hday file:", error);
       toast.showError("Failed to import file. Please check the format.");
@@ -307,7 +307,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.showSuccess("Exported timeoff.hday", "📤");
+    toast.showSuccess("Exported timeoff.hday", "bi-upload");
   }, [exportHday, toast]);
 
   const handleRawEditorChange = useCallback((value: string) => {
@@ -322,7 +322,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       setSelectedIndices(new Set());
       setIsRawEditorDirty(false);
       setRawEditorError("");
-      toast.showSuccess("Raw .hday content applied", "✓");
+      toast.showSuccess("Raw .hday content applied");
     } catch (error) {
       console.error("Failed to parse raw .hday content:", error);
       setRawEditorError("Failed to parse raw .hday content. Please check the format.");
@@ -339,13 +339,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
-    toast.showSuccess("Undo successful", "↩️");
+    toast.showSuccess("Undo successful", "bi-arrow-counterclockwise");
   }, [canUndo, undo, toast]);
 
   const handleRedo = useCallback(() => {
     if (!canRedo) return;
     redo();
-    toast.showSuccess("Redo successful", "↪️");
+    toast.showSuccess("Redo successful", "bi-arrow-clockwise");
   }, [canRedo, redo, toast]);
 
   // Use custom hook for keyboard shortcuts
@@ -378,8 +378,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   });
 
   return (
-    <div className="time-off-view py-3">
-      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+    <div className="time-off-view py-3 d-flex flex-column gap-3">
+      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
         <ButtonGroup aria-label="Toggle time off view">
           <Button
             variant={viewMode === "table" ? "primary" : "outline-primary"}

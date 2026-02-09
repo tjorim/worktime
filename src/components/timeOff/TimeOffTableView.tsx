@@ -4,6 +4,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import type { HdayEvent } from "../../lib/hday/types";
+import { EmptyState } from "../shared/EmptyState";
 import {
   getEventColorClass,
   getEventTypeLabel,
@@ -125,14 +126,13 @@ export function TimeOffTableView({
       />
       <Card.Body>
         {events.length === 0 ? (
-          <div className="text-center text-muted py-5">
-            <i className="bi bi-calendar-x display-4 d-block mb-3" aria-hidden="true"></i>
-            <p>No time-off events yet.</p>
-            <p className="small">
-              Click "Add Event" to create your first event, or "Import" to load an existing .hday
-              file.
-            </p>
-          </div>
+          <EmptyState
+            icon="bi-calendar-x"
+            title="No time-off events yet"
+            description={
+              'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
+            }
+          />
         ) : (
           <Table responsive hover>
             <thead>

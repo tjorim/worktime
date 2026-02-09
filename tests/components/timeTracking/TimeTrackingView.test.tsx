@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingView } from "../../../src/components/timeTracking/TimeTrackingView";
 import { SettingsProvider } from "../../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 
 const TEST_LABELS = [
@@ -43,7 +44,9 @@ describe("TimeTrackingView", () => {
   const renderWithSettings = () =>
     render(
       <SettingsProvider>
-        <TimeTrackingView />
+        <ToastProvider>
+          <TimeTrackingView />
+        </ToastProvider>
       </SettingsProvider>,
     );
 
@@ -182,11 +185,10 @@ describe("TimeTrackingView", () => {
       expect(card).toBeInTheDocument();
     });
 
-    it("should have proper heading structure", () => {
+    it("should have proper card header structure", () => {
       renderWithSettings();
 
-      const header = screen.getByRole("heading", { name: /Daily Time Tracking/i });
-      expect(header).toBeInTheDocument();
+      expect(screen.getByText("Daily Time Tracking")).toBeInTheDocument();
     });
   });
 
