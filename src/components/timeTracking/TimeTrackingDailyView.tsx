@@ -10,7 +10,7 @@ import { useLiveTime } from "../../hooks/useLiveTime";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
-import { ProgressBar } from "./ProgressBar";
+import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
@@ -124,15 +124,6 @@ export function TimeTrackingDailyView({
     [runningLabelBackground],
   );
 
-  const totalHours = useMemo(
-    () =>
-      dailyTasks.reduce((sum, task) => {
-        const startDayjs = dayjs(task.startTime);
-        const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime;
-        return sum + stopDayjs.diff(startDayjs, "hour", true);
-      }, 0),
-    [dailyTasks, liveTime],
-  );
   const hasTaskDetails = text.trim().length > 0 && selectedLabel.trim().length > 0;
   const hasCompletedRange = hasTaskDetails && start.trim().length > 0 && stop.trim().length > 0;
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
@@ -479,7 +470,7 @@ export function TimeTrackingDailyView({
           onStartNow={handleStartNow}
         />
 
-        <ProgressBar hours={totalHours} />
+        <TimelineProgressBar tasks={dailyTasks} labels={labels} liveTime={liveTime} />
 
         <DailyTaskList
           tasks={dailyTasks}

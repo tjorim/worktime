@@ -277,8 +277,9 @@ describe("TimeTrackingDailyView", () => {
 
       render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
 
-      expect(screen.getByText("Task A")).toBeInTheDocument();
-      expect(screen.getByText("Task B")).toBeInTheDocument();
+      // Tasks now appear in both timeline and task list
+      expect(screen.getAllByText("Task A").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Task B").length).toBeGreaterThan(0);
     });
 
     it("shows progress indicator", () => {
@@ -294,7 +295,9 @@ describe("TimeTrackingDailyView", () => {
       ];
 
       const { container } = render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
-      expect(container.querySelector(".progress")).toBeInTheDocument();
+      // TimelineProgressBar doesn't use .progress class like old ProgressBar
+      // Check for the timeline container instead
+      expect(container.querySelector(".position-relative")).toBeInTheDocument();
     });
   });
 

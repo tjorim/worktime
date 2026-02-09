@@ -69,13 +69,15 @@ describe("TimeTrackingView Integration Tests", () => {
 
     renderWithSettings();
 
-    expect(screen.getByText("Today Task")).toBeInTheDocument();
+    // Tasks now appear in both timeline and task list, so use getAllByText
+    expect(screen.getAllByText("Today Task").length).toBeGreaterThan(0);
     expect(screen.queryByText("Yesterday Task")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Go to previous day/i }));
 
     expect(screen.queryByText("Today Task")).not.toBeInTheDocument();
-    expect(screen.getByText("Yesterday Task")).toBeInTheDocument();
+    // Tasks now appear in both timeline and task list, so use getAllByText
+    expect(screen.getAllByText("Yesterday Task").length).toBeGreaterThan(0);
   });
 
   it("updates Weekly Summary content when header week navigation changes week", () => {
