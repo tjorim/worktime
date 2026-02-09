@@ -294,8 +294,8 @@ export function TimeTrackingWeeklyView({
                               height: "40px",
                               borderRadius: "50%",
                               background: `conic-gradient(
-                                ${percentage >= 100 ? "#198754" : "#0d6efd"} ${percentage}%,
-                                #e9ecef ${percentage}%
+                                ${percentage >= 100 ? "var(--bs-success)" : "var(--bs-primary)"} ${percentage}%,
+                                var(--bs-secondary-bg) ${percentage}%
                               )`,
                               display: "flex",
                               alignItems: "center",
@@ -394,7 +394,6 @@ export function TimeTrackingWeeklyView({
                           <div className="h5 mb-2">{item.hours.toFixed(1)} hours</div>
                           <ProgressBar
                             now={item.percentage}
-                            variant="primary"
                             style={{ height: "8px", backgroundColor: item.color, opacity: 0.3 }}
                           />
                         </Card.Body>
