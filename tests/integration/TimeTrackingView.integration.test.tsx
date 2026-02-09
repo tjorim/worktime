@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { TimeTrackingView } from "../../src/components/timeTracking/TimeTrackingView";
@@ -312,7 +311,7 @@ describe("TimeTrackingView Integration Tests", () => {
   describe("Day Navigation", () => {
     it("updates Daily Log content when header day navigation changes date", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-06T09:00:00Z"));
+      vi.setSystemTime(new Date("2025-01-06T09:00:00"));
       mockTasks = [
         {
           id: "today-task",
@@ -343,7 +342,7 @@ describe("TimeTrackingView Integration Tests", () => {
 
     it("updates Weekly Summary content when header week navigation changes week", () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-13T09:00:00Z"));
+      vi.setSystemTime(new Date("2025-01-13T09:00:00"));
       mockTasks = [
         {
           id: "current-week-task",
