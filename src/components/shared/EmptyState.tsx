@@ -31,8 +31,8 @@ export function EmptyState({
     <div className="text-center py-4">
       <div className="mb-3">
         <i
-          className={`bi ${icon}`}
-          style={{ fontSize: iconSize, color: "#6c757d" }}
+          className={`bi ${icon} text-muted`}
+          style={{ fontSize: iconSize }}
           aria-hidden="true"
         ></i>
       </div>

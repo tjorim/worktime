@@ -217,7 +217,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         {labels.length === 0 ? (
-          <div className="border rounded">
+          <div className="border rounded bg-body-tertiary">
             <EmptyState
               icon="bi-tags"
               title="No Labels Yet"

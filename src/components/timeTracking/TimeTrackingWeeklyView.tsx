@@ -183,7 +183,7 @@ export function TimeTrackingWeeklyView({
         {rows.length === 0 && (
           <div className="text-center py-5">
             <div className="mb-4">
-              <i className="bi bi-bar-chart" style={{ fontSize: "4rem", color: "#6c757d" }}></i>
+              <i className="bi bi-bar-chart text-muted" style={{ fontSize: "4rem" }} aria-hidden="true"></i>
             </div>
             <h5 className="text-muted mb-3">No Time Tracking Data Yet</h5>
             <p className="text-muted mb-4">

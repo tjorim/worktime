@@ -204,7 +204,7 @@ export function TemplatesPanel({
         </Button>
       </div>
       {templates.length === 0 ? (
-        <div className="mt-3 border rounded">
+        <div className="mt-3 border rounded bg-body-tertiary">
           <EmptyState
             icon="bi-file-earmark-text"
             title="No Templates Yet"
