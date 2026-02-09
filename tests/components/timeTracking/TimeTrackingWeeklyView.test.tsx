@@ -49,7 +49,17 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("shows informative message when week has no data", () => {
       renderPanel([]);
 
-      expect(screen.getByText(/No data for this week/i)).toBeInTheDocument();
+      expect(screen.getByText(/No Time Tracking Data Yet/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Start tracking your time in the Daily Log/i),
+      ).toBeInTheDocument();
+    });
+
+    it("shows call-to-action button in empty state", () => {
+      renderPanel([]);
+
+      const ctaButton = screen.getByRole("button", { name: /Go to Daily Log/i });
+      expect(ctaButton).toBeInTheDocument();
     });
 
     it("hides summary table when no tasks exist", () => {
@@ -104,10 +114,12 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel(weekTasks);
 
-      expect(screen.getByText(/Total for the week:.*7\.00.*hours/i)).toBeInTheDocument();
+      // Check the weekly summary section shows correct total
+      const totalElements = screen.getAllByText(/7\.00 hours/i);
+      expect(totalElements.length).toBeGreaterThan(0);
     });
 
-    it("shows target when weeklyTargetHours is provided", () => {
+    it("shows weekly progress when weeklyTargetHours is provided", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "08:00", "12:00")];
 
       render(
@@ -120,7 +132,9 @@ describe("TimeTrackingWeeklyView Component", () => {
         />,
       );
 
-      expect(screen.getByText(/Total for the week:.*4\.00.*\/ 40\.0 hours/i)).toBeInTheDocument();
+      expect(screen.getByText(/Weekly Progress/i)).toBeInTheDocument();
+      expect(screen.getByText(/4\.0h \/ 40\.0h/i)).toBeInTheDocument();
+      expect(screen.getByText(/36\.0h remaining/i)).toBeInTheDocument();
     });
 
     it("includes all labels in work hour totals", () => {
@@ -131,7 +145,43 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel(weekTasks);
 
-      expect(screen.getByText(/Total for the week:.*3\.50.*hours/i)).toBeInTheDocument();
+      // Check the weekly summary section shows correct total
+      expect(screen.getByText(/3\.50 hours/i)).toBeInTheDocument();
+    });
+
+    it("displays key metrics cards", () => {
+      const weekTasks = [
+        createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
+        createTaskForDate(tuesdayDate, "Development", "09:00", "11:00"),
+      ];
+
+      renderPanel(weekTasks);
+
+      // Use getAllByText for items that appear multiple times
+      const totalHoursElements = screen.getAllByText(/Total Hours/i);
+      expect(totalHoursElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/Avg\. Daily Hours/i)).toBeInTheDocument();
+      expect(screen.getByText(/Days Tracked/i)).toBeInTheDocument();
+      expect(screen.getByText(/Top Category/i)).toBeInTheDocument();
+    });
+
+    it("shows daily breakdown chart", () => {
+      const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
+
+      renderPanel(weekTasks);
+
+      expect(screen.getByText(/Daily Breakdown/i)).toBeInTheDocument();
+    });
+
+    it("shows category breakdown with percentages", () => {
+      const weekTasks = [
+        createTaskForDate(mondayDate, "Support", "09:00", "12:00"),
+        createTaskForDate(mondayDate, "Development", "13:00", "17:00"),
+      ];
+
+      renderPanel(weekTasks);
+
+      expect(screen.getByText(/Category Breakdown/i)).toBeInTheDocument();
     });
   });
 
@@ -181,7 +231,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel(mixedTasks, "2025-01-06");
 
-      const noDataMsg = screen.queryByText(/No data for this week/i);
+      const noDataMsg = screen.queryByText(/No Time Tracking Data Yet/i);
       expect(noDataMsg).toBeInTheDocument();
     });
   });
