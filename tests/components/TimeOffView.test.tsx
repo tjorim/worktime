@@ -30,11 +30,7 @@ describe("TimeOffView", () => {
       );
 
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Create your first event or import an existing .hday file to get started/i),
-      ).toBeInTheDocument();
-      // Should have Add Event button in empty state
-      expect(screen.getAllByRole("button", { name: /Add Event/i }).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Click "Add Event"/i)).toBeInTheDocument();
     });
 
     it("should show Add Event button in header", () => {
@@ -44,11 +40,8 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      const addButtons = screen.getAllByRole("button", { name: /Add Event/i });
-      // Should have at least one Add Event button (in header and possibly in empty state)
-      expect(addButtons.length).toBeGreaterThan(0);
-      // First one should be in the toolbar
-      expect(addButtons[0]).toHaveAttribute("aria-label", "Add event");
+      const addButton = screen.getByRole("button", { name: /Add Event/i });
+      expect(addButton).toBeInTheDocument();
     });
 
     it("should show Import and Export buttons", () => {
@@ -74,7 +67,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Open add modal
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       // Fill in event details
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
@@ -102,7 +95,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add a business trip event
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
@@ -130,7 +123,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(screen.getByText(/New event/i)).toBeInTheDocument();
@@ -145,7 +138,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       const modal = screen.getByRole("dialog");
       const closeButton = within(modal).getByLabelText(/Close/i);
@@ -163,7 +156,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       // Try to submit without start date
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
@@ -181,7 +174,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
@@ -208,7 +201,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event first
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -242,7 +235,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -267,7 +260,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -301,7 +294,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
 
       // Select weekly event type
       const eventTypeSelect = screen.getByLabelText(/Event type/i);
@@ -398,7 +391,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      expect(screen.getAllByRole("button", { name: /Add Event/i })[0]).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Add Event/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Export/i })).toBeInTheDocument();
     });
@@ -413,7 +406,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add an event to display table
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -438,7 +431,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -476,7 +469,7 @@ describe("TimeOffView", () => {
       expect(undoButton).toBeDisabled();
       expect(redoButton).toBeDisabled();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -499,7 +492,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -569,7 +562,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add initial events using the UI
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-10");
@@ -577,7 +570,7 @@ describe("TimeOffView", () => {
       await user.type(titleInput, "Old event 1");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      await user.click(screen.getAllByRole("button", { name: /Add Event/i })[0]);
+      await user.click(screen.getByRole("button", { name: /Add Event/i }));
       const startInput2 = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput2);
       await user.type(startInput2, "2025-01-11");
