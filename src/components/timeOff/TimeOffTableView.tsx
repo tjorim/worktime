@@ -187,7 +187,7 @@ export function TimeOffTableView({
                     </td>
                     <td>
                       <span className={clsx("badge", "event-type-badge", eventColorClass)}>
-                        {symbol && symbol + " "}
+                        {symbol && `${symbol} `}
                         {eventLabel}
                       </span>
                     </td>

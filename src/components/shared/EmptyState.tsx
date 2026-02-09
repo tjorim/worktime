@@ -30,17 +30,11 @@ export function EmptyState({
   ctaButton,
   iconSize = "3rem",
 }: EmptyStateProps) {
-  // Ensure icon is a valid Bootstrap icon class (starts with "bi-")
-  const safeIcon = icon.startsWith("bi-") ? icon : "bi-question-circle";
-  const safeCtaIcon = ctaButton?.icon?.startsWith("bi-")
-    ? ctaButton.icon
-    : "bi-plus-circle";
-
   return (
     <div className="text-center py-4">
       <div className="mb-3">
         <i
-          className={`bi ${safeIcon} text-muted`}
+          className={`bi ${icon} text-muted`}
           style={{ fontSize: iconSize }}
           aria-hidden="true"
         ></i>
@@ -53,7 +47,7 @@ export function EmptyState({
           variant={ctaButton.variant ?? "primary"}
           onClick={ctaButton.onClick}
         >
-          <i className={`bi ${safeCtaIcon} me-1`} aria-hidden="true"></i>
+          <i className={`bi ${ctaButton.icon ?? "bi-plus-circle"} me-1`} aria-hidden="true"></i>
           {ctaButton.label}
         </Button>
       )}
