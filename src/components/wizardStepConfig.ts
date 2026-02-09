@@ -55,21 +55,21 @@ export interface WizardContext {
 export const WIZARD_STEP_CONFIG: StepConfig[] = [
   {
     id: "welcome",
-    title: "Welcome to Worktime! 👋",
+    title: "Welcome to Worktime!",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "features",
     getPrevStep: () => null,
   },
   {
     id: "features",
-    title: "What can Worktime do? ✨",
+    title: "What can Worktime do?",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "schedule-selection",
     getPrevStep: () => "welcome",
   },
   {
     id: "schedule-selection",
-    title: "Pick Your Schedule 🗓️",
+    title: "Pick Your Schedule",
     isVisible: (ctx) => ctx.mode === "onboarding" || ctx.mode === "change-schedule",
     getNextStep: (ctx) => {
       if (ctx.shouldShowTeamSelection) {
@@ -92,7 +92,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "team-selection",
-    title: "Choose Your Experience 🎯",
+    title: "Choose Your Experience",
     isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.mode === "change-team",
     getNextStep: (ctx) => {
       // In change modes, close wizard after team selection
@@ -111,14 +111,14 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "timeoff-setup",
-    title: "Time Off & Vacation 🗓️",
+    title: "Time Off & Vacation",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "time-tracking-setup",
     getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },
   {
     id: "time-tracking-setup",
-    title: "Time Tracking ⏱️",
+    title: "Time Tracking",
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null, // Always closes wizard after time tracking setup
     getPrevStep: () => {

@@ -49,7 +49,10 @@ describe("TemplatesPanel", () => {
     it("shows empty state when no templates exist", () => {
       renderPanel({ templates: [] });
 
-      expect(screen.getByText("No templates yet.")).toBeInTheDocument();
+      expect(screen.getByText("No Templates Yet")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Templates let you quickly add recurring tasks/i),
+      ).toBeInTheDocument();
     });
 
     it("shows Add Template button", () => {

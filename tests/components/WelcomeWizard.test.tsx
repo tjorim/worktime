@@ -205,7 +205,7 @@ describe("WelcomeWizard", () => {
       renderWithProviders(<WelcomeWizard {...defaultProps} onHide={mockOnHide} />);
 
       // Modal renders without errors and accepts the callback
-      expect(screen.getByText("Welcome to Worktime! 👋")).toBeInTheDocument();
+      expect(screen.getAllByText("Welcome to Worktime!")[0]).toBeInTheDocument();
       expect(mockOnHide).toBeDefined();
     });
 

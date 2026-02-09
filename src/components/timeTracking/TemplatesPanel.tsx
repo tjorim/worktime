@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import { EmptyState } from "../shared/EmptyState";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
@@ -203,7 +204,21 @@ export function TemplatesPanel({
         </Button>
       </div>
       {templates.length === 0 ? (
-        <div className="small text-muted mt-2">No templates yet.</div>
+        <div className="mt-3 border rounded bg-body-tertiary">
+          <EmptyState
+            icon="bi-file-earmark-text"
+            title="No Templates Yet"
+            description="Templates let you quickly add recurring tasks. Create a template for tasks you log regularly."
+            ctaButton={{
+              label: "Add Your First Template",
+              onClick: () => {
+                resetForm();
+                setEditTemplateId(null);
+                setModalMode("create");
+              },
+            }}
+          />
+        </div>
       ) : (
         <ListGroup className="mt-2">
           {templates.map((template) => (

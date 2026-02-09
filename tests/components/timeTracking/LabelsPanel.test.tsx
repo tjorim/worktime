@@ -49,7 +49,10 @@ describe("LabelsPanel", () => {
     it("shows empty state when no labels exist", () => {
       renderPanel({ labels: [] });
 
-      expect(screen.getByText("No labels configured yet.")).toBeInTheDocument();
+      expect(screen.getByText("No Labels Yet")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Labels help categorize your time entries/i),
+      ).toBeInTheDocument();
     });
 
     it("shows Add Label button", () => {

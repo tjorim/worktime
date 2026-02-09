@@ -4,6 +4,7 @@ import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import { EmptyState } from "../shared/EmptyState";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import {
@@ -216,7 +217,21 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         {labels.length === 0 ? (
-          <div className="small text-muted">No labels configured yet.</div>
+          <div className="border rounded bg-body-tertiary">
+            <EmptyState
+              icon="bi-tags"
+              title="No Labels Yet"
+              description="Labels help categorize your time entries. Add your first label to get started."
+              ctaButton={{
+                label: "Add Your First Label",
+                onClick: () => {
+                  resetForm();
+                  setEditLabelId(null);
+                  setModalMode("create");
+                },
+              }}
+            />
+          </div>
         ) : (
           <ListGroup>
             {labels.map((label) => {
