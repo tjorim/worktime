@@ -27,6 +27,19 @@ export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingL
   );
 }
 
+/**
+ * Get the default label color from CSS variables (theme-aware).
+ * Falls back to Bootstrap's gray-600 (#6c757d) if CSS variable is not available.
+ */
+export function getDefaultLabelColor(): string {
+  if (typeof window === "undefined" || !document.documentElement) {
+    return "#6c757d";
+  }
+  const style = getComputedStyle(document.documentElement);
+  const color = style.getPropertyValue("--wt-label-default").trim();
+  return color || "#6c757d";
+}
+
 export function getContrastingTextColor(backgroundColor?: string): string {
   if (!backgroundColor) {
     return "#000";

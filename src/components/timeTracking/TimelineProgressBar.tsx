@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { buildLabelColorMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import { buildLabelColorMap, getContrastingTextColor, getDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 const DEFAULT_TARGET_HOURS = 8.5;
@@ -42,7 +42,7 @@ export function TimelineProgressBar({
       const stopDayjs = task.stopTime ? dayjs(task.stopTime) : (liveTime ?? dayjs());
       const durationHours = stopDayjs.diff(startDayjs, "hour", true);
       const nonNegativeDurationHours = Math.max(0, durationHours);
-      const color = colorByLabelId[task.label] ?? "#6c757d";
+      const color = colorByLabelId[task.label] ?? getDefaultLabelColor();
       const textColor = getContrastingTextColor(color);
 
       return {

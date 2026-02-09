@@ -17,6 +17,7 @@ import {
   buildLabelColorMap,
   buildLabelNameMap,
   getContrastingTextColor,
+  getDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
@@ -115,7 +116,7 @@ export function TimeTrackingDailyView({
   }, [liveTime, runningTask]);
 
   const runningLabelBackground = useMemo(
-    () => (runningTask ? (colorByLabelId[runningTask.label] ?? "#6c757d") : "#6c757d"),
+    () => (runningTask ? (colorByLabelId[runningTask.label] ?? getDefaultLabelColor()) : getDefaultLabelColor()),
     [runningTask, colorByLabelId],
   );
   const runningLabelTextColor = useMemo(

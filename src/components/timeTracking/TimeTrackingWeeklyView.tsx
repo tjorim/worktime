@@ -5,7 +5,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, getDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { EmptyState } from "../shared/EmptyState";
 
@@ -142,7 +142,7 @@ export function TimeTrackingWeeklyView({
         label,
         hours,
         percentage: (hours / weekTotal) * 100,
-        color: labelNameToColor[label] ?? "#6c757d",
+        color: labelNameToColor[label] ?? getDefaultLabelColor(),
       }))
       .sort((a, b) => b.hours - a.hours);
   }, [summary, weekTotal, labelNameToColor]);

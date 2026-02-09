@@ -6,7 +6,7 @@ import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
-import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, getContrastingTextColor, getDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type DailyTaskListProps = {
@@ -112,7 +112,7 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
         const startDisplay = dayjs(task.startTime).format("HH:mm");
         const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
         const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
-        const labelBackground = colorByLabelId[task.label] ?? "#6c757d";
+        const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
         const labelTextColor = getContrastingTextColor(labelBackground);
         return (
           <ListGroup.Item key={task.id}>
