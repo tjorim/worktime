@@ -144,6 +144,55 @@
 .today-row {
   background-color: var(--bs-primary-bg-subtle) !important;
   border-left: 4px solid var(--bs-primary) !important;
+  font-weight: 500;
+}
+
+/* Enhanced schedule detail table styling */
+.schedule-detail-table {
+  th {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-body-color);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.75rem;
+    border-bottom: 2px solid var(--bs-border-color);
+  }
+
+  td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+
+    &:hover {
+      background-color: var(--bs-secondary-bg);
+      transform: translateX(2px);
+    }
+
+    &.today-row {
+      background-color: var(--bs-primary-bg-subtle) !important;
+      border-left-color: var(--bs-primary) !important;
+      
+      &:hover {
+        background-color: color-mix(in srgb, var(--bs-primary-bg-subtle) 90%, var(--bs-primary) 10%) !important;
+      }
+    }
+  }
+}
+
+/* Mobile card styling for schedule detail */
+.today-card {
+  border-width: 2px;
+  border-left-width: 4px;
+  
+  .card-body {
+    background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, var(--bs-body-bg) 100%);
+  }
 }
 
 /* ============================================================================
