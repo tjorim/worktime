@@ -16,6 +16,9 @@ import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
 
 import { calculateShift } from "../../utils/shiftCalculations";
 
+// Icon size for small decorative icons (e.g., live indicator dot)
+const SMALL_ICON_SIZE = "0.5rem";
+
 interface ScheduleDetailModalProps {
   show: boolean;
   onHide: () => void;
@@ -155,38 +158,113 @@ export function ScheduleDetailModal({
             <i className="bi bi-calendar-week me-2"></i>
             7-Day Schedule
           </h6>
-          <div className="table-responsive">
-            <Table striped hover className="mb-0">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Day</th>
-                  <th>Shift</th>
-                  <th>Hours</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {weekSchedule.map((day) => (
-                  <tr
-                    key={day.date.format("YYYY-MM-DD")}
-                    className={day.isToday ? "today-row" : ""}
-                  >
-                    <td>
-                      <strong>{day.date.format("MMM D")}</strong>
-                      {day.isToday && (
-                        <Badge bg="primary" className="ms-2">
-                          Today
-                        </Badge>
+          
+          {/* Desktop table view */}
+          <div className="d-none d-md-block">
+            <div className="table-responsive">
+              <Table className="mb-0 schedule-detail-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Shift</th>
+                    <th>Hours</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weekSchedule.map((day) => (
+                    <tr
+                      key={day.date.format("YYYY-MM-DD")}
+                      className={clsx(
+                        day.isToday && "today-row"
                       )}
-                      {day.isTomorrow && (
-                        <Badge bg="info" className="ms-2">
-                          Tomorrow
-                        </Badge>
-                      )}
-                    </td>
-                    <td>{day.date.format("ddd")}</td>
-                    <td>
+                    >
+                      <td>
+                        <strong>{day.date.format("MMM D")}</strong>
+                        {day.isToday && (
+                          <Badge bg="primary" className="ms-2">
+                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
+                            Today
+                          </Badge>
+                        )}
+                        {day.isTomorrow && (
+                          <Badge bg="info" className="ms-2">
+                            Tomorrow
+                          </Badge>
+                        )}
+                      </td>
+                      <td>{day.date.format("ddd")}</td>
+                      <td>
+                        {day.shift.code === "O" ? (
+                          <Badge bg="secondary" pill>
+                            Off
+                          </Badge>
+                        ) : (
+                          <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
+                        )}
+                      </td>
+                      <td>
+                        <small className="text-muted">
+                          {day.shift.code === "O"
+                            ? "—"
+                            : getLocalizedShiftTime(
+                                day.shift.start,
+                                day.shift.end,
+                                settings.timeFormat,
+                              ) ?? "—"}
+                        </small>
+                      </td>
+                      <td>
+                        {day.shift.code === "O" ? (
+                          <small className="text-muted">
+                            <i className="bi bi-house me-1" aria-hidden="true"></i>
+                            Rest Day
+                          </small>
+                        ) : (
+                          <small className="text-success">
+                            <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
+                            Working
+                          </small>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="d-md-none">
+            {weekSchedule.map((day) => (
+              <Card
+                key={day.date.format("YYYY-MM-DD")}
+                className={clsx(
+                  "mb-3",
+                  day.isToday && "border-primary shadow-sm today-card"
+                )}
+              >
+                <Card.Body className="py-3">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 className="mb-1">
+                        {day.date.format("dddd")}
+                        {day.isToday && (
+                          <Badge bg="primary" className="ms-2">
+                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
+                            Today
+                          </Badge>
+                        )}
+                        {day.isTomorrow && (
+                          <Badge bg="info" className="ms-2">
+                            Tomorrow
+                          </Badge>
+                        )}
+                      </h6>
+                      <small className="text-muted">{day.date.format("MMMM D, YYYY")}</small>
+                    </div>
+                    <div>
                       {day.shift.code === "O" ? (
                         <Badge bg="secondary" pill>
                           Off
@@ -194,35 +272,42 @@ export function ScheduleDetailModal({
                       ) : (
                         <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
                       )}
-                    </td>
-                    <td>
-                      <small className="text-muted">
+                    </div>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                    <div>
+                      <small className="text-muted d-block">
+                        <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                        Hours
+                      </small>
+                      <span className="text-body">
                         {day.shift.code === "O"
                           ? "—"
                           : getLocalizedShiftTime(
                               day.shift.start,
                               day.shift.end,
                               settings.timeFormat,
-                            )}
-                      </small>
-                    </td>
-                    <td>
+                            ) ?? "—"}
+                      </span>
+                    </div>
+                    <div className="text-end">
+                      <small className="text-muted d-block">Status</small>
                       {day.shift.code === "O" ? (
-                        <small className="text-muted">
-                          <i className="bi bi-house me-1"></i>
+                        <span className="text-muted">
+                          <i className="bi bi-house me-1" aria-hidden="true"></i>
                           Rest Day
-                        </small>
+                        </span>
                       ) : (
-                        <small className="text-success">
-                          <i className="bi bi-briefcase me-1"></i>
+                        <span className="text-success">
+                          <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
                           Working
-                        </small>
+                        </span>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            ))}
           </div>
         </div>
 
