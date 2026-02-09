@@ -114,31 +114,40 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
   };
 
   return (
-    <Card className="mb-3">
-      <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <span className="fw-semibold">
-          <i className="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>
-          Vacation Statistics
-        </span>
-        <Form.Select
-          size="sm"
-          aria-label="Select year for vacation statistics"
-          value={selectedYear}
-          onChange={(event) => setSelectedYear(Number(event.target.value))}
-          className="w-auto"
-        >
-          {years.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </Form.Select>
+    <Card className="mb-3 shadow-sm">
+      <Card.Header>
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <span className="fw-semibold">
+            <i className="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>
+            Vacation Statistics
+          </span>
+          <div className="d-flex align-items-center gap-2">
+            <small className="text-muted">Year:</small>
+            <Form.Select
+              size="sm"
+              aria-label="Select year for vacation statistics"
+              value={selectedYear}
+              onChange={(event) => setSelectedYear(Number(event.target.value))}
+              className="w-auto"
+            >
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </Form.Select>
+          </div>
+        </div>
       </Card.Header>
       <Card.Body>
         <Row className="g-3">
-          <Col xs={12} lg={5}>
-            <div className="h-100 border rounded p-3">
-              <div className="fw-semibold mb-3">Allowance Settings</div>
+          <Col xs={12} md={5}>
+            <Card className="h-100">
+              <Card.Body>
+                <h6 className="text-uppercase text-muted mb-3">
+                  <i className="bi bi-sliders me-2" aria-hidden="true"></i>
+                  Allowance Settings
+                </h6>
               <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
                 <Form.Label>Allowance for {selectedYear}</Form.Label>
                 <Form.Control
@@ -201,13 +210,18 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   </Form.Group>
                 </Col>
               </Row>
-            </div>
+              </Card.Body>
+            </Card>
           </Col>
 
-          <Col xs={12} lg={7}>
-            <div className="h-100 border rounded p-3">
-              <div className="fw-semibold mb-2">Vacation usage</div>
-              <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
+          <Col xs={12} md={7}>
+            <Card className="h-100">
+              <Card.Body>
+                <h6 className="text-uppercase text-muted mb-2">
+                  <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
+                  Vacation Usage
+                </h6>
+                <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
 
               <div className="mb-3">
                 <div className="d-flex justify-content-between small text-muted mb-1">
@@ -234,12 +248,16 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   </div>
                 </Col>
               </Row>
-            </div>
+              </Card.Body>
+            </Card>
           </Col>
         </Row>
 
         <div className="mt-4">
-          <h6 className="mb-3">Breakdown by type</h6>
+          <h6 className="text-uppercase text-muted mb-3">
+            <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
+            Breakdown by Type
+          </h6>
           <Table responsive size="sm" className="mb-0">
             <thead>
               <tr>
