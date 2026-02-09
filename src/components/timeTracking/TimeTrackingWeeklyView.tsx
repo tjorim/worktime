@@ -260,7 +260,10 @@ export function TimeTrackingWeeklyView({
 
             {/* Daily Breakdown Chart */}
             <div className="mb-4">
-              <h6 className="text-uppercase text-muted mb-3">Daily Breakdown</h6>
+              <h6 className="text-uppercase text-muted mb-3">
+                <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
+                Daily Breakdown
+              </h6>
               <div className="row g-2">
                 {weekDays.map((day, index) => {
                   const dayTotal = dailyHourTotals[index] ?? 0;
@@ -323,7 +326,10 @@ export function TimeTrackingWeeklyView({
 
             {/* Detailed Table */}
             <div className="mb-4">
-              <h6 className="text-uppercase text-muted mb-3">Detailed Breakdown</h6>
+              <h6 className="text-uppercase text-muted mb-3">
+                <i className="bi bi-table me-2" aria-hidden="true"></i>
+                Detailed Breakdown
+              </h6>
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
@@ -370,7 +376,10 @@ export function TimeTrackingWeeklyView({
             {/* Category Breakdown */}
             {labelPercentages.length > 0 && (
               <div className="mb-4">
-                <h6 className="text-uppercase text-muted mb-3">Category Breakdown</h6>
+                <h6 className="text-uppercase text-muted mb-3">
+                  <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
+                  Category Breakdown
+                </h6>
                 <div className="row g-3">
                   {labelPercentages.map((item) => (
                     <div key={item.label} className="col-12 col-md-6 col-lg-4">
@@ -405,29 +414,34 @@ export function TimeTrackingWeeklyView({
             )}
 
             {/* Weekly Summary */}
-            <div className="mt-4 p-3 border rounded">
-              <h6 className="text-uppercase text-muted mb-3">Weekly Summary</h6>
-              <div className="row">
-                <div className="col-md-6">
-                  <ul className="list-unstyled mb-0">
-                    {Object.entries(summary).map(([label, hours]) => (
-                      <li key={label} className="mb-2">
-                        <span className="text-muted">{label}:</span>{" "}
-                        <span className="fw-semibold">{hours.toFixed(2)} hours</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="col-md-6">
-                  <div className="h5 mb-0">
-                    Total: <span className="text-primary">{weekTotal.toFixed(2)} hours</span>
+            <Card className="mt-4">
+              <Card.Body>
+                <h6 className="text-uppercase text-muted mb-3">
+                  <i className="bi bi-list-check me-2" aria-hidden="true"></i>
+                  Weekly Summary
+                </h6>
+                <div className="row">
+                  <div className="col-md-6">
+                    <ul className="list-unstyled mb-0">
+                      {Object.entries(summary).map(([label, hours]) => (
+                        <li key={label} className="mb-2">
+                          <span className="text-muted">{label}:</span>{" "}
+                          <span className="fw-semibold">{hours.toFixed(2)} hours</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  {weeklyTargetHours !== undefined && (
-                    <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} hours</div>
-                  )}
+                  <div className="col-md-6">
+                    <div className="h5 mb-0">
+                      Total: <span className="text-primary">{weekTotal.toFixed(2)} hours</span>
+                    </div>
+                    {weeklyTargetHours !== undefined && (
+                      <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} hours</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </Card.Body>
+            </Card>
           </>
         )}
       </Card.Body>

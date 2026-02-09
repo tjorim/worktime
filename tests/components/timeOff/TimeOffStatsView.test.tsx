@@ -50,7 +50,7 @@ describe("TimeOffStatsView", () => {
 
     it("should render vacation usage section", () => {
       render(<TimeOffStatsView {...defaultProps} />);
-      expect(screen.getByText("Vacation usage")).toBeInTheDocument();
+      expect(screen.getByText("Vacation Usage")).toBeInTheDocument();
     });
 
     it("should display allowance values in form inputs", () => {
