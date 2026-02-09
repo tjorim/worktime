@@ -13,6 +13,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShift } from "../utils/shiftCalculations";
+import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
 
@@ -236,17 +237,11 @@ export function TransferView({
 
               {/* Transfer Results */}
               {transfers.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="bi bi-calendar-x text-muted mb-3 icon-lg" aria-hidden="true"></i>
-                  <h6 className="text-muted">No Transfers Found</h6>
-                  <p className="text-muted mb-0">
-                    No transfers found between Team {myTeam} and Team {otherTeam}
-                    {useCustomRange &&
-                      (customStartDate || customEndDate) &&
-                      " in the selected date range"}
-                    .
-                  </p>
-                </div>
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title="No Transfers Found"
+                  description={`No transfers found between Team ${myTeam} and Team ${otherTeam}${useCustomRange && (customStartDate || customEndDate) ? " in the selected date range" : ""}.`}
+                />
               ) : (
                 <>
                   <div className="d-flex justify-content-end mb-2">

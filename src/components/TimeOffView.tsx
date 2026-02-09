@@ -378,8 +378,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   });
 
   return (
-    <div className="time-off-view py-3">
-      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2 mb-3">
+    <div className="time-off-view py-3 d-flex flex-column gap-3">
+      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
         <ButtonGroup aria-label="Toggle time off view">
           <Button
             variant={viewMode === "table" ? "primary" : "outline-primary"}
