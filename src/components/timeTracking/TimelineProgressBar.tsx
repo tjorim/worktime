@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import {
+  buildLabelColorMap,
+  getContrastingTextColor,
+  type TimeTrackingLabel,
+} from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type TimelineProgressBarProps = {
@@ -29,15 +33,8 @@ export function TimelineProgressBar({
   // Validate and sanitize targetHours: ensure it's finite and > 0
   const sanitizedTargetHours = Number.isFinite(targetHours) && targetHours > 0 ? targetHours : 8.5;
 
-  // Build color map from labels
-  const colorByLabelId = useMemo(
-    () =>
-      labels.reduce<Record<string, string>>((map, label) => {
-        map[label.id] = label.color;
-        return map;
-      }, {}),
-    [labels],
-  );
+  // Build color map from labels using shared helper
+  const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
 
   // Calculate segments for each task
   const segments = useMemo<TaskSegment[]>(() => {
@@ -59,13 +56,17 @@ export function TimelineProgressBar({
     });
   }, [tasks, colorByLabelId, liveTime, sanitizedTargetHours]);
 
-  // Calculate total hours
+  // Calculate total hours and percentage
   const totalHours = useMemo(
     () => segments.reduce((sum, segment) => sum + segment.durationHours, 0),
     [segments],
   );
 
-  const totalPercentage = (totalHours / sanitizedTargetHours) * 100;
+  const totalPercentage = useMemo(
+    () => segments.reduce((sum, segment) => sum + segment.percentage, 0),
+    [segments],
+  );
+
   const isOvertime = totalPercentage > 100;
 
   return (
@@ -73,33 +74,45 @@ export function TimelineProgressBar({
       {/* Stacked Progress Bar */}
       {segments.length > 0 ? (
         <BootstrapProgressBar>
-          {segments.map((segment) => (
-            <BootstrapProgressBar
-              key={segment.id}
-              now={Math.min(segment.percentage, 100)}
-              style={{
-                backgroundColor: segment.color,
-                color: segment.textColor,
-              }}
-              label={
-                segment.percentage > 10 ? (
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      fontWeight: 600,
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                      padding: "0 0.25rem",
-                    }}
-                    title={`${segment.text}: ${segment.durationHours.toFixed(2)}h`}
-                  >
-                    {segment.text}
-                  </span>
-                ) : undefined
-              }
-            />
-          ))}
+          {segments.map((segment) => {
+            // Normalize segment width if total exceeds 100%
+            const normalizedPercent =
+              totalPercentage > 100
+                ? (segment.percentage / totalPercentage) * 100
+                : segment.percentage;
+
+            const displayPercent = Math.min(normalizedPercent, 100);
+            const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
+
+            return (
+              <BootstrapProgressBar
+                key={segment.id}
+                now={displayPercent}
+                style={{
+                  backgroundColor: segment.color,
+                  color: segment.textColor,
+                }}
+                title={tooltipText}
+                aria-label={tooltipText}
+                label={
+                  normalizedPercent > 10 ? (
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        padding: "0 0.25rem",
+                      }}
+                    >
+                      {segment.text}
+                    </span>
+                  ) : undefined
+                }
+              />
+            );
+          })}
         </BootstrapProgressBar>
       ) : (
         <BootstrapProgressBar now={0} />
@@ -108,7 +121,7 @@ export function TimelineProgressBar({
       {/* Summary text */}
       <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
         <span>
-          {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
+          {totalHours.toFixed(2)}h ({(totalHours / sanitizedTargetHours * 100).toFixed(1)}%)
         </span>
         {isOvertime && (
           <span className="badge bg-warning text-dark">

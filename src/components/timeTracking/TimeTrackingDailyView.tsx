@@ -12,7 +12,12 @@ import { ConfirmationDialog } from "../ConfirmationDialog";
 import { DailyTaskList } from "./DailyTaskList";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
-import { buildLabelNameMap, getContrastingTextColor, type TimeTrackingLabel } from "./constants";
+import {
+  buildLabelColorMap,
+  buildLabelNameMap,
+  getContrastingTextColor,
+  type TimeTrackingLabel,
+} from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
 
@@ -69,14 +74,7 @@ export function TimeTrackingDailyView({
   const liveTime = useLiveTime({ precision: "second" });
   const dailyDate = dayjs(date);
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
-  const colorByLabelId = useMemo(
-    () =>
-      labels.reduce<Record<string, string>>((map, label) => {
-        map[label.id] = label.color;
-        return map;
-      }, {}),
-    [labels],
-  );
+  const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   useEffect(() => {
