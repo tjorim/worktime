@@ -8,6 +8,7 @@ sync state for users who opt in.
 
 - [Backend responsibilities](#backend-responsibilities)
 - [API surface](#api-surface)
+- [iCal subscription feed](#ical-subscription-feed)
 - [Authentication](#authentication)
 - [Storage model](#storage-model)
 - [Data deletion (GDPR/CCPA)](#data-deletion-gdprccpa)
@@ -35,6 +36,7 @@ sync state for users who opt in.
 | `/v1/sync` | GET | Required | Download latest snapshot (supports `If-None-Match`) |
 | `/v1/sync` | DELETE | Required | Erase all user data (see [Data deletion](#data-deletion-gdprccpa)) |
 | `/v1/health` | GET | None | Uptime checks and monitoring |
+| `/v1/cal/:token.ics` | GET | Token in URL | iCal subscription feed (see [iCal subscription feed](#ical-subscription-feed)) |
 | `/v1/auth/link` | POST | None | Exchange link token for access token (see [Authentication](#authentication)) |
 
 All authenticated endpoints require an `Authorization: Bearer <token>` header. Missing, malformed,
@@ -53,6 +55,73 @@ or expired tokens receive `401 Unauthorized`. Insufficient permissions receive `
 - **200 OK**: Write succeeded. Returns `{"version": 6, "etag": "def456", "updated_at": "..."}`.
 - **409 Conflict**: Version/etag mismatch. Returns the current server snapshot with metadata so the
   client can merge and retry.
+
+## iCal subscription feed
+
+`GET /v1/cal/:token.ics` serves a personalized iCalendar (RFC 5545) feed that calendar apps can
+subscribe to. Users add a `webcal://` URL to Google Calendar, Outlook, Apple Calendar, etc. and the
+app periodically polls for updates — no manual re-export needed.
+
+### Why a subscription link instead of file export
+
+A one-time .ics file download becomes stale immediately. A subscription URL lets the calendar app
+refresh automatically (typically every few hours), so shift changes and new time-off events appear
+without user intervention.
+
+### URL format
+
+```
+webcal://api.worktime.example.com/v1/cal/<feed-token>.ics
+```
+
+The `feed-token` is a long-lived, per-user opaque token generated when the user requests a
+subscription link. It is separate from the access token used for sync — feed tokens are embedded in
+URLs that calendar apps store, so they must not expire on the same short schedule.
+
+### Feed contents
+
+The feed combines data from the user's synced snapshot:
+
+| Source | VEVENT fields |
+|--------|---------------|
+| **Shifts** | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type. |
+| **Time-off events** | From .hday data. `SUMMARY`: event comment or type name. `DTSTART`/`DTEND`: event date(s). `CATEGORIES`: event type flag (holiday, business, sick, etc.). |
+| **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT. |
+
+### Response headers
+
+```http
+Content-Type: text/calendar; charset=utf-8
+Cache-Control: no-cache, no-store, must-revalidate
+```
+
+No caching headers — calendar apps manage their own poll interval. The server always returns the
+current state.
+
+### Security considerations
+
+- **No Bearer auth**: Calendar apps cannot send Authorization headers on subscription URLs. Auth is
+  via the feed token embedded in the URL path.
+- **Feed token properties**: 256-bit random, URL-safe (base64url). Revocable per user. One active
+  feed token per user (generating a new one invalidates the previous).
+- **Rate limiting**: 60 requests per token per hour. Returns `429` with `Retry-After` if exceeded.
+- **Privacy**: Feed URLs are secret — treat them like API keys. The settings UI should warn users
+  not to share their subscription link publicly.
+- **Revocation**: User can regenerate their feed token from settings, which immediately invalidates
+  the old URL.
+
+### Frontend integration
+
+The settings panel shows a "Subscribe to calendar" section with:
+
+1. A generated `webcal://` link the user can copy or click to open in their default calendar app.
+2. A "Regenerate link" button that revokes the old token and creates a new one.
+3. A brief explanation that the link is personal and should not be shared.
+
+### Phase
+
+This endpoint is part of **Phase 2** (after basic sync is operational), since it requires server
+access to the user's snapshot to generate the feed.
 
 ## Authentication
 
@@ -287,6 +356,7 @@ removed, but the feature analysis below informed the backend design.
 
 | Endpoint | Method | Auth | Purpose |
 |----------|--------|------|---------|
+| `/v1/cal/:token.ics` | GET | Token in URL | iCal subscription feed (shifts + time-off + holidays) |
 | `/v1/reports/weekly` | GET | Required | Weekly hours by project |
 | `/v1/reports/monthly` | GET | Required | Monthly hours by project |
 | `/v1/reports/team` | GET | Required (manager) | Team aggregated hours |
@@ -366,8 +436,9 @@ set is directly relevant:
 - Single snapshot model: entire `WorktimeUserState` syncs as one JSON payload.
 - Deploy on Cloudflare Workers + D1 or equivalent.
 
-**Phase 2 — Export and audit**
+**Phase 2 — Calendar feed, export, and audit**
 
+- `GET /v1/cal/:token.ics` iCal subscription feed for calendar app integration.
 - `GET /v1/export` for CSV/JSON export of time entries.
 - Server-side audit trail (append-only event log for time entry changes).
 - Individual user data only — no cross-user access.

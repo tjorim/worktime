@@ -14,22 +14,7 @@ This document serves as a general to-do list and development roadmap for Worktim
 
 Critical features and improvements that significantly impact user experience.
 
-#### 1. Export Schedule Feature
-
-- **Component**: Calendar export functionality
-- **Use Cases**:
-  - Download shift schedule as .ics calendar file
-  - Integration with external calendar apps
-  - Team schedule sharing
-- **Implementation**: Add calendar generation utility and activate export buttons
-- **Files to Modify**:
-  - `src/components/SettingsPanel.tsx` - Remove "Coming Soon" badge and enable button
-  - `src/components/ScheduleDetailModal.tsx` - Enable export button
-  - `src/utils/exportCalendar.ts` – Add calendar export utility
-- **Estimated Effort**: 3–4 hours
-- **Status**: 🔲 Planned
-
-#### 2. Missing HdayPlanner Utility Functions
+#### 1. Missing HdayPlanner Utility Functions
 
 - **Component**: Helper functions from HdayPlanner
 - **Source**: `HdayPlanner/frontend/src/lib/hday.ts`
@@ -127,21 +112,19 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 11. Calendar Export Formats
+#### 10. iCal Subscription Link (Backend Required)
 
-- **Component**: Multi-format export functionality
+- **Component**: Server-side iCal feed for calendar app integration
 - **Use Cases**:
-  - Export shift schedule as .ics calendar file
-  - Export time-off events to iCal/ICS format
-  - Export to CSV for spreadsheet analysis
-  - Integration with external calendar apps (Google Calendar, Outlook)
-- **Implementation**: Create export utilities for multiple formats
-- **Files to Modify**:
-  - `src/utils/exportCalendar.ts` - Add calendar generation utility
-  - `src/components/SettingsPanel.tsx` - Enable export buttons
-  - `src/components/TimeOffView.tsx` - Add export options
-- **Estimated Effort**: 4–5 hours
-- **Status**: 🔲 Future
+  - Subscribe to shift schedule in Google Calendar, Outlook, Apple Calendar, etc.
+  - Auto-refreshing feed — calendar app polls the URL periodically
+  - Combined feed with shifts and time-off events
+  - Per-user personalized feed (user's team, schedule type, time-off)
+- **Implementation**: Backend endpoint serving RFC 5545 iCalendar (.ics) format
+- **Prerequisite**: Backend sync (item 15) must be in place first
+- **Note**: Replaces the previous client-side .ics file export approach — a subscription link is more useful than a one-time download
+- **Status**: 🔲 Future (blocked on backend)
+- **See also**: `backend/README.md` for endpoint specification
 
 ### 🎨 Future Enhancements
 
@@ -310,9 +293,8 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **Export Schedule Feature** - Calendar export functionality (user-facing)
-2. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
-3. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
+1. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
+2. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
 
 ### 📋 Backlog (Code Quality)
 
@@ -327,7 +309,7 @@ Advanced features for future development phases.
 ### 📋 Backlog (Time-Off Management)
 
 8. **Time-Off TransferView Overlays** - Event indicators on transfer view
-9. **Calendar Export Formats** - .ics, CSV export for shifts and time-off
+9. **iCal Subscription Link** - Server-side calendar feed (blocked on backend)
 
 ### 📋 Backlog (UI/UX)
 
@@ -420,7 +402,6 @@ Advanced features for future development phases.
 
 - Advanced notification preferences
 - Export/import settings
-- Integration with calendar apps
 
 ### User Account System (Future Phase)
 
@@ -464,4 +445,4 @@ Advanced features for future development phases.
 ---
 
 **Last Updated**: 2026-02-09
-**Next Review**: After v4.7.0 (Export Schedule Feature)
+**Next Review**: After v4.7.0
