@@ -295,9 +295,8 @@ describe("TimeTrackingDailyView", () => {
       ];
 
       const { container } = render(<TimeTrackingDailyView {...mockProps} tasks={tasks} />);
-      // TimelineProgressBar doesn't use .progress class like old ProgressBar
-      // Check for the timeline container instead
-      expect(container.querySelector(".position-relative")).toBeInTheDocument();
+      // TimelineProgressBar uses React Bootstrap .progress class
+      expect(container.querySelector(".progress")).toBeInTheDocument();
     });
   });
 
