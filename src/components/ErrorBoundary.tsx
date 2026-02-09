@@ -59,8 +59,9 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <Container className="mt-4">
           <Card>
-            <Card.Header className="bg-danger text-white">
-              <h5 className="mb-0">⚠️ Something went wrong</h5>
+            <Card.Header className="bg-danger text-white fw-semibold">
+              <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+              Something went wrong
             </Card.Header>
             <Card.Body>
               <Alert variant="danger">

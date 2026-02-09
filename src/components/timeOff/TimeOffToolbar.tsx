@@ -51,10 +51,10 @@ function TimeOffToolbarComponent({
   return (
     <Card.Header>
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-        <h5 className="mb-0">
+        <span className="fw-semibold">
           <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
           Time Off Management
-        </h5>
+        </span>
         <div className="d-flex flex-wrap gap-2">
           <Button variant="outline-primary" size="sm" onClick={onImport} aria-label="Import events">
             <i className="bi bi-download me-1" aria-hidden="true"></i>

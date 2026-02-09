@@ -103,13 +103,12 @@ export function TransferView({
   }, [useCustomRange]);
 
   return (
-    <div className="transfer-view py-3">
-      <Card>
+    <Card>
         <Card.Header className="d-flex justify-content-between align-items-center">
-          <h6 className="mb-0">
+          <span className="fw-semibold">
             <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
             Team Transfers
-          </h6>
+          </span>
           {myTeam && (
             <Badge bg="primary" pill>
               <i className="bi bi-person-check me-1" aria-hidden="true"></i>
@@ -375,7 +374,6 @@ export function TransferView({
             </>
           )}
         </Card.Body>
-      </Card>
-    </div>
+    </Card>
   );
 }

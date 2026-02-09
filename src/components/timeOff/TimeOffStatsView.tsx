@@ -116,10 +116,10 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
   return (
     <Card className="mb-3">
       <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div className="fw-semibold">
+        <span className="fw-semibold">
           <i className="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>
           Vacation Statistics
-        </div>
+        </span>
         <Form.Select
           size="sm"
           aria-label="Select year for vacation statistics"

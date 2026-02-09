@@ -338,7 +338,10 @@ export function TimeTrackingDailyView({
     <Card className="shadow-sm">
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <h6 className="mb-0">Daily Time Tracking</h6>
+          <span className="fw-semibold">
+            <i className="bi bi-clock me-2" aria-hidden="true"></i>
+            Daily Time Tracking
+          </span>
           <DayNavigationButtonGroup
             isCurrent={isDailyCurrent}
             onPrevious={() =>

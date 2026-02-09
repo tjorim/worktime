@@ -151,10 +151,10 @@ export function TimeTrackingWeeklyView({
     <Card className="shadow-sm">
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <div className="d-flex align-items-center">
-            <i className="bi bi-bar-chart me-2"></i>
-            <h6 className="mb-0">Weekly Overview</h6>
-          </div>
+          <span className="fw-semibold">
+            <i className="bi bi-bar-chart me-2" aria-hidden="true"></i>
+            Weekly Overview
+          </span>
           <WeekNavigationButtonGroup
             isCurrent={isWeeklyCurrent}
             onPrevious={() =>
