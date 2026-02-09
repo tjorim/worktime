@@ -83,6 +83,13 @@ export function buildLabelNameMap(labels: TimeTrackingLabel[]): Record<string, s
   }, {});
 }
 
+export function buildLabelColorMap(labels: TimeTrackingLabel[]): Record<string, string> {
+  return labels.reduce<Record<string, string>>((map, label) => {
+    map[label.id] = label.color;
+    return map;
+  }, {});
+}
+
 export function normalizeLabelName(value: string): string {
   return value.trim();
 }

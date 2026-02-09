@@ -121,9 +121,9 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      // Verify both tasks are shown
-      expect(screen.getByText(/Morning work/i)).toBeInTheDocument();
-      expect(screen.getByText(/Afternoon support/i)).toBeInTheDocument();
+      // Verify both tasks are shown (tasks appear twice: in timeline and task list)
+      expect(screen.getAllByText(/Morning work/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Afternoon support/i).length).toBeGreaterThan(0);
 
       // Verify total hours (3.00h displayed in progress bar)
       expect(screen.getByText(/3\.00/i)).toBeInTheDocument();
@@ -331,13 +331,15 @@ describe("TimeTrackingView Integration Tests", () => {
 
       renderWithSettings();
 
-      expect(screen.getByText("Today Task")).toBeInTheDocument();
+      // Tasks appear twice: in timeline and task list
+      expect(screen.getAllByText("Today Task").length).toBeGreaterThan(0);
       expect(screen.queryByText("Yesterday Task")).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: /Go to previous day/i }));
 
       expect(screen.queryByText("Today Task")).not.toBeInTheDocument();
-      expect(screen.getByText("Yesterday Task")).toBeInTheDocument();
+      // Tasks appear twice: in timeline and task list
+      expect(screen.getAllByText("Yesterday Task").length).toBeGreaterThan(0);
     });
 
     it("updates Weekly Summary content when header week navigation changes week", () => {
