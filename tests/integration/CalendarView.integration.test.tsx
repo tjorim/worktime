@@ -555,24 +555,31 @@ describe("CalendarView Integration Tests", () => {
   });
 
   describe("Modal Event Workflows", () => {
-    it("completes add event workflow successfully", async () => {
-      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
-
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-
-      const { container } = renderCalendarView({ myTeam: 1 });
-
-      // Open context menu using fireEvent
+    /**
+     * Helper function to open the 'Add new event' modal for a specific day.
+     */
+    const openAddEventModalForDay = (container: HTMLElement, day: string) => {
       const dayCells = container.querySelectorAll(".month-calendar-day");
       const targetCell = Array.from(dayCells).find((cell) =>
-        cell.querySelector(".month-calendar-day-number")?.textContent?.includes("20"),
+        cell.querySelector(".month-calendar-day-number")?.textContent?.includes(day),
       );
       if (!targetCell) {
-        throw new Error('Target day cell for date "20" was not found in the month calendar.');
+        throw new Error(`Target day cell for date "${day}" was not found in the month calendar.`);
       }
       fireEvent.contextMenu(targetCell);
       fireEvent.click(screen.getByText("Add new event"));
+    };
+
+    beforeEach(() => {
+      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
+    });
+
+    it("completes add event workflow successfully", async () => {
+      const { container } = renderCalendarView({ myTeam: 1 });
+
+      openAddEventModalForDay(container, "20");
 
       // Fill in event details (the label is "Comment" not "Event title") using fireEvent
       const modal = screen.getByRole("dialog");
@@ -589,23 +596,9 @@ describe("CalendarView Integration Tests", () => {
     });
 
     it("validates date input when adding events", async () => {
-      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
-
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-
       const { container } = renderCalendarView({ myTeam: 1 });
 
-      // Open add event modal using fireEvent
-      const dayCells = container.querySelectorAll(".month-calendar-day");
-      const targetCell = Array.from(dayCells).find((cell) =>
-        cell.querySelector(".month-calendar-day-number")?.textContent?.includes("20"),
-      );
-      if (!targetCell) {
-        throw new Error('Target day cell for date "20" was not found in the month calendar.');
-      }
-      fireEvent.contextMenu(targetCell);
-      fireEvent.click(screen.getByText("Add new event"));
+      openAddEventModalForDay(container, "20");
 
       // Clear the pre-filled start date to trigger required validation
       const modal = screen.getByRole("dialog");
@@ -652,21 +645,26 @@ describe("CalendarView Integration Tests", () => {
   });
 
   describe("Delete Confirmation Flow", () => {
-    it("shows confirmation dialog when deleting event", async () => {
+    /**
+     * Helper function to open the delete confirmation dialog for the first vacation event.
+     */
+    const openDeleteConfirmationForVacation = () => {
+      const vacationBadge = screen.getAllByText("Vacation")[0];
+      fireEvent.contextMenu(vacationBadge);
+      fireEvent.click(screen.getByText("Delete event"));
+    };
+
+    beforeEach(() => {
       const fixtures = createTestFixtures();
       setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
       setupTimeOffEvents(fixtures.timeOffEvents);
-
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-
       renderCalendarView({ myTeam: 1 });
+    });
 
-      // Right-click event and select delete (get first occurrence) using fireEvent
-      const vacationBadges = screen.getAllByText("Vacation");
-      const vacationBadge = vacationBadges[0];
-      fireEvent.contextMenu(vacationBadge);
-      fireEvent.click(screen.getByText("Delete event"));
+    it("shows confirmation dialog when deleting event", async () => {
+      openDeleteConfirmationForVacation();
 
       // Verify confirmation dialog appears
       expect(screen.getByText(/Delete Event/i)).toBeInTheDocument();
@@ -674,20 +672,7 @@ describe("CalendarView Integration Tests", () => {
     });
 
     it("cancels delete when user clicks Cancel", async () => {
-      const fixtures = createTestFixtures();
-      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
-      setupTimeOffEvents(fixtures.timeOffEvents);
-
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-
-      renderCalendarView({ myTeam: 1 });
-
-      // Right-click event and select delete (get first occurrence) using fireEvent
-      const vacationBadges = screen.getAllByText("Vacation");
-      const vacationBadge = vacationBadges[0];
-      fireEvent.contextMenu(vacationBadge);
-      fireEvent.click(screen.getByText("Delete event"));
+      openDeleteConfirmationForVacation();
 
       // Click Cancel using fireEvent
       const cancelButton = screen.getByRole("button", { name: /Cancel/i });
@@ -698,20 +683,7 @@ describe("CalendarView Integration Tests", () => {
     });
 
     it("deletes event when user confirms", async () => {
-      const fixtures = createTestFixtures();
-      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
-      setupTimeOffEvents(fixtures.timeOffEvents);
-
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-
-      renderCalendarView({ myTeam: 1 });
-
-      // Right-click event and select delete (get first occurrence) using fireEvent
-      const vacationBadges = screen.getAllByText("Vacation");
-      const vacationBadge = vacationBadges[0];
-      fireEvent.contextMenu(vacationBadge);
-      fireEvent.click(screen.getByText("Delete event"));
+      openDeleteConfirmationForVacation();
 
       // Click Delete to confirm using fireEvent
       const deleteButton = screen.getByRole("button", { name: /^Delete$/i });
