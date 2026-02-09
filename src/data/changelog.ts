@@ -14,9 +14,76 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.6.0",
+    date: "2026-02-09",
+    status: "current",
+    added: [
+      "Time Tracking Tab: New main tab with daily task tracking, quick timer, labels, templates, and weekly analytics",
+      "Daily Task Tracking: Add, edit, and delete tasks with time ranges, label assignment, and overlap detection",
+      "Quick Timer: Start/stop timer for current tasks with running-task guard and short-timer discard confirmation",
+      "Time Tracking Labels: Custom labels with color picker, contrast-aware text, and JSON import/export",
+      "Time Tracking Templates: Reusable task patterns for quick entry with modal editor and JSON import/export",
+      "Weekly Overview: Analytics dashboard with key metrics cards (total hours, average daily, days tracked, top category), daily breakdown chart with circular progress, and category breakdown",
+      "Timeline Progress Bar: Visual timeline replacing progress bar, showing task segments colored by label with proportional widths",
+      "Label and Template Management: Full CRUD panels with usage tracking, validation, and raw JSON editor",
+      "Reusable EmptyState Component: Shared empty state with Bootstrap icons, descriptions, and call-to-action buttons across all Time Tracking views",
+      "Integration Tests: Comprehensive integration tests for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard workflows",
+      "State Migration v2: Vacation allowance migrated from single amount to per-year yearlyAmounts with automatic seeding from previous value",
+      "Migration Error Recovery: Fallback mechanism preserving raw state backup when migrations fail, with hasMigrationError flag for user-facing alerts",
+    ],
+    changed: [
+      "ShiftTimeline: Now handles single-team schedules and parallel shift scenarios correctly",
+      "SCSS Architecture: Split main.scss into 4 focused partials (_variables, _shifts, _calendar, _utilities) with --wt-* custom property naming",
+      "WelcomeWizard: Extracted into configuration-driven navigation with separate step components (WelcomeWizard.tsx simplified significantly)",
+      "TimeOffView: Refactored from 882 to 469 lines by extracting components (EventTable, TimeOffToolbar) and hooks",
+      "Onboarding Flow: Extended with time-off and time-tracking setup steps and feature toggles",
+      "User State: Added lastUsed group for persisting active tab, view preferences, and ephemeral UI state separately from settings",
+      "Vacation Allowance: Restructured to use yearlyAmounts per-year breakdown instead of single amount field",
+      "Time Utilities: Switched to dayjs for time formatting in time tracking components",
+      "classnames to clsx: Migrated conditional class name utility across all components",
+    ],
+    fixed: [
+      "ISO Week Year: Corrected all ISO week year calculations for accurate reporting near year boundaries",
+      "Dark Mode: Fixed various theme issues using bg-body, bg-body-tertiary, and Bootstrap CSS variables instead of hardcoded colors",
+      "Accessibility: Added aria-hidden to decorative icons, aria-describedby for form controls, contrast-aware label text colors",
+      "Selection State: Fixed stale selection indices after single-item deletion in TimeOffView",
+      "Wizard Navigation: Fixed various flow issues in change-team and change-schedule modes",
+    ],
+    technicalDetails: {
+      title: "Time Tracking Feature and Major Refactoring",
+      description:
+        "Added complete time tracking system with 16 component files in src/components/timeTracking/, useTimeTrackingStorage hook for localStorage persistence, and timeUtils for time calculations. Created TimeTrackingView as main container with daily/weekly/config tab navigation. Implemented TimeTrackingDailyView (task entry, timeline progress bar, daily task list), TimeTrackingWeeklyView (analytics dashboard with circular progress charts, category breakdown), and TimeTrackingConfigView (labels/templates management, JSON import/export). Refactored SCSS into 4 partials with --wt-* variable naming convention. Extracted WelcomeWizard into configuration-driven system with separate step components. Reduced TimeOffView from 882 to 469 lines. Added state migration v2 for yearly vacation amounts and migration error recovery with raw state backup. Added comprehensive integration test suites for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard. All 1057 tests passing.",
+    },
+  },
+  {
+    version: "4.5.2",
+    date: "2026-01-30",
+    status: "released",
+    added: [
+      "Weekend Shift Schedule: Enabled the weekend-only rotation pattern as a selectable schedule type",
+      "Roster-Specific Shift Definitions: Each schedule now defines its own shift times, display codes, and names independently",
+      "Roster Shift Time Validation: Runtime validation of shift time definitions ensures correct configuration at module load",
+      "Night-Shift Cutoff: Roster-specific night-shift cutoff hours for accurate shift-day mapping across schedule types",
+    ],
+    changed: [
+      "Calendar First Tab: Calendar view moved to first tab position with intelligent working schedule display based on user's schedule type",
+      "Bootstrap Theming: Refactored from CSS overrides to Sass source-level customization for better maintainability",
+      "Schedule Lookups: Optimized from array iteration to Map-based lookups for faster schedule resolution",
+      "Submodule Cleanup: Removed HdayPlanner submodule from .gitmodules (functionality fully integrated)",
+    ],
+    fixed: [
+      "Team Number Normalization: ScheduleDetailModal now normalizes team number to prevent invalid-team errors when switching between schedules with different team counts",
+    ],
+    technicalDetails: {
+      title: "Roster System Improvements and Theming",
+      description:
+        "Made shift definitions roster-specific by migrating display info (shift names, display codes) into each schedule's shiftTimes configuration, eliminating the shared global shift definition. Enabled weekend shift schedule as a selectable option. Added validation for roster shift times and implemented roster-specific night-shift cutoff for accurate shift-day mapping. Optimized schedule lookups by replacing array iteration with Map-based resolution. Moved Calendar to first tab with intelligent working schedule display. Refactored Bootstrap theming from CSS overrides to Sass source variables. Fixed ScheduleDetailModal team number normalization to prevent invalid-team errors. 61 files changed with 3687 insertions and 2007 deletions.",
+    },
+  },
+  {
     version: "4.5.1",
     date: "2026-01-27",
-    status: "current",
+    status: "released",
     added: [
       "CalendarView Component: New calendar tab displaying working days with shift badges, time-off events, and public holiday indicators",
       "Calendar Legend: Popover legend explaining event type colors and day indicators (public holidays, school holidays, payday, courses)",
@@ -487,12 +554,11 @@ export const changelogData: ChangelogVersion[] = [
 ];
 
 export const futurePlans = {
-  "v4.6.0": {
+  "v4.7.0": {
     title: "Advanced Features",
     features: [
       "Calendar export (.ics format)",
       "Notification system",
-      "Theme customization",
       "Cross-schedule transfer view",
     ],
   },
