@@ -141,7 +141,7 @@ export function PersonalizedStatusContent({
         <Card className="h-100">
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
-              <i className="bi bi-arrow-right-circle me-1"></i>
+              <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
               Your Next Shift
             </Card.Title>
             <div className="text-muted flex-grow-1">

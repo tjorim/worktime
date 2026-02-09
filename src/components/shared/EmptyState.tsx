@@ -42,7 +42,11 @@ export function EmptyState({
       <h6 className="text-muted mb-2">{title}</h6>
       <p className="text-muted small mb-3">{description}</p>
       {ctaButton && (
-        <Button size="sm" variant={ctaButton.variant} onClick={ctaButton.onClick}>
+        <Button
+          size="sm"
+          variant={ctaButton.variant ?? "primary"}
+          onClick={ctaButton.onClick}
+        >
           <i className={`bi ${ctaButton.icon ?? "bi-plus-circle"} me-1`} aria-hidden="true"></i>
           {ctaButton.label}
         </Button>
