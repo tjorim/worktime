@@ -175,11 +175,11 @@
     }
 
     &.today-row {
-      background-color: var(--bs-primary-bg-subtle) !important;
-      border-left-color: var(--bs-primary) !important;
+      background-color: var(--bs-primary-bg-subtle);
+      border-left-color: var(--bs-primary);
       
       &:hover {
-        background-color: var(--bs-primary-bg-subtle) !important;
+        background-color: var(--bs-primary-bg-subtle);
         filter: brightness(0.98);
       }
     }
