@@ -216,9 +216,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         {labels.length === 0 ? (
-          <div className="text-center py-4 border rounded bg-light">
-            <div className="mb-3">
-              <i className="bi bi-tags" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+          <div className="text-center py-4 border rounded">
+            <div className="mb-3" style={{ fontSize: "3rem" }}>
+              🏷️
             </div>
             <h6 className="text-muted mb-2">No Labels Yet</h6>
             <p className="text-muted small mb-3">

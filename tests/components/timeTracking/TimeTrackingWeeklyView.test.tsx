@@ -55,11 +55,26 @@ describe("TimeTrackingWeeklyView Component", () => {
       ).toBeInTheDocument();
     });
 
-    it("shows call-to-action button in empty state", () => {
-      renderPanel([]);
+    it("shows call-to-action button in empty state when callback provided", () => {
+      render(
+        <TimeTrackingWeeklyView
+          tasks={[]}
+          labels={TEST_LABELS}
+          selectedDate="2025-01-06"
+          onSelectedDateChange={vi.fn()}
+          onSwitchToDaily={vi.fn()}
+        />,
+      );
 
       const ctaButton = screen.getByRole("button", { name: /Go to Daily Log/i });
       expect(ctaButton).toBeInTheDocument();
+    });
+
+    it("hides CTA button when no callback provided", () => {
+      renderPanel([]);
+
+      const ctaButton = screen.queryByRole("button", { name: /Go to Daily Log/i });
+      expect(ctaButton).not.toBeInTheDocument();
     });
 
     it("hides summary table when no tasks exist", () => {

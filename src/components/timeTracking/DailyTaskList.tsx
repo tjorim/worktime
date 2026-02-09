@@ -98,8 +98,8 @@ export function DailyTaskList({ tasks, labels, onUpdateTask, onRemoveTask }: Dai
   if (tasks.length === 0) {
     return (
       <div className="text-center py-4 mt-3">
-        <div className="mb-3">
-          <i className="bi bi-clock-history" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+        <div className="mb-3" style={{ fontSize: "3rem" }}>
+          🕐
         </div>
         <h6 className="text-muted mb-2">No Time Entries Yet</h6>
         <p className="text-muted small mb-0">

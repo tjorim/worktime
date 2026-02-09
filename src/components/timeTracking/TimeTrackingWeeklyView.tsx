@@ -23,6 +23,7 @@ type TimeTrackingWeeklyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;
+  onSwitchToDaily?: () => void;
 };
 
 function getWeekDateRange(year: number, week: number): [string, string] {
@@ -48,6 +49,7 @@ export function TimeTrackingWeeklyView({
   selectedDate,
   onSelectedDateChange,
   weeklyTargetHours,
+  onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
@@ -170,20 +172,19 @@ export function TimeTrackingWeeklyView({
         {/* Enhanced Empty State */}
         {rows.length === 0 && (
           <div className="text-center py-5">
-            <div className="mb-4">
-              <i className="bi bi-calendar-x" style={{ fontSize: "4rem", color: "#6c757d" }}></i>
+            <div className="mb-4" style={{ fontSize: "4rem" }}>
+              📊
             </div>
             <h5 className="text-muted mb-3">No Time Tracking Data Yet</h5>
             <p className="text-muted mb-4">
               Start tracking your time in the Daily Log to see your weekly breakdown here.
             </p>
-            <Button
-              variant="primary"
-              onClick={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
-            >
-              <i className="bi bi-plus-circle me-2" aria-hidden="true"></i>
-              Go to Daily Log
-            </Button>
+            {onSwitchToDaily && (
+              <Button variant="primary" onClick={onSwitchToDaily}>
+                <i className="bi bi-plus-circle me-2" aria-hidden="true"></i>
+                Go to Daily Log
+              </Button>
+            )}
           </div>
         )}
 
