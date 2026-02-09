@@ -212,7 +212,7 @@ export function ScheduleDetailModal({
                                 day.shift.start,
                                 day.shift.end,
                                 settings.timeFormat,
-                              )}
+                              ) ?? "—"}
                         </small>
                       </td>
                       <td>
@@ -287,7 +287,7 @@ export function ScheduleDetailModal({
                               day.shift.start,
                               day.shift.end,
                               settings.timeFormat,
-                            )}
+                            ) ?? "—"}
                       </span>
                     </div>
                     <div className="text-end">
