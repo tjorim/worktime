@@ -212,13 +212,13 @@ describe("CurrentStatus Component", () => {
     it("should render without crashing", () => {
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText("Current Status")).toBeInTheDocument();
+      expect(screen.getAllByText("Current Status")[0]).toBeInTheDocument();
     });
 
     it("should render the card structure correctly", () => {
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText("Current Status")).toBeInTheDocument();
+      expect(screen.getAllByText("Current Status")[0]).toBeInTheDocument();
       // With scheduleType set to "5-shift" via mock, shows "Select Team" button
       expect(screen.getByRole("button", { name: /select team/i })).toBeInTheDocument();
     });
@@ -230,11 +230,11 @@ describe("CurrentStatus Component", () => {
 
       expect(
         screen.getByText(
-          "💡 Select your team above for personalized shift tracking and countdown timers",
+          "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("💡 Select your team above for personalized shift tracking"),
+        screen.getByText("Select your team above for personalized shift tracking"),
       ).toBeInTheDocument();
     });
 
@@ -262,7 +262,7 @@ describe("CurrentStatus Component", () => {
     it("should display formatted date code", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText(/📅.*Mon 15 Jan/)).toBeInTheDocument();
+      expect(screen.getByText(/Mon 15 Jan/)).toBeInTheDocument();
       expect(formatYYWWD).toHaveBeenCalledWith(expect.any(Object));
     });
   });
@@ -376,7 +376,7 @@ describe("CurrentStatus Component", () => {
       // Should show team selection prompt
       expect(
         screen.getByText(
-          "💡 Select your team above for personalized shift tracking and countdown timers",
+          "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
     });

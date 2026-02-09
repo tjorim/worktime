@@ -206,7 +206,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
       setSelectedIndices(new Set());
-      toast.showSuccess("Event deleted successfully", "🗑️");
+      toast.showSuccess("Event deleted successfully", "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
@@ -235,7 +235,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleBulkDeleteConfirm = () => {
     if (selectedIndices.size > 0) {
       deleteEvents(Array.from(selectedIndices));
-      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "🗑️");
+      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "bi-trash");
     }
     setSelectedIndices(new Set());
     setShowBulkDeleteConfirm(false);

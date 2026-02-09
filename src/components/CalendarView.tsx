@@ -291,7 +291,7 @@ export function CalendarView({
     if (!timeOffEnabled) return;
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
-      toast.showSuccess("Event deleted successfully", "🗑️");
+      toast.showSuccess("Event deleted successfully", "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
