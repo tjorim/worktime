@@ -205,7 +205,11 @@ export function TemplatesPanel({
       {templates.length === 0 ? (
         <div className="text-center py-4 mt-3 border rounded">
           <div className="mb-3">
-            <i className="bi bi-file-earmark-text" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+            <i
+              className="bi bi-file-earmark-text"
+              style={{ fontSize: "3rem", color: "#6c757d" }}
+              aria-hidden="true"
+            ></i>
           </div>
           <h6 className="text-muted mb-2">No Templates Yet</h6>
           <p className="text-muted small mb-3">

@@ -276,6 +276,8 @@ export function TimeTrackingWeeklyView({
                         <div className="mb-1">
                           <div
                             className="mx-auto"
+                            role="img"
+                            aria-label={`${day.label}: ${dayTotal.toFixed(1)} hours, ${percentage.toFixed(0)}% of daily target`}
                             style={{
                               width: "40px",
                               height: "40px",
@@ -290,8 +292,9 @@ export function TimeTrackingWeeklyView({
                             }}
                           >
                             <div
-                              className="bg-white rounded-circle d-flex align-items-center justify-content-center"
+                              className="bg-body rounded-circle d-flex align-items-center justify-content-center"
                               style={{ width: "32px", height: "32px" }}
+                              aria-hidden="true"
                             >
                               <small className="fw-semibold">{dayTotal.toFixed(1)}</small>
                             </div>
@@ -392,7 +395,7 @@ export function TimeTrackingWeeklyView({
             )}
 
             {/* Weekly Summary */}
-            <div className="mt-4 p-3 bg-light rounded">
+            <div className="mt-4 p-3 border rounded">
               <h6 className="text-uppercase text-muted mb-3">Weekly Summary</h6>
               <div className="row">
                 <div className="col-md-6">
