@@ -129,9 +129,12 @@ export function TimeOffTableView({
           <EmptyState
             icon="bi-calendar-x"
             title="No time-off events yet"
-            description={
-              'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
-            }
+            description='Create your first event or import an existing .hday file to get started.'
+            ctaButton={{
+              label: "Add Event",
+              onClick: onAddEvent,
+              icon: "bi-plus-circle",
+            }}
           />
         ) : (
           <Table responsive hover>
