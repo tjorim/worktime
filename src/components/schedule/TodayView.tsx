@@ -214,13 +214,13 @@ export function TodayView({
     <Card>
       <Card.Header>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <h6 className="mb-0">
+          <span className="fw-semibold">
             <i
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
               aria-hidden="true"
             ></i>
             {hasTeams ? "All Teams" : "Schedule"}
-          </h6>
+          </span>
           <DayNavigationButtonGroup
             isCurrent={isToday}
             onPrevious={onPreviousDay}
