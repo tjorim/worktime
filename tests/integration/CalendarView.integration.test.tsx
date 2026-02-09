@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { CalendarView } from "../../src/components/CalendarView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
@@ -27,7 +26,7 @@ const mockedUseSchoolHolidays = vi.mocked(useSchoolHolidays);
  * Test fixtures for multi-source data integration testing.
  * These represent typical data combinations seen in CalendarView.
  */
-const createTestFixtures = (year = 2025, month = 1) => {
+const createTestFixtures = () => {
   // Public holidays fixture - New Year's Day
   const publicHolidayMap = new Map<string, PublicHolidayInfo>([
     ["2025/01/01", { name: "New Year's Day", localName: "Nieuwjaarsdag" }],
@@ -369,6 +368,7 @@ describe("CalendarView Integration Tests", () => {
       const targetCell = Array.from(dayCells).find((cell) =>
         cell.querySelector(".month-calendar-day-number")?.textContent?.includes("15"),
       );
+      expect(targetCell).toBeTruthy();
 
       // Right-click to attempt context menu using fireEvent
       fireEvent.contextMenu(targetCell!);
@@ -506,10 +506,14 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      // Legend should not show event type indicators
-      // (e.g., vacation colors, business trip indicators)
-      const legend = screen.queryByText(/Time Off/i);
-      expect(legend).not.toBeInTheDocument();
+      // Open the legend popover
+      const legendButton = screen.getByRole("button", { name: /Legend/i });
+      fireEvent.click(legendButton);
+
+      // Verify "Event Types" section is not shown when time-off is disabled
+      expect(screen.queryByText("Event Types")).not.toBeInTheDocument();
+      // But "Day Indicators" should still be visible
+      expect(screen.getByText("Day Indicators")).toBeInTheDocument();
     });
   });
 
@@ -564,7 +568,10 @@ describe("CalendarView Integration Tests", () => {
       const targetCell = Array.from(dayCells).find((cell) =>
         cell.querySelector(".month-calendar-day-number")?.textContent?.includes("20"),
       );
-      fireEvent.contextMenu(targetCell!);
+      if (!targetCell) {
+        throw new Error('Target day cell for date "20" was not found in the month calendar.');
+      }
+      fireEvent.contextMenu(targetCell);
       fireEvent.click(screen.getByText("Add new event"));
 
       // Fill in event details (the label is "Comment" not "Event title") using fireEvent
@@ -594,7 +601,10 @@ describe("CalendarView Integration Tests", () => {
       const targetCell = Array.from(dayCells).find((cell) =>
         cell.querySelector(".month-calendar-day-number")?.textContent?.includes("20"),
       );
-      fireEvent.contextMenu(targetCell!);
+      if (!targetCell) {
+        throw new Error('Target day cell for date "20" was not found in the month calendar.');
+      }
+      fireEvent.contextMenu(targetCell);
       fireEvent.click(screen.getByText("Add new event"));
 
       // Clear the pre-filled start date to trigger required validation
