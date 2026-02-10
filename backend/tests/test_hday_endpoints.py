@@ -447,3 +447,92 @@ class TestAuditLogging:
         assert entry["action"] == "write_hday"
         assert entry["details"] is not None
         assert "etag" in entry["details"]
+
+
+class TestTimingHeaders:
+    """Tests for timing headers in hday endpoints."""
+    
+    def test_get_timing_headers_raw_format(self, client, share_dir):
+        """Test GET returns timing headers for format=raw."""
+        # Create a test .hday file
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=raw")
+        
+        assert response.status_code == 200
+        
+        # Check timing headers are present
+        assert "X-File-Read-Ms" in response.headers
+        assert "X-Parse-Time-Ms" in response.headers
+        assert "X-Total-Ms" in response.headers
+        
+        # Parse timing values
+        file_read_ms = float(response.headers["X-File-Read-Ms"])
+        parse_time_ms = float(response.headers["X-Parse-Time-Ms"])
+        total_ms = float(response.headers["X-Total-Ms"])
+        
+        # All timings should be non-negative
+        assert file_read_ms >= 0
+        assert parse_time_ms == 0.0  # No parsing for raw format
+        assert total_ms >= 0
+        
+        # Total should be greater than or equal to file_read
+        assert total_ms >= file_read_ms
+    
+    def test_get_timing_headers_parsed_format(self, client, share_dir):
+        """Test GET returns timing headers for format=parsed."""
+        # Create a test .hday file
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=parsed")
+        
+        assert response.status_code == 200
+        
+        # Check timing headers are present
+        assert "X-File-Read-Ms" in response.headers
+        assert "X-Parse-Time-Ms" in response.headers
+        assert "X-Total-Ms" in response.headers
+        
+        # Parse timing values
+        file_read_ms = float(response.headers["X-File-Read-Ms"])
+        parse_time_ms = float(response.headers["X-Parse-Time-Ms"])
+        total_ms = float(response.headers["X-Total-Ms"])
+        
+        # All timings should be non-negative
+        assert file_read_ms >= 0
+        assert parse_time_ms >= 0  # Parsing should have occurred
+        assert total_ms >= 0
+        
+        # Total should include both file read and parse time
+        assert total_ms >= file_read_ms
+        assert total_ms >= parse_time_ms
+    
+    def test_timing_header_format(self, client, share_dir):
+        """Test that timing headers have correct format (3 decimal places)."""
+        # Create a test .hday file
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser")
+        
+        assert response.status_code == 200
+        
+        # Check format of timing headers
+        file_read_header = response.headers["X-File-Read-Ms"]
+        parse_time_header = response.headers["X-Parse-Time-Ms"]
+        total_header = response.headers["X-Total-Ms"]
+        
+        # All should have 3 decimal places
+        assert "." in file_read_header
+        assert len(file_read_header.split(".")[1]) == 3
+        
+        assert "." in parse_time_header
+        assert len(parse_time_header.split(".")[1]) == 3
+        
+        assert "." in total_header
+        assert len(total_header.split(".")[1]) == 3

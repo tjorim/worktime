@@ -531,3 +531,151 @@ d1 # Every Monday
         assert data["members"][1]["raw"] == ""
         assert data["members"][1]["events"] == []
         assert data["members"][1]["etag"] is None
+
+
+class TestTeamHdayTimingHeaders:
+    """Tests for timing headers in team hday endpoints."""
+    
+    def test_team_hday_timing_headers_raw_format(self, client, share_dir):
+        """Test team hday endpoint returns timing headers for format=raw."""
+        # Create team directory with config, people, and .hday files
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
+        
+        # Create .hday file for one member
+        hday_file = team_dir / "jdoe.hday"
+        hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
+        
+        response = client.get("/v1/team/team1/hday?format=raw")
+        
+        assert response.status_code == 200
+        
+        # Check timing headers are present
+        assert "X-File-Read-Ms" in response.headers
+        assert "X-Parse-Time-Ms" in response.headers
+        assert "X-Total-Ms" in response.headers
+        
+        # Parse timing values
+        file_read_ms = float(response.headers["X-File-Read-Ms"])
+        parse_time_ms = float(response.headers["X-Parse-Time-Ms"])
+        total_ms = float(response.headers["X-Total-Ms"])
+        
+        # All timings should be non-negative
+        assert file_read_ms >= 0
+        assert parse_time_ms == 0.0  # No parsing for raw format
+        assert total_ms >= 0
+        
+        # Total should be greater than or equal to file_read
+        assert total_ms >= file_read_ms
+    
+    def test_team_hday_timing_headers_parsed_format(self, client, share_dir):
+        """Test team hday endpoint returns timing headers for format=parsed."""
+        # Create team directory with config, people, and .hday files
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
+        
+        # Create .hday file for one member
+        hday_file = team_dir / "jdoe.hday"
+        hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
+        
+        response = client.get("/v1/team/team1/hday?format=parsed")
+        
+        assert response.status_code == 200
+        
+        # Check timing headers are present
+        assert "X-File-Read-Ms" in response.headers
+        assert "X-Parse-Time-Ms" in response.headers
+        assert "X-Total-Ms" in response.headers
+        
+        # Parse timing values
+        file_read_ms = float(response.headers["X-File-Read-Ms"])
+        parse_time_ms = float(response.headers["X-Parse-Time-Ms"])
+        total_ms = float(response.headers["X-Total-Ms"])
+        
+        # All timings should be non-negative
+        assert file_read_ms >= 0
+        assert parse_time_ms >= 0  # Parsing should have occurred
+        assert total_ms >= 0
+        
+        # Total should include both file read and parse time
+        assert total_ms >= file_read_ms
+        assert total_ms >= parse_time_ms
+    
+    def test_team_hday_timing_header_format(self, client, share_dir):
+        """Test that timing headers have correct format (3 decimal places)."""
+        # Create team directory with config and people
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe", encoding="utf-8")
+        
+        response = client.get("/v1/team/team1/hday")
+        
+        assert response.status_code == 200
+        
+        # Check format of timing headers
+        file_read_header = response.headers["X-File-Read-Ms"]
+        parse_time_header = response.headers["X-Parse-Time-Ms"]
+        total_header = response.headers["X-Total-Ms"]
+        
+        # All should have 3 decimal places
+        assert "." in file_read_header
+        assert len(file_read_header.split(".")[1]) == 3
+        
+        assert "." in parse_time_header
+        assert len(parse_time_header.split(".")[1]) == 3
+        
+        assert "." in total_header
+        assert len(total_header.split(".")[1]) == 3
+    
+    def test_team_hday_timing_with_multiple_members(self, client, share_dir):
+        """Test timing headers with multiple team members and files."""
+        # Create team directory with config, people, and multiple .hday files
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\nblee,Bob Lee", encoding="utf-8")
+        
+        # Create .hday files for multiple members
+        (team_dir / "jdoe.hday").write_text("2025/01/15 # Vacation\n2025/12/25 # Holiday", encoding="utf-8")
+        (team_dir / "asmith.hday").write_text("2025/02/10 # Day off", encoding="utf-8")
+        (team_dir / "blee.hday").write_text("2025/03/01 # Conference", encoding="utf-8")
+        
+        response = client.get("/v1/team/team1/hday?format=parsed")
+        
+        assert response.status_code == 200
+        
+        # Verify timing headers are present
+        assert "X-File-Read-Ms" in response.headers
+        assert "X-Parse-Time-Ms" in response.headers
+        assert "X-Total-Ms" in response.headers
+        
+        # Parse timing values
+        file_read_ms = float(response.headers["X-File-Read-Ms"])
+        parse_time_ms = float(response.headers["X-Parse-Time-Ms"])
+        total_ms = float(response.headers["X-Total-Ms"])
+        
+        # With 3 members, file read and parse should take measurable time
+        assert file_read_ms > 0
+        assert parse_time_ms > 0
+        assert total_ms >= file_read_ms + parse_time_ms
