@@ -65,10 +65,10 @@ async def health_check() -> JSONResponse:
             content={"status": "degraded", "share": "permission_denied"}
         )
     except Exception as e:
-        logger.error(f"Health check failed: Error accessing SHARE_DIR: {e}")
+        logger.error("Health check failed: Error accessing SHARE_DIR", exc_info=e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"status": "degraded", "share": "error", "error": str(e)}
+            content={"status": "degraded", "share": "error", "error": "internal_error"}
         )
 
 
