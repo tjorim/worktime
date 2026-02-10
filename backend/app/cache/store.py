@@ -156,6 +156,42 @@ class FileCache:
         # Entry exists but is stale
         return not self._is_fresh(entry.cached_at)
     
+    def get_hday_stale(self, username: str) -> Optional[HdayCacheEntry]:
+        """Get cached .hday entry even if stale (for mtime validation).
+        
+        Returns the cached entry if it exists, regardless of TTL.
+        Does not remove stale entries from cache.
+        Use this when you want to check if mtime has changed.
+        
+        Args:
+            username: The username to lookup
+            
+        Returns:
+            Cached entry if exists, None otherwise
+        """
+        if not self._is_enabled():
+            return None
+            
+        return self._hday_entries.get(username)
+    
+    def refresh_hday_ttl(self, username: str) -> None:
+        """Refresh the TTL of an existing cache entry.
+        
+        Updates the cached_at timestamp to current time, extending the TTL
+        without changing the cached data. Use this when file mtime is unchanged.
+        
+        Args:
+            username: The username to refresh
+        """
+        if not self._is_enabled():
+            return
+            
+        entry = self._hday_entries.get(username)
+        if entry is not None:
+            # Update cached_at to refresh TTL
+            entry.cached_at = datetime.now().timestamp()
+            logger.debug("Refreshed .hday cache entry TTL")
+    
     # Team config cache operations
     
     def get_team_config(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
@@ -226,6 +262,42 @@ class FileCache:
         if team_id in self._team_entries:
             del self._team_entries[team_id]
             logger.debug("Invalidated team config cache entry")
+    
+    def get_team_config_stale(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
+        """Get cached team config entry even if stale (for mtime validation).
+        
+        Returns the cached entry if it exists, regardless of TTL.
+        Does not remove stale entries from cache.
+        Use this when you want to check if mtime has changed.
+        
+        Args:
+            team_id: The team identifier to lookup
+            
+        Returns:
+            Cached entry if exists, None otherwise
+        """
+        if not self._is_enabled():
+            return None
+            
+        return self._team_entries.get(team_id)
+    
+    def refresh_team_config_ttl(self, team_id: str) -> None:
+        """Refresh the TTL of an existing team config cache entry.
+        
+        Updates the cached_at timestamp to current time, extending the TTL
+        without changing the cached data. Use this when file mtimes are unchanged.
+        
+        Args:
+            team_id: The team identifier to refresh
+        """
+        if not self._is_enabled():
+            return
+            
+        entry = self._team_entries.get(team_id)
+        if entry is not None:
+            # Update cached_at to refresh TTL
+            entry.cached_at = datetime.now().timestamp()
+            logger.debug("Refreshed team config cache entry TTL")
 
 
 # Global cache instance

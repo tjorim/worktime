@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Optional
 import re
 
+from app.cache.store import get_cache
 from app.config.settings import settings
+from app.services.hday_parser import parse_text
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +128,11 @@ def get_hday_path(username: str) -> Path:
 def read_hday_file(username: str) -> tuple[str, str]:
     """Read an .hday file and return its content and etag.
     
+    Integrates with cache layer using write-through pattern:
+    - Checks cache first for fresh entry and returns immediately
+    - If stale entry exists, validates file mtime before deciding to re-read
+    - Parses and caches events even for raw format requests
+    
     Args:
         username: The username whose file to read
         
@@ -136,6 +143,17 @@ def read_hday_file(username: str) -> tuple[str, str]:
         HdayFileNotFoundError: If the file doesn't exist
         ShareNotAccessibleError: If the share directory is not accessible
     """
+    cache = get_cache()
+    
+    # Check cache first for fresh entry
+    cached_entry = cache.get_hday(username)
+    if cached_entry is not None:
+        logger.debug("Cache hit: returning cached .hday data")
+        return cached_entry.raw, cached_entry.etag
+    
+    # Check if we have a stale entry that might still be valid
+    stale_entry = cache.get_hday_stale(username)
+    
     file_path = get_hday_path(username)
     share_dir = settings.get_share_dir_path()
 
@@ -158,11 +176,40 @@ def read_hday_file(username: str) -> tuple[str, str]:
         logger.info("File not found")
         raise HdayFileNotFoundError(f"File not found for user: {username}")
 
+    # If we have a stale entry, check if file mtime has changed
+    if stale_entry is not None:
+        try:
+            # Get current file mtime
+            current_mtime = file_path.stat().st_mtime
+            
+            # If mtime unchanged, refresh TTL and return cached data
+            if current_mtime == stale_entry.mtime:
+                logger.debug("Cache refresh: file unchanged, extending TTL")
+                cache.refresh_hday_ttl(username)
+                return stale_entry.raw, stale_entry.etag
+            else:
+                logger.debug("File mtime changed, cache invalidated")
+        except Exception:
+            # If stat fails, proceed with normal file read
+            logger.debug("Failed to check file mtime, proceeding with file read")
+
     try:
         # Read file content
         # file_path has been validated by get_hday_path() - safe to use
         content = file_path.read_text(encoding="utf-8")
         etag = compute_etag(content)
+        
+        # Parse events and update cache (even for format=raw requests)
+        try:
+            events = parse_text(content)
+            # Get file mtime for cache entry
+            mtime = file_path.stat().st_mtime
+            cache.set_hday(username, content, events, etag, mtime)
+            logger.debug("Cached .hday data with parsed events")
+        except Exception as parse_error:
+            # If parsing fails, still return the content but don't cache
+            logger.warning(f"Failed to parse .hday content for caching: {parse_error}")
+        
         logger.info("Successfully read .hday file")
         return content, etag
     except PermissionError as e:
@@ -181,6 +228,10 @@ def write_hday_file(
     """Write content to an .hday file with atomic write and conflict detection.
     
     Uses atomic write pattern: write to temporary file, then replace.
+    Integrates with cache layer using write-through pattern:
+    - Checks cache first for fresh etag during conflict detection
+    - Updates cache immediately after successful write
+    - Returns cached data on conflict to avoid re-read
     
     Args:
         username: The username whose file to write
@@ -196,6 +247,7 @@ def write_hday_file(
         HdayConflictError: If the file state doesn't match expectations
         ShareNotAccessibleError: If the share directory is not accessible
     """
+    cache = get_cache()
     file_path = get_hday_path(username)
     temp_path = file_path.with_suffix(".hday.tmp")
     share_dir = settings.get_share_dir_path()
@@ -213,12 +265,24 @@ def write_hday_file(
         logger.error("Share directory is not writable/accessible")
         raise ShareNotAccessibleError("Share directory not writable")
 
-    # Conflict detection
+    # Conflict detection with cached etag optimization
     # file_path has been validated by get_hday_path() - safe to use
     file_exists = file_path.exists()
     if expected_etag is None:
         # Creating new file - must not exist
         if file_exists:
+            # Check cache first for fresh etag
+            cached_entry = cache.get_hday(username)
+            if cached_entry is not None:
+                logger.warning(
+                    f"Conflict: File already exists for user {username}, "
+                    f"expected new file (cached etag used)"
+                )
+                raise HdayConflictError(
+                    f"File already exists for user: {username}", cached_entry.etag
+                )
+            
+            # Cache miss or stale, fall back to file read
             try:
                 # file_path has been validated by get_hday_path() - safe to use
                 current_content = file_path.read_text(encoding="utf-8")
@@ -247,24 +311,39 @@ def write_hday_file(
                 f"File does not exist for user: {username}", None
             )
 
-        try:
-            # file_path has been validated by get_hday_path() - safe to use
-            current_content = file_path.read_text(encoding="utf-8")
-            current_etag = compute_etag(current_content)
-        except PermissionError as e:
-            logger.error("Permission denied reading file for etag check")
-            raise ShareNotAccessibleError(
-                f"Permission denied reading file for user: {username}"
-            ) from e
+        # Check cache first for fresh etag
+        cached_entry = cache.get_hday(username)
+        if cached_entry is not None:
+            current_etag = cached_entry.etag
+            if current_etag != expected_etag:
+                logger.warning(
+                    f"Conflict: Etag mismatch for user {username}. "
+                    f"Expected: {expected_etag}, Current: {current_etag} (cached)"
+                )
+                raise HdayConflictError(
+                    f"Etag mismatch - file has been modified", current_etag
+                )
+            logger.debug("Etag check passed using cached data")
+        else:
+            # Cache miss or stale, fall back to file read
+            try:
+                # file_path has been validated by get_hday_path() - safe to use
+                current_content = file_path.read_text(encoding="utf-8")
+                current_etag = compute_etag(current_content)
+            except PermissionError as e:
+                logger.error("Permission denied reading file for etag check")
+                raise ShareNotAccessibleError(
+                    f"Permission denied reading file for user: {username}"
+                ) from e
 
-        if current_etag != expected_etag:
-            logger.warning(
-                f"Conflict: Etag mismatch for user {username}. "
-                f"Expected: {expected_etag}, Current: {current_etag}"
-            )
-            raise HdayConflictError(
-                f"Etag mismatch - file has been modified", current_etag
-            )
+            if current_etag != expected_etag:
+                logger.warning(
+                    f"Conflict: Etag mismatch for user {username}. "
+                    f"Expected: {expected_etag}, Current: {current_etag}"
+                )
+                raise HdayConflictError(
+                    f"Etag mismatch - file has been modified", current_etag
+                )
 
     # Atomic write: write to temp file, then replace
     try:
@@ -274,8 +353,21 @@ def write_hday_file(
         # Atomic replace
         # Both paths have been validated - safe to use
         os.replace(temp_path, file_path)
-        # Compute and return new etag
+        
+        # Write-through cache update: update cache after successful write
         new_etag = compute_etag(content)
+        try:
+            # Parse events for cache entry
+            events = parse_text(content)
+            # Get new file mtime
+            new_mtime = file_path.stat().st_mtime
+            # Update cache with new data
+            cache.set_hday(username, content, events, new_etag, new_mtime)
+            logger.debug("Updated cache with newly written data")
+        except Exception as cache_error:
+            # Cache update failure should not fail the write operation
+            logger.warning(f"Failed to update cache after write: {cache_error}")
+        
         logger.info("Successfully wrote .hday file")
         return new_etag
 
