@@ -67,7 +67,7 @@ async def get_hday_file(username: str) -> HdayReadResponse:
         )
         
     except (ShareNotAccessibleError, PermissionError) as e:
-        logger.error(f"Share directory not accessible: {e}")
+        logger.error("Share directory not accessible", exc_info=e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": "Share directory not accessible"}
@@ -126,7 +126,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         return HdayWriteResponse(etag=new_etag)
         
     except HdayConflictError as e:
-        logger.warning(f"Conflict writing file for user {username}: {e}")
+        logger.warning(f"Conflict writing file for user {username}")
         
         # Read current file state for conflict response
         try:
@@ -154,7 +154,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
             )
             
     except ShareNotAccessibleError as e:
-        logger.error(f"Share directory not accessible: {e}")
+        logger.error("Share directory not accessible", exc_info=e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": "Share directory not accessible"}
