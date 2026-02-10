@@ -110,7 +110,7 @@ def parse_text(text: str) -> List[HdayEvent]:
         if m:
             g = m.groupdict()
             prefix = g["prefix"] or ""
-            flags = [PREFIX_MAP.get(ch, f"flag_{ch}") for ch in prefix]
+            flags = [PREFIX_MAP.get(ch.lower(), f"flag_{ch}") for ch in prefix]
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
@@ -131,7 +131,7 @@ def parse_text(text: str) -> List[HdayEvent]:
         if w:
             g = w.groupdict()
             suffix = g["suffix"] or ""
-            flags = [PREFIX_MAP.get(ch, f"flag_{ch}") for ch in suffix]
+            flags = [PREFIX_MAP.get(ch.lower(), f"flag_{ch}") for ch in suffix]
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
