@@ -28,16 +28,56 @@ export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingL
 }
 
 /**
+ * Cached default label color to avoid repeated getComputedStyle calls.
+ * Reset when theme changes via the observer below.
+ */
+let cachedDefaultLabelColor: string | null = null;
+
+/**
+ * Observer to invalidate cache when data-bs-theme attribute changes.
+ * This ensures the color updates when users switch between light/dark/auto themes.
+ */
+if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
+        cachedDefaultLabelColor = null;
+        break;
+      }
+    }
+  });
+
+  if (document.documentElement) {
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-bs-theme"],
+    });
+  }
+}
+
+/**
  * Get the default label color from CSS variables (theme-aware).
  * Falls back to Bootstrap's gray-600 (#6c757d) if CSS variable is not available.
+ * 
+ * The result is cached to avoid repeated getComputedStyle calls, which can be expensive.
+ * The cache is automatically invalidated when the theme changes (data-bs-theme attribute).
  */
 export function getDefaultLabelColor(): string {
   if (typeof window === "undefined" || !document.documentElement) {
     return "#6c757d";
   }
+
+  // Return cached value if available
+  if (cachedDefaultLabelColor !== null) {
+    return cachedDefaultLabelColor;
+  }
+
+  // Compute and cache the value
   const style = getComputedStyle(document.documentElement);
   const color = style.getPropertyValue("--wt-label-default").trim();
-  return color || "#6c757d";
+  cachedDefaultLabelColor = color || "#6c757d";
+
+  return cachedDefaultLabelColor;
 }
 
 export function getContrastingTextColor(backgroundColor?: string): string {
