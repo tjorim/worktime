@@ -131,7 +131,11 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         # Read current file state for conflict response
         try:
             current_raw, current_etag = hday_service.read_hday_file(username)
-            current_events = hday_parser.parse_text(current_raw)
+            try:
+                current_events = hday_parser.parse_text(current_raw)
+            except Exception:
+                # If parsing fails, return empty events list rather than crashing
+                current_events = []
             
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,

@@ -128,7 +128,7 @@ This completes Phase 2. The API is ready for:
 3. Additional endpoints as needed
 
 ## Files Changed Summary
-```
+```text
 backend/app/api/hday.py           | 173 ++++++++++++++++++
 backend/app/main.py               |   2 +
 backend/tests/test_hday_endpoints.py | 440 +++++++++++++++++++++++++++++++++++++++

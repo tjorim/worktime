@@ -30,7 +30,7 @@ async def health_check() -> JSONResponse:
         - 200: {"status": "ok", "share": "accessible"} - All systems operational
         - 503: {"status": "degraded", "share": "not_found"} - Directory missing
         - 503: {"status": "degraded", "share": "permission_denied"} - Access denied
-        - 503: {"status": "degraded", "share": "error", "error": "<msg>"} - Other errors
+        - 503: {"status": "degraded", "share": "error", "error": "internal_error"} - Other errors
     """
     share_path = settings.get_share_dir_path()
     

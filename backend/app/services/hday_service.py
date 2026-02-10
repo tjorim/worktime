@@ -114,9 +114,9 @@ def get_hday_path(username: str) -> Path:
         # Use strict=False so resolution does not depend on the file already existing
         normalized_path = file_path.resolve(strict=False)
         normalized_path.relative_to(resolved_share)
-    except ValueError:
+    except ValueError as err:
         # Either resolution failed or the path escapes the share directory
-        raise ValueError("Invalid username format")
+        raise ValueError("Invalid username format") from err
 
     # Always return the normalized, share-rooted path
     return normalized_path
