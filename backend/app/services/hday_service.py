@@ -67,24 +67,28 @@ def get_hday_path(username: str) -> Path:
     if not re.match(r'^[a-zA-Z0-9._-]+$', username):
         raise ValueError("Invalid username format")
     
-    # Additional check: username must not contain path separators
+    # Additional check: username must not contain path separators or traversal patterns
     if "/" in username or "\\" in username or ".." in username:
         raise ValueError("Invalid username format")
     
     share_dir = settings.get_share_dir_path()
+    # Resolve the share directory to an absolute, normalized path
+    resolved_share = share_dir.resolve()
+    
     # Sanitize: use only the filename part of username to prevent path traversal
     safe_filename = Path(username).name
-    file_path = share_dir / f"{safe_filename}.hday"
+    file_path = resolved_share / f"{safe_filename}.hday"
     
     # Verify the resolved path is within share_dir to prevent path traversal
     try:
-        resolved_path = file_path.resolve()
-        resolved_share = share_dir.resolve()
+        # Use strict=False so resolution does not depend on the file already existing
+        resolved_path = file_path.resolve(strict=False)
         resolved_path.relative_to(resolved_share)
     except ValueError:
+        # Either resolution failed or the path escapes the share directory
         raise ValueError("Invalid username format")
     
-    return file_path
+    return resolved_path
 
 
 def read_hday_file(username: str) -> tuple[str, str]:
