@@ -5,6 +5,7 @@ member lists, and aggregating .hday data across all team members.
 """
 
 import logging
+import os
 import re
 from pathlib import Path
 from typing import List
@@ -12,7 +13,7 @@ from typing import List
 from app.config.settings import settings
 from app.models.team import TeamMember, TeamMemberHdayData
 from app.services.hday_parser import parse_text
-from app.services.hday_service import compute_etag
+from app.services.hday_service import ShareNotAccessibleError, compute_etag
 
 logger = logging.getLogger(__name__)
 
@@ -107,12 +108,27 @@ def get_team_path(team_id: str) -> Path:
     Raises:
         ValueError: If team_id contains invalid characters
         TeamNotFoundError: If the team directory doesn't exist
+        ShareNotAccessibleError: If the share directory is not accessible
     """
     # First, sanitize the team_id so that it is safe to use as a path component.
     # This removes any taint from the user input
     safe_team_id = _sanitize_team_id(team_id)
 
     share_dir = settings.get_share_dir_path()
+    
+    # Check if share directory is accessible
+    if not share_dir.exists():
+        logger.error("Share directory does not exist")
+        raise ShareNotAccessibleError("Share directory not found")
+
+    if not share_dir.is_dir():
+        logger.error("Share directory is not a directory")
+        raise ShareNotAccessibleError("Share directory is not a directory")
+
+    if not os.access(share_dir, os.R_OK | os.X_OK):
+        logger.error("Share directory is not readable/accessible")
+        raise ShareNotAccessibleError("Share directory not accessible")
+    
     # Resolve the share directory to an absolute, normalized path
     resolved_share = share_dir.resolve()
 
