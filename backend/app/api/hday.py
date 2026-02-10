@@ -27,6 +27,9 @@ from app.services.hday_service import (
 
 logger = logging.getLogger(__name__)
 
+# Length of etag preview in audit log details
+ETAG_PREVIEW_LENGTH = 16
+
 router = APIRouter(tags=["Hday Files"])
 
 
@@ -115,7 +118,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         audit.append(
             target=f"{username}.hday",
             action="write_hday",
-            details=f"Updated via API (etag: {new_etag[:16]}...)"
+            details=f"Updated via API (etag: {new_etag[:ETAG_PREVIEW_LENGTH]}...)"
         )
         
         logger.info(f"Successfully wrote .hday file for user: {username}")
