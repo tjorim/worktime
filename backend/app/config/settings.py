@@ -107,19 +107,13 @@ class Settings(BaseSettings):
         share_path = self.get_share_dir_path()
         try:
             if not share_path.exists():
-                try:
-                    logger.info(f"Creating SHARE_DIR: {share_path}")
-                    share_path.mkdir(parents=True, exist_ok=True)
-                except (PermissionError, OSError) as e:
-                    logger.warning(
-                        f"Could not create SHARE_DIR at {share_path}: {e}. "
-                        "This is expected in production when using mounted shares."
-                    )
+                logger.info(f"Creating SHARE_DIR: {share_path}")
+                share_path.mkdir(parents=True, exist_ok=True)
             else:
                 logger.info(f"SHARE_DIR exists: {share_path}")
         except (PermissionError, OSError) as e:
             logger.warning(
-                f"Could not check SHARE_DIR at {share_path}: {e}. "
+                f"Could not create or check SHARE_DIR at {share_path}: {e}. "
                 "This is expected in production when using mounted shares with restricted permissions."
             )
     

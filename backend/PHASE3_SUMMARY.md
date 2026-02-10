@@ -6,10 +6,10 @@
 
 #### Dockerfile (`backend/Dockerfile`)
 - ✅ Created production-ready Dockerfile with Python 3.11-slim base image
-- ✅ Multi-stage approach with optimized layer caching:
-  - System dependencies installation
+- ✅ Optimized single-stage build with layer caching:
   - Python package installation from requirements.txt
   - Application code copy
+  - Data directory creation
 - ✅ Volume documentation for share directory mounting
 - ✅ Environment variable defaults for all configuration options
 - ✅ Port 8000 exposed for HTTP traffic
@@ -62,8 +62,9 @@ docker run -p 8000:8000 \
 - ✅ Share directory verification at startup:
   - Checks if directory exists
   - Verifies path is actually a directory
-  - Tests read access via directory listing
+  - Tests read and execute permissions via os.access()
   - Logs appropriate warnings without failing startup
+  - Note: Permission check may not reflect actual access on systems with complex permission schemes (ACLs, SELinux). Health endpoint performs actual directory listing for definitive verification.
 - ✅ Improved startup logging with visual separators
 - ✅ Configuration summary displayed on startup
 - ✅ All components properly wired:

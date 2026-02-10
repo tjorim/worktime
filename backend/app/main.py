@@ -5,6 +5,7 @@ and .hday files stored on a shared network drive.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -50,19 +51,13 @@ async def lifespan(app: FastAPI):
                 f"   The health endpoint will report 'degraded' status."
             )
         else:
-            # Try to list directory to verify read access
-            try:
-                list(share_path.iterdir())
+            # Check read and execute permissions (execute needed to list directory)
+            if os.access(share_path, os.R_OK | os.X_OK):
                 logger.info(f"✓ Share directory is accessible: {share_path}")
-            except PermissionError:
+            else:
                 logger.warning(
-                    f"⚠️  Share directory exists but is not readable: {share_path}\n"
-                    f"   Check file permissions. The health endpoint will report 'degraded' status."
-                )
-            except Exception as e:
-                logger.warning(
-                    f"⚠️  Error accessing share directory: {e}\n"
-                    f"   The health endpoint will report 'degraded' status."
+                    f"⚠️  Share directory exists but is not accessible: {share_path}\n"
+                    f"   Check file permissions (read+execute required). The health endpoint will report 'degraded' status."
                 )
     except Exception as e:
         logger.warning(
