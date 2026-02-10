@@ -1,5 +1,10 @@
 """Tests for .hday parser."""
 
+import json
+from pathlib import Path
+
+import pytest
+
 from app.models.hday import HdayEvent
 from app.services.hday_parser import (
     PREFIX_MAP,
@@ -8,6 +13,11 @@ from app.services.hday_parser import (
     parse_text,
     to_text,
 )
+
+# Load test vectors from shared JSON file
+TEST_VECTORS_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "parser-test-vectors.json"
+with open(TEST_VECTORS_PATH, "r") as f:
+    TEST_VECTORS = json.load(f)
 
 
 class TestPrefixMap:
@@ -382,3 +392,169 @@ class TestRoundTrip:
         result = to_text(events)
 
         assert result == original
+
+
+class TestSharedVectors:
+    """Tests using shared test vectors from JSON file."""
+
+    @pytest.mark.parametrize("test_case", TEST_VECTORS, ids=lambda tc: tc["description"])
+    def test_parse_from_vectors(self, test_case):
+        """Test parsing using shared test vectors."""
+        input_text = test_case["input"]
+        expected = test_case["expected_output"]
+        
+        events = parse_text(input_text)
+        
+        # Convert events to dictionaries for comparison
+        actual = [event.model_dump(exclude_none=True) for event in events]
+        
+        assert len(actual) == len(expected), f"Expected {len(expected)} events, got {len(actual)}"
+        
+        for i, (actual_event, expected_event) in enumerate(zip(actual, expected)):
+            # Compare each field
+            for key in expected_event:
+                assert key in actual_event, f"Event {i}: Missing key '{key}' in actual event"
+                assert actual_event[key] == expected_event[key], (
+                    f"Event {i}: Expected {key}={expected_event[key]}, "
+                    f"got {key}={actual_event[key]}"
+                )
+
+
+class TestAllFlags:
+    """Tests for all 12 flag characters individually."""
+
+    def test_flag_a_half_am(self):
+        """Test 'a' flag maps to half_am."""
+        events = parse_text("a2024/12/25")
+        assert events[0].flags == ["half_am", "holiday"]
+
+    def test_flag_p_half_pm(self):
+        """Test 'p' flag maps to half_pm."""
+        events = parse_text("p2024/12/25")
+        assert events[0].flags == ["half_pm", "holiday"]
+
+    def test_flag_b_business(self):
+        """Test 'b' flag maps to business."""
+        events = parse_text("b2024/12/25")
+        assert events[0].flags == ["business"]
+
+    def test_flag_e_weekend(self):
+        """Test 'e' flag maps to weekend."""
+        events = parse_text("e2024/12/25")
+        assert events[0].flags == ["weekend"]
+
+    def test_flag_h_birthday(self):
+        """Test 'h' flag maps to birthday."""
+        events = parse_text("h2024/12/25")
+        assert events[0].flags == ["birthday"]
+
+    def test_flag_i_ill(self):
+        """Test 'i' flag maps to ill."""
+        events = parse_text("i2024/12/25")
+        assert events[0].flags == ["ill"]
+
+    def test_flag_k_in(self):
+        """Test 'k' flag maps to in."""
+        events = parse_text("k2024/12/25")
+        assert events[0].flags == ["in"]
+
+    def test_flag_s_course(self):
+        """Test 's' flag maps to course."""
+        events = parse_text("s2024/12/25")
+        assert events[0].flags == ["course"]
+
+    def test_flag_u_other(self):
+        """Test 'u' flag maps to other."""
+        events = parse_text("u2024/12/25")
+        assert events[0].flags == ["other"]
+
+    def test_flag_w_onsite(self):
+        """Test 'w' flag maps to onsite."""
+        events = parse_text("w2024/12/25")
+        assert events[0].flags == ["onsite", "holiday"]
+
+    def test_flag_n_no_fly(self):
+        """Test 'n' flag maps to no_fly."""
+        events = parse_text("n2024/12/25")
+        assert events[0].flags == ["no_fly", "holiday"]
+
+    def test_flag_f_can_fly(self):
+        """Test 'f' flag maps to can_fly."""
+        events = parse_text("f2024/12/25")
+        assert events[0].flags == ["can_fly", "holiday"]
+
+
+class TestAllWeekdays:
+    """Tests for all 7 ISO weekdays (d1-d7)."""
+
+    def test_weekday_d1_monday(self):
+        """Test d1 maps to weekday 1 (Monday)."""
+        events = parse_text("d1")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 1
+
+    def test_weekday_d2_tuesday(self):
+        """Test d2 maps to weekday 2 (Tuesday)."""
+        events = parse_text("d2")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 2
+
+    def test_weekday_d3_wednesday(self):
+        """Test d3 maps to weekday 3 (Wednesday)."""
+        events = parse_text("d3")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 3
+
+    def test_weekday_d4_thursday(self):
+        """Test d4 maps to weekday 4 (Thursday)."""
+        events = parse_text("d4")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 4
+
+    def test_weekday_d5_friday(self):
+        """Test d5 maps to weekday 5 (Friday)."""
+        events = parse_text("d5")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 5
+
+    def test_weekday_d6_saturday(self):
+        """Test d6 maps to weekday 6 (Saturday)."""
+        events = parse_text("d6")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 6
+
+    def test_weekday_d7_sunday(self):
+        """Test d7 maps to weekday 7 (Sunday)."""
+        events = parse_text("d7")
+        assert events[0].type == "weekly"
+        assert events[0].weekday == 7
+
+
+class TestWindowsLineEndings:
+    """Tests for Windows line ending (CRLF) handling."""
+
+    def test_windows_crlf_single_line(self):
+        """Test parsing with single CRLF line ending."""
+        events = parse_text("2024/12/25\r\n")
+        assert len(events) == 1
+        assert events[0].start == "2024/12/25"
+
+    def test_windows_crlf_multiple_lines(self):
+        """Test parsing with multiple CRLF line endings."""
+        events = parse_text("2024/12/25\r\n2024/12/26\r\n2024/12/27")
+        assert len(events) == 3
+        assert events[0].start == "2024/12/25"
+        assert events[1].start == "2024/12/26"
+        assert events[2].start == "2024/12/27"
+
+    def test_windows_crlf_mixed_with_lf(self):
+        """Test parsing with mixed CRLF and LF line endings."""
+        events = parse_text("2024/12/25\r\n2024/12/26\n2024/12/27")
+        assert len(events) == 3
+
+    def test_windows_crlf_with_flags(self):
+        """Test parsing with CRLF and flags."""
+        events = parse_text("b2024/12/25 # Business\r\nd1k # Office")
+        assert len(events) == 2
+        assert events[0].flags == ["business"]
+        assert events[1].flags == ["in"]

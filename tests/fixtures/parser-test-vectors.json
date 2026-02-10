@@ -1,0 +1,694 @@
+[
+  {
+    "description": "Empty input",
+    "input": "",
+    "expected_output": []
+  },
+  {
+    "description": "Whitespace only",
+    "input": "   \n  \n  ",
+    "expected_output": []
+  },
+  {
+    "description": "Single-day range event",
+    "input": "2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Multi-day range event",
+    "input": "2024/12/25-2024/12/31",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/31",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/25-2024/12/31"
+      }
+    ]
+  },
+  {
+    "description": "Range event with title",
+    "input": "2024/12/25 # Christmas",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["holiday"],
+        "title": "Christmas",
+        "raw": "2024/12/25 # Christmas"
+      }
+    ]
+  },
+  {
+    "description": "Range event with multi-day and title",
+    "input": "2024/12/23-2024/12/27 # Christmas vacation",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/23",
+        "end": "2024/12/27",
+        "flags": ["holiday"],
+        "title": "Christmas vacation",
+        "raw": "2024/12/23-2024/12/27 # Christmas vacation"
+      }
+    ]
+  },
+  {
+    "description": "Range event with half_am flag (a)",
+    "input": "a2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["half_am", "holiday"],
+        "title": "",
+        "raw": "a2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with half_pm flag (p)",
+    "input": "p2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["half_pm", "holiday"],
+        "title": "",
+        "raw": "p2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with business flag (b)",
+    "input": "b2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["business"],
+        "title": "",
+        "raw": "b2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with weekend flag (e)",
+    "input": "e2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["weekend"],
+        "title": "",
+        "raw": "e2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with birthday flag (h)",
+    "input": "h2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["birthday"],
+        "title": "",
+        "raw": "h2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with ill flag (i)",
+    "input": "i2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["ill"],
+        "title": "",
+        "raw": "i2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with in-office flag (k)",
+    "input": "k2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["in"],
+        "title": "",
+        "raw": "k2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with course flag (s)",
+    "input": "s2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["course"],
+        "title": "",
+        "raw": "s2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with other flag (u)",
+    "input": "u2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["other"],
+        "title": "",
+        "raw": "u2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with onsite flag (w)",
+    "input": "w2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["onsite", "holiday"],
+        "title": "",
+        "raw": "w2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with no_fly flag (n)",
+    "input": "n2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["no_fly", "holiday"],
+        "title": "",
+        "raw": "n2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with can_fly flag (f)",
+    "input": "f2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["can_fly", "holiday"],
+        "title": "",
+        "raw": "f2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with business and half_am flags",
+    "input": "ba2024/12/25 # Business trip AM",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["business", "half_am"],
+        "title": "Business trip AM",
+        "raw": "ba2024/12/25 # Business trip AM"
+      }
+    ]
+  },
+  {
+    "description": "Range event with multiple flags (business, half_am, onsite - onsite dropped due to mutual exclusivity)",
+    "input": "baw2025/03/10-2025/03/14 # Business onsite AM",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/03/10",
+        "end": "2025/03/14",
+        "flags": ["business", "half_am"],
+        "title": "Business onsite AM",
+        "raw": "baw2025/03/10-2025/03/14 # Business onsite AM"
+      }
+    ]
+  },
+  {
+    "description": "Range event with multiple time/location flags (keeps only first)",
+    "input": "ap2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["half_am", "holiday"],
+        "title": "",
+        "raw": "ap2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with multiple type flags (keeps only first)",
+    "input": "bi2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["business"],
+        "title": "",
+        "raw": "bi2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range event with case insensitive flags (uppercase B)",
+    "input": "B2024/12/25 # Business",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["business"],
+        "title": "Business",
+        "raw": "B2024/12/25 # Business"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Monday (d1)",
+    "input": "d1",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d1"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Tuesday (d2)",
+    "input": "d2",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 2,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d2"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Wednesday (d3)",
+    "input": "d3",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 3,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d3"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Thursday (d4)",
+    "input": "d4",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 4,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d4"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Friday (d5)",
+    "input": "d5",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 5,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d5"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Saturday (d6)",
+    "input": "d6",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 6,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d6"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event for Sunday (d7)",
+    "input": "d7",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 7,
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "d7"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event with title",
+    "input": "d1 # Team meeting",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["holiday"],
+        "title": "Team meeting",
+        "raw": "d1 # Team meeting"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event with in-office flag",
+    "input": "d1k # Office day",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["in"],
+        "title": "Office day",
+        "raw": "d1k # Office day"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event with business flag",
+    "input": "d5b # Friday business",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 5,
+        "flags": ["business"],
+        "title": "Friday business",
+        "raw": "d5b # Friday business"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event with half-day flag",
+    "input": "d2ka",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 2,
+        "flags": ["in", "half_am"],
+        "title": "",
+        "raw": "d2ka"
+      }
+    ]
+  },
+  {
+    "description": "Weekly event with multiple flags",
+    "input": "d1ka # Monday in office AM",
+    "expected_output": [
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["in", "half_am"],
+        "title": "Monday in office AM",
+        "raw": "d1ka # Monday in office AM"
+      }
+    ]
+  },
+  {
+    "description": "Unknown line format",
+    "input": "random text",
+    "expected_output": [
+      {
+        "type": "unknown",
+        "raw": "random text",
+        "flags": ["holiday"]
+      }
+    ]
+  },
+  {
+    "description": "Multiple events with different types",
+    "input": "2024/12/25 # Christmas\nb2024/12/26-2024/12/28 # Business trip\nd1k # Office day",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["holiday"],
+        "title": "Christmas",
+        "raw": "2024/12/25 # Christmas"
+      },
+      {
+        "type": "range",
+        "start": "2024/12/26",
+        "end": "2024/12/28",
+        "flags": ["business"],
+        "title": "Business trip",
+        "raw": "b2024/12/26-2024/12/28 # Business trip"
+      },
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["in"],
+        "title": "Office day",
+        "raw": "d1k # Office day"
+      }
+    ]
+  },
+  {
+    "description": "Multiple events with blank lines",
+    "input": "2024/12/25\n\n\n2024/12/26",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/25"
+      },
+      {
+        "type": "range",
+        "start": "2024/12/26",
+        "end": "2024/12/26",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/26"
+      }
+    ]
+  },
+  {
+    "description": "Windows line endings (CRLF)",
+    "input": "2024/12/25\r\n2024/12/26",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/25"
+      },
+      {
+        "type": "range",
+        "start": "2024/12/26",
+        "end": "2024/12/26",
+        "flags": ["holiday"],
+        "title": "",
+        "raw": "2024/12/26"
+      }
+    ]
+  },
+  {
+    "description": "Range with all time/location flags (first wins)",
+    "input": "apwnf2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["half_am", "holiday"],
+        "title": "",
+        "raw": "apwnf2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Range with all type flags (first wins)",
+    "input": "beihksu2024/12/25",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2024/12/25",
+        "end": "2024/12/25",
+        "flags": ["business"],
+        "title": "",
+        "raw": "beihksu2024/12/25"
+      }
+    ]
+  },
+  {
+    "description": "Complex multi-line with various flags",
+    "input": "2025/01/15-2025/01/20 # Vacation\nd1k # Monday in office\nba2025/03/10-2025/03/14 # Business trip AM\nd5 # Every Friday",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/01/15",
+        "end": "2025/01/20",
+        "flags": ["holiday"],
+        "title": "Vacation",
+        "raw": "2025/01/15-2025/01/20 # Vacation"
+      },
+      {
+        "type": "weekly",
+        "weekday": 1,
+        "flags": ["in"],
+        "title": "Monday in office",
+        "raw": "d1k # Monday in office"
+      },
+      {
+        "type": "range",
+        "start": "2025/03/10",
+        "end": "2025/03/14",
+        "flags": ["business", "half_am"],
+        "title": "Business trip AM",
+        "raw": "ba2025/03/10-2025/03/14 # Business trip AM"
+      },
+      {
+        "type": "weekly",
+        "weekday": 5,
+        "flags": ["holiday"],
+        "title": "Every Friday",
+        "raw": "d5 # Every Friday"
+      }
+    ]
+  },
+  {
+    "description": "Course flag with half_pm",
+    "input": "sp2025/06/15 # Course PM",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/06/15",
+        "end": "2025/06/15",
+        "flags": ["course", "half_pm"],
+        "title": "Course PM",
+        "raw": "sp2025/06/15 # Course PM"
+      }
+    ]
+  },
+  {
+    "description": "Other flag with onsite",
+    "input": "uw2025/08/10 # Other onsite",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/08/10",
+        "end": "2025/08/10",
+        "flags": ["other", "onsite"],
+        "title": "Other onsite",
+        "raw": "uw2025/08/10 # Other onsite"
+      }
+    ]
+  },
+  {
+    "description": "Weekend flag range",
+    "input": "e2025/07/19-2025/07/20 # Weekend event",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/07/19",
+        "end": "2025/07/20",
+        "flags": ["weekend"],
+        "title": "Weekend event",
+        "raw": "e2025/07/19-2025/07/20 # Weekend event"
+      }
+    ]
+  },
+  {
+    "description": "Birthday with half_am",
+    "input": "ha2025/09/21 # Birthday morning",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/09/21",
+        "end": "2025/09/21",
+        "flags": ["birthday", "half_am"],
+        "title": "Birthday morning",
+        "raw": "ha2025/09/21 # Birthday morning"
+      }
+    ]
+  },
+  {
+    "description": "Ill with no_fly flag",
+    "input": "in2025/10/05 # Sick, no travel",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/10/05",
+        "end": "2025/10/05",
+        "flags": ["ill", "no_fly"],
+        "title": "Sick, no travel",
+        "raw": "in2025/10/05 # Sick, no travel"
+      }
+    ]
+  },
+  {
+    "description": "In-office with can_fly",
+    "input": "kf2025/11/12 # Office, flexible travel",
+    "expected_output": [
+      {
+        "type": "range",
+        "start": "2025/11/12",
+        "end": "2025/11/12",
+        "flags": ["in", "can_fly"],
+        "title": "Office, flexible travel",
+        "raw": "kf2025/11/12 # Office, flexible travel"
+      }
+    ]
+  }
+]
