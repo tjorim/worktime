@@ -140,13 +140,13 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
             )
         except HdayFileNotFoundError:
             # File was deleted between conflict detection and now
-            # Return conflict response with None etag
+            # Return conflict response indicating no current file exists
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,
                 content=HdayConflictResponse(
                     raw="",
                     events=[],
-                    etag="" if e.current_etag is None else e.current_etag
+                    etag=e.current_etag or ""  # Use empty string if None
                 ).model_dump()
             )
             

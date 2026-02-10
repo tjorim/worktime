@@ -10,6 +10,9 @@ from app.audit.logger import AUDIT_LOG_FILE
 from app.main import app
 from app.config import settings
 
+# Expected etag length: "sha256:" (7 chars) + 64 hex characters = 71
+EXPECTED_SHA256_ETAG_LENGTH = 71
+
 
 @pytest.fixture
 def client():
@@ -66,7 +69,7 @@ class TestGetEndpoint:
         assert data["username"] == "testuser"
         assert data["raw"] == test_content
         assert data["etag"].startswith("sha256:")
-        assert len(data["etag"]) == 71
+        assert len(data["etag"]) == EXPECTED_SHA256_ETAG_LENGTH
     
     def test_get_file_with_unicode(self, client, share_dir):
         """Test GET works with Unicode content."""
