@@ -5,6 +5,7 @@ aggregating .hday files across all team members.
 """
 
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -12,9 +13,10 @@ from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
 from app.services.team_service import (
     TeamNotFoundError,
+    _parse_members_file,
+    get_team_path,
     read_team_hday_files,
     read_team_info,
-    read_team_members,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,11 +94,16 @@ def get_team_hday(team_id: str) -> TeamHdayResponse:
         503: Share directory not accessible
     """
     try:
-        # First read team members
-        members = read_team_members(team_id)
+        # Get team path once for both operations (optimization)
+        team_path = get_team_path(team_id)
         
-        # Then read all .hday files
-        member_data = read_team_hday_files(team_id, members)
+        # Read team members from the validated path
+        people_path = team_path / "people"
+        members = _parse_members_file(people_path)
+        logger.info(f"Successfully read {len(members)} team members")
+        
+        # Read all .hday files using the same validated path
+        member_data = read_team_hday_files(team_id, members, team_path)
         
         logger.info(f"Successfully read bulk .hday data for {len(member_data)} members")
         
