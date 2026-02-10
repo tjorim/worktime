@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 export type TimeTrackingLabel = {
   id: string;
   name: string;
@@ -34,6 +36,12 @@ export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingL
 let cachedDefaultLabelColor: string | null = null;
 
 /**
+ * Listeners to notify when the default label color changes due to theme change.
+ * Components can subscribe to be notified of changes.
+ */
+const colorChangeListeners = new Set<() => void>();
+
+/**
  * Observer to invalidate cache when data-bs-theme attribute changes.
  * This ensures the color updates when users switch between light/dark/auto themes.
  */
@@ -42,6 +50,8 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
     for (const mutation of mutations) {
       if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
         cachedDefaultLabelColor = null;
+        // Notify all listeners
+        colorChangeListeners.forEach((listener) => listener());
         break;
       }
     }
@@ -78,6 +88,30 @@ export function getDefaultLabelColor(): string {
   cachedDefaultLabelColor = color || "#6c757d";
 
   return cachedDefaultLabelColor;
+}
+
+/**
+ * React hook that returns the default label color and re-renders the component
+ * when the theme changes. This ensures that memoized values using the color
+ * are recomputed when the theme switches.
+ */
+export function useDefaultLabelColor(): string {
+  const [color, setColor] = useState(getDefaultLabelColor);
+
+  useEffect(() => {
+    // Update color when theme changes
+    const listener = () => {
+      setColor(getDefaultLabelColor());
+    };
+
+    colorChangeListeners.add(listener);
+
+    return () => {
+      colorChangeListeners.delete(listener);
+    };
+  }, []);
+
+  return color;
 }
 
 export function getContrastingTextColor(backgroundColor?: string): string {

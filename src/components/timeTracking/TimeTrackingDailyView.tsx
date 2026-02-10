@@ -17,7 +17,7 @@ import {
   buildLabelColorMap,
   buildLabelNameMap,
   getContrastingTextColor,
-  getDefaultLabelColor,
+  useDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
@@ -78,6 +78,7 @@ export function TimeTrackingDailyView({
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const defaultLabelColor = useDefaultLabelColor();
 
   useEffect(() => {
     const fallback = labels[0]?.id ?? "";
@@ -116,8 +117,8 @@ export function TimeTrackingDailyView({
   }, [liveTime, runningTask]);
 
   const runningLabelBackground = useMemo(
-    () => (runningTask ? (colorByLabelId[runningTask.label] ?? getDefaultLabelColor()) : getDefaultLabelColor()),
-    [runningTask, colorByLabelId],
+    () => (runningTask ? (colorByLabelId[runningTask.label] ?? defaultLabelColor) : defaultLabelColor),
+    [runningTask, colorByLabelId, defaultLabelColor],
   );
   const runningLabelTextColor = useMemo(
     () => getContrastingTextColor(runningLabelBackground),
