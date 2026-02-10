@@ -65,16 +65,24 @@ def get_hday_path(username: str) -> Path:
     # Validate username - only allow alphanumeric, underscore, hyphen, and dot
     import re
     if not re.match(r'^[a-zA-Z0-9._-]+$', username):
-        raise ValueError(f"Invalid username: {username}")
+        raise ValueError("Invalid username format")
+    
+    # Additional check: username must not contain path separators
+    if "/" in username or "\\" in username or ".." in username:
+        raise ValueError("Invalid username format")
     
     share_dir = settings.get_share_dir_path()
-    file_path = share_dir / f"{username}.hday"
+    # Sanitize: use only the filename part of username to prevent path traversal
+    safe_filename = Path(username).name
+    file_path = share_dir / f"{safe_filename}.hday"
     
     # Verify the resolved path is within share_dir to prevent path traversal
     try:
-        file_path.resolve().relative_to(share_dir.resolve())
+        resolved_path = file_path.resolve()
+        resolved_share = share_dir.resolve()
+        resolved_path.relative_to(resolved_share)
     except ValueError:
-        raise ValueError(f"Invalid username - path traversal attempt: {username}")
+        raise ValueError("Invalid username format")
     
     return file_path
 
