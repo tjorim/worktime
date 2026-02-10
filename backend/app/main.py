@@ -5,6 +5,7 @@ and .hday files stored on a shared network drive.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -27,8 +28,46 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup and shutdown events."""
     # Startup
+    logger.info("=" * 60)
+    logger.info("Worktime Backend API - Starting up")
+    logger.info("=" * 60)
+    
+    # Log configuration
     settings.log_configuration()
-    logger.info("Worktime Backend API starting up...")
+    
+    # Verify share directory accessibility
+    share_path = settings.get_share_dir_path()
+    try:
+        if not share_path.exists():
+            logger.warning(
+                f"⚠️  Share directory does not exist: {share_path}\n"
+                f"   The health endpoint will report 'degraded' status until this is resolved.\n"
+                f"   For Docker: Ensure volume is mounted correctly.\n"
+                f"   For development: Directory will be created automatically."
+            )
+        elif not share_path.is_dir():
+            logger.warning(
+                f"⚠️  Share path exists but is not a directory: {share_path}\n"
+                f"   The health endpoint will report 'degraded' status."
+            )
+        else:
+            # Check read and execute permissions (execute needed to list directory)
+            if os.access(share_path, os.R_OK | os.X_OK):
+                logger.info(f"✓ Share directory is accessible: {share_path}")
+            else:
+                logger.warning(
+                    f"⚠️  Share directory exists but is not accessible: {share_path}\n"
+                    f"   Check file permissions (read+execute required). The health endpoint will report 'degraded' status."
+                )
+    except Exception as e:
+        logger.warning(
+            f"⚠️  Could not verify share directory status: {e}\n"
+            f"   The health endpoint will report current status."
+        )
+    
+    logger.info("=" * 60)
+    logger.info("Startup complete - Server ready to accept connections")
+    logger.info("=" * 60)
     
     yield
     
