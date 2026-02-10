@@ -52,11 +52,13 @@ class HdayReadResponse(BaseModel):
         username: The username whose .hday file was read
         raw: The raw content of the .hday file
         etag: Entity tag for conflict detection
+        events: Optional list of parsed events (present for format=parsed, absent for format=raw)
     """
     
     username: str
     raw: str
     etag: str
+    events: Optional[List[HdayEvent]] = None
 
 
 class HdayWriteRequest(BaseModel):

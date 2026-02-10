@@ -404,7 +404,8 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 def read_team_hday_files(
     team_id: str,
     members: List[TeamMember],
-    team_path: Path | None = None
+    team_path: Path | None = None,
+    parse_events: bool = True
 ) -> List[TeamMemberHdayData]:
     """Read .hday files for all team members.
     
@@ -417,9 +418,11 @@ def read_team_hday_files(
         members: List of team members
         team_path: Optional pre-validated team path. If not provided, calls get_team_path(team_id).
                    Use this to avoid redundant path validation when already have the path.
+        parse_events: Whether to parse .hday content into events. When False, skip parsing
+                     and set events=[]. When True, execute existing parsing logic.
         
     Returns:
-        List of TeamMemberHdayData objects with parsed .hday data
+        List of TeamMemberHdayData objects with .hday data (parsed or unparsed)
     """
     # Use provided team_path or get it if not provided
     if team_path is None:
@@ -461,8 +464,13 @@ def read_team_hday_files(
             # resolved_hday_path is derived from validated team_path - safe to use
             content = resolved_hday_path.read_text(encoding="utf-8")  # nosec B108
             
-            # Parse the .hday content into events
-            events = parse_text(content)
+            # Conditionally parse the .hday content into events based on parse_events flag
+            if parse_events:
+                # When parse_events=True: execute existing parsing logic
+                events = parse_text(content)
+            else:
+                # When parse_events=False: skip parse_text() call and set events=[]
+                events = []
             
             # Compute etag
             etag = compute_etag(content)
