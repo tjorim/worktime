@@ -5,7 +5,6 @@ with proper error handling, response formatting, and audit logging.
 """
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -51,7 +50,7 @@ async def get_hday_file(username: str) -> HdayReadResponse:
     """
     try:
         raw, etag = hday_service.read_hday_file(username)
-        logger.info(f"Successfully read .hday file for user: {username}")
+        logger.info("Successfully read .hday file")
         
         return HdayReadResponse(
             username=username,
@@ -60,7 +59,7 @@ async def get_hday_file(username: str) -> HdayReadResponse:
         )
         
     except HdayFileNotFoundError:
-        logger.info(f"File not found for user: {username}")
+        logger.info("File not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No events found for user: {username}"
@@ -95,7 +94,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
     """
     # Validation: at least one of raw or events must be provided
     if request.raw is None and request.events is None:
-        logger.warning(f"PUT request for {username} with neither raw nor events")
+        logger.warning("PUT request with neither raw nor events")
         raise HTTPException(
             status_code=422,
             detail="Either 'raw' or 'events' must be provided"
@@ -105,10 +104,10 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
     # If both raw and events provided, events takes precedence
     if request.events is not None:
         content = hday_parser.to_text(request.events)
-        logger.debug(f"Using serialized events for {username}")
+        logger.debug("Using serialized events")
     else:
         content = request.raw
-        logger.debug(f"Using raw content for {username}")
+        logger.debug("Using raw content")
     
     try:
         # Write the file with conflict detection
@@ -121,12 +120,12 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
             details=f"Updated via API (etag: {new_etag[:ETAG_PREVIEW_LENGTH]}...)"
         )
         
-        logger.info(f"Successfully wrote .hday file for user: {username}")
+        logger.info("Successfully wrote .hday file")
         
         return HdayWriteResponse(etag=new_etag)
         
     except HdayConflictError as e:
-        logger.warning(f"Conflict writing file for user {username}")
+        logger.warning("Conflict writing file")
         
         # Read current file state for conflict response
         try:
