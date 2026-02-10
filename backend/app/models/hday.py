@@ -1,0 +1,97 @@
+"""Pydantic models for .hday file handling.
+
+This module defines data models for parsing and serializing .hday format files,
+which are human-readable text files for managing time-off events.
+"""
+
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
+
+
+# Define all valid event flags
+Flag = Literal[
+    "half_am",
+    "half_pm",
+    "business",
+    "weekend",
+    "birthday",
+    "ill",
+    "in",
+    "course",
+    "other",
+    "onsite",
+    "no_fly",
+    "can_fly",
+    "holiday",
+]
+
+
+class HdayEvent(BaseModel):
+    """Represents a single event in an .hday file.
+    
+    An event can be one of three types:
+    - range: A time-off period with start and end dates
+    - weekly: A recurring weekly event on a specific weekday
+    - unknown: An unrecognized line preserved for round-trip fidelity
+    """
+    
+    type: Literal["range", "weekly", "unknown"]
+    start: Optional[str] = None
+    end: Optional[str] = None
+    weekday: Optional[int] = None
+    flags: List[Flag] = Field(default_factory=list)
+    title: Optional[str] = ""
+    raw: Optional[str] = ""
+
+
+class HdayReadResponse(BaseModel):
+    """Response model for reading an .hday file.
+    
+    Attributes:
+        username: The username whose .hday file was read
+        raw: The raw content of the .hday file
+        etag: Entity tag for conflict detection
+    """
+    
+    username: str
+    raw: str
+    etag: str
+
+
+class HdayWriteRequest(BaseModel):
+    """Request model for writing an .hday file.
+    
+    Attributes:
+        raw: Optional raw .hday content to write
+        events: Optional list of parsed events to serialize
+        etag: Entity tag for conflict detection (None for new files)
+    """
+    
+    raw: Optional[str] = None
+    events: Optional[List[HdayEvent]] = None
+    etag: Optional[str] = None
+
+
+class HdayWriteResponse(BaseModel):
+    """Response model for a successful write operation.
+    
+    Attributes:
+        etag: The new entity tag after the write
+    """
+    
+    etag: str
+
+
+class HdayConflictResponse(BaseModel):
+    """Response model for a conflict during write operation.
+    
+    Attributes:
+        raw: The current raw content in the file
+        events: The parsed events from the current content
+        etag: The current entity tag
+    """
+    
+    raw: str
+    events: List[HdayEvent]
+    etag: str
