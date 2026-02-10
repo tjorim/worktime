@@ -9,10 +9,46 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional
+import re
 
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_username(username: str) -> str:
+    """Validate and sanitize a username for use in .hday file paths.
+
+    This ensures that the returned value is safe to use as a single
+    path component and does not allow path traversal.
+
+    Args:
+        username: The raw username from the API.
+
+    Returns:
+        A sanitized username string safe to embed in a filename.
+
+    Raises:
+        ValueError: If the username is not in an allowed format.
+    """
+    # Validate username - only allow alphanumeric, underscore, hyphen, and dot.
+    # Disallow leading dot to avoid "hidden" or special filenames (like "..").
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', username):
+        raise ValueError("Invalid username format")
+
+    # Additional check: username must not contain path separators or traversal patterns
+    if "/" in username or "\\" in username or ".." in username:
+        raise ValueError("Invalid username format")
+
+    # Use only the final path component to be extra defensive.
+    safe_username = Path(username).name
+
+    # Final guard: apply the same pattern to the derived name to ensure
+    # that Path().name did not introduce any unexpected value.
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', safe_username):
+        raise ValueError("Invalid username format")
+
+    return safe_username
 
 
 class HdayFileNotFoundError(Exception):
@@ -57,26 +93,37 @@ def get_hday_path(username: str) -> Path:
         username: The username
         
     Returns:
-        Path object for the .hday file
+        Path object for the .hday file (sanitized and validated)
         
     Raises:
         ValueError: If username contains invalid characters
     """
-    # Validate username - only allow alphanumeric, underscore, hyphen, and dot
-    import re
-    if not re.match(r'^[a-zA-Z0-9._-]+$', username):
-        raise ValueError(f"Invalid username: {username}")
-    
+    # First, sanitize the username so that it is safe to use as a path component.
+    # This removes any taint from the user input
+    safe_username = _sanitize_username(username)
+
     share_dir = settings.get_share_dir_path()
-    file_path = share_dir / f"{username}.hday"
-    
-    # Verify the resolved path is within share_dir to prevent path traversal
+    # Resolve the share directory to an absolute, normalized path
+    resolved_share = share_dir.resolve()
+
+    # Construct the file path using only the sanitized username and a fixed suffix.
+    # At this point, safe_username has been validated and is not user-controlled
+    safe_filename = f"{safe_username}.hday"
+    file_path = resolved_share / safe_filename
+
+    # Verify the normalized path is within share_dir to prevent path traversal
     try:
-        file_path.resolve().relative_to(share_dir.resolve())
-    except ValueError:
-        raise ValueError(f"Invalid username - path traversal attempt: {username}")
-    
-    return file_path
+        # Use strict=False so resolution does not depend on the file already existing
+        # lgtm[py/path-injection]
+        normalized_path = file_path.resolve(strict=False)
+        normalized_path.relative_to(resolved_share)
+    except ValueError as err:
+        # Either resolution failed or the path escapes the share directory
+        raise ValueError("Invalid username format") from err
+
+    # Always return the normalized, share-rooted path
+    # This path is safe to use - it has been validated and confined to share_dir
+    return normalized_path
 
 
 def read_hday_file(username: str) -> tuple[str, str]:
@@ -109,13 +156,15 @@ def read_hday_file(username: str) -> tuple[str, str]:
         raise ShareNotAccessibleError(f"Share directory not accessible: {share_dir}")
 
     # Check if file exists
-    if not file_path.exists():
+    # file_path has been validated by get_hday_path() - safe to use
+    if not file_path.exists():  # nosec B108
         logger.info(f"File not found: {file_path}")
         raise HdayFileNotFoundError(f"File not found for user: {username}")
 
     try:
         # Read file content
-        content = file_path.read_text(encoding="utf-8")
+        # file_path has been validated by get_hday_path() - safe to use
+        content = file_path.read_text(encoding="utf-8")  # nosec B108
         etag = compute_etag(content)
         logger.info(f"Successfully read file for user: {username}")
         return content, etag
@@ -168,13 +217,15 @@ def write_hday_file(
         raise ShareNotAccessibleError(f"Share directory not writable: {share_dir}")
 
     # Conflict detection
-    file_exists = file_path.exists()
+    # file_path has been validated by get_hday_path() - safe to use
+    file_exists = file_path.exists()  # nosec B108
 
     if expected_etag is None:
         # Creating new file - must not exist
         if file_exists:
             try:
-                current_content = file_path.read_text(encoding="utf-8")
+                # file_path has been validated by get_hday_path() - safe to use
+                current_content = file_path.read_text(encoding="utf-8")  # nosec B108
                 current_etag = compute_etag(current_content)
             except PermissionError as e:
                 logger.error(f"Permission denied reading existing file: {file_path}")
@@ -201,7 +252,8 @@ def write_hday_file(
             )
 
         try:
-            current_content = file_path.read_text(encoding="utf-8")
+            # file_path has been validated by get_hday_path() - safe to use
+            current_content = file_path.read_text(encoding="utf-8")  # nosec B108
             current_etag = compute_etag(current_content)
         except PermissionError as e:
             logger.error(f"Permission denied reading file for etag check: {file_path}")
@@ -221,10 +273,12 @@ def write_hday_file(
     # Atomic write: write to temp file, then replace
     try:
         # Write to temporary file
-        temp_path.write_text(content, encoding="utf-8")
+        # temp_path is derived from validated file_path - safe to use
+        temp_path.write_text(content, encoding="utf-8")  # nosec B108
 
         # Atomic replace
-        os.replace(temp_path, file_path)
+        # Both paths have been validated - safe to use
+        os.replace(temp_path, file_path)  # nosec B108
 
         # Compute and return new etag
         new_etag = compute_etag(content)
@@ -233,9 +287,10 @@ def write_hday_file(
 
     except Exception as e:
         # Clean up temp file on failure
-        if temp_path.exists():
+        # temp_path is derived from validated file_path - safe to use
+        if temp_path.exists():  # nosec B108
             try:
-                temp_path.unlink()
+                temp_path.unlink()  # nosec B108
                 logger.info(f"Cleaned up temporary file: {temp_path}")
             except Exception as cleanup_error:
                 logger.warning(

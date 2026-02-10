@@ -123,7 +123,8 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     assert data["status"] == "degraded"
     assert data["share"] == "error"
     assert "error" in data
-    assert "Disk error" in data["error"]
+    # Error message is now generic for security (no information disclosure)
+    assert data["error"] == "internal_error"
 
 
 def test_healthz_alias(client, tmp_path, monkeypatch):
