@@ -24,6 +24,7 @@ from app.services.hday_service import (
     HdayFileNotFoundError,
     ShareNotAccessibleError,
 )
+from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ router = APIRouter(tags=["Hday Files"])
 
 
 @router.get("/v1/hday/{username}")
-async def get_hday_file(
+def get_hday_file(
     username: str,
     format: Literal["raw", "parsed"] = Query("raw")
 ) -> HdayReadResponse:
@@ -50,28 +51,52 @@ async def get_hday_file(
     Returns:
         HdayReadResponse with username, raw content, etag, and optionally events
         
+    Response Headers:
+        X-File-Read-Ms: Time taken to read the file in milliseconds
+        X-Parse-Time-Ms: Time taken to parse events (0 if format=raw)
+        
     Raises:
         404: File not found for user
         503: Share directory not accessible
     """
+    # Dictionary to store timing measurements
+    timings = {}
+    
     try:
-        raw, etag = hday_service.read_hday_file(username)
+        # Time the file read operation
+        with time_operation("file_read", timings):
+            raw, etag = hday_service.read_hday_file(username)
         logger.info("Successfully read .hday file")
         
         # Conditionally parse events based on format parameter
         events = None
         if format == "parsed":
             try:
-                events = hday_parser.parse_text(raw)
+                with time_operation("parse", timings):
+                    events = hday_parser.parse_text(raw)
             except Exception:
                 # If parsing fails, return empty events list rather than crashing
                 events = []
+        else:
+            # No parsing performed for raw format
+            timings["parse"] = 0.0
         
-        return HdayReadResponse(
+        # Prepare response data
+        response_data = HdayReadResponse(
             username=username,
             raw=raw,
             etag=etag,
             events=events
+        )
+        
+        # Return JSONResponse with timing headers
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=response_data.model_dump(mode="json"),
+            headers={
+                "X-File-Read-Ms": f"{timings.get('file_read', 0):.3f}",
+                "X-Parse-Time-Ms": f"{timings.get('parse', 0):.3f}",
+            }
         )
         
     except HdayFileNotFoundError:

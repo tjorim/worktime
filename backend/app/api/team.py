@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 
 from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
@@ -19,6 +20,8 @@ from app.services.team_service import (
     read_team_hday_files,
     read_team_info,
 )
+from app.services import hday_parser
+from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +96,18 @@ def get_team_hday(
     Returns:
         TeamHdayResponse with team_id and list of member .hday data
         
+    Response Headers:
+        X-File-Read-Ms: Time taken to read files in milliseconds
+        X-Parse-Time-Ms: Time taken to parse events (0 if format=raw)
+        
     Raises:
         400: Invalid team_id format
         404: Team not found
         503: Share directory not accessible
     """
+    # Dictionary to store timing measurements
+    timings = {}
+    
     try:
         # Get team path once for both operations (optimization)
         team_path = get_team_path(team_id)
@@ -107,16 +117,40 @@ def get_team_hday(
         members = _parse_members_file(people_path)
         logger.info(f"Successfully read {len(members)} team members")
         
-        # Read all .hday files using the same validated path
-        # Parse events only when format=parsed
-        parse_events = format == "parsed"
-        member_data = read_team_hday_files(team_id, members, team_path, parse_events)
+        # Read all .hday files (without parsing) and time it
+        with time_operation("file_read", timings):
+            member_data = read_team_hday_files(team_id, members, team_path, parse_events=False)
+        
+        # If format=parsed, parse the raw content for each member
+        if format == "parsed":
+            with time_operation("parse", timings):
+                for member in member_data:
+                    if member.raw:  # Only parse if there's content
+                        try:
+                            member.events = hday_parser.parse_text(member.raw)
+                        except Exception:
+                            # If parsing fails, use empty events list
+                            member.events = []
+        else:
+            # No parsing performed for raw format
+            timings["parse"] = 0.0
         
         logger.info(f"Successfully read bulk .hday data for {len(member_data)} members")
         
-        return TeamHdayResponse(
+        # Prepare response data
+        response_data = TeamHdayResponse(
             team_id=team_id,
             members=member_data
+        )
+        
+        # Return JSONResponse with timing headers
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=response_data.model_dump(mode="json"),
+            headers={
+                "X-File-Read-Ms": f"{timings.get('file_read', 0):.3f}",
+                "X-Parse-Time-Ms": f"{timings.get('parse', 0):.3f}",
+            }
         )
     
     except ValueError as e:
