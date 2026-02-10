@@ -14,6 +14,7 @@ from fastapi.responses import PlainTextResponse
 
 from .api.health import router as health_router
 from .api.hday import router as hday_router
+from .api.team import router as team_router
 from .config import settings
 from .config.cors import get_cors_origins
 
@@ -107,6 +108,7 @@ app.add_middleware(
 # Register API routers
 app.include_router(health_router)
 app.include_router(hday_router)
+app.include_router(team_router)
 
 
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
