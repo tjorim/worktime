@@ -58,6 +58,41 @@ def _sanitize_team_id(team_id: str) -> str:
     return safe_team_id
 
 
+def _sanitize_username(username: str) -> str:
+    """Validate and sanitize a username for use in file paths.
+
+    This ensures that the returned value is safe to use as a single
+    path component and does not allow path traversal.
+
+    Args:
+        username: The raw username from the team members data.
+
+    Returns:
+        A sanitized username string safe to embed in a filename.
+
+    Raises:
+        ValueError: If the username is not in an allowed format.
+    """
+    # Validate username - only allow alphanumeric, underscore, hyphen, and dot.
+    # Disallow leading dot to avoid "hidden" or special filenames (like "..").
+    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", username):
+        raise ValueError("Invalid username format")
+
+    # Additional check: username must not contain path separators or traversal patterns
+    if "/" in username or "\\" in username or ".." in username:
+        raise ValueError("Invalid username format")
+
+    # Use only the final path component to be extra defensive.
+    safe_username = Path(username).name
+
+    # Final guard: apply the same pattern to the derived name to ensure
+    # that Path().name did not introduce any unexpected value.
+    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", safe_username):
+        raise ValueError("Invalid username format")
+
+    return safe_username
+
+
 def get_team_path(team_id: str) -> Path:
     """Get the full path to a team's directory.
     
@@ -138,12 +173,12 @@ def read_team_config(team_id: str) -> str:
         logger.info("Successfully read team config")
         return team_name
     except PermissionError as e:
-        logger.error("Permission denied reading team config")
+        logger.exception("Permission denied reading team config")
         raise TeamNotFoundError(
             f"Cannot read team configuration: {team_id}"
         ) from e
-    except Exception as e:
-        logger.error("Error reading team config", exc_info=e)
+    except Exception:
+        logger.exception("Error reading team config")
         raise
 
 
@@ -183,7 +218,7 @@ def read_team_members(team_id: str) -> List[TeamMember]:
 
             # Split on first comma
             if "," not in line:
-                logger.warning(f"Skipping invalid line format: {line}")
+                logger.warning("Skipping invalid line format in team members file")
                 continue
 
             username, display_name = line.split(",", 1)
@@ -196,13 +231,33 @@ def read_team_members(team_id: str) -> List[TeamMember]:
         logger.info(f"Successfully read {len(members)} team members")
         return members
     except PermissionError as e:
-        logger.error("Permission denied reading team members file")
+        logger.exception("Permission denied reading team members file")
         raise TeamNotFoundError(
             f"Cannot read team members file: {team_id}"
         ) from e
-    except Exception as e:
-        logger.error("Error reading team members file", exc_info=e)
+    except Exception:
+        logger.exception("Error reading team members file")
         raise
+
+
+def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
+    """Create an empty TeamMemberHdayData object for a member.
+    
+    Used when a member's .hday file doesn't exist or cannot be read.
+    
+    Args:
+        member: The team member
+        
+    Returns:
+        TeamMemberHdayData with empty raw content, no events, and no etag
+    """
+    return TeamMemberHdayData(
+        username=member.username,
+        display_name=member.display_name,
+        raw="",
+        events=[],
+        etag=None,
+    )
 
 
 def read_team_hday_files(
@@ -225,20 +280,28 @@ def read_team_hday_files(
     member_data = []
 
     for member in members:
-        hday_path = team_path / f"{member.username}.hday"
+        # Sanitize username to prevent path traversal
+        try:
+            safe_username = _sanitize_username(member.username)
+        except ValueError:
+            logger.warning("Invalid username format, skipping member")
+            member_data.append(_create_empty_member_data(member))
+            continue
+        
+        hday_path = team_path / f"{safe_username}.hday"
+        
+        # Verify the path is still within the team directory
+        try:
+            hday_path.resolve().relative_to(team_path.resolve())
+        except ValueError:
+            logger.warning("Path traversal attempt detected, skipping member")
+            member_data.append(_create_empty_member_data(member))
+            continue
 
-        # hday_path is derived from validated team_path and member.username - safe to use
+        # hday_path is derived from validated team_path and sanitized username - safe to use
         if not hday_path.exists():  # nosec B108
             # File doesn't exist - return empty data
-            member_data.append(
-                TeamMemberHdayData(
-                    username=member.username,
-                    display_name=member.display_name,
-                    raw="",
-                    events=[],
-                    etag=None,
-                )
-            )
+            member_data.append(_create_empty_member_data(member))
             continue
 
         try:
@@ -264,27 +327,11 @@ def read_team_hday_files(
         except PermissionError:
             logger.warning(f"Permission denied reading .hday file for member: {member.username}")
             # Continue with empty data for this member
-            member_data.append(
-                TeamMemberHdayData(
-                    username=member.username,
-                    display_name=member.display_name,
-                    raw="",
-                    events=[],
-                    etag=None,
-                )
-            )
-        except Exception as e:
-            logger.error(f"Error reading .hday file for member: {member.username}", exc_info=e)
+            member_data.append(_create_empty_member_data(member))
+        except Exception:
+            logger.exception(f"Error reading .hday file for member: {member.username}")
             # Continue with empty data for this member
-            member_data.append(
-                TeamMemberHdayData(
-                    username=member.username,
-                    display_name=member.display_name,
-                    raw="",
-                    events=[],
-                    etag=None,
-                )
-            )
+            member_data.append(_create_empty_member_data(member))
 
     logger.info(f"Successfully processed .hday files for {len(member_data)} team members")
     return member_data

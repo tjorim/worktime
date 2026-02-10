@@ -423,3 +423,43 @@ d1 # Every Monday
 
         with pytest.raises(TeamNotFoundError, match="Team not found"):
             read_team_hday_files("nonexistent", members)
+
+    def test_read_team_hday_files_rejects_path_traversal_username(self, share_dir):
+        """Test that path traversal in username is rejected."""
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+
+        # Create members with malicious usernames
+        members = [
+            TeamMember(username="../etc/passwd", display_name="Hacker"),
+            TeamMember(username="../../secrets", display_name="Hacker2"),
+        ]
+
+        member_data = read_team_hday_files("team1", members)
+
+        # Should return empty data for invalid usernames
+        assert len(member_data) == 2
+        for data in member_data:
+            assert data.raw == ""
+            assert data.events == []
+            assert data.etag is None
+
+    def test_read_team_hday_files_rejects_special_chars_in_username(self, share_dir):
+        """Test that special characters in username are rejected."""
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+
+        # Create members with invalid usernames
+        members = [
+            TeamMember(username="user/file", display_name="Invalid User"),
+            TeamMember(username="user\\file", display_name="Invalid User 2"),
+        ]
+
+        member_data = read_team_hday_files("team1", members)
+
+        # Should return empty data for invalid usernames
+        assert len(member_data) == 2
+        for data in member_data:
+            assert data.raw == ""
+            assert data.events == []
+            assert data.etag is None
