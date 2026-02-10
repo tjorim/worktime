@@ -44,24 +44,31 @@ const colorChangeListeners = new Set<() => void>();
 /**
  * Observer to invalidate cache when data-bs-theme attribute changes.
  * This ensures the color updates when users switch between light/dark/auto themes.
+ * Guarded to prevent multiple observer registrations in test/HMR environments.
  */
-if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
-        cachedDefaultLabelColor = null;
-        // Notify all listeners
-        colorChangeListeners.forEach((listener) => listener());
-        break;
-      }
-    }
-  });
+let themeObserver: MutationObserver | null = null;
 
-  if (document.documentElement) {
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-bs-theme"],
+if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
+  if (!themeObserver) {
+    themeObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
+          cachedDefaultLabelColor = null;
+          // Notify all listeners
+          colorChangeListeners.forEach((listener) => {
+            listener();
+          });
+          break;
+        }
+      }
     });
+
+    if (document.documentElement) {
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-bs-theme"],
+      });
+    }
   }
 }
 
