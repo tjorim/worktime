@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.audit.logger import AUDIT_LOG_FILE
 from app.main import app
 from app.config import settings
 
