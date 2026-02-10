@@ -9,10 +9,46 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional
+import re
 
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_username(username: str) -> str:
+    """Validate and sanitize a username for use in .hday file paths.
+
+    This ensures that the returned value is safe to use as a single
+    path component and does not allow path traversal.
+
+    Args:
+        username: The raw username from the API.
+
+    Returns:
+        A sanitized username string safe to embed in a filename.
+
+    Raises:
+        ValueError: If the username is not in an allowed format.
+    """
+    # Validate username - only allow alphanumeric, underscore, hyphen, and dot.
+    # Disallow leading dot to avoid "hidden" or special filenames (like "..").
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', username):
+        raise ValueError("Invalid username format")
+
+    # Additional check: username must not contain path separators or traversal patterns
+    if "/" in username or "\\" in username or ".." in username:
+        raise ValueError("Invalid username format")
+
+    # Use only the final path component to be extra defensive.
+    safe_username = Path(username).name
+
+    # Final guard: apply the same pattern to the derived name to ensure
+    # that Path().name did not introduce any unexpected value.
+    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', safe_username):
+        raise ValueError("Invalid username format")
+
+    return safe_username
 
 
 class HdayFileNotFoundError(Exception):
@@ -62,25 +98,17 @@ def get_hday_path(username: str) -> Path:
     Raises:
         ValueError: If username contains invalid characters
     """
-    # Validate username - only allow alphanumeric, underscore, hyphen, and dot.
-    # Disallow leading dot to avoid "hidden" or special filenames (like "..").
-    import re
-    if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', username):
-        raise ValueError("Invalid username format")
-    
-    # Additional check: username must not contain path separators or traversal patterns
-    if "/" in username or "\\" in username or ".." in username:
-        raise ValueError("Invalid username format")
-    
+    # First, sanitize the username so that it is safe to use as a path component.
+    safe_username = _sanitize_username(username)
+
     share_dir = settings.get_share_dir_path()
     # Resolve the share directory to an absolute, normalized path
     resolved_share = share_dir.resolve()
-    
-    # Sanitize: use only the filename part of username to prevent path traversal.
-    # This ensures any accidental path components are discarded.
-    safe_filename = Path(username).name
-    file_path = resolved_share / f"{safe_filename}.hday"
-    
+
+    # Construct the file path using only the sanitized username and a fixed suffix.
+    safe_filename = f"{safe_username}.hday"
+    file_path = resolved_share / safe_filename
+
     # Verify the normalized path is within share_dir to prevent path traversal
     try:
         # Use strict=False so resolution does not depend on the file already existing
@@ -89,7 +117,7 @@ def get_hday_path(username: str) -> Path:
     except ValueError:
         # Either resolution failed or the path escapes the share directory
         raise ValueError("Invalid username format")
-    
+
     # Always return the normalized, share-rooted path
     return normalized_path
 
