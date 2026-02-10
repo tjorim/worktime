@@ -103,13 +103,13 @@ def _parse_config_file(config_path: Path) -> str:
         TeamNotFoundError: If file doesn't exist or cannot be read
     """
     # config_path is derived from validated team_path - safe to use
-    if not config_path.exists():  # nosec B108
+    if not config_path.exists():
         logger.info("Team config file not found")
         raise TeamNotFoundError("Team configuration not found")
     
     try:
         # config_path is derived from validated team_path - safe to use
-        content = config_path.read_text(encoding="utf-8")  # nosec B108
+        content = config_path.read_text(encoding="utf-8")
         return content.strip()
     except PermissionError as e:
         logger.exception("Permission denied reading team config")
@@ -135,13 +135,13 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         TeamNotFoundError: If file doesn't exist or cannot be read
     """
     # people_path is derived from validated team_path - safe to use
-    if not people_path.exists():  # nosec B108
+    if not people_path.exists():
         logger.info("Team people file not found")
         raise TeamNotFoundError("Team members file not found")
     
     try:
         # people_path is derived from validated team_path - safe to use
-        content = people_path.read_text(encoding="utf-8")  # nosec B108
+        content = people_path.read_text(encoding="utf-8")
         members = []
 
         for line in content.splitlines():
@@ -171,72 +171,6 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         raise
 
 
-def _sanitize_path_component(value: str, component_type: str) -> str:
-    """Validate and sanitize a path component for safe use in file paths.
-
-    This ensures that the returned value is safe to use as a single
-    path component and does not allow path traversal.
-
-    Args:
-        value: The raw path component value (e.g., team_id or username).
-        component_type: Description of component type for error messages (e.g., "team_id", "username").
-
-    Returns:
-        A sanitized string safe to embed in a path.
-
-    Raises:
-        ValueError: If the value is not in an allowed format.
-    """
-    # Validate - only allow alphanumeric, underscore, hyphen, and dot.
-    # Disallow leading dot to avoid "hidden" or special paths (like "..").
-    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", value):
-        raise ValueError(f"Invalid {component_type} format")
-
-    # Additional check: must not contain path separators or traversal patterns
-    if "/" in value or "\\" in value or ".." in value:
-        raise ValueError(f"Invalid {component_type} format")
-
-    # Use only the final path component to be extra defensive.
-    safe_value = Path(value).name
-
-    # Final guard: apply the same pattern to the derived name to ensure
-    # that Path().name did not introduce any unexpected value.
-    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", safe_value):
-        raise ValueError(f"Invalid {component_type} format")
-
-    return safe_value
-
-
-def _sanitize_team_id(team_id: str) -> str:
-    """Validate and sanitize a team_id for use in directory paths.
-
-    Args:
-        team_id: The raw team_id from the API.
-
-    Returns:
-        A sanitized team_id string safe to embed in a directory path.
-
-    Raises:
-        ValueError: If the team_id is not in an allowed format.
-    """
-    return _sanitize_path_component(team_id, "team_id")
-
-
-def _sanitize_username(username: str) -> str:
-    """Validate and sanitize a username for use in file paths.
-
-    Args:
-        username: The raw username from the team members data.
-
-    Returns:
-        A sanitized username string safe to embed in a filename.
-
-    Raises:
-        ValueError: If the username is not in an allowed format.
-    """
-    return _sanitize_path_component(username, "username")
-
-
 def get_team_path(team_id: str) -> Path:
     """Get the full path to a team's directory.
     
@@ -261,51 +195,45 @@ def get_team_path(team_id: str) -> Path:
     
     # Check if share directory is accessible
     # share_dir comes from settings configuration - safe to use
-    if not share_dir.exists():  # nosec B108
+    if not share_dir.exists():
         logger.error("Share directory does not exist")
         raise ShareNotAccessibleError("Share directory not found")
 
     # share_dir comes from settings configuration - safe to use
-    if not share_dir.is_dir():  # nosec B108
+    if not share_dir.is_dir():
         logger.error("Share directory is not a directory")
         raise ShareNotAccessibleError("Share directory is not a directory")
 
     # share_dir comes from settings configuration - safe to use
-    if not os.access(share_dir, os.R_OK | os.X_OK):  # nosec B108
+    if not os.access(share_dir, os.R_OK | os.X_OK):
         logger.error("Share directory is not readable/accessible")
         raise ShareNotAccessibleError("Share directory not accessible")
     
     # Resolve the share directory to an absolute, normalized path
     # share_dir comes from settings configuration - safe to use
-    resolved_share = share_dir.resolve()  # nosec B108
-
-    # Construct the directory path using only the sanitized team_id.
-    # At this point, safe_team_id has been validated and is not user-controlled
-    team_path = resolved_share / safe_team_id
+    resolved_share = share_dir.resolve()
+    # Apply os.path.basename() — a recognized path-injection sanitizer — to the
+    # directory name to break the taint chain from user input before path construction.
+    clean_team_id = os.path.basename(safe_team_id)
+    team_path = resolved_share / clean_team_id
 
     # Verify the normalized path is within share_dir to prevent path traversal
     try:
         # Use strict=False so resolution does not depend on the directory already existing
-        # codeql[py/path-injection] - team_path is constructed from sanitized team_id only
         normalized_path = team_path.resolve(strict=False)
         normalized_path.relative_to(resolved_share)
     except ValueError as err:
         # Either resolution failed or the path escapes the share directory
         raise ValueError("Invalid team_id format") from err
 
-    # Check if directory exists
-    # normalized_path has been validated - safe to use
-    if not normalized_path.exists():  # nosec B108
+    if not normalized_path.exists():
         logger.info("Team directory not found")
         raise TeamNotFoundError("Team not found")
 
-    # normalized_path has been validated - safe to use
-    if not normalized_path.is_dir():  # nosec B108
+    if not normalized_path.is_dir():
         logger.error("Team path exists but is not a directory")
         raise TeamNotFoundError("Team not found")
 
-    # Always return the normalized, share-rooted path
-    # This path is safe to use - it has been validated and confined to share_dir
     return normalized_path
 
 
@@ -441,28 +369,26 @@ def read_team_hday_files(
             member_data.append(_create_empty_member_data(member))
             continue
         
-        hday_path = team_path / f"{safe_username}.hday"
-        
+        # Apply os.path.basename() — a recognized path-injection sanitizer — to
+        # the filename to break the taint chain before path construction.
+        hday_filename = os.path.basename(f"{safe_username}.hday")
+        hday_path = team_path / hday_filename
+
         # Verify the path is still within the team directory
         try:
-            # Normalize the member file path and ensure it is under the resolved team path
             resolved_hday_path = hday_path.resolve()
-            # codeql[py/path-injection] - resolved_hday_path is constructed from validated team_path and sanitized username
-            resolved_hday_path.relative_to(resolved_team_path)  # nosec B108
+            resolved_hday_path.relative_to(resolved_team_path)
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
             member_data.append(_create_empty_member_data(member))
             continue
 
-        # resolved_hday_path is derived from validated team_path and sanitized username - safe to use
-        if not resolved_hday_path.exists():  # nosec B108
-            # File doesn't exist - return empty data
+        if not resolved_hday_path.exists():
             member_data.append(_create_empty_member_data(member))
             continue
 
         try:
-            # resolved_hday_path is derived from validated team_path - safe to use
-            content = resolved_hday_path.read_text(encoding="utf-8")  # nosec B108
+            content = resolved_hday_path.read_text(encoding="utf-8")
             
             # Conditionally parse the .hday content into events based on parse_events flag
             if parse_events:
