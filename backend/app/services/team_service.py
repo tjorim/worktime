@@ -308,6 +308,7 @@ def read_team_hday_files(
         
         # Verify the path is still within the team directory
         try:
+            # codeql[py/path-injection] - hday_path constructed from validated team_path and sanitized username
             hday_path.resolve().relative_to(team_path.resolve())
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
