@@ -117,20 +117,24 @@ def get_team_path(team_id: str) -> Path:
     share_dir = settings.get_share_dir_path()
     
     # Check if share directory is accessible
-    if not share_dir.exists():
+    # share_dir comes from settings configuration - safe to use
+    if not share_dir.exists():  # nosec B108
         logger.error("Share directory does not exist")
         raise ShareNotAccessibleError("Share directory not found")
 
-    if not share_dir.is_dir():
+    # share_dir comes from settings configuration - safe to use
+    if not share_dir.is_dir():  # nosec B108
         logger.error("Share directory is not a directory")
         raise ShareNotAccessibleError("Share directory is not a directory")
 
-    if not os.access(share_dir, os.R_OK | os.X_OK):
+    # share_dir comes from settings configuration - safe to use
+    if not os.access(share_dir, os.R_OK | os.X_OK):  # nosec B108
         logger.error("Share directory is not readable/accessible")
         raise ShareNotAccessibleError("Share directory not accessible")
     
     # Resolve the share directory to an absolute, normalized path
-    resolved_share = share_dir.resolve()
+    # share_dir comes from settings configuration - safe to use
+    resolved_share = share_dir.resolve()  # nosec B108
 
     # Construct the directory path using only the sanitized team_id.
     # At this point, safe_team_id has been validated and is not user-controlled
@@ -309,7 +313,8 @@ def read_team_hday_files(
         # Verify the path is still within the team directory
         try:
             # codeql[py/path-injection] - hday_path constructed from validated team_path and sanitized username
-            hday_path.resolve().relative_to(team_path.resolve())
+            # team_path has been validated by get_team_path() - safe to use
+            hday_path.resolve().relative_to(team_path.resolve())  # nosec B108
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
             member_data.append(_create_empty_member_data(member))
@@ -340,13 +345,13 @@ def read_team_hday_files(
                     etag=etag,
                 )
             )
-            logger.debug(f"Successfully read .hday file for member: {member.username}")
+            logger.debug("Successfully read .hday file for team member")
         except PermissionError:
-            logger.warning(f"Permission denied reading .hday file for member: {member.username}")
+            logger.warning("Permission denied reading .hday file for team member")
             # Continue with empty data for this member
             member_data.append(_create_empty_member_data(member))
         except Exception:
-            logger.exception(f"Error reading .hday file for member: {member.username}")
+            logger.exception("Error reading .hday file for team member")
             # Continue with empty data for this member
             member_data.append(_create_empty_member_data(member))
 
