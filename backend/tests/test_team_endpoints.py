@@ -168,7 +168,7 @@ class TestGetTeamHdayEndpoint:
     """Tests for GET /v1/team/{team_id}/hday endpoint."""
 
     def test_get_team_hday_all_files_exist(self, client, share_dir):
-        """Test successful retrieval of all team members' .hday data."""
+        """Test successful retrieval of all team members' .hday data with default format=raw."""
         # Create team directory with config and people files
         team_dir = share_dir / "team1"
         team_dir.mkdir()
@@ -199,7 +199,8 @@ class TestGetTeamHdayEndpoint:
         assert data["members"][0]["username"] == "jdoe"
         assert data["members"][0]["display_name"] == "John Doe"
         assert data["members"][0]["raw"] == "2025/01/15 # Vacation\n"
-        assert len(data["members"][0]["events"]) == 1
+        # Default format=raw means events should be empty list
+        assert data["members"][0]["events"] == []
         assert data["members"][0]["etag"] is not None
         assert data["members"][0]["etag"].startswith("sha256:")
         assert len(data["members"][0]["etag"]) == EXPECTED_SHA256_ETAG_LENGTH
@@ -208,7 +209,8 @@ class TestGetTeamHdayEndpoint:
         assert data["members"][1]["username"] == "asmith"
         assert data["members"][1]["display_name"] == "Alice Smith"
         assert data["members"][1]["raw"] == "2025/02/20 # Conference\n"
-        assert len(data["members"][1]["events"]) == 1
+        # Default format=raw means events should be empty list
+        assert data["members"][1]["events"] == []
         assert data["members"][1]["etag"] is not None
 
     def test_get_team_hday_some_files_missing(self, client, share_dir):
@@ -296,7 +298,7 @@ class TestGetTeamHdayEndpoint:
         assert data["members"][0]["etag"] is not None  # Empty file still has etag
 
     def test_get_team_hday_with_multiple_events(self, client, share_dir):
-        """Test retrieval with multiple events in .hday file."""
+        """Test retrieval with multiple events in .hday file using format=parsed."""
         team_dir = share_dir / "team1"
         team_dir.mkdir()
         
@@ -314,7 +316,8 @@ d1 # Every Monday
         jdoe_hday = team_dir / "jdoe.hday"
         jdoe_hday.write_text(hday_content, encoding="utf-8")
 
-        response = client.get("/v1/team/team1/hday")
+        # Use format=parsed to get parsed events
+        response = client.get("/v1/team/team1/hday?format=parsed")
 
         assert response.status_code == 200
         data = response.json()
@@ -413,3 +416,118 @@ d1 # Every Monday
         assert response.status_code == 200
         data = response.json()
         assert data["members"][0]["raw"] == "2025/01/15 # 휴가일 (vacation)\n"
+    
+    def test_get_team_hday_format_raw_default(self, client, share_dir):
+        """Test GET with default format=raw returns parsed events (backward compatibility)."""
+        # Create team directory with files
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
+        
+        # Create .hday file
+        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
+
+        response = client.get("/v1/team/team1/hday")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["members"]) == 1
+        assert data["members"][0]["username"] == "jdoe"
+        assert data["members"][0]["raw"] == "2025/01/15 # Vacation\n"
+        # Default format=raw should return empty events list
+        assert data["members"][0]["events"] == []
+    
+    def test_get_team_hday_format_raw_explicit(self, client, share_dir):
+        """Test GET with explicit format=raw returns no parsed events."""
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
+        
+        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
+
+        response = client.get("/v1/team/team1/hday?format=raw")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["members"][0]["events"] == []
+    
+    def test_get_team_hday_format_parsed(self, client, share_dir):
+        """Test GET with format=parsed returns parsed events."""
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8")
+        
+        # Create .hday files
+        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday.write_text("2025/01/15 # Vacation\n2025/12/25 # Christmas\n", encoding="utf-8")
+        
+        asmith_hday = team_dir / "asmith.hday"
+        asmith_hday.write_text("2025/02/20 # Conference\n", encoding="utf-8")
+
+        response = client.get("/v1/team/team1/hday?format=parsed")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["members"]) == 2
+        
+        # Check first member has parsed events
+        assert data["members"][0]["username"] == "jdoe"
+        assert len(data["members"][0]["events"]) == 2
+        assert data["members"][0]["events"][0]["type"] == "range"
+        assert data["members"][0]["events"][0]["start"] == "2025/01/15"
+        assert data["members"][0]["events"][0]["title"] == "Vacation"
+        
+        # Check second member has parsed events
+        assert data["members"][1]["username"] == "asmith"
+        assert len(data["members"][1]["events"]) == 1
+        assert data["members"][1]["events"][0]["start"] == "2025/02/20"
+        assert data["members"][1]["events"][0]["title"] == "Conference"
+    
+    def test_get_team_hday_format_parsed_missing_files(self, client, share_dir):
+        """Test GET with format=parsed handles missing files correctly."""
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        
+        config_file = team_dir / "config"
+        config_file.write_text("Engineering Team", encoding="utf-8")
+        
+        people_file = team_dir / "people"
+        people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8")
+        
+        # Only create file for first member
+        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
+        # asmith.hday intentionally not created
+
+        response = client.get("/v1/team/team1/hday?format=parsed")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["members"]) == 2
+        
+        # First member should have parsed event
+        assert data["members"][0]["username"] == "jdoe"
+        assert len(data["members"][0]["events"]) == 1
+        
+        # Second member should have empty data
+        assert data["members"][1]["username"] == "asmith"
+        assert data["members"][1]["raw"] == ""
+        assert data["members"][1]["events"] == []
+        assert data["members"][1]["etag"] is None

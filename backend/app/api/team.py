@@ -6,8 +6,9 @@ aggregating .hday files across all team members.
 
 import logging
 from pathlib import Path
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
@@ -76,14 +77,18 @@ def get_team_info(team_id: str) -> TeamInfoResponse:
 
 
 @router.get("/v1/team/{team_id}/hday")
-def get_team_hday(team_id: str) -> TeamHdayResponse:
+def get_team_hday(
+    team_id: str,
+    format: Literal["raw", "parsed"] = Query("raw")
+) -> TeamHdayResponse:
     """Get aggregated .hday data for all team members.
     
-    Retrieves and parses .hday files for all members of the team.
+    Retrieves and optionally parses .hday files for all members of the team.
     For members without .hday files, returns empty data with etag=None.
     
     Args:
         team_id: The unique identifier for the team
+        format: Response format - "raw" (default) or "parsed" to include events
         
     Returns:
         TeamHdayResponse with team_id and list of member .hday data
@@ -103,7 +108,9 @@ def get_team_hday(team_id: str) -> TeamHdayResponse:
         logger.info(f"Successfully read {len(members)} team members")
         
         # Read all .hday files using the same validated path
-        member_data = read_team_hday_files(team_id, members, team_path)
+        # Parse events only when format=parsed
+        parse_events = format == "parsed"
+        member_data = read_team_hday_files(team_id, members, team_path, parse_events)
         
         logger.info(f"Successfully read bulk .hday data for {len(member_data)} members")
         

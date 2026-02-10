@@ -5,8 +5,9 @@ with proper error handling, response formatting, and audit logging.
 """
 
 import logging
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
 from app.audit import logger as audit
@@ -33,16 +34,21 @@ router = APIRouter(tags=["Hday Files"])
 
 
 @router.get("/v1/hday/{username}")
-async def get_hday_file(username: str) -> HdayReadResponse:
+async def get_hday_file(
+    username: str,
+    format: Literal["raw", "parsed"] = Query("raw")
+) -> HdayReadResponse:
     """Get a user's .hday file content.
     
     Retrieves the raw content and etag for conflict detection.
+    Optionally parses events when format=parsed.
     
     Args:
         username: The username whose .hday file to retrieve
+        format: Response format - "raw" (default) or "parsed" to include events
         
     Returns:
-        HdayReadResponse with username, raw content, and etag
+        HdayReadResponse with username, raw content, etag, and optionally events
         
     Raises:
         404: File not found for user
@@ -52,10 +58,20 @@ async def get_hday_file(username: str) -> HdayReadResponse:
         raw, etag = hday_service.read_hday_file(username)
         logger.info("Successfully read .hday file")
         
+        # Conditionally parse events based on format parameter
+        events = None
+        if format == "parsed":
+            try:
+                events = hday_parser.parse_text(raw)
+            except Exception:
+                # If parsing fails, return empty events list rather than crashing
+                events = []
+        
         return HdayReadResponse(
             username=username,
             raw=raw,
-            etag=etag
+            etag=etag,
+            events=events
         )
         
     except HdayFileNotFoundError:
@@ -106,6 +122,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         content = hday_parser.to_text(request.events)
         logger.debug("Using serialized events")
     else:
+        # Raw text is written directly when request.raw is provided
         content = request.raw
         logger.debug("Using raw content")
     

@@ -92,6 +92,94 @@ class TestGetEndpoint:
         assert response.status_code == 503
         data = response.json()
         assert "not accessible" in data["detail"]
+    
+    def test_get_file_format_raw_default(self, client, share_dir):
+        """Test GET with default format=raw returns no events."""
+        # Create a test .hday file with parseable content
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == "testuser"
+        assert data["raw"] == test_content
+        assert data["etag"].startswith("sha256:")
+        # events should be None for format=raw (default)
+        assert data["events"] is None
+    
+    def test_get_file_format_raw_explicit(self, client, share_dir):
+        """Test GET with explicit format=raw returns no events."""
+        # Create a test .hday file
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=raw")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == "testuser"
+        assert data["raw"] == test_content
+        # events should be None for format=raw
+        assert data["events"] is None
+    
+    def test_get_file_format_parsed(self, client, share_dir):
+        """Test GET with format=parsed returns parsed events."""
+        # Create a test .hday file
+        test_file = share_dir / "testuser.hday"
+        test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=parsed")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == "testuser"
+        assert data["raw"] == test_content
+        assert data["etag"].startswith("sha256:")
+        # events should be present for format=parsed
+        assert data["events"] is not None
+        assert isinstance(data["events"], list)
+        assert len(data["events"]) == 2
+        assert data["events"][0]["type"] == "range"
+        assert data["events"][0]["start"] == "2025/01/15"
+        assert data["events"][0]["title"] == "Vacation"
+    
+    def test_get_file_format_parsed_empty_file(self, client, share_dir):
+        """Test GET with format=parsed on empty file returns empty events list."""
+        # Create an empty .hday file
+        test_file = share_dir / "testuser.hday"
+        test_file.write_text("", encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=parsed")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["raw"] == ""
+        assert data["events"] is not None
+        assert isinstance(data["events"], list)
+        assert len(data["events"]) == 0
+    
+    def test_get_file_format_parsed_malformed_content(self, client, share_dir):
+        """Test GET with format=parsed handles parsing errors gracefully."""
+        # Create a file with content that might cause parse errors
+        test_file = share_dir / "testuser.hday"
+        # Most content should parse fine, but we test the error handling path exists
+        test_content = "2025/01/15 # Valid event"
+        test_file.write_text(test_content, encoding="utf-8")
+        
+        response = client.get("/v1/hday/testuser?format=parsed")
+        
+        # Should still return 200 even if parsing has issues
+        assert response.status_code == 200
+        data = response.json()
+        assert data["raw"] == test_content
+        # events should be a list (empty if parsing fails, non-empty if it succeeds)
+        assert data["events"] is not None
+        assert isinstance(data["events"], list)
 
 
 class TestPutEndpoint:

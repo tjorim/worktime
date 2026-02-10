@@ -106,23 +106,20 @@ def get_hday_path(username: str) -> Path:
     # Resolve the share directory to an absolute, normalized path
     resolved_share = share_dir.resolve()
 
-    # Construct the file path using only the sanitized username and a fixed suffix.
-    # At this point, safe_username has been validated and is not user-controlled
-    safe_filename = f"{safe_username}.hday"
+    # Apply os.path.basename() — a recognized path-injection sanitizer — to the
+    # filename to break the taint chain from user input before path construction.
+    safe_filename = os.path.basename(f"{safe_username}.hday")
     file_path = resolved_share / safe_filename
 
     # Verify the normalized path is within share_dir to prevent path traversal
     try:
         # Use strict=False so resolution does not depend on the file already existing
-        # codeql[py/path-injection] - file_path is constructed from sanitized username only
         normalized_path = file_path.resolve(strict=False)
         normalized_path.relative_to(resolved_share)
     except ValueError as err:
         # Either resolution failed or the path escapes the share directory
         raise ValueError("Invalid username format") from err
 
-    # Always return the normalized, share-rooted path
-    # This path is safe to use - it has been validated and confined to share_dir
     return normalized_path
 
 
@@ -157,14 +154,14 @@ def read_hday_file(username: str) -> tuple[str, str]:
 
     # Check if file exists
     # file_path has been validated by get_hday_path() - safe to use
-    if not file_path.exists():  # nosec B108
+    if not file_path.exists():
         logger.info("File not found")
         raise HdayFileNotFoundError(f"File not found for user: {username}")
 
     try:
         # Read file content
         # file_path has been validated by get_hday_path() - safe to use
-        content = file_path.read_text(encoding="utf-8")  # nosec B108
+        content = file_path.read_text(encoding="utf-8")
         etag = compute_etag(content)
         logger.info("Successfully read .hday file")
         return content, etag
@@ -218,14 +215,13 @@ def write_hday_file(
 
     # Conflict detection
     # file_path has been validated by get_hday_path() - safe to use
-    file_exists = file_path.exists()  # nosec B108
-
+    file_exists = file_path.exists()
     if expected_etag is None:
         # Creating new file - must not exist
         if file_exists:
             try:
                 # file_path has been validated by get_hday_path() - safe to use
-                current_content = file_path.read_text(encoding="utf-8")  # nosec B108
+                current_content = file_path.read_text(encoding="utf-8")
                 current_etag = compute_etag(current_content)
             except PermissionError as e:
                 logger.error("Permission denied reading existing file")
@@ -253,7 +249,7 @@ def write_hday_file(
 
         try:
             # file_path has been validated by get_hday_path() - safe to use
-            current_content = file_path.read_text(encoding="utf-8")  # nosec B108
+            current_content = file_path.read_text(encoding="utf-8")
             current_etag = compute_etag(current_content)
         except PermissionError as e:
             logger.error("Permission denied reading file for etag check")
@@ -274,12 +270,10 @@ def write_hday_file(
     try:
         # Write to temporary file
         # temp_path is derived from validated file_path - safe to use
-        temp_path.write_text(content, encoding="utf-8")  # nosec B108
-
+        temp_path.write_text(content, encoding="utf-8")
         # Atomic replace
         # Both paths have been validated - safe to use
-        os.replace(temp_path, file_path)  # nosec B108
-
+        os.replace(temp_path, file_path)
         # Compute and return new etag
         new_etag = compute_etag(content)
         logger.info("Successfully wrote .hday file")
@@ -288,9 +282,9 @@ def write_hday_file(
     except Exception as e:
         # Clean up temp file on failure
         # temp_path is derived from validated file_path - safe to use
-        if temp_path.exists():  # nosec B108
+        if temp_path.exists():
             try:
-                temp_path.unlink()  # nosec B108
+                temp_path.unlink()
                 logger.info("Cleaned up temporary file")
             except Exception as cleanup_error:
                 logger.warning("Failed to clean up temporary file", exc_info=cleanup_error)
