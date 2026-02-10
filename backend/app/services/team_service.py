@@ -378,6 +378,8 @@ def read_team_hday_files(
         List of TeamMemberHdayData objects with parsed .hday data
     """
     team_path = get_team_path(team_id)
+    # Resolve the validated team_path once and reuse it for member file checks
+    resolved_team_path = team_path.resolve()
     member_data = []
 
     for member in members:
@@ -393,23 +395,24 @@ def read_team_hday_files(
         
         # Verify the path is still within the team directory
         try:
-            # codeql[py/path-injection] - hday_path constructed from validated team_path and sanitized username
-            # team_path has been validated by get_team_path() - safe to use
-            hday_path.resolve().relative_to(team_path.resolve())  # nosec B108
+            # Normalize the member file path and ensure it is under the resolved team path
+            resolved_hday_path = hday_path.resolve()
+            # codeql[py/path-injection] - resolved_hday_path is constructed from validated team_path and sanitized username
+            resolved_hday_path.relative_to(resolved_team_path)  # nosec B108
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
             member_data.append(_create_empty_member_data(member))
             continue
 
-        # hday_path is derived from validated team_path and sanitized username - safe to use
-        if not hday_path.exists():  # nosec B108
+        # resolved_hday_path is derived from validated team_path and sanitized username - safe to use
+        if not resolved_hday_path.exists():  # nosec B108
             # File doesn't exist - return empty data
             member_data.append(_create_empty_member_data(member))
             continue
 
         try:
-            # hday_path is derived from validated team_path - safe to use
-            content = hday_path.read_text(encoding="utf-8")  # nosec B108
+            # resolved_hday_path is derived from validated team_path - safe to use
+            content = resolved_hday_path.read_text(encoding="utf-8")  # nosec B108
             
             # Parse the .hday content into events
             events = parse_text(content)
