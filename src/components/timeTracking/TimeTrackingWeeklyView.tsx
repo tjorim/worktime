@@ -5,7 +5,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
+import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { EmptyState } from "../shared/EmptyState";
 
@@ -55,6 +55,7 @@ export function TimeTrackingWeeklyView({
   const weekStart = weeklyDate.startOf("isoWeek");
   const isWeeklyCurrent = weekStart.isSame(dayjs().startOf("isoWeek"), "day");
   const todayIso = dayjs().format("YYYY-MM-DD");
+  const defaultLabelColor = useDefaultLabelColor();
 
   // Extract primitives for stable useMemo dependencies
   const year = weekStart.isoWeekYear();
@@ -142,10 +143,10 @@ export function TimeTrackingWeeklyView({
         label,
         hours,
         percentage: (hours / weekTotal) * 100,
-        color: labelNameToColor[label] ?? "#6c757d",
+        color: labelNameToColor[label] ?? defaultLabelColor,
       }))
       .sort((a, b) => b.hours - a.hours);
-  }, [summary, weekTotal, labelNameToColor]);
+  }, [summary, weekTotal, labelNameToColor, defaultLabelColor]);
 
   return (
     <Card className="shadow-sm">
