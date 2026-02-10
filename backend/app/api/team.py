@@ -7,7 +7,6 @@ aggregating .hday files across all team members.
 import logging
 
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
 
 from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
@@ -24,7 +23,7 @@ router = APIRouter(tags=["Team"])
 
 
 @router.get("/v1/team/{team_id}")
-async def get_team_info(team_id: str) -> TeamInfoResponse:
+def get_team_info(team_id: str) -> TeamInfoResponse:
     """Get team information including name and members.
     
     Retrieves the team name from the config file and member list from the people file.
@@ -57,25 +56,25 @@ async def get_team_info(team_id: str) -> TeamInfoResponse:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid team_id format"
-        )
+        ) from e
         
     except TeamNotFoundError as e:
         logger.info("Team not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
-        )
+        ) from e
         
     except ShareNotAccessibleError as e:
-        logger.error("Share directory not accessible", exc_info=e)
-        return JSONResponse(
+        logger.exception("Share directory not accessible")
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"detail": "Share directory not accessible"}
-        )
+            detail="Share directory not accessible"
+        ) from e
 
 
 @router.get("/v1/team/{team_id}/hday")
-async def get_team_hday(team_id: str) -> TeamHdayResponse:
+def get_team_hday(team_id: str) -> TeamHdayResponse:
     """Get aggregated .hday data for all team members.
     
     Retrieves and parses .hday files for all members of the team.
@@ -111,18 +110,18 @@ async def get_team_hday(team_id: str) -> TeamHdayResponse:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid team_id format"
-        )
+        ) from e
         
     except TeamNotFoundError as e:
         logger.info("Team not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
-        )
+        ) from e
         
     except ShareNotAccessibleError as e:
-        logger.error("Share directory not accessible", exc_info=e)
-        return JSONResponse(
+        logger.exception("Share directory not accessible")
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"detail": "Share directory not accessible"}
-        )
+            detail="Share directory not accessible"
+        ) from e
