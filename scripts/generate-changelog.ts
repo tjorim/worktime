@@ -1,15 +1,8 @@
 #!/usr/bin/env tsx
 
 import { writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { changelogData, futurePlans } from "../src/data/changelog";
-
-// Get the directory of the current script file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Resolve to the repository root (one level up from scripts/)
-const REPO_ROOT = resolve(__dirname, "..");
 
 /**
  * Build the repository changelog content as a single Markdown string.
@@ -132,8 +125,7 @@ ${versionLinks.join("\n")}
  */
 function main() {
   const changelog = generateChangelog();
-  // Use hardcoded repository root instead of process.cwd() to avoid path traversal issues
-  const changelogPath = join(REPO_ROOT, "CHANGELOG.md");
+  const changelogPath = join(process.cwd(), "CHANGELOG.md");
 
   writeFileSync(changelogPath, changelog, "utf8");
   console.log("✅ CHANGELOG.md generated successfully");

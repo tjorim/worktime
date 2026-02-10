@@ -6,16 +6,10 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { createCanvas } from "canvas";
 
-// Get the directory of the current script file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Resolve to the repository root (one level up from scripts/)
-const REPO_ROOT = resolve(__dirname, "..");
-const ICONS_DIR = join(REPO_ROOT, "public", "assets", "icons");
+const ICONS_DIR = join(process.cwd(), "public", "assets", "icons");
 const COLORS = {
   gradientStart: "#1e3a8a",
   gradientEnd: "#0d6efd",
