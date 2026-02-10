@@ -101,16 +101,22 @@ def parse_text(text: str) -> List[HdayEvent]:
     Returns:
         List of parsed HdayEvent objects
     """
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    lines = text.splitlines()
     events: List[HdayEvent] = []
 
-    for ln in lines:
+    for original_line in lines:
+        # Preserve original line for raw field, use trimmed for parsing
+        ln = original_line.strip()
+        if not ln:
+            # Skip blank lines entirely
+            continue
         # Try to match range event
         m = RE_RANGE.match(ln)
         if m:
             g = m.groupdict()
             prefix = g["prefix"] or ""
-            flags = [PREFIX_MAP.get(ch.lower(), f"flag_{ch}") for ch in prefix]
+            # Only keep known flags, ignore unknown characters
+            flags = [PREFIX_MAP[ch.lower()] for ch in prefix if ch.lower() in PREFIX_MAP]
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
@@ -121,7 +127,7 @@ def parse_text(text: str) -> List[HdayEvent]:
                     end=g["end"] or g["start"],
                     flags=flags,
                     title=(g["title"] or "").strip(),
-                    raw=ln,
+                    raw=original_line,
                 )
             )
             continue
@@ -131,7 +137,8 @@ def parse_text(text: str) -> List[HdayEvent]:
         if w:
             g = w.groupdict()
             suffix = g["suffix"] or ""
-            flags = [PREFIX_MAP.get(ch.lower(), f"flag_{ch}") for ch in suffix]
+            # Only keep known flags, ignore unknown characters
+            flags = [PREFIX_MAP[ch.lower()] for ch in suffix if ch.lower() in PREFIX_MAP]
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
@@ -141,13 +148,13 @@ def parse_text(text: str) -> List[HdayEvent]:
                     weekday=int(g["weekday"]),
                     flags=flags,
                     title=(g["title"] or "").strip(),
-                    raw=ln,
+                    raw=original_line,
                 )
             )
             continue
 
         # Unknown line - preserve as-is
-        events.append(HdayEvent(type="unknown", raw=ln, flags=["holiday"]))
+        events.append(HdayEvent(type="unknown", raw=original_line, flags=["holiday"]))
 
     return events
 
@@ -171,7 +178,9 @@ def to_text(events: List[HdayEvent]) -> str:
 
         if ev.type == "range":
             title = f" # {ev.title}" if ev.title else ""
-            out_lines.append(f"{pref}{ev.start}-{ev.end}{title}")
+            # Default end to start if it is missing to avoid emitting '-None'
+            end = ev.end or ev.start
+            out_lines.append(f"{pref}{ev.start}-{end}{title}")
         elif ev.type == "weekly":
             title = f" # {ev.title}" if ev.title else ""
             out_lines.append(f"d{ev.weekday}{pref}{title}")

@@ -1,12 +1,9 @@
 """Tests for .hday parser."""
 
-import pytest
-
 from app.models.hday import HdayEvent
 from app.services.hday_parser import (
     PREFIX_MAP,
     REV_MAP,
-    TYPE_FLAGS,
     normalize_flags,
     parse_text,
     to_text,

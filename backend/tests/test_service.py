@@ -1,7 +1,5 @@
 """Tests for .hday service layer."""
 
-import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -75,6 +73,42 @@ class TestGetHdayPath:
         assert path1 != path2
         assert path1.name == "user1.hday"
         assert path2.name == "user2.hday"
+
+    def test_get_hday_path_rejects_path_traversal(self):
+        """Test that path traversal attempts are rejected."""
+        import pytest
+
+        # Test various path traversal attempts
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("../etc/passwd")
+
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("../../etc/passwd")
+
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("user/../admin")
+
+    def test_get_hday_path_rejects_special_characters(self):
+        """Test that special characters are rejected."""
+        import pytest
+
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("user/file")
+
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("user\\file")
+
+        with pytest.raises(ValueError, match="Invalid username"):
+            get_hday_path("user name")  # space not allowed
+
+    def test_get_hday_path_allows_valid_characters(self):
+        """Test that valid usernames work."""
+        # These should all work
+        assert get_hday_path("user123").name == "user123.hday"
+        assert get_hday_path("user_name").name == "user_name.hday"
+        assert get_hday_path("user-name").name == "user-name.hday"
+        assert get_hday_path("user.name").name == "user.name.hday"
+        assert get_hday_path("User123").name == "User123.hday"
 
 
 class TestReadHdayFile:

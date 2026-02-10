@@ -24,7 +24,7 @@ class HdayFileNotFoundError(Exception):
 class HdayConflictError(Exception):
     """Raised when a write operation conflicts with the current file state."""
 
-    def __init__(self, message: str, current_etag: str):
+    def __init__(self, message: str, current_etag: Optional[str] = None):
         super().__init__(message)
         self.current_etag = current_etag
 
@@ -51,14 +51,32 @@ def compute_etag(content: str) -> str:
 def get_hday_path(username: str) -> Path:
     """Get the full path to a user's .hday file.
     
+    Validates username to prevent path traversal attacks.
+    
     Args:
         username: The username
         
     Returns:
         Path object for the .hday file
+        
+    Raises:
+        ValueError: If username contains invalid characters
     """
+    # Validate username - only allow alphanumeric, underscore, hyphen, and dot
+    import re
+    if not re.match(r'^[a-zA-Z0-9._-]+$', username):
+        raise ValueError(f"Invalid username: {username}")
+    
     share_dir = settings.get_share_dir_path()
-    return share_dir / f"{username}.hday"
+    file_path = share_dir / f"{username}.hday"
+    
+    # Verify the resolved path is within share_dir to prevent path traversal
+    try:
+        file_path.resolve().relative_to(share_dir.resolve())
+    except ValueError:
+        raise ValueError(f"Invalid username - path traversal attempt: {username}")
+    
+    return file_path
 
 
 def read_hday_file(username: str) -> tuple[str, str]:
@@ -82,8 +100,12 @@ def read_hday_file(username: str) -> tuple[str, str]:
         logger.error(f"Share directory does not exist: {share_dir}")
         raise ShareNotAccessibleError(f"Share directory not found: {share_dir}")
 
-    if not os.access(share_dir, os.R_OK):
-        logger.error(f"Share directory is not readable: {share_dir}")
+    if not share_dir.is_dir():
+        logger.error(f"Share directory is not a directory: {share_dir}")
+        raise ShareNotAccessibleError(f"Share directory is not a directory: {share_dir}")
+
+    if not os.access(share_dir, os.R_OK | os.X_OK):
+        logger.error(f"Share directory is not readable/accessible: {share_dir}")
         raise ShareNotAccessibleError(f"Share directory not accessible: {share_dir}")
 
     # Check if file exists
@@ -137,8 +159,12 @@ def write_hday_file(
         logger.error(f"Share directory does not exist: {share_dir}")
         raise ShareNotAccessibleError(f"Share directory not found: {share_dir}")
 
-    if not os.access(share_dir, os.W_OK):
-        logger.error(f"Share directory is not writable: {share_dir}")
+    if not share_dir.is_dir():
+        logger.error(f"Share directory is not a directory: {share_dir}")
+        raise ShareNotAccessibleError(f"Share directory is not a directory: {share_dir}")
+
+    if not os.access(share_dir, os.W_OK | os.X_OK):
+        logger.error(f"Share directory is not writable/accessible: {share_dir}")
         raise ShareNotAccessibleError(f"Share directory not writable: {share_dir}")
 
     # Conflict detection
@@ -147,8 +173,14 @@ def write_hday_file(
     if expected_etag is None:
         # Creating new file - must not exist
         if file_exists:
-            current_content = file_path.read_text(encoding="utf-8")
-            current_etag = compute_etag(current_content)
+            try:
+                current_content = file_path.read_text(encoding="utf-8")
+                current_etag = compute_etag(current_content)
+            except PermissionError as e:
+                logger.error(f"Permission denied reading existing file: {file_path}")
+                raise ShareNotAccessibleError(
+                    f"Permission denied reading existing file for user: {username}"
+                ) from e
             logger.warning(
                 f"Conflict: File already exists for user {username}, "
                 f"expected new file"
@@ -163,12 +195,19 @@ def write_hday_file(
                 f"Conflict: File does not exist for user {username}, "
                 f"expected existing file"
             )
+            # File doesn't exist, so current_etag is None
             raise HdayConflictError(
-                f"File does not exist for user: {username}", expected_etag
+                f"File does not exist for user: {username}", None
             )
 
-        current_content = file_path.read_text(encoding="utf-8")
-        current_etag = compute_etag(current_content)
+        try:
+            current_content = file_path.read_text(encoding="utf-8")
+            current_etag = compute_etag(current_content)
+        except PermissionError as e:
+            logger.error(f"Permission denied reading file for etag check: {file_path}")
+            raise ShareNotAccessibleError(
+                f"Permission denied reading file for user: {username}"
+            ) from e
 
         if current_etag != expected_etag:
             logger.warning(
