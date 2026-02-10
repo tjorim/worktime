@@ -166,6 +166,8 @@ MANIFEST
 .mypy_cache/
 .dmypy.json
 dmypy.json
+venv/
+.venv/
 
 # Backend data directory (development only)
 backend/data/
