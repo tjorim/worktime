@@ -300,12 +300,6 @@ class TestAtomicWrites:
         # Verify actual file exists
         actual_file = share_dir / "testuser.hday"
         assert actual_file.exists()
-    
-    def test_temp_file_cleanup_on_permission_error(self, client, share_dir, monkeypatch):
-        """Test that temporary file is cleaned up even on write failure."""
-        # This is a more complex test that would require mocking file operations
-        # to simulate a permission error. For now, we verify the basic pattern.
-        pass
 
 
 class TestAuditLogging:
