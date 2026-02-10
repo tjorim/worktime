@@ -11,7 +11,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
+from .api.health import router as health_router
 from .config import settings
+from .config.cors import get_cors_origins
 
 # Configure logging
 logging.basicConfig(
@@ -42,8 +44,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS middleware
-cors_origins = settings.get_cors_origins_list()
+# Configure CORS middleware with production safety
+cors_origins = get_cors_origins(settings.CORS_ORIGINS, settings.ENVIRONMENT)
 
 if not cors_origins:
     logger.error(
@@ -56,20 +58,14 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials="*" not in cors_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False if "*" in cors_origins else True,
+    allow_methods=["GET", "PUT", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
 
-@app.get("/healthz", response_class=PlainTextResponse, tags=["Health"])
-async def health_check():
-    """Health check endpoint.
-    
-    Returns:
-        Plain text "OK" response indicating the service is running.
-    """
-    return "OK"
+# Register API routers
+app.include_router(health_router)
 
 
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
