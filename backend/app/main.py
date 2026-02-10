@@ -17,6 +17,7 @@ from .api.hday import router as hday_router
 from .api.team import router as team_router
 from .config import settings
 from .config.cors import get_cors_origins
+from .middleware.timing import TimingMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -103,6 +104,9 @@ app.add_middleware(
     allow_methods=["GET", "PUT", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
+# Add timing middleware after CORS
+app.add_middleware(TimingMiddleware)
 
 
 # Register API routers
