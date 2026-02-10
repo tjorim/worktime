@@ -114,7 +114,7 @@ def get_hday_path(username: str) -> Path:
     # Verify the normalized path is within share_dir to prevent path traversal
     try:
         # Use strict=False so resolution does not depend on the file already existing
-        # lgtm[py/path-injection]
+        # codeql[py/path-injection] - file_path is constructed from sanitized username only
         normalized_path = file_path.resolve(strict=False)
         normalized_path.relative_to(resolved_share)
     except ValueError as err:
@@ -144,21 +144,21 @@ def read_hday_file(username: str) -> tuple[str, str]:
 
     # Check if share directory is accessible
     if not share_dir.exists():
-        logger.error(f"Share directory does not exist: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory not found: {share_dir}")
+        logger.error("Share directory does not exist")
+        raise ShareNotAccessibleError("Share directory not found")
 
     if not share_dir.is_dir():
-        logger.error(f"Share directory is not a directory: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory is not a directory: {share_dir}")
+        logger.error("Share directory is not a directory")
+        raise ShareNotAccessibleError("Share directory is not a directory")
 
     if not os.access(share_dir, os.R_OK | os.X_OK):
-        logger.error(f"Share directory is not readable/accessible: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory not accessible: {share_dir}")
+        logger.error("Share directory is not readable/accessible")
+        raise ShareNotAccessibleError("Share directory not accessible")
 
     # Check if file exists
     # file_path has been validated by get_hday_path() - safe to use
     if not file_path.exists():  # nosec B108
-        logger.info(f"File not found: {file_path}")
+        logger.info("File not found")
         raise HdayFileNotFoundError(f"File not found for user: {username}")
 
     try:
@@ -166,15 +166,15 @@ def read_hday_file(username: str) -> tuple[str, str]:
         # file_path has been validated by get_hday_path() - safe to use
         content = file_path.read_text(encoding="utf-8")  # nosec B108
         etag = compute_etag(content)
-        logger.info(f"Successfully read file for user: {username}")
+        logger.info("Successfully read .hday file")
         return content, etag
     except PermissionError as e:
-        logger.error(f"Permission denied reading file: {file_path}")
+        logger.error("Permission denied reading file")
         raise ShareNotAccessibleError(
             f"Permission denied reading file for user: {username}"
         ) from e
     except Exception as e:
-        logger.error(f"Error reading file {file_path}: {e}")
+        logger.error("Error reading .hday file", exc_info=e)
         raise
 
 
@@ -205,16 +205,16 @@ def write_hday_file(
 
     # Check if share directory is accessible
     if not share_dir.exists():
-        logger.error(f"Share directory does not exist: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory not found: {share_dir}")
+        logger.error("Share directory does not exist")
+        raise ShareNotAccessibleError("Share directory not found")
 
     if not share_dir.is_dir():
-        logger.error(f"Share directory is not a directory: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory is not a directory: {share_dir}")
+        logger.error("Share directory is not a directory")
+        raise ShareNotAccessibleError("Share directory is not a directory")
 
     if not os.access(share_dir, os.W_OK | os.X_OK):
-        logger.error(f"Share directory is not writable/accessible: {share_dir}")
-        raise ShareNotAccessibleError(f"Share directory not writable: {share_dir}")
+        logger.error("Share directory is not writable/accessible")
+        raise ShareNotAccessibleError("Share directory not writable")
 
     # Conflict detection
     # file_path has been validated by get_hday_path() - safe to use
@@ -228,7 +228,7 @@ def write_hday_file(
                 current_content = file_path.read_text(encoding="utf-8")  # nosec B108
                 current_etag = compute_etag(current_content)
             except PermissionError as e:
-                logger.error(f"Permission denied reading existing file: {file_path}")
+                logger.error("Permission denied reading existing file")
                 raise ShareNotAccessibleError(
                     f"Permission denied reading existing file for user: {username}"
                 ) from e
@@ -256,7 +256,7 @@ def write_hday_file(
             current_content = file_path.read_text(encoding="utf-8")  # nosec B108
             current_etag = compute_etag(current_content)
         except PermissionError as e:
-            logger.error(f"Permission denied reading file for etag check: {file_path}")
+            logger.error("Permission denied reading file for etag check")
             raise ShareNotAccessibleError(
                 f"Permission denied reading file for user: {username}"
             ) from e
@@ -282,7 +282,7 @@ def write_hday_file(
 
         # Compute and return new etag
         new_etag = compute_etag(content)
-        logger.info(f"Successfully wrote file for user: {username}")
+        logger.info("Successfully wrote .hday file")
         return new_etag
 
     except Exception as e:
@@ -291,10 +291,8 @@ def write_hday_file(
         if temp_path.exists():  # nosec B108
             try:
                 temp_path.unlink()  # nosec B108
-                logger.info(f"Cleaned up temporary file: {temp_path}")
+                logger.info("Cleaned up temporary file")
             except Exception as cleanup_error:
-                logger.warning(
-                    f"Failed to clean up temporary file {temp_path}: {cleanup_error}"
-                )
-        logger.error(f"Error writing file for user {username}: {e}")
+                logger.warning("Failed to clean up temporary file", exc_info=cleanup_error)
+        logger.error("Error writing .hday file", exc_info=e)
         raise
