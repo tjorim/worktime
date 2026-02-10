@@ -13,8 +13,8 @@ from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
 from app.services.team_service import (
     TeamNotFoundError,
-    read_team_config,
     read_team_hday_files,
+    read_team_info,
     read_team_members,
 )
 
@@ -36,15 +36,13 @@ async def get_team_info(team_id: str) -> TeamInfoResponse:
         TeamInfoResponse with team_id, name, and members list
         
     Raises:
+        400: Invalid team_id format
         404: Team not found
         503: Share directory not accessible
     """
     try:
-        # Read team configuration (name)
-        team_name = read_team_config(team_id)
-        
-        # Read team members
-        members = read_team_members(team_id)
+        # Read both team name and members with a single team_path lookup
+        team_name, members = read_team_info(team_id)
         
         logger.info("Successfully retrieved team info")
         
@@ -52,6 +50,13 @@ async def get_team_info(team_id: str) -> TeamInfoResponse:
             team_id=team_id,
             name=team_name,
             members=members
+        )
+    
+    except ValueError as e:
+        logger.info("Invalid team_id format")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid team_id format"
         )
         
     except TeamNotFoundError as e:
@@ -83,6 +88,7 @@ async def get_team_hday(team_id: str) -> TeamHdayResponse:
         TeamHdayResponse with team_id and list of member .hday data
         
     Raises:
+        400: Invalid team_id format
         404: Team not found
         503: Share directory not accessible
     """
@@ -98,6 +104,13 @@ async def get_team_hday(team_id: str) -> TeamHdayResponse:
         return TeamHdayResponse(
             team_id=team_id,
             members=member_data
+        )
+    
+    except ValueError as e:
+        logger.info("Invalid team_id format")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid team_id format"
         )
         
     except TeamNotFoundError as e:

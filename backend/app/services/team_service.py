@@ -216,6 +216,7 @@ def read_team_members(team_id: str) -> List[TeamMember]:
         
     Raises:
         TeamNotFoundError: If the people file doesn't exist
+        ValueError: If team_id is invalid
     """
     team_path = get_team_path(team_id)
     people_path = team_path / "people"
@@ -250,6 +251,86 @@ def read_team_members(team_id: str) -> List[TeamMember]:
 
         logger.info(f"Successfully read {len(members)} team members")
         return members
+    except PermissionError as e:
+        logger.exception("Permission denied reading team members file")
+        raise TeamNotFoundError(
+            f"Cannot read team members file: {team_id}"
+        ) from e
+    except Exception:
+        logger.exception("Error reading team members file")
+        raise
+
+
+def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
+    """Read both team config and members with a single team_path lookup.
+    
+    Optimized version that calls get_team_path() once and reads both
+    config and people files from the same validated path.
+    
+    Args:
+        team_id: The team identifier
+        
+    Returns:
+        Tuple of (team_name, members_list)
+        
+    Raises:
+        TeamNotFoundError: If team or required files don't exist
+        ValueError: If team_id is invalid
+    """
+    team_path = get_team_path(team_id)
+    
+    # Read config file
+    config_path = team_path / "config"
+    # config_path is derived from validated team_path - safe to use
+    if not config_path.exists():  # nosec B108
+        logger.info("Team config file not found")
+        raise TeamNotFoundError(f"Team configuration not found: {team_id}")
+    
+    try:
+        # config_path is derived from validated team_path - safe to use
+        content = config_path.read_text(encoding="utf-8")  # nosec B108
+        team_name = content.strip()
+    except PermissionError as e:
+        logger.exception("Permission denied reading team config")
+        raise TeamNotFoundError(
+            f"Cannot read team configuration: {team_id}"
+        ) from e
+    except Exception:
+        logger.exception("Error reading team config")
+        raise
+    
+    # Read people file
+    people_path = team_path / "people"
+    # people_path is derived from validated team_path - safe to use
+    if not people_path.exists():  # nosec B108
+        logger.info("Team people file not found")
+        raise TeamNotFoundError(f"Team members file not found: {team_id}")
+    
+    try:
+        # people_path is derived from validated team_path - safe to use
+        content = people_path.read_text(encoding="utf-8")  # nosec B108
+        members = []
+
+        for line in content.splitlines():
+            # Skip empty lines
+            line = line.strip()
+            if not line:
+                continue
+
+            # Split on first comma
+            if "," not in line:
+                logger.warning("Skipping invalid line format in team members file")
+                continue
+
+            username, display_name = line.split(",", 1)
+            username = username.strip()
+            display_name = display_name.strip()
+
+            if username:  # Only add if username is not empty
+                members.append(TeamMember(username=username, display_name=display_name))
+
+        logger.info("Successfully read team info")
+        return team_name, members
     except PermissionError as e:
         logger.exception("Permission denied reading team members file")
         raise TeamNotFoundError(

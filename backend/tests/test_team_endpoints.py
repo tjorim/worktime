@@ -1,7 +1,5 @@
 """Tests for team API endpoints."""
 
-from pathlib import Path
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -137,6 +135,14 @@ class TestGetTeamInfoEndpoint:
         response = client.get("/v1/team//etc/passwd")
 
         assert response.status_code == 404
+
+    def test_get_team_info_rejects_invalid_team_id(self, client, share_dir):
+        """Test GET returns 400 for invalid team_id format."""
+        # Test team_id with leading dot (invalid format that reaches our handler)
+        response = client.get("/v1/team/.hidden")
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid team_id" in data["detail"]
 
     def test_get_team_info_empty_members_list(self, client, share_dir):
         """Test GET handles empty members list."""
@@ -360,6 +366,14 @@ d1 # Every Monday
 
         # FastAPI's routing may return 404 Not Found for invalid paths
         assert response.status_code == 404
+
+    def test_get_team_hday_rejects_invalid_team_id(self, client, share_dir):
+        """Test GET returns 400 for invalid team_id format."""
+        # Test team_id with leading dot (invalid format that reaches our handler)
+        response = client.get("/v1/team/.hidden/hday")
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid team_id" in data["detail"]
 
     def test_get_team_hday_no_members(self, client, share_dir):
         """Test GET handles empty members list."""
