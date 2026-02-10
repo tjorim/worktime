@@ -311,18 +311,25 @@ class TestTeamServiceCacheIntegration:
         people_file.write_text("alice,Alice", encoding="utf-8")
         people_mtime = people_file.stat().st_mtime
         
-        # Create cache entry and then make it stale by setting short TTL
+        # Create cache entry with old timestamp to make it stale
         members_data = [{"username": "alice", "display_name": "Alice"}]
         cache.set_team_config("team1", "Team One", members_data, config_mtime, people_mtime)
         
-        # Patch cache TTL to make entry stale quickly
-        monkeypatch.setattr(settings, "CACHE_TTL", 1)
-        time.sleep(1.1)  # Wait for entry to become stale
+        # Manually set the cache entry to be stale by backdating cached_at
+        stale_entry = cache._team_entries.get("team1")
+        if stale_entry:
+            stale_entry.cached_at = time.time() - 20  # 20 seconds ago (default TTL is 10)
         
-        # Verify entry is stale - get_team_config should return None for stale entry
-        assert cache.get_team_config("team1") is None
-        # But get_team_config_stale should return the entry
+        # Verify entry is stale - get_team_config_stale should return the entry
         assert cache.get_team_config_stale("team1") is not None
+        # get_team_config should return None for stale entry and remove it
+        assert cache.get_team_config("team1") is None
+        
+        # Re-add the stale entry for the actual test
+        cache.set_team_config("team1", "Team One", members_data, config_mtime, people_mtime)
+        stale_entry = cache._team_entries.get("team1")
+        if stale_entry:
+            stale_entry.cached_at = time.time() - 20  # Make it stale again
         
         name, members = read_team_info("team1")
         
@@ -350,9 +357,14 @@ class TestTeamServiceCacheIntegration:
         people_file.write_text("alice,Alice", encoding="utf-8")
         people_mtime = people_file.stat().st_mtime
         
-        # Create stale cache entry
+        # Create cache entry
         members_data = [{"username": "alice", "display_name": "Alice"}]
         cache.set_team_config("team1", "Team One", members_data, original_config_mtime, people_mtime)
+        
+        # Make entry stale by backdating cached_at
+        stale_entry = cache._team_entries.get("team1")
+        if stale_entry:
+            stale_entry.cached_at = time.time() - 20  # 20 seconds ago
         
         # Update config file (changes mtime)
         time.sleep(0.1)
@@ -360,7 +372,7 @@ class TestTeamServiceCacheIntegration:
         
         name, members = read_team_info("team1")
         
-        # Should read new content
+        # Should read new content since mtime changed
         assert name == "Team One Updated"
 
     def test_read_team_hday_files_uses_cached_read(self, share_dir):
@@ -430,323 +442,5 @@ class TestTeamServiceCacheIntegration:
 #         etag = write_hday_file("testuser", content, expected_etag=None)
 #         
 #         assert file_path.exists()
-        assert etag == compute_etag(content)
-
-    def test_read_hday_file_stale_cache_unchanged_mtime(self, tmp_path):
-        """Test that stale cache entry is refreshed when mtime unchanged."""
-        cache = get_cache()
-        
-        # Create test file
-        file_path = tmp_path / "testuser.hday"
-        content = "2025/01/15 # Vacation"
-        file_path.write_text(content, encoding="utf-8")
-        mtime = file_path.stat().st_mtime
-        
-        etag = compute_etag(content)
-        events = []
-        
-        # Create stale cache entry (cached_at in the past)
-        with patch("app.services.hday_service.settings.CACHE_TTL", 1):
-            cache.set_hday("testuser", content, events, etag, mtime)
-            time.sleep(1.1)  # Make entry stale
-        
-        # Verify entry is stale
-        assert cache.needs_mtime_check("testuser")
-        
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    raw, returned_etag = read_hday_file("testuser")
-        
-        # Should return cached data
-        assert raw == content
-        assert returned_etag == etag
-        
-        # Cache entry should now be fresh (TTL refreshed)
-        cached_entry = cache.get_hday("testuser")
-        assert cached_entry is not None
-
-    def test_read_hday_file_stale_cache_changed_mtime(self, tmp_path):
-        """Test that stale cache entry is invalidated when mtime changed."""
-        cache = get_cache()
-        
-        # Create test file
-        file_path = tmp_path / "testuser.hday"
-        original_content = "2025/01/15 # Original"
-        file_path.write_text(original_content, encoding="utf-8")
-        original_mtime = file_path.stat().st_mtime
-        
-        # Create stale cache entry with old mtime
-        old_etag = compute_etag(original_content)
-        cache.set_hday("testuser", original_content, [], old_etag, original_mtime)
-        
-        # Update file (this changes mtime)
-        time.sleep(0.1)  # Ensure mtime is different
-        new_content = "2025/01/15 # Updated"
-        file_path.write_text(new_content, encoding="utf-8")
-        
-        # Make cache entry stale
-        with patch("app.services.hday_service.settings.CACHE_TTL", 1):
-            time.sleep(1.1)
-        
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    raw, etag = read_hday_file("testuser")
-        
-        # Should read new content from file
-        assert raw == new_content
-        assert etag == compute_etag(new_content)
-        assert etag != old_etag
-
-    def test_write_hday_file_updates_cache(self, tmp_path):
-        """Test that write_hday_file updates cache after successful write."""
-        cache = get_cache()
-        
-        file_path = tmp_path / "testuser.hday"
-        content = "2025/01/15 # Vacation"
-        
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    etag = write_hday_file("testuser", content, expected_etag=None)
-        
-        # Verify cache was updated
-        cached_entry = cache.get_hday("testuser")
-        assert cached_entry is not None
-        assert cached_entry.raw == content
-        assert cached_entry.etag == etag
-
-    def test_write_hday_file_cached_etag_conflict_new_file(self, tmp_path):
-        """Test conflict detection using cached etag when creating new file."""
-        cache = get_cache()
-        
-        # Create existing file and populate cache
-        file_path = tmp_path / "testuser.hday"
-        existing_content = "existing content"
-        file_path.write_text(existing_content, encoding="utf-8")
-        existing_etag = compute_etag(existing_content)
-        
-        cache.set_hday("testuser", existing_content, [], existing_etag, time.time())
-        
-        # Try to create new file (expected_etag=None) when file exists
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    with pytest.raises(HdayConflictError) as exc_info:
-                        write_hday_file("testuser", "new content", expected_etag=None)
-        
-        # Should use cached etag in error
-        assert exc_info.value.current_etag == existing_etag
-
-    def test_write_hday_file_cached_etag_conflict_update(self, tmp_path):
-        """Test conflict detection using cached etag when updating file."""
-        cache = get_cache()
-        
-        # Create existing file and populate cache
-        file_path = tmp_path / "testuser.hday"
-        current_content = "current content"
-        file_path.write_text(current_content, encoding="utf-8")
-        current_etag = compute_etag(current_content)
-        
-        cache.set_hday("testuser", current_content, [], current_etag, time.time())
-        
-        # Try to update with wrong etag
-        wrong_etag = "sha256:wrong"
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    with pytest.raises(HdayConflictError) as exc_info:
-                        write_hday_file("testuser", "new content", expected_etag=wrong_etag)
-        
-        # Should use cached etag in error
-        assert exc_info.value.current_etag == current_etag
-
-    def test_write_hday_file_cached_etag_success(self, tmp_path):
-        """Test successful update using cached etag for conflict detection."""
-        cache = get_cache()
-        
-        # Create existing file and populate cache
-        file_path = tmp_path / "testuser.hday"
-        original_content = "original content"
-        file_path.write_text(original_content, encoding="utf-8")
-        original_etag = compute_etag(original_content)
-        
-        cache.set_hday("testuser", original_content, [], original_etag, time.time())
-        
-        # Update with correct cached etag
-        new_content = "new content"
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    new_etag = write_hday_file("testuser", new_content, expected_etag=original_etag)
-        
-        # Verify file was updated
-        assert file_path.read_text(encoding="utf-8") == new_content
-        
-        # Verify cache was updated
-        cached_entry = cache.get_hday("testuser")
-        assert cached_entry is not None
-        assert cached_entry.raw == new_content
-        assert cached_entry.etag == new_etag
-
-    def test_read_hday_file_parses_events_for_caching(self, tmp_path):
-        """Test that read_hday_file parses events even for format=raw requests."""
-        cache = get_cache()
-        
-        # Create test file with parseable content
-        file_path = tmp_path / "testuser.hday"
-        content = "2025/01/15-2025/01/17 # Vacation"
-        file_path.write_text(content, encoding="utf-8")
-        
-        with patch("app.services.hday_service.get_hday_path", return_value=file_path):
-            with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
-                with patch("app.services.hday_service.settings.CACHE_ENABLED", True):
-                    raw, etag = read_hday_file("testuser")
-        
-        # Verify cache entry has parsed events
-        cached_entry = cache.get_hday("testuser")
-        assert cached_entry is not None
-        assert len(cached_entry.events) > 0
-        assert cached_entry.events[0].type == "range"
-
-
-class TestTeamServiceCacheIntegration:
-    """Tests for cache integration in team_service."""
-
-    def setup_method(self):
-        """Reset cache before each test."""
-        cache = get_cache()
-        cache._hday_entries.clear()
-        cache._team_entries.clear()
-
-    def test_read_team_info_cache_hit(self, tmp_path):
-        """Test that read_team_info returns cached data on cache hit."""
-        cache = get_cache()
-        
-        # Pre-populate cache
-        members_data = [
-            {"username": "alice", "display_name": "Alice"},
-            {"username": "bob", "display_name": "Bob"}
-        ]
-        cache.set_team_config("team1", "Team One", members_data, time.time(), time.time())
-        
-        with patch("app.services.team_service.settings.CACHE_ENABLED", True):
-            with patch("app.services.team_service.get_team_path"):
-                name, members = read_team_info("team1")
-        
-        assert name == "Team One"
-        assert len(members) == 2
-        assert members[0].username == "alice"
-
-    def test_read_team_info_cache_miss(self, tmp_path):
-        """Test that read_team_info reads files and populates cache on miss."""
-        cache = get_cache()
-        
-        # Create test team directory
-        team_dir = tmp_path / "team1"
-        team_dir.mkdir()
-        
-        config_file = team_dir / "config"
-        config_file.write_text("Team One", encoding="utf-8")
-        
-        people_file = team_dir / "people"
-        people_file.write_text("alice,Alice\nbob,Bob", encoding="utf-8")
-        
-        with patch("app.services.team_service.get_team_path", return_value=team_dir):
-            with patch("app.services.team_service.settings.CACHE_ENABLED", True):
-                name, members = read_team_info("team1")
-        
-        # Verify data was read
-        assert name == "Team One"
-        assert len(members) == 2
-        
-        # Verify cache was populated
-        cached_entry = cache.get_team_config("team1")
-        assert cached_entry is not None
-        assert cached_entry.name == "Team One"
-        assert len(cached_entry.members) == 2
-
-
-    def test_read_team_info_stale_cache_changed_mtime(self, tmp_path):
-        """Test that stale cache entry is invalidated when mtime changed."""
-        cache = get_cache()
-        
-        # Create test team directory
-        team_dir = tmp_path / "team1"
-        team_dir.mkdir()
-        
-        config_file = team_dir / "config"
-        config_file.write_text("Team One", encoding="utf-8")
-        original_config_mtime = config_file.stat().st_mtime
-        
-        people_file = team_dir / "people"
-        people_file.write_text("alice,Alice", encoding="utf-8")
-        people_mtime = people_file.stat().st_mtime
-        
-        # Create stale cache entry
-        members_data = [{"username": "alice", "display_name": "Alice"}]
-        cache.set_team_config("team1", "Team One", members_data, original_config_mtime, people_mtime)
-        
-        # Update config file (changes mtime)
-        time.sleep(0.1)
-        config_file.write_text("Team One Updated", encoding="utf-8")
-        
-        with patch("app.services.team_service.get_team_path", return_value=team_dir):
-            with patch("app.services.team_service.settings.CACHE_ENABLED", True):
-                with patch("app.services.team_service.settings.CACHE_TTL", 1):
-                    time.sleep(1.1)  # Make entry stale
-                    name, members = read_team_info("team1")
-        
-        # Should read new content
-        assert name == "Team One Updated"
-
-    def test_read_team_hday_files_uses_cached_read(self, tmp_path):
-        """Test that read_team_hday_files leverages individual hday cache entries."""
-        cache = get_cache()
-        
-        # Pre-populate cache for one user
-        alice_content = "2025/01/15 # Alice vacation"
-        alice_etag = compute_etag(alice_content)
-        alice_events = []
-        cache.set_hday("alice", alice_content, alice_events, alice_etag, time.time())
-        
-        # Create file for bob (not in cache)
-        bob_file = tmp_path / "bob.hday"
-        bob_content = "2025/01/20 # Bob vacation"
-        bob_file.write_text(bob_content, encoding="utf-8")
-        
-        members = [
-            TeamMember(username="alice", display_name="Alice"),
-            TeamMember(username="bob", display_name="Bob")
-        ]
-        
-        def mock_get_hday_path(username):
-            if username == "alice":
-                # Alice should use cache, but we need a path for the mock
-                return tmp_path / "alice.hday"
-            return tmp_path / f"{username}.hday"
-        
-        with patch("app.services.team_service.read_hday_file") as mock_read:
-            # Mock read_hday_file to return different values for each user
-            def read_side_effect(username):
-                if username == "alice":
-                    return alice_content, alice_etag
-                elif username == "bob":
-                    return bob_content, compute_etag(bob_content)
-                raise FileNotFoundError(f"No file for {username}")
-            
-            mock_read.side_effect = read_side_effect
-            
-            with patch("app.services.team_service.settings.CACHE_ENABLED", True):
-                member_data = read_team_hday_files("team1", members, team_path=tmp_path, parse_events=True)
-        
-        # Verify both members were processed
-        assert len(member_data) == 2
-        assert member_data[0].username == "alice"
-        assert member_data[1].username == "bob"
-        
-        # Verify read_hday_file was called for each member
-        assert mock_read.call_count == 2
-
+#                 assert etag == compute_etag(content)
 
