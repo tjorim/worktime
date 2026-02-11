@@ -449,16 +449,16 @@ def read_team_hday_files(
 ) -> List[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
     
-    Attempts to read each member's .hday file from the team directory, leveraging
-    the individual hday cache entries for each member. For missing files, returns 
-    empty raw string, empty events list, and None for etag. Continues processing 
-    other members even if individual files are missing.
+    .hday files are located in the share root directory, not in team directories.
+    Attempts to read each member's .hday file, leveraging the individual hday 
+    cache entries for each member. For missing files, returns empty raw string, 
+    empty events list, and None for etag. Continues processing other members 
+    even if individual files are missing.
     
     Args:
-        team_id: The team identifier
+        team_id: The team identifier (used only for validation)
         members: List of team members
-        team_path: Optional pre-validated team path. If not provided, calls get_team_path(team_id).
-                   Use this to avoid redundant path validation when already have the path.
+        team_path: DEPRECATED - no longer used. .hday files are in share root.
         parse_events: Whether to parse .hday content into events. When False, skip parsing
                      and set events=[]. When True, execute existing parsing logic.
         
@@ -467,12 +467,9 @@ def read_team_hday_files(
     """
     cache = get_cache()
     
-    # Use provided team_path or get it if not provided
-    if team_path is None:
-        team_path = get_team_path(team_id)
-    
-    # Resolve the validated team_path once and reuse it for member file checks
-    resolved_team_path = team_path.resolve()
+    # Get share directory - .hday files are in the share root
+    share_dir = settings.get_share_dir_path()
+    resolved_share_dir = share_dir.resolve()
     member_data = []
 
     for member in members:
@@ -507,12 +504,12 @@ def read_team_hday_files(
         # Apply os.path.basename() — a recognized path-injection sanitizer — to
         # the filename to break the taint chain before path construction.
         hday_filename = os.path.basename(f"{safe_username}.hday")
-        hday_path = team_path / hday_filename
+        hday_path = share_dir / hday_filename
 
-        # Verify the path is still within the team directory
+        # Verify the path is still within the share directory
         try:
             resolved_hday_path = hday_path.resolve()
-            resolved_hday_path.relative_to(resolved_team_path)
+            resolved_hday_path.relative_to(resolved_share_dir)
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
             member_data.append(_create_empty_member_data(member))

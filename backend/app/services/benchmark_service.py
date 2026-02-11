@@ -24,11 +24,11 @@ def discover_benchmark_targets() -> tuple[str, str]:
     
     Scans the share directory to find:
     1. First .hday file (user file) for individual benchmarking
-    2. First team directory (with config and people files) for team benchmarking
+    2. First team configuration in config/ subdirectory for team benchmarking
     
     Returns:
         Tuple of (username, team_id) where username is from first .hday file
-        and team_id is from first valid team directory
+        and team_id is from first valid team configuration
         
     Raises:
         FileNotFoundError: If no suitable test data is found
@@ -38,27 +38,29 @@ def discover_benchmark_targets() -> tuple[str, str]:
     if not share_dir.exists():
         raise FileNotFoundError("Share directory does not exist")
     
-    # Find first .hday file
+    # Find first .hday file in share root
     username: Optional[str] = None
     for item in share_dir.iterdir():
         if item.is_file() and item.suffix == ".hday":
             username = item.stem
             break
     
-    # Find first team directory (has both config and people files)
+    # Find first team configuration (has both .conf and .people files in config/)
     team_id: Optional[str] = None
-    for item in share_dir.iterdir():
-        if item.is_dir():
-            config_file = item / "config"
-            people_file = item / "people"
-            if config_file.exists() and people_file.exists():
-                team_id = item.name
+    config_dir = share_dir / "config"
+    if config_dir.exists() and config_dir.is_dir():
+        for conf_file in config_dir.glob("*.conf"):
+            # Check if corresponding .people file exists
+            team_id_candidate = conf_file.stem
+            people_file = config_dir / f"{team_id_candidate}.people"
+            if people_file.exists():
+                team_id = team_id_candidate
                 break
     
     if username is None or team_id is None:
         raise FileNotFoundError(
             "No suitable test data found. Need at least one .hday file "
-            "and one team directory with config and people files."
+            "and one team configuration (with both .conf and .people files in config/)."
         )
     
     return username, team_id
