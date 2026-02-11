@@ -325,9 +325,15 @@ Alias: `/healthz` for container orchestration compatibility.
 
 ### Performance benchmarking
 
-`GET /v1/debug/benchmark` runs both raw and parsed modes against the same data and reports timing
-comparisons. This helps decide whether server-side parsing is worth the cost or whether the frontend
-should always parse client-side.
+`GET /v1/debug/benchmark` runs comprehensive performance benchmarks comparing raw and parsed modes
+for both individual file operations and team bulk operations. This helps determine whether
+server-side parsing is beneficial or if the frontend should always parse client-side.
+
+**Endpoint:** `GET /v1/debug/benchmark`
+
+**Production Mode:** This endpoint is **disabled in production environments**. The debug router is
+only registered when `ENVIRONMENT != "production"` (see `app/main.py`). Attempts to access this
+endpoint in production will return 404 Not Found.
 
 **Response (200 OK):**
 
@@ -349,21 +355,122 @@ should always parse client-side.
   },
   "teamBulk": {
     "memberCount": 15,
-    "raw": { "avgMs": 12.0, "p95Ms": 18.5 },
-    "parsed": { "avgMs": 45.2, "p95Ms": 62.1 }
+    "raw": {
+      "avgMs": 12.0,
+      "p95Ms": 18.5,
+      "responseSizeBytes": 65000
+    },
+    "parsed": {
+      "avgMs": 45.2,
+      "p95Ms": 62.1,
+      "responseSizeBytes": 186000
+    }
+  },
+  "cache": {
+    "warmCacheAvgMs": 0.05,
+    "coldCacheAvgMs": 0.85
   }
 }
 ```
 
-This endpoint is for development and evaluation only. It should be disabled or removed in
-production.
+**Response Fields:**
 
-**What to measure end-to-end:** The benchmark above only covers server time. A complete comparison
-should also measure client-side parse time in the browser (frontend can log
-`performance.now()` around the parser call) to determine total time for each approach:
+- `file`: Name of the .hday file used for benchmarking (automatically discovered from share directory)
+- `fileSize`: Size of the test file in bytes
+- `eventCount`: Number of events in the test file
+- `iterations`: Number of iterations run for each benchmark (default: 100)
+- `raw`: Individual file benchmark in raw format mode (file I/O only, no server-side parsing)
+  - `avgMs`: Average response time in milliseconds
+  - `p95Ms`: 95th percentile response time in milliseconds
+  - `responseSizeBytes`: Size of the JSON response payload
+- `parsed`: Individual file benchmark in parsed format mode (file I/O + server-side parsing)
+  - `avgMs`: Average response time including parsing in milliseconds
+  - `p95Ms`: 95th percentile response time including parsing in milliseconds
+  - `responseSizeBytes`: Size of the JSON response payload (typically 3-4x larger than raw due to
+    structured event objects)
+- `teamBulk`: Team bulk endpoint benchmarks (reading all team members' .hday files)
+  - `memberCount`: Number of team members whose files were read
+  - `raw`: Team bulk in raw format mode
+  - `parsed`: Team bulk in parsed format mode
+- `cache`: Cache performance measurements comparing cold vs warm cache reads
+  - `warmCacheAvgMs`: Average response time when data is already cached in memory
+  - `coldCacheAvgMs`: Response time for a cold cache read (includes file I/O)
 
-- **Raw mode**: server file I/O time + network transfer + client parse time.
-- **Parsed mode**: server file I/O time + server parse time + network transfer (larger payload).
+**Error Responses:**
+
+- **503 Service Unavailable** (`no_test_data`): No suitable test data found in the share directory.
+  Requires at least one `.hday` file and one team directory with `config` and `people` files.
+- **500 Internal Server Error**: Unexpected error during benchmark execution.
+
+**End-to-End Measurement Guidance:**
+
+The benchmark endpoint measures **server-side processing time only**. To make an informed decision
+about the default `?format` parameter, you need to measure the complete round-trip time including
+network transfer and client-side processing.
+
+**Total Time Calculations:**
+
+- **Raw mode total** = server file I/O + network transfer time + **client parse time**
+- **Parsed mode total** = server file I/O + server parse time + network transfer time (larger payload)
+
+The trade-off is between:
+
+- **Raw mode**: Smaller response payload (faster network transfer), but frontend must parse
+- **Parsed mode**: Larger response payload (slower network transfer), but frontend receives
+  structured data immediately
+
+**Frontend Timing Approach:**
+
+Use the browser's `performance.now()` API to measure client-side parse time and total request time:
+
+```javascript
+// Measuring total request time (including network)
+const requestStart = performance.now();
+const response = await fetch('/v1/hday/username?format=raw');
+const data = await response.json();
+const requestEnd = performance.now();
+const totalRequestTimeMs = requestEnd - requestStart;
+
+// Measuring client-side parse time (for raw mode)
+const parseStart = performance.now();
+const events = parseHdayText(data.raw); // Your parser function
+const parseEnd = performance.now();
+const clientParseTimeMs = parseEnd - parseStart;
+
+// Calculate total time for each mode:
+// - Raw mode total = totalRequestTimeMs + clientParseTimeMs
+// - Parsed mode total = totalRequestTimeMs (includes server parse + larger payload transfer, no client parsing)
+```
+
+**Interpreting Results:**
+
+Compare the totals for each mode across different network conditions:
+
+1. **Fast local network** (e.g., same building):
+   - If `raw mode total < parsed mode total`: Default to `?format=raw`
+   - Network transfer time is negligible, so client-side parsing overhead matters less
+   - Smaller payloads reduce memory pressure on the server
+
+2. **Slow or high-latency network** (e.g., VPN, remote access):
+   - If `parsed mode total < raw mode total`: Consider `?format=parsed`
+   - Larger payload penalty may be offset by avoiding client-side parse time
+   - However, server CPU becomes a bottleneck for team bulk operations
+
+3. **Team bulk operations** (`/v1/team/:id/hday`):
+   - With many team members (10+), parsed mode response size can be 150-200 KB+
+   - Network transfer time dominates on slower connections
+   - Raw mode is typically faster for bulk operations even with client-side parsing
+
+4. **Cache effectiveness**:
+   - Compare `warmCacheAvgMs` vs `coldCacheAvgMs` from the benchmark
+   - A large difference (10x or more) indicates effective caching
+   - Warm cache makes server-side operations very fast, favoring parsed mode
+   - Cold cache makes file I/O the bottleneck, reducing the benefit of server-side parsing
+
+**Recommendation:** Start with `?format=raw` as the default. This minimizes server CPU usage and
+response payload size while keeping the frontend parser active (needed for offline use anyway). Add
+UI controls to let users switch to parsed mode if they prefer, and consider making it
+user-configurable in settings.
 
 ## iCal subscription feed
 
