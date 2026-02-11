@@ -439,7 +439,7 @@ const clientParseTimeMs = parseEnd - parseStart;
 
 // Calculate total time for each mode:
 // - Raw mode total = totalRequestTimeMs + clientParseTimeMs
-// - Parsed mode total = totalRequestTimeMs (no client-side parsing needed)
+// - Parsed mode total = totalRequestTimeMs (includes server parse + larger payload transfer, no client parsing)
 ```
 
 **Interpreting Results:**
