@@ -1,0 +1,14 @@
+<h2>Team Management</h2>
+user01,Manager One
+user02,Manager Two
+
+<h2>Team Support</h2>
+user03,Support Member One
+user04,Support Member Two
+user05,Support Member Three
+user06,Support Member Four
+
+<h2>Team Non‑Support</h2>
+user07,Member One
+user08,Member Two
+example-user,Full Name
