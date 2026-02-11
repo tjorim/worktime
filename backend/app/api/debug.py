@@ -114,10 +114,8 @@ def get_benchmark() -> BenchmarkResponse:
             f"file={username}.hday, events={event_count}"
         )
         
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=response_data.model_dump(mode="json")
-        )
+        # Return Pydantic model directly - FastAPI will serialize automatically
+        return response_data
         
     except (HdayFileNotFoundError, TeamNotFoundError) as e:
         logger.error(f"Benchmark failed: {e}")

@@ -170,9 +170,9 @@ class TestBenchmarkIndividualFile:
         """Test benchmark with single iteration."""
         username, _ = test_user_file
         
-        # Should work with just 1 iteration (though p95 won't be meaningful)
-        # Statistics module requires at least 2 data points for percentile
-        with pytest.raises(Exception):  # Should raise statistics error for p95
+        # Should raise statistics error because p95 calculation requires at least 2 data points
+        import statistics
+        with pytest.raises(statistics.StatisticsError):
             benchmark_service.benchmark_individual_file(username, 1)
     
     def test_benchmark_multiple_iterations(self, test_user_file):
