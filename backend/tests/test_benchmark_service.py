@@ -30,7 +30,20 @@ def test_user_file(share_dir):
 
 
 @pytest.fixture
-def test_team(share_dir):
+def test_team_members(share_dir):
+    """Create .hday files for team members (separate from test_user_file)."""
+    # Create .hday files for team members
+    alice_file = share_dir / "alice.hday"
+    alice_file.write_text("2025/03/10 # Conference\n", encoding="utf-8")
+    
+    bob_file = share_dir / "bob.hday"
+    bob_file.write_text("2025/04/15 # Training\n", encoding="utf-8")
+    
+    return ["alice", "bob"]
+
+
+@pytest.fixture
+def test_team(share_dir, test_team_members):
     """Create a test team directory with config and people files."""
     team_id = "team1"
     team_dir = share_dir / team_id
@@ -47,13 +60,6 @@ def test_team(share_dir):
         encoding="utf-8"
     )
     
-    # Create .hday files for team members
-    alice_file = share_dir / "alice.hday"
-    alice_file.write_text("2025/03/10 # Conference\n", encoding="utf-8")
-    
-    bob_file = share_dir / "bob.hday"
-    bob_file.write_text("2025/04/15 # Training\n", encoding="utf-8")
-    
     return team_id
 
 
@@ -67,12 +73,23 @@ class TestDiscoverBenchmarkTargets:
         
         discovered_user, discovered_team = benchmark_service.discover_benchmark_targets()
         
-        # Should find the test user and team
-        assert discovered_user == username
+        # Should find a user (could be testuser, alice, or bob depending on filesystem order)
+        assert discovered_user is not None
+        assert discovered_user in ["testuser", "alice", "bob"]
+        # Should find the test team
         assert discovered_team == team_id
     
-    def test_discover_no_hday_files(self, share_dir, test_team):
+    def test_discover_no_hday_files(self, share_dir):
         """Test discovery when no .hday files exist."""
+        # Create team directory without .hday files
+        team_dir = share_dir / "team1"
+        team_dir.mkdir()
+        config_path = team_dir / "config"
+        config_path.write_text("Test Team", encoding="utf-8")
+        people_path = team_dir / "people"
+        people_path.write_text("alice, Alice\n", encoding="utf-8")
+        
+        # No .hday files exist, so discovery should fail
         with pytest.raises(FileNotFoundError, match="No suitable test data found"):
             benchmark_service.discover_benchmark_targets()
     
