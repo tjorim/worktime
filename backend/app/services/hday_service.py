@@ -312,7 +312,7 @@ def write_hday_file(
                 f"File already exists for user: {username}", current_etag
             )
             # Attach cached data to exception if available
-            if current_content and not cached_events and current_content:
+            if current_content and not cached_events:
                 try:
                     cached_events = parse_text(current_content)
                 except Exception:
