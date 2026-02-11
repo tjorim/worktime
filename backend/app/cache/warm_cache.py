@@ -182,6 +182,9 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
                     "username": username,
                     "display_name": display_name
                 })
+            else:
+                # Log warning for invalid lines (consistent with service layer)
+                logger.warning(f"Skipping invalid line format in team members file: {line}")
         
         # Cache team config
         cache = get_cache()

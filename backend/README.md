@@ -422,7 +422,7 @@ endpoint in production will return 404 Not Found.
 **Error Responses:**
 
 - **503 Service Unavailable** (`no_test_data`): No suitable test data found in the share directory.
-  Requires at least one `.hday` file and one team directory with `config` and `people` files.
+  Requires at least one `.hday` file and one team configuration (with both `.conf` and `.people` files in `config/` subdirectory).
 - **500 Internal Server Error**: Unexpected error during benchmark execution.
 
 **End-to-End Measurement Guidance:**

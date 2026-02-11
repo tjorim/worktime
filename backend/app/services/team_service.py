@@ -465,7 +465,6 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 def read_team_hday_files(
     team_id: str,
     members: List[TeamMember],
-    team_path: Path | None = None,
     parse_events: bool = True
 ) -> List[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
@@ -479,7 +478,6 @@ def read_team_hday_files(
     Args:
         team_id: The team identifier (retained for API compatibility; not currently used)
         members: List of team members
-        team_path: DEPRECATED - no longer used. .hday files are in share root.
         parse_events: Whether to parse .hday content into events. When False, skip parsing
                      and set events=[]. When True, execute existing parsing logic.
         
