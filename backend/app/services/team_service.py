@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import List
 
+from app.cache.store import get_cache
 from app.config.settings import settings
 from app.models.team import TeamMember, TeamMemberHdayData
 from app.services.hday_parser import parse_text
@@ -281,10 +282,12 @@ def read_team_members(team_id: str) -> List[TeamMember]:
 
 
 def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
-    """Read both team config and members with a single team_path lookup.
+    """Read both team config and members with cache optimization.
     
-    Optimized version that calls get_team_path() once and reads both
-    config and people files from the same validated path.
+    Uses cache with write-through pattern:
+    - First checks for fresh cache entry (within TTL)
+    - If stale entry exists, validates via mtime of both config and people files
+    - If either mtime changed, re-reads files and updates cache
     
     Args:
         team_id: The team identifier
@@ -296,6 +299,45 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
         TeamNotFoundError: If team or required files don't exist
         ValueError: If team_id is invalid
     """
+    cache = get_cache()
+    
+    # Check for fresh cache entry first
+    cached_entry = cache.get_team_config(team_id)
+    if cached_entry is not None:
+        logger.debug("Cache hit: returning fresh team config entry")
+        # Convert cached member dicts back to TeamMember objects
+        members = [TeamMember(**m) for m in cached_entry.members]
+        return cached_entry.name, members
+    
+    # Check for stale entry that might still be valid
+    stale_entry = cache.get_team_config_stale(team_id)
+    if stale_entry is not None:
+        # We have a stale entry - check if file mtimes have changed
+        team_path = get_team_path(team_id)
+        config_path = team_path / "config"
+        people_path = team_path / "people"
+        
+        try:
+            # Check both file mtimes
+            current_config_mtime = config_path.stat().st_mtime
+            current_people_mtime = people_path.stat().st_mtime
+            
+            # If both mtimes unchanged, refresh TTL and return cached data
+            if (current_config_mtime == stale_entry.config_mtime and 
+                current_people_mtime == stale_entry.people_mtime):
+                cache.refresh_team_config_ttl(team_id)
+                logger.debug("Cache refresh: mtimes unchanged, TTL extended")
+                members = [TeamMember(**m) for m in stale_entry.members]
+                return stale_entry.name, members
+            
+            # At least one mtime changed - fall through to re-read files
+            logger.debug("Cache stale: mtime changed, re-reading files")
+        except (FileNotFoundError, PermissionError) as e:
+            # Files missing or inaccessible - invalidate cache and fall through
+            logger.debug("Cache invalidated: files missing or inaccessible")
+            cache.invalidate_team_config(team_id)
+    
+    # No cache entry or mtime changed - read files and update cache
     team_path = get_team_path(team_id)
     
     # Read config and members using shared parsing logic
@@ -305,7 +347,26 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     people_path = team_path / "people"
     members = _parse_members_file(people_path)
     
-    logger.info("Successfully read team info")
+    # Get file mtimes and update cache
+    try:
+        config_mtime = config_path.stat().st_mtime
+        people_mtime = people_path.stat().st_mtime
+        
+        # Convert TeamMember objects to dicts for cache storage
+        members_dicts = [{"username": m.username, "display_name": m.display_name} for m in members]
+        
+        cache.set_team_config(
+            team_id=team_id,
+            name=team_name,
+            members=members_dicts,
+            config_mtime=config_mtime,
+            people_mtime=people_mtime
+        )
+        logger.info("Successfully read team info and updated cache")
+    except Exception as e:
+        logger.warning("Failed to update team config cache", exc_info=e)
+        # Continue even if cache update fails
+    
     return team_name, members
 
 
@@ -335,11 +396,12 @@ def read_team_hday_files(
     team_path: Path | None = None,
     parse_events: bool = True
 ) -> List[TeamMemberHdayData]:
-    """Read .hday files for all team members.
+    """Read .hday files for all team members with cache optimization.
     
-    Attempts to read each member's .hday file from the team directory.
-    For missing files, returns empty raw string, empty events list, and None for etag.
-    Continues processing other members even if individual files are missing.
+    Attempts to read each member's .hday file from the team directory, leveraging
+    the individual hday cache entries for each member. For missing files, returns 
+    empty raw string, empty events list, and None for etag. Continues processing 
+    other members even if individual files are missing.
     
     Args:
         team_id: The team identifier
@@ -352,6 +414,8 @@ def read_team_hday_files(
     Returns:
         List of TeamMemberHdayData objects with .hday data (parsed or unparsed)
     """
+    cache = get_cache()
+    
     # Use provided team_path or get it if not provided
     if team_path is None:
         team_path = get_team_path(team_id)
@@ -369,6 +433,26 @@ def read_team_hday_files(
             member_data.append(_create_empty_member_data(member))
             continue
         
+        # Check cache first for this member's .hday file
+        cached_entry = cache.get_hday(member.username)
+        if cached_entry is not None:
+            logger.debug(f"Cache hit: returning fresh .hday entry for {member.username}")
+            # Use cached data, but respect parse_events flag
+            events = cached_entry.events if parse_events else []
+            member_data.append(
+                TeamMemberHdayData(
+                    username=member.username,
+                    display_name=member.display_name,
+                    raw=cached_entry.raw,
+                    events=events,
+                    etag=cached_entry.etag,
+                )
+            )
+            continue
+        
+        # Check for stale cache entry that might still be valid
+        stale_entry = cache.get_hday_stale(member.username)
+        
         # Apply os.path.basename() — a recognized path-injection sanitizer — to
         # the filename to break the taint chain before path construction.
         hday_filename = os.path.basename(f"{safe_username}.hday")
@@ -384,23 +468,63 @@ def read_team_hday_files(
             continue
 
         if not resolved_hday_path.exists():
+            # File doesn't exist - invalidate cache if present and return empty
+            if stale_entry is not None:
+                cache.invalidate_hday(member.username)
             member_data.append(_create_empty_member_data(member))
             continue
 
+        # Check if stale entry is still valid via mtime
+        if stale_entry is not None:
+            try:
+                current_mtime = resolved_hday_path.stat().st_mtime
+                
+                # If mtime unchanged, refresh TTL and return cached data
+                if current_mtime == stale_entry.mtime:
+                    cache.refresh_hday_ttl(member.username)
+                    logger.debug(f"Cache refresh: mtime unchanged for {member.username}")
+                    events = stale_entry.events if parse_events else []
+                    member_data.append(
+                        TeamMemberHdayData(
+                            username=member.username,
+                            display_name=member.display_name,
+                            raw=stale_entry.raw,
+                            events=events,
+                            etag=stale_entry.etag,
+                        )
+                    )
+                    continue
+                
+                # mtime changed - fall through to re-read file
+                logger.debug(f"Cache stale: mtime changed for {member.username}")
+            except (PermissionError, OSError):
+                # Can't check mtime - fall through to re-read
+                pass
+
+        # No cache or mtime changed - read file and update cache
         try:
             content = resolved_hday_path.read_text(encoding="utf-8")
             
             # Conditionally parse the .hday content into events based on parse_events flag
-            if parse_events:
-                # When parse_events=True: execute existing parsing logic
-                events = parse_text(content)
-            else:
-                # When parse_events=False: skip parse_text() call and set events=[]
-                events = []
+            # Always parse for cache, but only include in response if parse_events=True
+            try:
+                parsed_events = parse_text(content)
+            except Exception as parse_error:
+                logger.warning(f"Failed to parse .hday for {member.username}", exc_info=parse_error)
+                parsed_events = []
             
             # Compute etag
             etag = compute_etag(content)
             
+            # Update cache with parsed events
+            try:
+                file_mtime = resolved_hday_path.stat().st_mtime
+                cache.set_hday(member.username, content, parsed_events, etag, file_mtime)
+            except Exception as cache_error:
+                logger.warning(f"Failed to update cache for {member.username}", exc_info=cache_error)
+            
+            # Return data with events based on parse_events flag
+            events = parsed_events if parse_events else []
             member_data.append(
                 TeamMemberHdayData(
                     username=member.username,
@@ -410,13 +534,13 @@ def read_team_hday_files(
                     etag=etag,
                 )
             )
-            logger.debug("Successfully read .hday file for team member")
+            logger.debug(f"Successfully read .hday file for {member.username}")
         except PermissionError:
-            logger.warning("Permission denied reading .hday file for team member")
+            logger.warning(f"Permission denied reading .hday file for {member.username}")
             # Continue with empty data for this member
             member_data.append(_create_empty_member_data(member))
         except Exception:
-            logger.exception("Error reading .hday file for team member")
+            logger.exception(f"Error reading .hday file for {member.username}")
             # Continue with empty data for this member
             member_data.append(_create_empty_member_data(member))
 
