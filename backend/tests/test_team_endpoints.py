@@ -30,14 +30,14 @@ class TestGetTeamInfoEndpoint:
 
     def test_get_team_info_success(self, client, share_dir):
         """Test successful retrieval of team info."""
-        # Create team directory with config and people files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config and people files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text(
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
@@ -56,13 +56,13 @@ class TestGetTeamInfoEndpoint:
 
     def test_get_team_info_with_whitespace_in_config(self, client, share_dir):
         """Test team info with whitespace in config is stripped."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("  Engineering Team  \n", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=  Engineering Team  \n", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1")
@@ -77,15 +77,15 @@ class TestGetTeamInfoEndpoint:
 
         assert response.status_code == 404
         data = response.json()
-        assert "Team not found" in data["detail"]
+        assert "Config directory not found" in data["detail"]
 
     def test_get_team_info_config_missing(self, client, share_dir):
         """Test GET returns 404 when config file is missing."""
-        # Create team directory but no config file
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config directory but no config file
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1")
@@ -96,12 +96,12 @@ class TestGetTeamInfoEndpoint:
 
     def test_get_team_info_people_missing(self, client, share_dir):
         """Test GET returns 404 when people file is missing."""
-        # Create team directory and config but no people file
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config directory and config but no people file
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
 
         response = client.get("/v1/team/team1")
 
@@ -146,13 +146,13 @@ class TestGetTeamInfoEndpoint:
 
     def test_get_team_info_empty_members_list(self, client, share_dir):
         """Test GET handles empty members list."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("", encoding="utf-8")
 
         response = client.get("/v1/team/team1")
@@ -169,23 +169,23 @@ class TestGetTeamHdayEndpoint:
 
     def test_get_team_hday_all_files_exist(self, client, share_dir):
         """Test successful retrieval of all team members' .hday data with default format=raw."""
-        # Create team directory with config and people files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config and people files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text(
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
         
-        # Create .hday files for both members
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create .hday files in share root directory
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
         
-        asmith_hday = team_dir / "asmith.hday"
+        asmith_hday = share_dir / "asmith.hday"
         asmith_hday.write_text("2025/02/20 # Conference\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -215,19 +215,19 @@ class TestGetTeamHdayEndpoint:
 
     def test_get_team_hday_some_files_missing(self, client, share_dir):
         """Test retrieval when some .hday files are missing."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text(
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
         
-        # Create .hday file only for first member
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create .hday file only for first member in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -249,13 +249,13 @@ class TestGetTeamHdayEndpoint:
 
     def test_get_team_hday_all_files_missing(self, client, share_dir):
         """Test retrieval when all .hday files are missing."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text(
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
@@ -274,17 +274,17 @@ class TestGetTeamHdayEndpoint:
 
     def test_get_team_hday_empty_file(self, client, share_dir):
         """Test retrieval with empty .hday file."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
         
-        # Create empty .hday file
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create empty .hday file in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -299,21 +299,21 @@ class TestGetTeamHdayEndpoint:
 
     def test_get_team_hday_with_multiple_events(self, client, share_dir):
         """Test retrieval with multiple events in .hday file using format=parsed."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
         
-        # Create .hday file with multiple events
+        # Create .hday file with multiple events in share root
         hday_content = """2025/01/15 # Vacation
 2025/02/20-2025/02/22 # Conference
 d1 # Every Monday
 """
-        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text(hday_content, encoding="utf-8")
 
         # Use format=parsed to get parsed events
@@ -334,15 +334,15 @@ d1 # Every Monday
 
         assert response.status_code == 404
         data = response.json()
-        assert "Team not found" in data["detail"]
+        assert "Config directory not found" in data["detail"]
 
     def test_get_team_hday_people_missing(self, client, share_dir):
         """Test GET returns 404 when people file is missing."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
 
@@ -380,13 +380,13 @@ d1 # Every Monday
 
     def test_get_team_hday_no_members(self, client, share_dir):
         """Test GET handles empty members list."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -398,17 +398,17 @@ d1 # Every Monday
 
     def test_get_team_hday_with_unicode_content(self, client, share_dir):
         """Test GET works with Unicode content in .hday files."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
         
-        # Create .hday file with Unicode content
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create .hday file with Unicode content in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # 휴가일 (vacation)\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -419,18 +419,18 @@ d1 # Every Monday
     
     def test_get_team_hday_format_raw_default(self, client, share_dir):
         """Test GET with default format=raw returns parsed events (backward compatibility)."""
-        # Create team directory with files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
         
-        # Create .hday file
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create .hday file in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday")
@@ -445,16 +445,16 @@ d1 # Every Monday
     
     def test_get_team_hday_format_raw_explicit(self, client, share_dir):
         """Test GET with explicit format=raw returns no parsed events."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
         
-        jdoe_hday = team_dir / "jdoe.hday"
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday?format=raw")
@@ -465,20 +465,20 @@ d1 # Every Monday
     
     def test_get_team_hday_format_parsed(self, client, share_dir):
         """Test GET with format=parsed returns parsed events."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8")
         
-        # Create .hday files
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Create .hday files in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n2025/12/25 # Christmas\n", encoding="utf-8")
         
-        asmith_hday = team_dir / "asmith.hday"
+        asmith_hday = share_dir / "asmith.hday"
         asmith_hday.write_text("2025/02/20 # Conference\n", encoding="utf-8")
 
         response = client.get("/v1/team/team1/hday?format=parsed")
@@ -502,17 +502,17 @@ d1 # Every Monday
     
     def test_get_team_hday_format_parsed_missing_files(self, client, share_dir):
         """Test GET with format=parsed handles missing files correctly."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8")
         
-        # Only create file for first member
-        jdoe_hday = team_dir / "jdoe.hday"
+        # Only create file for first member in share root
+        jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
         # asmith.hday intentionally not created
 
@@ -538,18 +538,18 @@ class TestTeamHdayTimingHeaders:
     
     def test_team_hday_timing_headers_raw_format(self, client, share_dir):
         """Test team hday endpoint returns timing headers for format=raw."""
-        # Create team directory with config, people, and .hday files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config, people, and .hday files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
         
-        # Create .hday file for one member
-        hday_file = team_dir / "jdoe.hday"
+        # Create .hday file for one member in share root
+        hday_file = share_dir / "jdoe.hday"
         hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
         
         response = client.get("/v1/team/team1/hday?format=raw")
@@ -576,18 +576,18 @@ class TestTeamHdayTimingHeaders:
     
     def test_team_hday_timing_headers_parsed_format(self, client, share_dir):
         """Test team hday endpoint returns timing headers for format=parsed."""
-        # Create team directory with config, people, and .hday files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config, people, and .hday files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
         
-        # Create .hday file for one member
-        hday_file = team_dir / "jdoe.hday"
+        # Create .hday file for one member in share root
+        hday_file = share_dir / "jdoe.hday"
         hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
         
         response = client.get("/v1/team/team1/hday?format=parsed")
@@ -615,14 +615,14 @@ class TestTeamHdayTimingHeaders:
     
     def test_team_hday_timing_header_format(self, client, share_dir):
         """Test that timing headers have correct format (3 decimal places)."""
-        # Create team directory with config and people
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config and people
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe", encoding="utf-8")
         
         response = client.get("/v1/team/team1/hday")
@@ -646,20 +646,20 @@ class TestTeamHdayTimingHeaders:
     
     def test_team_hday_timing_with_multiple_members(self, client, share_dir):
         """Test timing headers with multiple team members and files."""
-        # Create team directory with config, people, and multiple .hday files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
+        # Create config subdirectory with config, people, and multiple .hday files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_file = team_dir / "config"
-        config_file.write_text("Engineering Team", encoding="utf-8")
+        config_file = config_dir / "team1.conf"
+        config_file.write_text("groupname=Engineering Team", encoding="utf-8")
         
-        people_file = team_dir / "people"
+        people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\nasmith,Alice Smith\nblee,Bob Lee", encoding="utf-8")
         
-        # Create .hday files for multiple members
-        (team_dir / "jdoe.hday").write_text("2025/01/15 # Vacation\n2025/12/25 # Holiday", encoding="utf-8")
-        (team_dir / "asmith.hday").write_text("2025/02/10 # Day off", encoding="utf-8")
-        (team_dir / "blee.hday").write_text("2025/03/01 # Conference", encoding="utf-8")
+        # Create .hday files for multiple members in share root
+        (share_dir / "jdoe.hday").write_text("2025/01/15 # Vacation\n2025/12/25 # Holiday", encoding="utf-8")
+        (share_dir / "asmith.hday").write_text("2025/02/10 # Day off", encoding="utf-8")
+        (share_dir / "blee.hday").write_text("2025/03/01 # Conference", encoding="utf-8")
         
         response = client.get("/v1/team/team1/hday?format=parsed")
         

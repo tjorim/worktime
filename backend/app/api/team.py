@@ -15,10 +15,10 @@ from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
 from app.services.team_service import (
     TeamNotFoundError,
-    _parse_members_file,
     get_team_path,
     read_team_hday_files,
     read_team_info,
+    read_team_members,
 )
 from app.services import hday_parser
 from app.utils.timing import time_operation
@@ -109,12 +109,11 @@ def get_team_hday(
     timings = {}
     
     try:
-        # Get team path once for both operations (optimization)
+        # Validate team exists by getting config directory path
         team_path = get_team_path(team_id)
         
-        # Read team members from the validated path
-        people_path = team_path / "people"
-        members = _parse_members_file(people_path)
+        # Read team members using the proper service function
+        members = read_team_members(team_id)
         logger.info(f"Successfully read {len(members)} team members")
         
         # Read all .hday files (without parsing) and time it
