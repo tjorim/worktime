@@ -38,39 +38,62 @@ share access via its logged-in user credentials.
 
 ## File share structure
 
-The network share contains team configuration and per-user .hday files:
+The network share contains team configuration files in a `config/` subdirectory and per-user .hday files in the root:
 
 ```text
 <share>/
-├── config              # Team name
-├── people              # Team members: username,Full Name (one per line)
-├── alice.hday          # Alice's time-off events
-├── bob.hday            # Bob's time-off events
-└── charlie.hday        # Charlie's time-off events
+├── config/                    # Team configuration subdirectory
+│   ├── team1.conf            # Team 1 configuration (key=value format)
+│   ├── team1.people          # Team 1 members list
+│   ├── team2.conf            # Team 2 configuration
+│   └── team2.people          # Team 2 members list
+├── alice.hday                # Alice's time-off events
+├── bob.hday                  # Bob's time-off events
+└── charlie.hday              # Charlie's time-off events
 ```
 
 ### Config file
 
-Contains the team name. Exact format to be confirmed with an actual file copy.
+Team configuration files are stored in `config/{team_id}.conf` with key=value format:
+
+```text
+costcentername=CC000000
+costcenterpage=https://example.com/costcenter
+disablecr=false
+groupname=Generic Group Name
+grouppage=https://example.com/group
+region=XX
+showlink=false
+userdefinedday=other
+userdefinedoverrules=true
+userfilecontact=Contact Person (ABCD)
+```
+
+The backend extracts the `groupname` field as the team's display name.
 
 ### People file
 
-Lists team members, one per line:
+Team members are listed in `config/{team_id}.people` with CSV format and optional HTML section headers:
 
 ```text
+<h2>Team Management</h2>
 alice,Alice Johnson
 bob,Bob Smith
+
+<h2>Team Support</h2>
 charlie,Charlie Brown
 ```
 
-The `username` field maps directly to `{username}.hday` on the same share. The `Full Name` is used
-in the UI for display.
+HTML headers (lines starting with `<` and ending with `>`) are skipped during parsing.
+The `username` field maps directly to `{username}.hday` in the share root. The display name is used
+in the UI.
 
 ### .hday files
 
-Per-user time-off event files in the .hday format. See the main project's AGENTS.md for format
-documentation. The backend reads and writes these files, optionally parsing them server-side when
-`?format=parsed` is requested (see [Response format](#response-format-formatrawparsed)).
+Per-user time-off event files in the .hday format, stored in the share root directory. 
+See the main project's AGENTS.md for format documentation. The backend reads and writes 
+these files, optionally parsing them server-side when `?format=parsed` is requested 
+(see [Response format](#response-format-formatrawparsed)).
 
 ## API surface
 
