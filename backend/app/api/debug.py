@@ -57,12 +57,12 @@ def get_benchmark() -> BenchmarkResponse:
         username, team_id = benchmark_service.discover_benchmark_targets()
         logger.info(f"Discovered benchmark targets: user={username}, team={team_id}")
     except FileNotFoundError as e:
-        logger.warning("No test data available for benchmarking")
+        logger.warning("No test data available for benchmarking: %s", e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
                 "error": "no_test_data",
-                "message": str(e),
+                "message": "No test data available for benchmarking",
                 "details": "Share directory must contain at least one .hday file "
                           "and one team directory with config and people files"
             }
