@@ -317,13 +317,23 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     team_path = get_team_path(team_id)
     config_path = team_path / "config"
     people_path = team_path / "people"
+
+    # Normalize and verify that derived paths stay within the validated team_path
+    normalized_config_path = config_path.resolve(strict=False)
+    normalized_people_path = people_path.resolve(strict=False)
+    try:
+        normalized_config_path.relative_to(team_path)
+        normalized_people_path.relative_to(team_path)
+    except ValueError as err:
+        logger.error("Resolved team file paths escape team directory")
+        raise ValueError("Invalid team_id format") from err
     
     # If we have a stale entry, check if file mtimes have changed
     if stale_entry is not None:
         try:
             # Get current file mtimes
-            config_mtime = config_path.stat().st_mtime
-            people_mtime = people_path.stat().st_mtime
+            config_mtime = normalized_config_path.stat().st_mtime
+            people_mtime = normalized_people_path.stat().st_mtime
             
             # If both mtimes unchanged, refresh TTL and return cached data
             if (config_mtime == stale_entry.config_mtime and 
@@ -343,13 +353,13 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             logger.debug("Failed to check file mtimes, proceeding with file read")
     
     # Read config and members using shared parsing logic
-    team_name = _parse_config_file(config_path)
-    members = _parse_members_file(people_path)
+    team_name = _parse_config_file(normalized_config_path)
+    members = _parse_members_file(normalized_people_path)
     
     # Update cache with new data
     try:
-        config_mtime = config_path.stat().st_mtime
-        people_mtime = people_path.stat().st_mtime
+        config_mtime = normalized_config_path.stat().st_mtime
+        people_mtime = normalized_people_path.stat().st_mtime
         # Convert TeamMember objects to dicts for caching
         member_dicts = [
             {"username": m.username, "display_name": m.display_name}
