@@ -438,7 +438,7 @@ const parseEnd = performance.now();
 const clientParseTimeMs = parseEnd - parseStart;
 
 // For raw mode, total time = totalRequestTimeMs + clientParseTimeMs
-// (parseTimeMs is included in totalRequestTimeMs for parsed mode)
+// (clientParseTimeMs is included in totalRequestTimeMs for parsed mode)
 ```
 
 **Interpreting Results:**
