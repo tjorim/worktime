@@ -277,6 +277,29 @@ def get_team_path(team_id: str) -> Path:
     return config_dir
 
 
+def _validate_team_file_path(file_path: Path, base_dir: Path, file_type: str) -> None:
+    """Validate that a file path resolves within the expected base directory.
+    
+    This prevents path traversal attacks by ensuring the resolved path
+    is a child of the base directory.
+    
+    Args:
+        file_path: The file path to validate
+        base_dir: The base directory the file must be within
+        file_type: Description of the file type for error messages (e.g., "config", "people")
+        
+    Raises:
+        ValueError: If the path resolves outside the base directory
+    """
+    try:
+        resolved_file_path = file_path.resolve(strict=False)
+        resolved_base_dir = base_dir.resolve()
+        resolved_file_path.relative_to(resolved_base_dir)
+    except ValueError as err:
+        logger.error(f"Path traversal attempt detected in team {file_type} path")
+        raise ValueError("Invalid team_id format") from err
+
+
 def read_team_config(team_id: str) -> str:
     """Read the team configuration file and return the team name.
     
@@ -298,13 +321,7 @@ def read_team_config(team_id: str) -> str:
     config_path = config_dir / f"{clean_team_id}.conf"
     
     # Verify the path is within the config directory to prevent path traversal
-    try:
-        resolved_config_path = config_path.resolve(strict=False)
-        resolved_config_dir = config_dir.resolve()
-        resolved_config_path.relative_to(resolved_config_dir)
-    except ValueError as err:
-        logger.error("Path traversal attempt detected in team config path")
-        raise ValueError("Invalid team_id format") from err
+    _validate_team_file_path(config_path, config_dir, "config")
     
     team_name = _parse_config_file(config_path)
     logger.info("Successfully read team config")
@@ -336,13 +353,7 @@ def read_team_members(team_id: str) -> List[TeamMember]:
     people_path = config_dir / f"{clean_team_id}.people"
     
     # Verify the path is within the config directory to prevent path traversal
-    try:
-        resolved_people_path = people_path.resolve(strict=False)
-        resolved_config_dir = config_dir.resolve()
-        resolved_people_path.relative_to(resolved_config_dir)
-    except ValueError as err:
-        logger.error("Path traversal attempt detected in team people path")
-        raise ValueError("Invalid team_id format") from err
+    _validate_team_file_path(people_path, config_dir, "people")
     
     members = _parse_members_file(people_path)
     logger.info(f"Successfully read {len(members)} team members")
@@ -387,6 +398,10 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
         config_path = config_dir / f"{clean_team_id}.conf"
         people_path = config_dir / f"{clean_team_id}.people"
         
+        # Validate paths before using them to prevent path traversal
+        _validate_team_file_path(config_path, config_dir, "config")
+        _validate_team_file_path(people_path, config_dir, "people")
+        
         try:
             # Check both file mtimes
             current_config_mtime = config_path.stat().st_mtime
@@ -414,9 +429,13 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     
     # Read config and members using shared parsing logic
     config_path = config_dir / f"{clean_team_id}.conf"
-    team_name = _parse_config_file(config_path)
-    
     people_path = config_dir / f"{clean_team_id}.people"
+    
+    # Validate paths before using them to prevent path traversal
+    _validate_team_file_path(config_path, config_dir, "config")
+    _validate_team_file_path(people_path, config_dir, "people")
+    
+    team_name = _parse_config_file(config_path)
     members = _parse_members_file(people_path)
     
     # Get file mtimes and update cache
