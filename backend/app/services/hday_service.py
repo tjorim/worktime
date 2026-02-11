@@ -100,20 +100,23 @@ def get_hday_path(username: str) -> Path:
     Raises:
         ValueError: If username contains invalid characters
     """
-    # First, sanitize the username so that it is safe to use as a path component.
-    # This removes any taint from the user input
+    # First, sanitize the username so that it is safe to use as a single
+    # path component. This ensures it cannot contain path separators or
+    # traversal patterns.
     safe_username = _sanitize_username(username)
 
     share_dir = settings.get_share_dir_path()
     # Resolve the share directory to an absolute, normalized path
     resolved_share = share_dir.resolve()
 
-    # Apply os.path.basename() — a recognized path-injection sanitizer — to the
-    # filename to break the taint chain from user input before path construction.
-    safe_filename = os.path.basename(f"{safe_username}.hday")
+    # Construct the filename in a deterministic way from the sanitized
+    # username. Since safe_username is guaranteed to be a single, safe
+    # path component, this filename cannot perform path traversal.
+    safe_filename = f"{safe_username}.hday"
     file_path = resolved_share / safe_filename
 
-    # Verify the normalized path is within share_dir to prevent path traversal
+    # Verify the normalized path is within the resolved_share directory
+    # to prevent path traversal outside the configured share root.
     try:
         # Use strict=False so resolution does not depend on the file already existing
         normalized_path = file_path.resolve(strict=False)
