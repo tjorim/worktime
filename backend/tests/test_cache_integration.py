@@ -37,12 +37,6 @@ def share_dir(tmp_path, monkeypatch):
 class TestHdayServiceCacheIntegration:
     """Tests for cache integration in hday service functions."""
     
-    def setup_method(self):
-        """Clear cache before each test."""
-        cache = get_cache()
-        cache._hday_entries.clear()
-        cache._team_entries.clear()
-    
     def test_read_hday_file_fresh_cache_hit(self, share_dir):
         """Test that fresh cache entry is returned without file I/O."""
         # Create a file

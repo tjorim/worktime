@@ -6,6 +6,7 @@ and .hday files stored on a shared network drive.
 
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ from fastapi.responses import PlainTextResponse
 from .api.health import router as health_router
 from .api.hday import router as hday_router
 from .api.team import router as team_router
+from .cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .middleware.timing import TimingMiddleware
@@ -67,6 +69,17 @@ async def lifespan(app: FastAPI):
             f"⚠️  Could not verify share directory status: {e}\n"
             f"   The health endpoint will report current status."
         )
+    
+    # Warm cache if enabled
+    if settings.CACHE_ENABLED:
+        try:
+            start_time = time.perf_counter()
+            warm_cache()
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(f"✓ Cache warming completed in {elapsed_ms:.3f}ms")
+        except Exception as e:
+            logger.error(f"⚠️  Cache warming failed: {e}")
+            logger.error("   Continuing with cold cache - first requests will be slower")
     
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
