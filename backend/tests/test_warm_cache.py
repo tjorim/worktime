@@ -29,7 +29,7 @@ def share_dir(tmp_path, monkeypatch):
 
 class TestIsTeamDirectory:
     """Tests for _is_team_directory helper."""
-    
+
     def test_valid_team_directory(self, share_dir):
         """Test that directory with config and people is recognized as team."""
         team_dir = share_dir / "team1"
@@ -65,7 +65,7 @@ class TestIsTeamDirectory:
 
 class TestDiscoverTeamDirectories:
     """Tests for _discover_team_directories function."""
-    
+
     def test_discover_single_team(self, share_dir):
         """Test discovering a single team directory."""
         team_dir = share_dir / "team1"
