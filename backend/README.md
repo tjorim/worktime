@@ -84,7 +84,7 @@ bob,Bob Smith
 charlie,Charlie Brown
 ```
 
-HTML headers (lines starting with `<` and ending with `>`) are skipped during parsing.
+HTML heading tags (`<h1>` through `<h6>`) are skipped during parsing.
 The `username` field maps directly to `{username}.hday` in the share root. The display name is used
 in the UI.
 

@@ -477,7 +477,7 @@ def read_team_hday_files(
     even if individual files are missing.
     
     Args:
-        team_id: The team identifier (used only for validation)
+        team_id: The team identifier (retained for API compatibility; not currently used)
         members: List of team members
         team_path: DEPRECATED - no longer used. .hday files are in share root.
         parse_events: Whether to parse .hday content into events. When False, skip parsing
