@@ -229,9 +229,14 @@ class TestDebugBenchmarkEndpoint:
 class TestDebugRouterRegistration:
     """Tests for debug router conditional registration."""
     
-    def test_debug_router_registered_in_development(self, monkeypatch):
+    def test_debug_router_registered_in_development(self, monkeypatch, tmp_path):
         """Test that debug router is registered in development environment."""
         monkeypatch.setattr(settings, "ENVIRONMENT", "development")
+        
+        # Use isolated empty share directory
+        share = tmp_path / "share"
+        share.mkdir()
+        monkeypatch.setattr(settings, "SHARE_DIR", str(share))
         
         # Import fresh app to trigger registration
         from importlib import reload
@@ -244,8 +249,8 @@ class TestDebugRouterRegistration:
         # Even though it will fail without data, it should be registered
         response = client.get("/v1/debug/benchmark")
         
-        # Should not be 404 (not found), should be 503 (no data) or 200 (success)
-        assert response.status_code in [200, 503, 500]
+        # Should not be 404 (not found), should be 503 (no data) since we have no test data
+        assert response.status_code == 503
     
     def test_debug_router_not_registered_in_production(self, monkeypatch, tmp_path):
         """Test that debug router is NOT registered in production environment."""

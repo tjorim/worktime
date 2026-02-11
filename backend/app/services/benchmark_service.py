@@ -241,6 +241,9 @@ def benchmark_cache_performance(username: str, iterations: int) -> dict:
     cache = get_cache()
     
     # Clear cache for cold read
+    # Note: Direct access to _hday_entries follows existing pattern throughout
+    # codebase (see tests/conftest.py and test_cache_integration.py).
+    # A public clear() method would be preferable but requires broader refactoring.
     cache._hday_entries.clear()
     
     # Measure cold cache (single read)
