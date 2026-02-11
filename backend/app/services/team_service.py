@@ -188,8 +188,9 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
                 continue
             
             # Skip HTML section headers (e.g., <h2>Team Management</h2>)
-            # Use regex to match specific HTML heading tags
-            if re.match(r"^<h[1-6]\b[^>]*>.*</h[1-6]>\s*$", line, re.IGNORECASE):
+            # Use regex to match specific HTML heading tags with matching levels
+            heading_match = re.match(r"^<h([1-6])\b[^>]*>.*</h\1>\s*$", line, re.IGNORECASE)
+            if heading_match:
                 logger.debug(f"Skipping HTML header: {line}")
                 continue
 
@@ -214,8 +215,8 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         raise
 
 
-def get_team_path(team_id: str) -> Path:
-    """Get the full path to the config subdirectory for team files.
+def get_team_path(team_id: str) -> tuple[Path, str]:
+    """Get the config subdirectory path and sanitized team_id for team files.
     
     Team configuration files are stored in the config subdirectory:
     - Config file: {SHARE_DIR}/config/{team_id}.conf
@@ -227,7 +228,7 @@ def get_team_path(team_id: str) -> Path:
         team_id: The team identifier
         
     Returns:
-        Path object for the config subdirectory (sanitized and validated)
+        Tuple of (config_dir Path, sanitized_team_id str) to avoid redundant sanitization
         
     Raises:
         ValueError: If team_id contains invalid characters
@@ -272,9 +273,9 @@ def get_team_path(team_id: str) -> Path:
         logger.error("Config path exists but is not a directory")
         raise TeamNotFoundError("Config directory not found")
     
-    # Return the config directory - the calling functions will construct
-    # the full paths to {team_id}.conf and {team_id}.people
-    return config_dir
+    # Return both the config directory and the sanitized team_id
+    # to avoid redundant sanitization at call sites
+    return config_dir, safe_team_id
 
 
 def _validate_team_file_path(file_path: Path, base_dir: Path, file_type: str) -> None:
@@ -315,8 +316,7 @@ def read_team_config(team_id: str) -> str:
         TeamNotFoundError: If the config file doesn't exist or groupname is missing
         ValueError: If team_id is invalid
     """
-    config_dir = get_team_path(team_id)
-    safe_team_id = _sanitize_team_id(team_id)
+    config_dir, safe_team_id = get_team_path(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     config_path = config_dir / f"{clean_team_id}.conf"
     
@@ -347,8 +347,7 @@ def read_team_members(team_id: str) -> List[TeamMember]:
         TeamNotFoundError: If the people file doesn't exist
         ValueError: If team_id is invalid
     """
-    config_dir = get_team_path(team_id)
-    safe_team_id = _sanitize_team_id(team_id)
+    config_dir, safe_team_id = get_team_path(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     people_path = config_dir / f"{clean_team_id}.people"
     
@@ -392,8 +391,7 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     stale_entry = cache.get_team_config_stale(team_id)
     if stale_entry is not None:
         # We have a stale entry - check if file mtimes have changed
-        config_dir = get_team_path(team_id)
-        safe_team_id = _sanitize_team_id(team_id)
+        config_dir, safe_team_id = get_team_path(team_id)
         clean_team_id = os.path.basename(safe_team_id)
         config_path = config_dir / f"{clean_team_id}.conf"
         people_path = config_dir / f"{clean_team_id}.people"
@@ -423,8 +421,7 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             cache.invalidate_team_config(team_id)
     
     # No cache entry or mtime changed - read files and update cache
-    config_dir = get_team_path(team_id)
-    safe_team_id = _sanitize_team_id(team_id)
+    config_dir, safe_team_id = get_team_path(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     
     # Read config and members using shared parsing logic

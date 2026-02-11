@@ -170,8 +170,8 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
                 continue
             
             # Skip HTML section headers (e.g., <h2>Team Management</h2>)
-            # Use regex to match specific HTML heading tags
-            if re.match(r"^<h[1-6]\b[^>]*>.*</h[1-6]>\s*$", line, re.IGNORECASE):
+            # Use regex to match specific HTML heading tags with matching levels
+            if re.match(r"^<h([1-6])\b[^>]*>.*</h\1>\s*$", line, re.IGNORECASE):
                 continue
             
             parts = line.split(",", 1)

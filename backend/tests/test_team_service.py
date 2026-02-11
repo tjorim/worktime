@@ -129,12 +129,13 @@ class TestGetTeamPath:
         config_dir = share_dir / "config"
         config_dir.mkdir()
 
-        path = get_team_path("team1")
+        path, safe_team_id = get_team_path("team1")
 
         assert isinstance(path, Path)
         assert path.name == "config"
         assert path.exists()
         assert path.is_dir()
+        assert safe_team_id == "team1"
 
     def test_get_team_path_not_found(self, share_dir):
         """Test that missing config directory raises error."""
@@ -175,11 +176,12 @@ class TestGetTeamPath:
         config_dir.mkdir()
         
         # Just test that valid team_id characters don't cause errors
-        # (the function now returns config dir, not team-specific dir)
+        # (the function now returns config dir and sanitized team_id)
         valid_names = ["team-1", "team.alpha", "team_beta", "Team123"]
         for name in valid_names:
-            path = get_team_path(name)
+            path, safe_team_id = get_team_path(name)
             assert path.name == "config"
+            assert safe_team_id  # Should return sanitized version
 
     def test_get_team_path_rejects_leading_dot(self, share_dir):
         """Test that team_id with leading dot is rejected."""
