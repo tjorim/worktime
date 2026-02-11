@@ -6,6 +6,7 @@ startup by discovering and caching all .hday files and team configurations.
 
 import hashlib
 import logging
+import re
 from pathlib import Path
 from typing import List, Tuple
 
@@ -168,8 +169,9 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
             if not line:
                 continue
             
-            # Skip HTML section headers
-            if line.startswith("<") and line.endswith(">"):
+            # Skip HTML section headers (e.g., <h2>Team Management</h2>)
+            # Use regex to match specific HTML heading tags
+            if re.match(r"^<h[1-6]\b[^>]*>.*</h[1-6]>\s*$", line, re.IGNORECASE):
                 continue
             
             parts = line.split(",", 1)

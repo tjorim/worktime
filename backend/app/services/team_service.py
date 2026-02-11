@@ -188,7 +188,8 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
                 continue
             
             # Skip HTML section headers (e.g., <h2>Team Management</h2>)
-            if line.startswith("<") and line.endswith(">"):
+            # Use regex to match specific HTML heading tags
+            if re.match(r"^<h[1-6]\b[^>]*>.*</h[1-6]>\s*$", line, re.IGNORECASE):
                 logger.debug(f"Skipping HTML header: {line}")
                 continue
 
@@ -295,6 +296,16 @@ def read_team_config(team_id: str) -> str:
     safe_team_id = _sanitize_team_id(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     config_path = config_dir / f"{clean_team_id}.conf"
+    
+    # Verify the path is within the config directory to prevent path traversal
+    try:
+        resolved_config_path = config_path.resolve(strict=False)
+        resolved_config_dir = config_dir.resolve()
+        resolved_config_path.relative_to(resolved_config_dir)
+    except ValueError as err:
+        logger.error("Path traversal attempt detected in team config path")
+        raise ValueError("Invalid team_id format") from err
+    
     team_name = _parse_config_file(config_path)
     logger.info("Successfully read team config")
     return team_name
@@ -323,6 +334,16 @@ def read_team_members(team_id: str) -> List[TeamMember]:
     safe_team_id = _sanitize_team_id(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     people_path = config_dir / f"{clean_team_id}.people"
+    
+    # Verify the path is within the config directory to prevent path traversal
+    try:
+        resolved_people_path = people_path.resolve(strict=False)
+        resolved_config_dir = config_dir.resolve()
+        resolved_people_path.relative_to(resolved_config_dir)
+    except ValueError as err:
+        logger.error("Path traversal attempt detected in team people path")
+        raise ValueError("Invalid team_id format") from err
+    
     members = _parse_members_file(people_path)
     logger.info(f"Successfully read {len(members)} team members")
     return members

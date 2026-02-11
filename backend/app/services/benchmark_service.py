@@ -165,7 +165,6 @@ def benchmark_team_bulk(team_id: str, iterations: int) -> dict:
     
     raw_timings = []
     parsed_timings = []
-    team_path = team_service.get_team_path(team_id)
     
     # Run benchmarks
     for _ in range(iterations):
@@ -173,7 +172,7 @@ def benchmark_team_bulk(team_id: str, iterations: int) -> dict:
         start = time.perf_counter()
         _ = team_service.read_team_info(team_id)
         hday_data_raw = team_service.read_team_hday_files(
-            team_id, members, team_path, parse_events=False
+            team_id, members, parse_events=False
         )
         elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
         raw_timings.append(elapsed)
@@ -182,7 +181,7 @@ def benchmark_team_bulk(team_id: str, iterations: int) -> dict:
         start = time.perf_counter()
         _ = team_service.read_team_info(team_id)
         hday_data_parsed = team_service.read_team_hday_files(
-            team_id, members, team_path, parse_events=True
+            team_id, members, parse_events=True
         )
         elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
         parsed_timings.append(elapsed)
