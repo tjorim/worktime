@@ -437,8 +437,9 @@ const events = parseHdayText(data.raw); // Your parser function
 const parseEnd = performance.now();
 const clientParseTimeMs = parseEnd - parseStart;
 
-// For raw mode, total time = totalRequestTimeMs + clientParseTimeMs
-// (clientParseTimeMs is included in totalRequestTimeMs for parsed mode)
+// Calculate total time for each mode:
+// - Raw mode total = totalRequestTimeMs + clientParseTimeMs
+// - Parsed mode total = totalRequestTimeMs (no client-side parsing needed)
 ```
 
 **Interpreting Results:**
