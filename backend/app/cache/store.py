@@ -156,6 +156,47 @@ class FileCache:
         # Entry exists but is stale
         return not self._is_fresh(entry.cached_at)
     
+    def get_hday_stale(self, username: str) -> Optional[HdayCacheEntry]:
+        """Get cached .hday entry even if stale (beyond TTL).
+        
+        Unlike get_hday(), this does not remove stale entries. Use this when
+        you want to check if a stale entry might still be valid via mtime.
+        
+        Args:
+            username: The username to lookup
+            
+        Returns:
+            Cached entry (fresh or stale) if exists, None otherwise
+        """
+        if not self._is_enabled():
+            return None
+            
+        return self._hday_entries.get(username)
+    
+    def refresh_hday_ttl(self, username: str) -> bool:
+        """Refresh the TTL of a cached .hday entry.
+        
+        Updates the cached_at timestamp to current time, effectively
+        extending the entry's TTL without re-reading the file.
+        
+        Args:
+            username: The username whose entry to refresh
+            
+        Returns:
+            True if entry was refreshed, False if entry doesn't exist
+        """
+        if not self._is_enabled():
+            return False
+            
+        entry = self._hday_entries.get(username)
+        if entry is None:
+            return False
+            
+        # Update cached_at to extend TTL
+        entry.cached_at = datetime.now().timestamp()
+        logger.debug("Refreshed .hday cache TTL")
+        return True
+    
     # Team config cache operations
     
     def get_team_config(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
@@ -226,6 +267,69 @@ class FileCache:
         if team_id in self._team_entries:
             del self._team_entries[team_id]
             logger.debug("Invalidated team config cache entry")
+    
+    def get_team_config_stale(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
+        """Get cached team config entry even if stale (beyond TTL).
+        
+        Unlike get_team_config(), this does not remove stale entries. Use this when
+        you want to check if a stale entry might still be valid via mtime.
+        
+        Args:
+            team_id: The team identifier to lookup
+            
+        Returns:
+            Cached entry (fresh or stale) if exists, None otherwise
+        """
+        if not self._is_enabled():
+            return None
+            
+        return self._team_entries.get(team_id)
+    
+    def refresh_team_config_ttl(self, team_id: str) -> bool:
+        """Refresh the TTL of a cached team config entry.
+        
+        Updates the cached_at timestamp to current time, effectively
+        extending the entry's TTL without re-reading the files.
+        
+        Args:
+            team_id: The team identifier whose entry to refresh
+            
+        Returns:
+            True if entry was refreshed, False if entry doesn't exist
+        """
+        if not self._is_enabled():
+            return False
+            
+        entry = self._team_entries.get(team_id)
+        if entry is None:
+            return False
+            
+        # Update cached_at to extend TTL
+        entry.cached_at = datetime.now().timestamp()
+        logger.debug("Refreshed team config cache TTL")
+        return True
+    
+    def needs_team_config_mtime_check(self, team_id: str) -> bool:
+        """Check if a team config entry exists but may need mtime validation.
+        
+        This signals when a cache entry is stale (beyond TTL) but may still
+        be valid if the files' mtimes haven't changed.
+        
+        Args:
+            team_id: The team identifier to check
+            
+        Returns:
+            True if entry exists but is stale, False otherwise
+        """
+        if not self._is_enabled():
+            return False
+            
+        entry = self._team_entries.get(team_id)
+        if entry is None:
+            return False
+            
+        # Entry exists but is stale
+        return not self._is_fresh(entry.cached_at)
 
 
 # Global cache instance

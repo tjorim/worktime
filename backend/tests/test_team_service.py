@@ -294,6 +294,13 @@ class TestReadTeamMembers:
 
 class TestReadTeamHdayFiles:
     """Tests for read_team_hday_files function."""
+    
+    def setup_method(self):
+        """Clear cache before each test."""
+        from app.cache.store import get_cache
+        cache = get_cache()
+        cache._hday_entries.clear()
+        cache._team_entries.clear()
 
     def test_read_team_hday_files_all_exist(self, share_dir):
         """Test reading .hday files when all files exist."""
