@@ -213,6 +213,8 @@ def get_team_path(team_id: str) -> Path:
     # Resolve the share directory to an absolute, normalized path
     # share_dir comes from settings configuration - safe to use
     resolved_share = share_dir.resolve()
+    # Build a normalized string prefix for robust containment checks
+    safe_root = os.path.join(os.fspath(resolved_share), "")
     # Apply os.path.basename() — a recognized path-injection sanitizer — to the
     # directory name to break the taint chain from user input before path construction.
     clean_team_id = os.path.basename(safe_team_id)
@@ -222,7 +224,10 @@ def get_team_path(team_id: str) -> Path:
     try:
         # Use strict=False so resolution does not depend on the directory already existing
         normalized_path = team_path.resolve(strict=False)
+        # Ensure the resolved team path is a descendant of the resolved share directory
         normalized_path.relative_to(resolved_share)
+        if not os.fspath(normalized_path).startswith(safe_root):
+            raise ValueError("Team path escapes share directory")
     except ValueError as err:
         # Either resolution failed or the path escapes the share directory
         raise ValueError("Invalid team_id format") from err
@@ -318,12 +323,14 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     config_path = team_path / "config"
     people_path = team_path / "people"
 
+    # Use a resolved base path so that all subsequent checks use normalized paths
+    normalized_team_path = team_path.resolve(strict=False)
     # Normalize and verify that derived paths stay within the validated team_path
     normalized_config_path = config_path.resolve(strict=False)
     normalized_people_path = people_path.resolve(strict=False)
     try:
-        normalized_config_path.relative_to(team_path)
-        normalized_people_path.relative_to(team_path)
+        normalized_config_path.relative_to(normalized_team_path)
+        normalized_people_path.relative_to(normalized_team_path)
     except ValueError as err:
         logger.error("Resolved team file paths escape team directory")
         raise ValueError("Invalid team_id format") from err
