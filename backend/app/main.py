@@ -127,6 +127,12 @@ app.include_router(health_router)
 app.include_router(hday_router)
 app.include_router(team_router)
 
+# Register debug router only in non-production environments
+if settings.ENVIRONMENT != "production":
+    from .api.debug import router as debug_router
+    app.include_router(debug_router)
+    logger.info("✓ Debug endpoints enabled (development mode only)")
+
 
 @app.get("/", response_class=PlainTextResponse, tags=["Info"])
 async def root():

@@ -58,9 +58,17 @@ class BenchmarkResponse(BaseModel):
         fileSize: Size of the test file in bytes
         eventCount: Number of events in the test file
         iterations: Number of benchmark iterations performed
+        raw: Benchmark results for individual file in raw format
+        parsed: Benchmark results for individual file in parsed format
+        teamBulk: Benchmark results for team bulk operations
+        cache: Cache performance benchmark results
     """
     
     file: str = Field(..., description="Name of the benchmark test file")
     fileSize: int = Field(..., description="Size of the test file in bytes")
     eventCount: int = Field(..., description="Number of events in the test file")
     iterations: int = Field(..., description="Number of benchmark iterations performed")
+    raw: BenchmarkModeResult = Field(..., description="Individual file raw format benchmark")
+    parsed: BenchmarkModeResult = Field(..., description="Individual file parsed format benchmark")
+    teamBulk: TeamBulkResult = Field(..., description="Team bulk operations benchmark")
+    cache: CacheResult = Field(..., description="Cache performance benchmark")

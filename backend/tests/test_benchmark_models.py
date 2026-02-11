@@ -193,6 +193,32 @@ class TestCacheResult:
 
 class TestBenchmarkResponse:
     """Tests for BenchmarkResponse model."""
+    
+    @staticmethod
+    def _create_sample_mode_result():
+        """Helper to create a sample BenchmarkModeResult."""
+        return BenchmarkModeResult(
+            avgMs=10.0,
+            p95Ms=15.0,
+            responseSizeBytes=1024
+        )
+    
+    @staticmethod
+    def _create_sample_team_result():
+        """Helper to create a sample TeamBulkResult."""
+        return TeamBulkResult(
+            memberCount=3,
+            raw=BenchmarkModeResult(avgMs=10.0, p95Ms=15.0, responseSizeBytes=1024),
+            parsed=BenchmarkModeResult(avgMs=20.0, p95Ms=30.0, responseSizeBytes=2048)
+        )
+    
+    @staticmethod
+    def _create_sample_cache_result():
+        """Helper to create a sample CacheResult."""
+        return CacheResult(
+            warmCacheAvgMs=5.0,
+            coldCacheAvgMs=25.0
+        )
 
     def test_creation(self):
         """Test creating a benchmark response."""
@@ -200,42 +226,118 @@ class TestBenchmarkResponse:
             file="test.hday",
             fileSize=2048,
             eventCount=10,
-            iterations=100
+            iterations=100,
+            raw=self._create_sample_mode_result(),
+            parsed=self._create_sample_mode_result(),
+            teamBulk=self._create_sample_team_result(),
+            cache=self._create_sample_cache_result()
         )
 
         assert response.file == "test.hday"
         assert response.fileSize == 2048
         assert response.eventCount == 10
         assert response.iterations == 100
+        assert response.raw.avgMs == 10.0
+        assert response.parsed.avgMs == 10.0
+        assert response.teamBulk.memberCount == 3
+        assert response.cache.warmCacheAvgMs == 5.0
 
     def test_required_fields(self):
         """Test that all fields are required."""
+        # Missing file
         with pytest.raises(ValidationError):
             BenchmarkResponse(
                 fileSize=2048,
                 eventCount=10,
-                iterations=100
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
             )
-
+        
+        # Missing fileSize
         with pytest.raises(ValidationError):
             BenchmarkResponse(
                 file="test.hday",
                 eventCount=10,
-                iterations=100
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
             )
-
+        
+        # Missing eventCount
         with pytest.raises(ValidationError):
             BenchmarkResponse(
                 file="test.hday",
                 fileSize=2048,
-                iterations=100
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
             )
-
+        
+        # Missing iterations
         with pytest.raises(ValidationError):
             BenchmarkResponse(
                 file="test.hday",
                 fileSize=2048,
-                eventCount=10
+                eventCount=10,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
+            )
+        
+        # Missing raw
+        with pytest.raises(ValidationError):
+            BenchmarkResponse(
+                file="test.hday",
+                fileSize=2048,
+                eventCount=10,
+                iterations=100,
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
+            )
+        
+        # Missing parsed
+        with pytest.raises(ValidationError):
+            BenchmarkResponse(
+                file="test.hday",
+                fileSize=2048,
+                eventCount=10,
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result(),
+                cache=self._create_sample_cache_result()
+            )
+        
+        # Missing teamBulk
+        with pytest.raises(ValidationError):
+            BenchmarkResponse(
+                file="test.hday",
+                fileSize=2048,
+                eventCount=10,
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                cache=self._create_sample_cache_result()
+            )
+        
+        # Missing cache
+        with pytest.raises(ValidationError):
+            BenchmarkResponse(
+                file="test.hday",
+                fileSize=2048,
+                eventCount=10,
+                iterations=100,
+                raw=self._create_sample_mode_result(),
+                parsed=self._create_sample_mode_result(),
+                teamBulk=self._create_sample_team_result()
             )
 
     def test_type_validation(self):
@@ -244,13 +346,21 @@ class TestBenchmarkResponse:
             file="test.hday",
             fileSize=2048,
             eventCount=10,
-            iterations=100
+            iterations=100,
+            raw=self._create_sample_mode_result(),
+            parsed=self._create_sample_mode_result(),
+            teamBulk=self._create_sample_team_result(),
+            cache=self._create_sample_cache_result()
         )
 
         assert isinstance(response.file, str)
         assert isinstance(response.fileSize, int)
         assert isinstance(response.eventCount, int)
         assert isinstance(response.iterations, int)
+        assert isinstance(response.raw, BenchmarkModeResult)
+        assert isinstance(response.parsed, BenchmarkModeResult)
+        assert isinstance(response.teamBulk, TeamBulkResult)
+        assert isinstance(response.cache, CacheResult)
 
     def test_empty_filename(self):
         """Test that empty filename is allowed."""
@@ -258,7 +368,11 @@ class TestBenchmarkResponse:
             file="",
             fileSize=0,
             eventCount=0,
-            iterations=1
+            iterations=1,
+            raw=self._create_sample_mode_result(),
+            parsed=self._create_sample_mode_result(),
+            teamBulk=self._create_sample_team_result(),
+            cache=self._create_sample_cache_result()
         )
         assert response.file == ""
 
@@ -268,7 +382,11 @@ class TestBenchmarkResponse:
             file="large_events.hday",
             fileSize=1048576,  # 1MB
             eventCount=500,
-            iterations=1000
+            iterations=1000,
+            raw=self._create_sample_mode_result(),
+            parsed=self._create_sample_mode_result(),
+            teamBulk=self._create_sample_team_result(),
+            cache=self._create_sample_cache_result()
         )
 
         assert response.file == "large_events.hday"
