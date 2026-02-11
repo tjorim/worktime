@@ -32,105 +32,144 @@ def _compute_etag(content: str) -> str:
 def _is_team_directory(path: Path) -> bool:
     """Check if a directory is a team directory.
     
-    A team directory must contain both 'config' and 'people' files.
+    DEPRECATED: This function is no longer used with the new structure
+    where team configs are in config/ subdirectory.
     
     Args:
         path: Directory path to check
         
     Returns:
-        True if directory contains both config and people files
+        False (teams are now identified by .conf files in config/ directory)
     """
-    if not path.is_dir():
-        return False
-    
-    config_file = path / "config"
-    people_file = path / "people"
-    
-    return config_file.exists() and people_file.exists()
+    return False
 
 
-def _discover_team_directories(share_dir: Path) -> List[Path]:
-    """Discover all team directories in the share directory.
+def _discover_team_files(share_dir: Path) -> List[Tuple[str, Path, Path]]:
+    """Discover all team configuration files in the config subdirectory.
+    
+    Team files are stored as:
+    - config/{team_id}.conf
+    - config/{team_id}.people
     
     Args:
         share_dir: Share directory path
         
     Returns:
-        List of team directory paths
+        List of tuples (team_id, config_path, people_path) for all discovered teams
     """
-    team_dirs = []
+    team_files = []
+    config_dir = share_dir / "config"
+    
+    if not config_dir.exists() or not config_dir.is_dir():
+        logger.info("Config directory does not exist or is not a directory")
+        return team_files
     
     try:
-        for item in share_dir.iterdir():
-            if _is_team_directory(item):
-                team_dirs.append(item)
+        # Find all .conf files in config directory
+        for conf_file in config_dir.glob("*.conf"):
+            team_id = conf_file.stem  # e.g., "dl-example-group" from "dl-example-group.conf"
+            people_file = config_dir / f"{team_id}.people"
+            
+            # Only include if both .conf and .people files exist
+            if people_file.exists():
+                team_files.append((team_id, conf_file, people_file))
+            else:
+                logger.warning(f"Found {conf_file.name} but missing corresponding {team_id}.people")
     except (PermissionError, OSError) as e:
-        logger.warning(f"Could not list share directory during cache warming: {e}")
+        logger.warning(f"Could not list config directory during cache warming: {e}")
     
-    return team_dirs
+    return team_files
 
 
-def _discover_hday_files(share_dir: Path, team_dirs: List[Path]) -> List[Tuple[Path, str]]:
-    """Discover all .hday files in the share directory and team directories.
+def _discover_team_directories(share_dir: Path) -> List[Path]:
+    """Discover all team directories in the share directory.
+    
+    DEPRECATED: This function is no longer used with the new structure
+    where team configs are in config/ subdirectory. Returns empty list.
     
     Args:
         share_dir: Share directory path
-        team_dirs: List of team directory paths
+        
+    Returns:
+        Empty list (teams are now identified by files in config/ directory)
+    """
+    return []
+
+
+def _discover_hday_files(share_dir: Path, team_files: List[Tuple[str, Path, Path]]) -> List[Tuple[Path, str]]:
+    """Discover all .hday files in the share directory root.
+    
+    Args:
+        share_dir: Share directory path
+        team_files: List of (team_id, config_path, people_path) tuples (not used)
         
     Returns:
         List of tuples (file_path, username) for all discovered .hday files
     """
     hday_files = []
     
-    # Discover top-level .hday files
+    # Discover top-level .hday files in share root
     try:
         for item in share_dir.iterdir():
             if item.is_file() and item.suffix == ".hday":
                 username = item.stem
                 hday_files.append((item, username))
     except (PermissionError, OSError) as e:
-        logger.warning(f"Could not list top-level .hday files during cache warming: {e}")
+        logger.warning(f"Could not list .hday files during cache warming: {e}")
     
-    # Discover .hday files within team directories
-    for team_dir in team_dirs:
-        try:
-            for item in team_dir.iterdir():
-                if item.is_file() and item.suffix == ".hday":
-                    username = item.stem
-                    hday_files.append((item, username))
-        except (PermissionError, OSError) as e:
-            logger.warning(f"Could not list .hday files in team directory {team_dir.name}: {e}")
+    # Note: .hday files are now only in the share root, not in team directories
     
     return hday_files
 
 
-def _cache_team_config(team_dir: Path) -> bool:
+def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bool:
     """Read and cache team configuration.
     
     Args:
-        team_dir: Team directory path
+        team_id: Team identifier
+        config_path: Path to the team config file (.conf)
+        people_path: Path to the team people file (.people)
         
     Returns:
         True if successfully cached, False otherwise
     """
-    team_id = team_dir.name
-    
     try:
-        # Read config file
-        config_path = team_dir / "config"
-        team_name = config_path.read_text(encoding="utf-8").strip()
+        # Read config file and parse key=value format
+        config_content = config_path.read_text(encoding="utf-8")
         config_mtime = config_path.stat().st_mtime
         
+        # Extract groupname from config
+        team_name = None
+        for line in config_content.splitlines():
+            line = line.strip()
+            if not line or "=" not in line:
+                continue
+            
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            
+            if key == "groupname":
+                team_name = value
+                break
+        
+        if not team_name:
+            logger.warning(f"groupname not found in config file for team {team_id}")
+            return False
+        
         # Read people file
-        people_path = team_dir / "people"
         people_content = people_path.read_text(encoding="utf-8")
         people_mtime = people_path.stat().st_mtime
         
-        # Parse members
+        # Parse members, skipping HTML headers
         members = []
         for line in people_content.splitlines():
             line = line.strip()
             if not line:
+                continue
+            
+            # Skip HTML section headers
+            if line.startswith("<") and line.endswith(">"):
                 continue
             
             parts = line.split(",", 1)
@@ -205,8 +244,8 @@ def warm_cache() -> None:
     """Pre-populate cache with all .hday files and team configurations.
     
     This function discovers and caches:
-    - All team directories (directories containing config + people files)
-    - All .hday files (both top-level and within team directories)
+    - All team configuration files (config/{team_id}.conf and {team_id}.people)
+    - All .hday files in the share root directory
     
     Errors are handled gracefully by logging warnings and continuing.
     A summary is logged at the end with the number of cached entries.
@@ -230,18 +269,18 @@ def warm_cache() -> None:
         logger.warning(f"Cache warming skipped: share path is not a directory: {share_dir}")
         return
     
-    # Discover team directories
-    team_dirs = _discover_team_directories(share_dir)
-    logger.debug(f"Discovered {len(team_dirs)} team directories")
+    # Discover team files in config/ subdirectory
+    team_files = _discover_team_files(share_dir)
+    logger.debug(f"Discovered {len(team_files)} team configurations")
     
     # Cache team configurations
     teams_cached = 0
-    for team_dir in team_dirs:
-        if _cache_team_config(team_dir):
+    for team_id, config_path, people_path in team_files:
+        if _cache_team_config(team_id, config_path, people_path):
             teams_cached += 1
     
-    # Discover .hday files
-    hday_files = _discover_hday_files(share_dir, team_dirs)
+    # Discover .hday files in share root
+    hday_files = _discover_hday_files(share_dir, team_files)
     logger.debug(f"Discovered {len(hday_files)} .hday files")
     
     # Cache .hday files
