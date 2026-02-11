@@ -124,7 +124,7 @@ def get_benchmark() -> BenchmarkResponse:
             content={
                 "error": "benchmark_failed",
                 "message": "Required test data not found or inaccessible",
-                "details": str(e)
+                "details": "Required benchmark test data was not found or could not be accessed."
             }
         )
     except Exception as e:
@@ -134,6 +134,6 @@ def get_benchmark() -> BenchmarkResponse:
             content={
                 "error": "internal_error",
                 "message": "An unexpected error occurred during benchmark execution",
-                "details": str(e)
+                "details": "An unexpected internal error occurred during benchmark execution."
             }
         )
