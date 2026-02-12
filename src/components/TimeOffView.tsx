@@ -263,6 +263,28 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
   }, [isRawEditorDirty, rawText]);
 
+  const handleRawEditorChange = useCallback((value: string) => {
+    setRawEditorText(value);
+    setIsRawEditorDirty(value !== rawText);
+  }, [rawText]);
+
+  const handleParseRawEditor = useCallback(() => {
+    try {
+      importHday(rawEditorText);
+      setIsRawEditorDirty(false);
+      setSelectedIndices(new Set());
+      toast.showSuccess("Raw .hday content applied successfully", "bi-check-circle");
+    } catch (error) {
+      console.error("Failed to parse raw .hday content:", error);
+      toast.showError("Failed to parse content. Please check the format.");
+    }
+  }, [rawEditorText, importHday, toast]);
+
+  const handleResetRawEditor = useCallback(() => {
+    setRawEditorText(rawText);
+    setIsRawEditorDirty(false);
+  }, [rawText]);
+
   const handleImport = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -407,6 +429,12 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onToggleSelection={handleToggleSelection}
           onEditEvent={handleOpenEditModal}
           onDeleteEvent={handleDeleteClick}
+          rawEditorText={rawEditorText}
+          rawEditorError={undefined}
+          isRawEditorDirty={isRawEditorDirty}
+          onChangeRawEditorText={handleRawEditorChange}
+          onApplyRawEditor={handleParseRawEditor}
+          onResetRawEditor={handleResetRawEditor}
         />
       )}
 

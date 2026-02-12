@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
+import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
@@ -11,6 +12,7 @@ import {
   getTimeLocationSymbol,
 } from "../../lib/hday/parser";
 import { TimeOffToolbar } from "./TimeOffToolbar";
+import { TimeOffRawView } from "./TimeOffRawView";
 import { Weekday } from "../../data/timeoffConstants";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
 
@@ -76,6 +78,13 @@ type TimeOffTableViewProps = {
   onToggleSelection: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent: (index: number) => void;
+  // Raw editor props
+  rawEditorText: string;
+  rawEditorError?: string;
+  isRawEditorDirty: boolean;
+  onChangeRawEditorText: (value: string) => void;
+  onApplyRawEditor: () => void;
+  onResetRawEditor: () => void;
 };
 
 export function TimeOffTableView({
@@ -97,6 +106,12 @@ export function TimeOffTableView({
   onToggleSelection,
   onEditEvent,
   onDeleteEvent,
+  rawEditorText,
+  rawEditorError,
+  isRawEditorDirty,
+  onChangeRawEditorText,
+  onApplyRawEditor,
+  onResetRawEditor,
 }: TimeOffTableViewProps) {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -108,136 +123,163 @@ export function TimeOffTableView({
   }, [selectedIndices, events.length]);
 
   return (
-    <Card>
-      <TimeOffToolbar
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        eventCount={eventCount}
-        selectedCount={selectedCount}
-        onSelectAll={onSelectAll}
-        onClearSelection={onClearSelection}
-        onBulkDelete={onBulkDelete}
-        onImport={onImport}
-        onExport={onExport}
-        onAddEvent={onAddEvent}
-        viewMode={viewMode}
-      />
-      <Card.Body>
-        {events.length === 0 ? (
-          <EmptyState
-            icon="bi-calendar-x"
-            title="No time-off events yet"
-            description={
-              'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
-            }
-          />
-        ) : (
-          <Table responsive hover>
-            <thead>
-              <tr>
-                <th scope="col">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    className="form-check-input"
-                    aria-label="Select all events"
-                    checked={events.length > 0 && selectedIndices.size === events.length}
-                    onChange={(event) => {
-                      if (event.target.checked) {
-                        onSelectAll();
-                      } else {
-                        onClearSelection();
-                      }
-                    }}
-                  />
-                </th>
-                <th scope="col">Type</th>
-                <th scope="col">Date / Pattern</th>
-                <th scope="col">Title</th>
-                <th scope="col">Flags</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event, index) => {
-                const eventColorClass =
-                  event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
-                const eventLabel =
-                  event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
-                const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
+    <>
+      <Card>
+        <TimeOffToolbar
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          eventCount={eventCount}
+          selectedCount={selectedCount}
+          onSelectAll={onSelectAll}
+          onClearSelection={onClearSelection}
+          onBulkDelete={onBulkDelete}
+          onImport={onImport}
+          onExport={onExport}
+          onAddEvent={onAddEvent}
+          viewMode={viewMode}
+        />
+        <Card.Body>
+          {events.length === 0 ? (
+            <EmptyState
+              icon="bi-calendar-x"
+              title="No time-off events yet"
+              description={
+                'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
+              }
+            />
+          ) : (
+            <Table responsive hover>
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      className="form-check-input"
+                      aria-label="Select all events"
+                      checked={events.length > 0 && selectedIndices.size === events.length}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          onSelectAll();
+                        } else {
+                          onClearSelection();
+                        }
+                      }}
+                    />
+                  </th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Date / Pattern</th>
+                  <th scope="col">Title</th>
+                  <th scope="col">Flags</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event, index) => {
+                  const eventColorClass =
+                    event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
+                  const eventLabel =
+                    event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
+                  const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";
 
-                const unknownDescriptionId =
-                  event.type === "unknown" ? `unknown-event-${index}` : undefined;
+                  const unknownDescriptionId =
+                    event.type === "unknown" ? `unknown-event-${index}` : undefined;
 
-                return (
-                  <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        aria-label={`Select ${event.title || eventLabel}`}
-                        checked={selectedIndices.has(index)}
-                        onChange={() => onToggleSelection(index)}
-                      />
-                    </td>
-                    <td>
-                      <span className={clsx("badge", "event-type-badge", eventColorClass)}>
-                        {symbol && `${symbol} `}
-                        {eventLabel}
-                      </span>
-                    </td>
-                    <td>
-                      {formatEventDate(event)}
-                      {event.type === "unknown" && (
-                        <>
-                          <span className="text-muted">Unknown format</span>
-                          <span id={unknownDescriptionId} className="visually-hidden">
-                            Unknown event format. Remove or re-import this entry to resolve the
-                            issue.
-                          </span>
-                        </>
-                      )}
-                    </td>
-                    <td>{event.title || <span className="text-muted">—</span>}</td>
-                    <td>
-                      {event.flags?.length ? (
-                        <span className="text-muted small">{event.flags.join(", ")}</span>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                    <td>
-                      {event.type !== "unknown" && (
-                        <>
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
-                            onClick={() => onEditEvent(index)}
-                            className="me-2"
-                            aria-label={`Edit ${event.title || eventLabel}`}
-                          >
-                            <i className="bi bi-pencil" aria-hidden="true"></i>
-                          </Button>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => onDeleteEvent(index)}
-                            aria-label={`Delete ${event.title || eventLabel}`}
-                          >
-                            <i className="bi bi-trash" aria-hidden="true"></i>
-                          </Button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Table>
-        )}
-      </Card.Body>
-    </Card>
+                  return (
+                    <tr key={getEventRowKey(event, index)} aria-describedby={unknownDescriptionId}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          aria-label={`Select ${event.title || eventLabel}`}
+                          checked={selectedIndices.has(index)}
+                          onChange={() => onToggleSelection(index)}
+                        />
+                      </td>
+                      <td>
+                        <span className={clsx("badge", "event-type-badge", eventColorClass)}>
+                          {symbol && `${symbol} `}
+                          {eventLabel}
+                        </span>
+                      </td>
+                      <td>
+                        {formatEventDate(event)}
+                        {event.type === "unknown" && (
+                          <>
+                            <span className="text-muted">Unknown format</span>
+                            <span id={unknownDescriptionId} className="visually-hidden">
+                              Unknown event format. Remove or re-import this entry to resolve the
+                              issue.
+                            </span>
+                          </>
+                        )}
+                      </td>
+                      <td>{event.title || <span className="text-muted">—</span>}</td>
+                      <td>
+                        {event.flags?.length ? (
+                          <span className="text-muted small">{event.flags.join(", ")}</span>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {event.type !== "unknown" && (
+                          <>
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              onClick={() => onEditEvent(index)}
+                              className="me-2"
+                              aria-label={`Edit ${event.title || eventLabel}`}
+                            >
+                              <i className="bi bi-pencil" aria-hidden="true"></i>
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => onDeleteEvent(index)}
+                              aria-label={`Delete ${event.title || eventLabel}`}
+                            >
+                              <i className="bi bi-trash" aria-hidden="true"></i>
+                            </Button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
+        </Card.Body>
+      </Card>
+
+      {/* Collapsible Raw .hday Editor */}
+      <Accordion>
+        <Accordion.Item eventKey="raw-editor">
+          <Accordion.Header>
+            <i className="bi bi-code-square me-2" aria-hidden="true"></i>
+            Raw .hday Editor
+            {isRawEditorDirty && (
+              <span className="badge bg-warning text-dark ms-2" title="Unsaved changes">
+                •
+              </span>
+            )}
+          </Accordion.Header>
+          <Accordion.Body className="p-0">
+            <TimeOffRawView
+              rawText={rawEditorText}
+              error={rawEditorError}
+              isDirty={isRawEditorDirty}
+              onChangeRawText={onChangeRawEditorText}
+              onApply={onApplyRawEditor}
+              onReset={onResetRawEditor}
+            />
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
+    </>
   );
 }
