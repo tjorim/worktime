@@ -13,6 +13,7 @@ from typing import List, Tuple
 from app.cache.store import get_cache
 from app.config.settings import settings
 from app.services.hday_parser import parse_text
+from app.services.team_service import _parse_config_file, _parse_members_file
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +105,6 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
         True if successfully cached, False otherwise
     """
     try:
-        # Import here to avoid circular dependency
-        from app.services.team_service import _parse_config_file, _parse_members_file
-        
         # Get modification times
         config_mtime = config_path.stat().st_mtime
         people_mtime = people_path.stat().st_mtime
