@@ -9,11 +9,13 @@ import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
+import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
 
 interface SettingsPanelProps {
@@ -44,10 +46,13 @@ export function SettingsPanel({
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDevOptions, setShowDevOptions] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
+  const [versionClickCount, setVersionClickCount] = useState(0);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
+  const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const {
     settings,
     scheduleType,
@@ -72,6 +77,30 @@ export function SettingsPanel({
 
   const handleShortcutsClose = () => {
     setShowShortcuts(false);
+  };
+
+  const handleDevOptionsClick = () => {
+    setShowDevOptions(true);
+  };
+
+  const handleDevOptionsClose = () => {
+    setShowDevOptions(false);
+  };
+
+  // Triple-click on version to toggle dev mode
+  const handleVersionClick = () => {
+    setVersionClickCount((prev) => prev + 1);
+    setTimeout(() => setVersionClickCount(0), 1000); // Reset after 1 second
+
+    if (versionClickCount === 2) {
+      // Third click
+      toggleDevMode();
+      const message = isDevMode
+        ? "Developer mode disabled"
+        : "Developer mode enabled - check Information section";
+      toast.showInfo(message);
+      setVersionClickCount(0);
+    }
   };
 
   // Clear/reset all settings
@@ -344,6 +373,20 @@ export function SettingsPanel({
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
                 </ListGroup.Item>
+                {isDevMode && (
+                  <ListGroup.Item action onClick={handleDevOptionsClick}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-code-slash me-2"></i>
+                          Developer Options
+                        </div>
+                        <small className="text-muted">Backend API configuration</small>
+                      </div>
+                      <i className="bi bi-chevron-right text-muted"></i>
+                    </div>
+                  </ListGroup.Item>
+                )}
               </ListGroup>
             </div>
           </div>
@@ -414,7 +457,14 @@ export function SettingsPanel({
 
           {/* App Version Footer */}
           <div className="mt-auto p-3 text-center border-top">
-            <small className="text-muted d-block">Worktime v{CONFIG.VERSION}</small>
+            <small
+              className="text-muted d-block"
+              onClick={handleVersionClick}
+              style={{ cursor: "pointer", userSelect: "none" }}
+              title="Triple-click to toggle developer mode"
+            >
+              Worktime v{CONFIG.VERSION}
+            </small>
             <small className="text-muted">Built with ❤️ by Jorim Tielemans</small>
           </div>
         </Offcanvas.Body>
@@ -425,6 +475,9 @@ export function SettingsPanel({
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal show={showShortcuts} onHide={handleShortcutsClose} />
+
+      {/* Developer Options Modal */}
+      <DevOptionsPanel show={showDevOptions} onHide={handleDevOptionsClose} />
 
       {/* Reset Confirmation Modal */}
       <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>

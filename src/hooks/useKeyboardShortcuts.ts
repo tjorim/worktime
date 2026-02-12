@@ -10,6 +10,7 @@ interface KeyboardShortcuts {
   onTabTimeOff?: () => void;
   onTabTimeTracking?: () => void;
   onToggleSettings?: () => void;
+  onToggleDevMode?: () => void;
 }
 
 /**
@@ -52,6 +53,17 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
               shortcuts.onToggleSettings?.();
             } catch (error) {
               console.error("Error in onToggleSettings callback:", error);
+            }
+            break;
+          case "d":
+            // Ctrl+Shift+D for dev mode toggle
+            if (event.shiftKey) {
+              event.preventDefault?.();
+              try {
+                shortcuts.onToggleDevMode?.();
+              } catch (error) {
+                console.error("Error in onToggleDevMode callback:", error);
+              }
             }
             break;
           case "h":

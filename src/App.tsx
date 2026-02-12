@@ -9,6 +9,7 @@ import { WelcomeWizard, type WizardCompletionPayload } from "./components/Welcom
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
+import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
@@ -241,15 +242,17 @@ function AppContent() {
 /**
  * Root application component that composes context providers and renders the app content.
  *
- * @returns The root React element: SettingsProvider, EventStoreProvider and ToastProvider wrapping AppContent
+ * @returns The root React element: SettingsProvider, EventStoreProvider, DeveloperOptionsProvider and ToastProvider wrapping AppContent
  */
 function App() {
   return (
     <SettingsProvider>
       <EventStoreProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
+        <DeveloperOptionsProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </DeveloperOptionsProvider>
       </EventStoreProvider>
     </SettingsProvider>
   );
