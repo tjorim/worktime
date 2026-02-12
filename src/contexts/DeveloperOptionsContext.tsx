@@ -51,16 +51,8 @@ interface DeveloperOptionsProviderProps {
 export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderProps) {
   const [options, setOptions] = useLocalStorage<DeveloperOptions>(STORAGE_KEY, defaultOptions);
   
-  // Use persisted isDevMode from options, with URL param override
-  const [isDevMode, setIsDevMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("dev") === "true") {
-        return true;
-      }
-    }
-    return options.isDevMode;
-  });
+  // Use persisted isDevMode from options
+  const [isDevMode, setIsDevMode] = useState(options.isDevMode);
 
   // Sync isDevMode changes to localStorage
   useEffect(() => {

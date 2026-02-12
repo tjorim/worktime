@@ -3,8 +3,6 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import { useToast } from "../contexts/ToastContext";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
@@ -23,24 +21,16 @@ interface HeaderProps {
  */
 export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
   const [showSettings, setShowSettings] = useState(false);
-  const { toggleDevMode } = useDeveloperOptions();
-  const { showInfo } = useToast();
 
   const handleToggleSettings = useCallback(() => {
     setShowSettings((prev) => !prev);
   }, []);
 
-  const handleToggleDevMode = useCallback(() => {
-    toggleDevMode();
-    showInfo("Developer mode toggled");
-  }, [toggleDevMode, showInfo]);
-
   const shortcuts = useMemo(
     () => ({
       onToggleSettings: handleToggleSettings,
-      onToggleDevMode: handleToggleDevMode,
     }),
-    [handleToggleSettings, handleToggleDevMode],
+    [handleToggleSettings],
   );
 
   useKeyboardShortcuts(shortcuts);
