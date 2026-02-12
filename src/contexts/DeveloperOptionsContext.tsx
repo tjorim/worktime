@@ -10,6 +10,7 @@ export interface DeveloperOptions {
   connectionStatus: ConnectionStatus;
   lastConnectionTest: number | null; // timestamp
   autoConnect: boolean;
+  isDevMode: boolean; // Persist dev mode visibility
 }
 
 interface DeveloperOptionsContextType {
@@ -18,7 +19,7 @@ interface DeveloperOptionsContextType {
   updateApiUrl: (url: string) => void;
   updateAutoConnect: (autoConnect: boolean) => void;
   toggleDevMode: () => void;
-  testConnection: () => Promise<boolean>;
+  testConnection: (url?: string) => Promise<boolean>;
   disconnect: () => void;
 }
 
@@ -28,6 +29,7 @@ const defaultOptions: DeveloperOptions = {
   connectionStatus: "disconnected",
   lastConnectionTest: null,
   autoConnect: false,
+  isDevMode: false,
 };
 
 const STORAGE_KEY = "worktime_developer_options";
@@ -48,17 +50,25 @@ interface DeveloperOptionsProviderProps {
 
 export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderProps) {
   const [options, setOptions] = useLocalStorage<DeveloperOptions>(STORAGE_KEY, defaultOptions);
-  const [isDevMode, setIsDevMode] = useState(false);
-
-  // Check URL parameter for dev mode on mount
-  useEffect(() => {
+  
+  // Use persisted isDevMode from options, with URL param override
+  const [isDevMode, setIsDevMode] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("dev") === "true") {
-        setIsDevMode(true);
+        return true;
       }
     }
-  }, []);
+    return options.isDevMode;
+  });
+
+  // Sync isDevMode changes to localStorage
+  useEffect(() => {
+    setOptions((prev) => ({
+      ...prev,
+      isDevMode,
+    }));
+  }, [isDevMode, setOptions]);
 
   // Auto-connect on mount if enabled
   useEffect(() => {
@@ -74,6 +84,8 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         ...prev,
         apiUrl: url,
         connectionStatus: "disconnected",
+        enabled: false,
+        lastConnectionTest: null,
       }));
     },
     [setOptions],
@@ -90,26 +102,26 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     setIsDevMode((prev) => !prev);
   }, []);
 
-  const testConnection = useCallback(async (): Promise<boolean> => {
-    if (!options.apiUrl) {
+  const testConnection = useCallback(async (url?: string): Promise<boolean> => {
+    const testUrl = url || options.apiUrl;
+    if (!testUrl) {
       return false;
     }
 
     setOptions((prev) => ({ ...prev, connectionStatus: "connecting" }));
 
+    let timeoutId: number | undefined;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      const response = await fetch(`${options.apiUrl}/v1/health`, {
+      const response = await fetch(`${testUrl}/v1/health`, {
         method: "GET",
         signal: controller.signal,
         headers: {
           Accept: "application/json",
         },
       });
-
-      clearTimeout(timeoutId);
 
       if (response.ok) {
         setOptions((prev) => ({
@@ -135,6 +147,11 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         lastConnectionTest: Date.now(),
       }));
       return false;
+    } finally {
+      // Always clear the timeout
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
     }
   }, [options.apiUrl, setOptions]);
 

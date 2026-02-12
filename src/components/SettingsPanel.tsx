@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -49,7 +49,8 @@ export function SettingsPanel({
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
-  const [versionClickCount, setVersionClickCount] = useState(0);
+  const versionClickCountRef = useRef(0);
+  const versionClickTimeoutRef = useRef<number | null>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
@@ -89,17 +90,36 @@ export function SettingsPanel({
 
   // Triple-click on version to toggle dev mode
   const handleVersionClick = () => {
-    setVersionClickCount((prev) => prev + 1);
-    setTimeout(() => setVersionClickCount(0), 1000); // Reset after 1 second
+    // Clear existing timeout if any
+    if (versionClickTimeoutRef.current !== null) {
+      clearTimeout(versionClickTimeoutRef.current);
+    }
 
-    if (versionClickCount === 2) {
-      // Third click
+    // Increment click count
+    versionClickCountRef.current += 1;
+
+    // If third click, toggle dev mode
+    if (versionClickCountRef.current === 3) {
       toggleDevMode();
       const message = isDevMode
         ? "Developer mode disabled"
         : "Developer mode enabled - check Information section";
       toast.showInfo(message);
-      setVersionClickCount(0);
+      versionClickCountRef.current = 0;
+      versionClickTimeoutRef.current = null;
+    } else {
+      // Reset counter after 1 second
+      versionClickTimeoutRef.current = window.setTimeout(() => {
+        versionClickCountRef.current = 0;
+        versionClickTimeoutRef.current = null;
+      }, 1000);
+    }
+  };
+
+  const handleVersionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleVersionClick();
     }
   };
 
@@ -457,14 +477,17 @@ export function SettingsPanel({
 
           {/* App Version Footer */}
           <div className="mt-auto p-3 text-center border-top">
-            <small
-              className="text-muted d-block"
+            <button
+              type="button"
+              className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
               onClick={handleVersionClick}
+              onKeyDown={handleVersionKeyDown}
               style={{ cursor: "pointer", userSelect: "none" }}
               title="Triple-click to toggle developer mode"
+              aria-label={`Worktime version ${CONFIG.VERSION}. Triple-click to toggle developer mode.`}
             >
               Worktime v{CONFIG.VERSION}
-            </small>
+            </button>
             <small className="text-muted">Built with ❤️ by Jorim Tielemans</small>
           </div>
         </Offcanvas.Body>

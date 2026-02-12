@@ -46,7 +46,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setTestResult(null);
 
     try {
-      const success = await testConnection();
+      // Test with the current local URL (unsaved or saved)
+      const success = await testConnection(localApiUrl);
       setTestResult({
         success,
         message: success
