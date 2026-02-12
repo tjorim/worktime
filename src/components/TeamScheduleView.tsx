@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -6,6 +6,7 @@ import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
+import type { HdayEvent } from "../lib/hday/types";
 
 interface TeamMember {
   username: string;
@@ -14,14 +15,7 @@ interface TeamMember {
 
 interface TeamMemberHdayData extends TeamMember {
   raw: string;
-  events: Array<{
-    date_start: string;
-    date_end?: string;
-    recurring_day?: number;
-    type: string;
-    flags: string[];
-    comment?: string;
-  }>;
+  events: HdayEvent[];
   etag: string | null;
 }
 
@@ -51,6 +45,7 @@ export function TeamScheduleView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset state when connection is lost
   useEffect(() => {
@@ -60,11 +55,29 @@ export function TeamScheduleView() {
     }
   }, [connectionStatus]);
 
+  // Cleanup: abort any pending requests on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const fetchTeamData = useCallback(async () => {
     if (!teamId.trim()) {
       setError("Please enter a team ID");
       return;
     }
+
+    // Abort any previous fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this fetch
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     setIsLoading(true);
     setError(null);
@@ -79,6 +92,7 @@ export function TeamScheduleView() {
           headers: {
             Accept: "application/json",
           },
+          signal: abortController.signal,
         },
       );
 
@@ -88,13 +102,25 @@ export function TeamScheduleView() {
       }
 
       const data: TeamHdayResponse = await response.json();
-      setTeamData(data);
+      
+      // Only update state if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setTeamData(data);
+      }
     } catch (err) {
+      // Don't show error if the request was aborted
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      
       console.error("Error fetching team data:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
       setTeamData(null);
     } finally {
-      setIsLoading(false);
+      // Only update loading state if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [teamId, apiUrl]);
 
@@ -142,6 +168,7 @@ export function TeamScheduleView() {
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
                   disabled={isLoading}
+                  aria-required="true"
                 />
               </Form.Group>
               <Button type="submit" variant="primary" disabled={isLoading || !teamId.trim()}>
@@ -201,7 +228,7 @@ export function TeamScheduleView() {
                     <td>{member.display_name}</td>
                     <td>
                       {member.events.length > 0 ? (
-                        <span className="badge bg-info">{member.events.length} events</span>
+                        <span className="badge text-bg-info">{member.events.length} events</span>
                       ) : (
                         <span className="text-muted small">No events</span>
                       )}

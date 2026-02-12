@@ -3,17 +3,20 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "../../src/components/TimeOffView";
+import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
-  <SettingsProvider>
-    <ToastProvider>
-      <EventStoreProvider>{children}</EventStoreProvider>
-    </ToastProvider>
-  </SettingsProvider>
+  <ToastProvider>
+    <DeveloperOptionsProvider>
+      <SettingsProvider>
+        <EventStoreProvider>{children}</EventStoreProvider>
+      </SettingsProvider>
+    </DeveloperOptionsProvider>
+  </ToastProvider>
 );
 
 describe("TimeOffView", () => {

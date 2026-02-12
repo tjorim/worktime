@@ -6,13 +6,11 @@ import Form from "react-bootstrap/Form";
 import type { ScheduleOption } from "../data/rosters";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { isValidScheduleType } from "../utils/scheduleUtils";
 import { TransferView } from "./TransferView";
 import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
-import { TeamScheduleView } from "./TeamScheduleView";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
@@ -20,7 +18,7 @@ const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
 /**
  * Valid schedule view modes. Source of truth for all available views.
  */
-const SCHEDULE_VIEWS = ["today", "week", "transfer", "team"] as const;
+const SCHEDULE_VIEWS = ["today", "week", "transfer"] as const;
 
 /**
  * Default schedule view mode when no preference is stored or when stored value is invalid.
@@ -66,7 +64,6 @@ export function ScheduleTabView({
     updateLastOtherSchedule,
     lastUsed,
   } = useSettings();
-  const { options: devOptions } = useDeveloperOptions();
   const [viewMode, setViewMode] = useState(lastUsed.scheduleView ?? DEFAULT_SCHEDULE_VIEW);
 
   // Initialize viewingScheduleType from persisted value, falling back to user's schedule
@@ -100,8 +97,6 @@ export function ScheduleTabView({
     setCurrentDate(dayjs());
   };
 
-  const isBackendConnected = devOptions.connectionStatus === "connected";
-
   return (
     <div className="schedule-tab-view py-3 d-flex flex-column gap-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
@@ -130,16 +125,6 @@ export function ScheduleTabView({
             <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
             Transfers
           </Button>
-          {isBackendConnected && (
-            <Button
-              variant={viewMode === "team" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setViewMode("team")}
-            >
-              <i className="bi bi-people me-1" aria-hidden="true"></i>
-              Team Agenda
-            </Button>
-          )}
         </ButtonGroup>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -210,8 +195,6 @@ export function ScheduleTabView({
           onChangeTeam={onChangeTeam}
         />
       )}
-
-      {viewMode === "team" && <TeamScheduleView />}
     </div>
   );
 }

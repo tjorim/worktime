@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
+import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -10,6 +12,7 @@ import { useEventForm } from "../hooks/useEventForm";
 import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
+import { TeamScheduleView } from "./TeamScheduleView";
 import { TimeOffRawView } from "./timeOff/TimeOffRawView";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
@@ -71,6 +74,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     redo,
   } = useEventStore();
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
+  const { options } = useDeveloperOptions();
   const toast = useToast();
 
   const [viewMode, setViewMode] = useState(
@@ -408,6 +412,16 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
               <span className="badge bg-warning text-dark ms-1">•</span>
             )}
           </Button>
+          {options.connectionStatus === "connected" && (
+            <Button
+              variant={viewMode === "team" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setViewMode("team")}
+            >
+              <i className="bi bi-people me-1" aria-hidden="true"></i>
+              Team
+            </Button>
+          )}
         </ButtonGroup>
         <span className="text-muted small">
           {VIEW_MODE_HELP_TEXT[viewMode] ?? VIEW_MODE_HELP_TEXT[DEFAULT_TIME_OFF_VIEW]}
@@ -457,6 +471,33 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             onApply={handleParseRawEditor}
             onReset={handleResetRawEditor}
           />
+        </div>
+      )}
+
+      {viewMode === "team" && (
+        <div role="region" aria-label="Team schedule viewer">
+          <TeamScheduleView />
+          <Accordion className="mt-3">
+            <Accordion.Item eventKey="raw">
+              <Accordion.Header>
+                <i className="bi bi-code-square me-2" aria-hidden="true"></i>
+                Raw .hday content
+                {isRawEditorDirty && (
+                  <span className="badge bg-warning text-dark ms-2">Unsaved changes</span>
+                )}
+              </Accordion.Header>
+              <Accordion.Body>
+                <TimeOffRawView
+                  rawText={rawEditorText}
+                  error={rawEditorError}
+                  isDirty={isRawEditorDirty}
+                  onChangeRawText={handleRawEditorChange}
+                  onApply={handleParseRawEditor}
+                  onReset={handleResetRawEditor}
+                />
+              </Accordion.Body>
+            </Accordion.Item>
+          </Accordion>
         </div>
       )}
 

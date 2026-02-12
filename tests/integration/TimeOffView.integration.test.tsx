@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeOffView } from "../../src/components/TimeOffView";
+import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
@@ -17,13 +18,15 @@ import {
 
 function renderWithProviders() {
   return render(
-    <SettingsProvider>
-      <ToastProvider>
-        <EventStoreProvider>
-          <TimeOffView />
-        </EventStoreProvider>
-      </ToastProvider>
-    </SettingsProvider>,
+    <ToastProvider>
+      <DeveloperOptionsProvider>
+        <SettingsProvider>
+          <EventStoreProvider>
+            <TimeOffView />
+          </EventStoreProvider>
+        </SettingsProvider>
+      </DeveloperOptionsProvider>
+    </ToastProvider>,
   );
 }
 
