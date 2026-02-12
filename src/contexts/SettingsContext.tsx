@@ -9,7 +9,7 @@ export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
 export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
-export type ScheduleViewKey = "today" | "week" | "transfer";
+export type ScheduleViewKey = "today" | "week" | "transfer" | "team";
 export type TimeOffViewKey = "table" | "stats" | "raw";
 export type TimeTrackingViewKey = "daily" | "weekly" | "config";
 
@@ -96,7 +96,7 @@ export const defaultLastUsed: LastUsed = {
 };
 
 const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking"]);
-const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
+const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer", "team"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "raw"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
 
