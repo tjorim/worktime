@@ -49,6 +49,9 @@ interface TeamHdayResponse {
  */
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
+  const apiUrl = options.apiUrl;
+  const connectionStatus = options.connectionStatus;
+  
   const [teamId, setTeamId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +60,12 @@ export function TeamScheduleView() {
 
   // Reset state when connection is lost
   useEffect(() => {
-    if (options.connectionStatus !== "connected") {
+    if (connectionStatus !== "connected") {
       setTeamInfo(null);
       setTeamHdayData(null);
       setError(null);
     }
-  }, [options.connectionStatus]);
+  }, [connectionStatus]);
 
   const fetchTeamData = useCallback(async () => {
     if (!teamId.trim()) {
@@ -77,7 +80,7 @@ export function TeamScheduleView() {
 
     try {
       // Fetch team info
-      const infoResponse = await fetch(`${options.apiUrl}/v1/team/${encodeURIComponent(teamId)}`, {
+      const infoResponse = await fetch(`${apiUrl}/v1/team/${encodeURIComponent(teamId)}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -94,7 +97,7 @@ export function TeamScheduleView() {
 
       // Fetch team .hday data
       const hdayResponse = await fetch(
-        `${options.apiUrl}/v1/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        `${apiUrl}/v1/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
         {
           method: "GET",
           headers: {
@@ -118,14 +121,14 @@ export function TeamScheduleView() {
     } finally {
       setIsLoading(false);
     }
-  }, [teamId, options.apiUrl]);
+  }, [teamId, apiUrl]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchTeamData();
   };
 
-  if (options.connectionStatus !== "connected") {
+  if (connectionStatus !== "connected") {
     return (
       <Alert variant="info" className="mt-3">
         <Alert.Heading>Backend Connection Required</Alert.Heading>
@@ -191,7 +194,7 @@ export function TeamScheduleView() {
         </Alert>
       )}
 
-      {teamInfo && (
+      {teamInfo && teamHdayData && (
         <Card className="mb-3">
           <Card.Header>
             <h5 className="mb-0">
@@ -205,54 +208,46 @@ export function TeamScheduleView() {
               <span className="text-muted small ms-2">ID: {teamInfo.team_id}</span>
             </h6>
 
-            {teamHdayData ? (
-              <Table responsive hover className="mb-0">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Display Name</th>
-                    <th>Events</th>
-                    <th>Status</th>
+            <Table responsive hover className="mb-0">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Display Name</th>
+                  <th>Events</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamHdayData.members.map((member) => (
+                  <tr key={member.username}>
+                    <td>
+                      <code>{member.username}</code>
+                    </td>
+                    <td>{member.display_name}</td>
+                    <td>
+                      {member.events.length > 0 ? (
+                        <span className="badge bg-info">{member.events.length} events</span>
+                      ) : (
+                        <span className="text-muted small">No events</span>
+                      )}
+                    </td>
+                    <td>
+                      {member.etag ? (
+                        <span className="text-success small">
+                          <i className="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+                          .hday file
+                        </span>
+                      ) : (
+                        <span className="text-muted small">
+                          <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
+                          No .hday file
+                        </span>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {teamHdayData.members.map((member) => (
-                    <tr key={member.username}>
-                      <td>
-                        <code>{member.username}</code>
-                      </td>
-                      <td>{member.display_name}</td>
-                      <td>
-                        {member.events.length > 0 ? (
-                          <span className="badge bg-info">{member.events.length} events</span>
-                        ) : (
-                          <span className="text-muted small">No events</span>
-                        )}
-                      </td>
-                      <td>
-                        {member.etag ? (
-                          <span className="text-success small">
-                            <i className="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
-                            .hday file
-                          </span>
-                        ) : (
-                          <span className="text-muted small">
-                            <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
-                            No .hday file
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : (
-              <div className="text-center py-3">
-                <Spinner animation="border" role="status">
-                  <span className="visually-hidden">Loading .hday data...</span>
-                </Spinner>
-              </div>
-            )}
+                ))}
+              </tbody>
+            </Table>
           </Card.Body>
         </Card>
       )}
