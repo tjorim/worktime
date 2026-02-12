@@ -114,7 +114,7 @@ def get_team_hday(
         
         # Read all .hday files (without parsing) and time it
         with time_operation("file_read", timings):
-            member_data = read_team_hday_files(team_id, members, parse_events=False)
+            member_data = read_team_hday_files(members, parse_events=False)
         
         # If format=parsed, parse the raw content for each member
         if format == "parsed":

@@ -172,7 +172,7 @@ def benchmark_team_bulk(team_id: str, iterations: int) -> dict:
         start = time.perf_counter()
         _ = team_service.read_team_info(team_id)
         hday_data_raw = team_service.read_team_hday_files(
-            team_id, members, parse_events=False
+            members, parse_events=False
         )
         elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
         raw_timings.append(elapsed)
@@ -181,7 +181,7 @@ def benchmark_team_bulk(team_id: str, iterations: int) -> dict:
         start = time.perf_counter()
         _ = team_service.read_team_info(team_id)
         hday_data_parsed = team_service.read_team_hday_files(
-            team_id, members, parse_events=True
+            members, parse_events=True
         )
         elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
         parsed_timings.append(elapsed)

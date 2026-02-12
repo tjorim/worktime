@@ -338,7 +338,7 @@ class TestReadTeamHdayFiles:
             "2025/02/20 # Conference\n", encoding="utf-8"
         )
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         assert len(member_data) == 2
         assert member_data[0].username == "jdoe"
@@ -366,7 +366,7 @@ class TestReadTeamHdayFiles:
             "2025/01/15 # Vacation\n", encoding="utf-8"
         )
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         assert len(member_data) == 2
         # First member has data
@@ -391,7 +391,7 @@ class TestReadTeamHdayFiles:
             TeamMember(username="asmith", display_name="Alice Smith"),
         ]
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         assert len(member_data) == 2
         # Both members have empty data
@@ -412,7 +412,7 @@ class TestReadTeamHdayFiles:
         # Create empty .hday file in share root
         (share_dir / "jdoe.hday").write_text("", encoding="utf-8")
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         assert len(member_data) == 1
         assert member_data[0].username == "jdoe"
@@ -436,7 +436,7 @@ d1 # Every Monday
 """
         (share_dir / "jdoe.hday").write_text(hday_content, encoding="utf-8")
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         assert len(member_data) == 1
         assert member_data[0].username == "jdoe"
@@ -471,7 +471,7 @@ d1 # Every Monday
             TeamMember(username="../../secrets", display_name="Hacker2"),
         ]
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         # Should return empty data for invalid usernames
         assert len(member_data) == 2
@@ -492,7 +492,7 @@ d1 # Every Monday
             TeamMember(username="user\\file", display_name="Invalid User 2"),
         ]
 
-        member_data = read_team_hday_files("team1", members)
+        member_data = read_team_hday_files(members)
 
         # Should return empty data for invalid usernames
         assert len(member_data) == 2

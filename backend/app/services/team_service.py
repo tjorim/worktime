@@ -482,7 +482,6 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 
 def read_team_hday_files(
-    team_id: str,
     members: List[TeamMember],
     parse_events: bool = True
 ) -> List[TeamMemberHdayData]:
@@ -495,7 +494,6 @@ def read_team_hday_files(
     even if individual files are missing.
     
     Args:
-        team_id: The team identifier (retained for API compatibility; not currently used)
         members: List of team members
         parse_events: Whether to parse .hday content into events for the returned data.
                      When False, returned TeamMemberHdayData objects will have events=[]

@@ -322,7 +322,7 @@ class TestTeamServiceCacheIntegration:
         (team_dir / "asmith.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
         
         # First read - populates cache
-        member_data1 = read_team_hday_files(team_id, members)
+        member_data1 = read_team_hday_files(members)
         assert len(member_data1) == 2
         
         # Verify cache has entries for both users
@@ -337,7 +337,7 @@ class TestTeamServiceCacheIntegration:
         (team_dir / "asmith.hday").write_text("2025/04/15 # Training", encoding="utf-8")
         
         # Second read - should return cached data
-        member_data2 = read_team_hday_files(team_id, members)
+        member_data2 = read_team_hday_files(members)
         
         # Should have old data from cache
         jdoe_data = next(m for m in member_data2 if m.username == "jdoe")
@@ -357,7 +357,7 @@ class TestTeamServiceCacheIntegration:
         (team_dir / "jdoe.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         
         # Read with parse_events=False
-        member_data = read_team_hday_files(team_id, members, parse_events=False)
+        member_data = read_team_hday_files(members, parse_events=False)
         
         # Response should have empty events
         assert len(member_data[0].events) == 0
