@@ -178,6 +178,10 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
             if len(parts) == 2:
                 username = parts[0].strip()
                 display_name = parts[1].strip()
+                # Skip entries with empty usernames
+                if not username:
+                    logger.warning(f"Skipping entry with empty username in team members file")
+                    continue
                 members.append({
                     "username": username,
                     "display_name": display_name

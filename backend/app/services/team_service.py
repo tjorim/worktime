@@ -142,9 +142,12 @@ def _parse_config_file(config_path: Path) -> str:
     except TeamNotFoundError:
         # Re-raise our own exceptions
         raise
-    except Exception:
-        logger.exception("Error reading team config")
-        raise
+    except (UnicodeDecodeError, OSError) as e:
+        logger.exception("Error reading team config file")
+        raise TeamNotFoundError("Cannot read team configuration") from e
+    except Exception as e:
+        logger.exception("Unexpected error reading team config")
+        raise TeamNotFoundError("Cannot read team configuration") from e
 
 
 def _parse_members_file(people_path: Path) -> List[TeamMember]:
@@ -494,8 +497,11 @@ def read_team_hday_files(
     Args:
         team_id: The team identifier (retained for API compatibility; not currently used)
         members: List of team members
-        parse_events: Whether to parse .hday content into events. When False, skip parsing
-                     and set events=[]. When True, execute existing parsing logic.
+        parse_events: Whether to parse .hday content into events for the returned data.
+                     When False, returned TeamMemberHdayData objects will have events=[]
+                     (no per-call event parsing), but the implementation may still parse
+                     internally for caching. When True, execute existing parsing logic
+                     and populate events on the returned objects.
         
     Returns:
         List of TeamMemberHdayData objects with .hday data (parsed or unparsed)

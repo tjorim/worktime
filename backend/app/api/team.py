@@ -15,7 +15,6 @@ from app.models.team import TeamHdayResponse, TeamInfoResponse
 from app.services.hday_service import ShareNotAccessibleError
 from app.services.team_service import (
     TeamNotFoundError,
-    get_team_path,
     read_team_hday_files,
     read_team_info,
     read_team_members,
