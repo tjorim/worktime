@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
@@ -13,7 +12,6 @@ import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcut
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
-import { TimeOffRawView } from "./timeOff/TimeOffRawView";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -114,9 +112,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
-  // Raw .hday editor state
-  const [rawEditorText, setRawEditorText] = useState(rawText);
-  const [rawEditorError, setRawEditorError] = useState("");
+  // Raw .hday editor state (kept in sync but not rendered in UI)
+  const [_rawEditorText, setRawEditorText] = useState(rawText);
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
 
   // Delete confirmation
@@ -279,7 +276,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       importHday(text);
       setSelectedIndices(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
-      setRawEditorError(""); // Clear any raw editor errors
       toast.showSuccess(`Imported ${file.name}`, "bi-download");
     } catch (error) {
       console.error("Failed to import .hday file:", error);
@@ -313,32 +309,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     toast.showSuccess("Exported timeoff.hday", "bi-upload");
   }, [exportHday, toast]);
-
-  const handleRawEditorChange = useCallback((value: string) => {
-    setRawEditorText(value);
-    setIsRawEditorDirty(true);
-    setRawEditorError("");
-  }, []);
-
-  const handleParseRawEditor = useCallback(() => {
-    try {
-      importHday(rawEditorText);
-      setSelectedIndices(new Set());
-      setIsRawEditorDirty(false);
-      setRawEditorError("");
-      toast.showSuccess("Raw .hday content applied");
-    } catch (error) {
-      console.error("Failed to parse raw .hday content:", error);
-      setRawEditorError("Failed to parse raw .hday content. Please check the format.");
-      toast.showError("Failed to parse raw .hday content.");
-    }
-  }, [importHday, rawEditorText, toast]);
-
-  const handleResetRawEditor = useCallback(() => {
-    setRawEditorText(rawText);
-    setIsRawEditorDirty(false);
-    setRawEditorError("");
-  }, [rawText]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -401,17 +371,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
             Statistics
           </Button>
-          <Button
-            variant={viewMode === "raw" ? "primary" : "outline-primary"}
-            size="sm"
-            onClick={() => setViewMode("raw")}
-          >
-            <i className="bi bi-code-slash me-1" aria-hidden="true"></i>
-            Raw .hday
-            {isRawEditorDirty && viewMode !== "raw" && (
-              <span className="badge bg-warning text-dark ms-1">•</span>
-            )}
-          </Button>
           {options.connectionStatus === "connected" && (
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
@@ -461,43 +420,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         </div>
       )}
 
-      {viewMode === "raw" && (
-        <div role="region" aria-label="Raw .hday content editor">
-          <TimeOffRawView
-            rawText={rawEditorText}
-            error={rawEditorError}
-            isDirty={isRawEditorDirty}
-            onChangeRawText={handleRawEditorChange}
-            onApply={handleParseRawEditor}
-            onReset={handleResetRawEditor}
-          />
-        </div>
-      )}
-
       {viewMode === "team" && (
         <div role="region" aria-label="Team schedule viewer">
           <TeamScheduleView />
-          <Accordion className="mt-3">
-            <Accordion.Item eventKey="raw">
-              <Accordion.Header>
-                <i className="bi bi-code-square me-2" aria-hidden="true"></i>
-                Raw .hday content
-                {isRawEditorDirty && (
-                  <span className="badge bg-warning text-dark ms-2">Unsaved changes</span>
-                )}
-              </Accordion.Header>
-              <Accordion.Body>
-                <TimeOffRawView
-                  rawText={rawEditorText}
-                  error={rawEditorError}
-                  isDirty={isRawEditorDirty}
-                  onChangeRawText={handleRawEditorChange}
-                  onApply={handleParseRawEditor}
-                  onReset={handleResetRawEditor}
-                />
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
         </div>
       )}
 

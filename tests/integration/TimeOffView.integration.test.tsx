@@ -36,7 +36,7 @@ describe("TimeOffView Integration Tests", () => {
   });
 
   describe("View Switching", () => {
-    it("switches between table, statistics, and raw views", async () => {
+    it("switches between table and statistics views", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
@@ -45,11 +45,6 @@ describe("TimeOffView Integration Tests", () => {
 
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
       expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      expect(
-        screen.getByRole("region", { name: /Raw \.hday content editor/i }),
-      ).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: /^Table$/i }));
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
@@ -75,7 +70,7 @@ describe("TimeOffView Integration Tests", () => {
             activeTab: "timeoff",
             scheduleView: "today",
             otherSchedule: null,
-            timeOffView: "raw",
+            timeOffView: "stats",
             timeTrackingView: "daily",
             otherTeam: null,
           },
@@ -84,30 +79,21 @@ describe("TimeOffView Integration Tests", () => {
 
       renderWithProviders();
 
-      expect(
-        screen.getByRole("region", { name: /Raw \.hday content editor/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
     });
   });
 
   describe("Import and Display Workflow", () => {
-    it("imports simple .hday content via raw editor and renders events correctly", async () => {
+    it("imports simple .hday content via import and renders events correctly", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
-      // Switch to raw view
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
+      // Import content via file import
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
-      // Import content via raw editor
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, SIMPLE_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
-
-      // Switch to table view to see events
-      await user.click(screen.getByRole("button", { name: /^Table$/i }));
-
-      // Verify all events are rendered
+      // Verify all events are rendered in table view
       expect(screen.getByText("Vacation day")).toBeInTheDocument();
       expect(screen.getByText("Week vacation")).toBeInTheDocument();
       expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
@@ -143,15 +129,10 @@ describe("TimeOffView Integration Tests", () => {
       const user = userEvent.setup();
       renderWithProviders();
 
-      // Switch to raw view and import
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, MULTI_TYPE_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
-
-      // Switch to table view
-      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+      // Import via file
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([MULTI_TYPE_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // Verify different event types are present (use getAllByText since titles can appear multiple times)
       expect(screen.getAllByText("Regular vacation").length).toBeGreaterThan(0);
@@ -171,14 +152,13 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Import weekly events via raw editor
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, WEEKLY_EVENTS_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+      const user = userEvent.setup();
+      renderWithProviders();
 
-      // Switch to table view
-      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+      // Import weekly events
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([WEEKLY_EVENTS_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // Verify weekly events show pattern instead of dates
       expect(screen.getByText("Every Mon")).toBeInTheDocument();
@@ -190,14 +170,9 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Import events with flags
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, EVENT_FLAGS_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
-
-      // Switch to table view
-      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([EVENT_FLAGS_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // Verify events are displayed
       expect(screen.getByText("Half day AM")).toBeInTheDocument();
@@ -365,11 +340,9 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Import complex content
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, COMPLEX_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([COMPLEX_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // Verify localStorage contains all event types in correct format
       const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
@@ -483,14 +456,9 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Import events with various dates
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, SIMPLE_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
-
-      // Switch to table view to verify all events are present
-      await user.click(screen.getByRole("button", { name: /^Table$/i }));
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // All three events should be visible (no date filtering in table view)
       expect(screen.getByText("Vacation day")).toBeInTheDocument();
@@ -503,11 +471,9 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Import multi-type events
-      await user.click(screen.getByRole("button", { name: /Raw \.hday/i }));
-      const textarea = screen.getByRole("textbox", { name: /Raw \.hday content/i });
-      await user.clear(textarea);
-      await user.type(textarea, MULTI_TYPE_HDAY);
-      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([MULTI_TYPE_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
 
       // Switch to statistics view
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
