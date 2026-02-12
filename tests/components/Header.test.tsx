@@ -7,12 +7,15 @@ import { Header } from "../../src/components/Header";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>
       <EventStoreProvider>
-        <ToastProvider>{ui}</ToastProvider>
+        <DeveloperOptionsProvider>
+          <ToastProvider>{ui}</ToastProvider>
+        </DeveloperOptionsProvider>
       </EventStoreProvider>
     </SettingsProvider>,
   );
