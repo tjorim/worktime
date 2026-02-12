@@ -483,8 +483,7 @@ export function SettingsPanel({
               onClick={handleVersionClick}
               onKeyDown={handleVersionKeyDown}
               style={{ cursor: "pointer", userSelect: "none" }}
-              title="Triple-click to toggle developer mode"
-              aria-label={`Worktime version ${CONFIG.VERSION}. Triple-click to toggle developer mode.`}
+              aria-label={`Worktime version ${CONFIG.VERSION}`}
             >
               Worktime v{CONFIG.VERSION}
             </button>

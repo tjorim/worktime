@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -62,9 +62,18 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     }));
   }, [isDevMode, setOptions]);
 
+  // Reset connectionStatus to disconnected on mount to avoid stale status
+  useEffect(() => {
+    setOptions((prev) => ({
+      ...prev,
+      connectionStatus: "disconnected",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount
+
   // Auto-connect on mount if enabled
   useEffect(() => {
-    if (options.enabled && options.autoConnect && options.connectionStatus === "disconnected") {
+    if (options.enabled && options.autoConnect) {
       testConnection();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,18 +164,21 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     }));
   }, [setOptions]);
 
+  const contextValue = useMemo(
+    () => ({
+      options,
+      isDevMode,
+      updateApiUrl,
+      updateAutoConnect,
+      toggleDevMode,
+      testConnection,
+      disconnect,
+    }),
+    [options, isDevMode, updateApiUrl, updateAutoConnect, toggleDevMode, testConnection, disconnect]
+  );
+
   return (
-    <DeveloperOptionsContext.Provider
-      value={{
-        options,
-        isDevMode,
-        updateApiUrl,
-        updateAutoConnect,
-        toggleDevMode,
-        testConnection,
-        disconnect,
-      }}
-    >
+    <DeveloperOptionsContext.Provider value={contextValue}>
       {children}
     </DeveloperOptionsContext.Provider>
   );

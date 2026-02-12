@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -14,7 +14,7 @@ interface DevOptionsPanelProps {
 
 /**
  * Developer options panel for managing backend API connectivity.
- * Hidden by default, accessed via keyboard shortcut or URL parameter.
+ * Hidden by default, revealed only by triple-clicking the version button in Settings.
  *
  * @param show - Whether the panel is visible
  * @param onHide - Callback to hide the panel
@@ -30,6 +30,13 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
+
+  // Sync localApiUrl with options.apiUrl when panel opens or options change
+  useEffect(() => {
+    if (show) {
+      setLocalApiUrl(options.apiUrl);
+    }
+  }, [options.apiUrl, show]);
 
   const handleApiUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalApiUrl(e.target.value);
