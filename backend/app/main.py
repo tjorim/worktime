@@ -4,6 +4,7 @@ This FastAPI application serves as a bridge between the Worktime web frontend
 and .hday files stored on a shared network drive.
 """
 
+import asyncio
 import logging
 import os
 import time
@@ -27,6 +28,28 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+async def _warm_cache_async():
+    """Run cache warming in a background task without blocking startup.
+    
+    This function wraps the synchronous warm_cache() call to run it
+    asynchronously using asyncio.to_thread(), allowing the server to
+    start accepting requests immediately while cache warming proceeds
+    in the background.
+    """
+    if not settings.CACHE_ENABLED:
+        return
+        
+    try:
+        start_time = time.perf_counter()
+        # Run the synchronous warm_cache function in a thread pool
+        await asyncio.to_thread(warm_cache)
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(f"✓ Background cache warming completed in {elapsed_ms:.3f}ms")
+    except Exception as e:
+        logger.error(f"⚠️  Background cache warming failed: {e}")
+        logger.error("   Continuing with cold cache - first requests will be slower")
 
 
 @asynccontextmanager
@@ -70,16 +93,11 @@ async def lifespan(app: FastAPI):
             f"   The health endpoint will report current status."
         )
     
-    # Warm cache if enabled
+    # Warm cache in background if enabled
     if settings.CACHE_ENABLED:
-        try:
-            start_time = time.perf_counter()
-            warm_cache()
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.info(f"✓ Cache warming completed in {elapsed_ms:.3f}ms")
-        except Exception as e:
-            logger.error(f"⚠️  Cache warming failed: {e}")
-            logger.error("   Continuing with cold cache - first requests will be slower")
+        # Start cache warming in background - don't block startup
+        asyncio.create_task(_warm_cache_async())
+        logger.info("✓ Cache warming started in background")
     
     logger.info("=" * 60)
     logger.info("Startup complete - Server ready to accept connections")
