@@ -217,12 +217,12 @@ class TestTeamServiceCacheIntegration:
     def test_read_team_info_fresh_cache_hit(self, share_dir):
         """Test that fresh cache entry is returned without file I/O."""
         team_id = "team1"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        # Create config and people files
-        (team_dir / "config").write_text("Engineering Team", encoding="utf-8")
-        (team_dir / "people").write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
+        # Create config and people files in config/ subdirectory
+        (config_dir / f"{team_id}.conf").write_text("groupname=Engineering Team", encoding="utf-8")
+        (config_dir / f"{team_id}.people").write_text("jdoe,John Doe\nasmith,Alice Smith", encoding="utf-8")
         
         # First read - populates cache
         name1, members1 = read_team_info(team_id)
@@ -237,7 +237,7 @@ class TestTeamServiceCacheIntegration:
         assert len(cached_entry.members) == 2
         
         # Modify files after caching
-        (team_dir / "config").write_text("New Team Name", encoding="utf-8")
+        (config_dir / f"{team_id}.conf").write_text("groupname=New Team Name", encoding="utf-8")
         
         # Second read - should return cached data
         name2, members2 = read_team_info(team_id)
@@ -247,11 +247,11 @@ class TestTeamServiceCacheIntegration:
     def test_read_team_info_stale_cache_mtime_unchanged(self, share_dir):
         """Test that stale entry with unchanged mtime refreshes TTL."""
         team_id = "team1"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        (team_dir / "config").write_text("Engineering Team", encoding="utf-8")
-        (team_dir / "people").write_text("jdoe,John Doe", encoding="utf-8")
+        (config_dir / f"{team_id}.conf").write_text("groupname=Engineering Team", encoding="utf-8")
+        (config_dir / f"{team_id}.people").write_text("jdoe,John Doe", encoding="utf-8")
         
         # First read
         name1, members1 = read_team_info(team_id)
@@ -277,11 +277,11 @@ class TestTeamServiceCacheIntegration:
     def test_read_team_info_stale_cache_mtime_changed(self, share_dir):
         """Test that stale entry with changed mtime re-reads files."""
         team_id = "team1"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        (team_dir / "config").write_text("Engineering Team", encoding="utf-8")
-        (team_dir / "people").write_text("jdoe,John Doe", encoding="utf-8")
+        (config_dir / f"{team_id}.conf").write_text("groupname=Engineering Team", encoding="utf-8")
+        (config_dir / f"{team_id}.people").write_text("jdoe,John Doe", encoding="utf-8")
         
         # First read
         name1, members1 = read_team_info(team_id)
@@ -294,7 +294,7 @@ class TestTeamServiceCacheIntegration:
             
             # Modify config file
             time.sleep(0.1)  # Ensure mtime changes
-            (team_dir / "config").write_text("New Team Name", encoding="utf-8")
+            (config_dir / f"{team_id}.conf").write_text("groupname=New Team Name", encoding="utf-8")
             
             # Read again - should detect mtime change
             name2, members2 = read_team_info(team_id)
@@ -308,21 +308,17 @@ class TestTeamServiceCacheIntegration:
     
     def test_read_team_hday_files_uses_individual_cache(self, share_dir):
         """Test that read_team_hday_files leverages individual hday cache entries."""
-        team_id = "team1"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
-        
         members = [
             TeamMember(username="jdoe", display_name="John Doe"),
             TeamMember(username="asmith", display_name="Alice Smith"),
         ]
         
-        # Create hday files
-        (team_dir / "jdoe.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
-        (team_dir / "asmith.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
+        # Create hday files in share root
+        (share_dir / "jdoe.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
+        (share_dir / "asmith.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
         
         # First read - populates cache
-        member_data1 = read_team_hday_files(team_id, members)
+        member_data1 = read_team_hday_files(members)
         assert len(member_data1) == 2
         
         # Verify cache has entries for both users
@@ -333,11 +329,11 @@ class TestTeamServiceCacheIntegration:
         assert asmith_entry is not None
         
         # Modify files
-        (team_dir / "jdoe.hday").write_text("2025/03/10 # Sick day", encoding="utf-8")
-        (team_dir / "asmith.hday").write_text("2025/04/15 # Training", encoding="utf-8")
+        (share_dir / "jdoe.hday").write_text("2025/03/10 # Sick day", encoding="utf-8")
+        (share_dir / "asmith.hday").write_text("2025/04/15 # Training", encoding="utf-8")
         
         # Second read - should return cached data
-        member_data2 = read_team_hday_files(team_id, members)
+        member_data2 = read_team_hday_files(members)
         
         # Should have old data from cache
         jdoe_data = next(m for m in member_data2 if m.username == "jdoe")
@@ -348,16 +344,12 @@ class TestTeamServiceCacheIntegration:
     
     def test_read_team_hday_files_respects_parse_events_flag(self, share_dir):
         """Test that parse_events flag is respected but cache still has parsed events."""
-        team_id = "team1"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
-        
         members = [TeamMember(username="jdoe", display_name="John Doe")]
         
-        (team_dir / "jdoe.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
+        (share_dir / "jdoe.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         
         # Read with parse_events=False
-        member_data = read_team_hday_files(team_id, members, parse_events=False)
+        member_data = read_team_hday_files(members, parse_events=False)
         
         # Response should have empty events
         assert len(member_data[0].events) == 0

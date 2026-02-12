@@ -44,17 +44,17 @@ def test_team_members(share_dir):
 
 @pytest.fixture
 def test_team(share_dir, test_team_members):
-    """Create a test team directory with config and people files."""
+    """Create a test team configuration in config subdirectory."""
     team_id = "team1"
-    team_dir = share_dir / team_id
-    team_dir.mkdir()
+    config_dir = share_dir / "config"
+    config_dir.mkdir()
     
-    # Create config file
-    config_path = team_dir / "config"
-    config_path.write_text("Test Team", encoding="utf-8")
+    # Create config file with key=value format
+    config_path = config_dir / f"{team_id}.conf"
+    config_path.write_text("groupname=Test Team", encoding="utf-8")
     
     # Create people file with two members
-    people_path = team_dir / "people"
+    people_path = config_dir / f"{team_id}.people"
     people_path.write_text(
         "alice, Alice Smith\nbob, Bob Jones\n",
         encoding="utf-8"
@@ -81,12 +81,12 @@ class TestDiscoverBenchmarkTargets:
     
     def test_discover_no_hday_files(self, share_dir):
         """Test discovery when no .hday files exist."""
-        # Create team directory without .hday files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        config_path = team_dir / "config"
-        config_path.write_text("Test Team", encoding="utf-8")
-        people_path = team_dir / "people"
+        # Create team configuration without .hday files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        config_path = config_dir / "team1.conf"
+        config_path.write_text("groupname=Test Team", encoding="utf-8")
+        people_path = config_dir / "team1.people"
         people_path.write_text("alice, Alice\n", encoding="utf-8")
         
         # No .hday files exist, so discovery should fail
@@ -99,10 +99,11 @@ class TestDiscoverBenchmarkTargets:
             benchmark_service.discover_benchmark_targets()
     
     def test_discover_team_missing_config(self, share_dir, test_user_file):
-        """Test discovery when team directory is missing config file."""
-        team_dir = share_dir / "incomplete_team"
-        team_dir.mkdir()
-        people_path = team_dir / "people"
+        """Test discovery when team is missing config file."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        # Create only people file, no config file
+        people_path = config_dir / "incomplete_team.people"
         people_path.write_text("user1, User One\n", encoding="utf-8")
         
         # Should not find the incomplete team
@@ -110,11 +111,12 @@ class TestDiscoverBenchmarkTargets:
             benchmark_service.discover_benchmark_targets()
     
     def test_discover_team_missing_people(self, share_dir, test_user_file):
-        """Test discovery when team directory is missing people file."""
-        team_dir = share_dir / "incomplete_team"
-        team_dir.mkdir()
-        config_path = team_dir / "config"
-        config_path.write_text("Incomplete Team", encoding="utf-8")
+        """Test discovery when team is missing people file."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        # Create only config file, no people file
+        config_path = config_dir / "incomplete_team.conf"
+        config_path.write_text("groupname=Incomplete Team", encoding="utf-8")
         
         # Should not find the incomplete team
         with pytest.raises(FileNotFoundError, match="No suitable test data found"):
@@ -224,13 +226,13 @@ class TestBenchmarkTeamBulk:
     def test_benchmark_team_empty_members(self, share_dir):
         """Test team bulk benchmark with team that has no members."""
         team_id = "empty_team"
-        team_dir = share_dir / team_id
-        team_dir.mkdir()
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        config_path = team_dir / "config"
-        config_path.write_text("Empty Team", encoding="utf-8")
+        config_path = config_dir / f"{team_id}.conf"
+        config_path.write_text("groupname=Empty Team", encoding="utf-8")
         
-        people_path = team_dir / "people"
+        people_path = config_dir / f"{team_id}.people"
         people_path.write_text("", encoding="utf-8")  # Empty file
         
         iterations = 5

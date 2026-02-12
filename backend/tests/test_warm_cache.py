@@ -12,6 +12,7 @@ from app.cache.warm_cache import (
     _cache_team_config,
     _discover_hday_files,
     _discover_team_directories,
+    _discover_team_files,
     _is_team_directory,
     warm_cache,
 )
@@ -28,19 +29,19 @@ def share_dir(tmp_path, monkeypatch):
 
 
 class TestIsTeamDirectory:
-    """Tests for _is_team_directory helper."""
+    """Tests for _is_team_directory helper (deprecated)."""
 
     def test_valid_team_directory(self, share_dir):
-        """Test that directory with config and people is recognized as team."""
+        """Test that function always returns False (deprecated)."""
         team_dir = share_dir / "team1"
         team_dir.mkdir()
         (team_dir / "config").write_text("Team 1", encoding="utf-8")
         (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
         
-        assert _is_team_directory(team_dir)
+        assert not _is_team_directory(team_dir)
     
     def test_directory_without_config(self, share_dir):
-        """Test that directory without config is not a team directory."""
+        """Test that function always returns False (deprecated)."""
         team_dir = share_dir / "team1"
         team_dir.mkdir()
         (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
@@ -48,7 +49,7 @@ class TestIsTeamDirectory:
         assert not _is_team_directory(team_dir)
     
     def test_directory_without_people(self, share_dir):
-        """Test that directory without people is not a team directory."""
+        """Test that function always returns False (deprecated)."""
         team_dir = share_dir / "team1"
         team_dir.mkdir()
         (team_dir / "config").write_text("Team 1", encoding="utf-8")
@@ -56,7 +57,7 @@ class TestIsTeamDirectory:
         assert not _is_team_directory(team_dir)
     
     def test_not_a_directory(self, share_dir):
-        """Test that a file is not a team directory."""
+        """Test that function always returns False (deprecated)."""
         file_path = share_dir / "notadir.txt"
         file_path.write_text("content", encoding="utf-8")
         
@@ -64,10 +65,10 @@ class TestIsTeamDirectory:
 
 
 class TestDiscoverTeamDirectories:
-    """Tests for _discover_team_directories function."""
+    """Tests for _discover_team_directories function (deprecated)."""
 
     def test_discover_single_team(self, share_dir):
-        """Test discovering a single team directory."""
+        """Test that function always returns empty list (deprecated)."""
         team_dir = share_dir / "team1"
         team_dir.mkdir()
         (team_dir / "config").write_text("Team 1", encoding="utf-8")
@@ -75,11 +76,10 @@ class TestDiscoverTeamDirectories:
         
         teams = _discover_team_directories(share_dir)
         
-        assert len(teams) == 1
-        assert teams[0].name == "team1"
+        assert len(teams) == 0
     
     def test_discover_multiple_teams(self, share_dir):
-        """Test discovering multiple team directories."""
+        """Test that function always returns empty list (deprecated)."""
         for i in range(3):
             team_dir = share_dir / f"team{i}"
             team_dir.mkdir()
@@ -88,12 +88,10 @@ class TestDiscoverTeamDirectories:
         
         teams = _discover_team_directories(share_dir)
         
-        assert len(teams) == 3
-        team_names = {t.name for t in teams}
-        assert team_names == {"team0", "team1", "team2"}
+        assert len(teams) == 0
     
     def test_ignores_non_team_directories(self, share_dir):
-        """Test that non-team directories are ignored."""
+        """Test that function always returns empty list (deprecated)."""
         # Create team directory
         team_dir = share_dir / "team1"
         team_dir.mkdir()
@@ -107,17 +105,128 @@ class TestDiscoverTeamDirectories:
         
         teams = _discover_team_directories(share_dir)
         
-        assert len(teams) == 1
-        assert teams[0].name == "team1"
+        assert len(teams) == 0
     
     def test_handles_permission_error(self, share_dir, caplog):
-        """Test graceful handling of permission errors."""
+        """Test that function always returns empty list (deprecated)."""
         with patch.object(Path, "iterdir", side_effect=PermissionError("Access denied")):
             with caplog.at_level(logging.WARNING):
                 teams = _discover_team_directories(share_dir)
         
         assert len(teams) == 0
-        assert "Could not list share directory" in caplog.text
+
+
+class TestDiscoverTeamFiles:
+    """Tests for _discover_team_files function."""
+
+    def test_discover_single_team(self, share_dir):
+        """Test discovering a single team from config directory."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "team1.conf").write_text("groupname=Team 1\n", encoding="utf-8")
+        (config_dir / "team1.people").write_text("alice,Alice\n", encoding="utf-8")
+        
+        teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 1
+        team_id, config_path, people_path = teams[0]
+        assert team_id == "team1"
+        assert config_path.name == "team1.conf"
+        assert people_path.name == "team1.people"
+    
+    def test_discover_multiple_teams(self, share_dir):
+        """Test discovering multiple teams from config directory."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        for i in range(3):
+            (config_dir / f"team{i}.conf").write_text(f"groupname=Team {i}\n", encoding="utf-8")
+            (config_dir / f"team{i}.people").write_text(f"user{i},User {i}\n", encoding="utf-8")
+        
+        teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 3
+        team_ids = {team_id for team_id, _, _ in teams}
+        assert team_ids == {"team0", "team1", "team2"}
+    
+    def test_ignores_conf_without_people(self, share_dir, caplog):
+        """Test that .conf files without corresponding .people files are ignored."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        # Valid team
+        (config_dir / "team1.conf").write_text("groupname=Team 1\n", encoding="utf-8")
+        (config_dir / "team1.people").write_text("alice,Alice\n", encoding="utf-8")
+        
+        # Incomplete team (missing .people file)
+        (config_dir / "team2.conf").write_text("groupname=Team 2\n", encoding="utf-8")
+        
+        with caplog.at_level(logging.WARNING):
+            teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 1
+        assert teams[0][0] == "team1"
+        assert "Found team2.conf but missing corresponding team2.people" in caplog.text
+    
+    def test_ignores_people_without_conf(self, share_dir):
+        """Test that .people files without corresponding .conf files are ignored."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        # Valid team
+        (config_dir / "team1.conf").write_text("groupname=Team 1\n", encoding="utf-8")
+        (config_dir / "team1.people").write_text("alice,Alice\n", encoding="utf-8")
+        
+        # Orphaned .people file
+        (config_dir / "team2.people").write_text("bob,Bob\n", encoding="utf-8")
+        
+        teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 1
+        assert teams[0][0] == "team1"
+    
+    def test_no_config_directory(self, share_dir, caplog):
+        """Test handling when config directory doesn't exist."""
+        with caplog.at_level(logging.INFO):
+            teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 0
+        assert "Config directory does not exist or is not a directory" in caplog.text
+    
+    def test_config_is_file_not_directory(self, share_dir, caplog):
+        """Test handling when config path is a file, not a directory."""
+        config_file = share_dir / "config"
+        config_file.write_text("not a directory", encoding="utf-8")
+        
+        with caplog.at_level(logging.INFO):
+            teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 0
+        assert "Config directory does not exist or is not a directory" in caplog.text
+    
+    def test_handles_permission_error(self, share_dir, caplog):
+        """Test graceful handling of permission errors."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        with patch.object(Path, "glob", side_effect=PermissionError("Access denied")):
+            with caplog.at_level(logging.WARNING):
+                teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 0
+        assert "Could not list config directory during cache warming" in caplog.text
+    
+    def test_team_id_with_hyphens(self, share_dir):
+        """Test team IDs with hyphens (e.g., dl-example-group)."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "dl-example-group.conf").write_text("groupname=Example Group\n", encoding="utf-8")
+        (config_dir / "dl-example-group.people").write_text("alice,Alice\n", encoding="utf-8")
+        
+        teams = _discover_team_files(share_dir)
+        
+        assert len(teams) == 1
+        assert teams[0][0] == "dl-example-group"
 
 
 class TestDiscoverHdayFiles:
@@ -134,36 +243,45 @@ class TestDiscoverHdayFiles:
         usernames = {username for _, username in files}
         assert usernames == {"alice", "bob"}
     
-    def test_discover_team_hday_files(self, share_dir):
-        """Test discovering .hday files within team directories."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        (team_dir / "people").write_text("charlie,Charlie\n", encoding="utf-8")
-        (team_dir / "charlie.hday").write_text("2025/03/10 # Holiday", encoding="utf-8")
-        
-        files = _discover_hday_files(share_dir, [team_dir])
-        
-        assert len(files) == 1
-        assert files[0][1] == "charlie"
-    
-    def test_discover_mixed_hday_files(self, share_dir):
-        """Test discovering .hday files from both top-level and teams."""
-        # Top-level files
+    def test_discover_only_root_level_files(self, share_dir):
+        """Test that .hday files are only discovered in share root."""
+        # Root level file
         (share_dir / "alice.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         
-        # Team files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        (team_dir / "people").write_text("bob,Bob\n", encoding="utf-8")
-        (team_dir / "bob.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
+        # Create config subdirectory with team files (not for .hday discovery)
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "team1.conf").write_text("groupname=Team 1", encoding="utf-8")
+        (config_dir / "team1.people").write_text("bob,Bob\n", encoding="utf-8")
         
-        files = _discover_hday_files(share_dir, [team_dir])
+        # Create another subdirectory with .hday file (should be ignored)
+        other_dir = share_dir / "team1"
+        other_dir.mkdir()
+        (other_dir / "bob.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
+        
+        files = _discover_hday_files(share_dir, [])
+        
+        # Only root level file should be found
+        assert len(files) == 1
+        assert files[0][1] == "alice"
+    
+    def test_discover_with_config_dir(self, share_dir):
+        """Test discovering .hday files with config directory present."""
+        # Top-level files
+        (share_dir / "alice.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
+        (share_dir / "charlie.hday").write_text("2025/03/10 # Holiday", encoding="utf-8")
+        
+        # Config directory (not for .hday discovery)
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "team1.conf").write_text("groupname=Team 1", encoding="utf-8")
+        (config_dir / "team1.people").write_text("bob,Bob\n", encoding="utf-8")
+        
+        files = _discover_hday_files(share_dir, [])
         
         assert len(files) == 2
         usernames = {username for _, username in files}
-        assert usernames == {"alice", "bob"}
+        assert usernames == {"alice", "charlie"}
     
     def test_ignores_non_hday_files(self, share_dir):
         """Test that non-.hday files are ignored."""
@@ -183,27 +301,7 @@ class TestDiscoverHdayFiles:
                 files = _discover_hday_files(share_dir, [])
         
         assert len(files) == 0
-        assert "Could not list top-level .hday files" in caplog.text
-    
-    def test_handles_permission_error_in_team(self, share_dir, caplog):
-        """Test graceful handling of permission errors in team directory."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        
-        # Mock iterdir to fail only for team_dir
-        original_iterdir = Path.iterdir
-        
-        def mock_iterdir(self):
-            if self == team_dir:
-                raise PermissionError("Access denied")
-            return original_iterdir(self)
-        
-        with patch.object(Path, "iterdir", mock_iterdir):
-            with caplog.at_level(logging.WARNING):
-                files = _discover_hday_files(share_dir, [team_dir])
-        
-        assert len(files) == 0
-        assert "Could not list .hday files in team directory team1" in caplog.text
+        assert "Could not list .hday files during cache warming" in caplog.text
 
 
 class TestCacheTeamConfig:
@@ -211,12 +309,16 @@ class TestCacheTeamConfig:
     
     def test_cache_team_config_success(self, share_dir):
         """Test successfully caching team configuration."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Engineering Team", encoding="utf-8")
-        (team_dir / "people").write_text("alice,Alice Johnson\nbob,Bob Smith\n", encoding="utf-8")
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        result = _cache_team_config(team_dir)
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        config_path.write_text("groupname=Engineering Team\n", encoding="utf-8")
+        people_path.write_text("alice,Alice Johnson\nbob,Bob Smith\n", encoding="utf-8")
+        
+        result = _cache_team_config("team1", config_path, people_path)
         
         assert result is True
         
@@ -230,12 +332,16 @@ class TestCacheTeamConfig:
     
     def test_cache_team_config_with_whitespace(self, share_dir):
         """Test caching team config with extra whitespace."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("  Team Name  \n", encoding="utf-8")
-        (team_dir / "people").write_text(" alice , Alice Johnson \n  \nbob,Bob\n", encoding="utf-8")
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        result = _cache_team_config(team_dir)
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        config_path.write_text("  groupname = Team Name  \n", encoding="utf-8")
+        people_path.write_text(" alice , Alice Johnson \n  \nbob,Bob\n", encoding="utf-8")
+        
+        result = _cache_team_config("team1", config_path, people_path)
         
         assert result is True
         
@@ -244,31 +350,81 @@ class TestCacheTeamConfig:
         assert cached.name == "Team Name"
         assert len(cached.members) == 2
     
+    def test_cache_team_config_with_html_headers(self, share_dir):
+        """Test caching team config with HTML section headers in people file."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        config_path.write_text("groupname=Engineering Team\n", encoding="utf-8")
+        people_path.write_text(
+            "<h2>Team Management</h2>\nalice,Alice Johnson\n<h2>Engineers</h2>\nbob,Bob Smith\n",
+            encoding="utf-8"
+        )
+        
+        result = _cache_team_config("team1", config_path, people_path)
+        
+        assert result is True
+        
+        cache = get_cache()
+        cached = cache.get_team_config("team1")
+        assert cached is not None
+        assert len(cached.members) == 2
+        assert cached.members[0]["username"] == "alice"
+        assert cached.members[1]["username"] == "bob"
+    
     def test_cache_team_config_missing_config_file(self, share_dir, caplog):
         """Test handling missing config file."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        people_path.write_text("alice,Alice\n", encoding="utf-8")
         
         with caplog.at_level(logging.WARNING):
-            result = _cache_team_config(team_dir)
+            result = _cache_team_config("team1", config_path, people_path)
         
         assert result is False
-        assert "Could not cache team config" in caplog.text
+        assert "Could not cache team config for team1" in caplog.text
+    
+    def test_cache_team_config_missing_groupname(self, share_dir, caplog):
+        """Test handling config file without groupname."""
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        config_path.write_text("other_key=some value\n", encoding="utf-8")
+        people_path.write_text("alice,Alice\n", encoding="utf-8")
+        
+        with caplog.at_level(logging.WARNING):
+            result = _cache_team_config("team1", config_path, people_path)
+        
+        assert result is False
+        assert "groupname not found in config file for team team1" in caplog.text
     
     def test_cache_team_config_permission_error(self, share_dir, caplog):
         """Test handling permission error."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        config_file = team_dir / "config"
-        config_file.write_text("Team", encoding="utf-8")
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        
+        config_path = config_dir / "team1.conf"
+        people_path = config_dir / "team1.people"
+        
+        config_path.write_text("groupname=Team\n", encoding="utf-8")
+        people_path.write_text("alice,Alice\n", encoding="utf-8")
         
         with patch.object(Path, "read_text", side_effect=PermissionError("Access denied")):
             with caplog.at_level(logging.WARNING):
-                result = _cache_team_config(team_dir)
+                result = _cache_team_config("team1", config_path, people_path)
         
         assert result is False
-        assert "Could not cache team config" in caplog.text
+        assert "Could not cache team config for team1" in caplog.text
 
 
 class TestCacheHdayFile:
@@ -378,14 +534,14 @@ class TestWarmCache:
     
     def test_warm_cache_success(self, share_dir, caplog):
         """Test successful cache warming with teams and users."""
-        # Create team
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Engineering", encoding="utf-8")
-        (team_dir / "people").write_text("alice,Alice\nbob,Bob\n", encoding="utf-8")
-        (team_dir / "alice.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
+        # Create config subdirectory with team
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "team1.conf").write_text("groupname=Engineering\n", encoding="utf-8")
+        (config_dir / "team1.people").write_text("alice,Alice\nbob,Bob\n", encoding="utf-8")
         
-        # Create top-level user
+        # Create top-level .hday files (only in share root)
+        (share_dir / "alice.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         (share_dir / "charlie.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
         
         with caplog.at_level(logging.INFO):
@@ -412,42 +568,38 @@ class TestWarmCache:
     
     def test_warm_cache_partial_failure(self, share_dir, caplog):
         """Test cache warming continues after partial failures."""
-        # Create valid team
-        team1 = share_dir / "team1"
-        team1.mkdir()
-        (team1 / "config").write_text("Team 1", encoding="utf-8")
-        (team1 / "people").write_text("alice,Alice\n", encoding="utf-8")
+        # Create config directory
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
         
-        # Create team with missing people file - will be discovered but fail to cache
-        team2 = share_dir / "team2"
-        team2.mkdir()
-        (team2 / "config").write_text("Team 2", encoding="utf-8")
-        # people file missing intentionally
+        # Create valid team
+        (config_dir / "team1.conf").write_text("groupname=Team 1\n", encoding="utf-8")
+        (config_dir / "team1.people").write_text("alice,Alice\n", encoding="utf-8")
+        
+        # Create team with missing people file - will be discovered but fail during caching
+        (config_dir / "team2.conf").write_text("groupname=Team 2\n", encoding="utf-8")
+        # team2.people file missing intentionally - will trigger warning during discovery
+        
+        # Create team with missing groupname - will be discovered but fail during caching
+        (config_dir / "team3.conf").write_text("other_key=value\n", encoding="utf-8")
+        (config_dir / "team3.people").write_text("dave,Dave\n", encoding="utf-8")
         
         # Create valid user
         (share_dir / "charlie.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         
-        # Mock _is_team_directory to return True for both teams
-        # so team2 is discovered but fails during caching
-        original_is_team = _is_team_directory
-        
-        def mock_is_team(path):
-            if path.name == "team2":
-                return True  # Pretend it's valid to test partial failure
-            return original_is_team(path)
-        
-        with patch("app.cache.warm_cache._is_team_directory", mock_is_team):
-            with caplog.at_level(logging.INFO):
-                warm_cache()
+        with caplog.at_level(logging.INFO):
+            warm_cache()
         
         # Should log warnings but continue
-        assert "Could not cache team config for team2" in caplog.text
+        assert "Found team2.conf but missing corresponding team2.people" in caplog.text
+        assert "groupname not found in config file for team team3" in caplog.text
         assert "Cache warming complete: 1 users cached, 1 teams cached" in caplog.text
         
         # Verify successful caches
         cache = get_cache()
         assert cache.get_team_config("team1") is not None
         assert cache.get_team_config("team2") is None
+        assert cache.get_team_config("team3") is None
         assert cache.get_hday("charlie") is not None
     
     def test_warm_cache_empty_share(self, share_dir, caplog):

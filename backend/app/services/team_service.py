@@ -94,14 +94,20 @@ def _sanitize_username(username: str) -> str:
 def _parse_config_file(config_path: Path) -> str:
     """Parse team configuration file and return team name.
     
+    Expects a key=value format config file and extracts the 'groupname' field.
+    Example format:
+        costcentername=CC000000
+        groupname=Generic Group Name
+        region=XX
+    
     Args:
         config_path: Path to the config file
         
     Returns:
-        Team name with whitespace stripped
+        Team name (value of 'groupname' field) with whitespace stripped
         
     Raises:
-        TeamNotFoundError: If file doesn't exist or cannot be read
+        TeamNotFoundError: If file doesn't exist, cannot be read, or groupname is missing
     """
     # config_path is derived from validated team_path - safe to use
     if not config_path.exists():
@@ -111,20 +117,53 @@ def _parse_config_file(config_path: Path) -> str:
     try:
         # config_path is derived from validated team_path - safe to use
         content = config_path.read_text(encoding="utf-8")
-        return content.strip()
+        
+        # Parse key=value format and extract groupname
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or "=" not in line:
+                continue
+            
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            
+            if key == "groupname":
+                if not value:
+                    raise TeamNotFoundError("groupname field is empty in config file")
+                return value
+        
+        # If we get here, groupname was not found
+        raise TeamNotFoundError("groupname field not found in config file")
+        
     except PermissionError as e:
         logger.exception("Permission denied reading team config")
         raise TeamNotFoundError("Cannot read team configuration") from e
-    except Exception:
-        logger.exception("Error reading team config")
+    except TeamNotFoundError:
+        # Re-raise our own exceptions
         raise
+    except (UnicodeDecodeError, OSError) as e:
+        logger.exception("Error reading team config file")
+        raise TeamNotFoundError("Cannot read team configuration") from e
+    except Exception as e:
+        logger.exception("Unexpected error reading team config")
+        raise TeamNotFoundError("Cannot read team configuration") from e
 
 
 def _parse_members_file(people_path: Path) -> List[TeamMember]:
     """Parse team members file and return list of members.
     
     Parses CSV format by splitting each line on the first comma into
-    username and display_name. Skips empty lines and trims whitespace.
+    username and display_name. Skips empty lines, HTML section headers,
+    and trims whitespace.
+    
+    Expected format:
+        <h2>Team Management</h2>
+        user01,Manager One
+        user02,Manager Two
+        
+        <h2>Team Support</h2>
+        user03,Support Member One
     
     Args:
         people_path: Path to the people file
@@ -150,10 +189,17 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
             line = line.strip()
             if not line:
                 continue
+            
+            # Skip HTML section headers (e.g., <h2>Team Management</h2>)
+            # Use regex to match specific HTML heading tags with matching levels
+            heading_match = re.match(r"^<h([1-6])\b[^>]*>.*</h\1>\s*$", line, re.IGNORECASE)
+            if heading_match:
+                logger.debug(f"Skipping HTML header: {line}")
+                continue
 
             # Split on first comma
             if "," not in line:
-                logger.warning("Skipping invalid line format in team members file")
+                logger.warning(f"Skipping invalid line format in team members file: {line}")
                 continue
 
             username, display_name = line.split(",", 1)
@@ -172,8 +218,12 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         raise
 
 
-def get_team_path(team_id: str) -> Path:
-    """Get the full path to a team's directory.
+def get_team_path(team_id: str) -> tuple[Path, str]:
+    """Get the config subdirectory path and sanitized team_id for team files.
+    
+    Team configuration files are stored in the config subdirectory:
+    - Config file: {SHARE_DIR}/config/{team_id}.conf
+    - People file: {SHARE_DIR}/config/{team_id}.people
     
     Validates team_id to prevent path traversal attacks.
     
@@ -181,11 +231,11 @@ def get_team_path(team_id: str) -> Path:
         team_id: The team identifier
         
     Returns:
-        Path object for the team directory (sanitized and validated)
+        Tuple of (config_dir Path, sanitized_team_id str) to avoid redundant sanitization
         
     Raises:
         ValueError: If team_id contains invalid characters
-        TeamNotFoundError: If the team directory doesn't exist
+        TeamNotFoundError: If the config subdirectory doesn't exist
         ShareNotAccessibleError: If the share directory is not accessible
     """
     # First, sanitize the team_id so that it is safe to use as a path component.
@@ -213,46 +263,69 @@ def get_team_path(team_id: str) -> Path:
     # Resolve the share directory to an absolute, normalized path
     # share_dir comes from settings configuration - safe to use
     resolved_share = share_dir.resolve()
-    # Apply os.path.basename() — a recognized path-injection sanitizer — to the
-    # directory name to break the taint chain from user input before path construction.
-    clean_team_id = os.path.basename(safe_team_id)
-    team_path = resolved_share / clean_team_id
+    
+    # Config files are in a config/ subdirectory
+    config_dir = resolved_share / "config"
+    
+    # Verify the config directory exists
+    if not config_dir.exists():
+        logger.error("Config directory does not exist")
+        raise TeamNotFoundError("Config directory not found")
+    
+    if not config_dir.is_dir():
+        logger.error("Config path exists but is not a directory")
+        raise TeamNotFoundError("Config directory not found")
+    
+    # Return both the config directory and the sanitized team_id
+    # to avoid redundant sanitization at call sites
+    return config_dir, safe_team_id
 
-    # Verify the normalized path is within share_dir to prevent path traversal
+
+def _validate_team_file_path(file_path: Path, base_dir: Path, file_type: str) -> None:
+    """Validate that a file path resolves within the expected base directory.
+    
+    This prevents path traversal attacks by ensuring the resolved path
+    is a child of the base directory.
+    
+    Args:
+        file_path: The file path to validate
+        base_dir: The base directory the file must be within
+        file_type: Description of the file type for error messages (e.g., "config", "people")
+        
+    Raises:
+        ValueError: If the path resolves outside the base directory
+    """
     try:
-        # Use strict=False so resolution does not depend on the directory already existing
-        normalized_path = team_path.resolve(strict=False)
-        normalized_path.relative_to(resolved_share)
+        resolved_file_path = file_path.resolve(strict=False)
+        resolved_base_dir = base_dir.resolve()
+        resolved_file_path.relative_to(resolved_base_dir)
     except ValueError as err:
-        # Either resolution failed or the path escapes the share directory
+        logger.error(f"Path traversal attempt detected in team {file_type} path")
         raise ValueError("Invalid team_id format") from err
-
-    if not normalized_path.exists():
-        logger.info("Team directory not found")
-        raise TeamNotFoundError("Team not found")
-
-    if not normalized_path.is_dir():
-        logger.error("Team path exists but is not a directory")
-        raise TeamNotFoundError("Team not found")
-
-    return normalized_path
 
 
 def read_team_config(team_id: str) -> str:
     """Read the team configuration file and return the team name.
     
+    Reads from {SHARE_DIR}/config/{team_id}.conf
+    
     Args:
         team_id: The team identifier
         
     Returns:
-        The team name with whitespace stripped
+        The team name (value of 'groupname' field) with whitespace stripped
         
     Raises:
-        TeamNotFoundError: If the config file doesn't exist
+        TeamNotFoundError: If the config file doesn't exist or groupname is missing
         ValueError: If team_id is invalid
     """
-    team_path = get_team_path(team_id)
-    config_path = team_path / "config"
+    config_dir, safe_team_id = get_team_path(team_id)
+    clean_team_id = os.path.basename(safe_team_id)
+    config_path = config_dir / f"{clean_team_id}.conf"
+    
+    # Verify the path is within the config directory to prevent path traversal
+    _validate_team_file_path(config_path, config_dir, "config")
+    
     team_name = _parse_config_file(config_path)
     logger.info("Successfully read team config")
     return team_name
@@ -261,8 +334,11 @@ def read_team_config(team_id: str) -> str:
 def read_team_members(team_id: str) -> List[TeamMember]:
     """Read the team members file and parse the CSV format.
     
+    Reads from {SHARE_DIR}/config/{team_id}.people
+    
     Parses CSV format by splitting each line on the first comma into
-    username and display_name. Skips empty lines and trims whitespace.
+    username and display_name. Skips empty lines, HTML section headers,
+    and trims whitespace.
     
     Args:
         team_id: The team identifier
@@ -274,8 +350,13 @@ def read_team_members(team_id: str) -> List[TeamMember]:
         TeamNotFoundError: If the people file doesn't exist
         ValueError: If team_id is invalid
     """
-    team_path = get_team_path(team_id)
-    people_path = team_path / "people"
+    config_dir, safe_team_id = get_team_path(team_id)
+    clean_team_id = os.path.basename(safe_team_id)
+    people_path = config_dir / f"{clean_team_id}.people"
+    
+    # Verify the path is within the config directory to prevent path traversal
+    _validate_team_file_path(people_path, config_dir, "people")
+    
     members = _parse_members_file(people_path)
     logger.info(f"Successfully read {len(members)} team members")
     return members
@@ -311,12 +392,18 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     
     # Check for stale entry that might still be valid
     stale_entry = cache.get_team_config_stale(team_id)
+    # Get config directory and sanitized team_id once (used for both stale cache check and fresh read)
+    config_dir, safe_team_id = get_team_path(team_id)
+    clean_team_id = os.path.basename(safe_team_id)
+    config_path = config_dir / f"{clean_team_id}.conf"
+    people_path = config_dir / f"{clean_team_id}.people"
+    
+    # Validate paths before using them to prevent path traversal
+    _validate_team_file_path(config_path, config_dir, "config")
+    _validate_team_file_path(people_path, config_dir, "people")
+    
     if stale_entry is not None:
         # We have a stale entry - check if file mtimes have changed
-        team_path = get_team_path(team_id)
-        config_path = team_path / "config"
-        people_path = team_path / "people"
-        
         try:
             # Check both file mtimes
             current_config_mtime = config_path.stat().st_mtime
@@ -338,13 +425,9 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             cache.invalidate_team_config(team_id)
     
     # No cache entry or mtime changed - read files and update cache
-    team_path = get_team_path(team_id)
+    # Paths already constructed and validated above
     
-    # Read config and members using shared parsing logic
-    config_path = team_path / "config"
     team_name = _parse_config_file(config_path)
-    
-    people_path = team_path / "people"
     members = _parse_members_file(people_path)
     
     # Get file mtimes and update cache
@@ -391,37 +474,33 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 
 def read_team_hday_files(
-    team_id: str,
     members: List[TeamMember],
-    team_path: Path | None = None,
     parse_events: bool = True
 ) -> List[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
     
-    Attempts to read each member's .hday file from the team directory, leveraging
-    the individual hday cache entries for each member. For missing files, returns 
-    empty raw string, empty events list, and None for etag. Continues processing 
-    other members even if individual files are missing.
+    .hday files are located in the share root directory, not in team directories.
+    Attempts to read each member's .hday file, leveraging the individual hday 
+    cache entries for each member. For missing files, returns empty raw string, 
+    empty events list, and None for etag. Continues processing other members 
+    even if individual files are missing.
     
     Args:
-        team_id: The team identifier
         members: List of team members
-        team_path: Optional pre-validated team path. If not provided, calls get_team_path(team_id).
-                   Use this to avoid redundant path validation when already have the path.
-        parse_events: Whether to parse .hday content into events. When False, skip parsing
-                     and set events=[]. When True, execute existing parsing logic.
+        parse_events: Whether to parse .hday content into events for the returned data.
+                     When False, returned TeamMemberHdayData objects will have events=[]
+                     (no per-call event parsing), but the implementation may still parse
+                     internally for caching. When True, execute existing parsing logic
+                     and populate events on the returned objects.
         
     Returns:
         List of TeamMemberHdayData objects with .hday data (parsed or unparsed)
     """
     cache = get_cache()
     
-    # Use provided team_path or get it if not provided
-    if team_path is None:
-        team_path = get_team_path(team_id)
-    
-    # Resolve the validated team_path once and reuse it for member file checks
-    resolved_team_path = team_path.resolve()
+    # Get share directory - .hday files are in the share root
+    share_dir = settings.get_share_dir_path()
+    resolved_share_dir = share_dir.resolve()
     member_data = []
 
     for member in members:
@@ -456,12 +535,12 @@ def read_team_hday_files(
         # Apply os.path.basename() — a recognized path-injection sanitizer — to
         # the filename to break the taint chain before path construction.
         hday_filename = os.path.basename(f"{safe_username}.hday")
-        hday_path = team_path / hday_filename
+        hday_path = share_dir / hday_filename
 
-        # Verify the path is still within the team directory
+        # Verify the path is still within the share directory
         try:
             resolved_hday_path = hday_path.resolve()
-            resolved_hday_path.relative_to(resolved_team_path)
+            resolved_hday_path.relative_to(resolved_share_dir)
         except ValueError:
             logger.warning("Path traversal attempt detected, skipping member")
             member_data.append(_create_empty_member_data(member))
