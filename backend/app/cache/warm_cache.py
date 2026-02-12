@@ -104,60 +104,25 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
         True if successfully cached, False otherwise
     """
     try:
-        # Read config file and parse key=value format
-        config_content = config_path.read_text(encoding="utf-8")
+        # Import here to avoid circular dependency
+        from app.services.team_service import _parse_config_file, _parse_members_file
+        
+        # Get modification times
         config_mtime = config_path.stat().st_mtime
-        
-        # Extract groupname from config
-        team_name = None
-        for line in config_content.splitlines():
-            line = line.strip()
-            if not line or "=" not in line:
-                continue
-            
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip()
-            
-            if key == "groupname":
-                team_name = value
-                break
-        
-        if not team_name:
-            logger.warning(f"groupname not found in config file for team {team_id}")
-            return False
-        
-        # Read people file
-        people_content = people_path.read_text(encoding="utf-8")
         people_mtime = people_path.stat().st_mtime
         
-        # Parse members, skipping HTML headers
-        members = []
-        for line in people_content.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Skip HTML section headers (e.g., <h2>Team Management</h2>)
-            # Use regex to match specific HTML heading tags with matching levels
-            if re.match(r"^<h([1-6])\b[^>]*>.*</h\1>\s*$", line, re.IGNORECASE):
-                continue
-            
-            parts = line.split(",", 1)
-            if len(parts) == 2:
-                username = parts[0].strip()
-                display_name = parts[1].strip()
-                # Skip entries with empty usernames
-                if not username:
-                    logger.warning("Skipping entry with empty username in team members file")
-                    continue
-                members.append({
-                    "username": username,
-                    "display_name": display_name
-                })
-            else:
-                # Log warning for invalid lines (consistent with service layer)
-                logger.warning(f"Skipping invalid line format in team members file: {line}")
+        # Use service layer parsers (single source of truth)
+        team_name = _parse_config_file(config_path)
+        team_members = _parse_members_file(people_path)
+        
+        # Convert TeamMember objects to dict format expected by cache
+        members = [
+            {
+                "username": member.username,
+                "display_name": member.display_name
+            }
+            for member in team_members
+        ]
         
         # Cache team config
         cache = get_cache()
@@ -171,7 +136,8 @@ def _cache_team_config(team_id: str, config_path: Path, people_path: Path) -> bo
         
         return True
     
-    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError) as e:
+    except Exception as e:
+        # Catch any errors from parsing or file operations
         logger.warning(f"Could not cache team config for {team_id}: {e}")
         return False
 
