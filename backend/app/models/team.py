@@ -60,8 +60,10 @@ class TeamHdayResponse(BaseModel):
     
     Attributes:
         team_id: The unique identifier for the team
+        name: The team name
         members: List of .hday data for each team member
     """
     
     team_id: str
+    name: str
     members: List[TeamMemberHdayData]

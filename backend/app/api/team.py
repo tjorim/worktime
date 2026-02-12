@@ -82,9 +82,9 @@ def get_team_hday(
     team_id: str,
     format: Literal["raw", "parsed"] = Query("raw")
 ) -> TeamHdayResponse:
-    """Get aggregated .hday data for all team members.
+    """Get aggregated .hday data for all team members with team info.
     
-    Retrieves and optionally parses .hday files for all members of the team.
+    Retrieves team name, member list, and optionally parses .hday files for all members.
     For members without .hday files, returns empty data with etag=None.
     
     Args:
@@ -92,7 +92,7 @@ def get_team_hday(
         format: Response format - "raw" (default) or "parsed" to include events
         
     Returns:
-        TeamHdayResponse with team_id and list of member .hday data
+        TeamHdayResponse with team_id, name, and list of member .hday data
         
     Response Headers:
         X-File-Read-Ms: Time taken to read files in milliseconds
@@ -107,9 +107,9 @@ def get_team_hday(
     timings = {}
     
     try:
-        # Validate team exists and read team members
-        members = read_team_members(team_id)
-        logger.info(f"Successfully read {len(members)} team members")
+        # Get team info (name and members)
+        team_name, members = read_team_info(team_id)
+        logger.info(f"Successfully read team info: {team_name} with {len(members)} members")
         
         # Read all .hday files (without parsing) and time it
         with time_operation("file_read", timings):
@@ -134,6 +134,7 @@ def get_team_hday(
         # Prepare response data
         response_data = TeamHdayResponse(
             team_id=team_id,
+            name=team_name,
             members=member_data
         )
         

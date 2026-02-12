@@ -25,14 +25,9 @@ interface TeamMemberHdayData extends TeamMember {
   etag: string | null;
 }
 
-interface TeamInfoResponse {
-  team_id: string;
-  name: string;
-  members: TeamMember[];
-}
-
 interface TeamHdayResponse {
   team_id: string;
+  name: string;
   members: TeamMemberHdayData[];
 }
 
@@ -55,14 +50,12 @@ export function TeamScheduleView() {
   const [teamId, setTeamId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [teamInfo, setTeamInfo] = useState<TeamInfoResponse | null>(null);
-  const [teamHdayData, setTeamHdayData] = useState<TeamHdayResponse | null>(null);
+  const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
 
   // Reset state when connection is lost
   useEffect(() => {
     if (connectionStatus !== "connected") {
-      setTeamInfo(null);
-      setTeamHdayData(null);
+      setTeamData(null);
       setError(null);
     }
   }, [connectionStatus]);
@@ -75,28 +68,11 @@ export function TeamScheduleView() {
 
     setIsLoading(true);
     setError(null);
-    setTeamInfo(null);
-    setTeamHdayData(null);
+    setTeamData(null);
 
     try {
-      // Fetch team info
-      const infoResponse = await fetch(`${apiUrl}/v1/team/${encodeURIComponent(teamId)}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!infoResponse.ok) {
-        const errorText = await infoResponse.text();
-        throw new Error(`Failed to fetch team info: ${errorText}`);
-      }
-
-      const info: TeamInfoResponse = await infoResponse.json();
-      setTeamInfo(info);
-
-      // Fetch team .hday data
-      const hdayResponse = await fetch(
+      // Fetch team .hday data (includes team info)
+      const response = await fetch(
         `${apiUrl}/v1/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
         {
           method: "GET",
@@ -106,18 +82,17 @@ export function TeamScheduleView() {
         },
       );
 
-      if (!hdayResponse.ok) {
-        const errorText = await hdayResponse.text();
-        throw new Error(`Failed to fetch team .hday data: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch team data: ${errorText}`);
       }
 
-      const hdayData: TeamHdayResponse = await hdayResponse.json();
-      setTeamHdayData(hdayData);
+      const data: TeamHdayResponse = await response.json();
+      setTeamData(data);
     } catch (err) {
       console.error("Error fetching team data:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
-      setTeamInfo(null);
-      setTeamHdayData(null);
+      setTeamData(null);
     } finally {
       setIsLoading(false);
     }
@@ -194,18 +169,18 @@ export function TeamScheduleView() {
         </Alert>
       )}
 
-      {teamInfo && teamHdayData && (
+      {teamData && (
         <Card className="mb-3">
           <Card.Header>
             <h5 className="mb-0">
               <i className="bi bi-building me-2" aria-hidden="true"></i>
-              {teamInfo.name}
+              {teamData.name}
             </h5>
           </Card.Header>
           <Card.Body>
             <h6 className="mb-3">
-              Team Members ({teamInfo.members.length})
-              <span className="text-muted small ms-2">ID: {teamInfo.team_id}</span>
+              Team Members ({teamData.members.length})
+              <span className="text-muted small ms-2">ID: {teamData.team_id}</span>
             </h6>
 
             <Table responsive hover className="mb-0">
@@ -218,7 +193,7 @@ export function TeamScheduleView() {
                 </tr>
               </thead>
               <tbody>
-                {teamHdayData.members.map((member) => (
+                {teamData.members.map((member) => (
                   <tr key={member.username}>
                     <td>
                       <code>{member.username}</code>
@@ -252,7 +227,7 @@ export function TeamScheduleView() {
         </Card>
       )}
 
-      {!teamInfo && !error && !isLoading && (
+      {!teamData && !error && !isLoading && (
         <Card className="text-center py-5">
           <Card.Body>
             <i className="bi bi-inbox display-1 text-muted mb-3 d-block" aria-hidden="true"></i>
