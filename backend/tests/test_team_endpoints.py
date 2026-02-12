@@ -418,7 +418,7 @@ d1 # Every Monday
         assert data["members"][0]["raw"] == "2025/01/15 # 휴가일 (vacation)\n"
     
     def test_get_team_hday_format_raw_default(self, client, share_dir):
-        """Test GET with default format=raw returns raw lines with an empty events list (backward compatibility)."""
+        """Test GET with default format=raw returns raw lines with an empty events list."""
         # Create config subdirectory with files
         config_dir = share_dir / "config"
         config_dir.mkdir()
