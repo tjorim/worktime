@@ -113,8 +113,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
   // Raw .hday editor state (kept in sync but not rendered in UI)
-  const [_rawEditorText, setRawEditorText] = useState(rawText);
+  const [rawEditorText, setRawEditorText] = useState(rawText);
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
+  const rawEditorTextRef = useRef(rawText);
+
+  // Update ref whenever rawEditorText changes
+  useEffect(() => {
+    rawEditorTextRef.current = rawEditorText;
+  }, [rawEditorText]);
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -270,7 +276,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleParseRawEditor = useCallback(() => {
     try {
-      importHday(rawEditorText);
+      // Use the ref to get the current value without adding to dependencies
+      importHday(rawEditorTextRef.current);
       setIsRawEditorDirty(false);
       setSelectedIndices(new Set());
       toast.showSuccess("Raw .hday content applied successfully", "bi-check-circle");
@@ -278,7 +285,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       console.error("Failed to parse raw .hday content:", error);
       toast.showError("Failed to parse content. Please check the format.");
     }
-  }, [rawEditorText, importHday, toast]);
+  }, [importHday, toast]);
 
   const handleResetRawEditor = useCallback(() => {
     setRawEditorText(rawText);

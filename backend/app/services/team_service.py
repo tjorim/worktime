@@ -150,12 +150,11 @@ def _parse_config_file(config_path: Path) -> str:
         raise TeamNotFoundError("Cannot read team configuration") from e
 
 
-def _parse_members_file(people_path: Path) -> List[TeamMember]:
-    """Parse team members file and return list of members.
+def _parse_members_file_with_sections(people_path: Path) -> tuple[List[TeamSection], List[TeamMember]]:
+    """Parse team members file and return sections + flat list of members.
     
-    Parses CSV format by splitting each line on the first comma into
-    username and display_name. Skips empty lines, HTML section headers,
-    and trims whitespace.
+    Parses CSV format, preserving HTML section headers as group boundaries.
+    Returns both a structured sections list and a flat members list for backward compatibility.
     
     Expected format:
         <h2>Team Management</h2>
@@ -169,7 +168,9 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         people_path: Path to the people file
         
     Returns:
-        List of TeamMember objects
+        Tuple of (sections list, flat members list)
+        - sections: List of TeamSection objects (grouped by headers)
+        - members: Flat list of all TeamMember objects
         
     Raises:
         TeamNotFoundError: If file doesn't exist or cannot be read
@@ -180,9 +181,14 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
         raise TeamNotFoundError("Team members file not found")
     
     try:
+        from app.models.team import TeamSection
+        
         # people_path is derived from validated team_path - safe to use
         content = people_path.read_text(encoding="utf-8")
-        members = []
+        sections: List[TeamSection] = []
+        all_members: List[TeamMember] = []
+        current_section_title: Optional[str] = None
+        current_section_members: List[TeamMember] = []
 
         for line in content.splitlines():
             # Skip empty lines
@@ -190,11 +196,21 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
             if not line:
                 continue
             
-            # Skip HTML section headers (e.g., <h2>Team Management</h2>)
+            # Check for HTML section headers (e.g., <h2>Team Management</h2>)
             # Use regex to match specific HTML heading tags with matching levels
-            heading_match = re.match(r"^<h([1-6])\b[^>]*>.*</h\1>\s*$", line, re.IGNORECASE)
+            heading_match = re.match(r"^<h([1-6])\b[^>]*>(.*)</h\1>\s*$", line, re.IGNORECASE)
             if heading_match:
-                logger.debug(f"Skipping HTML header: {line}")
+                # Save previous section if it has members
+                if current_section_members:
+                    sections.append(TeamSection(
+                        title=current_section_title,
+                        members=current_section_members
+                    ))
+                    current_section_members = []
+                
+                # Extract header text
+                current_section_title = heading_match.group(2).strip()
+                logger.debug(f"Found section header: {current_section_title}")
                 continue
 
             # Split on first comma
@@ -207,15 +223,50 @@ def _parse_members_file(people_path: Path) -> List[TeamMember]:
             display_name = display_name.strip()
 
             if username:  # Only add if username is not empty
-                members.append(TeamMember(username=username, display_name=display_name))
+                member = TeamMember(username=username, display_name=display_name)
+                current_section_members.append(member)
+                all_members.append(member)
 
-        return members
+        # Add final section if it has members
+        if current_section_members:
+            sections.append(TeamSection(
+                title=current_section_title,
+                members=current_section_members
+            ))
+        
+        # If no sections were created (no headers), create single section with all members
+        if not sections and all_members:
+            sections.append(TeamSection(
+                title=None,
+                members=all_members
+            ))
+
+        return sections, all_members
     except PermissionError as e:
         logger.exception("Permission denied reading team members file")
         raise TeamNotFoundError("Cannot read team members file") from e
     except Exception:
         logger.exception("Error reading team members file")
         raise
+
+
+def _parse_members_file(people_path: Path) -> List[TeamMember]:
+    """Parse team members file and return flat list of members.
+    
+    Legacy function for backward compatibility. Returns only the flat member list.
+    For new code, use _parse_members_file_with_sections() to get structured data.
+    
+    Args:
+        people_path: Path to the people file
+        
+    Returns:
+        Flat list of all TeamMember objects
+        
+    Raises:
+        TeamNotFoundError: If file doesn't exist or cannot be read
+    """
+    _, members = _parse_members_file_with_sections(people_path)
+    return members
 
 
 def get_team_path(team_id: str) -> tuple[Path, str]:
@@ -362,43 +413,45 @@ def read_team_members(team_id: str) -> List[TeamMember]:
     return members
 
 
-def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
-    """Read both team config and members with cache optimization.
+def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], List[TeamMember]]:
+    """Read team config and members with section grouping from cache or files.
     
-    Uses cache with write-through pattern:
-    - First checks for fresh cache entry (within TTL)
-    - If stale entry exists, validates via mtime of both config and people files
-    - If either mtime changed, re-reads files and updates cache
+    Returns structured sections (with headers from .people file) plus a flat member list
+    for backward compatibility. Uses the same caching strategy as read_team_info().
     
     Args:
         team_id: The team identifier
         
     Returns:
-        Tuple of (team_name, members_list)
+        Tuple of (team_name, sections_list, flat_members_list)
         
     Raises:
         TeamNotFoundError: If team or required files don't exist
         ValueError: If team_id is invalid
     """
+    from app.models.team import TeamSection
+    
     cache = get_cache()
     
     # Check for fresh cache entry first
     cached_entry = cache.get_team_config(team_id)
     if cached_entry is not None:
-        logger.debug("Cache hit: returning fresh team config entry")
+        logger.debug("Cache hit: returning fresh team config entry with sections")
         # Convert cached member dicts back to TeamMember objects
         members = [TeamMember(**m) for m in cached_entry.members]
-        return cached_entry.name, members
+        # Create single section from flat cached data (headers not preserved in cache)
+        sections = [TeamSection(title=None, members=members)] if members else []
+        return cached_entry.name, sections, members
     
     # Check for stale entry that might still be valid
     stale_entry = cache.get_team_config_stale(team_id)
-    # Get config directory and sanitized team_id once (used for both stale cache check and fresh read)
+    # Get config directory and sanitized team_id once
     config_dir, safe_team_id = get_team_path(team_id)
     clean_team_id = os.path.basename(safe_team_id)
     config_path = config_dir / f"{clean_team_id}.conf"
     people_path = config_dir / f"{clean_team_id}.people"
     
-    # Validate paths before using them to prevent path traversal
+    # Validate paths before using them
     _validate_team_file_path(config_path, config_dir, "config")
     _validate_team_file_path(people_path, config_dir, "people")
     
@@ -413,24 +466,24 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             if (current_config_mtime == stale_entry.config_mtime and 
                 current_people_mtime == stale_entry.people_mtime):
                 cache.refresh_team_config_ttl(team_id)
-                logger.debug("Cache refresh: mtimes unchanged, TTL extended")
+                logger.debug("Cache refresh: mtimes unchanged, TTL extended (with sections)")
                 members = [TeamMember(**m) for m in stale_entry.members]
-                return stale_entry.name, members
+                # Create single section from flat cached data
+                sections = [TeamSection(title=None, members=members)] if members else []
+                return stale_entry.name, sections, members
             
             # At least one mtime changed - fall through to re-read files
-            logger.debug("Cache stale: mtime changed, re-reading files")
+            logger.debug("Cache stale: mtime changed, re-reading files with sections")
         except (FileNotFoundError, PermissionError) as e:
             # Files missing or inaccessible - invalidate cache and fall through
             logger.debug("Cache invalidated: files missing or inaccessible")
             cache.invalidate_team_config(team_id)
     
     # No cache entry or mtime changed - read files and update cache
-    # Paths already constructed and validated above
-    
     team_name = _parse_config_file(config_path)
-    members = _parse_members_file(people_path)
+    sections, members = _parse_members_file_with_sections(people_path)
     
-    # Get file mtimes and update cache
+    # Get file mtimes and update cache (only flat members in cache)
     try:
         config_mtime = config_path.stat().st_mtime
         people_mtime = people_path.stat().st_mtime
@@ -445,11 +498,31 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             config_mtime=config_mtime,
             people_mtime=people_mtime
         )
-        logger.info("Successfully read team info and updated cache")
+        logger.info("Successfully read team info with sections and updated cache")
     except Exception as e:
         logger.warning("Failed to update team config cache", exc_info=e)
         # Continue even if cache update fails
     
+    return team_name, sections, members
+
+
+def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
+    """Read both team config and members with cache optimization.
+    
+    Legacy function for backward compatibility. Returns only flat member list.
+    For new code, use read_team_info_with_sections() to get structured data.
+    
+    Args:
+        team_id: The team identifier
+        
+    Returns:
+        Tuple of (team_name, members_list)
+        
+    Raises:
+        TeamNotFoundError: If team or required files don't exist
+        ValueError: If team_id is invalid
+    """
+    team_name, _, members = read_team_info_with_sections(team_id)
     return team_name, members
 
 

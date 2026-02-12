@@ -395,7 +395,7 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.lastUsed.activeTab).toBe("schedule");
       expect(result.current.lastUsed.scheduleView).toBe("week");
       expect(result.current.lastUsed.otherSchedule).toBe("9-5");
-      expect(result.current.lastUsed.timeOffView).toBe("raw");
+      expect(result.current.lastUsed.timeOffView).toBe("table"); // "raw" was removed, defaults to "table"
       expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
       expect(result.current.lastUsed.otherTeam).toBe(3);
     });

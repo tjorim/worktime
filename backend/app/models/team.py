@@ -23,18 +23,32 @@ class TeamMember(BaseModel):
     display_name: str
 
 
+class TeamSection(BaseModel):
+    """Represents a section of team members (optional grouping from .people file headers).
+    
+    Attributes:
+        title: Optional section title from HTML header (None if no header)
+        members: List of team members in this section
+    """
+    
+    title: Optional[str] = None
+    members: List[TeamMember]
+
+
 class TeamInfoResponse(BaseModel):
     """Response model for team information.
     
     Attributes:
         team_id: The unique identifier for the team
         name: The team name
-        members: List of team members
+        sections: List of team sections (grouped by headers if present in .people file)
+        members: Flat list of all team members (for backward compatibility)
     """
     
     team_id: str
     name: str
-    members: List[TeamMember]
+    sections: List[TeamSection]
+    members: List[TeamMember]  # Flat list for backward compatibility
 
 
 class TeamMemberHdayData(BaseModel):
@@ -55,15 +69,29 @@ class TeamMemberHdayData(BaseModel):
     etag: Optional[str] = None
 
 
+class TeamSectionHdayData(BaseModel):
+    """Represents a section of team members with .hday data.
+    
+    Attributes:
+        title: Optional section title from HTML header (None if no header)
+        members: List of team members with .hday data in this section
+    """
+    
+    title: Optional[str] = None
+    members: List[TeamMemberHdayData]
+
+
 class TeamHdayResponse(BaseModel):
     """Response model for aggregated team .hday data.
     
     Attributes:
         team_id: The unique identifier for the team
         name: The team name
-        members: List of .hday data for each team member
+        sections: List of team sections with .hday data (grouped by headers if present)
+        members: Flat list of all members with .hday data (for backward compatibility)
     """
     
     team_id: str
     name: str
-    members: List[TeamMemberHdayData]
+    sections: List[TeamSectionHdayData]
+    members: List[TeamMemberHdayData]  # Flat list for backward compatibility

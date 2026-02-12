@@ -151,10 +151,6 @@ describe("TimeOffView Integration Tests", () => {
       const user = userEvent.setup();
       renderWithProviders();
 
-      // Import weekly events via raw editor
-      const user = userEvent.setup();
-      renderWithProviders();
-
       // Import weekly events
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([WEEKLY_EVENTS_HDAY], "test.hday", { type: "text/plain" });

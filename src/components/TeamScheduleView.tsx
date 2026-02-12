@@ -19,10 +19,16 @@ interface TeamMemberHdayData extends TeamMember {
   etag: string | null;
 }
 
+interface TeamSectionHdayData {
+  title: string | null;
+  members: TeamMemberHdayData[];
+}
+
 interface TeamHdayResponse {
   team_id: string;
   name: string;
-  members: TeamMemberHdayData[];
+  sections: TeamSectionHdayData[];
+  members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
 /**
@@ -210,46 +216,58 @@ export function TeamScheduleView() {
               <span className="text-muted small ms-2">ID: {teamData.team_id}</span>
             </h6>
 
-            <Table responsive hover className="mb-0">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Display Name</th>
-                  <th>Events</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamData.members.map((member) => (
-                  <tr key={member.username}>
-                    <td>
-                      <code>{member.username}</code>
-                    </td>
-                    <td>{member.display_name}</td>
-                    <td>
-                      {member.events.length > 0 ? (
-                        <span className="badge text-bg-info">{member.events.length} events</span>
-                      ) : (
-                        <span className="text-muted small">No events</span>
-                      )}
-                    </td>
-                    <td>
-                      {member.etag ? (
-                        <span className="text-success small">
-                          <i className="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
-                          .hday file
-                        </span>
-                      ) : (
-                        <span className="text-muted small">
-                          <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
-                          No .hday file
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            {teamData.sections.map((section, sectionIndex) => (
+              <div key={sectionIndex} className="mb-4 last:mb-0">
+                {/* Show section header if title exists and there are multiple sections */}
+                {section.title && teamData.sections.length > 1 && (
+                  <h6 className="mb-2 text-secondary">
+                    <i className="bi bi-people-fill me-2" aria-hidden="true"></i>
+                    {section.title}
+                  </h6>
+                )}
+
+                <Table responsive hover className="mb-0">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Display Name</th>
+                      <th>Events</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.members.map((member) => (
+                      <tr key={member.username}>
+                        <td>
+                          <code>{member.username}</code>
+                        </td>
+                        <td>{member.display_name}</td>
+                        <td>
+                          {member.events.length > 0 ? (
+                            <span className="badge text-bg-info">{member.events.length} events</span>
+                          ) : (
+                            <span className="text-muted small">No events</span>
+                          )}
+                        </td>
+                        <td>
+                          {member.etag ? (
+                            <span className="text-success small">
+                              <i className="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+                              .hday file
+                            </span>
+                          ) : (
+                            <span className="text-muted small">
+                              <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
+                              No .hday file
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            ))}
           </Card.Body>
         </Card>
       )}
