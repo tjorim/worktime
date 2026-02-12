@@ -30,21 +30,6 @@ def _compute_etag(content: str) -> str:
     return f"sha256:{hash_obj.hexdigest()}"
 
 
-def _is_team_directory(path: Path) -> bool:
-    """Check if a directory is a team directory.
-    
-    DEPRECATED: This function is no longer used with the new structure
-    where team configs are in config/ subdirectory.
-    
-    Args:
-        path: Directory path to check
-        
-    Returns:
-        False (teams are now identified by .conf files in config/ directory)
-    """
-    return False
-
-
 def _discover_team_files(share_dir: Path) -> List[Tuple[str, Path, Path]]:
     """Discover all team configuration files in the config subdirectory.
     
@@ -82,27 +67,11 @@ def _discover_team_files(share_dir: Path) -> List[Tuple[str, Path, Path]]:
     return team_files
 
 
-def _discover_team_directories(share_dir: Path) -> List[Path]:
-    """Discover all team directories in the share directory.
-    
-    DEPRECATED: This function is no longer used with the new structure
-    where team configs are in config/ subdirectory. Returns empty list.
-    
-    Args:
-        share_dir: Share directory path
-        
-    Returns:
-        Empty list (teams are now identified by files in config/ directory)
-    """
-    return []
-
-
-def _discover_hday_files(share_dir: Path, team_files: List[Tuple[str, Path, Path]]) -> List[Tuple[Path, str]]:
+def _discover_hday_files(share_dir: Path) -> List[Tuple[Path, str]]:
     """Discover all .hday files in the share directory root.
     
     Args:
         share_dir: Share directory path
-        team_files: List of (team_id, config_path, people_path) tuples (not used)
         
     Returns:
         List of tuples (file_path, username) for all discovered .hday files
@@ -289,7 +258,7 @@ def warm_cache() -> None:
             teams_cached += 1
     
     # Discover .hday files in share root
-    hday_files = _discover_hday_files(share_dir, team_files)
+    hday_files = _discover_hday_files(share_dir)
     logger.debug(f"Discovered {len(hday_files)} .hday files")
     
     # Cache .hday files

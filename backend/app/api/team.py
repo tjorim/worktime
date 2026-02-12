@@ -5,7 +5,6 @@ aggregating .hday files across all team members.
 """
 
 import logging
-from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status

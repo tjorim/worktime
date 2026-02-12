@@ -392,17 +392,18 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
     
     # Check for stale entry that might still be valid
     stale_entry = cache.get_team_config_stale(team_id)
+    # Get config directory and sanitized team_id once (used for both stale cache check and fresh read)
+    config_dir, safe_team_id = get_team_path(team_id)
+    clean_team_id = os.path.basename(safe_team_id)
+    config_path = config_dir / f"{clean_team_id}.conf"
+    people_path = config_dir / f"{clean_team_id}.people"
+    
+    # Validate paths before using them to prevent path traversal
+    _validate_team_file_path(config_path, config_dir, "config")
+    _validate_team_file_path(people_path, config_dir, "people")
+    
     if stale_entry is not None:
         # We have a stale entry - check if file mtimes have changed
-        config_dir, safe_team_id = get_team_path(team_id)
-        clean_team_id = os.path.basename(safe_team_id)
-        config_path = config_dir / f"{clean_team_id}.conf"
-        people_path = config_dir / f"{clean_team_id}.people"
-        
-        # Validate paths before using them to prevent path traversal
-        _validate_team_file_path(config_path, config_dir, "config")
-        _validate_team_file_path(people_path, config_dir, "people")
-        
         try:
             # Check both file mtimes
             current_config_mtime = config_path.stat().st_mtime
@@ -424,16 +425,7 @@ def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
             cache.invalidate_team_config(team_id)
     
     # No cache entry or mtime changed - read files and update cache
-    config_dir, safe_team_id = get_team_path(team_id)
-    clean_team_id = os.path.basename(safe_team_id)
-    
-    # Read config and members using shared parsing logic
-    config_path = config_dir / f"{clean_team_id}.conf"
-    people_path = config_dir / f"{clean_team_id}.people"
-    
-    # Validate paths before using them to prevent path traversal
-    _validate_team_file_path(config_path, config_dir, "config")
-    _validate_team_file_path(people_path, config_dir, "people")
+    # Paths already constructed and validated above
     
     team_name = _parse_config_file(config_path)
     members = _parse_members_file(people_path)
