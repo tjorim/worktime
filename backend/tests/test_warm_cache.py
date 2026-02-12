@@ -11,9 +11,7 @@ from app.cache.warm_cache import (
     _cache_hday_file,
     _cache_team_config,
     _discover_hday_files,
-    _discover_team_directories,
     _discover_team_files,
-    _is_team_directory,
     warm_cache,
 )
 from app.config.settings import settings
@@ -26,94 +24,6 @@ def share_dir(tmp_path, monkeypatch):
     share.mkdir()
     monkeypatch.setattr(settings, "SHARE_DIR", str(share))
     return share
-
-
-class TestIsTeamDirectory:
-    """Tests for _is_team_directory helper (deprecated)."""
-
-    def test_valid_team_directory(self, share_dir):
-        """Test that function always returns False (deprecated)."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
-        
-        assert not _is_team_directory(team_dir)
-    
-    def test_directory_without_config(self, share_dir):
-        """Test that function always returns False (deprecated)."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
-        
-        assert not _is_team_directory(team_dir)
-    
-    def test_directory_without_people(self, share_dir):
-        """Test that function always returns False (deprecated)."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        
-        assert not _is_team_directory(team_dir)
-    
-    def test_not_a_directory(self, share_dir):
-        """Test that function always returns False (deprecated)."""
-        file_path = share_dir / "notadir.txt"
-        file_path.write_text("content", encoding="utf-8")
-        
-        assert not _is_team_directory(file_path)
-
-
-class TestDiscoverTeamDirectories:
-    """Tests for _discover_team_directories function (deprecated)."""
-
-    def test_discover_single_team(self, share_dir):
-        """Test that function always returns empty list (deprecated)."""
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
-        
-        teams = _discover_team_directories(share_dir)
-        
-        assert len(teams) == 0
-    
-    def test_discover_multiple_teams(self, share_dir):
-        """Test that function always returns empty list (deprecated)."""
-        for i in range(3):
-            team_dir = share_dir / f"team{i}"
-            team_dir.mkdir()
-            (team_dir / "config").write_text(f"Team {i}", encoding="utf-8")
-            (team_dir / "people").write_text(f"user{i},User {i}\n", encoding="utf-8")
-        
-        teams = _discover_team_directories(share_dir)
-        
-        assert len(teams) == 0
-    
-    def test_ignores_non_team_directories(self, share_dir):
-        """Test that function always returns empty list (deprecated)."""
-        # Create team directory
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        (team_dir / "config").write_text("Team 1", encoding="utf-8")
-        (team_dir / "people").write_text("alice,Alice\n", encoding="utf-8")
-        
-        # Create non-team directory
-        other_dir = share_dir / "other"
-        other_dir.mkdir()
-        (other_dir / "somefile.txt").write_text("content", encoding="utf-8")
-        
-        teams = _discover_team_directories(share_dir)
-        
-        assert len(teams) == 0
-    
-    def test_handles_permission_error(self, share_dir, caplog):
-        """Test that function always returns empty list (deprecated)."""
-        with patch.object(Path, "iterdir", side_effect=PermissionError("Access denied")):
-            with caplog.at_level(logging.WARNING):
-                teams = _discover_team_directories(share_dir)
-        
-        assert len(teams) == 0
 
 
 class TestDiscoverTeamFiles:
@@ -237,7 +147,7 @@ class TestDiscoverHdayFiles:
         (share_dir / "alice.hday").write_text("2025/01/15 # Vacation", encoding="utf-8")
         (share_dir / "bob.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
         
-        files = _discover_hday_files(share_dir, [])
+        files = _discover_hday_files(share_dir)
         
         assert len(files) == 2
         usernames = {username for _, username in files}
@@ -259,7 +169,7 @@ class TestDiscoverHdayFiles:
         other_dir.mkdir()
         (other_dir / "bob.hday").write_text("2025/02/20 # Conference", encoding="utf-8")
         
-        files = _discover_hday_files(share_dir, [])
+        files = _discover_hday_files(share_dir)
         
         # Only root level file should be found
         assert len(files) == 1
@@ -277,7 +187,7 @@ class TestDiscoverHdayFiles:
         (config_dir / "team1.conf").write_text("groupname=Team 1", encoding="utf-8")
         (config_dir / "team1.people").write_text("bob,Bob\n", encoding="utf-8")
         
-        files = _discover_hday_files(share_dir, [])
+        files = _discover_hday_files(share_dir)
         
         assert len(files) == 2
         usernames = {username for _, username in files}
@@ -289,7 +199,7 @@ class TestDiscoverHdayFiles:
         (share_dir / "readme.txt").write_text("Some notes", encoding="utf-8")
         (share_dir / "config").write_text("Config", encoding="utf-8")
         
-        files = _discover_hday_files(share_dir, [])
+        files = _discover_hday_files(share_dir)
         
         assert len(files) == 1
         assert files[0][1] == "alice"
@@ -298,7 +208,7 @@ class TestDiscoverHdayFiles:
         """Test graceful handling of permission errors at top level."""
         with patch.object(Path, "iterdir", side_effect=PermissionError("Access denied")):
             with caplog.at_level(logging.WARNING):
-                files = _discover_hday_files(share_dir, [])
+                files = _discover_hday_files(share_dir)
         
         assert len(files) == 0
         assert "Could not list .hday files during cache warming" in caplog.text
@@ -406,7 +316,8 @@ class TestCacheTeamConfig:
             result = _cache_team_config("team1", config_path, people_path)
         
         assert result is False
-        assert "groupname not found in config file for team team1" in caplog.text
+        assert "Could not cache team config for team1" in caplog.text
+        assert "groupname field not found" in caplog.text
     
     def test_cache_team_config_permission_error(self, share_dir, caplog):
         """Test handling permission error."""
@@ -592,7 +503,8 @@ class TestWarmCache:
         
         # Should log warnings but continue
         assert "Found team2.conf but missing corresponding team2.people" in caplog.text
-        assert "groupname not found in config file for team team3" in caplog.text
+        assert "Could not cache team config for team3" in caplog.text
+        assert "groupname field not found" in caplog.text
         assert "Cache warming complete: 1 users cached, 1 teams cached" in caplog.text
         
         # Verify successful caches

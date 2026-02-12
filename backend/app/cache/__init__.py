@@ -6,12 +6,10 @@ and team configurations with TTL expiry and mtime validation support.
 
 from app.cache.models import HdayCacheEntry, TeamConfigCacheEntry
 from app.cache.store import FileCache, get_cache
-from app.cache.warm_cache import warm_cache
 
 __all__ = [
     "HdayCacheEntry",
     "TeamConfigCacheEntry",
     "FileCache",
     "get_cache",
-    "warm_cache",
 ]

@@ -16,7 +16,7 @@ from fastapi.responses import PlainTextResponse
 from .api.health import router as health_router
 from .api.hday import router as hday_router
 from .api.team import router as team_router
-from .cache import warm_cache
+from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .middleware.timing import TimingMiddleware
