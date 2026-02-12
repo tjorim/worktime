@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -9,11 +9,13 @@ import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
+import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
+import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
 
 interface SettingsPanelProps {
@@ -44,10 +46,14 @@ export function SettingsPanel({
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDevOptions, setShowDevOptions] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
+  const versionClickCountRef = useRef(0);
+  const versionClickTimeoutRef = useRef<number | null>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
+  const { isDevMode, toggleDevMode } = useDeveloperOptions();
   const {
     settings,
     scheduleType,
@@ -72,6 +78,49 @@ export function SettingsPanel({
 
   const handleShortcutsClose = () => {
     setShowShortcuts(false);
+  };
+
+  const handleDevOptionsClick = () => {
+    setShowDevOptions(true);
+  };
+
+  const handleDevOptionsClose = () => {
+    setShowDevOptions(false);
+  };
+
+  // Triple-click on version to toggle dev mode
+  const handleVersionClick = () => {
+    // Clear existing timeout if any
+    if (versionClickTimeoutRef.current !== null) {
+      clearTimeout(versionClickTimeoutRef.current);
+    }
+
+    // Increment click count
+    versionClickCountRef.current += 1;
+
+    // If third click, toggle dev mode
+    if (versionClickCountRef.current === 3) {
+      toggleDevMode();
+      const message = isDevMode
+        ? "Developer mode disabled"
+        : "Developer mode enabled - check Information section";
+      toast.showInfo(message);
+      versionClickCountRef.current = 0;
+      versionClickTimeoutRef.current = null;
+    } else {
+      // Reset counter after 1 second
+      versionClickTimeoutRef.current = window.setTimeout(() => {
+        versionClickCountRef.current = 0;
+        versionClickTimeoutRef.current = null;
+      }, 1000);
+    }
+  };
+
+  const handleVersionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleVersionClick();
+    }
   };
 
   // Clear/reset all settings
@@ -344,6 +393,20 @@ export function SettingsPanel({
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
                 </ListGroup.Item>
+                {isDevMode && (
+                  <ListGroup.Item action onClick={handleDevOptionsClick}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-code-slash me-2"></i>
+                          Developer Options
+                        </div>
+                        <small className="text-muted">Backend API configuration</small>
+                      </div>
+                      <i className="bi bi-chevron-right text-muted"></i>
+                    </div>
+                  </ListGroup.Item>
+                )}
               </ListGroup>
             </div>
           </div>
@@ -414,7 +477,16 @@ export function SettingsPanel({
 
           {/* App Version Footer */}
           <div className="mt-auto p-3 text-center border-top">
-            <small className="text-muted d-block">Worktime v{CONFIG.VERSION}</small>
+            <button
+              type="button"
+              className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
+              onClick={handleVersionClick}
+              onKeyDown={handleVersionKeyDown}
+              style={{ cursor: "pointer", userSelect: "none" }}
+              aria-label={`Worktime version ${CONFIG.VERSION}`}
+            >
+              Worktime v{CONFIG.VERSION}
+            </button>
             <small className="text-muted">Built with ❤️ by Jorim Tielemans</small>
           </div>
         </Offcanvas.Body>
@@ -425,6 +497,9 @@ export function SettingsPanel({
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal show={showShortcuts} onHide={handleShortcutsClose} />
+
+      {/* Developer Options Modal */}
+      <DevOptionsPanel show={showDevOptions} onHide={handleDevOptionsClose} />
 
       {/* Reset Confirmation Modal */}
       <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>
