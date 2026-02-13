@@ -38,6 +38,14 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
           cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Cache Nuitka compilation artifacts
+        uses: actions/cache@v4
+        with:
+          path: .nuitka-cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('backend/requirements.txt', 'backend/build_exe.py') }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-
       
       - name: Install dependencies
         run: |
@@ -46,12 +54,9 @@ jobs:
           pip install nuitka ordered-set zstandard
         shell: pwsh
       
-      - name: Install Windows SDK (required by Nuitka)
-        run: |
-          choco install windows-sdk-10-version-2004-all -y
-        shell: pwsh
-      
       - name: Build executable with Nuitka
+        env:
+          NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache
         run: |
           cd backend
           python build_exe.py
