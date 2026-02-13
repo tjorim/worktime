@@ -111,7 +111,7 @@ jobs:
           
           ## Build Information:
           - Commit: ${{ github.sha }}
-          - Build date: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
+          - Build date: $((Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")) UTC
           "@
           
           $notes | Out-File -FilePath backend/dist/README.txt -Encoding utf8

@@ -14,6 +14,19 @@ import sys
 from pathlib import Path
 
 
+def get_app_version():
+    """Extract version from the FastAPI app."""
+    backend_dir = Path(__file__).parent.resolve()
+    sys.path.insert(0, str(backend_dir))
+    
+    try:
+        from app.main import app
+        return app.version
+    except Exception as e:
+        print(f"Warning: Could not extract version from app: {e}")
+        return "1.0.0"
+
+
 def main():
     """Build the Windows executable using Nuitka."""
     # Get the backend directory
@@ -25,11 +38,20 @@ def main():
         print(f"Error: Could not find {main_py}")
         sys.exit(1)
     
+    # Get version from app
+    version = get_app_version()
+    version_parts = version.split('.')
+    # Ensure we have at least 3 parts for Windows version
+    while len(version_parts) < 3:
+        version_parts.append('0')
+    file_version = '.'.join(version_parts[:3]) + '.0'  # Windows needs 4 parts
+    
     print("=" * 60)
     print("Building Worktime Backend as Windows Executable")
     print("=" * 60)
     print(f"Backend directory: {backend_dir}")
     print(f"Main module: {main_py}")
+    print(f"Version: {version}")
     print()
     
     # Nuitka build command
@@ -59,8 +81,8 @@ def main():
         # Add company and product metadata
         "--company-name=Worktime",
         "--product-name=Worktime Backend",
-        "--file-version=1.0.0.0",
-        "--product-version=1.0.0",
+        f"--file-version={file_version}",
+        f"--product-version={version}",
         "--file-description=Worktime Backend API Server",
         # Optimize for size
         "--lto=yes",
