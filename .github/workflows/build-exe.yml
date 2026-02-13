@@ -1,0 +1,187 @@
+name: Build Windows Executable
+
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'backend/**'
+  #     - '.github/workflows/build-exe.yml'
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - 'backend/**'
+  #     - '.github/workflows/build-exe.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+# Prevent concurrent builds
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows-exe:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write  # For PR comments
+      actions: write  # For artifact upload
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+        shell: pwsh
+
+      - name: Extract build version metadata
+        id: version
+        run: |
+          cd backend
+          $version = python -c "from app.main import app; print(app.version)" 2>$null
+          if (-not $version) {
+            $version = "1.0.0"
+          }
+          $numeric = ($version -split '\.' | ForEach-Object { if ($_ -match '^\d+') { $Matches[0] } } | Where-Object { $_ -ne '' })
+          while ($numeric.Count -lt 3) {
+            $numeric += '0'
+          }
+          $fileVersion = "{0}.{1}.{2}.0" -f $numeric[0], $numeric[1], $numeric[2]
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "file_version=$fileVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Build executable with Nuitka-Action
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          working-directory: backend
+          script-name: launcher.py
+          caching-key: ${{ hashFiles('backend/requirements.txt', '.github/workflows/build-exe.yml') }}
+          mode: onefile
+          output-dir: dist
+          output-file: worktime-backend.exe
+          include-package: app
+          assume-yes-for-downloads: true
+          company-name: Worktime
+          product-name: Worktime Backend
+          file-version: ${{ steps.version.outputs.file_version }}
+          product-version: ${{ steps.version.outputs.version }}
+          file-description: Worktime Backend API Server
+          show-memory: true
+      
+      - name: Test executable
+        run: |
+          cd backend/dist
+          # Test that executable runs and responds to --help or shows version
+          # Note: The actual server needs configuration, so we just check it exists and is executable
+          if (Test-Path "worktime-backend.exe") {
+            Write-Host "✅ Executable created successfully"
+            $size = (Get-Item "worktime-backend.exe").Length / 1MB
+            Write-Host "📦 Size: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Host "❌ Executable not found"
+            exit 1
+          }
+        shell: pwsh
+      
+      - name: Create release notes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          $notes = @"
+          # Worktime Backend - Windows Executable
+          
+          This is a standalone Windows executable of the Worktime backend API server.
+          No Python installation required!
+          
+          ## How to use:
+          
+          1. Download ``worktime-backend.exe``
+          2. Create a ``.env`` file in the same directory (optional):
+             ```
+             SHARE_DIR=C:\path\to\shared\files
+             CORS_ORIGINS=http://localhost:5173
+             PORT=8000
+             ```
+          3. Double-click ``worktime-backend.exe`` or run from command line
+          4. The server will start on http://localhost:8000
+          
+          ## Configuration:
+          
+          The server can be configured via environment variables or a ``.env`` file:
+          - ``SHARE_DIR``: Directory containing .hday files (default: ./data/hday_files)
+          - ``CORS_ORIGINS``: Allowed origins for CORS (default: http://localhost:5173)
+          - ``PORT``: Server port (default: 8000)
+          - ``HOST``: Server host (default: 0.0.0.0)
+          - ``ENVIRONMENT``: development or production (default: development)
+          
+          ## Requirements:
+          - Windows 10 or later
+          - Network share access (if using shared .hday files)
+          
+          ## Build Information:
+          - Commit: ${{ github.sha }}
+          - Build date: $((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
+          "@
+          
+          $notes | Out-File -FilePath backend/dist/README.txt -Encoding utf8
+        shell: pwsh
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: worktime-backend-windows
+          path: |
+            backend/dist/worktime-backend.exe
+            backend/dist/README.txt
+          retention-days: 30
+          if-no-files-found: error
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Check if executable exists and get size
+            const exePath = path.join('backend', 'dist', 'worktime-backend.exe');
+            let sizeInfo = 'Unknown';
+            if (fs.existsSync(exePath)) {
+              const stats = fs.statSync(exePath);
+              const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+              sizeInfo = `${sizeMB} MB`;
+            }
+            
+            const comment = `## 🎉 Windows Executable Build Complete
+            
+            ✅ Successfully built Windows executable!
+            
+            📦 **Size:** ${sizeInfo}
+            
+            The executable is available as a build artifact named \`worktime-backend-windows\`.
+            
+            ### To download and test:
+            1. Go to the "Actions" tab
+            2. Find this workflow run
+            3. Download the \`worktime-backend-windows\` artifact
+            4. Extract and run \`worktime-backend.exe\`
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

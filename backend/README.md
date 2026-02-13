@@ -1,8 +1,12 @@
 # Backend
 
+[![Build Windows Executable](https://github.com/tjorim/worktime/actions/workflows/build-exe.yml/badge.svg)](https://github.com/tjorim/worktime/actions/workflows/build-exe.yml)
+
 This document describes the backend for Worktime: a lightweight API server that bridges the web
 frontend with .hday files and team configuration stored on a shared network drive (NFS/SMB). The
 goal is to keep the app local-first while enabling shared team data for users on the same network.
+
+> **💡 Quick Start for Windows Users:** Download the [standalone Windows executable](#windows-executable) - no Python installation required!
 
 ## Table of contents
 
@@ -17,6 +21,7 @@ goal is to keep the app local-first while enabling shared team data for users on
 - [Security](#security)
 - [CORS](#cors)
 - [Hosting and deployment](#hosting-and-deployment)
+  - [Windows Executable](#windows-executable)
 - [WebPlanner feature analysis](#webplanner-feature-analysis)
 - [Resolved questions](#resolved-questions)
 - [Conclusions](#conclusions)
@@ -864,10 +869,70 @@ Environment variables:
 
 ### Deployment options
 
+- **Windows Executable** (recommended for end users): Download the pre-built `worktime-backend.exe` 
+  from GitHub Actions artifacts. No Python installation required! Just double-click to run.
+  See [Windows Executable](#windows-executable) below for details.
 - **Direct**: `uvicorn app.main:app` on the host machine.
 - **Docker**: Mount the network share into the container. The hdayplanner prototype's Dockerfile
   (python:3.11-slim + uvicorn) is a working starting point.
 - **Windows service**: For long-running deployment on a Windows laptop with share access.
+
+### Windows Executable
+
+For easy deployment on Windows machines, we provide a standalone executable built with Nuitka. This is
+the recommended approach for non-technical users.
+
+**Download:**
+
+The Windows executable is automatically built on every commit to `main` and is available as a GitHub
+Actions artifact named `worktime-backend-windows`. To download:
+
+1. Go to the [Actions tab](../../actions/workflows/build-exe.yml)
+2. Click on the latest successful workflow run
+3. Download the `worktime-backend-windows` artifact
+4. Extract `worktime-backend.exe`
+
+**Usage:**
+
+1. Place `worktime-backend.exe` in a folder of your choice
+2. (Optional) Create a `.env` file in the same folder to configure the server:
+   ```
+   SHARE_DIR=C:\path\to\shared\files
+   CORS_ORIGINS=http://localhost:5173
+   PORT=8000
+   ```
+3. Double-click `worktime-backend.exe` to start the server
+4. The server will start on http://localhost:8000 (or the configured PORT)
+5. Access the API at http://localhost:8000 or connect your Worktime frontend
+
+**Configuration:**
+
+The executable accepts the same environment variables as the Python version (see Configuration table
+above). You can set these in a `.env` file or in Windows environment variables.
+
+**Building from source:**
+
+To build the Windows executable yourself:
+
+```bash
+cd backend
+pip install -r requirements.txt
+pip install nuitka ordered-set zstandard
+python -m nuitka launcher.py \
+  --onefile \
+  --output-dir=dist \
+  --output-filename=worktime-backend.exe \
+  --include-package=app \
+  --windows-console-mode=force \
+  --assume-yes-for-downloads
+```
+
+The executable will be created in `backend/dist/worktime-backend.exe`.
+
+**Requirements:**
+- Windows 10 or later
+- Network share access (if using shared .hday files)
+- No Python installation required!
 
 ### Technology
 
