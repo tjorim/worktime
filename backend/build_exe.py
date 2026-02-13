@@ -8,7 +8,6 @@ Usage:
     python build_exe.py
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -107,7 +106,7 @@ def main():
     
     try:
         # Run Nuitka
-        result = subprocess.run(cmd, cwd=backend_dir, check=True)
+        subprocess.run(cmd, cwd=backend_dir, check=True)
         
         print()
         print("=" * 60)

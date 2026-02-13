@@ -26,7 +26,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write  # For PR comments
-      actions: read  # For artifact upload
+      actions: write  # For artifact upload
     
     steps:
       - name: Checkout repository
@@ -72,14 +72,6 @@ jobs:
           }
         shell: pwsh
       
-      - name: Upload executable artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: worktime-backend-windows
-          path: backend/dist/worktime-backend.exe
-          retention-days: 30
-          if-no-files-found: error
-      
       - name: Create release notes
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -122,13 +114,15 @@ jobs:
           $notes | Out-File -FilePath backend/dist/README.txt -Encoding utf8
         shell: pwsh
       
-      - name: Upload release notes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
           name: worktime-backend-windows
-          path: backend/dist/README.txt
+          path: |
+            backend/dist/worktime-backend.exe
+            backend/dist/README.txt
           retention-days: 30
+          if-no-files-found: error
       
       - name: Comment on PR
         if: github.event_name == 'pull_request'

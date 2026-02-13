@@ -167,7 +167,7 @@ Now your Worktime app can read and write .hday files through the backend!
   ```cmd
   curl http://localhost:8000/v1/health
   ```
-  Should return: `{"status": "healthy", ...}`
+  Should return: `{"status": "ok", "share": "accessible"}`
 
 ## Stopping the Server
 
