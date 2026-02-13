@@ -110,7 +110,7 @@ def main():
         
         print()
         print("=" * 60)
-        print("✅ Build completed successfully!")
+        print("[SUCCESS] Build completed successfully!")
         print("=" * 60)
         
         # Check output
@@ -120,21 +120,21 @@ def main():
             print(f"Executable: {exe_path}")
             print(f"Size: {size_mb:.2f} MB")
         else:
-            print("⚠️  Warning: Expected executable not found at", exe_path)
+            print("[WARNING] Expected executable not found at", exe_path)
         
         return 0
         
     except subprocess.CalledProcessError as e:
         print()
         print("=" * 60)
-        print("❌ Build failed!")
+        print("[ERROR] Build failed!")
         print("=" * 60)
         print(f"Error: {e}")
         return 1
     except Exception as e:
         print()
         print("=" * 60)
-        print("❌ Unexpected error!")
+        print("[ERROR] Unexpected error!")
         print("=" * 60)
         print(f"Error: {e}")
         return 1
