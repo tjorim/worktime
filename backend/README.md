@@ -916,8 +916,15 @@ To build the Windows executable yourself:
 
 ```bash
 cd backend
+pip install -r requirements.txt
 pip install nuitka ordered-set zstandard
-python build_exe.py
+python -m nuitka app/main.py \
+  --onefile \
+  --output-dir=dist \
+  --output-filename=worktime-backend.exe \
+  --include-package=app \
+  --windows-console-mode=force \
+  --assume-yes-for-downloads
 ```
 
 The executable will be created in `backend/dist/worktime-backend.exe`.

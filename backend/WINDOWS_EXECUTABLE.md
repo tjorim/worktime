@@ -184,9 +184,15 @@ If you want to build the executable yourself:
    pip install -r requirements.txt
    pip install nuitka ordered-set zstandard
    ```
-4. Run the build script:
+4. Build with Nuitka:
    ```bash
-   python build_exe.py
+   python -m nuitka app/main.py \
+     --onefile \
+     --output-dir=dist \
+     --output-filename=worktime-backend.exe \
+     --include-package=app \
+     --windows-console-mode=force \
+     --assume-yes-for-downloads
    ```
 5. Find the executable in `dist/worktime-backend.exe`
 
