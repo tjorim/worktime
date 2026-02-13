@@ -75,7 +75,7 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
 /**
  * Get the default label color from CSS variables (theme-aware).
  * Falls back to Bootstrap's gray-600 (#6c757d) if CSS variable is not available.
- * 
+ *
  * The result is cached to avoid repeated getComputedStyle calls, which can be expensive.
  * The cache is automatically invalidated when the theme changes (data-bs-theme attribute).
  */

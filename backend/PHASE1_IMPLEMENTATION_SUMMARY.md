@@ -3,7 +3,9 @@
 ## Completed Tasks
 
 ### Task 1: Pydantic Models (`backend/app/models/hday.py`)
+
 ✅ **Implemented** - All requirements met:
+
 - Defined `Flag` type as Literal with all 13 valid flags
 - Created `HdayEvent` model with required fields
 - Implemented API schema models:
@@ -15,7 +17,9 @@
 **Test Coverage**: 16 passing tests
 
 ### Task 2: Parser Logic (`backend/app/services/hday_parser.py`)
+
 ✅ **Implemented** - All requirements met:
+
 - Ported `PREFIX_MAP` and `REV_MAP` dictionaries from archived prototype
 - Defined `TYPE_FLAGS` tuple for mutually exclusive type flags
 - Implemented `normalize_flags()` with FIFO flag ordering
@@ -25,13 +29,16 @@
 - **Enhancement**: Added case-insensitive flag parsing (flags like 'B' are now treated as 'b')
 
 **Test Coverage**: 34 passing tests including:
+
 - Flag mapping validation
 - Normalization logic
 - Parsing (range, weekly, unknown events)
 - Serialization (round-trip fidelity)
 
 ### Task 3: Service Layer (`backend/app/services/hday_service.py`)
+
 ✅ **Implemented** - All requirements met:
+
 - Defined custom exceptions:
   - `HdayFileNotFoundError`
   - `HdayConflictError` (with current_etag attribute)
@@ -46,13 +53,15 @@
   - Conflict detection for null and non-null etags
 
 **Test Coverage**: 7 passing tests for core functions (compute_etag, get_hday_path)
+
 - Note: Full file I/O integration tests are deferred to API endpoint tests in Phase 2
 
 ## Test Results
 
 **Total: 57 passing tests**
+
 - Models: 16 tests
-- Parser: 34 tests  
+- Parser: 34 tests
 - Service: 7 tests
 
 All tests pass with 100% success rate.
@@ -87,6 +96,7 @@ backend/tests/
 ## Next Steps
 
 Phase 2 will build API endpoints on top of this foundation:
+
 - `GET /api/hday/{username}` - Read .hday file
 - `PUT /api/hday/{username}` - Write/update .hday file
 - Full integration tests with actual file I/O

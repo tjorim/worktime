@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import type { HdayEvent } from "../lib/hday/types";
+import { dayjs } from "../utils/dateTimeUtils";
+import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 
 interface TeamMember {
   username: string;
@@ -32,26 +35,117 @@ interface TeamHdayResponse {
 }
 
 /**
- * Team Schedule Viewer - displays team members and their .hday schedules.
+ * Get event type flag from event (returns first flag or empty string)
+ */
+function getEventType(event: HdayEvent): string {
+  if (event.flags && event.flags.length > 0) {
+    const firstFlag = event.flags[0];
+    // Map TypeFlag to single character for color coding
+    switch (firstFlag) {
+      case "business":
+        return "b";
+      case "course":
+        return "s";
+      case "weekend":
+        return "w";
+      case "in":
+        return "i";
+      case "ill":
+        return "l";
+      case "birthday":
+        return "a";
+      case "other":
+        return "o";
+      default:
+        return "";
+    }
+  }
+  return "";
+}
+
+/**
+ * Get background color CSS class for event type based on flags
+ * Reuses existing event color classes from _shifts.scss
+ */
+function getEventColorClass(eventType: string, isHalfDay: boolean): string {
+  const suffix = isHalfDay ? "-half" : "-full";
+  switch (eventType) {
+    case "b":
+      return `event-business${suffix}`;
+    case "s":
+      return `event-course${suffix}`;
+    case "w":
+      return `event-weekend${suffix}`;
+    case "i":
+      return `event-in${suffix}`;
+    case "l":
+      return `event-ill${suffix}`;
+    case "a":
+      return `event-birthday${suffix}`;
+    case "o":
+      return `event-course${suffix}`; // Use course color for "other"
+    default:
+      return `event-holiday${suffix}`; // Vacation (no flag)
+  }
+}
+
+/**
+ * Check if a date has an event for a member
+ */
+function getEventsForDate(member: TeamMemberHdayData, date: dayjs.Dayjs): HdayEvent[] {
+  return member.events.filter((event) => {
+    if (event.type === "range" && event.start && event.end) {
+      const eventStart = dayjs(event.start.replace(/\//g, "-")); // Convert YYYY/MM/DD to YYYY-MM-DD
+      const eventEnd = dayjs(event.end.replace(/\//g, "-"));
+      return (
+        (date.isAfter(eventStart, "day") || date.isSame(eventStart, "day")) &&
+        (date.isBefore(eventEnd, "day") || date.isSame(eventEnd, "day"))
+      );
+    } else if (event.type === "weekly" && event.weekday) {
+      // Check if date matches the weekly pattern (1=Monday, 7=Sunday)
+      const dayOfWeek = date.isoWeekday(); // 1=Monday, 7=Sunday
+      return event.weekday === dayOfWeek;
+    }
+    return false;
+  });
+}
+
+/**
+ * Team Schedule Viewer - displays team members and their .hday schedules in a calendar grid.
  * Only visible when developer options are enabled and backend is connected.
  *
- * Allows user to input a team ID and view:
- * - Team name
- * - List of all team members
- * - Each member's .hday events in an agenda-style view
+ * Shows a calendar-style grid with:
+ * - Dates as columns (horizontal timeline)
+ * - Team members as rows (grouped by sections)
+ * - Color-coded cells for different event types
+ * - Member metadata shown on hover over names
  *
- * Inspired by example-team-overview.html but simplified for initial implementation.
+ * Inspired by example-team-overview.html.
  */
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
   const apiUrl = options.apiUrl;
   const connectionStatus = options.connectionStatus;
-  
-  const [teamId, setTeamId] = useState("");
+
+  const [teamId, setTeamId] = useState(() => {
+    // Load saved team ID from localStorage
+    return localStorage.getItem("worktime_last_team_id") || "";
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Date range for calendar (default: current month ± 1 month)
+  const [startMonth, setStartMonth] = useState(() => dayjs().subtract(1, "month").startOf("month"));
+  const [endMonth, setEndMonth] = useState(() => dayjs().add(1, "month").endOf("month"));
+
+  // Save team ID to localStorage when it changes
+  useEffect(() => {
+    if (teamId) {
+      localStorage.setItem("worktime_last_team_id", teamId);
+    }
+  }, [teamId]);
 
   // Reset state when connection is lost
   useEffect(() => {
@@ -108,7 +202,7 @@ export function TeamScheduleView() {
       }
 
       const data: TeamHdayResponse = await response.json();
-      
+
       // Only update state if this request wasn't aborted
       if (!abortController.signal.aborted) {
         setTeamData(data);
@@ -118,7 +212,7 @@ export function TeamScheduleView() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      
+
       console.error("Error fetching team data:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
       setTeamData(null);
@@ -130,10 +224,54 @@ export function TeamScheduleView() {
     }
   }, [teamId, apiUrl]);
 
+  // Auto-load team data if team ID is available and connected
+  useEffect(() => {
+    if (teamId && connectionStatus === "connected" && !teamData && !isLoading) {
+      fetchTeamData();
+    }
+  }, [teamId, connectionStatus, teamData, isLoading, fetchTeamData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchTeamData();
   };
+
+  // Generate array of all dates in the range
+  const dateRange = useMemo(() => {
+    const dates: dayjs.Dayjs[] = [];
+    let current = startMonth;
+    while (current.isBefore(endMonth) || current.isSame(endMonth, "day")) {
+      dates.push(current);
+      current = current.add(1, "day");
+    }
+    return dates;
+  }, [startMonth, endMonth]);
+
+  // Group dates by month for header
+  const monthGroups = useMemo(() => {
+    const groups: { month: string; colspan: number }[] = [];
+    let currentMonth = "";
+    let count = 0;
+
+    dateRange.forEach((date) => {
+      const monthName = date.format("MMMM YYYY");
+      if (monthName !== currentMonth) {
+        if (count > 0) {
+          groups.push({ month: currentMonth, colspan: count });
+        }
+        currentMonth = monthName;
+        count = 1;
+      } else {
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      groups.push({ month: currentMonth, colspan: count });
+    }
+
+    return groups;
+  }, [dateRange]);
 
   if (connectionStatus !== "connected") {
     return (
@@ -203,73 +341,262 @@ export function TeamScheduleView() {
       )}
 
       {teamData && (
-        <Card className="mb-3">
-          <Card.Header>
-            <h5 className="mb-0">
-              <i className="bi bi-building me-2" aria-hidden="true"></i>
-              {teamData.name}
-            </h5>
-          </Card.Header>
-          <Card.Body>
-            <h6 className="mb-3">
-              Team Members ({teamData.members.length})
-              <span className="text-muted small ms-2">ID: {teamData.team_id}</span>
-            </h6>
+        <>
+          <Card className="mb-3">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">
+                  <i className="bi bi-building me-2" aria-hidden="true"></i>
+                  {teamData.name}
+                </h5>
+                <MonthNavigationButtonGroup
+                  isCurrent={
+                    startMonth.isSame(dayjs().subtract(1, "month").startOf("month"), "day") &&
+                    endMonth.isSame(dayjs().add(1, "month").endOf("month"), "day")
+                  }
+                  onPrevious={() => {
+                    setStartMonth(startMonth.subtract(1, "month"));
+                    setEndMonth(endMonth.subtract(1, "month"));
+                  }}
+                  onCurrent={() => {
+                    setStartMonth(dayjs().subtract(1, "month").startOf("month"));
+                    setEndMonth(dayjs().add(1, "month").endOf("month"));
+                  }}
+                  onNext={() => {
+                    setStartMonth(startMonth.add(1, "month"));
+                    setEndMonth(endMonth.add(1, "month"));
+                  }}
+                  displayLabel={`${startMonth.format("MMM YYYY")} - ${endMonth.format("MMM YYYY")}`}
+                />
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <h6 className="mb-3">
+                Team Members ({teamData.members.length})
+                <span className="text-muted small ms-2">ID: {teamData.team_id}</span>
+              </h6>
 
-            {teamData.sections.map((section, sectionIndex) => (
-              <div key={sectionIndex} className="mb-4 last:mb-0">
-                {/* Show section header if title exists and there are multiple sections */}
-                {section.title && teamData.sections.length > 1 && (
-                  <h6 className="mb-2 text-secondary">
-                    <i className="bi bi-people-fill me-2" aria-hidden="true"></i>
-                    {section.title}
-                  </h6>
-                )}
-
-                <Table responsive hover className="mb-0">
+              <div className="table-responsive">
+                <table className="team-calendar-grid" cellSpacing="0" cellPadding="1">
                   <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Display Name</th>
-                      <th>Events</th>
-                      <th>Status</th>
+                    {/* Month header row */}
+                    <tr className="calendar-header">
+                      <th className="calendar-name-cell" rowSpan={2}>
+                        Name
+                      </th>
+                      {monthGroups.map((group, idx) => (
+                        <th key={idx} className="calendar-month-header" colSpan={group.colspan}>
+                          {group.month}
+                        </th>
+                      ))}
+                    </tr>
+                    {/* Day header row */}
+                    <tr className="calendar-header">
+                      {dateRange.map((date) => {
+                        const isWeekend = date.day() === 0 || date.day() === 6;
+                        const isToday = date.isSame(dayjs(), "day");
+                        return (
+                          <th
+                            key={date.format("YYYY-MM-DD")}
+                            className="calendar-day-header"
+                            style={{
+                              background: isToday
+                                ? "var(--wt-team-cal-today)"
+                                : isWeekend
+                                  ? "var(--wt-team-cal-weekend)"
+                                  : undefined,
+                              opacity: isWeekend && !isToday ? 0.6 : 1,
+                            }}
+                            title={date.format("ddd, MMM D")}
+                          >
+                            {date.format("D")}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {section.members.map((member) => (
-                      <tr key={member.username}>
-                        <td>
-                          <code>{member.username}</code>
-                        </td>
-                        <td>{member.display_name}</td>
-                        <td>
-                          {member.events.length > 0 ? (
-                            <span className="badge text-bg-info">{member.events.length} events</span>
-                          ) : (
-                            <span className="text-muted small">No events</span>
-                          )}
-                        </td>
-                        <td>
-                          {member.etag ? (
-                            <span className="text-success small">
-                              <i className="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
-                              .hday file
-                            </span>
-                          ) : (
-                            <span className="text-muted small">
-                              <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
-                              No .hday file
-                            </span>
-                          )}
-                        </td>
-                      </tr>
+                    {teamData.sections.map((section, sectionIndex) => (
+                      <Fragment key={`section-${sectionIndex}`}>
+                        {/* Section header row (if multiple sections with titles) */}
+                        {section.title && teamData.sections.length > 1 && (
+                          <tr className="section-header-row">
+                            <td className="section-header">
+                              <i className="bi bi-people-fill me-2" aria-hidden="true"></i>
+                              {section.title}
+                            </td>
+                            {/* Empty cells for date columns */}
+                            {dateRange.map((date) => (
+                              <td
+                                key={date.format("YYYY-MM-DD")}
+                                className="section-header-spacer"
+                              ></td>
+                            ))}
+                          </tr>
+                        )}
+                        {/* Member rows */}
+                        {section.members.map((member) => {
+                          const tooltip = (
+                            <Tooltip id={`tooltip-${member.username}`}>
+                              <div className="text-start">
+                                <strong>{member.display_name}</strong>
+                                <br />
+                                <code className="text-white">{member.username}</code>
+                                <br />
+                                {member.events.length} event{member.events.length !== 1 ? "s" : ""}
+                                <br />
+                                {member.etag ? (
+                                  <span className="text-success">
+                                    <i
+                                      className="bi bi-file-earmark-text me-1"
+                                      aria-hidden="true"
+                                    ></i>
+                                    .hday file
+                                  </span>
+                                ) : (
+                                  <span className="text-muted">
+                                    <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
+                                    No .hday file
+                                  </span>
+                                )}
+                              </div>
+                            </Tooltip>
+                          );
+
+                          return (
+                            <tr key={member.username} className="calendar-member-row">
+                              <td className="calendar-name-cell">
+                                <OverlayTrigger placement="right" overlay={tooltip}>
+                                  <span className="member-name">{member.display_name}</span>
+                                </OverlayTrigger>
+                              </td>
+                              {dateRange.map((date) => {
+                                const events = getEventsForDate(member, date);
+                                const isWeekend = date.day() === 0 || date.day() === 6;
+                                const isToday = date.isSame(dayjs(), "day");
+
+                                let cellClass = "calendar-day-cell";
+                                let content = "\u00A0"; // Non-breaking space
+                                let isHalfDay = false;
+
+                                if (events.length > 0) {
+                                  const event = events[0];
+                                  if (event) {
+                                    // Check for half-day
+                                    isHalfDay =
+                                      event.flags !== undefined &&
+                                      (event.flags.includes("half_am") ||
+                                        event.flags.includes("half_pm"));
+
+                                    // Use first event if multiple
+                                    const eventType = getEventType(event);
+                                    cellClass += ` ${getEventColorClass(eventType, isHalfDay)}`;
+
+                                    // Show symbol for half-day events
+                                    if (isHalfDay) {
+                                      content = "½"; // Half-day indicator
+                                    }
+                                  }
+                                } else if (isWeekend) {
+                                  cellClass += " calendar-weekend";
+                                } else {
+                                  cellClass += " calendar-available";
+                                }
+
+                                if (isToday) {
+                                  cellClass += " calendar-today";
+                                }
+
+                                return (
+                                  <td
+                                    key={date.format("YYYY-MM-DD")}
+                                    className={cellClass}
+                                    title={
+                                      events.length > 0
+                                        ? `${date.format("MMM D")}: ${events.map((e) => e.title || "Event").join(", ")}`
+                                        : date.format("MMM D")
+                                    }
+                                  >
+                                    {content}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </Fragment>
                     ))}
                   </tbody>
-                </Table>
+                </table>
               </div>
-            ))}
-          </Card.Body>
-        </Card>
+            </Card.Body>
+          </Card>
+
+          {/* Legend */}
+          <Card className="mb-3">
+            <Card.Header>
+              <h6 className="mb-0">Legend</h6>
+            </Card.Header>
+            <Card.Body>
+              <div className="row g-2">
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box calendar-available"></div>
+                    <span>Available / In office</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-holiday-half"></div>
+                    <span>Vacation</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-ill-half"></div>
+                    <span>Sick leave</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-business-half"></div>
+                    <span>Business trip</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-course-half"></div>
+                    <span>Training / Course</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-weekend-half"></div>
+                    <span>Weekly off</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box calendar-weekend"></div>
+                    <span>Weekend</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-in-half"></div>
+                    <span>In office (explicit)</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="fw-bold fs-5">½</span>
+                    <span>Half-day event</span>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </>
       )}
 
       {!teamData && !error && !isLoading && (

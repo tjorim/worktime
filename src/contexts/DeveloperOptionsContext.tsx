@@ -50,7 +50,7 @@ interface DeveloperOptionsProviderProps {
 
 export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderProps) {
   const [options, setOptions] = useLocalStorage<DeveloperOptions>(STORAGE_KEY, defaultOptions);
-  
+
   // Use persisted isDevMode from options
   const [isDevMode, setIsDevMode] = useState(options.isDevMode);
 
@@ -103,58 +103,61 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     setIsDevMode((prev) => !prev);
   }, []);
 
-  const testConnection = useCallback(async (url?: string): Promise<boolean> => {
-    const testUrl = url || options.apiUrl;
-    if (!testUrl) {
-      return false;
-    }
+  const testConnection = useCallback(
+    async (url?: string): Promise<boolean> => {
+      const testUrl = url || options.apiUrl;
+      if (!testUrl) {
+        return false;
+      }
 
-    setOptions((prev) => ({ ...prev, connectionStatus: "connecting" }));
+      setOptions((prev) => ({ ...prev, connectionStatus: "connecting" }));
 
-    let timeoutId: number | undefined;
-    try {
-      const controller = new AbortController();
-      timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      let timeoutId: number | undefined;
+      try {
+        const controller = new AbortController();
+        timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      const response = await fetch(`${testUrl}/v1/health`, {
-        method: "GET",
-        signal: controller.signal,
-        headers: {
-          Accept: "application/json",
-        },
-      });
+        const response = await fetch(`${testUrl}/v1/health`, {
+          method: "GET",
+          signal: controller.signal,
+          headers: {
+            Accept: "application/json",
+          },
+        });
 
-      if (response.ok) {
-        setOptions((prev) => ({
-          ...prev,
-          enabled: true,
-          connectionStatus: "connected",
-          lastConnectionTest: Date.now(),
-        }));
-        return true;
-      } else {
+        if (response.ok) {
+          setOptions((prev) => ({
+            ...prev,
+            enabled: true,
+            connectionStatus: "connected",
+            lastConnectionTest: Date.now(),
+          }));
+          return true;
+        } else {
+          setOptions((prev) => ({
+            ...prev,
+            connectionStatus: "error",
+            lastConnectionTest: Date.now(),
+          }));
+          return false;
+        }
+      } catch (error) {
+        console.error("Backend connection test failed:", error);
         setOptions((prev) => ({
           ...prev,
           connectionStatus: "error",
           lastConnectionTest: Date.now(),
         }));
         return false;
+      } finally {
+        // Always clear the timeout
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
       }
-    } catch (error) {
-      console.error("Backend connection test failed:", error);
-      setOptions((prev) => ({
-        ...prev,
-        connectionStatus: "error",
-        lastConnectionTest: Date.now(),
-      }));
-      return false;
-    } finally {
-      // Always clear the timeout
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-    }
-  }, [options.apiUrl, setOptions]);
+    },
+    [options.apiUrl, setOptions],
+  );
 
   const disconnect = useCallback(() => {
     setOptions((prev) => ({
@@ -174,7 +177,15 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
       testConnection,
       disconnect,
     }),
-    [options, isDevMode, updateApiUrl, updateAutoConnect, toggleDevMode, testConnection, disconnect]
+    [
+      options,
+      isDevMode,
+      updateApiUrl,
+      updateAutoConnect,
+      toggleDevMode,
+      testConnection,
+      disconnect,
+    ],
   );
 
   return (

@@ -12,7 +12,7 @@ from typing import List
 
 from app.cache.store import get_cache
 from app.config.settings import settings
-from app.models.team import TeamMember, TeamMemberHdayData
+from app.models.team import TeamMember, TeamMemberHdayData, TeamSection
 from app.services.hday_parser import parse_text
 from app.services.hday_service import ShareNotAccessibleError, compute_etag
 
@@ -181,8 +181,6 @@ def _parse_members_file_with_sections(people_path: Path) -> tuple[List[TeamSecti
         raise TeamNotFoundError("Team members file not found")
     
     try:
-        from app.models.team import TeamSection
-        
         # people_path is derived from validated team_path - safe to use
         content = people_path.read_text(encoding="utf-8")
         sections: List[TeamSection] = []
@@ -429,8 +427,6 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
         TeamNotFoundError: If team or required files don't exist
         ValueError: If team_id is invalid
     """
-    from app.models.team import TeamSection
-    
     cache = get_cache()
     
     # Check for fresh cache entry first

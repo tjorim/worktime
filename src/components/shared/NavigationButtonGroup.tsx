@@ -18,6 +18,7 @@ type NavigationButtonGroupProps = {
   selectorValue?: string;
   selectorId?: string;
   onSelectorChange?: (value: string) => void;
+  displayLabel?: string; // Static label to display instead of interactive selector
 };
 
 function NavigationButtonGroup({
@@ -36,6 +37,7 @@ function NavigationButtonGroup({
   selectorValue,
   selectorId,
   onSelectorChange,
+  displayLabel,
 }: NavigationButtonGroupProps) {
   const autoSelectorId = useId();
   const effectiveSelectorId = selectorId ?? autoSelectorId;
@@ -71,6 +73,7 @@ function NavigationButtonGroup({
 
   return (
     <div className="d-flex flex-wrap align-items-center gap-2">
+      {displayLabel && <span className="text-muted small">{displayLabel}</span>}
       {selectorLabel && selectorValue !== undefined && onSelectorChange && (
         <div className="d-flex align-items-center gap-2">
           <Form.Label htmlFor={effectiveSelectorId} className="mb-0 small text-muted">
@@ -105,6 +108,25 @@ export function WeekNavigationButtonGroup({
   return (
     <NavigationButtonGroup
       currentIcon="bi-house"
+      currentLabel={currentLabel}
+      previousAriaLabel={previousAriaLabel}
+      currentAriaLabel={currentAriaLabel}
+      nextAriaLabel={nextAriaLabel}
+      {...rest}
+    />
+  );
+}
+
+export function MonthNavigationButtonGroup({
+  currentLabel = "Reset",
+  previousAriaLabel = "Previous month",
+  currentAriaLabel = "Reset to default range",
+  nextAriaLabel = "Next month",
+  ...rest
+}: Omit<NavigationButtonGroupProps, "currentIcon">) {
+  return (
+    <NavigationButtonGroup
+      currentIcon="bi-calendar-event"
       currentLabel={currentLabel}
       previousAriaLabel={previousAriaLabel}
       currentAriaLabel={currentAriaLabel}

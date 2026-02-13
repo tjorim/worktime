@@ -1,6 +1,5 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
@@ -256,30 +255,15 @@ export function TimeOffTableView({
         </Card.Body>
       </Card>
 
-      {/* Collapsible Raw .hday Editor */}
-      <Accordion>
-        <Accordion.Item eventKey="raw-editor">
-          <Accordion.Header>
-            <i className="bi bi-code-square me-2" aria-hidden="true"></i>
-            Raw .hday Editor
-            {isRawEditorDirty && (
-              <span className="badge bg-warning text-dark ms-2" title="Unsaved changes">
-                •
-              </span>
-            )}
-          </Accordion.Header>
-          <Accordion.Body className="p-0">
-            <TimeOffRawView
-              rawText={rawEditorText}
-              error={rawEditorError}
-              isDirty={isRawEditorDirty}
-              onChangeRawText={onChangeRawEditorText}
-              onApply={onApplyRawEditor}
-              onReset={onResetRawEditor}
-            />
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
+      {/* Raw .hday Editor */}
+      <TimeOffRawView
+        rawText={rawEditorText}
+        error={rawEditorError}
+        isDirty={isRawEditorDirty}
+        onChangeRawText={onChangeRawEditorText}
+        onApply={onApplyRawEditor}
+        onReset={onResetRawEditor}
+      />
     </>
   );
 }

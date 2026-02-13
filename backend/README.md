@@ -90,9 +90,9 @@ in the UI.
 
 ### .hday files
 
-Per-user time-off event files in the .hday format, stored in the share root directory. 
-See the main project's AGENTS.md for format documentation. The backend reads and writes 
-these files, optionally parsing them server-side when `?format=parsed` is requested 
+Per-user time-off event files in the .hday format, stored in the share root directory.
+See the main project's AGENTS.md for format documentation. The backend reads and writes
+these files, optionally parsing them server-side when `?format=parsed` is requested
 (see [Response format](#response-format-formatrawparsed)).
 
 ## API surface
@@ -449,7 +449,7 @@ Use the browser's `performance.now()` API to measure client-side parse time and 
 ```javascript
 // Measuring total request time (including network)
 const requestStart = performance.now();
-const response = await fetch('/v1/hday/username?format=raw');
+const response = await fetch("/v1/hday/username?format=raw");
 const data = await response.json();
 const requestEnd = performance.now();
 const totalRequestTimeMs = requestEnd - requestStart;
@@ -524,11 +524,11 @@ rather than strict security.
 
 The feed combines data from the user's .hday file and roster configuration:
 
-| Source              | VEVENT fields                                                                                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Shifts**          | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type.         |
+| Source              | VEVENT fields                                                                                                                                                         |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shifts**          | Computed from roster config + user's team. `SUMMARY`: shift name (e.g., "Morning"). `DTSTART`/`DTEND`: shift hours. `CATEGORIES`: schedule type.                      |
 | **Time-off events** | From .hday data on the share. `SUMMARY`: event comment or type name. `DTSTART`/`DTEND`: event date(s). `CATEGORIES`: event type flag (holiday, business, sick, etc.). |
-| **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT.                                                                                                |
+| **Public holidays** | Optional. `SUMMARY`: holiday name. `TRANSP`: TRANSPARENT.                                                                                                             |
 
 ### Response headers
 
@@ -635,12 +635,12 @@ eliminates file I/O on the hot path entirely.
 
 ### What to cache
 
-| Data                | Source                          | Memory cost             |
-| ------------------- | ------------------------------- | ----------------------- |
-| Raw .hday text      | Per-user `.hday` files          | ~2-5 KB per user        |
-| Parsed events       | Result of `parse_text()`        | ~5-15 KB per user       |
-| Precomputed etags   | SHA-256 of raw file bytes       | 64 bytes per user       |
-| Team config         | `config` + `people` files       | < 1 KB                  |
+| Data              | Source                    | Memory cost       |
+| ----------------- | ------------------------- | ----------------- |
+| Raw .hday text    | Per-user `.hday` files    | ~2-5 KB per user  |
+| Parsed events     | Result of `parse_text()`  | ~5-15 KB per user |
+| Precomputed etags | SHA-256 of raw file bytes | 64 bytes per user |
+| Team config       | `config` + `people` files | < 1 KB            |
 
 For a 20-person team, total memory footprint is well under 1 MB.
 
@@ -649,12 +649,12 @@ For a 20-person team, total memory footprint is well under 1 MB.
 The challenge is that files can change outside the backend (direct edits on the share). Four
 strategies were considered:
 
-| Strategy              | How it works                                                      | Trade-off                                           |
-| --------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
-| **Polling with mtime** | Periodically check file modification times, reload on change     | Simple, small staleness window (e.g., 5-10s)        |
-| **File watcher**       | OS-level notifications (inotify/fsnotify)                        | Instant, but unreliable on NFS/SMB                  |
-| **TTL + write-through** | Cache expires after N seconds; API writes invalidate immediately | Simple, predictable, good fit for this use case     |
-| **Etag on read**       | Check file hash on each request, serve cached if unchanged       | Always fresh, but still hits the share for stat/hash |
+| Strategy                | How it works                                                     | Trade-off                                            |
+| ----------------------- | ---------------------------------------------------------------- | ---------------------------------------------------- |
+| **Polling with mtime**  | Periodically check file modification times, reload on change     | Simple, small staleness window (e.g., 5-10s)         |
+| **File watcher**        | OS-level notifications (inotify/fsnotify)                        | Instant, but unreliable on NFS/SMB                   |
+| **TTL + write-through** | Cache expires after N seconds; API writes invalidate immediately | Simple, predictable, good fit for this use case      |
+| **Etag on read**        | Check file hash on each request, serve cached if unchanged       | Always fresh, but still hits the share for stat/hash |
 
 **Recommendation: TTL + write-through.** Most writes go through the API, which invalidates the
 cache instantly. A short TTL (5-30 seconds, configurable) catches the rare direct file edit on the
@@ -700,10 +700,10 @@ cold-cache and warm-cache scenarios to capture this.
 
 ### Configuration
 
-| Variable          | Description                                   | Default |
-| ----------------- | --------------------------------------------- | ------- |
-| `CACHE_TTL`       | Seconds before a cache entry is considered stale | `10`  |
-| `CACHE_ENABLED`   | Enable/disable in-memory caching              | `true`  |
+| Variable        | Description                                      | Default |
+| --------------- | ------------------------------------------------ | ------- |
+| `CACHE_TTL`     | Seconds before a cache entry is considered stale | `10`    |
+| `CACHE_ENABLED` | Enable/disable in-memory caching                 | `true`  |
 
 Disabling the cache (`CACHE_ENABLED=false`) makes every request read from the share directly. Useful
 for debugging or when the share is local and fast.
@@ -751,17 +751,17 @@ All write operations are logged for accountability.
 JSON Lines (one JSON object per line), appended to an audit log file:
 
 ```json
-{"ts": "2025-07-16T10:30:00Z", "target": "alice", "action": "write_hday", "details": "24 events"}
+{ "ts": "2025-07-16T10:30:00Z", "target": "alice", "action": "write_hday", "details": "24 events" }
 ```
 
 ### Fields
 
-| Field     | Description                                                       |
-| --------- | ----------------------------------------------------------------- |
-| `ts`      | UTC ISO 8601 timestamp                                            |
-| `target`  | Which user's .hday file was affected                              |
-| `action`  | Operation type: `write_hday`, `create_hday`                      |
-| `details` | Human-readable context (event count, conflict detected, etc.)     |
+| Field     | Description                                                   |
+| --------- | ------------------------------------------------------------- |
+| `ts`      | UTC ISO 8601 timestamp                                        |
+| `target`  | Which user's .hday file was affected                          |
+| `action`  | Operation type: `write_hday`, `create_hday`                   |
+| `details` | Human-readable context (event count, conflict detected, etc.) |
 
 ### Storage
 
@@ -852,15 +852,15 @@ local path. The backend process runs under a user account with read/write access
 
 Environment variables:
 
-| Variable        | Description                                       | Default                 |
-| --------------- | ------------------------------------------------- | ----------------------- |
-| `SHARE_DIR`     | Path to mounted share directory                   | `./data/hday_files`     |
-| `CORS_ORIGINS`  | Comma-separated allowed origins                   | `http://localhost:5173` |
-| `ENVIRONMENT`   | `development` or `production`                     | `development`           |
-| `HOST`          | Bind address                                      | `0.0.0.0`               |
-| `PORT`          | Bind port                                         | `8000`                  |
-| `CACHE_TTL`     | Seconds before a cache entry is considered stale  | `10`                    |
-| `CACHE_ENABLED` | Enable/disable in-memory caching                  | `true`                  |
+| Variable        | Description                                      | Default                 |
+| --------------- | ------------------------------------------------ | ----------------------- |
+| `SHARE_DIR`     | Path to mounted share directory                  | `./data/hday_files`     |
+| `CORS_ORIGINS`  | Comma-separated allowed origins                  | `http://localhost:5173` |
+| `ENVIRONMENT`   | `development` or `production`                    | `development`           |
+| `HOST`          | Bind address                                     | `0.0.0.0`               |
+| `PORT`          | Bind port                                        | `8000`                  |
+| `CACHE_TTL`     | Seconds before a cache entry is considered stale | `10`                    |
+| `CACHE_ENABLED` | Enable/disable in-memory caching                 | `true`                  |
 
 ### Deployment options
 
@@ -896,31 +896,31 @@ removed, but the feature analysis below informed the backend design.
 
 ### Features that stay client-side
 
-| Feature              | Worktime approach                                                         |
-| -------------------- | ------------------------------------------------------------------------- |
-| **Daily task entry** | localStorage, no backend needed. Tasks are small and personal.            |
-| **Task templates**   | Stored in `WorktimeUserState`. User-specific, local to the browser.       |
-| **Progress bar**     | Client computation: sum durations, compare to configurable daily target.  |
-| **Date navigation**  | Client filters localStorage by date. No server round-trip needed.         |
-| **Project tags**     | App config or user settings. Revisit if tags become team-shared.          |
+| Feature              | Worktime approach                                                        |
+| -------------------- | ------------------------------------------------------------------------ |
+| **Daily task entry** | localStorage, no backend needed. Tasks are small and personal.           |
+| **Task templates**   | Stored in `WorktimeUserState`. User-specific, local to the browser.      |
+| **Progress bar**     | Client computation: sum durations, compare to configurable daily target. |
+| **Date navigation**  | Client filters localStorage by date. No server round-trip needed.        |
+| **Project tags**     | App config or user settings. Revisit if tags become team-shared.         |
 
 ### Features where a backend adds value
 
 | Feature                      | Why                                                                                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Team time-off overview**   | Requires reading multiple users' .hday files from the share. The `/v1/team/:id/hday` endpoint serves this.                          |
-| **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline.  |
+| **Team time-off overview**   | Requires reading multiple users' .hday files from the share. The `/v1/team/:id/hday` endpoint serves this.                           |
+| **Weekly/monthly reporting** | Cross-user team reports and manager dashboards require server-side aggregation. Client falls back to local aggregation when offline. |
 | **Team time summaries**      | Requires access to multiple users' data. Privacy: aggregated totals only unless user opts in.                                        |
 | **Data export**              | CSV/JSON export for HR or invoicing. Browser-based PDF generation is fragile.                                                        |
 | **Audit trail**              | Append-only log of time entry changes. Legally relevant proof of hours worked. 7+ year retention.                                    |
 
 ### Hybrid features
 
-| Feature                  | Client                                   | Backend enhancement                                                             |
-| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------- |
-| **Template sharing**     | Local create/apply.                      | Share templates via config files on the network share for team template pools.   |
-| **Configurable targets** | Daily/weekly targets in user settings.   | Optional backend validation against team/org policies.                          |
-| **Push notifications**   | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority).     |
+| Feature                  | Client                                   | Backend enhancement                                                            |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| **Template sharing**     | Local create/apply.                      | Share templates via config files on the network share for team template pools. |
+| **Configurable targets** | Daily/weekly targets in user settings.   | Optional backend validation against team/org policies.                         |
+| **Push notifications**   | Browser notifications for shift changes. | Server-triggered "you haven't logged hours today" reminders (low priority).    |
 
 ### What not to port from WebPlanner
 
@@ -1047,13 +1047,13 @@ The prototype's patterns that do not carry forward:
 These ideas were brainstormed during backend planning and are documented here for reference. They are
 not prioritized or scheduled.
 
-| Feature                     | Description                                                                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **iCal subscription feed**  | `GET /v1/cal/:token.ics` — personalized calendar feed combining shifts + time-off + holidays. See [iCal subscription feed](#ical-subscription-feed) for full spec. |
-| **Calendar import**         | Pull time-off from Microsoft Graph (Outlook) or Google Calendar into .hday format. Prototype's `graph/sync.py` demonstrated this.           |
-| **Data export**             | `GET /v1/export?format=csv&from=...&to=...` — CSV/JSON export of time-off events for HR or reporting.                                      |
-| **Team reporting**          | `GET /v1/reports/weekly`, `GET /v1/reports/monthly`, `GET /v1/reports/team` — cross-user aggregated time-off summaries for managers.         |
-| **Template sharing**        | Share task/event templates via config files on the network share for team template pools.                                                    |
-| **Authentication**          | If exposed beyond the trusted network: device-link tokens for personal use, or OIDC/SAML for enterprise SSO.                                |
-| **Cloud sync**              | For users outside the corporate network: optional snapshot-based sync to a cloud database as a separate deployment mode.                     |
-| **Push notifications**      | Server-triggered reminders (e.g., "you haven't logged hours today"). Low priority.                                                          |
+| Feature                    | Description                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **iCal subscription feed** | `GET /v1/cal/:token.ics` — personalized calendar feed combining shifts + time-off + holidays. See [iCal subscription feed](#ical-subscription-feed) for full spec. |
+| **Calendar import**        | Pull time-off from Microsoft Graph (Outlook) or Google Calendar into .hday format. Prototype's `graph/sync.py` demonstrated this.                                  |
+| **Data export**            | `GET /v1/export?format=csv&from=...&to=...` — CSV/JSON export of time-off events for HR or reporting.                                                              |
+| **Team reporting**         | `GET /v1/reports/weekly`, `GET /v1/reports/monthly`, `GET /v1/reports/team` — cross-user aggregated time-off summaries for managers.                               |
+| **Template sharing**       | Share task/event templates via config files on the network share for team template pools.                                                                          |
+| **Authentication**         | If exposed beyond the trusted network: device-link tokens for personal use, or OIDC/SAML for enterprise SSO.                                                       |
+| **Cloud sync**             | For users outside the corporate network: optional snapshot-based sync to a cloud database as a separate deployment mode.                                           |
+| **Push notifications**     | Server-triggered reminders (e.g., "you haven't logged hours today"). Low priority.                                                                                 |

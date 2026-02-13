@@ -17,10 +17,10 @@ describe("TimeOffRawView", () => {
     vi.clearAllMocks();
   });
 
-  it("should render the card with header", () => {
+  it("should render the card with accordion header", () => {
     render(<TimeOffRawView {...defaultProps} />);
 
-    const header = screen.getByText("Raw .hday content", { selector: ".card-header" });
+    const header = screen.getByRole("button", { name: /Raw \.hday Editor/i });
     expect(header).toBeInTheDocument();
   });
 

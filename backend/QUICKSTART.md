@@ -25,15 +25,15 @@ cp .env.example .env
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENVIRONMENT` | `development` | Environment mode: `development` or `production` |
-| `HOST` | `0.0.0.0` | Server bind address |
-| `PORT` | `8000` | Server port |
-| `SHARE_DIR` | `./data/hday_files` | Path to .hday files directory |
-| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated list of allowed CORS origins |
-| `CACHE_ENABLED` | `true` | Enable/disable caching |
-| `CACHE_TTL` | `10` | Cache TTL in seconds |
+| Variable        | Default                 | Description                                     |
+| --------------- | ----------------------- | ----------------------------------------------- |
+| `ENVIRONMENT`   | `development`           | Environment mode: `development` or `production` |
+| `HOST`          | `0.0.0.0`               | Server bind address                             |
+| `PORT`          | `8000`                  | Server port                                     |
+| `SHARE_DIR`     | `./data/hday_files`     | Path to .hday files directory                   |
+| `CORS_ORIGINS`  | `http://localhost:5173` | Comma-separated list of allowed CORS origins    |
+| `CACHE_ENABLED` | `true`                  | Enable/disable caching                          |
+| `CACHE_TTL`     | `10`                    | Cache TTL in seconds                            |
 
 ## Running the Server
 
@@ -95,20 +95,24 @@ backend/
 ### CORS Configuration
 
 In **development**, you can use:
+
 - `CORS_ORIGINS=http://localhost:5173` (default)
 - `CORS_ORIGINS=*` (allow all origins - development only)
 
 In **production**:
+
 - Always use explicit origin list: `CORS_ORIGINS=https://example.com,https://app.example.com`
 - Wildcard (`*`) is rejected for security
 
 ### Share Directory
 
 In **development**:
+
 - Uses local directory `./data/hday_files`
 - Created automatically if it doesn't exist
 
 In **production**:
+
 - Set `SHARE_DIR` to mounted network share path (NFS/SMB)
 - Example: `SHARE_DIR=/mnt/worktime_share`
 
@@ -132,16 +136,19 @@ Cache:           enabled (TTL: 10s)
 ## Testing
 
 Health check:
+
 ```bash
 curl http://localhost:8000/healthz
 ```
 
 API information:
+
 ```bash
 curl http://localhost:8000/
 ```
 
 Interactive docs:
+
 ```
 Open http://localhost:8000/docs in your browser
 ```

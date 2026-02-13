@@ -166,7 +166,10 @@
   }
 
   tbody tr {
-    transition: background-color 0.2s ease, border-left-color 0.2s ease, transform 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-left-color 0.2s ease,
+      transform 0.2s ease;
     border-left: 4px solid transparent;
 
     &:hover {
@@ -177,7 +180,7 @@
     &.today-row {
       background-color: var(--bs-primary-bg-subtle);
       border-left-color: var(--bs-primary);
-      
+
       &:hover {
         background-color: var(--bs-primary-bg-subtle);
         filter: brightness(0.98);
@@ -190,7 +193,7 @@
 .today-card {
   border-width: 2px;
   border-left-width: 4px;
-  
+
   .card-body {
     background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, var(--bs-body-bg) 50%);
   }
@@ -405,6 +408,94 @@
 .event-unknown {
   background-color: #ccc;
   color: #000;
+}
+
+/* Dark mode event color overrides */
+[data-bs-theme="dark"] {
+  .event-holiday-full {
+    background-color: #6b2020;
+    color: #ffb3b3;
+  }
+
+  .event-holiday-half {
+    background-color: #8b3030;
+    color: #ffcccc;
+  }
+
+  .event-business-full {
+    background-color: #6b4820;
+    color: #ffd699;
+  }
+
+  .event-business-half {
+    background-color: #8b5e30;
+    color: #ffe4b3;
+  }
+
+  .event-course-full {
+    background-color: #6b5b20;
+    color: #ffe699;
+  }
+
+  .event-course-half {
+    background-color: #8b7530;
+    color: #ffefb3;
+  }
+
+  .event-in-full {
+    background-color: #004d5c;
+    color: #99e6f0;
+  }
+
+  .event-in-half {
+    background-color: #006675;
+    color: #b3ecf5;
+  }
+
+  .event-weekend-full {
+    background-color: #4d204d;
+    color: #e699e6;
+  }
+
+  .event-weekend-half {
+    background-color: #663066;
+    color: #edb3ed;
+  }
+
+  .event-birthday-full {
+    background-color: #20204d;
+    color: #b3b3ff;
+  }
+
+  .event-birthday-half {
+    background-color: #303066;
+    color: #ccccff;
+  }
+
+  .event-ill-full {
+    background-color: #2d4020;
+    color: #b3d699;
+  }
+
+  .event-ill-half {
+    background-color: #3d5530;
+    color: #c6e0b3;
+  }
+
+  .event-other-full {
+    background-color: #204d4d;
+    color: #99e6e6;
+  }
+
+  .event-other-half {
+    background-color: #306666;
+    color: #b3eded;
+  }
+
+  .event-unknown {
+    background-color: #555;
+    color: #ccc;
+  }
 }
 
 /* ============================================================================

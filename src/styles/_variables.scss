@@ -69,6 +69,12 @@
 
   /* --- Time Off Calendar Highlighting --- */
   --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.1);
+
+  /* --- Team Calendar Grid --- */
+  --wt-team-cal-today: #fff3cd;
+  --wt-team-cal-weekend: #d6d8db;
+  --wt-team-cal-available: #b3e5ec;
+  --wt-team-cal-weekend-cell: #e0e0e0;
 }
 
 /* ============================================================================
@@ -136,6 +142,12 @@
 
   /* --- Time Off Calendar Highlighting --- */
   --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.15);
+
+  /* --- Team Calendar Grid --- */
+  --wt-team-cal-today: rgba(255, 193, 7, 0.3);
+  --wt-team-cal-weekend: #3a3f44;
+  --wt-team-cal-available: #004d5c;
+  --wt-team-cal-weekend-cell: #383838;
 
   /* ==========================================================================
      BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)

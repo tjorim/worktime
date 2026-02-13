@@ -1,7 +1,12 @@
 import { useMemo } from "react";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { buildLabelColorMap, getContrastingTextColor, getDefaultLabelColor, type TimeTrackingLabel } from "./constants";
+import {
+  buildLabelColorMap,
+  getContrastingTextColor,
+  getDefaultLabelColor,
+  type TimeTrackingLabel,
+} from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 const DEFAULT_TARGET_HOURS = 8.5;

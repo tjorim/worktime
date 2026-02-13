@@ -87,7 +87,7 @@ if cache.needs_mtime_check(username):
     # Entry exists but is stale - check if file changed
     current_mtime = file_path.stat().st_mtime
     stale_entry = cache._hday_entries.get(username)
-    
+
     if stale_entry and stale_entry.mtime == current_mtime:
         # File unchanged - refresh cache with existing data
         cache.set_hday(
@@ -120,7 +120,7 @@ When integrating caching into service functions:
 ```python
 def read_hday_file(username: str) -> HdayReadResponse:
     cache = get_cache()
-    
+
     # Check cache first
     cached_entry = cache.get_hday(username)
     if cached_entry:
@@ -131,14 +131,14 @@ def read_hday_file(username: str) -> HdayReadResponse:
             etag=cached_entry.etag,
             events=cached_entry.events
         )
-    
+
     # Cache miss - read from file
     file_path = get_hday_path(username)
     raw_content = file_path.read_text()
     mtime = file_path.stat().st_mtime
     etag = compute_etag(raw_content)
     events = parse_text(raw_content)
-    
+
     # Populate cache
     cache.set_hday(
         username=username,
@@ -147,7 +147,7 @@ def read_hday_file(username: str) -> HdayReadResponse:
         etag=etag,
         mtime=mtime
     )
-    
+
     return HdayReadResponse(
         username=username,
         raw=raw_content,
@@ -168,6 +168,7 @@ The cache module includes comprehensive test coverage:
 - Mtime validation support
 
 Run tests:
+
 ```bash
 pytest tests/test_cache.py -v
 ```

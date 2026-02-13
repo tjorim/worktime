@@ -269,10 +269,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
   }, [isRawEditorDirty, rawText]);
 
-  const handleRawEditorChange = useCallback((value: string) => {
-    setRawEditorText(value);
-    setIsRawEditorDirty(value !== rawText);
-  }, [rawText]);
+  const handleRawEditorChange = useCallback(
+    (value: string) => {
+      setRawEditorText(value);
+      setIsRawEditorDirty(value !== rawText);
+    },
+    [rawText],
+  );
 
   const handleParseRawEditor = useCallback(() => {
     try {
