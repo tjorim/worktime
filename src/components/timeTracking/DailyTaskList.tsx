@@ -90,13 +90,13 @@ export function DailyTaskList({
     setEditError("");
   };
 
-  const openEditModal = (task: StoredTimeTrackingTask) => {
+  const openEditModal = useCallback((task: StoredTimeTrackingTask) => {
     setEditingTaskId(task.id);
     setEditText(task.text);
     setEditLabel(task.label);
     setEditStart(dayjs(task.startTime).format("HH:mm"));
     setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
-  };
+  }, []);
 
   const submitEditModal = async () => {
     if (!editingTask) {
@@ -245,7 +245,7 @@ export function DailyTaskList({
     });
 
     return items;
-  }, [contextMenu.taskId, tasks, handleToggleBreak, onRemoveTask]);
+  }, [contextMenu.taskId, tasks, handleToggleBreak, openEditModal, onRemoveTask]);
 
   if (tasks.length === 0) {
     return (
