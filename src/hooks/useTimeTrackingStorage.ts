@@ -17,6 +17,7 @@ type RawTask = {
   label: string;
   startTime: string;
   stopTime?: string | null;
+  includesBreak?: boolean;
 };
 
 type ImportPayload = {
@@ -55,6 +56,10 @@ function isValidRawTask(value: unknown): value is RawTask {
     return false;
   }
 
+  if (v.includesBreak !== undefined && typeof v.includesBreak !== "boolean") {
+    return false;
+  }
+
   const startTime = typeof v.startTime === "string" ? v.startTime : "";
   const stopTime = typeof v.stopTime === "string" ? v.stopTime : null;
 
@@ -70,13 +75,17 @@ function isValidRawTask(value: unknown): value is RawTask {
 
 // StoredTimeTrackingTask now has string timestamps, so it matches RawTask structure
 function convertToTask(raw: RawTask): StoredTimeTrackingTask {
-  return {
+  const task: StoredTimeTrackingTask = {
     id: raw.id,
     text: raw.text,
     label: raw.label,
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
+  if (raw.includesBreak === true) {
+    task.includesBreak = true;
+  }
+  return task;
 }
 
 function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
@@ -146,16 +155,17 @@ export function useTimeTrackingStorage() {
           }
           // Otherwise append the new task
           resolve(true);
-          return [
-            ...prev,
-            {
-              id: payload.id,
-              text: payload.text,
-              label: payload.label,
-              startTime: payload.startTime,
-              stopTime: payload.stopTime ?? null,
-            },
-          ];
+          const newTask: RawTask = {
+            id: payload.id,
+            text: payload.text,
+            label: payload.label,
+            startTime: payload.startTime,
+            stopTime: payload.stopTime ?? null,
+          };
+          if (payload.includesBreak === true) {
+            newTask.includesBreak = true;
+          }
+          return [...prev, newTask];
         });
       });
     },
@@ -169,6 +179,7 @@ export function useTimeTrackingStorage() {
       newStopTime: StoredTimeTrackingTask["stopTime"];
       newText?: string;
       newLabel?: string;
+      includesBreak?: boolean;
     }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
@@ -179,8 +190,33 @@ export function useTimeTrackingStorage() {
                 label: payload.newLabel ?? raw.label,
                 startTime: payload.newStartTime,
                 stopTime: payload.newStopTime ?? null,
+                includesBreak:
+                  typeof payload.includesBreak === "boolean"
+                    ? payload.includesBreak || undefined
+                    : raw.includesBreak,
               }
             : raw,
+        ),
+      );
+    },
+    [setRawTasks],
+  );
+
+  /**
+   * Toggle the break deduction flag on a task.
+   *
+   * @param taskId - ID of the task to update.
+   * @param includesBreak - When `true`, a 30-minute break is deducted from the
+   *   task's effective duration. When `false`, the flag is removed (`undefined`
+   *   in storage) so no deduction applies.
+   *
+   * If `taskId` does not match any stored task the call is a no-op.
+   */
+  const toggleBreak = useCallback(
+    (taskId: string, includesBreak: boolean) => {
+      setRawTasks((prev) =>
+        prev.map((raw) =>
+          raw.id === taskId ? { ...raw, includesBreak: includesBreak || undefined } : raw,
         ),
       );
     },
@@ -270,6 +306,7 @@ export function useTimeTrackingStorage() {
     labels,
     addTask,
     updateTaskTimes,
+    toggleBreak,
     removeTask,
     addTemplate,
     updateTemplate,

@@ -38,6 +38,7 @@ type TimeTrackingDailyViewProps = {
     newLabel?: string;
   }) => void;
   onRemoveTask: (id: string) => void;
+  onToggleBreak: (taskId: string, includesBreak: boolean) => void;
 };
 
 function todayIso() {
@@ -63,6 +64,7 @@ export function TimeTrackingDailyView({
   onAddTask,
   onUpdateTaskTimes,
   onRemoveTask,
+  onToggleBreak,
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
   const [text, setText] = useState("");
@@ -471,6 +473,7 @@ export function TimeTrackingDailyView({
           labels={labels}
           onUpdateTask={handleUpdateTask}
           onRemoveTask={onRemoveTask}
+          onToggleBreak={onToggleBreak}
         />
       </Card.Body>
 

@@ -7,6 +7,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
+import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";
 
 type OverviewRow = {
@@ -82,11 +83,12 @@ export function TimeTrackingWeeklyView({
         .map((task) => {
           const startDayjs = dayjs(task.startTime);
           const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
+          const rawHours = Math.max(stopDayjs.diff(startDayjs, "hour", true), 0);
           const labelName = labelNameById[task.label] ?? "Unknown label";
           return {
             date: task.startTime.substring(0, 10),
             label: labelName,
-            hours: Math.max(stopDayjs.diff(startDayjs, "hour", true), 0),
+            hours: effectiveDurationHours(rawHours, task.includesBreak),
           };
         }),
     [tasks, start, end, labelNameById],

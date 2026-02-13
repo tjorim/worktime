@@ -4,6 +4,7 @@ export type StoredTimeTrackingTask = {
   label: string;
   startTime: string;
   stopTime?: string | null;
+  includesBreak?: boolean;
 };
 
 export type TimeTrackingTemplate = {
