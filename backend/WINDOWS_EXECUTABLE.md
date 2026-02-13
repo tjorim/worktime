@@ -186,7 +186,7 @@ If you want to build the executable yourself:
    ```
 4. Build with Nuitka:
    ```bash
-   python -m nuitka app/main.py \
+   python -m nuitka launcher.py \
      --onefile \
      --output-dir=dist \
      --output-filename=worktime-backend.exe \

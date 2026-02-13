@@ -918,7 +918,7 @@ To build the Windows executable yourself:
 cd backend
 pip install -r requirements.txt
 pip install nuitka ordered-set zstandard
-python -m nuitka app/main.py \
+python -m nuitka launcher.py \
   --onefile \
   --output-dir=dist \
   --output-filename=worktime-backend.exe \
