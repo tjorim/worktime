@@ -6,7 +6,12 @@ import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
-import { buildLabelNameMap, getContrastingTextColor, getDefaultLabelColor, type TimeTrackingLabel } from "./constants";
+import {
+  buildLabelNameMap,
+  getContrastingTextColor,
+  getDefaultLabelColor,
+  type TimeTrackingLabel,
+} from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 
 type DailyTaskListProps = {

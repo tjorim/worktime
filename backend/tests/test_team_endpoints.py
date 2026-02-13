@@ -193,6 +193,7 @@ class TestGetTeamHdayEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["team_id"] == "team1"
+        assert data["name"] == "Engineering Team"
         assert len(data["members"]) == 2
         
         # Check first member
@@ -234,6 +235,7 @@ class TestGetTeamHdayEndpoint:
 
         assert response.status_code == 200
         data = response.json()
+        assert data["name"] == "Engineering Team"
         assert len(data["members"]) == 2
         
         # First member has data
@@ -264,6 +266,7 @@ class TestGetTeamHdayEndpoint:
 
         assert response.status_code == 200
         data = response.json()
+        assert data["name"] == "Engineering Team"
         assert len(data["members"]) == 2
         
         # Both members have empty data
@@ -291,6 +294,7 @@ class TestGetTeamHdayEndpoint:
 
         assert response.status_code == 200
         data = response.json()
+        assert data["name"] == "Engineering Team"
         assert len(data["members"]) == 1
         assert data["members"][0]["username"] == "jdoe"
         assert data["members"][0]["raw"] == ""
@@ -321,6 +325,7 @@ d1 # Every Monday
 
         assert response.status_code == 200
         data = response.json()
+        assert data["name"] == "Engineering Team"
         assert len(data["members"]) == 1
         assert data["members"][0]["username"] == "jdoe"
         assert len(data["members"][0]["events"]) == 3

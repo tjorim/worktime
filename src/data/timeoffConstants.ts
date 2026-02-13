@@ -60,7 +60,7 @@ export const TIME_LOCATION_FLAGS_AS_EVENT_FLAGS: readonly EventFlag[] =
  * Defined at module level as a single source of truth for valid view modes.
  * Note: Calendar view has been moved to its own main tab.
  */
-export const TIMEOFF_VIEWS = ["table", "stats", "raw"] as const;
+export const TIMEOFF_VIEWS = ["table", "stats", "team"] as const;
 
 /**
  * Type derived from TIMEOFF_VIEWS for type-safe view mode handling.
@@ -79,5 +79,5 @@ export const DEFAULT_WEEKDAY = Weekday.Monday;
 export const VIEW_MODE_HELP_TEXT: Record<(typeof TIMEOFF_VIEWS)[number], string> = {
   table: "Select events from the table to edit or delete.",
   stats: "Review allowance usage and vacation breakdowns by year.",
-  raw: "Edit raw .hday content directly. Click Apply to save changes.",
+  team: "View team roster and .hday schedules for all team members.",
 };

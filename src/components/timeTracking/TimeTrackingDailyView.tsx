@@ -117,7 +117,8 @@ export function TimeTrackingDailyView({
   }, [liveTime, runningTask]);
 
   const runningLabelBackground = useMemo(
-    () => (runningTask ? (colorByLabelId[runningTask.label] ?? defaultLabelColor) : defaultLabelColor),
+    () =>
+      runningTask ? (colorByLabelId[runningTask.label] ?? defaultLabelColor) : defaultLabelColor,
     [runningTask, colorByLabelId, defaultLabelColor],
   );
   const runningLabelTextColor = useMemo(

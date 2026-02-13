@@ -223,31 +223,31 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                 </h6>
                 <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
 
-              <div className="mb-3">
-                <div className="d-flex justify-content-between small text-muted mb-1">
-                  <span>Used</span>
-                  <span>
-                    {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)}{" "}
-                    {allowance.unit}
-                  </span>
-                </div>
-                <ProgressBar now={usagePercent} label={`${Math.round(usagePercent)}%`} />
-              </div>
-
-              <Row className="text-center">
-                <Col xs={6}>
-                  <div className="fw-semibold">Remaining</div>
-                  <div className="fs-4">{formatVacationValue(remainingValue)}</div>
-                  <div className="text-muted small">{allowance.unit}</div>
-                </Col>
-                <Col xs={6}>
-                  <div className="fw-semibold">Total time off</div>
-                  <div className="fs-4">{formatVacationValue(stats.totalDays)}</div>
-                  <div className="text-muted small">
-                    days ({formatVacationValue(stats.totalHours)} h)
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between small text-muted mb-1">
+                    <span>Used</span>
+                    <span>
+                      {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)}{" "}
+                      {allowance.unit}
+                    </span>
                   </div>
-                </Col>
-              </Row>
+                  <ProgressBar now={usagePercent} label={`${Math.round(usagePercent)}%`} />
+                </div>
+
+                <Row className="text-center">
+                  <Col xs={6}>
+                    <div className="fw-semibold">Remaining</div>
+                    <div className="fs-4">{formatVacationValue(remainingValue)}</div>
+                    <div className="text-muted small">{allowance.unit}</div>
+                  </Col>
+                  <Col xs={6}>
+                    <div className="fw-semibold">Total time off</div>
+                    <div className="fs-4">{formatVacationValue(stats.totalDays)}</div>
+                    <div className="text-muted small">
+                      days ({formatVacationValue(stats.totalHours)} h)
+                    </div>
+                  </Col>
+                </Row>
               </Card.Body>
             </Card>
           </Col>

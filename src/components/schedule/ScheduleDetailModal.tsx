@@ -158,7 +158,7 @@ export function ScheduleDetailModal({
             <i className="bi bi-calendar-week me-2"></i>
             7-Day Schedule
           </h6>
-          
+
           {/* Desktop table view */}
           <div className="d-none d-md-block">
             <div className="table-responsive">
@@ -176,15 +176,17 @@ export function ScheduleDetailModal({
                   {weekSchedule.map((day) => (
                     <tr
                       key={day.date.format("YYYY-MM-DD")}
-                      className={clsx(
-                        day.isToday && "today-row"
-                      )}
+                      className={clsx(day.isToday && "today-row")}
                     >
                       <td>
                         <strong>{day.date.format("MMM D")}</strong>
                         {day.isToday && (
                           <Badge bg="primary" className="ms-2">
-                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
+                            <i
+                              className="bi bi-circle-fill me-1"
+                              style={{ fontSize: SMALL_ICON_SIZE }}
+                              aria-hidden="true"
+                            ></i>
                             Today
                           </Badge>
                         )}
@@ -208,11 +210,11 @@ export function ScheduleDetailModal({
                         <small className="text-muted">
                           {day.shift.code === "O"
                             ? "—"
-                            : getLocalizedShiftTime(
+                            : (getLocalizedShiftTime(
                                 day.shift.start,
                                 day.shift.end,
                                 settings.timeFormat,
-                              ) ?? "—"}
+                              ) ?? "—")}
                         </small>
                       </td>
                       <td>
@@ -240,10 +242,7 @@ export function ScheduleDetailModal({
             {weekSchedule.map((day) => (
               <Card
                 key={day.date.format("YYYY-MM-DD")}
-                className={clsx(
-                  "mb-3",
-                  day.isToday && "border-primary shadow-sm today-card"
-                )}
+                className={clsx("mb-3", day.isToday && "border-primary shadow-sm today-card")}
               >
                 <Card.Body className="py-3">
                   <div className="d-flex justify-content-between align-items-start mb-2">
@@ -252,7 +251,11 @@ export function ScheduleDetailModal({
                         {day.date.format("dddd")}
                         {day.isToday && (
                           <Badge bg="primary" className="ms-2">
-                            <i className="bi bi-circle-fill me-1" style={{ fontSize: SMALL_ICON_SIZE }} aria-hidden="true"></i>
+                            <i
+                              className="bi bi-circle-fill me-1"
+                              style={{ fontSize: SMALL_ICON_SIZE }}
+                              aria-hidden="true"
+                            ></i>
                             Today
                           </Badge>
                         )}
@@ -283,11 +286,11 @@ export function ScheduleDetailModal({
                       <span className="text-body">
                         {day.shift.code === "O"
                           ? "—"
-                          : getLocalizedShiftTime(
+                          : (getLocalizedShiftTime(
                               day.shift.start,
                               day.shift.end,
                               settings.timeFormat,
-                            ) ?? "—"}
+                            ) ?? "—")}
                       </span>
                     </div>
                     <div className="text-end">
