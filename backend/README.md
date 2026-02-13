@@ -1,8 +1,12 @@
 # Backend
 
+[![Build Windows Executable](https://github.com/tjorim/worktime/actions/workflows/build-exe.yml/badge.svg)](https://github.com/tjorim/worktime/actions/workflows/build-exe.yml)
+
 This document describes the backend for Worktime: a lightweight API server that bridges the web
 frontend with .hday files and team configuration stored on a shared network drive (NFS/SMB). The
 goal is to keep the app local-first while enabling shared team data for users on the same network.
+
+> **💡 Quick Start for Windows Users:** Download the [standalone Windows executable](#windows-executable) - no Python installation required!
 
 ## Table of contents
 
@@ -17,6 +21,7 @@ goal is to keep the app local-first while enabling shared team data for users on
 - [Security](#security)
 - [CORS](#cors)
 - [Hosting and deployment](#hosting-and-deployment)
+  - [Windows Executable](#windows-executable)
 - [WebPlanner feature analysis](#webplanner-feature-analysis)
 - [Resolved questions](#resolved-questions)
 - [Conclusions](#conclusions)
