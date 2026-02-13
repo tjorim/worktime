@@ -84,8 +84,6 @@ def main():
         "--follow-imports",
         # Include the entire app package
         f"--include-package=app",
-        # Enable plugins for common packages
-        "--enable-plugin=pydantic",
         # Windows-specific options - keep console for server logs
         "--windows-console-mode=force",
         # Add company and product metadata
