@@ -222,6 +222,7 @@ export function DailyTaskList({
         label: `Too short for ${BREAK_DURATION_MINUTES}min break`,
         icon: "bi-cup-hot",
         onClick: () => {},
+        disabled: true,
       });
     } else {
       items.push({

@@ -7,6 +7,7 @@ export interface ContextMenuItem {
   icon?: string;
   onClick: () => void;
   variant?: "danger";
+  disabled?: boolean;
 }
 
 interface ContextMenuProps {
@@ -132,6 +133,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
   }, [isOpen, onClose, items.length]);
 
   const handleItemClick = (item: ContextMenuItem) => {
+    if (item.disabled) return;
     onClose();
     item.onClick();
   };
@@ -157,6 +159,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
           role="menuitem"
           className={clsx("context-menu-item", item.variant === "danger" && "danger")}
           onClick={() => handleItemClick(item)}
+          disabled={item.disabled}
           aria-label={item.label}
         >
           {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
