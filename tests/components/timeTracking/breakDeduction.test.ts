@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   BREAK_DURATION_MINUTES,
-  BREAK_THRESHOLD_HOURS,
   effectiveDurationHours,
   calculateBreakPosition,
 } from "../../../src/components/timeTracking/timeUtils";
@@ -10,10 +9,6 @@ describe("Break Deduction", () => {
   describe("constants", () => {
     it("defines break duration as 30 minutes", () => {
       expect(BREAK_DURATION_MINUTES).toBe(30);
-    });
-
-    it("defines break threshold as 5.5 hours", () => {
-      expect(BREAK_THRESHOLD_HOURS).toBe(5.5);
     });
   });
 

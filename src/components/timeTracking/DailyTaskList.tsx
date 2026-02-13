@@ -271,8 +271,7 @@ export function DailyTaskList({
               key={task.id}
               onContextMenu={(e) => handleContextMenu(e, task.id)}
             >
-              <div className="d-flex justify-content-between align-items-start gap-2">
-                <div className="fw-semibold">
+              <div className="fw-semibold">
                   {task.text}{" "}
                   <span
                     className="time-tracking-label"
@@ -294,15 +293,6 @@ export function DailyTaskList({
                     </Badge>
                   )}
                 </div>
-                <div className="d-flex gap-2">
-                  <Button size="sm" variant="outline-primary" onClick={() => openEditModal(task)}>
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="outline-danger" onClick={() => onRemoveTask(task.id)}>
-                    Remove
-                  </Button>
-                </div>
-              </div>
               <div className="small text-muted mb-2">
                 Start: {startDisplay} · Stop: {stopDisplay}
               </div>

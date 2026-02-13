@@ -5,9 +5,6 @@
  */
 export const BREAK_DURATION_MINUTES = 30;
 
-/** Minimum daily hours before the mandatory break applies. */
-export const BREAK_THRESHOLD_HOURS = 5.5;
-
 /** Lunch window start in minutes from midnight (11:30). */
 const LUNCH_WINDOW_START = 11 * 60 + 30; // 690
 

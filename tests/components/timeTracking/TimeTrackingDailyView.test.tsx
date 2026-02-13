@@ -42,6 +42,7 @@ describe("TimeTrackingDailyView", () => {
       newLabel?: string;
     }) => void;
     onRemoveTask: (id: string) => void;
+    onToggleBreak: (taskId: string, includesBreak: boolean) => void;
   };
 
   beforeEach(() => {
@@ -55,6 +56,7 @@ describe("TimeTrackingDailyView", () => {
       onAddTask: vi.fn().mockReturnValue(true),
       onUpdateTaskTimes: vi.fn(),
       onRemoveTask: vi.fn(),
+      onToggleBreak: vi.fn(),
     };
   });
 
@@ -295,7 +297,7 @@ describe("TimeTrackingDailyView", () => {
   });
 
   describe("Task Management", () => {
-    it("provides remove action for each task", () => {
+    it("provides remove action via context menu", () => {
       const today = dayjs().format("YYYY-MM-DD");
       const tasks: StoredTimeTrackingTask[] = [
         {
@@ -307,11 +309,13 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      renderView({ tasks });
-      expect(screen.getAllByRole("button", { name: /Remove/i })).toHaveLength(1);
+      const { container } = renderView({ tasks });
+      const taskItem = container.querySelector(".list-group-item")!;
+      fireEvent.contextMenu(taskItem);
+      expect(screen.getByText("Remove")).toBeInTheDocument();
     });
 
-    it("invokes callback on task removal", async () => {
+    it("invokes callback on task removal via context menu", async () => {
       const user = userEvent.setup();
       const today = dayjs().format("YYYY-MM-DD");
       const tasks: StoredTimeTrackingTask[] = [
@@ -324,13 +328,15 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      renderView({ tasks });
-      await user.click(screen.getByRole("button", { name: /Remove/i }));
+      const { container } = renderView({ tasks });
+      const taskItem = container.querySelector(".list-group-item")!;
+      fireEvent.contextMenu(taskItem);
+      await user.click(screen.getByText("Remove"));
 
       expect(mockProps.onRemoveTask).toHaveBeenCalledWith("1");
     });
 
-    it("updates task details via edit modal", async () => {
+    it("updates task details via edit modal from context menu", async () => {
       const user = userEvent.setup();
       const onUpdateTaskTimes = vi.fn();
       const today = dayjs().format("YYYY-MM-DD");
@@ -344,9 +350,11 @@ describe("TimeTrackingDailyView", () => {
         },
       ];
 
-      renderView({ tasks, onUpdateTaskTimes });
+      const { container } = renderView({ tasks, onUpdateTaskTimes });
 
-      await user.click(screen.getByRole("button", { name: /Edit/i }));
+      const taskItem = container.querySelector(".list-group-item")!;
+      fireEvent.contextMenu(taskItem);
+      await user.click(screen.getByText("Edit"));
 
       const dialog = screen.getByRole("dialog");
       const taskInput = within(dialog).getByLabelText(/^Task$/i);
