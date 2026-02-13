@@ -85,7 +85,7 @@ export function TimelineProgressBar({
       if (task.includesBreak && rawDurationHours > 0) {
         // Calculate break position based on actual clock times and lunch window
         const taskStartMinutes = startDayjs.hour() * 60 + startDayjs.minute();
-        const taskStopMinutes = taskStartMinutes + rawDurationHours * 60;
+        const taskStopMinutes = stopDayjs.hour() * 60 + stopDayjs.minute();
         const pos = calculateBreakPosition(taskStartMinutes, taskStopMinutes);
         segment.beforeBreakHours = pos.beforeHours;
         segment.breakHours = pos.breakHours;
