@@ -53,7 +53,7 @@ jobs:
           if (-not $version) {
             $version = "1.0.0"
           }
-          $numeric = ($version -split '\.' | ForEach-Object { ($_ -replace '[^0-9]', '') } | Where-Object { $_ -ne '' })
+          $numeric = ($version -split '\.' | ForEach-Object { if ($_ -match '^\d+') { $Matches[0] } } | Where-Object { $_ -ne '' })
           while ($numeric.Count -lt 3) {
             $numeric += '0'
           }
