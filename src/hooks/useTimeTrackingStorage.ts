@@ -56,6 +56,10 @@ function isValidRawTask(value: unknown): value is RawTask {
     return false;
   }
 
+  if (v.includesBreak !== undefined && typeof v.includesBreak !== "boolean") {
+    return false;
+  }
+
   const startTime = typeof v.startTime === "string" ? v.startTime : "";
   const stopTime = typeof v.stopTime === "string" ? v.stopTime : null;
 
@@ -78,7 +82,7 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
-  if (raw.includesBreak) {
+  if (raw.includesBreak === true) {
     task.includesBreak = true;
   }
   return task;
@@ -158,7 +162,7 @@ export function useTimeTrackingStorage() {
             startTime: payload.startTime,
             stopTime: payload.stopTime ?? null,
           };
-          if (payload.includesBreak) {
+          if (payload.includesBreak === true) {
             newTask.includesBreak = true;
           }
           return [...prev, newTask];
@@ -186,7 +190,10 @@ export function useTimeTrackingStorage() {
                 label: payload.newLabel ?? raw.label,
                 startTime: payload.newStartTime,
                 stopTime: payload.newStopTime ?? null,
-                includesBreak: payload.includesBreak ?? raw.includesBreak,
+                includesBreak:
+                  typeof payload.includesBreak === "boolean"
+                    ? payload.includesBreak || undefined
+                    : raw.includesBreak,
               }
             : raw,
         ),
@@ -195,6 +202,16 @@ export function useTimeTrackingStorage() {
     [setRawTasks],
   );
 
+  /**
+   * Toggle the break deduction flag on a task.
+   *
+   * @param taskId - ID of the task to update.
+   * @param includesBreak - When `true`, a 30-minute break is deducted from the
+   *   task's effective duration. When `false`, the flag is removed (`undefined`
+   *   in storage) so no deduction applies.
+   *
+   * If `taskId` does not match any stored task the call is a no-op.
+   */
   const toggleBreak = useCallback(
     (taskId: string, includesBreak: boolean) => {
       setRawTasks((prev) =>
