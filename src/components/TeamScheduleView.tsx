@@ -134,17 +134,20 @@ export function TeamScheduleView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Date range for calendar (default: current month ± 1 month)
   const [startMonth, setStartMonth] = useState(() => dayjs().subtract(1, "month").startOf("month"));
   const [endMonth, setEndMonth] = useState(() => dayjs().add(1, "month").endOf("month"));
 
-  // Save team ID to localStorage when it changes
+  // Save team ID to localStorage when it changes and reset attempt flag for new team
   useEffect(() => {
     if (teamId) {
       localStorage.setItem("worktime_last_team_id", teamId);
     }
+    // Reset attempt flag when team ID changes to allow auto-fetch for new team
+    setHasAttemptedFetch(false);
   }, [teamId]);
 
   // Reset state when connection is lost
@@ -152,6 +155,7 @@ export function TeamScheduleView() {
     if (connectionStatus !== "connected") {
       setTeamData(null);
       setError(null);
+      setHasAttemptedFetch(false);
     }
   }, [connectionStatus]);
 
@@ -167,6 +171,7 @@ export function TeamScheduleView() {
   const fetchTeamData = useCallback(async () => {
     if (!teamId.trim()) {
       setError("Please enter a team ID");
+      setHasAttemptedFetch(true);
       return;
     }
 
@@ -182,6 +187,7 @@ export function TeamScheduleView() {
     setIsLoading(true);
     setError(null);
     setTeamData(null);
+    setHasAttemptedFetch(true);
 
     try {
       // Fetch team .hday data (includes team info)
@@ -224,15 +230,16 @@ export function TeamScheduleView() {
     }
   }, [teamId, apiUrl]);
 
-  // Auto-load team data if team ID is available and connected
+  // Auto-load team data if team ID is available and connected (only once per team ID)
   useEffect(() => {
-    if (teamId && connectionStatus === "connected" && !teamData && !isLoading) {
+    if (teamId && connectionStatus === "connected" && !teamData && !isLoading && !hasAttemptedFetch) {
       fetchTeamData();
     }
-  }, [teamId, connectionStatus, teamData, isLoading, fetchTeamData]);
+  }, [teamId, connectionStatus, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedFetch(false); // Reset attempt flag to allow manual retry
     fetchTeamData();
   };
 

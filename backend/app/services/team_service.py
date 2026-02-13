@@ -415,7 +415,8 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
     """Read team config and members with section grouping from cache or files.
     
     Returns structured sections (with headers from .people file) plus a flat member list
-    for backward compatibility. Uses the same caching strategy as read_team_info().
+    for backward compatibility. Always re-parses the .people file to preserve section
+    headers even when using cached data.
     
     Args:
         team_id: The team identifier
@@ -429,18 +430,6 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
     """
     cache = get_cache()
     
-    # Check for fresh cache entry first
-    cached_entry = cache.get_team_config(team_id)
-    if cached_entry is not None:
-        logger.debug("Cache hit: returning fresh team config entry with sections")
-        # Convert cached member dicts back to TeamMember objects
-        members = [TeamMember(**m) for m in cached_entry.members]
-        # Create single section from flat cached data (headers not preserved in cache)
-        sections = [TeamSection(title=None, members=members)] if members else []
-        return cached_entry.name, sections, members
-    
-    # Check for stale entry that might still be valid
-    stale_entry = cache.get_team_config_stale(team_id)
     # Get config directory and sanitized team_id once
     config_dir, safe_team_id = get_team_path(team_id)
     clean_team_id = os.path.basename(safe_team_id)
@@ -451,6 +440,21 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
     _validate_team_file_path(config_path, config_dir, "config")
     _validate_team_file_path(people_path, config_dir, "people")
     
+    # Check for fresh cache entry first
+    cached_entry = cache.get_team_config(team_id)
+    if cached_entry is not None:
+        logger.debug("Cache hit: re-parsing .people file to preserve section headers")
+        # Re-parse .people file to get section structure (cache only stores flat list)
+        try:
+            sections, members = _parse_members_file_with_sections(people_path)
+            return cached_entry.name, sections, members
+        except Exception as e:
+            logger.warning("Failed to re-parse .people file from cache hit, falling back to fresh read", exc_info=e)
+            # Fall through to full read if parsing fails
+    
+    # Check for stale entry that might still be valid
+    stale_entry = cache.get_team_config_stale(team_id)
+    
     if stale_entry is not None:
         # We have a stale entry - check if file mtimes have changed
         try:
@@ -458,14 +462,13 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
             current_config_mtime = config_path.stat().st_mtime
             current_people_mtime = people_path.stat().st_mtime
             
-            # If both mtimes unchanged, refresh TTL and return cached data
+            # If both mtimes unchanged, refresh TTL and re-parse for sections
             if (current_config_mtime == stale_entry.config_mtime and 
                 current_people_mtime == stale_entry.people_mtime):
                 cache.refresh_team_config_ttl(team_id)
-                logger.debug("Cache refresh: mtimes unchanged, TTL extended (with sections)")
-                members = [TeamMember(**m) for m in stale_entry.members]
-                # Create single section from flat cached data
-                sections = [TeamSection(title=None, members=members)] if members else []
+                logger.debug("Cache refresh: mtimes unchanged, TTL extended, re-parsing for sections")
+                # Re-parse .people file to get section structure
+                sections, members = _parse_members_file_with_sections(people_path)
                 return stale_entry.name, sections, members
             
             # At least one mtime changed - fall through to re-read files
