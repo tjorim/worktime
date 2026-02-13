@@ -28,6 +28,7 @@ export function TimeTrackingView() {
     labels,
     addTask,
     updateTaskTimes,
+    toggleBreak,
     removeTask,
     addTemplate,
     updateTemplate,
@@ -87,6 +88,7 @@ export function TimeTrackingView() {
           onAddTask={addTask}
           onUpdateTaskTimes={updateTaskTimes}
           onRemoveTask={removeTask}
+          onToggleBreak={toggleBreak}
         />
       )}
 

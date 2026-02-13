@@ -17,6 +17,7 @@ type RawTask = {
   label: string;
   startTime: string;
   stopTime?: string | null;
+  includesBreak?: boolean;
 };
 
 type ImportPayload = {
@@ -70,13 +71,17 @@ function isValidRawTask(value: unknown): value is RawTask {
 
 // StoredTimeTrackingTask now has string timestamps, so it matches RawTask structure
 function convertToTask(raw: RawTask): StoredTimeTrackingTask {
-  return {
+  const task: StoredTimeTrackingTask = {
     id: raw.id,
     text: raw.text,
     label: raw.label,
     startTime: raw.startTime,
     stopTime: raw.stopTime ?? undefined,
   };
+  if (raw.includesBreak) {
+    task.includesBreak = true;
+  }
+  return task;
 }
 
 function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
@@ -146,16 +151,17 @@ export function useTimeTrackingStorage() {
           }
           // Otherwise append the new task
           resolve(true);
-          return [
-            ...prev,
-            {
-              id: payload.id,
-              text: payload.text,
-              label: payload.label,
-              startTime: payload.startTime,
-              stopTime: payload.stopTime ?? null,
-            },
-          ];
+          const newTask: RawTask = {
+            id: payload.id,
+            text: payload.text,
+            label: payload.label,
+            startTime: payload.startTime,
+            stopTime: payload.stopTime ?? null,
+          };
+          if (payload.includesBreak) {
+            newTask.includesBreak = true;
+          }
+          return [...prev, newTask];
         });
       });
     },
@@ -169,6 +175,7 @@ export function useTimeTrackingStorage() {
       newStopTime: StoredTimeTrackingTask["stopTime"];
       newText?: string;
       newLabel?: string;
+      includesBreak?: boolean;
     }) => {
       setRawTasks((prev) =>
         prev.map((raw) =>
@@ -179,8 +186,20 @@ export function useTimeTrackingStorage() {
                 label: payload.newLabel ?? raw.label,
                 startTime: payload.newStartTime,
                 stopTime: payload.newStopTime ?? null,
+                includesBreak: payload.includesBreak ?? raw.includesBreak,
               }
             : raw,
+        ),
+      );
+    },
+    [setRawTasks],
+  );
+
+  const toggleBreak = useCallback(
+    (taskId: string, includesBreak: boolean) => {
+      setRawTasks((prev) =>
+        prev.map((raw) =>
+          raw.id === taskId ? { ...raw, includesBreak: includesBreak || undefined } : raw,
         ),
       );
     },
@@ -270,6 +289,7 @@ export function useTimeTrackingStorage() {
     labels,
     addTask,
     updateTaskTimes,
+    toggleBreak,
     removeTask,
     addTemplate,
     updateTemplate,

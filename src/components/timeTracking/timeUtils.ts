@@ -1,3 +1,24 @@
+/**
+ * Mandatory break duration in minutes. Per labor law, employees working more
+ * than 5.5 hours must take a 30-minute break that is automatically deducted
+ * from their logged time.
+ */
+export const BREAK_DURATION_MINUTES = 30;
+
+/** Minimum daily hours before the mandatory break applies. */
+export const BREAK_THRESHOLD_HOURS = 5.5;
+
+/**
+ * Returns the effective duration in hours for a task, subtracting the
+ * mandatory break when `includesBreak` is true. The deduction is capped
+ * at the raw duration so the result never goes negative.
+ */
+export function effectiveDurationHours(rawHours: number, includesBreak?: boolean): number {
+  if (!includesBreak) return rawHours;
+  const deduction = BREAK_DURATION_MINUTES / 60;
+  return Math.max(rawHours - deduction, 0);
+}
+
 export function timeToMinutes(time: string): number {
   const parts = time.split(":");
   if (parts.length !== 2) {

@@ -13,9 +13,9 @@ describe("ProgressBar Component", () => {
     });
 
     it("calculates percentage based on default target", () => {
-      const { container } = render(<ProgressBar hours={4.25} />);
+      const { container } = render(<ProgressBar hours={4} />);
 
-      // 4.25 / 8.5 = 50%
+      // 4 / 8 = 50%
       const progressElement = container.querySelector(".progress-bar");
       expect(progressElement).toHaveStyle({ width: "50%" });
     });
@@ -131,8 +131,8 @@ describe("ProgressBar Component", () => {
   });
 
   describe("Default Configuration", () => {
-    it("uses 8.5 hours as default target when not specified", () => {
-      const { container } = render(<ProgressBar hours={8.5} />);
+    it("uses 8 hours as default target when not specified", () => {
+      const { container } = render(<ProgressBar hours={8} />);
 
       // Should be exactly 100% with default target
       expect(container.textContent).toContain("100.0%");
