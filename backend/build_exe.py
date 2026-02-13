@@ -40,11 +40,21 @@ def main():
     
     # Get version from app
     version = get_app_version()
+    # Extract numeric version parts for Windows (needs X.X.X.X format)
     version_parts = version.split('.')
-    # Ensure we have at least 3 parts for Windows version
-    while len(version_parts) < 3:
-        version_parts.append('0')
-    file_version = '.'.join(version_parts[:3]) + '.0'  # Windows needs 4 parts
+    numeric_parts = []
+    for part in version_parts:
+        # Extract only numeric part (handles cases like "1.0.0-beta")
+        numeric = ''.join(c for c in part if c.isdigit())
+        if numeric:
+            numeric_parts.append(numeric)
+        if len(numeric_parts) >= 3:
+            break
+    # Ensure we have at least 3 parts
+    while len(numeric_parts) < 3:
+        numeric_parts.append('0')
+    # Windows needs 4 parts
+    file_version = '.'.join(numeric_parts[:3]) + '.0'
     
     print("=" * 60)
     print("Building Worktime Backend as Windows Executable")
