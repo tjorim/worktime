@@ -52,8 +52,6 @@ def main():
         "--follow-imports",
         # Include the entire app package
         f"--include-package=app",
-        # Include data files directory pattern (for .env if needed)
-        f"--include-data-dir={app_dir}=app",
         # Enable plugins for common packages
         "--enable-plugin=pydantic",
         # Windows-specific options - keep console for server logs
