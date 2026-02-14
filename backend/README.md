@@ -884,8 +884,9 @@ the recommended approach for non-technical users.
 
 **Download:**
 
-The Windows executable is automatically built on every commit to `main` and is available as a GitHub
-Actions artifact named `worktime-backend-windows`. To download:
+The Windows executable workflow is intentionally manual-only (`workflow_dispatch`) because full
+Windows builds take significant time. Trigger it from the Actions tab when you need a fresh binary.
+Each run uploads a GitHub Actions artifact named `worktime-backend-windows`. To download:
 
 1. Go to the [Actions tab](../../actions/workflows/build-exe.yml)
 2. Click on the latest successful workflow run

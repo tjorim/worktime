@@ -15,8 +15,20 @@ export interface ChangelogVersion {
 export const changelogData: ChangelogVersion[] = [
   {
     version: "4.6.1",
-    date: "2026-02-09",
+    date: "2026-02-14",
     status: "current",
+    added: [],
+    changed: [
+      "Team Schedule Viewer: Added grouped sections and team API-backed data loading so teams are organized clearly and schedule availability updates from integrated team data (PR #216)",
+      "Windows Delivery: Added a Windows executable build-and-delivery pipeline so users can download and run Worktime directly as a native `.exe` package (PR #218)",
+      "Time Tracking Totals: Break deduction is now applied in totals calculations, so tracked hours shown in daily/weekly summaries reflect net worked time after breaks (PR #221)",
+    ],
+    fixed: [],
+  },
+  {
+    version: "4.6.0",
+    date: "2026-02-09",
+    status: "released",
     added: [
       "Time Tracking Tab: New main tab with daily task tracking, quick timer, labels, templates, and weekly analytics",
       "Daily Task Tracking: Add, edit, and delete tasks with time ranges, label assignment, and overlap detection",

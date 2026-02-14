@@ -6,7 +6,6 @@ which are human-readable text files for managing time-off events.
 
 import logging
 import re
-from typing import List
 
 from app.models.hday import HdayEvent
 
@@ -44,7 +43,7 @@ RE_WEEKLY = re.compile(
 )
 
 
-def normalize_flags(flags: List[str]) -> List[str]:
+def normalize_flags(flags: list[str]) -> list[str]:
     """Enforce mutual exclusivity of time/location flags and type flags.
     
     Only keeps the first flag found in each category.
@@ -86,7 +85,7 @@ def normalize_flags(flags: List[str]) -> List[str]:
     return normalized
 
 
-def parse_text(text: str) -> List[HdayEvent]:
+def parse_text(text: str) -> list[HdayEvent]:
     """Parse .hday file content into a list of events.
     
     Supported formats:
@@ -102,7 +101,7 @@ def parse_text(text: str) -> List[HdayEvent]:
         List of parsed HdayEvent objects
     """
     lines = text.splitlines()
-    events: List[HdayEvent] = []
+    events: list[HdayEvent] = []
 
     for original_line in lines:
         # Preserve original line for raw field, use trimmed for parsing
@@ -159,7 +158,7 @@ def parse_text(text: str) -> List[HdayEvent]:
     return events
 
 
-def to_text(events: List[HdayEvent]) -> str:
+def to_text(events: list[HdayEvent]) -> str:
     """Serialize a list of events to .hday format.
     
     Args:
@@ -168,7 +167,7 @@ def to_text(events: List[HdayEvent]) -> str:
     Returns:
         .hday formatted text
     """
-    out_lines: List[str] = []
+    out_lines: list[str] = []
 
     for ev in events:
         # Preserve the original order of flags from input (FIFO), don't reorder

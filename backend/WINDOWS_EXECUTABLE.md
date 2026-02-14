@@ -16,13 +16,15 @@ everything you need into a single file - no Python installation required!
 
 ## Download
 
-The Windows executable is automatically built and available from GitHub Actions:
+The Windows executable workflow is manual-only (`workflow_dispatch`) and should be triggered when
+you need a fresh build:
 
 1. Go to https://github.com/tjorim/worktime/actions/workflows/build-exe.yml
-2. Click on the latest successful workflow run (green checkmark)
-3. Scroll down to "Artifacts" section
-4. Download the `worktime-backend-windows` artifact
-5. Extract the ZIP file to get `worktime-backend.exe`
+2. Click **Run workflow** and start a run from the branch you want to build
+3. Open the successful workflow run (green checkmark)
+4. Scroll down to the **Artifacts** section
+5. Download the `worktime-backend-windows` artifact
+6. Extract the ZIP file to get `worktime-backend.exe`
 
 ## Quick Start
 

@@ -9,7 +9,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 from app.cache.store import get_cache
 from app.config.settings import settings
@@ -39,14 +38,14 @@ def discover_benchmark_targets() -> tuple[str, str]:
         raise FileNotFoundError("Share directory does not exist")
     
     # Find first .hday file in share root
-    username: Optional[str] = None
+    username: str | None = None
     for item in share_dir.iterdir():
         if item.is_file() and item.suffix == ".hday":
             username = item.stem
             break
     
     # Find first team configuration (has both .conf and .people files in config/)
-    team_id: Optional[str] = None
+    team_id: str | None = None
     config_dir = share_dir / "config"
     if config_dir.exists() and config_dir.is_dir():
         for conf_file in config_dir.glob("*.conf"):

@@ -5,7 +5,6 @@ and mtime validation support.
 """
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +23,7 @@ class HdayCacheEntry(BaseModel):
     """
     
     raw: str
-    events: List[HdayEvent]
+    events: list[HdayEvent]
     etag: str
     mtime: float
     cached_at: float = Field(default_factory=lambda: datetime.now().timestamp())
@@ -42,7 +41,7 @@ class TeamConfigCacheEntry(BaseModel):
     """
     
     name: str
-    members: List[dict]  # List of {"username": str, "display_name": str}
+    members: list[dict]  # List of {"username": str, "display_name": str}
     config_mtime: float
     people_mtime: float
     cached_at: float = Field(default_factory=lambda: datetime.now().timestamp())
