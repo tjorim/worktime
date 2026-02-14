@@ -168,23 +168,46 @@
   }
 
   tbody tr {
-    transition:
-      background-color 0.2s ease,
-      border-left-color 0.2s ease;
-    border-left: 3px solid transparent;
+    transition: background-color 0.2s ease;
+
+    td:first-child {
+      position: relative;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -1px;
+        bottom: -1px;
+        width: 3px;
+        background-color: transparent;
+        transition: background-color 0.2s ease;
+        pointer-events: none;
+        z-index: 1;
+      }
+    }
 
     &:hover {
       background-color: var(--bs-secondary-bg);
-      border-left-color: var(--bs-primary-border-subtle);
+
+      td:first-child::before {
+        background-color: var(--bs-primary-border-subtle);
+      }
     }
 
     &.today-row {
       background-color: var(--bs-primary-bg-subtle);
-      border-left-color: var(--bs-primary);
+
+      td:first-child::before {
+        background-color: var(--bs-primary);
+      }
 
       &:hover {
         background-color: var(--bs-primary-bg-subtle);
-        border-left-color: var(--bs-primary);
+
+        td:first-child::before {
+          background-color: var(--bs-primary);
+        }
       }
     }
   }
