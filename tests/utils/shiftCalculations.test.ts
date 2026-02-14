@@ -474,9 +474,7 @@ describe("Roster Configuration Integration Tests", () => {
     // Test that 5-shift reference team has expected shift on reference date
     const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const referenceDate = new Date(`${fiveShiftRoster?.shiftConfig.referenceDate}T00:00:00.000Z`);
-    const referenceTeam = fiveShiftRoster?.shiftConfig.referenceTeam ?? 1;
-
-    const referenceShift = calculateShift(referenceDate, referenceTeam, "5-shift");
+    const referenceShift = calculateShift(referenceDate, 1, "5-shift");
     expect(referenceShift).toStrictEqual(getShift("M", "5-shift"));
   });
 

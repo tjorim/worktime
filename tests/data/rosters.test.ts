@@ -26,8 +26,6 @@ describe("Schedule pattern validation", () => {
       expect(config.cycleLengthDays).toBeGreaterThan(0);
       expect(config.shiftsPerDay).toBeGreaterThan(0);
       expect(config.referenceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(config.referenceTeam).toBeGreaterThan(0);
-      expect(config.referenceTeam).toBeLessThanOrEqual(config.teamCount);
       expect(config.schedulePattern).toBeDefined();
       expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
       if (config.weeklyHours != null) {
