@@ -8,7 +8,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from app.cache.store import get_cache
 from app.config.settings import settings
