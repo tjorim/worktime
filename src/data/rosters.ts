@@ -231,7 +231,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         },
         O: OFF_SHIFT_TIME,
       },
-      referenceDate: "2025-01-06", // Monday of week 1, 2025 (aligned with other rosters)
+      referenceDate: "2025-07-14", // Monday of week 1, 2025 (aligned with other rosters)
       schedulePattern: [
         // Week 1: Morning shift Mon-Fri + support weekend day shift
         "M", // Monday

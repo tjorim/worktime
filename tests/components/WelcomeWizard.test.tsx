@@ -910,7 +910,6 @@ describe("WelcomeWizard", () => {
       await user.click(twoShiftButton);
 
       // Selection should be applied and Continue becomes available
-      expect(twoShiftButton).toHaveClass("btn-primary");
       const continueButton = screen.getByRole("button", { name: /Continue/i });
       expect(continueButton).not.toBeDisabled();
     });

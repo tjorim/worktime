@@ -109,10 +109,10 @@ describe("Shift Calculations", () => {
       const week53Team1 = calculateShift(week53Monday, 1, "2-shift");
       const week1Team1 = calculateShift(week1Monday, 1, "2-shift");
 
-      // Rotation continues weekly (M -> L -> M) through week 53 into week 1
-      expect(week52Team1.code).toBe("M");
-      expect(week53Team1.code).toBe("L");
-      expect(week1Team1.code).toBe("M");
+      // Rotation continues weekly (L -> M -> L) through week 53 into week 1
+      expect(week52Team1.code).toBe("L");
+      expect(week53Team1.code).toBe("M");
+      expect(week1Team1.code).toBe("L");
 
       // Verify encoded week labels around the boundary
       expect(formatYYWWD(week53Monday)).toBe("2653.1");
@@ -123,10 +123,10 @@ describe("Shift Calculations", () => {
       const week53Saturday = dayjs("2027-01-02"); // Sat of ISO week 53 (2653)
       const week1Saturday = dayjs("2027-01-09"); // Sat of ISO week 1 (2701)
 
-      expect(calculateShift(week53Saturday, 4, "2-shift").code).toBe("D");
-      expect(calculateShift(week53Saturday, 1, "2-shift").code).toBe("O");
-      expect(calculateShift(week1Saturday, 1, "2-shift").code).toBe("D");
-      expect(calculateShift(week1Saturday, 4, "2-shift").code).toBe("O");
+      expect(calculateShift(week53Saturday, 1, "2-shift").code).toBe("D");
+      expect(calculateShift(week53Saturday, 4, "2-shift").code).toBe("O");
+      expect(calculateShift(week1Saturday, 2, "2-shift").code).toBe("D");
+      expect(calculateShift(week1Saturday, 1, "2-shift").code).toBe("O");
     });
   });
 
@@ -831,8 +831,8 @@ describe("getOffDayProgress Function Tests", () => {
     });
 
     it("should return weekend off-day progress for 2-shift schedule at 06:00 on Sunday", () => {
-      const sundayMorning = dayjs("2025-01-12 06:00");
-      const progress = getOffDayProgress(sundayMorning, 2, "2-shift");
+      const sundayMorning = dayjs("2025-07-27 06:00");
+      const progress = getOffDayProgress(sundayMorning, 1, "2-shift");
 
       expect(progress).not.toBeNull();
       if (progress) {

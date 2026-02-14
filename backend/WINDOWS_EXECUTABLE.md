@@ -80,6 +80,7 @@ If you're using a network share for team .hday files:
 ### UNC Path (Alternative)
 
 You can also use a UNC path directly:
+
 ```env
 SHARE_DIR=\\server\share\worktime
 ```
@@ -99,6 +100,7 @@ worktime-backend.exe
 ```
 
 The server will start and display:
+
 ```
 Worktime Backend API - Starting up
 ============================================================
@@ -119,15 +121,15 @@ All configuration is done via environment variables. You can set these:
 2. In Windows environment variables
 3. Via command line (set before running the executable)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SHARE_DIR` | Path to folder with .hday files | `./data/hday_files` |
-| `CORS_ORIGINS` | Comma-separated list of allowed origins | `http://localhost:5173` |
-| `PORT` | Server port | `8000` |
-| `HOST` | Server host/bind address | `0.0.0.0` |
-| `ENVIRONMENT` | `development` or `production` | `development` |
-| `CACHE_TTL` | Cache lifetime in seconds | `10` |
-| `CACHE_ENABLED` | Enable caching (`true` or `false`) | `true` |
+| Variable        | Description                             | Default                 |
+| --------------- | --------------------------------------- | ----------------------- |
+| `SHARE_DIR`     | Path to folder with .hday files         | `./data/hday_files`     |
+| `CORS_ORIGINS`  | Comma-separated list of allowed origins | `http://localhost:5173` |
+| `PORT`          | Server port                             | `8000`                  |
+| `HOST`          | Server host/bind address                | `0.0.0.0`               |
+| `ENVIRONMENT`   | `development` or `production`           | `development`           |
+| `CACHE_TTL`     | Cache lifetime in seconds               | `10`                    |
+| `CACHE_ENABLED` | Enable caching (`true` or `false`)      | `true`                  |
 
 ## Connecting the Frontend
 
@@ -201,6 +203,7 @@ If you want to build the executable yourself:
 ## Support
 
 For issues or questions:
+
 - Check the [main README](../README.md)
 - Review the [backend documentation](README.md)
 - Open an issue on [GitHub](https://github.com/tjorim/worktime/issues)

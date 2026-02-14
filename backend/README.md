@@ -869,7 +869,7 @@ Environment variables:
 
 ### Deployment options
 
-- **Windows Executable** (recommended for end users): Download the pre-built `worktime-backend.exe` 
+- **Windows Executable** (recommended for end users): Download the pre-built `worktime-backend.exe`
   from GitHub Actions artifacts. No Python installation required! Just double-click to run.
   See [Windows Executable](#windows-executable) below for details.
 - **Direct**: `uvicorn app.main:app` on the host machine.
@@ -931,6 +931,7 @@ python -m nuitka launcher.py \
 The executable will be created in `backend/dist/worktime-backend.exe`.
 
 **Requirements:**
+
 - Windows 10 or later
 - Network share access (if using shared .hday files)
 - No Python installation required!
