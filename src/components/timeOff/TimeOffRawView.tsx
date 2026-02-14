@@ -1,9 +1,8 @@
 import { useId } from "react";
+import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
-import { useState } from "react";
 
 type TimeOffRawViewProps = {
   rawText: string;
@@ -23,20 +22,12 @@ export function TimeOffRawView({
   onReset,
 }: TimeOffRawViewProps) {
   const errorId = useId();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const contentId = useId();
 
   return (
     <Card>
-      <Card.Header>
-        <button
-          type="button"
-          className="timeoff-raw-toggle"
-          aria-expanded={isExpanded}
-          aria-controls={contentId}
-          onClick={() => setIsExpanded((previous) => !previous)}
-        >
-          <span>
+      <Accordion className="timeoff-raw-accordion">
+        <Accordion.Item eventKey="raw-editor">
+          <Accordion.Header>
             <i className="bi bi-code-square me-2" aria-hidden="true"></i>
             Raw .hday Editor
             {isDirty && (
@@ -44,24 +35,18 @@ export function TimeOffRawView({
                 •
               </span>
             )}
-          </span>
-          <i
-            className={`bi ms-2 ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
-            aria-hidden="true"
-          ></i>
-        </button>
-      </Card.Header>
-      <Collapse in={isExpanded}>
-        <div id={contentId}>
-          <Card.Body>
+          </Accordion.Header>
+          <Accordion.Body>
             <p className="text-muted">
               Paste your <code>.hday</code> content below (or load a file), click{" "}
               <strong>Apply</strong>, then export if needed. Flags: <code>a</code>=half AM,{" "}
               <code>p</code>=half PM, <code>b</code>=business, <code>e</code>=weekend,{" "}
-              <code>h</code>=birthday, <code>i</code>
-              =ill, <code>k</code>=in, <code>s</code>=course, <code>u</code>=other, <code>w</code>
-              =onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly: <code>d1-d7</code>{" "}
-              (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM business).
+              <code>h</code>
+              =birthday, <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course,{" "}
+              <code>u</code>
+              =other, <code>w</code>=onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly:{" "}
+              <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM
+              business).
             </p>
             <Form.Group controlId="hdayText" className="mb-3">
               <Form.Label className="visually-hidden">Raw .hday content</Form.Label>
@@ -93,9 +78,9 @@ export function TimeOffRawView({
                 Reset
               </Button>
             </div>
-          </Card.Body>
-        </div>
-      </Collapse>
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
     </Card>
   );
 }
