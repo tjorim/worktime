@@ -16,7 +16,6 @@ jobs:
 
     permissions:
       contents: read
-      actions: write # For artifact upload
 
     steps:
       - name: Checkout repository
@@ -41,6 +40,7 @@ jobs:
           cd backend
           $version = python -c "from app.main import app; print(app.version)" 2>$null
           if (-not $version) {
+            Write-Host "⚠️ Could not read app.version; falling back to 1.0.0"
             $version = "1.0.0"
           }
           $numeric = ($version -split '\.' | ForEach-Object { if ($_ -match '^\d+') { $Matches[0] } } | Where-Object { $_ -ne '' })
@@ -53,7 +53,7 @@ jobs:
         shell: pwsh
 
       - name: Build executable with Nuitka-Action
-        uses: Nuitka/Nuitka-Action@main
+        uses: Nuitka/Nuitka-Action@0d4e22d4b66062a13d120f6948dd90170be04b3a # v1.4
         with:
           working-directory: backend
           script-name: launcher.py
