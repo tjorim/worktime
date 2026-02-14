@@ -37,8 +37,14 @@ function getLatestMarkdownRelease(changelogMarkdown: string): ReleaseMetadata {
     throw new Error("No versioned release entries found in CHANGELOG.md.");
   }
 
-  const [version, date] = matches[0].slice(1);
-  return { version, date };
+  const releases = matches.map((match) => {
+    const [version, date] = match.slice(1);
+    return { version, date };
+  });
+
+  return releases.reduce((latest, current) =>
+    compareVersions(current.version, latest.version) > 0 ? current : latest,
+  );
 }
 
 function getLatestTsRelease(changelog: ChangelogVersion[]): ChangelogVersion {
@@ -89,7 +95,9 @@ if (markdownRelease.date !== tsRelease.date) {
 
 if (failures.length > 0) {
   console.error("❌ Version consistency check failed:\n");
-  failures.forEach((failure) => console.error(`- ${failure}`));
+  failures.forEach((failure) => {
+    console.error(`- ${failure}`);
+  });
   process.exit(1);
 }
 
