@@ -166,24 +166,34 @@
   }
 
   tbody tr {
-    transition:
-      background-color 0.2s ease,
-      border-left-color 0.2s ease;
-    border-left: 4px solid transparent;
+    transition: background-color 0.2s ease;
+
+    td:first-child {
+      box-shadow: inset 4px 0 0 transparent;
+      transition: box-shadow 0.2s ease;
+    }
 
     &:hover {
       background-color: var(--bs-secondary-bg);
-      border-left-color: var(--bs-primary-border-subtle);
+
+      td:first-child {
+        box-shadow: inset 4px 0 0 var(--bs-primary-border-subtle);
+      }
     }
 
     &.today-row {
       background-color: var(--bs-primary-bg-subtle);
-      border-left-color: var(--bs-primary);
+
+      td:first-child {
+        box-shadow: inset 4px 0 0 var(--bs-primary);
+      }
 
       &:hover {
         background-color: var(--bs-primary-bg-subtle);
-        border-left-color: var(--bs-primary);
-        filter: brightness(0.98);
+
+        td:first-child {
+          box-shadow: inset 4px 0 0 var(--bs-primary);
+        }
       }
     }
   }
