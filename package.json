@@ -1,6 +1,6 @@
 {
   "name": "worktime",
-  "version": "4.4.1",
+  "version": "4.6.1",
   "description": "Team Shift Tracker + Time Off Management for 5-team continuous (24/7) schedules",
   "keywords": [
     "continuous",
@@ -35,7 +35,8 @@
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "generate-changelog": "tsx scripts/generate-changelog.ts",
-    "generate-icons": "tsx scripts/generate-icons.ts"
+    "generate-icons": "tsx scripts/generate-icons.ts",
+    "check-version-consistency": "tsx scripts/check-version-consistency.ts"
   },
   "dependencies": {
     "@types/uuid": "^11.0.0",

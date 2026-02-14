@@ -94,6 +94,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate release version consistency
+        run: npm run check-version-consistency
+
       - name: Validate core app changes
         if: env.CORE_CHANGES == 'true'
         run: |
@@ -191,17 +194,6 @@ jobs:
           # Test build to ensure config is valid
           npm run build
           echo "✅ Build completed successfully"
-
-      - name: Check for version updates
-        if: env.CORE_CHANGES == 'true' || env.CONFIG_CHANGES == 'true'
-        run: |
-          echo "🔢 Checking version consistency..."
-
-          # Check package.json version
-          if [ -f "package.json" ]; then
-            VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version)")
-            echo "ℹ️  Package version: $VERSION"
-          fi
 
       - name: Performance impact analysis
         if: env.CORE_CHANGES == 'true'
