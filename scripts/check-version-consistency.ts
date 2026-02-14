@@ -1,15 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { changelogData, type ChangelogVersion } from "../src/data/changelog.ts";
+
 type ReleaseMetadata = {
   version: string;
   date: string;
-};
-
-type TsChangelogStatus = "current" | "released" | "planned";
-
-type TsReleaseMetadata = ReleaseMetadata & {
-  status: TsChangelogStatus;
 };
 
 const root = process.cwd();
@@ -45,17 +41,8 @@ function getLatestMarkdownRelease(changelogMarkdown: string): ReleaseMetadata {
   return { version, date };
 }
 
-function getLatestTsRelease(changelogTs: string): TsReleaseMetadata {
-  const entryPattern =
-    /\{[\s\S]*?version:\s*"(\d+\.\d+\.\d+)"[\s\S]*?date:\s*"(\d{4}-\d{2}-\d{2})"[\s\S]*?status:\s*"(current|released|planned)"[\s\S]*?\}/g;
-
-  const entries: TsReleaseMetadata[] = [...changelogTs.matchAll(entryPattern)].map((match) => ({
-    version: match[1],
-    date: match[2],
-    status: match[3] as TsChangelogStatus,
-  }));
-
-  const releases = entries.filter((entry) => entry.status === "released" || entry.status === "current");
+function getLatestTsRelease(changelog: ChangelogVersion[]): ChangelogVersion {
+  const releases = changelog.filter((entry) => entry.status === "released" || entry.status === "current");
 
   if (releases.length === 0) {
     throw new Error("No released/current entries found in src/data/changelog.ts.");
@@ -69,11 +56,10 @@ function getLatestTsRelease(changelogTs: string): TsReleaseMetadata {
 const pkgRaw = readFileSync(resolve(root, "package.json"), "utf8");
 const pkg = JSON.parse(pkgRaw) as { version: string };
 const changelogMd = readFileSync(resolve(root, "CHANGELOG.md"), "utf8");
-const changelogTs = readFileSync(resolve(root, "src/data/changelog.ts"), "utf8");
 
 const packageVersion = pkg.version;
 const markdownRelease = getLatestMarkdownRelease(changelogMd);
-const tsRelease = getLatestTsRelease(changelogTs);
+const tsRelease = getLatestTsRelease(changelogData);
 
 const failures: string[] = [];
 
