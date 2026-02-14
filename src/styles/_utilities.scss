@@ -88,6 +88,19 @@ body {
   color: var(--bs-body-color);
 }
 
+.timeoff-raw-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
 /* ============================================================================
    LAYOUT UTILITIES
    ========================================================================= */

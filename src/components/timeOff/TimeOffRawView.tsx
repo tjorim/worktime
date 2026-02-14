@@ -1,8 +1,9 @@
 import { useId } from "react";
-import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
+import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
+import { useState } from "react";
 
 type TimeOffRawViewProps = {
   rawText: string;
@@ -22,12 +23,20 @@ export function TimeOffRawView({
   onReset,
 }: TimeOffRawViewProps) {
   const errorId = useId();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const contentId = useId();
 
   return (
     <Card>
-      <Accordion>
-        <Accordion.Item eventKey="raw-editor">
-          <Accordion.Header>
+      <Card.Header>
+        <button
+          type="button"
+          className="timeoff-raw-toggle"
+          aria-expanded={isExpanded}
+          aria-controls={contentId}
+          onClick={() => setIsExpanded((previous) => !previous)}
+        >
+          <span>
             <i className="bi bi-code-square me-2" aria-hidden="true"></i>
             Raw .hday Editor
             {isDirty && (
@@ -35,8 +44,16 @@ export function TimeOffRawView({
                 •
               </span>
             )}
-          </Accordion.Header>
-          <Accordion.Body>
+          </span>
+          <i
+            className={`bi ms-2 ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
+            aria-hidden="true"
+          ></i>
+        </button>
+      </Card.Header>
+      <Collapse in={isExpanded}>
+        <div id={contentId}>
+          <Card.Body>
             <p className="text-muted">
               Paste your <code>.hday</code> content below (or load a file), click{" "}
               <strong>Apply</strong>, then export if needed. Flags: <code>a</code>=half AM,{" "}
@@ -76,9 +93,9 @@ export function TimeOffRawView({
                 Reset
               </Button>
             </div>
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
+          </Card.Body>
+        </div>
+      </Collapse>
     </Card>
   );
 }
