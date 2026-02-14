@@ -215,24 +215,24 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   {
     value: "2-shift",
     title: "2-shift",
-    description: "Alternating early and late shifts each week.",
-    isAvailable: false, // Coming soon
+    description: "Alternating morning and evening shifts with rotating support weekends.",
+    isAvailable: true,
     shiftConfig: {
-      teamCount: 2,
+      teamCount: 4,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
       shiftTimes: {
         M: {
-          name: "Early",
+          name: "Morning",
           start: 6.5,
           end: 15.5,
-          displayCode: "E",
+          displayCode: "M",
         },
         L: {
-          name: "Late",
+          name: "Evening",
           start: 15,
           end: 24,
-          displayCode: "L",
+          displayCode: "E",
         },
         D: {
           name: "Day",
@@ -242,18 +242,18 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         },
         O: OFF_SHIFT_TIME,
       },
-      referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
+      referenceDate: "2025-01-06", // Monday of week 1, 2025 (aligned with other rosters)
+      referenceTeam: 1, // Team 1 starts in the support-week (Morning + weekend Day shifts)
       schedulePattern: [
-        // Week 1: Early shift Mon-Fri, off weekend
+        // Week 1: Morning shift Mon-Fri + support weekend day shift
         "M", // Monday
         "M", // Tuesday
         "M", // Wednesday
         "M", // Thursday
         "M", // Friday
-        "O", // Saturday
-        "O", // Sunday
-        // Week 2: Late shift Mon-Fri, off weekend
+        "D", // Saturday
+        "D", // Sunday
+        // Week 2: Evening shift Mon-Fri, off weekend
         "L", // Monday
         "L", // Tuesday
         "L", // Wednesday
@@ -261,7 +261,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Friday
         "O", // Saturday
         "O", // Sunday
-        // Week 3: Early shift Mon-Fri, off weekend
+        // Week 3: Morning shift Mon-Fri, off weekend
         "M", // Monday
         "M", // Tuesday
         "M", // Wednesday
@@ -269,7 +269,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "M", // Friday
         "O", // Saturday
         "O", // Sunday
-        // Week 4: Late shift Mon-Fri, off weekend (assigned weekend day shift TBD)
+        // Week 4: Evening shift Mon-Fri, off weekend
         "L", // Monday
         "L", // Tuesday
         "L", // Wednesday
@@ -279,7 +279,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Sunday
       ],
       notes:
-        "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend (day shift) and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
+        "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.",
     },
   },
   {

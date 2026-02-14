@@ -19,6 +19,7 @@ export const changelogData: ChangelogVersion[] = [
     status: "current",
     added: [],
     changed: [
+      "2-shift Roster Completion: Added full 4-team support rotation with working-weekend day shifts and explicit week-53/week-1 continuity coverage (2653 → 2701)",
       "Team Schedule Viewer: Added grouped sections and team API-backed data loading so teams are organized clearly and schedule availability updates from integrated team data (PR #216)",
       "Windows Delivery: Added a Windows executable build-and-delivery pipeline so users can download and run Worktime directly as a native `.exe` package (PR #218)",
       "Time Tracking Totals: Break deduction is now applied in totals calculations, so tracked hours shown in daily/weekly summaries reflect net worked time after breaks (PR #221)",
