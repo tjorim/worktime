@@ -232,7 +232,13 @@ export function TeamScheduleView() {
 
   // Auto-load team data if team ID is available and connected (only once per team ID)
   useEffect(() => {
-    if (teamId && connectionStatus === "connected" && !teamData && !isLoading && !hasAttemptedFetch) {
+    if (
+      teamId &&
+      connectionStatus === "connected" &&
+      !teamData &&
+      !isLoading &&
+      !hasAttemptedFetch
+    ) {
       fetchTeamData();
     }
   }, [teamId, connectionStatus, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);

@@ -31,7 +31,7 @@
  *
  * Each schedule type is self-contained with its own configuration:
  * 1. Reference date: When the reference team's pattern starts
- * 2. Reference team: Which team is at the reference point
+ * 2. Team 1 is always used as the reference team
  * 3. Schedule pattern: Cycle-based or weekly-rotation pattern
  *
  * For cycle-based schedules:
@@ -187,11 +187,6 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
   return referenceDate.startOf("day");
 };
 
-const getReferenceTeamForSchedule = (scheduleOption?: NullableScheduleOption): number => {
-  const schedule = getScheduleForOption(scheduleOption);
-  return schedule.shiftConfig.referenceTeam;
-};
-
 // Mapping of shift codes to their visual properties (emoji and CSS class)
 const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
   M: { emoji: "🌅", className: "shift-morning" },
@@ -228,25 +223,23 @@ export const getShift = (code: ShiftType, scheduleOption: ScheduleOption): Shift
  * Returns the number of units (days or weeks depending on pattern) this team is offset from the reference team.
  * @param teamNumber - The team number to calculate the offset for
  * @param teamCount - Total number of teams in the schedule
- * @param referenceTeam - The reference team number (1-indexed)
  * @returns The offset index (0 to teamCount-1)
  */
-const getTeamOffsetUnits = (teamNumber: number, teamCount: number, referenceTeam: number) => {
+const getTeamOffsetUnits = (teamNumber: number, teamCount: number) => {
   if (teamCount <= 1) return 0;
-  // Normalize to [0..teamCount-1] range to handle cases where teamNumber < referenceTeam
-  return (((teamNumber - referenceTeam) % teamCount) + teamCount) % teamCount;
+  // Normalize to [0..teamCount-1] range
+  return (((teamNumber - 1) % teamCount) + teamCount) % teamCount;
 };
 
 const getCycleTeamOffsetDays = (scheduleOption?: NullableScheduleOption, teamNumber?: number) => {
   const teamCount = getTeamCountForSchedule(scheduleOption);
   const cycleLength = getCycleLengthForSchedule(scheduleOption);
-  const referenceTeam = getReferenceTeamForSchedule(scheduleOption);
   if (!teamNumber || teamCount <= 1 || cycleLength <= 0) return 0;
 
   // For weekly rotation schedules (multiples of 7), use week-based offset
   // to ensure teams are on different weeks, not just different positions in cycle
   const offsetStep = cycleLength % 7 === 0 ? 7 : Math.floor(cycleLength / teamCount);
-  return getTeamOffsetUnits(teamNumber, teamCount, referenceTeam) * offsetStep;
+  return getTeamOffsetUnits(teamNumber, teamCount) * offsetStep;
 };
 
 /**

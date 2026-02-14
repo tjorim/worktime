@@ -894,39 +894,9 @@ describe("WelcomeWizard", () => {
       expect(fiveShiftButton).toBeInTheDocument();
     });
 
-    it("should not allow selection of disabled schedules", async () => {
+    it("should allow selecting the 2-shift schedule", async () => {
       const user = userEvent.setup();
-      const onScheduleSelectMock = vi.fn();
 
-      renderWithProviders(
-        <WelcomeWizard
-          {...defaultProps}
-          onScheduleSelect={onScheduleSelectMock}
-          mode="change-schedule"
-        />,
-      );
-
-      // Navigate to schedule selection
-      await waitFor(() => {
-        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
-      });
-
-      // Find disabled schedule button (2-shift is marked as unavailable)
-      const twoShiftButton = screen.getByRole("button", { name: /2-shift/i });
-      const weekendShiftButton = screen.getByRole("button", { name: /Weekend shift/i });
-
-      // 2-shift should be disabled while weekend shift is available
-      expect(twoShiftButton).toBeDisabled();
-      expect(weekendShiftButton).not.toBeDisabled();
-
-      // Attempting to click should not select disabled option
-      await user.click(twoShiftButton);
-
-      // Button should remain disabled even if clicked
-      expect(twoShiftButton).toBeDisabled();
-    });
-
-    it("should show tooltip on disabled schedule options", async () => {
       renderWithProviders(<WelcomeWizard {...defaultProps} mode="change-schedule" />);
 
       // Navigate to schedule selection
@@ -934,11 +904,26 @@ describe("WelcomeWizard", () => {
         expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
 
-      // Find disabled schedule button
       const twoShiftButton = screen.getByRole("button", { name: /2-shift/i });
+      expect(twoShiftButton).not.toBeDisabled();
 
-      // Should have a title attribute for tooltip
-      expect(twoShiftButton).toHaveAttribute("title", "This schedule option is coming soon");
+      await user.click(twoShiftButton);
+
+      // Selection should be applied and Continue becomes available
+      const continueButton = screen.getByRole("button", { name: /Continue/i });
+      expect(continueButton).not.toBeDisabled();
+    });
+
+    it("should not show coming-soon tooltip for 2-shift", async () => {
+      renderWithProviders(<WelcomeWizard {...defaultProps} mode="change-schedule" />);
+
+      // Navigate to schedule selection
+      await waitFor(() => {
+        expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
+      });
+
+      const twoShiftButton = screen.getByRole("button", { name: /2-shift/i });
+      expect(twoShiftButton).not.toHaveAttribute("title", "This schedule option is coming soon");
     });
 
     it("should handle schedule selection in onboarding flow", async () => {

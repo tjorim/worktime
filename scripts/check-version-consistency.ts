@@ -48,7 +48,9 @@ function getLatestMarkdownRelease(changelogMarkdown: string): ReleaseMetadata {
 }
 
 function getLatestTsRelease(changelog: ChangelogVersion[]): ChangelogVersion {
-  const releases = changelog.filter((entry) => entry.status === "released" || entry.status === "current");
+  const releases = changelog.filter(
+    (entry) => entry.status === "released" || entry.status === "current",
+  );
 
   if (releases.length === 0) {
     throw new Error("No released/current entries found in src/data/changelog.ts.");

@@ -156,7 +156,8 @@ describe("Break Deduction", () => {
 
       for (const [start, stop] of cases) {
         const result = calculateBreakPosition(start, stop);
-        const totalMinutes = result.beforeHours * 60 + result.breakHours * 60 + result.afterHours * 60;
+        const totalMinutes =
+          result.beforeHours * 60 + result.breakHours * 60 + result.afterHours * 60;
         expect(totalMinutes).toBeCloseTo(stop - start, 5);
       }
     });

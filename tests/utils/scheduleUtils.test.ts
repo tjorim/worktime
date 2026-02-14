@@ -129,8 +129,8 @@ describe("scheduleUtils", () => {
       });
     });
 
-    describe("multi-team schedules with two teams", () => {
-      // Examples: "2-shift" and "weekend-shift" with teamCount: 2
+    describe("multi-team schedules", () => {
+      // 2-shift has 4 teams, weekend-shift has 2 teams
 
       it("should return null when myTeam is null for 2-shift", () => {
         const result = getEffectiveTeam(null, "2-shift");
@@ -147,8 +147,13 @@ describe("scheduleUtils", () => {
         expect(result).toBe(2);
       });
 
+      it("should return team 4 when valid for 2-shift", () => {
+        const result = getEffectiveTeam(4, "2-shift");
+        expect(result).toBe(4);
+      });
+
       it("should return null for team number above valid range for 2-shift", () => {
-        const result = getEffectiveTeam(3, "2-shift");
+        const result = getEffectiveTeam(5, "2-shift");
         expect(result).toBe(null);
       });
 
@@ -172,13 +177,13 @@ describe("scheduleUtils", () => {
         expect(result).toBe(null);
       });
 
-      it("should log a warning for invalid team number in a two-team schedule", () => {
+      it("should log a warning for invalid team number in the 2-shift schedule", () => {
         const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-        getEffectiveTeam(5, "2-shift");
+        getEffectiveTeam(6, "2-shift");
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          "Invalid team number 5 (expected 1-2). Treating as null.",
+          "Invalid team number 6 (expected 1-4). Treating as null.",
         );
 
         consoleWarnSpy.mockRestore();

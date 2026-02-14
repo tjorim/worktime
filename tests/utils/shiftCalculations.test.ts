@@ -99,6 +99,37 @@ describe("Shift Calculations", () => {
     });
   });
 
+  describe("2-shift week 53 continuity", () => {
+    it("should continue normal weekly rotation through ISO week 53 into week 1", () => {
+      const week52Monday = dayjs("2026-12-21"); // ISO week 52
+      const week53Monday = dayjs("2026-12-28"); // ISO week 53
+      const week1Monday = dayjs("2027-01-04"); // ISO week 1
+
+      const week52Team1 = calculateShift(week52Monday, 1, "2-shift");
+      const week53Team1 = calculateShift(week53Monday, 1, "2-shift");
+      const week1Team1 = calculateShift(week1Monday, 1, "2-shift");
+
+      // Rotation continues weekly (L -> M -> L) through week 53 into week 1
+      expect(week52Team1.code).toBe("L");
+      expect(week53Team1.code).toBe("M");
+      expect(week1Team1.code).toBe("L");
+
+      // Verify encoded week labels around the boundary
+      expect(formatYYWWD(week53Monday)).toBe("2653.1");
+      expect(formatYYWWD(week1Monday)).toBe("2701.1");
+    });
+
+    it("should keep the weekend support day-shift rotating by team", () => {
+      const week53Saturday = dayjs("2027-01-02"); // Sat of ISO week 53 (2653)
+      const week1Saturday = dayjs("2027-01-09"); // Sat of ISO week 1 (2701)
+
+      expect(calculateShift(week53Saturday, 1, "2-shift").code).toBe("D");
+      expect(calculateShift(week53Saturday, 4, "2-shift").code).toBe("O");
+      expect(calculateShift(week1Saturday, 2, "2-shift").code).toBe("D");
+      expect(calculateShift(week1Saturday, 1, "2-shift").code).toBe("O");
+    });
+  });
+
   describe("Next Shift Calculation", () => {
     it("should find next working shift", () => {
       const testDate = new Date("2025-07-16");
@@ -434,18 +465,16 @@ describe("Roster Configuration Integration Tests", () => {
     const nineFiveResults = getAllTeamsShifts(testDate, "9-5");
     expect(nineFiveResults).toHaveLength(1);
 
-    // Test 2-shift roster with 2 teams
+    // Test 2-shift roster with 4 teams
     const twoShiftResults = getAllTeamsShifts(testDate, "2-shift");
-    expect(twoShiftResults).toHaveLength(2);
+    expect(twoShiftResults).toHaveLength(4);
   });
 
   it("should use roster-specific reference date and team", () => {
     // Test that 5-shift reference team has expected shift on reference date
     const fiveShiftRoster = SCHEDULE_OPTIONS.find((s) => s.value === "5-shift");
     const referenceDate = new Date(`${fiveShiftRoster?.shiftConfig.referenceDate}T00:00:00.000Z`);
-    const referenceTeam = fiveShiftRoster?.shiftConfig.referenceTeam ?? 1;
-
-    const referenceShift = calculateShift(referenceDate, referenceTeam, "5-shift");
+    const referenceShift = calculateShift(referenceDate, 1, "5-shift");
     expect(referenceShift).toStrictEqual(getShift("M", "5-shift"));
   });
 
@@ -802,7 +831,7 @@ describe("getOffDayProgress Function Tests", () => {
     });
 
     it("should return weekend off-day progress for 2-shift schedule at 06:00 on Sunday", () => {
-      const sundayMorning = dayjs("2025-01-12 06:00");
+      const sundayMorning = dayjs("2025-07-27 06:00");
       const progress = getOffDayProgress(sundayMorning, 1, "2-shift");
 
       expect(progress).not.toBeNull();

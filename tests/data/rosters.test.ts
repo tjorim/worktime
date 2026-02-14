@@ -26,8 +26,6 @@ describe("Schedule pattern validation", () => {
       expect(config.cycleLengthDays).toBeGreaterThan(0);
       expect(config.shiftsPerDay).toBeGreaterThan(0);
       expect(config.referenceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(config.referenceTeam).toBeGreaterThan(0);
-      expect(config.referenceTeam).toBeLessThanOrEqual(config.teamCount);
       expect(config.schedulePattern).toBeDefined();
       expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
       if (config.weeklyHours != null) {
@@ -117,10 +115,11 @@ describe("Schedule pattern validation", () => {
     expect(schedule?.shiftConfig.teamCount).toBe(5);
   });
 
-  it("should have 2-shift schedule marked as coming soon", () => {
+  it("should have 2-shift schedule available", () => {
     const schedule = SCHEDULE_OPTIONS.find((s) => s.value === "2-shift");
     expect(schedule).toBeDefined();
-    expect(schedule?.isAvailable).toBe(false);
+    expect(schedule?.isAvailable).toBe(true);
+    expect(schedule?.shiftConfig.teamCount).toBe(4);
   });
 
   it("should have weekend-shift schedule available", () => {

@@ -76,10 +76,7 @@ export function DailyTaskList({
     ? (tasks.find((task) => task.id === editingTaskId) ?? null)
     : null;
 
-  const taskWithBreak = useMemo(
-    () => tasks.find((task) => task.includesBreak) ?? null,
-    [tasks],
-  );
+  const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
   const closeEditModal = () => {
     setEditingTaskId(null);
@@ -133,13 +130,10 @@ export function DailyTaskList({
     }
   };
 
-  const handleContextMenu = useCallback(
-    (event: React.MouseEvent, taskId: string) => {
-      event.preventDefault();
-      setContextMenu({ isOpen: true, x: event.clientX, y: event.clientY, taskId });
-    },
-    [],
-  );
+  const handleContextMenu = useCallback((event: React.MouseEvent, taskId: string) => {
+    event.preventDefault();
+    setContextMenu({ isOpen: true, x: event.clientX, y: event.clientY, taskId });
+  }, []);
 
   const closeContextMenu = useCallback(() => {
     setContextMenu((prev) => ({ ...prev, isOpen: false }));
@@ -268,32 +262,29 @@ export function DailyTaskList({
           const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
           const labelTextColor = getContrastingTextColor(labelBackground);
           return (
-            <ListGroup.Item
-              key={task.id}
-              onContextMenu={(e) => handleContextMenu(e, task.id)}
-            >
+            <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
               <div className="fw-semibold">
-                  {task.text}{" "}
-                  <span
-                    className="time-tracking-label"
-                    style={{
-                      backgroundColor: labelBackground,
-                      color: labelTextColor,
-                    }}
+                {task.text}{" "}
+                <span
+                  className="time-tracking-label"
+                  style={{
+                    backgroundColor: labelBackground,
+                    color: labelTextColor,
+                  }}
+                >
+                  {labelNameById[task.label] ?? "Unknown label"}
+                </span>
+                {task.includesBreak && (
+                  <Badge
+                    bg="secondary"
+                    className="ms-2"
+                    title={`${BREAK_DURATION_MINUTES}min break deducted`}
                   >
-                    {labelNameById[task.label] ?? "Unknown label"}
-                  </span>
-                  {task.includesBreak && (
-                    <Badge
-                      bg="secondary"
-                      className="ms-2"
-                      title={`${BREAK_DURATION_MINUTES}min break deducted`}
-                    >
-                      <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>
-                      -{BREAK_DURATION_MINUTES}min
-                    </Badge>
-                  )}
-                </div>
+                    <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                    {BREAK_DURATION_MINUTES}min
+                  </Badge>
+                )}
+              </div>
               <div className="small text-muted mb-2">
                 Start: {startDisplay} · Stop: {stopDisplay}
               </div>

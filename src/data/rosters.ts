@@ -25,7 +25,6 @@ export type ShiftRosterConfig = {
   shiftTimes: Partial<Record<ShiftCode, ShiftTimeDefinition>>;
   schedulePattern: ShiftCode[]; // M=morning/early, L=evening/late, N=night, D=day, O=off
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
-  referenceTeam: number; // 1-based team number for reference point
   // Optional fields
   weeklyHours?: number | null; // Target working hours per week for this schedule (null/undefined = not yet determined)
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
@@ -44,8 +43,7 @@ export type ScheduleRoster = {
  * Throws an error if validation fails.
  */
 function validateSchedulePattern(config: ShiftRosterConfig): void {
-  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, referenceTeam, weeklyHours } =
-    config;
+  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, weeklyHours } = config;
 
   // Validation 1: Pattern length matches cycle length
   if (schedulePattern.length !== cycleLengthDays) {
@@ -137,15 +135,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 5: Reference team is within valid range
-  if (referenceTeam < 1 || referenceTeam > teamCount) {
-    throw new Error(
-      `Schedule pattern validation failed: ` +
-        `Reference team ${referenceTeam} is outside valid range (1-${teamCount})`,
-    );
-  }
-
-  // Validation 6: Cycle length is reasonable (1-365 days)
+  // Validation 5: Cycle length is reasonable (1-365 days)
   if (cycleLengthDays < 1 || cycleLengthDays > 365) {
     throw new Error(
       `Schedule pattern validation failed: ` +
@@ -153,14 +143,14 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 7: Team count is positive
+  // Validation 6: Team count is positive
   if (teamCount < 1) {
     throw new Error(
       `Schedule pattern validation failed: ` + `Team count ${teamCount} must be at least 1`,
     );
   }
 
-  // Validation 8: At least one working shift exists (not all off days)
+  // Validation 7: At least one working shift exists (not all off days)
   const hasWorkingShift = schedulePattern.some((shift) => shift !== "O");
   if (!hasWorkingShift) {
     throw new Error(
@@ -169,7 +159,7 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
     );
   }
 
-  // Validation 9: Optional weekly hours must be a finite non-negative number when provided
+  // Validation 8: Optional weekly hours must be a finite non-negative number when provided
   if (weeklyHours != null && (!Number.isFinite(weeklyHours) || weeklyHours < 0)) {
     throw new Error(
       `Schedule pattern validation failed: weeklyHours must be a finite non-negative number when provided.`,
@@ -197,7 +187,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1, // Reference team is on day shift (Monday) on the reference date
       schedulePattern: [
         "D", // Monday
         "D", // Tuesday
@@ -215,24 +204,24 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   {
     value: "2-shift",
     title: "2-shift",
-    description: "Alternating early and late shifts each week.",
-    isAvailable: false, // Coming soon
+    description: "Alternating morning and evening shifts with rotating support weekends.",
+    isAvailable: true,
     shiftConfig: {
-      teamCount: 2,
+      teamCount: 4,
       cycleLengthDays: 28,
       shiftsPerDay: 2,
       shiftTimes: {
         M: {
-          name: "Early",
+          name: "Morning",
           start: 6.5,
           end: 15.5,
-          displayCode: "E",
+          displayCode: "M",
         },
         L: {
-          name: "Late",
+          name: "Evening",
           start: 15,
           end: 24,
-          displayCode: "L",
+          displayCode: "E",
         },
         D: {
           name: "Day",
@@ -242,18 +231,17 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         },
         O: OFF_SHIFT_TIME,
       },
-      referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1, // Reference team is on early shift (week 1, day 1 of cycle) on the reference date
+      referenceDate: "2025-07-14", // Monday of week 1, 2025 (aligned with other rosters)
       schedulePattern: [
-        // Week 1: Early shift Mon-Fri, off weekend
+        // Week 1: Morning shift Mon-Fri + support weekend day shift
         "M", // Monday
         "M", // Tuesday
         "M", // Wednesday
         "M", // Thursday
         "M", // Friday
-        "O", // Saturday
-        "O", // Sunday
-        // Week 2: Late shift Mon-Fri, off weekend
+        "D", // Saturday
+        "D", // Sunday
+        // Week 2: Evening shift Mon-Fri, off weekend
         "L", // Monday
         "L", // Tuesday
         "L", // Wednesday
@@ -261,7 +249,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Friday
         "O", // Saturday
         "O", // Sunday
-        // Week 3: Early shift Mon-Fri, off weekend
+        // Week 3: Morning shift Mon-Fri, off weekend
         "M", // Monday
         "M", // Tuesday
         "M", // Wednesday
@@ -269,7 +257,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "M", // Friday
         "O", // Saturday
         "O", // Sunday
-        // Week 4: Late shift Mon-Fri, off weekend (assigned weekend day shift TBD)
+        // Week 4: Evening shift Mon-Fri, off weekend
         "L", // Monday
         "L", // Tuesday
         "L", // Wednesday
@@ -279,7 +267,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Sunday
       ],
       notes:
-        "Early/late rotation by week in 4-week cycle. Each team has one assigned working weekend (day shift) and individual jumpdays within the cycle (team-specific, not shown in base pattern).",
+        "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.",
     },
   },
   {
@@ -313,7 +301,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-01-06", // Monday of week 1, 2025
-      referenceTeam: 1, // Reference team is off (week 1, day 1 of cycle = Monday = off) on the reference date
       schedulePattern: [
         // Week 1: Off Mon-Thu, Day Friday, Early Sat-Sun
         "O",
@@ -367,7 +354,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         O: OFF_SHIFT_TIME,
       },
       referenceDate: "2025-07-16", // Wednesday, reference date from CONFIG
-      referenceTeam: 1, // Reference team is on morning shift (day 1 of cycle) on the reference date
       schedulePattern: ["M", "M", "L", "L", "N", "N", "O", "O", "O", "O"],
       notes: "Continuous multi-team rotation.",
     },

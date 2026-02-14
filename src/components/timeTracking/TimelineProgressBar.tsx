@@ -112,8 +112,7 @@ export function TimelineProgressBar({
     () => segments.reduce((sum, segment) => sum + (segment.breakHours ?? 0), 0),
     [segments],
   );
-  const visualTotalPercentage =
-    totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
+  const visualTotalPercentage = totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
 
   const isOvertime = totalPercentage > 100;
 
@@ -134,12 +133,9 @@ export function TimelineProgressBar({
               segment.beforeBreakHours != null &&
               segment.afterBreakHours != null
             ) {
-              const beforePct =
-                (segment.beforeBreakHours / sanitizedTargetHours) * 100 * norm;
-              const breakPct =
-                (segment.breakHours / sanitizedTargetHours) * 100 * norm;
-              const afterPct =
-                (segment.afterBreakHours / sanitizedTargetHours) * 100 * norm;
+              const beforePct = (segment.beforeBreakHours / sanitizedTargetHours) * 100 * norm;
+              const breakPct = (segment.breakHours / sanitizedTargetHours) * 100 * norm;
+              const afterPct = (segment.afterBreakHours / sanitizedTargetHours) * 100 * norm;
 
               // Show label on whichever work portion is larger
               const showLabelOnBefore = beforePct >= afterPct;
@@ -157,9 +153,7 @@ export function TimelineProgressBar({
                     title={tooltipText}
                     aria-label={tooltipText}
                     label={
-                      labelOnBefore ? (
-                        <span style={LABEL_STYLE}>{segment.text}</span>
-                      ) : undefined
+                      labelOnBefore ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
                     }
                   />,
                 );
@@ -184,9 +178,7 @@ export function TimelineProgressBar({
                     title={tooltipText}
                     aria-label={tooltipText}
                     label={
-                      labelOnAfter ? (
-                        <span style={LABEL_STYLE}>{segment.text}</span>
-                      ) : undefined
+                      labelOnAfter ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
                     }
                   />,
                 );
