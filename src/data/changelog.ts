@@ -14,19 +14,6 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
-    version: "Unreleased",
-    date: "Future Enhancements",
-    status: "planned",
-    added: [],
-    changed: [],
-    fixed: [],
-    planned: [
-      "Calendar export (.ics format)",
-      "Notification system",
-      "Cross-schedule transfer view",
-    ],
-  },
-  {
     version: "4.6.1",
     date: "2026-02-14",
     status: "current",
