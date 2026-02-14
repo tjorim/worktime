@@ -28,7 +28,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     label,
     startTime: `${date}T${startTime}`,
     stopTime: `${date}T${endTime}`,
-    includesBreak: includesBreak || undefined,
+    includesBreak: includesBreak ? true : undefined,
   });
 
   const TEST_LABELS = [
@@ -142,7 +142,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
       expect(summarySection).toHaveTextContent("Support: 7.50 hours");
       const deductedTotals = screen.getAllByText(/7\.50 hours/i);
-      expect(deductedTotals.length).toBeGreaterThan(0);
+      expect(deductedTotals).toHaveLength(2);
     });
 
     it("shows weekly progress when weeklyTargetHours is provided", () => {
