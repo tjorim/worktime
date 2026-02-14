@@ -8,7 +8,6 @@ import hashlib
 import logging
 import re
 from pathlib import Path
-from typing import List, Tuple
 
 from app.cache.store import get_cache
 from app.config.settings import settings
@@ -31,7 +30,7 @@ def _compute_etag(content: str) -> str:
     return f"sha256:{hash_obj.hexdigest()}"
 
 
-def _discover_team_files(share_dir: Path) -> List[Tuple[str, Path, Path]]:
+def _discover_team_files(share_dir: Path) -> list[tuple[str, Path, Path]]:
     """Discover all team configuration files in the config subdirectory.
     
     Team files are stored as:
@@ -68,7 +67,7 @@ def _discover_team_files(share_dir: Path) -> List[Tuple[str, Path, Path]]:
     return team_files
 
 
-def _discover_hday_files(share_dir: Path) -> List[Tuple[Path, str]]:
+def _discover_hday_files(share_dir: Path) -> list[tuple[Path, str]]:
     """Discover all .hday files in the share directory root.
     
     Args:

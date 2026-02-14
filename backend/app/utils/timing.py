@@ -6,11 +6,10 @@ and storing results for custom response headers.
 
 import time
 from contextlib import contextmanager
-from typing import Dict
 
 
 @contextmanager
-def time_operation(operation_name: str, timings: Dict[str, float]):
+def time_operation(operation_name: str, timings: dict[str, float]):
     """Context manager for timing an operation.
     
     Measures the elapsed time of a code block and stores the result

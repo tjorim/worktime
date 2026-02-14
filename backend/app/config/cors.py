@@ -5,12 +5,11 @@ with built-in security for production environments.
 """
 
 import logging
-from typing import List
 
 logger = logging.getLogger(__name__)
 
 
-def get_cors_origins(cors_env: str, environment: str) -> List[str]:
+def get_cors_origins(cors_env: str, environment: str) -> list[str]:
     """Parse and validate CORS origins with production safety checks.
     
     Args:

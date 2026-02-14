@@ -8,7 +8,6 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ AUDIT_LOG_DIR = Path(__file__).parent.parent.parent / "data"
 AUDIT_LOG_FILE = AUDIT_LOG_DIR / "audit.log"
 
 
-def append(target: str, action: str, details: Optional[str] = None) -> None:
+def append(target: str, action: str, details: str | None = None) -> None:
     """Append an audit log entry to the audit log file.
     
     Args:

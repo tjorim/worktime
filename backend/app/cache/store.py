@@ -4,9 +4,10 @@ This module provides a singleton FileCache class that manages cached data
 with TTL expiry and mtime validation support.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from app.cache.models import HdayCacheEntry, TeamConfigCacheEntry
 from app.config.settings import settings
@@ -23,7 +24,7 @@ class FileCache:
     When CACHE_ENABLED=False, all operations become no-ops that return cache misses.
     """
     
-    _instance: Optional["FileCache"] = None
+    _instance: FileCache | None = None
     
     def __new__(cls):
         """Ensure singleton pattern."""
@@ -37,8 +38,8 @@ class FileCache:
         if self._initialized:
             return
             
-        self._hday_entries: Dict[str, HdayCacheEntry] = {}
-        self._team_entries: Dict[str, TeamConfigCacheEntry] = {}
+        self._hday_entries: dict[str, HdayCacheEntry] = {}
+        self._team_entries: dict[str, TeamConfigCacheEntry] = {}
         self._initialized = True
         logger.info("FileCache initialized")
     
@@ -65,7 +66,7 @@ class FileCache:
     
     # .hday cache operations
     
-    def get_hday(self, username: str) -> Optional[HdayCacheEntry]:
+    def get_hday(self, username: str) -> HdayCacheEntry | None:
         """Get cached .hday entry for a username.
         
         Returns the cached entry if it exists and is fresh (within TTL),
@@ -95,7 +96,7 @@ class FileCache:
         self,
         username: str,
         raw: str,
-        events: List[HdayEvent],
+        events: list[HdayEvent],
         etag: str,
         mtime: float
     ) -> None:
@@ -156,7 +157,7 @@ class FileCache:
         # Entry exists but is stale
         return not self._is_fresh(entry.cached_at)
     
-    def get_hday_stale(self, username: str) -> Optional[HdayCacheEntry]:
+    def get_hday_stale(self, username: str) -> HdayCacheEntry | None:
         """Get cached .hday entry even if stale (beyond TTL).
         
         Unlike get_hday(), this does not remove stale entries. Use this when
@@ -199,7 +200,7 @@ class FileCache:
     
     # Team config cache operations
     
-    def get_team_config(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
+    def get_team_config(self, team_id: str) -> TeamConfigCacheEntry | None:
         """Get cached team configuration entry.
         
         Returns the cached entry if it exists and is fresh (within TTL),
@@ -229,7 +230,7 @@ class FileCache:
         self,
         team_id: str,
         name: str,
-        members: List[dict],
+        members: list[dict],
         config_mtime: float,
         people_mtime: float
     ) -> None:
@@ -268,7 +269,7 @@ class FileCache:
             del self._team_entries[team_id]
             logger.debug("Invalidated team config cache entry")
     
-    def get_team_config_stale(self, team_id: str) -> Optional[TeamConfigCacheEntry]:
+    def get_team_config_stale(self, team_id: str) -> TeamConfigCacheEntry | None:
         """Get cached team config entry even if stale (beyond TTL).
         
         Unlike get_team_config(), this does not remove stale entries. Use this when
@@ -333,7 +334,7 @@ class FileCache:
 
 
 # Global cache instance
-_cache: Optional[FileCache] = None
+_cache: FileCache | None = None
 
 
 def get_cache() -> FileCache:

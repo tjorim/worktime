@@ -7,7 +7,6 @@ settings with sensible defaults for development and production environments.
 import logging
 import os
 from pathlib import Path
-from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -73,7 +72,7 @@ class Settings(BaseSettings):
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
     
-    def get_cors_origins_list(self) -> List[str]:
+    def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
         
         Returns:

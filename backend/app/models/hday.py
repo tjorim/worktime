@@ -4,7 +4,7 @@ This module defines data models for parsing and serializing .hday format files,
 which are human-readable text files for managing time-off events.
 """
 
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -37,12 +37,12 @@ class HdayEvent(BaseModel):
     """
     
     type: Literal["range", "weekly", "unknown"]
-    start: Optional[str] = None
-    end: Optional[str] = None
-    weekday: Optional[int] = None
-    flags: List[Flag] = Field(default_factory=list)
-    title: Optional[str] = ""
-    raw: Optional[str] = ""
+    start: str | None = None
+    end: str | None = None
+    weekday: int | None = None
+    flags: list[Flag] = Field(default_factory=list)
+    title: str | None = ""
+    raw: str | None = ""
 
 
 class HdayReadResponse(BaseModel):
@@ -58,7 +58,7 @@ class HdayReadResponse(BaseModel):
     username: str
     raw: str
     etag: str
-    events: Optional[List[HdayEvent]] = None
+    events: list[HdayEvent] | None = None
 
 
 class HdayWriteRequest(BaseModel):
@@ -70,9 +70,9 @@ class HdayWriteRequest(BaseModel):
         etag: Entity tag for conflict detection (None for new files)
     """
     
-    raw: Optional[str] = None
-    events: Optional[List[HdayEvent]] = None
-    etag: Optional[str] = None
+    raw: str | None = None
+    events: list[HdayEvent] | None = None
+    etag: str | None = None
 
 
 class HdayWriteResponse(BaseModel):
@@ -95,5 +95,5 @@ class HdayConflictResponse(BaseModel):
     """
     
     raw: str
-    events: List[HdayEvent]
+    events: list[HdayEvent]
     etag: str
