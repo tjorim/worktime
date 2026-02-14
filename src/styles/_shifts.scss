@@ -149,6 +149,8 @@
 
 /* Enhanced schedule detail table styling */
 .schedule-detail-table {
+  border-collapse: separate;
+  border-spacing: 0;
   th {
     background-color: var(--bs-secondary-bg);
     color: var(--bs-body-color);
@@ -166,34 +168,23 @@
   }
 
   tbody tr {
-    transition: background-color 0.2s ease;
-
-    td:first-child {
-      box-shadow: inset 4px 0 0 transparent;
-      transition: box-shadow 0.2s ease;
-    }
+    transition:
+      background-color 0.2s ease,
+      border-left-color 0.2s ease;
+    border-left: 3px solid transparent;
 
     &:hover {
       background-color: var(--bs-secondary-bg);
-
-      td:first-child {
-        box-shadow: inset 4px 0 0 var(--bs-primary-border-subtle);
-      }
+      border-left-color: var(--bs-primary-border-subtle);
     }
 
     &.today-row {
       background-color: var(--bs-primary-bg-subtle);
-
-      td:first-child {
-        box-shadow: inset 4px 0 0 var(--bs-primary);
-      }
+      border-left-color: var(--bs-primary);
 
       &:hover {
         background-color: var(--bs-primary-bg-subtle);
-
-        td:first-child {
-          box-shadow: inset 4px 0 0 var(--bs-primary);
-        }
+        border-left-color: var(--bs-primary);
       }
     }
   }
