@@ -173,6 +173,7 @@
 
     &:hover {
       background-color: var(--bs-secondary-bg);
+      border-left-color: var(--bs-primary-border-subtle);
     }
 
     &.today-row {
@@ -181,6 +182,7 @@
 
       &:hover {
         background-color: var(--bs-primary-bg-subtle);
+        border-left-color: var(--bs-primary-text-emphasis);
         filter: brightness(0.98);
       }
     }
