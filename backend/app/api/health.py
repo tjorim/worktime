@@ -6,8 +6,6 @@ components including share directory accessibility.
 
 import logging
 from pathlib import Path
-from typing import Any
-
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
