@@ -21,12 +21,14 @@ describe("TimeTrackingWeeklyView Component", () => {
     label: string,
     startTime: string,
     endTime: string,
+    includesBreak = false,
   ): StoredTimeTrackingTask => ({
     id: `${date}-${label}-${Math.random()}`,
     text: `${label} work`,
     label,
     startTime: `${date}T${startTime}`,
     stopTime: `${date}T${endTime}`,
+    includesBreak: includesBreak ? true : undefined,
   });
 
   const TEST_LABELS = [
@@ -130,6 +132,17 @@ describe("TimeTrackingWeeklyView Component", () => {
       // Check the weekly summary section shows correct total
       const totalElements = screen.getAllByText(/7\.00 hours/i);
       expect(totalElements.length).toBeGreaterThan(0);
+    });
+
+    it("applies 30-minute break deduction in weekly totals", () => {
+      const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "17:00", true)];
+
+      renderPanel(weekTasks);
+
+      const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
+      expect(summarySection).toHaveTextContent("Support: 7.50 hours");
+      const deductedTotals = screen.getAllByText(/7\.50 hours/i);
+      expect(deductedTotals).toHaveLength(2);
     });
 
     it("shows weekly progress when weeklyTargetHours is provided", () => {
