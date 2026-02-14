@@ -94,6 +94,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate release version consistency
+        run: npm run check-version-consistency
+
       - name: Validate core app changes
         if: env.CORE_CHANGES == 'true'
         run: |
