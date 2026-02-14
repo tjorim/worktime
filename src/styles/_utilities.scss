@@ -88,17 +88,6 @@ body {
   color: var(--bs-body-color);
 }
 
-.timeoff-raw-accordion .accordion-button {
-  background-color: var(--bs-card-cap-bg);
-  color: var(--bs-body-color);
-}
-
-.timeoff-raw-accordion .accordion-button:not(.collapsed) {
-  background-color: var(--bs-card-cap-bg);
-  color: var(--bs-body-color);
-  box-shadow: none;
-}
-
 /* ============================================================================
    LAYOUT UTILITIES
    ========================================================================= */

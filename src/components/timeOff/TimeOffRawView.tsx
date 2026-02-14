@@ -23,7 +23,7 @@ export function TimeOffRawView({
   const errorId = useId();
 
   return (
-    <Accordion className="timeoff-raw-accordion">
+    <Accordion>
       <Accordion.Item eventKey="raw-editor">
         <Accordion.Header>
           <i className="bi bi-code-square me-2" aria-hidden="true"></i>
