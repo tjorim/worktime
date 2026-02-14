@@ -343,13 +343,12 @@ def _validate_team_file_path(file_path: Path, base_dir: Path, file_type: str) ->
     Raises:
         ValueError: If the path resolves outside the base directory
     """
-    try:
-        resolved_file_path = file_path.resolve(strict=False)
-        resolved_base_dir = base_dir.resolve()
-        resolved_file_path.relative_to(resolved_base_dir)
-    except ValueError as err:
+    resolved_file_path = file_path.resolve(strict=False)
+    resolved_base_dir = base_dir.resolve()
+
+    if not resolved_file_path.is_relative_to(resolved_base_dir):
         logger.error(f"Path traversal attempt detected in team {file_type} path")
-        raise ValueError("Invalid team_id format") from err
+        raise ValueError("Invalid team_id format")
 
 
 def read_team_config(team_id: str) -> str:
