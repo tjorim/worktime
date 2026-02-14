@@ -8,7 +8,6 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List
 
 from app.cache.store import get_cache
 from app.config.settings import settings
@@ -150,7 +149,7 @@ def _parse_config_file(config_path: Path) -> str:
         raise TeamNotFoundError("Cannot read team configuration") from e
 
 
-def _parse_members_file_with_sections(people_path: Path) -> tuple[List[TeamSection], List[TeamMember]]:
+def _parse_members_file_with_sections(people_path: Path) -> tuple[list[TeamSection], list[TeamMember]]:
     """Parse team members file and return sections + flat list of members.
     
     Parses CSV format, preserving HTML section headers as group boundaries.
@@ -183,10 +182,10 @@ def _parse_members_file_with_sections(people_path: Path) -> tuple[List[TeamSecti
     try:
         # people_path is derived from validated team_path - safe to use
         content = people_path.read_text(encoding="utf-8")
-        sections: List[TeamSection] = []
-        all_members: List[TeamMember] = []
-        current_section_title: Optional[str] = None
-        current_section_members: List[TeamMember] = []
+        sections: list[TeamSection] = []
+        all_members: list[TeamMember] = []
+        current_section_title: str | None = None
+        current_section_members: list[TeamMember] = []
 
         for line in content.splitlines():
             # Skip empty lines
@@ -248,7 +247,7 @@ def _parse_members_file_with_sections(people_path: Path) -> tuple[List[TeamSecti
         raise
 
 
-def _parse_members_file(people_path: Path) -> List[TeamMember]:
+def _parse_members_file(people_path: Path) -> list[TeamMember]:
     """Parse team members file and return flat list of members.
     
     Legacy function for backward compatibility. Returns only the flat member list.
@@ -344,13 +343,12 @@ def _validate_team_file_path(file_path: Path, base_dir: Path, file_type: str) ->
     Raises:
         ValueError: If the path resolves outside the base directory
     """
-    try:
-        resolved_file_path = file_path.resolve(strict=False)
-        resolved_base_dir = base_dir.resolve()
-        resolved_file_path.relative_to(resolved_base_dir)
-    except ValueError as err:
+    resolved_file_path = file_path.resolve(strict=False)
+    resolved_base_dir = base_dir.resolve()
+
+    if not resolved_file_path.is_relative_to(resolved_base_dir):
         logger.error(f"Path traversal attempt detected in team {file_type} path")
-        raise ValueError("Invalid team_id format") from err
+        raise ValueError("Invalid team_id format")
 
 
 def read_team_config(team_id: str) -> str:
@@ -380,7 +378,7 @@ def read_team_config(team_id: str) -> str:
     return team_name
 
 
-def read_team_members(team_id: str) -> List[TeamMember]:
+def read_team_members(team_id: str) -> list[TeamMember]:
     """Read the team members file and parse the CSV format.
     
     Reads from {SHARE_DIR}/config/{team_id}.people
@@ -411,7 +409,7 @@ def read_team_members(team_id: str) -> List[TeamMember]:
     return members
 
 
-def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], List[TeamMember]]:
+def read_team_info_with_sections(team_id: str) -> tuple[str, list[TeamSection], list[TeamMember]]:
     """Read team config and members with section grouping from cache or files.
     
     Returns structured sections (with headers from .people file) plus a flat member list
@@ -505,7 +503,7 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, List[TeamSection], 
     return team_name, sections, members
 
 
-def read_team_info(team_id: str) -> tuple[str, List[TeamMember]]:
+def read_team_info(team_id: str) -> tuple[str, list[TeamMember]]:
     """Read both team config and members with cache optimization.
     
     Legacy function for backward compatibility. Returns only flat member list.
@@ -546,9 +544,9 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 
 def read_team_hday_files(
-    members: List[TeamMember],
+    members: list[TeamMember],
     parse_events: bool = True
-) -> List[TeamMemberHdayData]:
+) -> list[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
     
     .hday files are located in the share root directory, not in team directories.

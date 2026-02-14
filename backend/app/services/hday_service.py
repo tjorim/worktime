@@ -8,7 +8,6 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List
 import re
 
 from app.cache.store import get_cache
@@ -63,7 +62,7 @@ class HdayFileNotFoundError(Exception):
 class HdayConflictError(Exception):
     """Raised when a write operation conflicts with the current file state."""
 
-    def __init__(self, message: str, current_etag: Optional[str] = None):
+    def __init__(self, message: str, current_etag: str | None = None):
         super().__init__(message)
         self.current_etag = current_etag
 
@@ -233,7 +232,7 @@ def read_hday_file(username: str) -> tuple[str, str]:
 
 
 def write_hday_file(
-    username: str, content: str, expected_etag: Optional[str]
+    username: str, content: str, expected_etag: str | None
 ) -> str:
     """Write content to an .hday file with atomic write and conflict detection.
     
@@ -280,7 +279,7 @@ def write_hday_file(
     cached_entry = cache.get_hday(username)
     current_content = None
     current_etag = None
-    cached_events: List[HdayEvent] = []
+    cached_events: list[HdayEvent] = []
     
     if expected_etag is None:
         # Creating new file - must not exist

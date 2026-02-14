@@ -6,7 +6,6 @@ statistics module.
 """
 
 import statistics
-from typing import Dict
 
 
 def calculate_avg(measurements: list[float]) -> float:
@@ -61,7 +60,7 @@ def calculate_percentile(measurements: list[float], percentile: int) -> float:
     return statistics.quantiles(measurements, n=100, method='inclusive')[percentile - 1]
 
 
-def calculate_stats(measurements: list[float]) -> Dict[str, float]:
+def calculate_stats(measurements: list[float]) -> dict[str, float]:
     """Calculate both average and 95th percentile statistics.
     
     This is a convenience function that combines calculate_avg and
