@@ -1,7 +1,8 @@
 name: Build Windows Executable
 
 on:
-  workflow_dispatch: # Manual trigger only
+  # Manual trigger only: Windows onefile builds are intentionally run on-demand because they are slow.
+  workflow_dispatch:
 
 # Prevent concurrent builds
 concurrency:
