@@ -1,0 +1,65 @@
+name: PR Preview Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel previous runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    name: Build Preview Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload preview artifact
+        id: upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: pr-preview-${{ github.event.pull_request.number }}
+          path: dist/
+          retention-days: 7
+
+      - name: Build comment body
+        id: build-comment
+        run: |
+          ARTIFACT_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo 'COMMENT_BODY<<EOF'
+            echo "## Preview Build"
+            echo ""
+            echo "A preview build for this PR is available as a downloadable artifact."
+            echo ""
+            echo "**[Download preview build]($ARTIFACT_URL)** (select \`pr-preview-${{ github.event.pull_request.number }}\` from Artifacts)"
+            echo ""
+            echo "Built from ${{ github.event.pull_request.head.sha }}"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+      - name: Comment PR with preview link
+        if: github.event.pull_request.head.repo.fork == false
+        uses: ./.github/actions/upsert-comment
+        with:
+          comment-identifier: "Preview Build"
+          comment-body: ${{ env.COMMENT_BODY }}
