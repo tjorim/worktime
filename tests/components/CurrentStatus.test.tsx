@@ -286,7 +286,7 @@ describe("CurrentStatus Component", () => {
 
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText(/⏰ Starts in 2h 30m/)).toBeInTheDocument();
+      expect(screen.getByText(/Starts in 2h 30m/)).toBeInTheDocument();
     });
 
     it("should handle night shift countdown correctly", () => {
@@ -308,7 +308,7 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       // Should still show countdown
-      expect(screen.getByText(/⏰ Starts in 2h 30m/)).toBeInTheDocument();
+      expect(screen.getByText(/Starts in 2h 30m/)).toBeInTheDocument();
     });
 
     it("should not show countdown when expired", () => {
@@ -324,7 +324,7 @@ describe("CurrentStatus Component", () => {
 
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.queryByText(/⏰ Starts in/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Starts in/)).not.toBeInTheDocument();
     });
 
     it("should not show countdown when no countdown data", () => {
@@ -365,7 +365,7 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       expect(useCountdownHook.useCountdown).toHaveBeenCalledWith(null);
-      expect(screen.queryByText(/⏰ Starts in/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Starts in/)).not.toBeInTheDocument();
     });
   });
 
@@ -408,7 +408,7 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       // Should not show countdown
-      expect(screen.queryByText(/⏰ Starts in/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Starts in/)).not.toBeInTheDocument();
     });
 
     it("should handle different team numbers correctly", () => {
