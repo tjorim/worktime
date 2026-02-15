@@ -79,6 +79,14 @@ export function DailyTaskList({
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
+  const isEditedTaskTooShortForBreak = useMemo(() => {
+    if (!editStop || !editStart) return false;
+    return (
+      dayjs(`2000-01-01T${editStop}`).diff(dayjs(`2000-01-01T${editStart}`), "minute") <
+      BREAK_DURATION_MINUTES
+    );
+  }, [editStart, editStop]);
+
   const closeEditModal = () => {
     setEditingTaskId(null);
     setEditText("");
@@ -126,10 +134,26 @@ export function DailyTaskList({
         setEditError("Unable to update task. Please review the changes and try again.");
         return;
       }
-      // Handle break toggle if changed
+      // Handle break toggle if changed — use edited form values directly
+      // to avoid stale data from the pre-update tasks array
       const originalBreak = editingTask.includesBreak ?? false;
       if (editIncludesBreak !== originalBreak) {
-        handleToggleBreak(editingTask.id);
+        if (editIncludesBreak) {
+          // Enabling break: check if another task already has it
+          if (taskWithBreak && taskWithBreak.id !== editingTask.id) {
+            setMoveBreakConfirm({
+              isOpen: true,
+              fromTaskId: taskWithBreak.id,
+              toTaskId: editingTask.id,
+              fromTaskName: taskWithBreak.text,
+            });
+          } else {
+            onToggleBreak(editingTask.id, true);
+          }
+        } else {
+          // Disabling break
+          onToggleBreak(editingTask.id, false);
+        }
       }
       closeEditModal();
     } catch (error) {
@@ -377,12 +401,7 @@ export function DailyTaskList({
               label={`Includes ${BREAK_DURATION_MINUTES}min break`}
               checked={editIncludesBreak}
               onChange={(event) => setEditIncludesBreak(event.target.checked)}
-              disabled={
-                !editIncludesBreak &&
-                !!editingTask?.stopTime &&
-                dayjs(editingTask.stopTime).diff(dayjs(editingTask.startTime), "minute") <
-                  BREAK_DURATION_MINUTES
-              }
+              disabled={!editIncludesBreak && isEditedTaskTooShortForBreak}
             />
           </Form>
         </Modal.Body>
