@@ -2,7 +2,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -16,9 +16,16 @@ import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 
+export type EditRequest = {
+  task: StoredTimeTrackingTask;
+  info?: string;
+};
+
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
+  editRequest?: EditRequest | null;
+  onEditRequestHandled?: () => void;
   onUpdateTask: (payload: {
     id: string;
     text: string;
@@ -33,11 +40,16 @@ type DailyTaskListProps = {
 export function DailyTaskList({
   tasks,
   labels,
+  editRequest,
+  onEditRequestHandled,
   onUpdateTask,
   onRemoveTask,
   onToggleBreak,
 }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [externalEditingTask, setExternalEditingTask] = useState<StoredTimeTrackingTask | null>(
+    null,
+  );
   const [editForm, setEditForm] = useState<TaskEditForm>({
     text: "",
     label: "",
@@ -46,6 +58,7 @@ export function DailyTaskList({
     includesBreak: false,
   });
   const [editError, setEditError] = useState("");
+  const [editInfo, setEditInfo] = useState("");
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -74,27 +87,42 @@ export function DailyTaskList({
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   const editingTask = editingTaskId
-    ? (tasks.find((task) => task.id === editingTaskId) ?? null)
+    ? (tasks.find((task) => task.id === editingTaskId) ?? externalEditingTask)
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
   const closeEditModal = () => {
     setEditingTaskId(null);
+    setExternalEditingTask(null);
     setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false });
     setEditError("");
+    setEditInfo("");
   };
 
-  const openEditModal = useCallback((task: StoredTimeTrackingTask) => {
-    setEditingTaskId(task.id);
-    setEditForm({
-      text: task.text,
-      label: task.label,
-      start: dayjs(task.startTime).format("HH:mm"),
-      stop: task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "",
-      includesBreak: task.includesBreak ?? false,
-    });
-  }, []);
+  const openEditModal = useCallback(
+    (task: StoredTimeTrackingTask, info?: string) => {
+      const isInDailyList = tasks.some((t) => t.id === task.id);
+      setExternalEditingTask(isInDailyList ? null : task);
+      setEditingTaskId(task.id);
+      setEditForm({
+        text: task.text,
+        label: task.label,
+        start: dayjs(task.startTime).format("HH:mm"),
+        stop: task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "",
+        includesBreak: task.includesBreak ?? false,
+      });
+      setEditInfo(info ?? "");
+    },
+    [tasks],
+  );
+
+  useEffect(() => {
+    if (editRequest) {
+      openEditModal(editRequest.task, editRequest.info);
+      onEditRequestHandled?.();
+    }
+  }, [editRequest, openEditModal, onEditRequestHandled]);
 
   const submitEditModal = async () => {
     if (!editingTask) {
@@ -266,7 +294,7 @@ export function DailyTaskList({
     return items;
   }, [contextMenu.taskId, tasks, handleToggleBreak, openEditModal, onRemoveTask]);
 
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && !editingTask) {
     return (
       <EmptyState
         icon="bi-clock-history"
@@ -278,7 +306,7 @@ export function DailyTaskList({
 
   return (
     <>
-      <ListGroup className="mt-3">
+      {tasks.length === 0 ? null : <ListGroup className="mt-3">
         {tasks.map((task) => {
           const startDisplay = dayjs(task.startTime).format("HH:mm");
           const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
@@ -338,7 +366,7 @@ export function DailyTaskList({
             </ListGroup.Item>
           );
         })}
-      </ListGroup>
+      </ListGroup>}
 
       <TaskEditModal
         show={editingTask !== null}
@@ -348,6 +376,7 @@ export function DailyTaskList({
         onClose={closeEditModal}
         onSubmit={submitEditModal}
         error={editError}
+        info={editInfo}
       />
 
       <ContextMenu

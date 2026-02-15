@@ -23,6 +23,7 @@ type TaskEditModalProps = {
   onClose: () => void;
   onSubmit: () => void;
   error: string;
+  info?: string;
 };
 
 export function TaskEditModal({
@@ -33,6 +34,7 @@ export function TaskEditModal({
   onClose,
   onSubmit,
   error,
+  info,
 }: TaskEditModalProps) {
   const isTooShortForBreak = useMemo(() => {
     if (!value.stop || !value.start) return false;
@@ -54,6 +56,11 @@ export function TaskEditModal({
         {error && (
           <Alert variant="danger" aria-live="polite">
             {error}
+          </Alert>
+        )}
+        {info && (
+          <Alert variant="info" aria-live="polite">
+            {info}
           </Alert>
         )}
         <Form

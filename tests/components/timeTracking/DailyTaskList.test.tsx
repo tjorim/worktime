@@ -23,9 +23,9 @@ function makeTask(overrides: Partial<StoredTimeTrackingTask> = {}): StoredTimeTr
 }
 
 describe("DailyTaskList", () => {
-  let onUpdateTask: ReturnType<typeof vi.fn>;
-  let onRemoveTask: ReturnType<typeof vi.fn>;
-  let onToggleBreak: ReturnType<typeof vi.fn>;
+  let onUpdateTask: ReturnType<typeof vi.fn<() => boolean>>;
+  let onRemoveTask: ReturnType<typeof vi.fn<(id: string) => void>>;
+  let onToggleBreak: ReturnType<typeof vi.fn<(taskId: string, includesBreak: boolean) => void>>;
 
   beforeEach(() => {
     onUpdateTask = vi.fn().mockReturnValue(true);
