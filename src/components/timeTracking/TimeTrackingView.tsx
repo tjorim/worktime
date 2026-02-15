@@ -54,6 +54,7 @@ export function TimeTrackingView() {
           <Button
             variant={viewMode === "daily" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "daily"}
             onClick={() => setViewMode("daily")}
           >
             <i className="bi bi-list-check me-1" aria-hidden="true"></i>
@@ -62,6 +63,7 @@ export function TimeTrackingView() {
           <Button
             variant={viewMode === "weekly" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "weekly"}
             onClick={() => setViewMode("weekly")}
           >
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
@@ -70,6 +72,7 @@ export function TimeTrackingView() {
           <Button
             variant={viewMode === "config" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "config"}
             onClick={() => setViewMode("config")}
           >
             <i className="bi bi-gear me-1" aria-hidden="true"></i>

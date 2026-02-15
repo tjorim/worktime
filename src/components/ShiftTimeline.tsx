@@ -162,7 +162,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
   // Scenario 2: Check for parallel shifts (teams with same start time)
   const hasParallelShifts = hasTeamsWithSameStartTime(workingTeams);
   return (
-    <div className="card-timeline timeline-container">
+    <div className="card-timeline timeline-container" aria-label="Shift timeline">
       <div className="timeline-header text-center">
         <i className="bi bi-clock me-2" aria-hidden="true"></i>
         Today's Shift Timeline

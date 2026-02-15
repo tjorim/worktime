@@ -128,7 +128,7 @@ export function WelcomeWizard({
     }
   }, [startStep]);
 
-  const SETTINGS_LOCATION_TEXT = "Settings panel (⚙️ in the top right)";
+  const SETTINGS_LOCATION_TEXT = <>Settings panel (<span aria-hidden="true">⚙️</span> in the top right)</>;
 
   const isChangeFlow = mode === "change-schedule" || mode === "change-team";
   const resolvedSchedule = isValidScheduleType(selectedSchedule) ? selectedSchedule : null;
@@ -242,7 +242,6 @@ export function WelcomeWizard({
       show={show}
       onHide={onHide}
       backdrop="static"
-      keyboard={false}
       centered
       size="lg"
       onEntered={handleModalEntered}
@@ -255,6 +254,7 @@ export function WelcomeWizard({
         <div className="mb-4">
           <ProgressBar
             now={getProgressPercentage()}
+            aria-label={`Onboarding progress: step ${getStepIndex(effectiveStep, wizardContext)} of ${getTotalSteps(wizardContext)}`}
             variant="primary"
             style={{ height: "4px" }}
             className="mb-2"
@@ -267,8 +267,8 @@ export function WelcomeWizard({
           </div>
         </div>
         {isLoading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" />
+          <div className="text-center py-5" role="status">
+            <Spinner animation="border" aria-hidden="true" />
             <div className="mt-3 text-muted">Setting up your experience...</div>
           </div>
         ) : (

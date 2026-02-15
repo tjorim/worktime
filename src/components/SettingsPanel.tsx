@@ -252,15 +252,17 @@ export function SettingsPanel({
                       <div className="fw-medium">Time Format</div>
                       <small className="text-muted">24-hour or 12-hour display</small>
                     </div>
-                    <ButtonGroup size="sm">
+                    <ButtonGroup size="sm" aria-label="Time format">
                       <Button
                         variant={settings.timeFormat === "24h" ? "primary" : "outline-secondary"}
+                        aria-pressed={settings.timeFormat === "24h"}
                         onClick={() => updateTimeFormat("24h")}
                       >
                         24h
                       </Button>
                       <Button
                         variant={settings.timeFormat === "12h" ? "primary" : "outline-secondary"}
+                        aria-pressed={settings.timeFormat === "12h"}
                         onClick={() => updateTimeFormat("12h")}
                       >
                         12h
@@ -274,9 +276,10 @@ export function SettingsPanel({
                       <div className="fw-medium">Theme</div>
                       <small className="text-muted">App appearance</small>
                     </div>
-                    <ButtonGroup size="sm">
+                    <ButtonGroup size="sm" aria-label="Theme">
                       <Button
                         variant={settings.theme === "auto" ? "primary" : "outline-secondary"}
+                        aria-pressed={settings.theme === "auto"}
                         onClick={() => updateTheme("auto")}
                       >
                         <i className="bi bi-circle-half me-1"></i>
@@ -284,6 +287,7 @@ export function SettingsPanel({
                       </Button>
                       <Button
                         variant={settings.theme === "light" ? "primary" : "outline-secondary"}
+                        aria-pressed={settings.theme === "light"}
                         onClick={() => updateTheme("light")}
                       >
                         <i className="bi bi-sun me-1"></i>
@@ -291,6 +295,7 @@ export function SettingsPanel({
                       </Button>
                       <Button
                         variant={settings.theme === "dark" ? "primary" : "outline-secondary"}
+                        aria-pressed={settings.theme === "dark"}
                         onClick={() => updateTheme("dark")}
                       >
                         <i className="bi bi-moon me-1"></i>

@@ -390,6 +390,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           <Button
             variant={viewMode === "table" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "table"}
             onClick={() => setViewMode("table")}
           >
             <i className="bi bi-table me-1" aria-hidden="true"></i>
@@ -398,6 +399,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           <Button
             variant={viewMode === "stats" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "stats"}
             onClick={() => setViewMode("stats")}
           >
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
@@ -407,6 +409,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             <Button
               variant={viewMode === "team" ? "primary" : "outline-primary"}
               size="sm"
+              aria-pressed={viewMode === "team"}
               onClick={() => setViewMode("team")}
             >
               <i className="bi bi-people me-1" aria-hidden="true"></i>

@@ -37,6 +37,9 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
 
   return (
     <>
+      <a href="#main-content" className="visually-hidden-focusable">
+        Skip to content
+      </a>
       <Navbar fixed="top" bg="primary" data-bs-theme="dark" className="shadow-sm">
         <Container fluid>
           <Navbar.Brand className="d-flex align-items-center">
@@ -48,6 +51,7 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
             size="sm"
             onClick={() => setShowSettings(true)}
             aria-label="Settings"
+            title="Settings (Ctrl+,)"
           >
             <i className="bi bi-gear"></i>
             <span className="d-none d-lg-inline ms-1">Settings</span>
