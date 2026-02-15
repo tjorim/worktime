@@ -52,7 +52,7 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       // Use semantic query for break segment
-      const breakBar = screen.getByTestId("break-segment");
+      const breakBar = screen.getByTestId("break-segment-task-1");
       expect(breakBar).toBeInTheDocument();
     });
 
