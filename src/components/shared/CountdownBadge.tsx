@@ -34,7 +34,7 @@ export function CountdownBadge({
 
   return (
     <Badge bg={variant} className={className}>
-      {showIcon && "⏰ "}Starts in {countdown.formatted}
+      {showIcon && <span aria-hidden="true">⏰ </span>}Starts in {countdown.formatted}
     </Badge>
   );
 }

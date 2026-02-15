@@ -104,6 +104,7 @@ export function ScheduleTabView({
           <Button
             variant={viewMode === "today" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "today"}
             onClick={() => setViewMode("today")}
           >
             <i className="bi bi-calendar-day me-1" aria-hidden="true"></i>
@@ -112,6 +113,7 @@ export function ScheduleTabView({
           <Button
             variant={viewMode === "week" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "week"}
             onClick={() => setViewMode("week")}
           >
             <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
@@ -120,6 +122,7 @@ export function ScheduleTabView({
           <Button
             variant={viewMode === "transfer" ? "primary" : "outline-primary"}
             size="sm"
+            aria-pressed={viewMode === "transfer"}
             onClick={() => setViewMode("transfer")}
           >
             <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
