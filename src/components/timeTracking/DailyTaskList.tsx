@@ -306,67 +306,69 @@ export function DailyTaskList({
 
   return (
     <>
-      {tasks.length === 0 ? null : <ListGroup className="mt-3">
-        {tasks.map((task) => {
-          const startDisplay = dayjs(task.startTime).format("HH:mm");
-          const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
-          const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
-          const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
-          const labelTextColor = getContrastingTextColor(labelBackground);
-          return (
-            <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
-              <div className="d-flex justify-content-between align-items-start gap-2">
-                <div className="flex-grow-1">
-                  <div className="fw-semibold">
-                    {task.text}{" "}
-                    <span
-                      className="time-tracking-label"
-                      style={{
-                        backgroundColor: labelBackground,
-                        color: labelTextColor,
-                      }}
-                    >
-                      {labelNameById[task.label] ?? "Unknown label"}
-                    </span>
-                    {task.includesBreak && (
-                      <Badge
-                        bg="secondary"
-                        className="ms-2"
-                        title={`${BREAK_DURATION_MINUTES}min break deducted`}
-                        aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+      {tasks.length === 0 ? null : (
+        <ListGroup className="mt-3">
+          {tasks.map((task) => {
+            const startDisplay = dayjs(task.startTime).format("HH:mm");
+            const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
+            const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
+            const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
+            const labelTextColor = getContrastingTextColor(labelBackground);
+            return (
+              <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold">
+                      {task.text}{" "}
+                      <span
+                        className="time-tracking-label"
+                        style={{
+                          backgroundColor: labelBackground,
+                          color: labelTextColor,
+                        }}
                       >
-                        <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                        {BREAK_DURATION_MINUTES}min
-                      </Badge>
-                    )}
+                        {labelNameById[task.label] ?? "Unknown label"}
+                      </span>
+                      {task.includesBreak && (
+                        <Badge
+                          bg="secondary"
+                          className="ms-2"
+                          title={`${BREAK_DURATION_MINUTES}min break deducted`}
+                          aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+                        >
+                          <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                          {BREAK_DURATION_MINUTES}min
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="small text-muted">
+                      Start: {startDisplay} · Stop: {stopDisplay}
+                    </div>
                   </div>
-                  <div className="small text-muted">
-                    Start: {startDisplay} · Stop: {stopDisplay}
+                  <div className="d-none d-md-flex gap-1 flex-shrink-0">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      aria-label={`Edit ${task.text}`}
+                      onClick={() => openEditModal(task)}
+                    >
+                      <i className="bi bi-pencil" aria-hidden="true"></i>
+                    </Button>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      aria-label={`Delete ${task.text}`}
+                      onClick={() => onRemoveTask(task.id)}
+                    >
+                      <i className="bi bi-trash" aria-hidden="true"></i>
+                    </Button>
                   </div>
                 </div>
-                <div className="d-none d-md-flex gap-1 flex-shrink-0">
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    aria-label={`Edit ${task.text}`}
-                    onClick={() => openEditModal(task)}
-                  >
-                    <i className="bi bi-pencil" aria-hidden="true"></i>
-                  </Button>
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    aria-label={`Delete ${task.text}`}
-                    onClick={() => onRemoveTask(task.id)}
-                  >
-                    <i className="bi bi-trash" aria-hidden="true"></i>
-                  </Button>
-                </div>
-              </div>
-            </ListGroup.Item>
-          );
-        })}
-      </ListGroup>}
+              </ListGroup.Item>
+            );
+          })}
+        </ListGroup>
+      )}
 
       <TaskEditModal
         show={editingTask !== null}

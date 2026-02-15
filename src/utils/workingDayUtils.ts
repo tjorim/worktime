@@ -42,10 +42,7 @@ export function hasTimeOffEvent(date: Dayjs, events: HdayEvent[]): boolean {
     if (event.type === "range" && event.start && event.end) {
       const start = dayjs(event.start.replace(/\//g, "-"));
       const end = dayjs(event.end.replace(/\//g, "-"));
-      if (
-        date.isSameOrAfter(start, "day") &&
-        date.isSameOrBefore(end, "day")
-      ) {
+      if (date.isSameOrAfter(start, "day") && date.isSameOrBefore(end, "day")) {
         return true;
       }
     }

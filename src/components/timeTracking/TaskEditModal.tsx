@@ -65,6 +65,7 @@ export function TaskEditModal({
         )}
         <Form
           as="form"
+          id="taskEditForm"
           onSubmit={(event) => {
             event.preventDefault();
             onSubmit();
@@ -128,7 +129,7 @@ export function TaskEditModal({
         <Button variant="outline-secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" type="submit" onClick={onSubmit}>
+        <Button variant="primary" form="taskEditForm" onClick={onSubmit}>
           Save Changes
         </Button>
       </Modal.Footer>

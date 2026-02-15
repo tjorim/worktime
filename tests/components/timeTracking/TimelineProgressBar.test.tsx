@@ -28,7 +28,7 @@ describe("TimelineProgressBar", () => {
 
       // The break segment should have its own aria-label
       expect(
-        screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`)
+        screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`),
       ).toBeInTheDocument();
       // The work segments should have the task tooltip
       const workSegments = screen.getAllByLabelText(/Morning work: \d+\.\d+h/);
@@ -41,7 +41,7 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       expect(
-        screen.queryByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`)
+        screen.queryByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`),
       ).not.toBeInTheDocument();
       expect(screen.getByLabelText(/Morning work: \d+\.\d+h/)).toBeInTheDocument();
     });
@@ -61,7 +61,9 @@ describe("TimelineProgressBar", () => {
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      const breakSegment = screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`);
+      const breakSegment = screen.getByLabelText(
+        `Break deduction: ${BREAK_DURATION_MINUTES} minutes`,
+      );
       expect(breakSegment).toHaveAttribute("title", `Break: ${BREAK_DURATION_MINUTES}min`);
     });
   });
