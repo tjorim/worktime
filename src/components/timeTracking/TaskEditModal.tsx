@@ -36,10 +36,13 @@ export function TaskEditModal({
 }: TaskEditModalProps) {
   const isTooShortForBreak = useMemo(() => {
     if (!value.stop || !value.start) return false;
-    return (
-      dayjs(`2000-01-01T${value.stop}`).diff(dayjs(`2000-01-01T${value.start}`), "minute") <
-      BREAK_DURATION_MINUTES
-    );
+    const start = dayjs(`2000-01-01T${value.start}`);
+    let stop = dayjs(`2000-01-01T${value.stop}`);
+    // If stop is less than or equal to start, treat stop as next day
+    if (stop.isSameOrBefore(start)) {
+      stop = stop.add(1, "day");
+    }
+    return stop.diff(start, "minute") < BREAK_DURATION_MINUTES;
   }, [value.start, value.stop]);
 
   return (
@@ -53,7 +56,13 @@ export function TaskEditModal({
             {error}
           </Alert>
         )}
-        <Form>
+        <Form
+          as="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
           <Form.Group controlId="editTaskName" className="mb-3">
             <Form.Label>Task</Form.Label>
             <Form.Control
@@ -112,7 +121,7 @@ export function TaskEditModal({
         <Button variant="outline-secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onSubmit}>
+        <Button variant="primary" type="submit" onClick={onSubmit}>
           Save Changes
         </Button>
       </Modal.Footer>

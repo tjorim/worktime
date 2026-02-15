@@ -137,6 +137,7 @@ export function DailyTaskList({
               toTaskId: editingTask.id,
               fromTaskName: taskWithBreak.text,
             });
+            return; // Do not close modal, wait for confirmation
           } else {
             onToggleBreak(editingTask.id, true);
           }
@@ -202,6 +203,7 @@ export function DailyTaskList({
     onToggleBreak(moveBreakConfirm.fromTaskId, false);
     onToggleBreak(moveBreakConfirm.toTaskId, true);
     setMoveBreakConfirm({ isOpen: false, fromTaskId: "", toTaskId: "", fromTaskName: "" });
+    closeEditModal();
   }, [moveBreakConfirm, onToggleBreak]);
 
   const cancelMoveBreak = useCallback(() => {

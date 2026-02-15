@@ -2,12 +2,16 @@ import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import isoWeeksInYear from "dayjs/plugin/isoWeeksInYear";
 import isLeapYear from "dayjs/plugin/isLeapYear";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import "dayjs/locale/en-gb";
 
 // Configure dayjs with plugins and locale
 dayjs.extend(isoWeek);
 dayjs.extend(isLeapYear);
 dayjs.extend(isoWeeksInYear);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 dayjs.locale("en-gb");
 
 // Export the configured dayjs instance

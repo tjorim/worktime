@@ -43,7 +43,7 @@ const toHolidayMap = (holidays: PublicHoliday[], language: string, nativeLanguag
     const localName = getPublicHolidayName(holiday, nativeLanguage);
 
     let current = start;
-    while (current.isBefore(end) || current.isSame(end, "day")) {
+    while (current.isSameOrBefore(end, "day")) {
       map.set(formatHdayDate(current), { name, localName });
       current = current.add(1, "day");
     }

@@ -172,7 +172,7 @@ const countWeeklyDaysInYear = (weekday: number, year: number): number => {
   }
 
   let count = 0;
-  while (current.isBefore(endOfYear) || current.isSame(endOfYear, "day")) {
+  while (current.isSameOrBefore(endOfYear, "day")) {
     count += 1;
     current = current.add(7, "day");
   }

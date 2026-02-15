@@ -98,8 +98,8 @@ function getEventsForDate(member: TeamMemberHdayData, date: dayjs.Dayjs): HdayEv
       const eventStart = dayjs(event.start.replace(/\//g, "-")); // Convert YYYY/MM/DD to YYYY-MM-DD
       const eventEnd = dayjs(event.end.replace(/\//g, "-"));
       return (
-        (date.isAfter(eventStart, "day") || date.isSame(eventStart, "day")) &&
-        (date.isBefore(eventEnd, "day") || date.isSame(eventEnd, "day"))
+        date.isSameOrAfter(eventStart, "day") &&
+        date.isSameOrBefore(eventEnd, "day")
       );
     } else if (event.type === "weekly" && event.weekday) {
       // Check if date matches the weekly pattern (1=Monday, 7=Sunday)
@@ -253,7 +253,7 @@ export function TeamScheduleView() {
   const dateRange = useMemo(() => {
     const dates: dayjs.Dayjs[] = [];
     let current = startMonth;
-    while (current.isBefore(endMonth) || current.isSame(endMonth, "day")) {
+    while (current.isSameOrBefore(endMonth, "day")) {
       dates.push(current);
       current = current.add(1, "day");
     }

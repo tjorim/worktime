@@ -167,8 +167,8 @@ export function TimelineProgressBar({
                   style={{ backgroundColor: segment.color, opacity: 0.3 }}
                   title={`Break: ${BREAK_DURATION_MINUTES}min`}
                   aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
-                  data-testid="break-segment"
-                />,
+                  data-testid={`break-segment-${segment.id}`}
+                />, 
               );
 
               if (afterPct > 0) {
