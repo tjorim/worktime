@@ -105,14 +105,6 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                 <span>YYWW.D date format</span>
               </div>
             </Col>
-            {!isFiveShift && (
-              <Col xs={6}>
-                <div className="d-flex align-items-center small">
-                  <i className="bi bi-clock-history text-info me-2"></i>
-                  <span>More schedule views coming soon</span>
-                </div>
-              </Col>
-            )}
           </Row>
         </div>
 

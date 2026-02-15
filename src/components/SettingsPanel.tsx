@@ -501,7 +501,12 @@ export function SettingsPanel({
       <ChangelogModal show={showChangelog} onHide={handleChangelogClose} />
 
       {/* Keyboard Shortcuts Modal */}
-      <KeyboardShortcutsModal show={showShortcuts} onHide={handleShortcutsClose} />
+      <KeyboardShortcutsModal
+        show={showShortcuts}
+        onHide={handleShortcutsClose}
+        enableTimeOff={settings.enableTimeOff}
+        enableTimeTracking={settings.enableTimeTracking}
+      />
 
       {/* Developer Options Modal */}
       <DevOptionsPanel show={showDevOptions} onHide={handleDevOptionsClose} />
