@@ -1,9 +1,6 @@
-import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useCallback, useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
@@ -15,6 +12,7 @@ import {
   getDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
+import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 
@@ -40,12 +38,14 @@ export function DailyTaskList({
   onToggleBreak,
 }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editLabel, setEditLabel] = useState("");
-  const [editStart, setEditStart] = useState("");
-  const [editStop, setEditStop] = useState("");
+  const [editForm, setEditForm] = useState<TaskEditForm>({
+    text: "",
+    label: "",
+    start: "",
+    stop: "",
+    includesBreak: false,
+  });
   const [editError, setEditError] = useState("");
-  const [editIncludesBreak, setEditIncludesBreak] = useState(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -79,31 +79,21 @@ export function DailyTaskList({
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
-  const isEditedTaskTooShortForBreak = useMemo(() => {
-    if (!editStop || !editStart) return false;
-    return (
-      dayjs(`2000-01-01T${editStop}`).diff(dayjs(`2000-01-01T${editStart}`), "minute") <
-      BREAK_DURATION_MINUTES
-    );
-  }, [editStart, editStop]);
-
   const closeEditModal = () => {
     setEditingTaskId(null);
-    setEditText("");
-    setEditLabel("");
-    setEditStart("");
-    setEditStop("");
+    setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false });
     setEditError("");
-    setEditIncludesBreak(false);
   };
 
   const openEditModal = useCallback((task: StoredTimeTrackingTask) => {
     setEditingTaskId(task.id);
-    setEditText(task.text);
-    setEditLabel(task.label);
-    setEditStart(dayjs(task.startTime).format("HH:mm"));
-    setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
-    setEditIncludesBreak(task.includesBreak ?? false);
+    setEditForm({
+      text: task.text,
+      label: task.label,
+      start: dayjs(task.startTime).format("HH:mm"),
+      stop: task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "",
+      includesBreak: task.includesBreak ?? false,
+    });
   }, []);
 
   const submitEditModal = async () => {
@@ -120,13 +110,13 @@ export function DailyTaskList({
       stop?: string | null;
     } = {
       id: editingTask.id,
-      text: editText,
-      label: editLabel,
-      start: editStart,
+      text: editForm.text,
+      label: editForm.label,
+      start: editForm.start,
     };
     // Include stop if user provided a value (stopped task) or if task was originally stopped
-    if (editStop || editingTask.stopTime) {
-      payload.stop = editStop || null;
+    if (editForm.stop || editingTask.stopTime) {
+      payload.stop = editForm.stop || null;
     }
     try {
       const didUpdate = await onUpdateTask(payload);
@@ -137,8 +127,8 @@ export function DailyTaskList({
       // Handle break toggle if changed — use edited form values directly
       // to avoid stale data from the pre-update tasks array
       const originalBreak = editingTask.includesBreak ?? false;
-      if (editIncludesBreak !== originalBreak) {
-        if (editIncludesBreak) {
+      if (editForm.includesBreak !== originalBreak) {
+        if (editForm.includesBreak) {
           // Enabling break: check if another task already has it
           if (taskWithBreak && taskWithBreak.id !== editingTask.id) {
             setMoveBreakConfirm({
@@ -348,77 +338,15 @@ export function DailyTaskList({
         })}
       </ListGroup>
 
-      <Modal show={editingTask !== null} onHide={closeEditModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Edit Task</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {editError && (
-            <Alert variant="danger" aria-live="polite">
-              {editError}
-            </Alert>
-          )}
-          <Form>
-            <Form.Group controlId="editTaskName" className="mb-3">
-              <Form.Label>Task</Form.Label>
-              <Form.Control
-                value={editText}
-                onChange={(event) => setEditText(event.target.value)}
-              />
-            </Form.Group>
-            <Form.Group controlId="editTaskLabel" className="mb-3">
-              <Form.Label>Label</Form.Label>
-              <Form.Select value={editLabel} onChange={(event) => setEditLabel(event.target.value)}>
-                {labels.map((label) => (
-                  <option key={label.id} value={label.id}>
-                    {label.name}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-            <div className="d-flex gap-3 mb-3">
-              <Form.Group controlId="editTaskStart" className="flex-fill">
-                <Form.Label>Start</Form.Label>
-                <Form.Control
-                  type="time"
-                  value={editStart}
-                  onChange={(event) => setEditStart(event.target.value)}
-                />
-              </Form.Group>
-              <Form.Group controlId="editTaskStop" className="flex-fill">
-                <Form.Label>Stop</Form.Label>
-                <Form.Control
-                  type="time"
-                  value={editStop}
-                  onChange={(event) => setEditStop(event.target.value)}
-                />
-                <Form.Text className="text-muted">Leave empty to keep task running</Form.Text>
-              </Form.Group>
-            </div>
-            <Form.Check
-              id="editTaskBreak"
-              type="checkbox"
-              label={`Includes ${BREAK_DURATION_MINUTES}min break`}
-              checked={editIncludesBreak}
-              onChange={(event) => setEditIncludesBreak(event.target.checked)}
-              disabled={!editIncludesBreak && isEditedTaskTooShortForBreak}
-            />
-            {isEditedTaskTooShortForBreak && !editIncludesBreak && (
-              <Form.Text className="text-danger" data-testid="break-too-short-help">
-                Task too short for a break
-              </Form.Text>
-            )}
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={closeEditModal}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={submitEditModal}>
-            Save Changes
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <TaskEditModal
+        show={editingTask !== null}
+        labels={labels}
+        value={editForm}
+        onChange={setEditForm}
+        onClose={closeEditModal}
+        onSubmit={submitEditModal}
+        error={editError}
+      />
 
       <ContextMenu
         isOpen={contextMenu.isOpen}
