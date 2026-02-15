@@ -5,6 +5,7 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { TimeTrackingView } from "../../src/components/timeTracking/TimeTrackingView";
 import type { StoredTimeTrackingTask } from "../../src/components/timeTracking/types";
+import { dayjs } from "../../src/utils/dateTimeUtils";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
@@ -73,7 +74,9 @@ describe("TimeTrackingView Integration Tests", () => {
       expect(runningBadge).toBeInTheDocument();
       const activeTaskElements = screen.getAllByText(/Active Task/i);
       expect(activeTaskElements.length).toBeGreaterThan(0);
-      const startTimeElements = screen.getAllByText(/08:30/i);
+      // Format expected start time in local timezone (same as component does)
+      const expectedStart = dayjs("2025-01-06T08:30:00Z").format("HH:mm");
+      const startTimeElements = screen.getAllByText(new RegExp(expectedStart));
       expect(startTimeElements.length).toBeGreaterThan(0); // Appears in timer and task list
       expect(screen.getByText(/00:30:00/i)).toBeInTheDocument(); // 30 minutes elapsed (only in timer)
     });

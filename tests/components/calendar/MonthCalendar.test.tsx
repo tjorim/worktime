@@ -9,6 +9,7 @@ describe("MonthCalendar", () => {
   const mockOnMonthChange = vi.fn();
   const mockOnAddEvent = vi.fn();
   const mockOnViewEvent = vi.fn();
+  const mockOnEditEvent = vi.fn();
 
   const defaultProps = {
     events: [] as HdayEvent[],
@@ -16,6 +17,7 @@ describe("MonthCalendar", () => {
     onMonthChange: mockOnMonthChange,
     onAddEvent: mockOnAddEvent,
     onViewEvent: mockOnViewEvent,
+    onEditEvent: mockOnEditEvent,
   };
 
   beforeEach(() => {
@@ -48,7 +50,7 @@ describe("MonthCalendar", () => {
 
     it("should have semantic calendar structure", () => {
       render(<MonthCalendar {...defaultProps} />);
-      const calendar = screen.getByLabelText("Month calendar");
+      const calendar = screen.getByRole("grid", { name: "Calendar for January 2025" });
       expect(calendar).toBeInTheDocument();
       expect(calendar).toHaveClass("month-calendar-grid");
     });

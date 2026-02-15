@@ -29,6 +29,14 @@
   gap: 0.5rem;
 }
 
+/* Row wrappers for ARIA grid semantics — inherit parent grid layout */
+.month-calendar-header-row,
+.month-calendar-week-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+}
+
 .month-calendar-weekday {
   text-transform: uppercase;
   font-size: 0.7rem;
@@ -91,6 +99,39 @@
   background: var(--wt-month-calendar-today-bg);
   border-width: 2px;
   box-shadow: 0 0 0 3px var(--wt-month-calendar-today-shadow);
+}
+
+.month-calendar-day:focus-visible {
+  outline: 2px solid var(--wt-month-calendar-focus-outline);
+  outline-offset: -1px;
+}
+
+/* "+" add button — visible on hover or when cell/children have focus */
+.month-calendar-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--wt-month-calendar-event-bg);
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.month-calendar-add-btn:hover {
+  background: var(--wt-month-calendar-event-hover);
+}
+
+.month-calendar-day:hover .month-calendar-add-btn,
+.month-calendar-day:focus-within .month-calendar-add-btn {
+  opacity: 1;
 }
 
 .month-calendar-day-header {

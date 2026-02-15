@@ -1,3 +1,4 @@
+import { useRef, useCallback, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -28,6 +29,10 @@ interface DayCellProps {
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number) => void;
   onEventContextMenu?: (index: number, x: number, y: number) => void;
+  /** Whether this cell is the roving-tabindex focus target */
+  isFocusTarget?: boolean;
+  /** Callback ref so MonthCalendar can imperatively focus this cell */
+  cellRef?: (el: HTMLDivElement | null) => void;
 }
 
 /**
@@ -101,6 +106,22 @@ const getIndicatorDetails = (
   }>;
 };
 
+/** Minimum touch move distance (px) before canceling long-press */
+const LONG_PRESS_MOVE_THRESHOLD = 10;
+/** Long-press duration (ms) to trigger context menu on touch devices */
+const LONG_PRESS_DURATION = 500;
+
+/**
+ * Opens a context menu positioned at the center of the given element's bounding rect.
+ */
+function openMenuFromElement(
+  el: HTMLElement,
+  handler: (x: number, y: number) => void,
+) {
+  const rect = el.getBoundingClientRect();
+  handler(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
 /**
  * DayCell renders an individual day in the month calendar grid.
  *
@@ -110,24 +131,16 @@ const getIndicatorDetails = (
  * - Visual indicators for courses, public holidays, school holidays, and paydays
  * - Highlights for weekends, today, and holidays
  * - Click-to-view existing events, right-click context menu for actions
+ * - Keyboard accessible: Enter/Shift+F10 opens context menu
+ * - Touch accessible: long-press opens context menu
+ * - "+" add button visible on hover/focus-within
  *
  * Accessibility:
+ * - role="gridcell" for ARIA grid semantics
+ * - Roving tabindex (0 for focused cell, -1 for others)
  * - ARIA labels with full date and holiday information
  * - Color indicators supplemented with emoji symbols
  * - Semantic button elements for all interactive areas
- *
- * @param props - Component props
- * @param props.date - The date this cell represents
- * @param props.isCurrentMonth - Whether this day is in the currently displayed month
- * @param props.isToday - Whether this day is today
- * @param props.isWeekend - Whether this day is Saturday or Sunday
- * @param props.publicHoliday - Public holiday info if this day is a holiday
- * @param props.paydayInfo - Payday info if this day is a payday
- * @param props.schoolHoliday - School holiday info if this day is a school holiday
- * @param props.events - Array of events occurring on this day
- * @param props.onViewEvent - Callback when user clicks to view an event
- * @param props.onDayContextMenu - Optional callback for day cell right-click context menu
- * @param props.onEventContextMenu - Optional callback for event chip right-click context menu
  */
 export function DayCell({
   date,
@@ -142,6 +155,8 @@ export function DayCell({
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
+  isFocusTarget = false,
+  cellRef,
 }: DayCellProps) {
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
@@ -164,8 +179,86 @@ export function DayCell({
     ariaLabelParts.push(paydayInfo.name);
   }
 
+  // Long-press state for touch support
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+    touchStartPos.current = null;
+  }, []);
+
+  /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
+  const startLongPress = useCallback(
+    (touch: React.Touch, handler: (x: number, y: number) => void) => {
+      touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+      touchTimerRef.current = setTimeout(() => {
+        handler(touch.clientX, touch.clientY);
+        touchTimerRef.current = null;
+      }, LONG_PRESS_DURATION);
+    },
+    [],
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartPos.current || !touchTimerRef.current) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      const dx = touch.clientX - touchStartPos.current.x;
+      const dy = touch.clientY - touchStartPos.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_THRESHOLD) {
+        clearLongPress();
+      }
+    },
+    [clearLongPress],
+  );
+
+  // Keyboard handler for the day cell itself
+  const handleCellKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (!onDayContextMenu) return;
+      // Enter or Shift+F10 or ContextMenu key opens the day context menu
+      if (
+        e.key === "Enter" ||
+        (e.key === "F10" && e.shiftKey) ||
+        e.key === "ContextMenu"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        openMenuFromElement(e.currentTarget, (x, y) =>
+          onDayContextMenu(date, x, y),
+        );
+      }
+    },
+    [date, onDayContextMenu],
+  );
+
+  // Keyboard handler for event chip buttons
+  const handleEventKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+      if (!onEventContextMenu) return;
+      if ((e.key === "F10" && e.shiftKey) || e.key === "ContextMenu") {
+        e.preventDefault();
+        e.stopPropagation();
+        openMenuFromElement(e.currentTarget, (x, y) =>
+          onEventContextMenu(index, x, y),
+        );
+      }
+    },
+    [onEventContextMenu],
+  );
+
   return (
     <div
+      ref={cellRef}
+      role="gridcell"
+      tabIndex={isFocusTarget ? 0 : -1}
+      aria-label={ariaLabelParts.join(" - ")}
+      aria-haspopup={onDayContextMenu ? "menu" : undefined}
       className={clsx(
         "month-calendar-day",
         !isCurrentMonth && "is-other-month",
@@ -181,8 +274,16 @@ export function DayCell({
           onDayContextMenu(date, e.clientX, e.clientY);
         }
       }}
+      onKeyDown={handleCellKeyDown}
+      onTouchStart={(e) => {
+        if (onDayContextMenu && e.touches[0]) {
+          startLongPress(e.touches[0], (x, y) => onDayContextMenu(date, x, y));
+        }
+      }}
+      onTouchEnd={clearLongPress}
+      onTouchMove={handleTouchMove}
     >
-      <div className="month-calendar-day-header" aria-label={ariaLabelParts.join(" - ")}>
+      <div className="month-calendar-day-header">
         <span className="month-calendar-day-number">{date.date()}</span>
         <span className="month-calendar-day-indicators" aria-hidden="true">
           {indicators.map((indicator) => (
@@ -200,6 +301,21 @@ export function DayCell({
             </span>
           ))}
         </span>
+        {onDayContextMenu && (
+          <button
+            type="button"
+            className="month-calendar-add-btn"
+            tabIndex={-1}
+            aria-label={`Add event on ${date.format("MMMM D, YYYY")}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              onDayContextMenu(date, rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }}
+          >
+            <i className="bi bi-plus" aria-hidden="true"></i>
+          </button>
+        )}
       </div>
       <div className="month-calendar-events">
         {/* Shift badge - shows working schedule when provided */}
@@ -235,6 +351,14 @@ export function DayCell({
                   onEventContextMenu(index, e.clientX, e.clientY);
                 }
               }}
+              onKeyDown={(e) => handleEventKeyDown(e, index)}
+              onTouchStart={(e) => {
+                if (onEventContextMenu && e.touches[0]) {
+                  startLongPress(e.touches[0], (x, y) => onEventContextMenu(index, x, y));
+                }
+              }}
+              onTouchEnd={clearLongPress}
+              onTouchMove={handleTouchMove}
               aria-label={`View ${label}`}
             >
               <span className={clsx("month-calendar-event-color", colorClass)} />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useId } from "react";
+import { useEffect, useRef, useState, useId, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 
@@ -16,9 +16,11 @@ interface ContextMenuProps {
   y: number;
   onClose: () => void;
   items: ContextMenuItem[];
+  /** Element to return focus to when the menu closes */
+  triggerRef?: RefObject<HTMLElement | null>;
 }
 
-export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) {
+export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: x, top: y });
   const menuId = useId();
@@ -131,6 +133,15 @@ export function ContextMenu({ isOpen, x, y, onClose, items }: ContextMenuProps) 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, items.length]);
+
+  // Return focus to trigger element when menu closes
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (prevOpenRef.current && !isOpen) {
+      triggerRef?.current?.focus();
+    }
+    prevOpenRef.current = isOpen;
+  }, [isOpen, triggerRef]);
 
   const handleItemClick = (item: ContextMenuItem) => {
     if (item.disabled) return;
