@@ -251,13 +251,13 @@ export function MonthCalendar({
 
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
-    (date: dayjs.Dayjs, x: number, y: number) => {
+    (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
-      // The focused day cell is the trigger
-      triggerRef.current = cellRefs.current[focusedIndex] ?? null;
+      // Use the actual triggering element for focus return
+      triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
     },
-    [allowEventActions, focusedIndex],
+    [allowEventActions],
   );
 
   const handleEventContextMenu = useCallback(

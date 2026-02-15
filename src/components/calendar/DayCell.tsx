@@ -1,4 +1,4 @@
-import { useRef, useCallback, type KeyboardEvent } from "react";
+import { useRef, useCallback, useEffect, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -27,7 +27,7 @@ interface DayCellProps {
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   onViewEvent: (index: number) => void;
-  onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number) => void;
+  onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number) => void;
   /** Whether this cell is the roving-tabindex focus target */
   isFocusTarget?: boolean;
@@ -191,6 +191,13 @@ export function DayCell({
     touchStartPos.current = null;
   }, []);
 
+  // Cleanup long-press timer on unmount
+  useEffect(() => {
+    return () => {
+      clearLongPress();
+    };
+  }, [clearLongPress]);
+
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
     (touch: React.Touch, handler: (x: number, y: number) => void) => {
@@ -230,7 +237,7 @@ export function DayCell({
         e.preventDefault();
         e.stopPropagation();
         openMenuFromElement(e.currentTarget, (x, y) =>
-          onDayContextMenu(date, x, y),
+          onDayContextMenu(date, x, y, e.currentTarget as HTMLElement),
         );
       }
     },
@@ -271,13 +278,13 @@ export function DayCell({
       onContextMenu={(e) => {
         if (onDayContextMenu) {
           e.preventDefault();
-          onDayContextMenu(date, e.clientX, e.clientY);
+          onDayContextMenu(date, e.clientX, e.clientY, e.currentTarget as HTMLElement);
         }
       }}
       onKeyDown={handleCellKeyDown}
       onTouchStart={(e) => {
         if (onDayContextMenu && e.touches[0]) {
-          startLongPress(e.touches[0], (x, y) => onDayContextMenu(date, x, y));
+          startLongPress(e.touches[0], (x, y) => onDayContextMenu(date, x, y, e.currentTarget as HTMLElement));
         }
       }}
       onTouchEnd={clearLongPress}
@@ -310,7 +317,7 @@ export function DayCell({
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
-              onDayContextMenu(date, rect.left + rect.width / 2, rect.top + rect.height / 2);
+              onDayContextMenu(date, rect.left + rect.width / 2, rect.top + rect.height / 2, e.currentTarget);
             }}
           >
             <i className="bi bi-plus" aria-hidden="true"></i>

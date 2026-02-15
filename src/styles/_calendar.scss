@@ -107,6 +107,7 @@
 }
 
 /* "+" add button — visible on hover or when cell/children have focus */
+
 .month-calendar-add-btn {
   display: inline-flex;
   align-items: center;
@@ -122,7 +123,9 @@
   line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0.15s;
 }
 
 .month-calendar-add-btn:hover {
@@ -132,6 +135,8 @@
 .month-calendar-day:hover .month-calendar-add-btn,
 .month-calendar-day:focus-within .month-calendar-add-btn {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .month-calendar-day-header {
