@@ -129,7 +129,7 @@ export function TaskEditModal({
         <Button variant="outline-secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" form="taskEditForm" onClick={onSubmit}>
+        <Button variant="primary" type="submit" form="taskEditForm">
           Save Changes
         </Button>
       </Modal.Footer>

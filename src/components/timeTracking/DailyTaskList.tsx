@@ -92,13 +92,13 @@ export function DailyTaskList({
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
-  const closeEditModal = () => {
+  const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
     setExternalEditingTask(null);
     setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false });
     setEditError("");
     setEditInfo("");
-  };
+  }, []);
 
   const openEditModal = useCallback(
     (task: StoredTimeTrackingTask, info?: string) => {
@@ -232,7 +232,7 @@ export function DailyTaskList({
     onToggleBreak(moveBreakConfirm.toTaskId, true);
     setMoveBreakConfirm({ isOpen: false, fromTaskId: "", toTaskId: "", fromTaskName: "" });
     closeEditModal();
-  }, [moveBreakConfirm, onToggleBreak]);
+  }, [moveBreakConfirm, onToggleBreak, closeEditModal]);
 
   const cancelMoveBreak = useCallback(() => {
     setMoveBreakConfirm({ isOpen: false, fromTaskId: "", toTaskId: "", fromTaskName: "" });
