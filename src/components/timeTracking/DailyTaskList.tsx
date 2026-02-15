@@ -45,6 +45,7 @@ export function DailyTaskList({
   const [editStart, setEditStart] = useState("");
   const [editStop, setEditStop] = useState("");
   const [editError, setEditError] = useState("");
+  const [editIncludesBreak, setEditIncludesBreak] = useState(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -85,6 +86,7 @@ export function DailyTaskList({
     setEditStart("");
     setEditStop("");
     setEditError("");
+    setEditIncludesBreak(false);
   };
 
   const openEditModal = useCallback((task: StoredTimeTrackingTask) => {
@@ -93,6 +95,7 @@ export function DailyTaskList({
     setEditLabel(task.label);
     setEditStart(dayjs(task.startTime).format("HH:mm"));
     setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
+    setEditIncludesBreak(task.includesBreak ?? false);
   }, []);
 
   const submitEditModal = async () => {
@@ -122,6 +125,11 @@ export function DailyTaskList({
       if (!didUpdate) {
         setEditError("Unable to update task. Please review the changes and try again.");
         return;
+      }
+      // Handle break toggle if changed
+      const originalBreak = editingTask.includesBreak ?? false;
+      if (editIncludesBreak !== originalBreak) {
+        handleToggleBreak(editingTask.id);
       }
       closeEditModal();
     } catch (error) {
@@ -263,30 +271,52 @@ export function DailyTaskList({
           const labelTextColor = getContrastingTextColor(labelBackground);
           return (
             <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
-              <div className="fw-semibold">
-                {task.text}{" "}
-                <span
-                  className="time-tracking-label"
-                  style={{
-                    backgroundColor: labelBackground,
-                    color: labelTextColor,
-                  }}
-                >
-                  {labelNameById[task.label] ?? "Unknown label"}
-                </span>
-                {task.includesBreak && (
-                  <Badge
-                    bg="secondary"
-                    className="ms-2"
-                    title={`${BREAK_DURATION_MINUTES}min break deducted`}
+              <div className="d-flex justify-content-between align-items-start gap-2">
+                <div className="flex-grow-1">
+                  <div className="fw-semibold">
+                    {task.text}{" "}
+                    <span
+                      className="time-tracking-label"
+                      style={{
+                        backgroundColor: labelBackground,
+                        color: labelTextColor,
+                      }}
+                    >
+                      {labelNameById[task.label] ?? "Unknown label"}
+                    </span>
+                    {task.includesBreak && (
+                      <Badge
+                        bg="secondary"
+                        className="ms-2"
+                        title={`${BREAK_DURATION_MINUTES}min break deducted`}
+                      >
+                        <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                        {BREAK_DURATION_MINUTES}min
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="small text-muted">
+                    Start: {startDisplay} · Stop: {stopDisplay}
+                  </div>
+                </div>
+                <div className="d-none d-md-flex gap-1 flex-shrink-0">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    aria-label={`Edit ${task.text}`}
+                    onClick={() => openEditModal(task)}
                   >
-                    <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                    {BREAK_DURATION_MINUTES}min
-                  </Badge>
-                )}
-              </div>
-              <div className="small text-muted mb-2">
-                Start: {startDisplay} · Stop: {stopDisplay}
+                    <i className="bi bi-pencil" aria-hidden="true"></i>
+                  </Button>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    aria-label={`Delete ${task.text}`}
+                    onClick={() => onRemoveTask(task.id)}
+                  >
+                    <i className="bi bi-trash" aria-hidden="true"></i>
+                  </Button>
+                </div>
               </div>
             </ListGroup.Item>
           );
@@ -321,7 +351,7 @@ export function DailyTaskList({
                 ))}
               </Form.Select>
             </Form.Group>
-            <div className="d-flex gap-3">
+            <div className="d-flex gap-3 mb-3">
               <Form.Group controlId="editTaskStart" className="flex-fill">
                 <Form.Label>Start</Form.Label>
                 <Form.Control
@@ -340,6 +370,19 @@ export function DailyTaskList({
                 <Form.Text className="text-muted">Leave empty to keep task running</Form.Text>
               </Form.Group>
             </div>
+            <Form.Check
+              id="editTaskBreak"
+              type="checkbox"
+              label={`Includes ${BREAK_DURATION_MINUTES}min break`}
+              checked={editIncludesBreak}
+              onChange={(event) => setEditIncludesBreak(event.target.checked)}
+              disabled={
+                !editIncludesBreak &&
+                !!editingTask?.stopTime &&
+                dayjs(editingTask.stopTime).diff(dayjs(editingTask.startTime), "minute") <
+                  BREAK_DURATION_MINUTES
+              }
+            />
           </Form>
         </Modal.Body>
         <Modal.Footer>
