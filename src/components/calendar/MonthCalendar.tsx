@@ -261,10 +261,10 @@ export function MonthCalendar({
   );
 
   const handleEventContextMenu = useCallback(
-    (index: number, x: number, y: number) => {
+    (index: number, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
-      // Try to capture the currently focused element as trigger
-      triggerRef.current = document.activeElement as HTMLElement | null;
+      // Use the actual triggering element for focus return
+      triggerRef.current = el;
       setContextMenu({ type: "event", x, y, eventIndex: index });
     },
     [allowEventActions],

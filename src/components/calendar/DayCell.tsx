@@ -28,7 +28,7 @@ interface DayCellProps {
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
-  onEventContextMenu?: (index: number, x: number, y: number) => void;
+  onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
   /** Whether this cell is the roving-tabindex focus target */
   isFocusTarget?: boolean;
   /** Callback ref so MonthCalendar can imperatively focus this cell */
@@ -252,7 +252,7 @@ export function DayCell({
         e.preventDefault();
         e.stopPropagation();
         openMenuFromElement(e.currentTarget, (x, y) =>
-          onEventContextMenu(index, x, y),
+          onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
         );
       }
     },
@@ -355,13 +355,13 @@ export function DayCell({
                 if (onEventContextMenu) {
                   e.preventDefault();
                   e.stopPropagation();
-                  onEventContextMenu(index, e.clientX, e.clientY);
+                  onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
                 }
               }}
               onKeyDown={(e) => handleEventKeyDown(e, index)}
               onTouchStart={(e) => {
                 if (onEventContextMenu && e.touches[0]) {
-                  startLongPress(e.touches[0], (x, y) => onEventContextMenu(index, x, y));
+                  startLongPress(e.touches[0], (x, y) => onEventContextMenu(index, x, y, e.currentTarget as HTMLElement));
                 }
               }}
               onTouchEnd={clearLongPress}
