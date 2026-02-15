@@ -51,7 +51,7 @@ export function ConfirmationDialog({
           {title}
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body><div id={bodyId}>{message}</div></Modal.Body>
+      <Modal.Body id={bodyId}>{message}</Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" onClick={onCancel}>
           {cancelLabel}
