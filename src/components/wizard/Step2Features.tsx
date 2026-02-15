@@ -8,6 +8,9 @@ interface Step2FeaturesProps {
   onPrev: () => void;
   onNext: () => void;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
+  /**
+   * Text or element describing where to find settings. Caller is responsible for any desired styling (e.g., <b> or <strong> if bold is needed).
+   */
   settingsLocationText: ReactNode;
 }
 
@@ -72,8 +75,7 @@ export function Step2Features({
         </Row>
         <Alert variant="info" className="mt-4">
           <i className="bi bi-gear me-2"></i>
-          <strong>Tip:</strong> You can customize your experience anytime in the{" "}
-          <b>{settingsLocationText}</b>.
+          <strong>Tip:</strong> You can customize your experience anytime in the {settingsLocationText}.
         </Alert>
       </div>
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">

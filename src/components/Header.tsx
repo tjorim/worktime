@@ -20,6 +20,7 @@ interface HeaderProps {
  * @returns The header React element containing the app title and Settings button
  */
 export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
+  const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleToggleSettings = useCallback(() => {
@@ -51,7 +52,8 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
             size="sm"
             onClick={() => setShowSettings(true)}
             aria-label="Settings"
-            title="Settings (Ctrl+,)"
+            title={`Settings (${isMac ? "Cmd" : "Ctrl"}+,)`}
+            aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
           >
             <i className="bi bi-gear"></i>
             <span className="d-none d-lg-inline ms-1">Settings</span>

@@ -128,7 +128,7 @@ export function WelcomeWizard({
     }
   }, [startStep]);
 
-  const SETTINGS_LOCATION_TEXT = <>Settings panel (<span aria-hidden="true">⚙️</span> in the top right)</>;
+  const SETTINGS_LOCATION_TEXT = <b>Settings panel (<span aria-hidden="true">⚙️</span> in the top right)</b>;
 
   const isChangeFlow = mode === "change-schedule" || mode === "change-team";
   const resolvedSchedule = isValidScheduleType(selectedSchedule) ? selectedSchedule : null;

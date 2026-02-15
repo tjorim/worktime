@@ -161,9 +161,15 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
 
   // Scenario 2: Check for parallel shifts (teams with same start time)
   const hasParallelShifts = hasTeamsWithSameStartTime(workingTeams);
+  // Accessibility: use a stable id for the header and reference it with aria-labelledby
+  const timelineHeaderId = "shift-timeline-header";
   return (
-    <div className="card-timeline timeline-container" aria-label="Shift timeline">
-      <div className="timeline-header text-center">
+    <div
+      className="card-timeline timeline-container"
+      role="region"
+      aria-labelledby={timelineHeaderId}
+    >
+      <div className="timeline-header text-center" id={timelineHeaderId}>
         <i className="bi bi-clock me-2" aria-hidden="true"></i>
         Today's Shift Timeline
       </div>
