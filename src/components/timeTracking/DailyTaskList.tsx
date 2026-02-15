@@ -289,6 +289,7 @@ export function DailyTaskList({
                         bg="secondary"
                         className="ms-2"
                         title={`${BREAK_DURATION_MINUTES}min break deducted`}
+                        aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
                       >
                         <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
                         {BREAK_DURATION_MINUTES}min
