@@ -403,6 +403,11 @@ export function DailyTaskList({
               onChange={(event) => setEditIncludesBreak(event.target.checked)}
               disabled={!editIncludesBreak && isEditedTaskTooShortForBreak}
             />
+            {isEditedTaskTooShortForBreak && !editIncludesBreak && (
+              <Form.Text className="text-danger" data-testid="break-too-short-help">
+                Task too short for a break
+              </Form.Text>
+            )}
           </Form>
         </Modal.Body>
         <Modal.Footer>

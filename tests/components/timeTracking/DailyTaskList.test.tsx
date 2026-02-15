@@ -61,18 +61,22 @@ describe("DailyTaskList", () => {
 
   describe("context menu break item", () => {
     it("shows 'Includes 30min break' for eligible task", () => {
-      const { container } = renderList([makeTask()]);
+      renderList([makeTask()]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      // Use a safer query for the task item
+      const taskItem = screen.getByText("Morning work");
+      expect(taskItem).toBeInTheDocument();
       fireEvent.contextMenu(taskItem);
 
       expect(screen.getByText("Includes 30min break")).toBeInTheDocument();
     });
 
     it("shows 'Remove break deduction' when task already has break", () => {
-      const { container } = renderList([makeTask({ includesBreak: true })]);
+      renderList([makeTask({ includesBreak: true })]);
 
-      const taskItem = container.querySelector(".list-group-item")!;
+      // Use a safer query for the task item
+      const taskItem = screen.getByText("Morning work");
+      expect(taskItem).toBeInTheDocument();
       fireEvent.contextMenu(taskItem);
 
       expect(screen.getByText("Remove break deduction")).toBeInTheDocument();
@@ -89,7 +93,9 @@ describe("DailyTaskList", () => {
       fireEvent.contextMenu(taskItem);
 
       const menuItem = screen.getByText("Too short for 30min break");
-      expect(menuItem.closest("button")).toBeDisabled();
+      const buttonAncestor = menuItem.closest("button");
+      expect(buttonAncestor).not.toBeNull(); // Fail clearly if missing
+      expect(buttonAncestor).toBeDisabled();
     });
 
     it("allows break toggle on running tasks (no stopTime)", () => {
@@ -165,9 +171,9 @@ describe("DailyTaskList", () => {
       await user.click(screen.getByText("Includes 30min break"));
       await user.click(screen.getByText("Move Break"));
 
-      // Should remove break from task A and add to task B
-      expect(onToggleBreak).toHaveBeenCalledWith("task-a", false);
-      expect(onToggleBreak).toHaveBeenCalledWith("task-b", true);
+      // Should remove break from task A and add to task B, in order
+      expect(onToggleBreak).toHaveBeenNthCalledWith(1, "task-a", false);
+      expect(onToggleBreak).toHaveBeenNthCalledWith(2, "task-b", true);
     });
 
     it("cancels move when dialog is dismissed", async () => {

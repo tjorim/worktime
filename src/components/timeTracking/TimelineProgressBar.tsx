@@ -167,6 +167,7 @@ export function TimelineProgressBar({
                   style={{ backgroundColor: segment.color, opacity: 0.3 }}
                   title={`Break: ${BREAK_DURATION_MINUTES}min`}
                   aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
+                  data-testid="break-segment"
                 />,
               );
 
@@ -230,7 +231,7 @@ export function TimelineProgressBar({
 
       {/* Summary text */}
       <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
-        <span>
+        <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
         {isOvertime && (

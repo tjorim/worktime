@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimelineProgressBar } from "../../../src/components/timeTracking/TimelineProgressBar";
+import { BREAK_DURATION_MINUTES } from "../../../src/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
 
@@ -26,7 +27,9 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       // The break segment should have its own aria-label
-      expect(screen.getByLabelText("Break deduction: 30 minutes")).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`)
+      ).toBeInTheDocument();
       // The work segments should have the task tooltip
       const workSegments = screen.getAllByLabelText(/Morning work: \d+\.\d+h/);
       expect(workSegments.length).toBeGreaterThanOrEqual(1);
@@ -37,20 +40,20 @@ describe("TimelineProgressBar", () => {
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      expect(screen.queryByLabelText("Break deduction: 30 minutes")).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`)
+      ).not.toBeInTheDocument();
       expect(screen.getByLabelText(/Morning work: \d+\.\d+h/)).toBeInTheDocument();
     });
 
     it("applies reduced opacity to break segment", () => {
       const task = makeTask({ includesBreak: true });
 
-      const { container } = render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      const progressBars = container.querySelectorAll(".progress-bar");
-      const breakBar = Array.from(progressBars).find(
-        (bar) => (bar as HTMLElement).style.opacity === "0.3",
-      );
-      expect(breakBar).toBeTruthy();
+      // Use semantic query for break segment
+      const breakBar = screen.getByTestId("break-segment");
+      expect(breakBar).toBeInTheDocument();
     });
 
     it("shows break title tooltip on break segment", () => {
@@ -58,8 +61,8 @@ describe("TimelineProgressBar", () => {
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      const breakSegment = screen.getByLabelText("Break deduction: 30 minutes");
-      expect(breakSegment).toHaveAttribute("title", "Break: 30min");
+      const breakSegment = screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`);
+      expect(breakSegment).toHaveAttribute("title", `Break: ${BREAK_DURATION_MINUTES}min`);
     });
   });
 
@@ -86,9 +89,10 @@ describe("TimelineProgressBar", () => {
       // 8:00-16:00 = 8 hours raw, 7.5 effective with break
       const task = makeTask({ includesBreak: true });
 
-      const { container } = render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      expect(container.textContent).toContain("7.50h");
+      const totalDuration = screen.getByTestId("timeline-total-duration");
+      expect(totalDuration).toHaveTextContent("7.50h");
     });
 
     it("shows full hours without break", () => {
