@@ -146,7 +146,7 @@ describe("TimeTrackingDailyView", () => {
       });
     });
 
-    it("blocks stopping a cross-day running task and shows an error", async () => {
+    it("opens edit modal for a cross-day running task with info message", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-02T00:05:00"));
       const onUpdateTaskTimes = vi.fn();
@@ -162,7 +162,8 @@ describe("TimeTrackingDailyView", () => {
 
       fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
 
-      expect(screen.getAllByRole("alert")[0]).toHaveTextContent(
+      expect(screen.getByText(/Edit Task/i)).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent(
         /This task started on 2025-01-01 and spans midnight/i,
       );
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();

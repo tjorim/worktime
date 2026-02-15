@@ -115,6 +115,7 @@ export function TimelineProgressBar({
   const visualTotalPercentage = totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
 
   const isOvertime = totalPercentage > 100;
+  const hasBreakSegments = segments.some((s) => s.includesBreak);
 
   return (
     <div className="my-3">
@@ -166,6 +167,7 @@ export function TimelineProgressBar({
                   style={{ backgroundColor: segment.color, opacity: 0.3 }}
                   title={`Break: ${BREAK_DURATION_MINUTES}min`}
                   aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
+                  data-testid={`break-segment-${segment.id}`}
                 />,
               );
 
@@ -209,9 +211,27 @@ export function TimelineProgressBar({
         <BootstrapProgressBar now={0} />
       )}
 
+      {/* Break legend */}
+      {hasBreakSegments && (
+        <div className="text-muted mt-1 d-flex align-items-center" style={{ fontSize: "0.75rem" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "12px",
+              height: "12px",
+              backgroundColor: "currentColor",
+              opacity: 0.3,
+              borderRadius: "2px",
+              marginRight: "0.35rem",
+            }}
+          />
+          Break ({BREAK_DURATION_MINUTES}min)
+        </div>
+      )}
+
       {/* Summary text */}
       <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
-        <span>
+        <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)
         </span>
         {isOvertime && (

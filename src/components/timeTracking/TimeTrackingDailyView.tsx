@@ -10,7 +10,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { ConfirmationDialog } from "../ConfirmationDialog";
-import { DailyTaskList } from "./DailyTaskList";
+import { DailyTaskList, type EditRequest } from "./DailyTaskList";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import {
@@ -67,6 +67,7 @@ export function TimeTrackingDailyView({
   onToggleBreak,
 }: TimeTrackingDailyViewProps) {
   const date = selectedDate || todayIso();
+  const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   const [text, setText] = useState("");
   const [selectedLabel, setSelectedLabel] = useState<string>("");
   const [start, setStart] = useState("");
@@ -227,9 +228,10 @@ export function TimeTrackingDailyView({
     const startDate = startDayjs.format("YYYY-MM-DD");
     const now = dayjs();
     if (!now.isSame(startDayjs, "day")) {
-      setError(
-        `This task started on ${startDate} and spans midnight. Time tracking only supports same-day tasks. Navigate to ${startDate} and use the Edit button on the task to set a stop time.`,
-      );
+      setEditRequest({
+        task: runningTask,
+        info: `This task started on ${startDate} and spans midnight. Set a stop time on ${startDate} to complete it.`,
+      });
       return;
     }
     if (now.isBefore(startDayjs)) {
@@ -471,6 +473,8 @@ export function TimeTrackingDailyView({
         <DailyTaskList
           tasks={dailyTasks}
           labels={labels}
+          editRequest={editRequest}
+          onEditRequestHandled={() => setEditRequest(null)}
           onUpdateTask={handleUpdateTask}
           onRemoveTask={onRemoveTask}
           onToggleBreak={onToggleBreak}

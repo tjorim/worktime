@@ -1,11 +1,8 @@
-import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -15,12 +12,20 @@ import {
   getDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
+import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
+
+export type EditRequest = {
+  task: StoredTimeTrackingTask;
+  info?: string;
+};
 
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
+  editRequest?: EditRequest | null;
+  onEditRequestHandled?: () => void;
   onUpdateTask: (payload: {
     id: string;
     text: string;
@@ -35,16 +40,25 @@ type DailyTaskListProps = {
 export function DailyTaskList({
   tasks,
   labels,
+  editRequest,
+  onEditRequestHandled,
   onUpdateTask,
   onRemoveTask,
   onToggleBreak,
 }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editLabel, setEditLabel] = useState("");
-  const [editStart, setEditStart] = useState("");
-  const [editStop, setEditStop] = useState("");
+  const [externalEditingTask, setExternalEditingTask] = useState<StoredTimeTrackingTask | null>(
+    null,
+  );
+  const [editForm, setEditForm] = useState<TaskEditForm>({
+    text: "",
+    label: "",
+    start: "",
+    stop: "",
+    includesBreak: false,
+  });
   const [editError, setEditError] = useState("");
+  const [editInfo, setEditInfo] = useState("");
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -73,27 +87,42 @@ export function DailyTaskList({
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   const editingTask = editingTaskId
-    ? (tasks.find((task) => task.id === editingTaskId) ?? null)
+    ? (tasks.find((task) => task.id === editingTaskId) ?? externalEditingTask)
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
-  const closeEditModal = () => {
+  const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
-    setEditText("");
-    setEditLabel("");
-    setEditStart("");
-    setEditStop("");
+    setExternalEditingTask(null);
+    setEditForm({ text: "", label: "", start: "", stop: "", includesBreak: false });
     setEditError("");
-  };
-
-  const openEditModal = useCallback((task: StoredTimeTrackingTask) => {
-    setEditingTaskId(task.id);
-    setEditText(task.text);
-    setEditLabel(task.label);
-    setEditStart(dayjs(task.startTime).format("HH:mm"));
-    setEditStop(task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "");
+    setEditInfo("");
   }, []);
+
+  const openEditModal = useCallback(
+    (task: StoredTimeTrackingTask, info?: string) => {
+      const isInDailyList = tasks.some((t) => t.id === task.id);
+      setExternalEditingTask(isInDailyList ? null : task);
+      setEditingTaskId(task.id);
+      setEditForm({
+        text: task.text,
+        label: task.label,
+        start: dayjs(task.startTime).format("HH:mm"),
+        stop: task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "",
+        includesBreak: task.includesBreak ?? false,
+      });
+      setEditInfo(info ?? "");
+    },
+    [tasks],
+  );
+
+  useEffect(() => {
+    if (editRequest) {
+      openEditModal(editRequest.task, editRequest.info);
+      onEditRequestHandled?.();
+    }
+  }, [editRequest, openEditModal, onEditRequestHandled]);
 
   const submitEditModal = async () => {
     if (!editingTask) {
@@ -109,19 +138,41 @@ export function DailyTaskList({
       stop?: string | null;
     } = {
       id: editingTask.id,
-      text: editText,
-      label: editLabel,
-      start: editStart,
+      text: editForm.text,
+      label: editForm.label,
+      start: editForm.start,
     };
     // Include stop if user provided a value (stopped task) or if task was originally stopped
-    if (editStop || editingTask.stopTime) {
-      payload.stop = editStop || null;
+    if (editForm.stop || editingTask.stopTime) {
+      payload.stop = editForm.stop || null;
     }
     try {
       const didUpdate = await onUpdateTask(payload);
       if (!didUpdate) {
         setEditError("Unable to update task. Please review the changes and try again.");
         return;
+      }
+      // Handle break toggle if changed — use edited form values directly
+      // to avoid stale data from the pre-update tasks array
+      const originalBreak = editingTask.includesBreak ?? false;
+      if (editForm.includesBreak !== originalBreak) {
+        if (editForm.includesBreak) {
+          // Enabling break: check if another task already has it
+          if (taskWithBreak && taskWithBreak.id !== editingTask.id) {
+            setMoveBreakConfirm({
+              isOpen: true,
+              fromTaskId: taskWithBreak.id,
+              toTaskId: editingTask.id,
+              fromTaskName: taskWithBreak.text,
+            });
+            return; // Do not close modal, wait for confirmation
+          } else {
+            onToggleBreak(editingTask.id, true);
+          }
+        } else {
+          // Disabling break
+          onToggleBreak(editingTask.id, false);
+        }
       }
       closeEditModal();
     } catch (error) {
@@ -180,7 +231,8 @@ export function DailyTaskList({
     onToggleBreak(moveBreakConfirm.fromTaskId, false);
     onToggleBreak(moveBreakConfirm.toTaskId, true);
     setMoveBreakConfirm({ isOpen: false, fromTaskId: "", toTaskId: "", fromTaskName: "" });
-  }, [moveBreakConfirm, onToggleBreak]);
+    closeEditModal();
+  }, [moveBreakConfirm, onToggleBreak, closeEditModal]);
 
   const cancelMoveBreak = useCallback(() => {
     setMoveBreakConfirm({ isOpen: false, fromTaskId: "", toTaskId: "", fromTaskName: "" });
@@ -242,7 +294,7 @@ export function DailyTaskList({
     return items;
   }, [contextMenu.taskId, tasks, handleToggleBreak, openEditModal, onRemoveTask]);
 
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && !editingTask) {
     return (
       <EmptyState
         icon="bi-clock-history"
@@ -254,103 +306,80 @@ export function DailyTaskList({
 
   return (
     <>
-      <ListGroup className="mt-3">
-        {tasks.map((task) => {
-          const startDisplay = dayjs(task.startTime).format("HH:mm");
-          const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
-          const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
-          const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
-          const labelTextColor = getContrastingTextColor(labelBackground);
-          return (
-            <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
-              <div className="fw-semibold">
-                {task.text}{" "}
-                <span
-                  className="time-tracking-label"
-                  style={{
-                    backgroundColor: labelBackground,
-                    color: labelTextColor,
-                  }}
-                >
-                  {labelNameById[task.label] ?? "Unknown label"}
-                </span>
-                {task.includesBreak && (
-                  <Badge
-                    bg="secondary"
-                    className="ms-2"
-                    title={`${BREAK_DURATION_MINUTES}min break deducted`}
-                  >
-                    <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                    {BREAK_DURATION_MINUTES}min
-                  </Badge>
-                )}
-              </div>
-              <div className="small text-muted mb-2">
-                Start: {startDisplay} · Stop: {stopDisplay}
-              </div>
-            </ListGroup.Item>
-          );
-        })}
-      </ListGroup>
+      {tasks.length === 0 ? null : (
+        <ListGroup className="mt-3">
+          {tasks.map((task) => {
+            const startDisplay = dayjs(task.startTime).format("HH:mm");
+            const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
+            const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
+            const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
+            const labelTextColor = getContrastingTextColor(labelBackground);
+            return (
+              <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold">
+                      {task.text}{" "}
+                      <span
+                        className="time-tracking-label"
+                        style={{
+                          backgroundColor: labelBackground,
+                          color: labelTextColor,
+                        }}
+                      >
+                        {labelNameById[task.label] ?? "Unknown label"}
+                      </span>
+                      {task.includesBreak && (
+                        <Badge
+                          bg="secondary"
+                          className="ms-2"
+                          title={`${BREAK_DURATION_MINUTES}min break deducted`}
+                          aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+                        >
+                          <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                          {BREAK_DURATION_MINUTES}min
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="small text-muted">
+                      Start: {startDisplay} · Stop: {stopDisplay}
+                    </div>
+                  </div>
+                  <div className="d-none d-md-flex gap-1 flex-shrink-0">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      aria-label={`Edit ${task.text}`}
+                      onClick={() => openEditModal(task)}
+                    >
+                      <i className="bi bi-pencil" aria-hidden="true"></i>
+                    </Button>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      aria-label={`Delete ${task.text}`}
+                      onClick={() => onRemoveTask(task.id)}
+                    >
+                      <i className="bi bi-trash" aria-hidden="true"></i>
+                    </Button>
+                  </div>
+                </div>
+              </ListGroup.Item>
+            );
+          })}
+        </ListGroup>
+      )}
 
-      <Modal show={editingTask !== null} onHide={closeEditModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Edit Task</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {editError && (
-            <Alert variant="danger" aria-live="polite">
-              {editError}
-            </Alert>
-          )}
-          <Form>
-            <Form.Group controlId="editTaskName" className="mb-3">
-              <Form.Label>Task</Form.Label>
-              <Form.Control
-                value={editText}
-                onChange={(event) => setEditText(event.target.value)}
-              />
-            </Form.Group>
-            <Form.Group controlId="editTaskLabel" className="mb-3">
-              <Form.Label>Label</Form.Label>
-              <Form.Select value={editLabel} onChange={(event) => setEditLabel(event.target.value)}>
-                {labels.map((label) => (
-                  <option key={label.id} value={label.id}>
-                    {label.name}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-            <div className="d-flex gap-3">
-              <Form.Group controlId="editTaskStart" className="flex-fill">
-                <Form.Label>Start</Form.Label>
-                <Form.Control
-                  type="time"
-                  value={editStart}
-                  onChange={(event) => setEditStart(event.target.value)}
-                />
-              </Form.Group>
-              <Form.Group controlId="editTaskStop" className="flex-fill">
-                <Form.Label>Stop</Form.Label>
-                <Form.Control
-                  type="time"
-                  value={editStop}
-                  onChange={(event) => setEditStop(event.target.value)}
-                />
-                <Form.Text className="text-muted">Leave empty to keep task running</Form.Text>
-              </Form.Group>
-            </div>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={closeEditModal}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={submitEditModal}>
-            Save Changes
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <TaskEditModal
+        show={editingTask !== null}
+        labels={labels}
+        value={editForm}
+        onChange={setEditForm}
+        onClose={closeEditModal}
+        onSubmit={submitEditModal}
+        error={editError}
+        info={editInfo}
+      />
 
       <ContextMenu
         isOpen={contextMenu.isOpen}

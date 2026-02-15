@@ -52,7 +52,7 @@ const buildCalendarDays = (month: dayjs.Dayjs) => {
   const end = month.endOf("month").endOf("week");
   const days: dayjs.Dayjs[] = [];
   let current = start;
-  while (current.isBefore(end) || current.isSame(end, "day")) {
+  while (current.isSameOrBefore(end, "day")) {
     days.push(current);
     current = current.add(1, "day");
   }
@@ -148,7 +148,7 @@ export function MonthCalendar({
         }
 
         let current: dayjs.Dayjs = rangeStart;
-        while (current.isBefore(rangeEnd) || current.isSame(rangeEnd, "day")) {
+        while (current.isSameOrBefore(rangeEnd, "day")) {
           addEvent(current, { event, index });
           current = current.add(1, "day");
         }
@@ -162,7 +162,7 @@ export function MonthCalendar({
         if (!firstOccurrence) return;
         let current = firstOccurrence;
         const lastDay = days[days.length - 1]!;
-        while (current.isBefore(lastDay) || current.isSame(lastDay, "day")) {
+        while (current.isSameOrBefore(lastDay, "day")) {
           addEvent(current, { event, index });
           current = current.add(7, "day");
         }
