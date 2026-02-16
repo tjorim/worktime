@@ -8,6 +8,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import type { HdayEvent } from "../lib/hday/types";
+import { TYPE_FLAGS_AS_EVENT_FLAGS } from "../data/timeoffConstants";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 
@@ -34,15 +35,7 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-const RECOGNIZED_TYPE_FLAGS = new Set([
-  "business",
-  "course",
-  "weekend",
-  "in",
-  "ill",
-  "birthday",
-  "other",
-]);
+const RECOGNIZED_TYPE_FLAGS = new Set(TYPE_FLAGS_AS_EVENT_FLAGS);
 
 /**
  * Get event type flag from event (returns first flag or empty string)
