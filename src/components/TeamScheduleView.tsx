@@ -34,14 +34,22 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
+const RECOGNIZED_TYPE_FLAGS = new Set([
+  "business",
+  "course",
+  "weekend",
+  "in",
+  "ill",
+  "birthday",
+  "other",
+]);
+
 /**
  * Get event type flag from event (returns first flag or empty string)
  */
 function getEventType(event: HdayEvent): string {
   if (event.flags && event.flags.length > 0) {
-    const typeFlag = event.flags.find((flag) =>
-      ["business", "course", "weekend", "in", "ill", "birthday", "other"].includes(flag),
-    );
+    const typeFlag = event.flags.find((flag) => RECOGNIZED_TYPE_FLAGS.has(flag));
 
     // Map TypeFlag to single character for color coding
     switch (typeFlag) {
