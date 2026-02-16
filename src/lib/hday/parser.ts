@@ -267,13 +267,14 @@ export function parseHday(text: string): HdayEvent[] {
     /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<comment>.*))?$/i;
   const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<comment>.*))?$/i;
 
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const lines = text.split(/\r?\n/);
   const events: HdayEvent[] = [];
 
-  for (const line of lines) {
+  for (const originalLine of lines) {
+    const line = originalLine.trim();
+    if (!line) {
+      continue;
+    }
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
@@ -291,7 +292,7 @@ export function parseHday(text: string): HdayEvent[] {
         end: normalizedEnd,
         flags,
         title: title.trim(),
-        raw: line,
+        raw: originalLine,
       });
       continue;
     }
@@ -304,7 +305,7 @@ export function parseHday(text: string): HdayEvent[] {
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
         console.error(`Weekly event regex matched but weekday is undefined: ${line}`);
-        events.push({ type: "unknown", raw: line, flags: ["holiday"] });
+        events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
         continue;
       }
 
@@ -316,7 +317,7 @@ export function parseHday(text: string): HdayEvent[] {
         weekday: weekdayNum,
         flags,
         title: comment.trim(),
-        raw: line,
+        raw: originalLine,
       });
       continue;
     }
@@ -324,7 +325,7 @@ export function parseHday(text: string): HdayEvent[] {
     // Unknown format - keep as-is
     events.push({
       type: "unknown",
-      raw: line,
+      raw: originalLine,
       flags: ["holiday"],
     });
   }

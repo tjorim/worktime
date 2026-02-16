@@ -848,6 +848,20 @@ describe("parseHday", () => {
       ]);
     });
 
+    it("preserves original raw line whitespace while parsing trimmed content", () => {
+      const result = parseHday("  2026/07/27 rFIAT # birthday mom  ");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/07/27",
+          end: "2026/07/27",
+          flags: ["holiday"],
+          title: "birthday mom",
+          raw: "  2026/07/27 rFIAT # birthday mom  ",
+        },
+      ]);
+    });
+
     it("treats non-r single-letter separators as unknown format", () => {
       const result = parseHday("2026/2/16 x Should not parse");
       expect(result).toEqual([
