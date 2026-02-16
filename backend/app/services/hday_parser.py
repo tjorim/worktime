@@ -35,7 +35,7 @@ TYPE_FLAGS = ("business", "weekend", "birthday", "ill", "in", "course", "other")
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
-    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*?))?(?:\s*#\s*(?P<comment>.*))?$",
+    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*))?(?:\s*#\s*(?P<comment>.*))?$",
     re.I,
 )
 RE_WEEKLY = re.compile(
