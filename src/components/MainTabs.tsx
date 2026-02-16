@@ -114,79 +114,79 @@ export function MainTabs({
   return (
     <>
       <main id="main-content">
-      <Tabs
-        activeKey={activeKey}
-        onSelect={(k) => {
-          const newKey = (k || "calendar") as TabKey;
-          setActiveTab(newKey);
-        }}
-        id={tabsId}
-      >
-        <Tab
-          eventKey="calendar"
-          title={
-            <>
-              <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
-              Calendar
-            </>
-          }
+        <Tabs
+          activeKey={activeKey}
+          onSelect={(k) => {
+            const newKey = (k || "calendar") as TabKey;
+            setActiveTab(newKey);
+          }}
+          id={tabsId}
         >
-          <CalendarView
-            myTeam={myTeam}
-            onChangeSchedule={onChangeSchedule}
-            onChangeTeam={onChangeTeam}
-            onOpenScheduleTab={() => setActiveTab("schedule")}
-          />
-        </Tab>
-
-        <Tab
-          eventKey="schedule"
-          title={
-            <>
-              <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-              Schedule
-            </>
-          }
-        >
-          <ScheduleTabView
-            myTeam={myTeam}
-            currentDate={currentDate}
-            setCurrentDate={setCurrentDate}
-            onTeamClick={handleTeamClick}
-            onChangeSchedule={onChangeSchedule}
-            onChangeTeam={onChangeTeam}
-            isActive={activeKey === "schedule"}
-          />
-        </Tab>
-
-        {timeOffEnabled && (
           <Tab
-            eventKey="timeoff"
+            eventKey="calendar"
             title={
               <>
-                <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-                Time Off
+                <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
+                Calendar
               </>
             }
           >
-            <TimeOffView isActive={activeKey === "timeoff"} />
+            <CalendarView
+              myTeam={myTeam}
+              onChangeSchedule={onChangeSchedule}
+              onChangeTeam={onChangeTeam}
+              onOpenScheduleTab={() => setActiveTab("schedule")}
+            />
           </Tab>
-        )}
 
-        {timeTrackingEnabled && (
           <Tab
-            eventKey="timetracking"
+            eventKey="schedule"
             title={
               <>
-                <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
-                Time Tracking
+                <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
+                Schedule
               </>
             }
           >
-            <TimeTrackingView />
+            <ScheduleTabView
+              myTeam={myTeam}
+              currentDate={currentDate}
+              setCurrentDate={setCurrentDate}
+              onTeamClick={handleTeamClick}
+              onChangeSchedule={onChangeSchedule}
+              onChangeTeam={onChangeTeam}
+              isActive={activeKey === "schedule"}
+            />
           </Tab>
-        )}
-      </Tabs>
+
+          {timeOffEnabled && (
+            <Tab
+              eventKey="timeoff"
+              title={
+                <>
+                  <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
+                  Time Off
+                </>
+              }
+            >
+              <TimeOffView isActive={activeKey === "timeoff"} />
+            </Tab>
+          )}
+
+          {timeTrackingEnabled && (
+            <Tab
+              eventKey="timetracking"
+              title={
+                <>
+                  <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
+                  Time Tracking
+                </>
+              }
+            >
+              <TimeTrackingView />
+            </Tab>
+          )}
+        </Tabs>
       </main>
 
       {/* Schedule Detail Modal */}

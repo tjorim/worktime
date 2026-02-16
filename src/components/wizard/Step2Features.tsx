@@ -75,7 +75,8 @@ export function Step2Features({
         </Row>
         <Alert variant="info" className="mt-4">
           <i className="bi bi-gear me-2"></i>
-          <strong>Tip:</strong> You can customize your experience anytime in the {settingsLocationText}.
+          <strong>Tip:</strong> You can customize your experience anytime in the{" "}
+          {settingsLocationText}.
         </Alert>
       </div>
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">

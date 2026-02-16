@@ -79,7 +79,36 @@ export function PersonalizedStatusContent({
     return setTimeFromFractionalHour(nextShift.date, nextShift.shift.start);
   }, [nextShift]);
 
+  // Calculate current shift start/end times for progress bar and "Ends in" countdown
+  const currentShiftStartTime = useMemo(() => {
+    if (!currentShift.shift.isWorking || currentShift.shift.start == null) return null;
+    return setTimeFromFractionalHour(currentShift.date, currentShift.shift.start);
+  }, [currentShift]);
+
+  const currentShiftEndTime = useMemo(() => {
+    const { start, end } = currentShift.shift;
+    if (!currentShift.shift.isWorking || end == null) return null;
+    // Detect midnight-crossing shifts (e.g., night shift 23h-7h)
+    const endDate =
+      start != null && start > end ? currentShift.date.add(1, "day") : currentShift.date;
+    return setTimeFromFractionalHour(endDate, end);
+  }, [currentShift]);
+
+  // Shift progress percentage (elapsed / total duration)
+  const shiftProgress = useMemo(() => {
+    if (!currentShiftStartTime || !currentShiftEndTime) return null;
+    const totalSeconds = currentShiftEndTime.diff(currentShiftStartTime, "second");
+    if (totalSeconds <= 0) return null;
+    const elapsedSeconds = today.diff(currentShiftStartTime, "second");
+    const clampedElapsedSeconds = Math.max(0, elapsedSeconds);
+    const percentage = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
+    const elapsedHours = Math.floor(clampedElapsedSeconds / 3600);
+    const totalHours = Math.round(totalSeconds / 3600);
+    return { percentage, elapsedHours, totalHours };
+  }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const countdown = useCountdown(nextShiftStartTime);
+  const shiftEndCountdown = useCountdown(currentShiftEndTime);
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
   // Tooltip details for current shift badge
@@ -121,6 +150,29 @@ export function PersonalizedStatusContent({
               {currentShift.shift.start != null && currentShift.shift.end != null && (
                 <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
               )}
+              {currentShift.shift.isWorking && (
+                <>
+                  <CountdownBadge
+                    countdown={shiftEndCountdown}
+                    startTime={currentShiftEndTime}
+                    label="Ends in"
+                    variant="warning"
+                  />
+                  {shiftProgress && (
+                    <div className="mt-2">
+                      <div className="small text-muted mb-1">
+                        Shift Progress: {shiftProgress.elapsedHours}h / {shiftProgress.totalHours}h
+                      </div>
+                      <ProgressBar
+                        now={shiftProgress.percentage}
+                        variant="warning"
+                        className="progress-thin"
+                        aria-label={`Shift progress: ${shiftProgress.elapsedHours} of ${shiftProgress.totalHours} hours`}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               {!currentShift.shift.isWorking && offDayProgress && (
                 <div className="mt-2">
                   <div className="small text-muted mb-1">
@@ -152,7 +204,7 @@ export function PersonalizedStatusContent({
                     {nextShift.date.format("ddd, MMM D")} - {nextShift.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
-                  <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
+                  <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
                 </div>
               ) : (
                 <EmptyState
