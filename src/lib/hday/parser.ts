@@ -219,8 +219,8 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
  * Parse .hday file content into event entries.
  *
  * Supported line formats:
- * - Range: `[flags]YYYY/MM/DD-YYYY/MM/DD # title` (end date optional; defaults to start)
- * - Weekly: `dN[flags] # title` where N is 1–7 (ISO weekday, Monday = 1)
+ * - Range: `[flags]YYYY/MM/DD-YYYY/MM/DD # comment` (end date optional; defaults to start)
+ * - Weekly: `dN[flags] # comment` where N is 1–7 (ISO weekday, Monday = 1)
  * - Unknown lines are preserved as `unknown` events with a default `holiday` flag
  *
  * Flags (single letters): a=half_am, p=half_pm, b=business, s=course, i=in, w=onsite, n=no_fly, f=can_fly.
@@ -253,30 +253,46 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
  * @see toLine For the inverse operation (serializing events back to .hday format)
  */
 export function parseHday(text: string): HdayEvent[] {
-  const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{2}\/\d{2})(?:-(?<end>\d{4}\/\d{2}\/\d{2}))?(?:\s*#\s*(?<title>.*))?$/i;
-  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<title>.*))?$/i;
+  const normalizeHdayDate = (value: string): string => {
+    const match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (!match) return value;
 
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+    const year = match[1]!;
+    const month = match[2]!;
+    const day = match[3]!;
+    return `${year}/${month.padStart(2, "0")}/${day.padStart(2, "0")}`;
+  };
+
+  const reRange =
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*))?(?:\s*#\s*(?<comment>.*))?$/i;
+  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<comment>.*))?$/i;
+
+  const lines = text.split(/\r?\n/);
   const events: HdayEvent[] = [];
 
-  for (const line of lines) {
+  for (const originalLine of lines) {
+    const line = originalLine.trim();
+    if (!line) {
+      continue;
+    }
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start, end, title = "" } = rangeMatch.groups;
+      const { prefix = "", end, comment = "", replacement = "" } = rangeMatch.groups;
+      const start = rangeMatch.groups.start!;
       const flags = parsePrefixFlags(prefix);
+      const normalizedStart = normalizeHdayDate(start);
+      const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
+      // In .hday syntax this is technically a comment; we map it to event title in the UI.
+      const title = comment || replacement;
 
       events.push({
         type: "range",
-        start,
-        end: end || start,
+        start: normalizedStart,
+        end: normalizedEnd,
         flags,
         title: title.trim(),
-        raw: line,
+        raw: originalLine,
       });
       continue;
     }
@@ -284,12 +300,12 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as weekly event
     const weeklyMatch = line.match(reWeekly);
     if (weeklyMatch?.groups) {
-      const { suffix = "", weekday, title = "" } = weeklyMatch.groups;
+      const { suffix = "", weekday, comment = "" } = weeklyMatch.groups;
 
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
         console.error(`Weekly event regex matched but weekday is undefined: ${line}`);
-        events.push({ type: "unknown", raw: line, flags: ["holiday"] });
+        events.push({ type: "unknown", raw: originalLine, flags: ["holiday"] });
         continue;
       }
 
@@ -300,8 +316,8 @@ export function parseHday(text: string): HdayEvent[] {
         type: "weekly",
         weekday: weekdayNum,
         flags,
-        title: title.trim(),
-        raw: line,
+        title: comment.trim(),
+        raw: originalLine,
       });
       continue;
     }
@@ -309,7 +325,7 @@ export function parseHday(text: string): HdayEvent[] {
     // Unknown format - keep as-is
     events.push({
       type: "unknown",
-      raw: line,
+      raw: originalLine,
       flags: ["holiday"],
     });
   }
@@ -327,7 +343,7 @@ export function parseHday(text: string): HdayEvent[] {
  * @example
  * // Serialize a single-day vacation
  * toLine({ type: 'range', start: '2025/01/15', end: '2025/01/15', title: 'Day off', flags: ['holiday'] })
- * // Returns: "2025/01/15 # Day off"
+ * // Returns: "2025/01/15-2025/01/15 # Day off"
  *
  * @example
  * // Serialize a business trip with half-day AM flag
@@ -384,10 +400,8 @@ export function toLine(ev: Omit<HdayEvent, "raw"> | HdayEvent): string {
   const title = ev.title ? ` # ${ev.title}` : "";
 
   if (ev.type === "range") {
-    if (ev.start === ev.end) {
-      return `${prefix}${ev.start}${title}`;
-    }
-    return `${prefix}${ev.start}-${ev.end}${title}`;
+    const end = ev.end || ev.start;
+    return `${prefix}${ev.start}-${end}${title}`;
   } else if (ev.type === "weekly") {
     return `d${ev.weekday}${prefix}${title}`;
   } else if (ev.type === "unknown") {

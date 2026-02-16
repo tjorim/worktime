@@ -265,7 +265,7 @@ describe("buildPreviewLine", () => {
         title: "Trip",
         flags: ["business"],
       }),
-    ).toBe("b2025/01/02 # Trip");
+    ).toBe("b2025/01/02-2025/01/02 # Trip");
   });
 
   it("builds a weekly line with flags", () => {
@@ -805,6 +805,73 @@ describe("parseHday", () => {
         },
       ]);
     });
+
+    it("parses legacy holidaytool ranges with non-padded dates and r-title separator", () => {
+      const result = parseHday("2026/1/23-2026/2/6 r Costa Rica - Holiday");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/01/23",
+          end: "2026/02/06",
+          flags: ["holiday"],
+          title: "Costa Rica - Holiday",
+          raw: "2026/1/23-2026/2/6 r Costa Rica - Holiday",
+        },
+      ]);
+    });
+
+    it("parses legacy holidaytool single-day ranges with non-padded dates", () => {
+      const result = parseHday("2026/2/16 r Carnaval - Holiday");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/02/16",
+          end: "2026/02/16",
+          flags: ["holiday"],
+          title: "Carnaval - Holiday",
+          raw: "2026/2/16 r Carnaval - Holiday",
+        },
+      ]);
+    });
+
+    it("parses replacement marker and keeps # comment as title", () => {
+      const result = parseHday("2026/07/27 rFIAT # birthday mom");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/07/27",
+          end: "2026/07/27",
+          flags: ["holiday"],
+          title: "birthday mom",
+          raw: "2026/07/27 rFIAT # birthday mom",
+        },
+      ]);
+    });
+
+    it("preserves original raw line whitespace while parsing trimmed content", () => {
+      const result = parseHday("  2026/07/27 rFIAT # birthday mom  ");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/07/27",
+          end: "2026/07/27",
+          flags: ["holiday"],
+          title: "birthday mom",
+          raw: "  2026/07/27 rFIAT # birthday mom  ",
+        },
+      ]);
+    });
+
+    it("treats non-r single-letter separators as unknown format", () => {
+      const result = parseHday("2026/2/16 x Should not parse");
+      expect(result).toEqual([
+        {
+          type: "unknown",
+          raw: "2026/2/16 x Should not parse",
+          flags: ["holiday"],
+        },
+      ]);
+    });
   });
 
   describe("weekly events", () => {
@@ -919,7 +986,7 @@ describe("toLine", () => {
       flags: ["holiday"],
       title: "",
     };
-    expect(toLine(event)).toBe("2024/12/25");
+    expect(toLine(event)).toBe("2024/12/25-2024/12/25");
   });
 
   it("serializes multi-day range event", () => {
@@ -941,7 +1008,7 @@ describe("toLine", () => {
       flags: ["holiday"],
       title: "Christmas",
     };
-    expect(toLine(event)).toBe("2024/12/25 # Christmas");
+    expect(toLine(event)).toBe("2024/12/25-2024/12/25 # Christmas");
   });
 
   it("serializes range event with business flag", () => {
@@ -951,7 +1018,7 @@ describe("toLine", () => {
       end: "2024/12/25",
       flags: ["business"],
     };
-    expect(toLine(event)).toBe("b2024/12/25");
+    expect(toLine(event)).toBe("b2024/12/25-2024/12/25");
   });
 
   it("serializes range event with half_am flag", () => {
@@ -961,7 +1028,7 @@ describe("toLine", () => {
       end: "2024/12/25",
       flags: ["half_am", "holiday"],
     };
-    expect(toLine(event)).toBe("a2024/12/25");
+    expect(toLine(event)).toBe("a2024/12/25-2024/12/25");
   });
 
   it("serializes range event with multiple flags", () => {
@@ -972,7 +1039,7 @@ describe("toLine", () => {
       flags: ["half_am", "business"],
       title: "Business AM",
     };
-    expect(toLine(event)).toBe("ba2024/12/25 # Business AM");
+    expect(toLine(event)).toBe("ba2024/12/25-2024/12/25 # Business AM");
   });
 
   it("serializes weekly event", () => {
@@ -1003,8 +1070,8 @@ describe("toLine", () => {
   });
 
   it("roundtrips parse and serialize correctly", () => {
-    const input = `2024/12/25 # Christmas
-ba2024/12/26 # Business AM
+    const input = `2024/12/25-2024/12/25 # Christmas
+ba2024/12/26-2024/12/26 # Business AM
 d1k # Office`;
 
     const events = parseHday(input);
@@ -1020,7 +1087,7 @@ d1k # Office`;
       flags: ["holiday"],
       title: "Test",
     };
-    expect(toLine(event)).toBe("2024/12/25 # Test");
+    expect(toLine(event)).toBe("2024/12/25-2024/12/25 # Test");
     expect(toLine(event)).not.toContain("h");
   });
 
@@ -1030,7 +1097,7 @@ d1k # Office`;
       start: "2024/12/25",
       end: "2024/12/25",
     };
-    expect(toLine(event)).toBe("2024/12/25");
+    expect(toLine(event)).toBe("2024/12/25-2024/12/25");
   });
 
   it("handles weekly events without title", () => {

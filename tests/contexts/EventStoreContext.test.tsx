@@ -24,7 +24,7 @@ describe("EventStoreContext", () => {
     });
 
     it("should load events from localStorage if present", () => {
-      const testHday = "2025/01/15 # Test event\n";
+      const testHday = "2025/01/15-2025/01/15 # Test event\n";
       localStorage.setItem("worktime_hday_raw", testHday);
 
       const { result } = renderHook(() => useEventStore(), { wrapper });
@@ -373,7 +373,7 @@ d1 # Every Monday`;
     it("should persist imported content to localStorage", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
-      const hdayContent = "2025/01/15 # Imported event\n";
+      const hdayContent = "2025/01/15-2025/01/15 # Imported event\n";
 
       act(() => {
         result.current.importHday(hdayContent);
@@ -415,7 +415,7 @@ d1 # Every Monday`;
     it("should maintain round-trip fidelity with sorted output", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
-      const originalContent = `2025/01/15 # Event 1
+      const originalContent = `2025/01/15-2025/01/15 # Event 1
 b2025/01/16-2025/01/20 # Business trip
 d5 # Every Friday`;
 
@@ -426,7 +426,7 @@ d5 # Every Friday`;
       const exported = result.current.exportHday();
 
       // Events are automatically sorted: range events by date, then weekly events
-      const expectedSorted = `2025/01/15 # Event 1
+      const expectedSorted = `2025/01/15-2025/01/15 # Event 1
 b2025/01/16-2025/01/20 # Business trip
 d5 # Every Friday
 `;
