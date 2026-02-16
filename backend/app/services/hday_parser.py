@@ -35,11 +35,11 @@ TYPE_FLAGS = ("business", "weekend", "birthday", "ill", "in", "course", "other")
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
-    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*?))?(?:\s*#\s*(?P<title_hash>.*))?$",
+    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*?))?(?:\s*#\s*(?P<comment_text>.*))?$",
     re.I,
 )
 RE_WEEKLY = re.compile(
-    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*?)(?:\s*#\s*(?P<title>.*))?$", re.I
+    r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*?)(?:\s*#\s*(?P<comment_text>.*))?$", re.I
 )
 
 
@@ -101,8 +101,8 @@ def parse_text(text: str) -> list[HdayEvent]:
     """Parse .hday file content into a list of events.
     
     Supported formats:
-    - Range events: [flags]YYYY/MM/DD[-YYYY/MM/DD] [# title]
-    - Weekly events: dN[flags] [# title] where N is 1-7 (ISO weekday)
+    - Range events: [flags]YYYY/MM/DD[-YYYY/MM/DD] [# comment]
+    - Weekly events: dN[flags] [# comment] where N is 1-7 (ISO weekday)
     
     Unknown lines are preserved as 'unknown' type events.
     
@@ -133,7 +133,7 @@ def parse_text(text: str) -> list[HdayEvent]:
                 flags.append("holiday")
             start = normalize_hday_date(g["start"])
             end = normalize_hday_date(g["end"]) if g["end"] else start
-            title = (g.get("title_hash") or g.get("replacement") or "").strip()
+            title = (g.get("comment_text") or g.get("replacement") or "").strip()
             events.append(
                 HdayEvent(
                     type="range",
@@ -161,7 +161,7 @@ def parse_text(text: str) -> list[HdayEvent]:
                     type="weekly",
                     weekday=int(g["weekday"]),
                     flags=flags,
-                    title=(g["title"] or "").strip(),
+                    title=(g["comment_text"] or "").strip(),
                     raw=original_line,
                 )
             )

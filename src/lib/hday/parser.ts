@@ -219,8 +219,8 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
  * Parse .hday file content into event entries.
  *
  * Supported line formats:
- * - Range: `[flags]YYYY/MM/DD-YYYY/MM/DD # title` (end date optional; defaults to start)
- * - Weekly: `dN[flags] # title` where N is 1–7 (ISO weekday, Monday = 1)
+ * - Range: `[flags]YYYY/MM/DD-YYYY/MM/DD # comment` (end date optional; defaults to start)
+ * - Weekly: `dN[flags] # comment` where N is 1–7 (ISO weekday, Monday = 1)
  * - Unknown lines are preserved as `unknown` events with a default `holiday` flag
  *
  * Flags (single letters): a=half_am, p=half_pm, b=business, s=course, i=in, w=onsite, n=no_fly, f=can_fly.
@@ -264,8 +264,8 @@ export function parseHday(text: string): HdayEvent[] {
   };
 
   const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<titleHash>.*))?$/i;
-  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<title>.*))?$/i;
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<commentText>.*))?$/i;
+  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<commentText>.*))?$/i;
 
   const lines = text
     .split(/\r?\n/)
@@ -277,11 +277,12 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start, end, titleHash = "", replacement = "" } = rangeMatch.groups;
+      const { prefix = "", start, end, commentText = "", replacement = "" } = rangeMatch.groups;
       const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
-      const title = titleHash || replacement;
+      // In .hday syntax this is technically a comment; we map it to event title in the UI.
+      const title = commentText || replacement;
 
       events.push({
         type: "range",
@@ -297,7 +298,7 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as weekly event
     const weeklyMatch = line.match(reWeekly);
     if (weeklyMatch?.groups) {
-      const { suffix = "", weekday, title = "" } = weeklyMatch.groups;
+      const { suffix = "", weekday, commentText = "" } = weeklyMatch.groups;
 
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
@@ -313,7 +314,7 @@ export function parseHday(text: string): HdayEvent[] {
         type: "weekly",
         weekday: weekdayNum,
         flags,
-        title: title.trim(),
+        title: commentText.trim(),
         raw: line,
       });
       continue;
