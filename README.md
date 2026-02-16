@@ -19,11 +19,8 @@ Worktime helps teams and individuals working in various shift schedules to quick
 
 - **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
 - **9-5**: Standard weekday schedule (Mon-Fri, single user)
-- **Weekend shift**: Weekend-only rotation with alternating early/late shifts
-
-**Coming Soon:**
-
 - **2-shift**: Alternating early/late shifts
+- **Weekend shift**: Weekend-only rotation with alternating early/late shifts
 
 ## Features
 
@@ -36,7 +33,7 @@ Worktime helps teams and individuals working in various shift schedules to quick
 
 ### 📅 Schedule Selection
 
-- Choose from multiple roster patterns (5-shift, 9-5, weekend-shift)
+- Choose from multiple roster patterns (5-shift, 9-5, 2-shift, weekend-shift)
 - Switch between schedule types at any time in settings
 - Onboarding wizard for easy setup
 
@@ -110,7 +107,7 @@ Teams are numbered 1-5, with each team starting their cycle 2 days after the pre
 
 - **9-5**: Monday-Friday day shifts (09:00-17:00) with weekends off
 - **Weekend shift**: Weekend-only rotation with alternating early/late shifts
-- **2-shift**: Alternating early/late shifts (coming soon)
+- **2-shift**: Alternating early/late shifts
 
 ## Date Format
 
@@ -160,7 +157,7 @@ Examples:
 4. **Open your browser**
    - Navigate to `http://localhost:8000`
    - Follow the onboarding wizard:
-     1. Choose your schedule type (5-shift, 9-5, or weekend-shift)
+     1. Choose your schedule type (5-shift, 9-5, 2-shift, or weekend-shift)
      2. Select your team (for multi-team schedules)
      3. Configure vacation allowance (optional)
    - Start tracking your shifts!
@@ -253,7 +250,7 @@ npm run test         # Run test suite
 
 ### 📅 Multi-Schedule Support
 
-- **Schedule Selection**: Choose from 5-shift, 9-5, or weekend-shift patterns
+- **Schedule Selection**: Choose from 5-shift, 9-5, 2-shift, or weekend-shift patterns
 - **Schedule Switching**: Switch between schedule types at any time
 - **Onboarding Wizard**: 5-step wizard with schedule, team, and vacation setup
 - **Schedule-Generic Components**: All components work with any schedule type

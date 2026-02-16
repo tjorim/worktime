@@ -12,8 +12,8 @@ Worktime is a Team Shift Tracker and Time-Off Manager supporting multiple roster
 
 - **5-shift**: Continuous 24/7 rotation with 5 teams (morning/evening/night shifts)
 - **9-5**: Standard weekday schedule (Mon-Fri, single user)
-- **2-shift**: Alternating early/late shifts (coming soon)
-- **Weekend shift**: Weekend-only rotation (coming soon)
+- **2-shift**: Alternating early/late shifts
+- **Weekend shift**: Weekend-only rotation
 
 **Note**: Previously known as NextShift. Rebranded to Worktime with v4.0.0 after merging HdayPlanner's time-off management capabilities. Schedule selection and multi-roster support added in v4.4.0.
 
@@ -609,7 +609,7 @@ d1i # Every Monday in office
 
 - **Structured Roster System**: Machine-readable schedule configurations in `src/data/rosters.ts`
 - **Schedule Selection**: Onboarding wizard now includes schedule selection step
-- **Multiple Schedule Types**: Support for 5-shift, 9-5, 2-shift (coming soon), weekend-shift (coming soon)
+- **Multiple Schedule Types**: Support for 5-shift, 9-5, 2-shift, weekend-shift
 - **Runtime Validation**: Comprehensive validation of roster configurations at module load
 - **Reference Date System**: Per-schedule reference dates and teams for accurate calculations
 - **Shift Times**: Define shift names, display codes, and hours per schedule
