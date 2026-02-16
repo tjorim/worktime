@@ -277,7 +277,8 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start, end, comment = "", replacement = "" } = rangeMatch.groups;
+      const { prefix = "", end, comment = "", replacement = "" } = rangeMatch.groups;
+      const start = rangeMatch.groups.start!;
       const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
