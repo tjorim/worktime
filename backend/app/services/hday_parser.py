@@ -35,7 +35,7 @@ TYPE_FLAGS = ("business", "weekend", "birthday", "ill", "in", "course", "other")
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
-    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:(?:\s*#\s*(?P<title_hash>.*))|(?:\s+r\s+(?P<title_legacy>.*)))?$",
+    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:\s+r(?P<replacement>[^#]*?))?(?:\s*#\s*(?P<title_hash>.*))?$",
     re.I,
 )
 RE_WEEKLY = re.compile(
@@ -133,7 +133,7 @@ def parse_text(text: str) -> list[HdayEvent]:
                 flags.append("holiday")
             start = normalize_hday_date(g["start"] or "")
             end = normalize_hday_date(g["end"]) if g["end"] else start
-            title = (g.get("title_hash") or g.get("title_legacy") or "").strip()
+            title = (g.get("title_hash") or g.get("replacement") or "").strip()
             events.append(
                 HdayEvent(
                     type="range",

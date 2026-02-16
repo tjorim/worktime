@@ -264,7 +264,7 @@ export function parseHday(text: string): HdayEvent[] {
   };
 
   const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:(?:\s*#\s*(?<titleHash>.*))|(?:\s+r\s+(?<titleLegacy>.*)))?$/i;
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<titleHash>.*))?$/i;
   const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<title>.*))?$/i;
 
   const lines = text
@@ -277,11 +277,11 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start = "", end, titleHash = "", titleLegacy = "" } = rangeMatch.groups;
+      const { prefix = "", start = "", end, titleHash = "", replacement = "" } = rangeMatch.groups;
       const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
-      const title = titleHash || titleLegacy;
+      const title = titleHash || replacement;
 
       events.push({
         type: "range",

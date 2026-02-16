@@ -233,6 +233,17 @@ b2025/03/10-2025/03/14 # Business trip
         assert events[0].end == "2026/02/16"
         assert events[0].title == "Carnaval - Holiday"
 
+    def test_parse_replacement_marker_with_hash_title(self):
+        """Test parsing replacement marker without treating replacement text as title."""
+        text = "2026/07/27 rFIAT # birthday mom"
+        events = parse_text(text)
+
+        assert len(events) == 1
+        assert events[0].type == "range"
+        assert events[0].start == "2026/07/27"
+        assert events[0].end == "2026/07/27"
+        assert events[0].title == "birthday mom"
+
     def test_non_r_single_letter_separator_is_unknown(self):
         """Test that non-r legacy separators do not parse as range events."""
         text = "2026/2/16 x Should not parse"
