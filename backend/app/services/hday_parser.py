@@ -131,7 +131,7 @@ def parse_text(text: str) -> list[HdayEvent]:
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
-            start = normalize_hday_date(g["start"] or "")
+            start = normalize_hday_date(g["start"])
             end = normalize_hday_date(g["end"]) if g["end"] else start
             title = (g.get("title_hash") or g.get("replacement") or "").strip()
             events.append(

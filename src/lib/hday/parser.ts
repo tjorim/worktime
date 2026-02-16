@@ -257,9 +257,9 @@ export function parseHday(text: string): HdayEvent[] {
     const match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
     if (!match) return value;
 
-    const year = match[1] ?? "";
-    const month = match[2] ?? "";
-    const day = match[3] ?? "";
+    const year = match[1]!;
+    const month = match[2]!;
+    const day = match[3]!;
     return `${year}/${month.padStart(2, "0")}/${day.padStart(2, "0")}`;
   };
 
@@ -277,7 +277,7 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start = "", end, titleHash = "", replacement = "" } = rangeMatch.groups;
+      const { prefix = "", start, end, titleHash = "", replacement = "" } = rangeMatch.groups;
       const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
