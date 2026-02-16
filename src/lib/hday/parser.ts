@@ -264,7 +264,7 @@ export function parseHday(text: string): HdayEvent[] {
   };
 
   const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:(?:\s*#\s*(?<titleHash>.*))|(?:\s+[a-z]\s+(?<titleLegacy>.*)))?$/i;
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:(?:\s*#\s*(?<titleHash>.*))|(?:\s+r\s+(?<titleLegacy>.*)))?$/i;
   const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<title>.*))?$/i;
 
   const lines = text
