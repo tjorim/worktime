@@ -363,7 +363,7 @@ export function ScheduleDetailModal({
                       <i className="bi bi-brightness-high me-1 text-dark"></i>
                       Day Shifts
                     </span>
-                    <Badge bg="light" text="dark">
+                    <Badge bg="secondary">
                       {stats.dayShifts}
                     </Badge>
                   </ListGroup.Item>

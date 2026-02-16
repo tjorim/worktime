@@ -237,7 +237,7 @@ export function SettingsPanel({
             Settings
           </Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">
+        <Offcanvas.Body className="p-0 d-flex flex-column">
           {/* App Preferences Section */}
           <div className="border-bottom">
             <div className="p-3">
