@@ -833,6 +833,17 @@ describe("parseHday", () => {
         },
       ]);
     });
+
+    it("treats non-r single-letter separators as unknown format", () => {
+      const result = parseHday("2026/2/16 x Should not parse");
+      expect(result).toEqual([
+        {
+          type: "unknown",
+          raw: "2026/2/16 x Should not parse",
+          flags: ["holiday"],
+        },
+      ]);
+    });
   });
 
   describe("weekly events", () => {
