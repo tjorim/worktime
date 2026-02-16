@@ -39,9 +39,12 @@ interface TeamHdayResponse {
  */
 function getEventType(event: HdayEvent): string {
   if (event.flags && event.flags.length > 0) {
-    const firstFlag = event.flags[0];
+    const typeFlag = event.flags.find((flag) =>
+      ["business", "course", "weekend", "in", "ill", "birthday", "other"].includes(flag),
+    );
+
     // Map TypeFlag to single character for color coding
-    switch (firstFlag) {
+    switch (typeFlag) {
       case "business":
         return "b";
       case "course":
@@ -57,9 +60,15 @@ function getEventType(event: HdayEvent): string {
       case "other":
         return "o";
       default:
-        return "";
+        break;
     }
   }
+
+  // Weekly recurring events without explicit type flags are weekly-off defaults.
+  if (event.type === "weekly") {
+    return "w";
+  }
+
   return "";
 }
 
@@ -557,32 +566,38 @@ export function TeamScheduleView() {
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-holiday-half"></div>
+                    <div className="legend-color-box event-holiday-full"></div>
                     <span>Vacation</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-ill-half"></div>
+                    <div className="legend-color-box event-ill-full"></div>
                     <span>Sick leave</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-business-half"></div>
+                    <div className="legend-color-box event-business-full"></div>
                     <span>Business trip</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-course-half"></div>
+                    <div className="legend-color-box event-course-full"></div>
                     <span>Training / Course</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-weekend-half"></div>
+                    <div className="legend-color-box event-weekend-full"></div>
                     <span>Weekly off</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-birthday-full"></div>
+                    <span>Birthday</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
@@ -593,7 +608,7 @@ export function TeamScheduleView() {
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-in-half"></div>
+                    <div className="legend-color-box event-in-full"></div>
                     <span>In office (explicit)</span>
                   </div>
                 </div>
