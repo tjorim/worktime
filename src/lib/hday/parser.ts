@@ -340,7 +340,7 @@ export function parseHday(text: string): HdayEvent[] {
  * @example
  * // Serialize a single-day vacation
  * toLine({ type: 'range', start: '2025/01/15', end: '2025/01/15', title: 'Day off', flags: ['holiday'] })
- * // Returns: "2025/01/15 # Day off"
+ * // Returns: "2025/01/15-2025/01/15 # Day off"
  *
  * @example
  * // Serialize a business trip with half-day AM flag
@@ -397,10 +397,8 @@ export function toLine(ev: Omit<HdayEvent, "raw"> | HdayEvent): string {
   const title = ev.title ? ` # ${ev.title}` : "";
 
   if (ev.type === "range") {
-    if (ev.start === ev.end) {
-      return `${prefix}${ev.start}${title}`;
-    }
-    return `${prefix}${ev.start}-${ev.end}${title}`;
+    const end = ev.end || ev.start;
+    return `${prefix}${ev.start}-${end}${title}`;
   } else if (ev.type === "weekly") {
     return `d${ev.weekday}${prefix}${title}`;
   } else if (ev.type === "unknown") {
