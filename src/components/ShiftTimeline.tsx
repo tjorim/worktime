@@ -176,7 +176,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
       <div className="d-flex timeline-flow flex-wrap">
         {prevShift && (
           <div className="timeline-team">
-            <Badge bg="light" text="dark" className="timeline-badge">
+            <Badge bg="secondary" className="timeline-badge">
               T{prevShift.teamNumber}
             </Badge>
             <div className="timeline-code">{prevShift.shift.displayCode}</div>
@@ -225,7 +225,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
         {nextShift && !hasParallelShifts && <span className="timeline-arrow">→</span>}
         {nextShift && (
           <div className="timeline-team">
-            <Badge bg="light" text="dark" className="timeline-badge">
+            <Badge bg="secondary" className="timeline-badge">
               T{nextShift.teamNumber}
             </Badge>
             <div className="timeline-code">{nextShift.shift.displayCode}</div>

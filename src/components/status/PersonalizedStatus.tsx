@@ -49,8 +49,8 @@ export function PersonalizedStatusContent({
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
 
-  const today = dayjs();
-  const todayMinuteKey = today.startOf("minute").toISOString();
+  const todayMinuteKey = dayjs().startOf("minute").toISOString();
+  const today = useMemo(() => dayjs(todayMinuteKey), [todayMinuteKey]);
 
   // Calculate current shift for today
   const currentShift = useMemo((): ShiftResult => {
@@ -61,17 +61,17 @@ export function PersonalizedStatusContent({
       code: getShiftCode(today, myTeam, scheduleType),
       teamNumber: myTeam,
     };
-  }, [myTeam, todayMinuteKey, scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [myTeam, today, scheduleType]);
 
   // Calculate next shift
   const nextShift = useMemo((): UpcomingShiftResult | null => {
     return getNextShift(today, myTeam, scheduleType);
-  }, [myTeam, todayMinuteKey, scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [myTeam, today, scheduleType]);
 
   // Calculate off-day progress when team is off
   const offDayProgress = useMemo((): OffDayProgress | null => {
     return getOffDayProgress(today, myTeam, scheduleType);
-  }, [myTeam, todayMinuteKey, scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [myTeam, today, scheduleType]);
 
   // Calculate next shift start time for countdown
   const nextShiftStartTime = useMemo(() => {

@@ -360,10 +360,10 @@ export function ScheduleDetailModal({
                   </ListGroup.Item>
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                     <span>
-                      <i className="bi bi-brightness-high me-1 text-dark"></i>
+                      <i className="bi bi-brightness-high me-1"></i>
                       Day Shifts
                     </span>
-                    <Badge bg="light" text="dark">
+                    <Badge bg="secondary">
                       {stats.dayShifts}
                     </Badge>
                   </ListGroup.Item>
