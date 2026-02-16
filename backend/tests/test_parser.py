@@ -210,6 +210,38 @@ b2025/03/10-2025/03/14 # Business trip
         assert events[0].flags == ["business"]
 
 
+    def test_parse_legacy_range_non_padded_and_r_separator(self):
+        """Test parsing legacy holidaytool range with non-padded dates and r separator."""
+        text = "2026/1/23-2026/2/6 r Costa Rica - Holiday"
+        events = parse_text(text)
+
+        assert len(events) == 1
+        assert events[0].type == "range"
+        assert events[0].start == "2026/01/23"
+        assert events[0].end == "2026/02/06"
+        assert events[0].title == "Costa Rica - Holiday"
+        assert events[0].flags == ["holiday"]
+
+    def test_parse_legacy_single_day_non_padded_and_r_separator(self):
+        """Test parsing legacy holidaytool single-day event with r separator."""
+        text = "2026/2/16 r Carnaval - Holiday"
+        events = parse_text(text)
+
+        assert len(events) == 1
+        assert events[0].type == "range"
+        assert events[0].start == "2026/02/16"
+        assert events[0].end == "2026/02/16"
+        assert events[0].title == "Carnaval - Holiday"
+
+    def test_non_r_single_letter_separator_is_unknown(self):
+        """Test that non-r legacy separators do not parse as range events."""
+        text = "2026/2/16 x Should not parse"
+        events = parse_text(text)
+
+        assert len(events) == 1
+        assert events[0].type == "unknown"
+
+
 class TestToText:
     """Tests for to_text function."""
 

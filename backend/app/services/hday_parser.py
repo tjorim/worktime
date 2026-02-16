@@ -35,12 +35,24 @@ TYPE_FLAGS = ("business", "weekend", "birthday", "ill", "in", "course", "other")
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
-    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{2}/\d{2})(?:-(?P<end>\d{4}/\d{2}/\d{2}))?(?:\s*#\s*(?P<title>.*))?$",
+    r"^(?P<prefix>[a-z]*)?(?P<start>\d{4}/\d{1,2}/\d{1,2})(?:-(?P<end>\d{4}/\d{1,2}/\d{1,2}))?(?:(?:\s*#\s*(?P<title_hash>.*))|(?:\s+r\s+(?P<title_legacy>.*)))?$",
     re.I,
 )
 RE_WEEKLY = re.compile(
     r"^d(?P<weekday>[1-7])(?P<suffix>[a-z]*?)(?:\s*#\s*(?P<title>.*))?$", re.I
 )
+
+
+
+
+def normalize_hday_date(value: str) -> str:
+    """Normalize hday dates to YYYY/MM/DD while preserving already-normalized values."""
+    match = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", value)
+    if not match:
+        return value
+
+    year, month, day = match.groups()
+    return f"{year}/{month.zfill(2)}/{day.zfill(2)}"
 
 
 def normalize_flags(flags: list[str]) -> list[str]:
@@ -119,13 +131,16 @@ def parse_text(text: str) -> list[HdayEvent]:
             flags = normalize_flags(flags)
             if not any(f in TYPE_FLAGS for f in flags):
                 flags.append("holiday")
+            start = normalize_hday_date(g["start"] or "")
+            end = normalize_hday_date(g["end"]) if g["end"] else start
+            title = (g.get("title_hash") or g.get("title_legacy") or "").strip()
             events.append(
                 HdayEvent(
                     type="range",
-                    start=g["start"],
-                    end=g["end"] or g["start"],
+                    start=start,
+                    end=end,
                     flags=flags,
-                    title=(g["title"] or "").strip(),
+                    title=title,
                     raw=original_line,
                 )
             )
