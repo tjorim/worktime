@@ -114,10 +114,7 @@ const LONG_PRESS_DURATION = 500;
 /**
  * Opens a context menu positioned at the center of the given element's bounding rect.
  */
-function openMenuFromElement(
-  el: HTMLElement,
-  handler: (x: number, y: number) => void,
-) {
+function openMenuFromElement(el: HTMLElement, handler: (x: number, y: number) => void) {
   const rect = el.getBoundingClientRect();
   handler(rect.left + rect.width / 2, rect.top + rect.height / 2);
 }
@@ -229,11 +226,7 @@ export function DayCell({
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (!onDayContextMenu) return;
       // Enter or Shift+F10 or ContextMenu key opens the day context menu
-      if (
-        e.key === "Enter" ||
-        (e.key === "F10" && e.shiftKey) ||
-        e.key === "ContextMenu"
-      ) {
+      if (e.key === "Enter" || (e.key === "F10" && e.shiftKey) || e.key === "ContextMenu") {
         e.preventDefault();
         e.stopPropagation();
         openMenuFromElement(e.currentTarget, (x, y) =>
@@ -284,7 +277,9 @@ export function DayCell({
       onKeyDown={handleCellKeyDown}
       onTouchStart={(e) => {
         if (onDayContextMenu && e.touches[0]) {
-          startLongPress(e.touches[0], (x, y) => onDayContextMenu(date, x, y, e.currentTarget as HTMLElement));
+          startLongPress(e.touches[0], (x, y) =>
+            onDayContextMenu(date, x, y, e.currentTarget as HTMLElement),
+          );
         }
       }}
       onTouchEnd={clearLongPress}
@@ -317,7 +312,12 @@ export function DayCell({
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
-              onDayContextMenu(date, rect.left + rect.width / 2, rect.top + rect.height / 2, e.currentTarget);
+              onDayContextMenu(
+                date,
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+                e.currentTarget,
+              );
             }}
           >
             <i className="bi bi-plus" aria-hidden="true"></i>
@@ -361,7 +361,9 @@ export function DayCell({
               onKeyDown={(e) => handleEventKeyDown(e, index)}
               onTouchStart={(e) => {
                 if (onEventContextMenu && e.touches[0]) {
-                  startLongPress(e.touches[0], (x, y) => onEventContextMenu(index, x, y, e.currentTarget as HTMLElement));
+                  startLongPress(e.touches[0], (x, y) =>
+                    onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+                  );
                 }
               }}
               onTouchEnd={clearLongPress}

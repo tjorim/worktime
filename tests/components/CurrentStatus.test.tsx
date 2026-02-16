@@ -64,23 +64,28 @@ vi.mock("../../src/hooks/useCountdown", () => ({
 
 vi.mock("../../src/utils/dateTimeUtils", async (importOriginal) => {
   const actual = await importOriginal();
-  const mockDayjsObj = {
+  const mockDayjsObj: Record<string, ReturnType<typeof vi.fn>> = {
     startOf: vi.fn(() => ({
       toISOString: vi.fn(() => "2024-01-15T00:00:00.000Z"),
     })),
     isSame: vi.fn(() => false),
     format: vi.fn(() => "2024-01-15"),
+    diff: vi.fn(() => 28800),
     hour: vi.fn(() => ({
       minute: vi.fn(() => ({
         second: vi.fn(() => ({
           isBefore: vi.fn(() => false),
           isAfter: vi.fn(() => true),
+          diff: vi.fn(() => 28800),
+          isValid: vi.fn(() => true),
         })),
       })),
     })),
-    add: vi.fn(() => mockDayjsObj),
-    subtract: vi.fn(() => mockDayjsObj),
+    add: vi.fn(),
+    subtract: vi.fn(),
   };
+  mockDayjsObj.add.mockReturnValue(mockDayjsObj);
+  mockDayjsObj.subtract.mockReturnValue(mockDayjsObj);
   return {
     ...actual,
     dayjs: vi.fn(() => mockDayjsObj),
