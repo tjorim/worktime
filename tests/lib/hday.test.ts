@@ -805,6 +805,34 @@ describe("parseHday", () => {
         },
       ]);
     });
+
+    it("parses legacy holidaytool ranges with non-padded dates and r-title separator", () => {
+      const result = parseHday("2026/1/23-2026/2/6 r Costa Rica - Holiday");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/01/23",
+          end: "2026/02/06",
+          flags: ["holiday"],
+          title: "Costa Rica - Holiday",
+          raw: "2026/1/23-2026/2/6 r Costa Rica - Holiday",
+        },
+      ]);
+    });
+
+    it("parses legacy holidaytool single-day ranges with non-padded dates", () => {
+      const result = parseHday("2026/2/16 r Carnaval - Holiday");
+      expect(result).toEqual([
+        {
+          type: "range",
+          start: "2026/02/16",
+          end: "2026/02/16",
+          flags: ["holiday"],
+          title: "Carnaval - Holiday",
+          raw: "2026/2/16 r Carnaval - Holiday",
+        },
+      ]);
+    });
   });
 
   describe("weekly events", () => {

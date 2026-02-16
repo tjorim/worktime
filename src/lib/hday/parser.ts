@@ -253,8 +253,18 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
  * @see toLine For the inverse operation (serializing events back to .hday format)
  */
 export function parseHday(text: string): HdayEvent[] {
+  const normalizeHdayDate = (value: string): string => {
+    const match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (!match) return value;
+
+    const year = match[1] ?? "";
+    const month = match[2] ?? "";
+    const day = match[3] ?? "";
+    return `${year}/${month.padStart(2, "0")}/${day.padStart(2, "0")}`;
+  };
+
   const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{2}\/\d{2})(?:-(?<end>\d{4}\/\d{2}\/\d{2}))?(?:\s*#\s*(?<title>.*))?$/i;
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:(?:\s*#\s*(?<titleHash>.*))|(?:\s+[a-z]\s+(?<titleLegacy>.*)))?$/i;
   const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<title>.*))?$/i;
 
   const lines = text
@@ -267,13 +277,16 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start, end, title = "" } = rangeMatch.groups;
+      const { prefix = "", start = "", end = "", titleHash = "", titleLegacy = "" } = rangeMatch.groups;
       const flags = parsePrefixFlags(prefix);
+      const normalizedStart = normalizeHdayDate(start);
+      const normalizedEnd = normalizeHdayDate(end || normalizedStart);
+      const title = titleHash || titleLegacy;
 
       events.push({
         type: "range",
-        start,
-        end: end || start,
+        start: normalizedStart,
+        end: normalizedEnd,
         flags,
         title: title.trim(),
         raw: line,
