@@ -264,8 +264,8 @@ export function parseHday(text: string): HdayEvent[] {
   };
 
   const reRange =
-    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<commentText>.*))?$/i;
-  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<commentText>.*))?$/i;
+    /^(?<prefix>[a-z]*)?(?<start>\d{4}\/\d{1,2}\/\d{1,2})(?:-(?<end>\d{4}\/\d{1,2}\/\d{1,2}))?(?:\s+r(?<replacement>[^#]*?))?(?:\s*#\s*(?<comment>.*))?$/i;
+  const reWeekly = /^d(?<weekday>[1-7])(?<suffix>[a-z]*?)(?:\s*#\s*(?<comment>.*))?$/i;
 
   const lines = text
     .split(/\r?\n/)
@@ -277,12 +277,12 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as range event
     const rangeMatch = line.match(reRange);
     if (rangeMatch?.groups) {
-      const { prefix = "", start, end, commentText = "", replacement = "" } = rangeMatch.groups;
+      const { prefix = "", start, end, comment = "", replacement = "" } = rangeMatch.groups;
       const flags = parsePrefixFlags(prefix);
       const normalizedStart = normalizeHdayDate(start);
       const normalizedEnd = end ? normalizeHdayDate(end) : normalizedStart;
       // In .hday syntax this is technically a comment; we map it to event title in the UI.
-      const title = commentText || replacement;
+      const title = comment || replacement;
 
       events.push({
         type: "range",
@@ -298,7 +298,7 @@ export function parseHday(text: string): HdayEvent[] {
     // Try parsing as weekly event
     const weeklyMatch = line.match(reWeekly);
     if (weeklyMatch?.groups) {
-      const { suffix = "", weekday, commentText = "" } = weeklyMatch.groups;
+      const { suffix = "", weekday, comment = "" } = weeklyMatch.groups;
 
       // Regex guarantees weekday is 1-7; this check should never fail
       if (!weekday) {
@@ -314,7 +314,7 @@ export function parseHday(text: string): HdayEvent[] {
         type: "weekly",
         weekday: weekdayNum,
         flags,
-        title: commentText.trim(),
+        title: comment.trim(),
         raw: line,
       });
       continue;
