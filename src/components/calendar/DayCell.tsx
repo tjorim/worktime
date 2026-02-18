@@ -338,7 +338,7 @@ export function DayCell({
           </div>
         )}
         {visibleEvents.map(({ event, index }) => {
-          const colorClass = getEventColorClass(event.flags);
+          const colorClass = getEventColorClass(event.flags, event.type);
           const label = event.title || getEventTypeLabel(event.flags);
           const symbol = getTimeLocationSymbol(event.flags);
 

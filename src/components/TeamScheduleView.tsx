@@ -8,6 +8,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import type { HdayEvent } from "../lib/hday/types";
+import { getEventColorClass } from "../lib/hday/parser";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 
@@ -32,61 +33,6 @@ interface TeamHdayResponse {
   name: string;
   sections: TeamSectionHdayData[];
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
-}
-
-/**
- * Get event type flag from event (returns first flag or empty string)
- */
-function getEventType(event: HdayEvent): string {
-  if (event.flags && event.flags.length > 0) {
-    const firstFlag = event.flags[0];
-    // Map TypeFlag to single character for color coding
-    switch (firstFlag) {
-      case "business":
-        return "b";
-      case "course":
-        return "s";
-      case "weekend":
-        return "w";
-      case "in":
-        return "i";
-      case "ill":
-        return "l";
-      case "birthday":
-        return "a";
-      case "other":
-        return "o";
-      default:
-        return "";
-    }
-  }
-  return "";
-}
-
-/**
- * Get background color CSS class for event type based on flags
- * Reuses existing event color classes from _shifts.scss
- */
-function getEventColorClass(eventType: string, isHalfDay: boolean): string {
-  const suffix = isHalfDay ? "-half" : "-full";
-  switch (eventType) {
-    case "b":
-      return `event-business${suffix}`;
-    case "s":
-      return `event-course${suffix}`;
-    case "w":
-      return `event-weekend${suffix}`;
-    case "i":
-      return `event-in${suffix}`;
-    case "l":
-      return `event-ill${suffix}`;
-    case "a":
-      return `event-birthday${suffix}`;
-    case "o":
-      return `event-course${suffix}`; // Use course color for "other"
-    default:
-      return `event-holiday${suffix}`; // Vacation (no flag)
-  }
 }
 
 /**
@@ -499,8 +445,7 @@ export function TeamScheduleView() {
                                         event.flags.includes("half_pm"));
 
                                     // Use first event if multiple
-                                    const eventType = getEventType(event);
-                                    cellClass += ` ${getEventColorClass(eventType, isHalfDay)}`;
+                                    cellClass += ` ${getEventColorClass(event.flags, event.type)}`;
 
                                     // Show symbol for half-day events
                                     if (isHalfDay) {
@@ -557,32 +502,38 @@ export function TeamScheduleView() {
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-holiday-half"></div>
+                    <div className="legend-color-box event-holiday-full"></div>
                     <span>Vacation</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-ill-half"></div>
+                    <div className="legend-color-box event-ill-full"></div>
                     <span>Sick leave</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-business-half"></div>
+                    <div className="legend-color-box event-business-full"></div>
                     <span>Business trip</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-course-half"></div>
+                    <div className="legend-color-box event-course-full"></div>
                     <span>Training / Course</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-weekend-half"></div>
+                    <div className="legend-color-box event-recurring-full"></div>
                     <span>Weekly off</span>
+                  </div>
+                </div>
+                <div className="col-md-6 col-lg-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="legend-color-box event-birthday-full"></div>
+                    <span>Birthday</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
@@ -593,7 +544,7 @@ export function TeamScheduleView() {
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-in-half"></div>
+                    <div className="legend-color-box event-in-full"></div>
                     <span>In office (explicit)</span>
                   </div>
                 </div>

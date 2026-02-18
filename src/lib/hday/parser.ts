@@ -465,10 +465,15 @@ export function getEventColor(flags?: EventFlag[]): string {
  * Returns a class name that maps to styles in main.scss.
  *
  * @param flags - Optional list of event flags
+ * @param eventType - Optional event type; weekly recurring events with no explicit type flag default to the weekly-off color instead of vacation
  * @returns CSS class name (e.g., "event-holiday-full", "event-business-half")
  */
-export function getEventColorClass(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return "event-holiday-full";
+export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
+  const isWeekly = eventType === "weekly";
+
+  if (!flags || flags.length === 0) {
+    return isWeekly ? "event-recurring-full" : "event-holiday-full";
+  }
 
   const hasHalfDay = flags.includes("half_am") !== flags.includes("half_pm");
   const suffix = hasHalfDay ? "half" : "full";
@@ -481,7 +486,8 @@ export function getEventColorClass(flags?: EventFlag[]): string {
   if (flags.includes("in")) return `event-in-${suffix}`;
   if (flags.includes("other")) return `event-other-${suffix}`;
 
-  return `event-holiday-${suffix}`;
+  // No recognized type flag found — weekly events without an explicit type default to recurring day-off
+  return isWeekly ? `event-recurring-${suffix}` : `event-holiday-${suffix}`;
 }
 
 /**
@@ -511,23 +517,23 @@ export const getHalfDaySymbol = getTimeLocationSymbol;
  * Determine the CSS class for an event based on its flags.
  *
  * @param flags - Event flags that indicate type (business, weekend, birthday, ill, course, in, other, holiday) and time-of-day (`half_am`, `half_pm`)
- * @returns A string of the form `event--{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
+ * @returns A string of the form `event-{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
  */
 export function getEventClass(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return "event--holiday-full";
+  if (!flags || flags.length === 0) return "event-holiday-full";
 
   const hasAm = flags.includes("half_am");
   const hasPm = flags.includes("half_pm");
   const half = hasAm !== hasPm ? "half" : "full";
 
-  if (flags.includes("business")) return `event--business-${half}`;
-  if (flags.includes("weekend")) return `event--weekend-${half}`;
-  if (flags.includes("birthday")) return `event--birthday-${half}`;
-  if (flags.includes("ill")) return `event--ill-${half}`;
-  if (flags.includes("course")) return `event--course-${half}`;
-  if (flags.includes("in")) return `event--in-office-${half}`;
-  if (flags.includes("other")) return `event--other-${half}`;
-  return `event--holiday-${half}`;
+  if (flags.includes("business")) return `event-business-${half}`;
+  if (flags.includes("weekend")) return `event-weekend-${half}`;
+  if (flags.includes("birthday")) return `event-birthday-${half}`;
+  if (flags.includes("ill")) return `event-ill-${half}`;
+  if (flags.includes("course")) return `event-course-${half}`;
+  if (flags.includes("in")) return `event-in-full`;
+  if (flags.includes("other")) return `event-other-${half}`;
+  return `event-holiday-${half}`;
 }
 
 /**
