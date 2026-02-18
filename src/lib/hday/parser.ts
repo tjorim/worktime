@@ -465,10 +465,15 @@ export function getEventColor(flags?: EventFlag[]): string {
  * Returns a class name that maps to styles in main.scss.
  *
  * @param flags - Optional list of event flags
+ * @param eventType - Optional event type; weekly recurring events with no explicit type flag default to the weekly-off color instead of vacation
  * @returns CSS class name (e.g., "event-holiday-full", "event-business-half")
  */
-export function getEventColorClass(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return "event-holiday-full";
+export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
+  const isWeekly = eventType === "weekly";
+
+  if (!flags || flags.length === 0) {
+    return isWeekly ? "event-recurring-full" : "event-holiday-full";
+  }
 
   const hasHalfDay = flags.includes("half_am") !== flags.includes("half_pm");
   const suffix = hasHalfDay ? "half" : "full";
@@ -481,7 +486,8 @@ export function getEventColorClass(flags?: EventFlag[]): string {
   if (flags.includes("in")) return `event-in-${suffix}`;
   if (flags.includes("other")) return `event-other-${suffix}`;
 
-  return `event-holiday-${suffix}`;
+  // No recognized type flag found — weekly events without an explicit type default to recurring day-off
+  return isWeekly ? `event-recurring-${suffix}` : `event-holiday-${suffix}`;
 }
 
 /**

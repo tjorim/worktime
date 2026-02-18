@@ -8,7 +8,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import type { HdayEvent } from "../lib/hday/types";
-import { TYPE_FLAGS_AS_EVENT_FLAGS } from "../data/timeoffConstants";
+import { getEventColorClass } from "../lib/hday/parser";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 
@@ -35,69 +35,6 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-const RECOGNIZED_TYPE_FLAGS = new Set(TYPE_FLAGS_AS_EVENT_FLAGS);
-
-/**
- * Get event type flag from event (returns first flag or empty string)
- */
-function getEventType(event: HdayEvent): string {
-  if (event.flags && event.flags.length > 0) {
-    const typeFlag = event.flags.find((flag) => RECOGNIZED_TYPE_FLAGS.has(flag));
-
-    // Map TypeFlag to single character for color coding
-    switch (typeFlag) {
-      case "business":
-        return "b";
-      case "course":
-        return "s";
-      case "weekend":
-        return "w";
-      case "in":
-        return "i";
-      case "ill":
-        return "l";
-      case "birthday":
-        return "a";
-      case "other":
-        return "o";
-      default:
-        break;
-    }
-  }
-
-  // Weekly recurring events without explicit type flags are weekly-off defaults.
-  if (event.type === "weekly") {
-    return "w";
-  }
-
-  return "";
-}
-
-/**
- * Get background color CSS class for event type based on flags
- * Reuses existing event color classes from _shifts.scss
- */
-function getEventColorClass(eventType: string, isHalfDay: boolean): string {
-  const suffix = isHalfDay ? "-half" : "-full";
-  switch (eventType) {
-    case "b":
-      return `event-business${suffix}`;
-    case "s":
-      return `event-course${suffix}`;
-    case "w":
-      return `event-weekend${suffix}`;
-    case "i":
-      return `event-in${suffix}`;
-    case "l":
-      return `event-ill${suffix}`;
-    case "a":
-      return `event-birthday${suffix}`;
-    case "o":
-      return `event-course${suffix}`; // Use course color for "other"
-    default:
-      return `event-holiday${suffix}`; // Vacation (no flag)
-  }
-}
 
 /**
  * Check if a date has an event for a member
@@ -509,8 +446,7 @@ export function TeamScheduleView() {
                                         event.flags.includes("half_pm"));
 
                                     // Use first event if multiple
-                                    const eventType = getEventType(event);
-                                    cellClass += ` ${getEventColorClass(eventType, isHalfDay)}`;
+                                    cellClass += ` ${getEventColorClass(event.flags, event.type)}`;
 
                                     // Show symbol for half-day events
                                     if (isHalfDay) {
@@ -591,7 +527,7 @@ export function TeamScheduleView() {
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
-                    <div className="legend-color-box event-weekend-full"></div>
+                    <div className="legend-color-box event-recurring-full"></div>
                     <span>Weekly off</span>
                   </div>
                 </div>

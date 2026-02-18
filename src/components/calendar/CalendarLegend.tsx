@@ -12,7 +12,7 @@ const EVENT_TYPE_LEGEND = [
   { colorClass: "event-business-full", label: "Business" },
   { colorClass: "event-course-full", label: "Course" },
   { colorClass: "event-in-full", label: "In Office" },
-  { colorClass: "event-weekend-full", label: "Day Off" },
+  { colorClass: "event-recurring-full", label: "Day Off" },
   { colorClass: "event-birthday-full", label: "Birthday" },
   { colorClass: "event-ill-full", label: "Sick Leave" },
   { colorClass: "event-other-full", label: "Other" },

@@ -178,7 +178,7 @@ export function TimeOffTableView({
               <tbody>
                 {events.map((event, index) => {
                   const eventColorClass =
-                    event.type !== "unknown" ? getEventColorClass(event.flags) : "event-unknown";
+                    event.type !== "unknown" ? getEventColorClass(event.flags, event.type) : "event-unknown";
                   const eventLabel =
                     event.type !== "unknown" ? getEventTypeLabel(event.flags) : "Unknown";
                   const symbol = event.type !== "unknown" ? getTimeLocationSymbol(event.flags) : "";

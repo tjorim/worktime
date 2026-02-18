@@ -405,6 +405,14 @@
   background-color: #cc66cc;
   color: #000;
 }
+.event-recurring-full {
+  background-color: #b3007a;
+  color: #fff;
+}
+.event-recurring-half {
+  background-color: #e066b3;
+  color: #000;
+}
 .event-birthday-full {
   background-color: #0000cc;
   color: #fff;
@@ -484,6 +492,16 @@
   .event-weekend-half {
     background-color: #663066;
     color: #edb3ed;
+  }
+
+  .event-recurring-full {
+    background-color: #590040;
+    color: #f0b3d9;
+  }
+
+  .event-recurring-half {
+    background-color: #73004f;
+    color: #f5cce6;
   }
 
   .event-birthday-full {

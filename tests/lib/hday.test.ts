@@ -5,6 +5,7 @@ import {
   type EventFlag,
   getEventClass,
   getEventColor,
+  getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
   type HdayEvent,
@@ -1107,6 +1108,38 @@ d1k # Office`;
       flags: ["in"],
     };
     expect(toLine(event)).toBe("d3k");
+  });
+});
+
+describe("getEventColorClass", () => {
+  it("returns holiday-full for no flags (range event)", () => {
+    expect(getEventColorClass(undefined, "range")).toBe("event-holiday-full");
+  });
+
+  it("returns holiday-full for default holiday flag on a range event", () => {
+    expect(getEventColorClass(["holiday"], "range")).toBe("event-holiday-full");
+  });
+
+  it("returns recurring-full for a weekly event with no explicit type flag (plain d1)", () => {
+    // The parser injects "holiday" as the default flag for bare dx entries.
+    // Without eventType, this would incorrectly return vacation red.
+    expect(getEventColorClass(["holiday"], "weekly")).toBe("event-recurring-full");
+  });
+
+  it("returns recurring-full for a weekly event with empty flags", () => {
+    expect(getEventColorClass([], "weekly")).toBe("event-recurring-full");
+  });
+
+  it("respects explicit type flag on a weekly event (e.g. business trip every Monday)", () => {
+    expect(getEventColorClass(["business"], "weekly")).toBe("event-business-full");
+  });
+
+  it("respects half-day flag on a weekly event", () => {
+    expect(getEventColorClass(["half_am", "holiday"], "weekly")).toBe("event-recurring-half");
+  });
+
+  it("is backward compatible — omitting eventType returns vacation color for default flag", () => {
+    expect(getEventColorClass(["holiday"])).toBe("event-holiday-full");
   });
 });
 
