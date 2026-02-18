@@ -520,20 +520,20 @@ export const getHalfDaySymbol = getTimeLocationSymbol;
  * @returns A string of the form `event--{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
  */
 export function getEventClass(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return "event--holiday-full";
+  if (!flags || flags.length === 0) return "event-holiday-full";
 
   const hasAm = flags.includes("half_am");
   const hasPm = flags.includes("half_pm");
   const half = hasAm !== hasPm ? "half" : "full";
 
-  if (flags.includes("business")) return `event--business-${half}`;
-  if (flags.includes("weekend")) return `event--weekend-${half}`;
-  if (flags.includes("birthday")) return `event--birthday-${half}`;
-  if (flags.includes("ill")) return `event--ill-${half}`;
-  if (flags.includes("course")) return `event--course-${half}`;
-  if (flags.includes("in")) return `event--in-office-${half}`;
-  if (flags.includes("other")) return `event--other-${half}`;
-  return `event--holiday-${half}`;
+  if (flags.includes("business")) return `event-business-${half}`;
+  if (flags.includes("weekend")) return `event-weekend-${half}`;
+  if (flags.includes("birthday")) return `event-birthday-${half}`;
+  if (flags.includes("ill")) return `event-ill-${half}`;
+  if (flags.includes("course")) return `event-course-${half}`;
+  if (flags.includes("in")) return `event-in-full`;
+  if (flags.includes("other")) return `event-other-${half}`;
+  return `event-holiday-${half}`;
 }
 
 /**

@@ -1148,116 +1148,147 @@ describe("getEventClass", () => {
     expect(getEventClass()).toBe("event--holiday-full");
   });
 
+  it("returns holiday-full for no flags", () => {
+    expect(getEventClass()).toBe("event-holiday-full");
+  });
+
   it("returns holiday-full for empty array", () => {
-    expect(getEventClass([])).toBe("event--holiday-full");
+    expect(getEventClass([])).toBe("event-holiday-full");
   });
 
   it("returns holiday-full for holiday flag", () => {
-    expect(getEventClass(["holiday"])).toBe("event--holiday-full");
+    expect(getEventClass(["holiday"])).toBe("event-holiday-full");
   });
 
   it("returns holiday-half for half_am", () => {
-    expect(getEventClass(["half_am", "holiday"])).toBe("event--holiday-half");
+    expect(getEventClass(["half_am", "holiday"])).toBe("event-holiday-half");
   });
 
   it("returns holiday-half for half_pm", () => {
-    expect(getEventClass(["half_pm", "holiday"])).toBe("event--holiday-half");
+    expect(getEventClass(["half_pm", "holiday"])).toBe("event-holiday-half");
   });
 
   it("returns holiday-half for multiple time flags (keeps only first)", () => {
     // Mutual exclusivity: only half_am is kept
     const normalized = normalizeEventFlags(["half_am", "half_pm", "holiday"]);
-    expect(getEventClass(normalized)).toBe("event--holiday-half");
+    expect(getEventClass(normalized)).toBe("event-holiday-half");
   });
 
   it("returns business-full for business flag", () => {
-    expect(getEventClass(["business"])).toBe("event--business-full");
+    expect(getEventClass(["business"])).toBe("event-business-full");
   });
 
   it("returns business-half for business with half_am", () => {
-    expect(getEventClass(["half_am", "business"])).toBe("event--business-half");
+    expect(getEventClass(["half_am", "business"])).toBe("event-business-half");
   });
 
   it("returns business-half for business with half_pm", () => {
-    expect(getEventClass(["half_pm", "business"])).toBe("event--business-half");
+    expect(getEventClass(["half_pm", "business"])).toBe("event-business-half");
   });
 
   it("returns course-full for course flag", () => {
-    expect(getEventClass(["course"])).toBe("event--course-full");
+    expect(getEventClass(["course"])).toBe("event-course-full");
   });
 
   it("returns course-half for course with half_pm", () => {
-    expect(getEventClass(["half_pm", "course"])).toBe("event--course-half");
+    expect(getEventClass(["half_pm", "course"])).toBe("event-course-half");
   });
 
-  it("returns in-office-full for in flag", () => {
-    expect(getEventClass(["in"])).toBe("event--in-office-full");
+  it("returns in-full for in flag", () => {
+    expect(getEventClass(["in"])).toBe("event-in-full");
   });
 
-  it("returns in-office-half for in with half_am", () => {
-    expect(getEventClass(["half_am", "in"])).toBe("event--in-office-half");
+  it("returns in-full for in with half_am", () => {
+    expect(getEventClass(["half_am", "in"])).toBe("event-in-full");
   });
 
   it("returns weekend-full for weekend flag", () => {
-    expect(getEventClass(["weekend"])).toBe("event--weekend-full");
+    expect(getEventClass(["weekend"])).toBe("event-weekend-full");
   });
 
   it("returns weekend-half for weekend with half_am", () => {
-    expect(getEventClass(["half_am", "weekend"])).toBe("event--weekend-half");
+    expect(getEventClass(["half_am", "weekend"])).toBe("event-weekend-half");
   });
 
   it("returns weekend-half for weekend with half_pm", () => {
-    expect(getEventClass(["half_pm", "weekend"])).toBe("event--weekend-half");
+    expect(getEventClass(["half_pm", "weekend"])).toBe("event-weekend-half");
   });
 
   it("returns birthday-full for birthday flag", () => {
-    expect(getEventClass(["birthday"])).toBe("event--birthday-full");
+    expect(getEventClass(["birthday"])).toBe("event-birthday-full");
   });
 
   it("returns birthday-half for birthday with half_am", () => {
-    expect(getEventClass(["half_am", "birthday"])).toBe("event--birthday-half");
+    expect(getEventClass(["half_am", "birthday"])).toBe("event-birthday-half");
   });
 
   it("returns birthday-half for birthday with half_pm", () => {
-    expect(getEventClass(["half_pm", "birthday"])).toBe("event--birthday-half");
+    expect(getEventClass(["half_pm", "birthday"])).toBe("event-birthday-half");
   });
 
   it("returns ill-full for ill flag", () => {
-    expect(getEventClass(["ill"])).toBe("event--ill-full");
+    expect(getEventClass(["ill"])).toBe("event-ill-full");
   });
 
   it("returns ill-half for ill with half_am", () => {
-    expect(getEventClass(["half_am", "ill"])).toBe("event--ill-half");
+    expect(getEventClass(["half_am", "ill"])).toBe("event-ill-half");
   });
 
   it("returns ill-half for ill with half_pm", () => {
-    expect(getEventClass(["half_pm", "ill"])).toBe("event--ill-half");
+    expect(getEventClass(["half_pm", "ill"])).toBe("event-ill-half");
   });
 
   it("returns other-full for other flag", () => {
-    expect(getEventClass(["other"])).toBe("event--other-full");
+    expect(getEventClass(["other"])).toBe("event-other-full");
   });
 
   it("returns other-half for other with half_am", () => {
-    expect(getEventClass(["half_am", "other"])).toBe("event--other-half");
+    expect(getEventClass(["half_am", "other"])).toBe("event-other-half");
   });
 
   it("returns other-half for other with half_pm", () => {
-    expect(getEventClass(["half_pm", "other"])).toBe("event--other-half");
+    expect(getEventClass(["half_pm", "other"])).toBe("event-other-half");
   });
 
   it("prioritizes business over other type flags", () => {
-    expect(getEventClass(["business", "course", "in"])).toBe("event--business-full");
+    expect(getEventClass(["business", "course", "in"])).toBe("event-business-full");
   });
 
   it("prioritizes course over in", () => {
-    expect(getEventClass(["course", "in"])).toBe("event--course-full");
+    expect(getEventClass(["course", "in"])).toBe("event-course-full");
   });
 
   it("returns correct class for complex flag combinations", () => {
     // Mutual exclusivity: when both half_am and half_pm present, only half_am is kept
     const normalized1 = normalizeEventFlags(["half_am", "half_pm", "business"]);
-    expect(getEventClass(normalized1)).toBe("event--business-half");
-    expect(getEventClass(["half_am", "course", "in"])).toBe("event--course-half");
+    expect(getEventClass(normalized1)).toBe("event-business-half");
+    expect(getEventClass(["half_am", "course", "in"])).toBe("event-course-half");
+  });
+    it("returns recurring-full for undefined flags and weekly event", () => {
+      expect(getEventColorClass(undefined, "weekly")).toBe("event-recurring-full");
+    });
+
+    it("returns recurring-half for half_pm and holiday flags with weekly event", () => {
+      expect(getEventColorClass(["half_pm", "holiday"], "weekly")).toBe("event-recurring-half");
+    });
+  });
+
+  it("returns other-half for other with half_pm", () => {
+    expect(getEventClass(["half_pm", "other"])).toBe("event-other-half");
+  });
+
+  it("prioritizes business over other type flags", () => {
+    expect(getEventClass(["business", "course", "in"])).toBe("event-business-full");
+  });
+
+  it("prioritizes course over in", () => {
+    expect(getEventClass(["course", "in"])).toBe("event-course-full");
+  });
+
+  it("returns correct class for complex flag combinations", () => {
+    // Mutual exclusivity: when both half_am and half_pm present, only half_am is kept
+    const normalized1 = normalizeEventFlags(["half_am", "half_pm", "business"]);
+    expect(getEventClass(normalized1)).toBe("event-business-half");
+    expect(getEventClass(["half_am", "course", "in"])).toBe("event-course-half");
   });
 });
