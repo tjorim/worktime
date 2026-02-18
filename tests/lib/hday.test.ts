@@ -1222,10 +1222,6 @@ describe("getEventClass", () => {
       expect(getEventClass(["half_pm", "ill"])).toBe("event-ill-half");
     });
   it("returns holiday-full for no flags", () => {
-    expect(getEventClass()).toBe("event--holiday-full");
-  });
-
-  it("returns holiday-full for no flags", () => {
     expect(getEventClass()).toBe("event-holiday-full");
   });
 

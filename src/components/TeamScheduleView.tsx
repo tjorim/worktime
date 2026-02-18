@@ -35,7 +35,6 @@ interface TeamHdayResponse {
   members: TeamMemberHdayData[]; // Flat list for backward compatibility
 }
 
-
 /**
  * Check if a date has an event for a member
  */

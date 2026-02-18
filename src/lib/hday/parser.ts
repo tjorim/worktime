@@ -517,7 +517,7 @@ export const getHalfDaySymbol = getTimeLocationSymbol;
  * Determine the CSS class for an event based on its flags.
  *
  * @param flags - Event flags that indicate type (business, weekend, birthday, ill, course, in, other, holiday) and time-of-day (`half_am`, `half_pm`)
- * @returns A string of the form `event--{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
+ * @returns A string of the form `event-{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
  */
 export function getEventClass(flags?: EventFlag[]): string {
   if (!flags || flags.length === 0) return "event-holiday-full";
