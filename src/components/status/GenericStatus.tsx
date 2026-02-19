@@ -201,7 +201,6 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   </Badge>
                 </div>
               )}
-              <hr className="my-3" />
             </div>
           </Card.Body>
         </Card>
