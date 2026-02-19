@@ -53,7 +53,7 @@ export function TimeTrackingWeeklyView({
   weeklyTargetHours,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
-  const liveTime = useLiveTime({ precision: "second" });
+  const liveTime = useLiveTime({ precision: "minute" });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
   const isWeeklyCurrent = weekStart.isSame(liveTime.startOf("isoWeek"), "day");
