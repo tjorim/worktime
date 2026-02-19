@@ -6,7 +6,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import type { ScheduleOption } from "../../data/rosters";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
+import { getScheduleConfig, isValidScheduleType } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 import { useLiveShiftStatus } from "../../hooks/useLiveShiftStatus";
@@ -34,6 +34,16 @@ export function PersonalizedStatusContent({
   myTeam,
   scheduleType,
 }: PersonalizedStatusContentProps) {
+  if (!isValidScheduleType(scheduleType)) {
+    return (
+      <EmptyState
+        icon="bi-exclamation-triangle"
+        title="Invalid Schedule"
+        description="Your saved schedule is invalid. Please reconfigure your schedule settings."
+      />
+    );
+  }
+
   const teamTooltipId = useId();
 
   const scheduleConfig = getScheduleConfig(scheduleType);
