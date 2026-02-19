@@ -11,7 +11,9 @@ import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsC
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
+import { usePwaInstall } from "./hooks/usePwaInstall";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
+import { useShiftNotifications } from "./hooks/useShiftNotifications";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
 
@@ -42,7 +44,9 @@ function AppContent() {
   >("onboarding");
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
-  const { currentDate, setCurrentDate } = useShiftCalculation();
+  const { currentDate, setCurrentDate, nextShift } = useShiftCalculation();
+  const { canAutoPrompt, hasDeferredPrompt, isInstallSupported, promptInstall } = usePwaInstall();
+  const { isNotificationSupported } = useShiftNotifications(nextShift, myTeam);
 
   const handleTabChange = useCallback(
     (tab: TabKey) => {
@@ -84,6 +88,13 @@ function AppContent() {
       return () => mql.removeEventListener("change", applyTheme);
     }
   }, [settings.theme]);
+
+
+
+  useEffect(() => {
+    if (!canAutoPrompt) return;
+    void promptInstall("auto");
+  }, [canAutoPrompt, promptInstall]);
 
   const handleTeamSelect = (team: number) => {
     // Save team selection (onboarding will be completed after vacation step)
@@ -193,6 +204,10 @@ function AppContent() {
             onShowAbout={() => setShowAbout(true)}
             onChangeSchedule={handleChangeSchedule}
             onChangeTeam={handleChangeTeam}
+            onInstallApp={() => void promptInstall("manual")}
+            canInstallApp={hasDeferredPrompt}
+            isInstallPromptSupported={isInstallSupported}
+            isNotificationSupported={isNotificationSupported}
           />
           <ErrorBoundary>
             <CurrentStatus

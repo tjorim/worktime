@@ -9,6 +9,10 @@ interface HeaderProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+  onInstallApp?: () => void;
+  canInstallApp?: boolean;
+  isInstallPromptSupported?: boolean;
+  isNotificationSupported?: boolean;
 }
 
 /**
@@ -19,7 +23,15 @@ interface HeaderProps {
  * @param onChangeTeam - Optional callback invoked when the user wants to change their team
  * @returns The header React element containing the app title and Settings button
  */
-export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
+export function Header({
+  onShowAbout,
+  onChangeSchedule,
+  onChangeTeam,
+  onInstallApp,
+  canInstallApp = false,
+  isInstallPromptSupported = false,
+  isNotificationSupported = false,
+}: HeaderProps = {}) {
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -68,6 +80,10 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
         onShowAbout={onShowAbout}
         onChangeSchedule={onChangeSchedule}
         onChangeTeam={onChangeTeam}
+        onInstallApp={onInstallApp}
+        canInstallApp={canInstallApp}
+        isInstallPromptSupported={isInstallPromptSupported}
+        isNotificationSupported={isNotificationSupported}
       />
     </>
   );

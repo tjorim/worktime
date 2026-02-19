@@ -8,6 +8,7 @@ import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
+export type NotificationLeadTime = "15m" | "1h" | "2h";
 export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
@@ -26,6 +27,7 @@ interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
   notifications: NotificationSetting;
+  notificationLeadTime: NotificationLeadTime;
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
@@ -37,6 +39,7 @@ interface SettingsContextType {
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
+  updateNotificationLeadTime: (leadTime: NotificationLeadTime) => void;
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
@@ -77,6 +80,7 @@ export const defaultSettings: UserSettings = {
   timeFormat: "24h",
   theme: "auto",
   notifications: "off",
+  notificationLeadTime: "1h",
   vacationAllowance: {
     yearlyAmounts: {},
     unit: "days",
@@ -111,7 +115,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -241,6 +245,24 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v3: Add notificationLeadTime setting.
+  3: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        notificationLeadTime:
+          typeof settings.notificationLeadTime === "string"
+            ? settings.notificationLeadTime
+            : defaultSettings.notificationLeadTime,
+      },
+    };
+  },
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -317,6 +339,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const notifications = ["on", "off"].includes(settings.notifications as string)
     ? (settings.notifications as NotificationSetting)
     : defaultSettings.notifications;
+  const notificationLeadTime = ["15m", "1h", "2h"].includes(
+    settings.notificationLeadTime as string,
+  )
+    ? (settings.notificationLeadTime as NotificationLeadTime)
+    : defaultSettings.notificationLeadTime;
 
   const vacationAllowance = sanitizeVacationAllowance(
     settings.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
@@ -421,6 +448,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       timeFormat,
       theme,
       notifications,
+      notificationLeadTime,
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
@@ -486,6 +514,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, notifications },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateNotificationLeadTime = useCallback(
+    (notificationLeadTime: NotificationLeadTime) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, notificationLeadTime },
       }));
     },
     [setUserState],
@@ -690,6 +728,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
+      updateNotificationLeadTime,
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
@@ -715,6 +754,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
+      updateNotificationLeadTime,
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,

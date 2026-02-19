@@ -24,6 +24,10 @@ interface SettingsPanelProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+  onInstallApp?: () => void;
+  canInstallApp?: boolean;
+  isInstallPromptSupported?: boolean;
+  isNotificationSupported?: boolean;
 }
 
 /**
@@ -42,6 +46,10 @@ export function SettingsPanel({
   onShowAbout,
   onChangeSchedule,
   onChangeTeam,
+  onInstallApp,
+  canInstallApp = false,
+  isInstallPromptSupported = false,
+  isNotificationSupported = false,
 }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -59,6 +67,8 @@ export function SettingsPanel({
     scheduleType,
     updateTimeFormat,
     updateTheme,
+    updateNotifications,
+    updateNotificationLeadTime,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     resetSettings,
@@ -220,6 +230,44 @@ export function SettingsPanel({
     onChangeTeam?.();
   };
 
+
+
+  const handleInstallApp = () => {
+    if (onInstallApp) {
+      onInstallApp();
+      return;
+    }
+    toast.showInfo("Install is unavailable in this browser right now.", "bi-download");
+  };
+
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    if (!isNotificationSupported) {
+      toast.showWarning("Your browser does not support notifications.", "bi-bell-slash");
+      return;
+    }
+
+    if (!enabled) {
+      updateNotifications("off");
+      toast.showInfo("Shift reminders disabled.", "bi-bell-slash");
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        updateNotifications("on");
+        toast.showSuccess("Shift reminders enabled.", "bi-bell-fill");
+      } else {
+        updateNotifications("off");
+        toast.showWarning("Notification permission denied.", "bi-bell-slash");
+      }
+    } catch (error) {
+      console.error("Failed to request notification permission:", error);
+      updateNotifications("off");
+      toast.showError("Could not enable notifications.", "bi-x-circle");
+    }
+  };
+
   // Share handler
   const handleShareApp = () => {
     shareApp(
@@ -303,6 +351,67 @@ export function SettingsPanel({
                       </Button>
                     </ButtonGroup>
                   </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Shift Reminders</div>
+                      <small className="text-muted">Get notified before your next shift</small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-notifications"
+                      checked={settings.notifications === "on"}
+                      onChange={(event) => void handleNotificationsToggle(event.target.checked)}
+                      aria-label="Toggle shift reminders"
+                      disabled={!isNotificationSupported}
+                    />
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center mt-2">
+                    <small className="text-muted">Reminder timing</small>
+                    <Form.Select
+                      size="sm"
+                      style={{ width: "auto" }}
+                      value={settings.notificationLeadTime}
+                      onChange={(event) =>
+                        updateNotificationLeadTime(event.target.value as "15m" | "1h" | "2h")
+                      }
+                      aria-label="Notification lead time"
+                      disabled={settings.notifications !== "on" || !isNotificationSupported}
+                    >
+                      <option value="15m">15 minutes before</option>
+                      <option value="1h">1 hour before</option>
+                      <option value="2h">2 hours before</option>
+                    </Form.Select>
+                  </div>
+                  {!isNotificationSupported && (
+                    <small className="text-muted d-block mt-2">
+                      Notifications are not supported in this browser.
+                    </small>
+                  )}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Install App</div>
+                      <small className="text-muted">Install Worktime for quick access</small>
+                    </div>
+                    <Button
+                      variant={canInstallApp ? "primary" : "outline-secondary"}
+                      size="sm"
+                      onClick={handleInstallApp}
+                      disabled={!canInstallApp}
+                    >
+                      Install app
+                    </Button>
+                  </div>
+                  {!canInstallApp && (
+                    <small className="text-muted d-block mt-2">
+                      {isInstallPromptSupported
+                        ? "Install prompt is currently unavailable (already installed or not eligible yet)."
+                        : "Install prompts are not supported in this browser."}
+                    </small>
+                  )}
                 </ListGroup.Item>
               </ListGroup>
             </div>
