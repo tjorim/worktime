@@ -19,6 +19,7 @@ import {
   getContrastingTextColor,
   useDefaultLabelColor,
   type TimeTrackingLabel,
+  TIME_TRACKING_LIVE_TIME_PRECISION,
 } from "./constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
@@ -76,7 +77,9 @@ export function TimeTrackingDailyView({
   const [error, setError] = useState("");
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const liveTime = useLiveTime({ precision: "second" });
+  const liveTime = useLiveTime({
+    precision: TIME_TRACKING_LIVE_TIME_PRECISION.dailyLog,
+  });
   const dailyDate = dayjs(date);
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);

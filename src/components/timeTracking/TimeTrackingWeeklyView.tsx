@@ -6,7 +6,12 @@ import Table from "react-bootstrap/Table";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
+import {
+  buildLabelNameMap,
+  TIME_TRACKING_LIVE_TIME_PRECISION,
+  useDefaultLabelColor,
+  type TimeTrackingLabel,
+} from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";
@@ -53,7 +58,9 @@ export function TimeTrackingWeeklyView({
   weeklyTargetHours,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
-  const liveTime = useLiveTime({ precision: "minute" });
+  const liveTime = useLiveTime({
+    precision: TIME_TRACKING_LIVE_TIME_PRECISION.weeklySummary,
+  });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
   const isWeeklyCurrent = weekStart.isSame(liveTime.startOf("isoWeek"), "day");
