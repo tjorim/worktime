@@ -375,11 +375,9 @@ export function CalendarView({
                 iconSize="2.5rem"
                 description={
                   <>
-                    <span>
-                      This calendar shows your working schedule with shift patterns
-                      {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one
-                      place.
-                    </span>
+                    This calendar shows your working schedule with shift patterns
+                    {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one
+                    place.
                     <span className="d-block mt-2">
                       {!scheduleType
                         ? "To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings."
