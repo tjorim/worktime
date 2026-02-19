@@ -83,8 +83,11 @@ export function PersonalizedStatusContent({
       return {
         date: shiftDay,
         shift: shiftDayShift,
-        // getShiftCode handles night-shift date adjustment internally
-        code: getShiftCode(today, myTeam, scheduleType),
+        // Use shiftDay (not today) so the code is derived from the same date as the
+        // shift object. Using today would call calculateShift(today) internally, which
+        // returns Off on the calendar day after the last night in a series — producing
+        // a mismatched code like "…O" while the shift name still shows "Night".
+        code: getShiftCode(shiftDay, myTeam, scheduleType),
         teamNumber: myTeam,
       };
     }
