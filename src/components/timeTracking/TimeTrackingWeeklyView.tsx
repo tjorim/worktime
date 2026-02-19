@@ -6,11 +6,7 @@ import Table from "react-bootstrap/Table";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import {
-  buildLabelNameMap,
-  useDefaultLabelColor,
-  type TimeTrackingLabel,
-} from "./constants";
+import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";

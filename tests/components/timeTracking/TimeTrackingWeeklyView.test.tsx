@@ -141,7 +141,9 @@ describe("TimeTrackingWeeklyView Component", () => {
         id: "running-task",
         text: "Support work",
         label: "Support",
-        startTime: "2025-01-06T09:00:00",
+        // Derive startTime from fake Date.now() so the 6-hour gap is
+        // timezone-independent (avoids UTC vs. local mismatch).
+        startTime: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
         stopTime: null,
       };
 

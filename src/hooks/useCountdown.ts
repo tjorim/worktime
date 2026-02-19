@@ -16,17 +16,18 @@ export interface CountdownResult {
  * Compute the remaining time until a target Dayjs date.
  *
  * @param targetDate - The date to count down to; pass `null` to indicate no target (treated as expired)
+ * @param currentTime - The current time to measure from
  * @returns A CountdownResult containing `days`, `hours`, `minutes`, `seconds`, `totalSeconds`, `formatted`, and `isExpired`. When `targetDate` is `null`, invalid, or in the past, `isExpired` is `true`, numeric fields are zero and `formatted` is an empty string.
  *
  * @example
  * // 2 days, 5 hours, 30 minutes from now
  * const target = dayjs().add(2, 'day').add(5, 'hour').add(30, 'minute');
- * calculateTimeLeft(target)
+ * calculateTimeLeft(target, dayjs())
  * // Returns: { days: 2, hours: 5, minutes: 30, seconds: 0, isExpired: false, totalSeconds: 192600, formatted: "2d 5h 30m" }
  *
  * @example
  * // Past date
- * calculateTimeLeft(dayjs().subtract(1, 'hour'))
+ * calculateTimeLeft(dayjs().subtract(1, 'hour'), dayjs())
  * // Returns: { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, totalSeconds: 0, formatted: "" }
  */
 function calculateTimeLeft(targetDate: Dayjs | null, currentTime: Dayjs): CountdownResult {
@@ -109,10 +110,7 @@ export function useCountdown(
 ): CountdownResult {
   const liveTime = useLiveTime({ updateInterval });
 
-  const timeLeft = useMemo(
-    () => calculateTimeLeft(targetDate, liveTime),
-    [targetDate, liveTime],
-  );
+  const timeLeft = useMemo(() => calculateTimeLeft(targetDate, liveTime), [targetDate, liveTime]);
 
   return timeLeft;
 }

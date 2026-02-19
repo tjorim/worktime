@@ -39,9 +39,9 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
 
   // Calculate current shift day (accounts for night shifts spanning midnight)
   const currentShiftDay = useMemo(() => {
-    if (!scheduleType) return today;
+    if (!scheduleType) return liveTime;
     return getCurrentShiftDay(liveTime, scheduleType);
-  }, [liveTime, scheduleType, today]);
+  }, [liveTime, scheduleType]);
 
   // Find which team is currently working (for timeline)
   const currentWorkingTeam = useMemo(() => {
