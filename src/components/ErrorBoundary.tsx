@@ -92,15 +92,14 @@ export class ErrorBoundary extends Component<Props, State> {
                       <summary className="text-danger fw-bold mb-2">
                         {this.state.error.name}: {this.state.error.message}
                       </summary>
-                      <pre className="small text-muted overflow-y-auto" style={{ maxHeight: 300 }}>
+                      <pre className="small text-muted error-stack-trace">
                         {this.state.error.stack}
                       </pre>
                       {this.state.errorInfo && (
                         <div className="mt-2">
                           <strong>Component Stack:</strong>
                           <pre
-                            className="small text-muted overflow-y-auto"
-                            style={{ maxHeight: 300 }}
+                            className="small text-muted error-stack-trace"
                           >
                             {this.state.errorInfo.componentStack}
                           </pre>

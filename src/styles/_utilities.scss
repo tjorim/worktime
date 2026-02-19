@@ -89,6 +89,11 @@ body {
   color: var(--bs-body-color);
 }
 
+.error-stack-trace {
+  max-height: var(--wt-error-stack-max-height, 300px);
+  overflow-y: auto;
+}
+
 /* ============================================================================
    LAYOUT UTILITIES
    ========================================================================= */
