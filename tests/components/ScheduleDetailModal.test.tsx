@@ -54,6 +54,29 @@ describe("ScheduleDetailModal", () => {
     expect(screen.getByText("Schedule Details")).toBeInTheDocument();
   });
 
+  it("shows enhanced analytics and accessible table metadata", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    expect(screen.getByLabelText("Personal 7-day schedule table")).toBeInTheDocument();
+    expect(screen.getByText("Working vs Rest Days")).toBeInTheDocument();
+    expect(screen.getByText("Total Weekly Hours")).toBeInTheDocument();
+    expect(screen.getByText(/40h/)).toBeInTheDocument();
+    expect(screen.getByText(/5\/7 \(71%\)/)).toBeInTheDocument();
+  });
+
+  it("only shows shift types defined by the selected schedule", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    expect(screen.getByText("Day Shifts")).toBeInTheDocument();
+    expect(screen.queryByText("Morning Shifts")).not.toBeInTheDocument();
+    expect(screen.queryByText("Evening Shifts")).not.toBeInTheDocument();
+    expect(screen.queryByText("Night Shifts")).not.toBeInTheDocument();
+  });
+
   it("throws an error when team number is out of range", () => {
     expect(() =>
       renderWithSettings(
