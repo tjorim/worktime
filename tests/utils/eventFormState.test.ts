@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isEventFormDirty, serializeEventFormState } from "../../src/utils/eventFormState";
+import {
+  isEventFormDirty,
+  serializeEventFormState,
+  serializeEventFormStateFromEvent,
+  toEventFormStateFromEvent,
+} from "../../src/utils/eventFormState";
 
 describe("eventFormState", () => {
   it("serializes flags in stable sorted order", () => {
@@ -15,6 +20,42 @@ describe("eventFormState", () => {
     expect(serialized).toContain('"flags":["business","onsite"]');
   });
 
+  it("normalizes unknown event types as range when building state from event", () => {
+    const formState = toEventFormStateFromEvent(
+      {
+        type: "unknown",
+        start: "2026/03/01",
+        end: "2026/03/02",
+        title: "Imported",
+        flags: ["onsite"],
+      },
+      1,
+    );
+
+    expect(formState).toEqual({
+      type: "range",
+      weekday: 1,
+      start: "2026/03/01",
+      end: "2026/03/02",
+      title: "Imported",
+      flags: ["onsite"],
+    });
+  });
+
+  it("serializes existing event state via helper", () => {
+    const serialized = serializeEventFormStateFromEvent(
+      {
+        type: "weekly",
+        weekday: 5,
+        title: "Office",
+        flags: ["business", "onsite"],
+      },
+      1,
+    );
+
+    expect(serialized).toContain('"type":"weekly"');
+    expect(serialized).toContain('"weekday":5');
+  });
   it("returns false when only flag order changes", () => {
     const initial = serializeEventFormState({
       type: "weekly",

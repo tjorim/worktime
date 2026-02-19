@@ -12,7 +12,11 @@ import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcut
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
-import { isEventFormDirty, serializeEventFormState } from "../utils/eventFormState";
+import {
+  isEventFormDirty,
+  serializeEventFormState,
+  serializeEventFormStateFromEvent,
+} from "../utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -171,16 +175,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     setEditIndex(index);
     prefillFormFromEvent(event);
-    setInitialFormState(
-      serializeEventFormState({
-        type: event.type === "weekly" ? "weekly" : "range",
-        weekday: event.weekday || DEFAULT_WEEKDAY,
-        start: event.start || "",
-        end: event.end || "",
-        title: event.title || "",
-        flags: event.flags || [],
-      }),
-    );
+    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
     setModalMode("edit");
     setShowEventModal(true);
   };
@@ -208,16 +203,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       return;
     }
     prefillFormFromEvent(event);
-    setInitialFormState(
-      serializeEventFormState({
-        type: event.type === "weekly" ? "weekly" : "range",
-        weekday: event.weekday || DEFAULT_WEEKDAY,
-        start: event.start || "",
-        end: event.end || "",
-        title: event.title || "",
-        flags: event.flags || [],
-      }),
-    );
+    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
     setModalMode("view");
   }, [editIndex, events, prefillFormFromEvent]);
 
