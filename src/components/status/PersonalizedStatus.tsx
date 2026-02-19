@@ -54,6 +54,14 @@ export function PersonalizedStatusContent({
   const todayMinuteKey = dayjs().startOf("minute").toISOString();
   const today = useMemo(() => dayjs(todayMinuteKey), [todayMinuteKey]);
 
+  // NOTE: This component intentionally does NOT use useShiftCalculation().
+  // The hook uses a static dayjs() at mount time and simpler shift logic
+  // (currentShift anchored to the calendar date, nextShift anchored to currentDate).
+  // Here we need (1) a live-updating `today` that re-evaluates every minute, and
+  // (2) the night-shift extension logic below (Cases A/B) that anchors both
+  // currentShift and nextShift to shiftDay when the user is still inside the
+  // previous night's shift window. Using the hook would silently break that logic.
+
   // Resolve the shift day anchor used for both shift lookup and next-shift search.
   // During night shift early-morning hours (before nightShiftEnd, e.g. before 07:00),
   // getCurrentShiftDay returns the previous calendar day.
