@@ -268,14 +268,18 @@ describe("CurrentStatus Component", () => {
         isExpired: true,
       };
 
-      // GenericStatusContent calls useCountdown twice per render:
-      //   1st call: countdown (next-shift start time — drives the Next Activity card)
-      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
-      vi.mocked(useCountdownHook.useCountdown)
-        .mockReturnValueOnce(activeCountdown) // render 1: countdown (next shift)
-        .mockReturnValueOnce(activeCountdown) // render 1: shiftEndCountdown (active → shows UI)
-        .mockReturnValueOnce(activeCountdown) // render 2: countdown (next shift)
-        .mockReturnValueOnce(expiredCountdown); // render 2: shiftEndCountdown (expired → hides UI)
+
+      // Track call count to control return values for useCountdown
+      let callCount = 0;
+      vi.mocked(useCountdownHook.useCountdown).mockImplementation(() => {
+        // Render 1: call 0 (next shift), call 1 (shift end)
+        // Render 2: call 2 (next shift), call 3 (shift end)
+        if (callCount === 0 || callCount === 1 || callCount === 2) {
+          return activeCountdown;
+        }
+        return expiredCountdown;
+      callCount++;
+      });
 
       const { rerender } = renderWithProviders(
         <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />,

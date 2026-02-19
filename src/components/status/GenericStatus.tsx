@@ -242,7 +242,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
           </Card.Body>
         </Card>
       </Col>
-      {hasTeams && teamCount > 1 && (
+      {hasTeams && (
         <Col xs={12} className="mt-3">
           <div className="small text-muted text-center">
             <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
