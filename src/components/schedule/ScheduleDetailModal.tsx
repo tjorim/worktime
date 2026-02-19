@@ -5,6 +5,7 @@ import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import clsx from "clsx";
@@ -89,6 +90,53 @@ export function ScheduleDetailModal({
     const eveningShifts = weekSchedule.filter((day) => day.shift.code === "L").length;
     const nightShifts = weekSchedule.filter((day) => day.shift.code === "N").length;
     const dayShifts = weekSchedule.filter((day) => day.shift.code === "D").length;
+    const totalWeeklyHours = weekSchedule.reduce((sum, day) => {
+      if (day.shift.start === null || day.shift.end === null) {
+        return sum;
+      }
+
+      const duration =
+        day.shift.end > day.shift.start
+          ? day.shift.end - day.shift.start
+          : 24 - day.shift.start + day.shift.end;
+
+      return sum + duration;
+    }, 0);
+
+    const shiftDistribution = [
+      {
+        key: "M",
+        label: "Morning Shifts",
+        icon: "bi bi-sun",
+        iconClassName: "text-warning",
+        variant: "warning",
+        count: morningShifts,
+      },
+      {
+        key: "L",
+        label: "Evening Shifts",
+        icon: "bi bi-sunset",
+        iconClassName: "text-info",
+        variant: "info",
+        count: eveningShifts,
+      },
+      {
+        key: "D",
+        label: "Day Shifts",
+        icon: "bi bi-brightness-high",
+        iconClassName: "text-primary",
+        variant: "primary",
+        count: dayShifts,
+      },
+      {
+        key: "N",
+        label: "Night Shifts",
+        icon: "bi bi-moon",
+        iconClassName: "text-primary",
+        variant: "dark",
+        count: nightShifts,
+      },
+    ];
 
     return {
       workingDays,
@@ -97,6 +145,8 @@ export function ScheduleDetailModal({
       eveningShifts,
       nightShifts,
       dayShifts,
+      totalWeeklyHours,
+      shiftDistribution,
     };
   }, [weekSchedule]);
 
@@ -162,7 +212,10 @@ export function ScheduleDetailModal({
           {/* Desktop table view */}
           <div className="d-none d-md-block">
             <div className="table-responsive">
-              <Table className="mb-0 schedule-detail-table">
+              <Table
+                className="mb-0 schedule-detail-table"
+                aria-label={`${hasTeams ? `Team ${teamNumber}` : "Personal"} 7-day schedule table`}
+              >
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -323,14 +376,35 @@ export function ScheduleDetailModal({
                   <i className="bi bi-bar-chart me-2"></i>
                   Weekly Statistics
                 </h6>
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="fw-semibold">Working vs Rest Days</span>
+                    <small className="text-muted">
+                      {stats.workingDays}/7 working • {stats.offDays}/7 rest
+                    </small>
+                  </div>
+                  <ProgressBar>
+                    <ProgressBar
+                      now={(stats.workingDays / 7) * 100}
+                      variant="success"
+                      key="working"
+                      label={`${stats.workingDays} working`}
+                    />
+                    <ProgressBar
+                      now={(stats.offDays / 7) * 100}
+                      variant="secondary"
+                      key="rest"
+                      label={`${stats.offDays} rest`}
+                    />
+                  </ProgressBar>
+                </div>
                 <ListGroup variant="flush">
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>Working Days</span>
-                    <Badge bg="success">{stats.workingDays}/7</Badge>
-                  </ListGroup.Item>
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>Rest Days</span>
-                    <Badge bg="secondary">{stats.offDays}/7</Badge>
+                    <span>
+                      <i className="bi bi-clock me-1" aria-hidden="true"></i>
+                      Total Weekly Hours
+                    </span>
+                    <Badge bg="primary">{stats.totalWeeklyHours.toFixed(1)}h</Badge>
                   </ListGroup.Item>
                 </ListGroup>
               </Card.Body>
@@ -343,35 +417,35 @@ export function ScheduleDetailModal({
                   <i className="bi bi-pie-chart me-2"></i>
                   Shift Distribution
                 </h6>
+                <ProgressBar className="mb-3" aria-label="Shift distribution over the next 7 days">
+                  {stats.shiftDistribution
+                    .filter((item) => item.count > 0)
+                    .map((item) => (
+                      <ProgressBar
+                        key={item.key}
+                        now={(item.count / 7) * 100}
+                        variant={item.variant}
+                        label={
+                          item.count >= 2 ? `${Math.round((item.count / 7) * 100)}%` : undefined
+                        }
+                      />
+                    ))}
+                </ProgressBar>
                 <ListGroup variant="flush">
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>
-                      <i className="bi bi-sun me-1 text-warning"></i>
-                      Morning Shifts
-                    </span>
-                    <Badge className="bg-warning">{stats.morningShifts}</Badge>
-                  </ListGroup.Item>
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>
-                      <i className="bi bi-sunset me-1 text-info"></i>
-                      Evening Shifts
-                    </span>
-                    <Badge bg="info">{stats.eveningShifts}</Badge>
-                  </ListGroup.Item>
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>
-                      <i className="bi bi-brightness-high me-1"></i>
-                      Day Shifts
-                    </span>
-                    <Badge bg="secondary">{stats.dayShifts}</Badge>
-                  </ListGroup.Item>
-                  <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
-                    <span>
-                      <i className="bi bi-moon me-1 text-primary"></i>
-                      Night Shifts
-                    </span>
-                    <Badge bg="primary">{stats.nightShifts}</Badge>
-                  </ListGroup.Item>
+                  {stats.shiftDistribution.map((item) => (
+                    <ListGroup.Item
+                      key={item.key}
+                      className="px-0 py-2 d-flex justify-content-between"
+                    >
+                      <span>
+                        <i className={clsx(item.icon, "me-1", item.iconClassName)}></i>
+                        {item.label}
+                      </span>
+                      <Badge bg={item.variant}>
+                        {item.count}/7 ({Math.round((item.count / 7) * 100)}%)
+                      </Badge>
+                    </ListGroup.Item>
+                  ))}
                 </ListGroup>
               </Card.Body>
             </Card>

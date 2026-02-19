@@ -54,6 +54,18 @@ describe("ScheduleDetailModal", () => {
     expect(screen.getByText("Schedule Details")).toBeInTheDocument();
   });
 
+  it("shows enhanced analytics and accessible table metadata", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    expect(screen.getByLabelText("Personal 7-day schedule table")).toBeInTheDocument();
+    expect(screen.getByText("Working vs Rest Days")).toBeInTheDocument();
+    expect(screen.getByText("Total Weekly Hours")).toBeInTheDocument();
+    expect(screen.getByText(/40\.0h/)).toBeInTheDocument();
+    expect(screen.getByText(/5\/7 \(71%\)/)).toBeInTheDocument();
+  });
+
   it("throws an error when team number is out of range", () => {
     expect(() =>
       renderWithSettings(
