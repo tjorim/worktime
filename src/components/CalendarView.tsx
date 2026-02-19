@@ -20,6 +20,7 @@ import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
+import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import {
   TYPE_FLAG_OPTIONS,
@@ -367,27 +368,33 @@ export function CalendarView({
         </Card.Header>
         <Card.Body>
           {!getShiftForDate ? (
-            <div className="text-center py-5">
-              <div className="mb-4">
-                <i className="bi bi-calendar3 fs-1 text-muted mb-3 d-inline-block"></i>
-              </div>
-              <h4>Welcome to Your Working Calendar!</h4>
-              <p className="text-muted mb-4">
-                This calendar shows your working schedule with shift patterns
-                {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one place.
-              </p>
-              <p className="text-muted mb-3">
-                {!scheduleType
-                  ? "To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings."
-                  : "To see your personalized calendar, please select your team in Settings."}
-              </p>
+            <div className="text-center">
+              <EmptyState
+                icon="bi-calendar3"
+                title="Welcome to Your Working Calendar!"
+                iconSize="2.5rem"
+                description={
+                  <>
+                    <span>
+                      This calendar shows your working schedule with shift patterns
+                      {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one
+                      place.
+                    </span>
+                    <span className="d-block mt-2">
+                      {!scheduleType
+                        ? "To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings."
+                        : "To see your personalized calendar, please select your team in Settings."}
+                    </span>
+                  </>
+                }
+              />
               <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-              <p className="text-muted mt-4 mb-3">
+              <p className="text-muted mt-4 mb-3 small">
                 You can still explore the Today and Week schedule views before making a selection.
               </p>
               {onOpenScheduleTab && (
                 <div>
-                  <Button variant="outline-secondary" onClick={onOpenScheduleTab}>
+                  <Button size="sm" variant="outline-secondary" onClick={onOpenScheduleTab}>
                     <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
                     View Schedule
                   </Button>
