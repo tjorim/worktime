@@ -32,12 +32,15 @@ export function useLiveShiftStatus(myTeam: number, scheduleType: ScheduleOption)
       shiftDayShift.isWorking && isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
 
     if (isInNightShiftExtension) {
-      const nightShiftCode = `${formatYYWWD(shiftDay)}${shiftDayShift.code}`;
+      const shiftDayCode =
+        shiftDayShift.code === "N"
+          ? `${formatYYWWD(shiftDay)}${shiftDayShift.code}`
+          : getShiftCode(shiftDay, myTeam, scheduleType);
 
       return {
         date: shiftDay,
         shift: shiftDayShift,
-        code: nightShiftCode,
+        code: shiftDayCode,
         teamNumber: myTeam,
       };
     }
