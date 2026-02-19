@@ -242,6 +242,7 @@ describe("CurrentStatus Component", () => {
     });
 
     it("should show team summary badge in generic status", () => {
+      // The default mock sets up exactly 2 teams: team 1 (working) + team 2 (off)
       renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("1 working, 1 off")).toBeInTheDocument();
@@ -267,11 +268,14 @@ describe("CurrentStatus Component", () => {
         isExpired: true,
       };
 
+      // GenericStatusContent calls useCountdown twice per render:
+      //   1st call: countdown (next-shift start time — drives the Next Activity card)
+      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
       vi.mocked(useCountdownHook.useCountdown)
-        .mockReturnValueOnce(activeCountdown)
-        .mockReturnValueOnce(activeCountdown)
-        .mockReturnValueOnce(activeCountdown)
-        .mockReturnValueOnce(expiredCountdown);
+        .mockReturnValueOnce(activeCountdown) // render 1: countdown (next shift)
+        .mockReturnValueOnce(activeCountdown) // render 1: shiftEndCountdown (active → shows UI)
+        .mockReturnValueOnce(activeCountdown) // render 2: countdown (next shift)
+        .mockReturnValueOnce(expiredCountdown); // render 2: shiftEndCountdown (expired → hides UI)
 
       const { rerender } = renderWithProviders(
         <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />,
@@ -279,7 +283,7 @@ describe("CurrentStatus Component", () => {
 
       expect(screen.getByText(/^Ends in/)).toBeInTheDocument();
       expect(
-        screen.getByLabelText(/Shift progress with \d+ hours and \d+ minutes remaining/),
+        screen.getByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
       ).toBeInTheDocument();
 
       rerender(
@@ -292,7 +296,7 @@ describe("CurrentStatus Component", () => {
 
       expect(screen.queryByText(/^Ends in/)).not.toBeInTheDocument();
       expect(
-        screen.queryByLabelText(/Shift progress with \d+ hours and \d+ minutes remaining/),
+        screen.queryByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
       ).not.toBeInTheDocument();
     });
 

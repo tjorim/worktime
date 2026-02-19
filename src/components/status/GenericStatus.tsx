@@ -92,7 +92,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
       workingTeams,
       offTeams: allTeamsToday.length - workingTeams,
     };
-  }, [hasTeams, scheduleType, teamCount, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+  }, [hasTeams, scheduleType, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   const currentShiftStartTime = useMemo(() => {
     if (!currentWorkingTeam || currentWorkingTeam.shift.start == null) return null;
@@ -116,7 +116,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
   const shiftEndCountdown = useCountdown(currentShiftEndTime);
 
   const shiftProgress = useMemo(() => {
-    if (!currentShiftStartTime || !currentShiftEndTime || !currentWorkingTeam) return null;
+    if (!currentShiftStartTime || !currentShiftEndTime) return null;
 
     const totalSeconds = currentShiftEndTime.diff(currentShiftStartTime, "second");
     if (totalSeconds <= 0) return null;
@@ -130,7 +130,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
       remainingHours: Math.floor(remainingSeconds / 3600),
       remainingMinutes: Math.floor((remainingSeconds % 3600) / 60),
     };
-  }, [currentShiftStartTime, currentShiftEndTime, currentWorkingTeam, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+  }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   return (
     <Row>
@@ -165,26 +165,35 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                     Currently working
                   </div>
                   {shiftEndCountdown && !shiftEndCountdown.isExpired && (
-                    <CountdownBadge
-                      countdown={shiftEndCountdown}
-                      startTime={currentShiftEndTime}
-                      label="Ends in"
-                      variant="warning"
-                    />
-                  )}
-                  {shiftEndCountdown && !shiftEndCountdown.isExpired && shiftProgress && (
-                    <div className="mt-2">
-                      <div className="small text-muted mb-1">
-                        Shift progress: {shiftProgress.remainingHours}h{" "}
-                        {shiftProgress.remainingMinutes}m remaining
-                      </div>
-                      <ProgressBar
-                        now={shiftProgress.percentage}
+                    <>
+                      <CountdownBadge
+                        countdown={shiftEndCountdown}
+                        startTime={currentShiftEndTime}
+                        label="Ends in"
                         variant="warning"
-                        className="progress-thin"
-                        aria-label={`Shift progress with ${shiftProgress.remainingHours} hours and ${shiftProgress.remainingMinutes} minutes remaining`}
                       />
-                    </div>
+                      {shiftProgress && (
+                        <div className="mt-2">
+                          <div className="small text-muted mb-1">
+                            Shift progress:{" "}
+                            {shiftProgress.remainingHours > 0
+                              ? `${shiftProgress.remainingHours}h `
+                              : ""}
+                            {shiftProgress.remainingMinutes}m remaining
+                          </div>
+                          <ProgressBar
+                            now={shiftProgress.percentage}
+                            variant="warning"
+                            className="progress-thin"
+                            aria-label={`Shift progress with ${
+                              shiftProgress.remainingHours > 0
+                                ? `${shiftProgress.remainingHours} hours and `
+                                : ""
+                            }${shiftProgress.remainingMinutes} minutes remaining`}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (
@@ -194,7 +203,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   description="All teams are currently off duty"
                 />
               )}
-              {teamsSummary && teamsSummary.workingTeams > 0 && (
+              {teamsSummary && (
                 <div className="mt-3">
                   <Badge bg="info" text="dark">
                     {teamsSummary.workingTeams} working, {teamsSummary.offTeams} off
