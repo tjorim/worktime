@@ -198,10 +198,10 @@ export function DayCell({
   }, [clearLongPress]);
 
   useEffect(() => {
-    if (hiddenCount === 0) {
+    if (isOverflowExpanded && hiddenCount === 0) {
       setIsOverflowExpanded(false);
     }
-  }, [hiddenCount]);
+  }, [hiddenCount, isOverflowExpanded]);
 
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
@@ -261,14 +261,14 @@ export function DayCell({
   );
 
   const renderEventButton = useCallback(
-    ({ event, index }: DayEvent, idSuffix: "event" | "hidden-event") => {
+    ({ event, index }: DayEvent) => {
       const colorClass = getEventColorClass(event.flags, event.type);
       const label = event.title || getEventTypeLabel(event.flags);
       const symbol = getTimeLocationSymbol(event.flags);
 
       return (
         <button
-          key={`${date.format("YYYY-MM-DD")}-${idSuffix}-${index}`}
+          key={`${date.format("YYYY-MM-DD")}-${index}`}
           type="button"
           className="month-calendar-event"
           onClick={(eventClick) => {
@@ -406,22 +406,26 @@ export function DayCell({
             {shiftBadge.code}
           </div>
         )}
-        {visibleEvents.map((dayEvent) => renderEventButton(dayEvent, "event"))}
+        {visibleEvents.map((dayEvent) => renderEventButton(dayEvent))}
         {hiddenCount > 0 && (
           <>
             <button
               type="button"
-              className="month-calendar-event-overflow month-calendar-event-overflow-btn text-muted"
+              className="month-calendar-event-overflow month-calendar-event-overflow-btn"
               onClick={(eventClick) => {
                 eventClick.stopPropagation();
                 setIsOverflowExpanded((current) => !current);
               }}
               aria-expanded={isOverflowExpanded}
-              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more events`}
+              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more ${hiddenCount === 1 ? "event" : "events"}`}
             >
-              {isOverflowExpanded ? "Show less" : `+${hiddenCount} more`}
+              {isOverflowExpanded ? `-${hiddenCount} less` : `+${hiddenCount} more`}
             </button>
-            {isOverflowExpanded && hiddenEvents.map((dayEvent) => renderEventButton(dayEvent, "hidden-event"))}
+            {isOverflowExpanded && (
+              <div className="month-calendar-overflow-list">
+                {hiddenEvents.map((dayEvent) => renderEventButton(dayEvent))}
+              </div>
+            )}
           </>
         )}
       </div>
