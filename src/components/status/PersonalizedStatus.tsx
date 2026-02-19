@@ -9,20 +9,8 @@ import type { ScheduleOption } from "../../data/rosters";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
-import { dayjs, setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
-import type {
-  UpcomingShiftResult,
-  OffDayProgress,
-  ShiftResult,
-} from "../../utils/shiftCalculations";
-import {
-  calculateShift,
-  getCurrentShiftDay,
-  getNextShift,
-  getOffDayProgress,
-  getShiftCode,
-  isCurrentlyWorking,
-} from "../../utils/shiftCalculations";
+import { useLiveShiftStatus } from "../../hooks/useLiveShiftStatus";
+import { setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
@@ -50,75 +38,10 @@ export function PersonalizedStatusContent({
 
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
-
-  const todayMinuteKey = dayjs().startOf("minute").toISOString();
-  const today = useMemo(() => dayjs(todayMinuteKey), [todayMinuteKey]);
-
-  // NOTE: This component intentionally does NOT use useShiftCalculation().
-  // The hook uses a static dayjs() at mount time and simpler shift logic
-  // (currentShift anchored to the calendar date, nextShift anchored to currentDate).
-  // Here we need (1) a live-updating `today` that re-evaluates every minute, and
-  // (2) the night-shift extension logic below (Cases A/B) that anchors both
-  // currentShift and nextShift to shiftDay when the user is still inside the
-  // previous night's shift window. Using the hook would silently break that logic.
-
-  // Resolve the shift day anchor used for both shift lookup and next-shift search.
-  // During night shift early-morning hours (before nightShiftEnd, e.g. before 07:00),
-  // getCurrentShiftDay returns the previous calendar day.
-  const shiftDay = useMemo(() => getCurrentShiftDay(today, scheduleType), [today, scheduleType]);
-
-  // Determine the current shift, handling two distinct cases:
-  //
-  // Case A – Night-shift extension (e.g. T2 at 06:22 still in the 23:00–07:00 shift):
-  //   shiftDay = yesterday, shiftDayShift = Night, isCurrentlyWorking = true
-  //   → use shiftDay as the date so start/end times anchor to the correct night.
-  //
-  // Case B – Shift not yet started or regular daytime (e.g. T5 at 06:22, Morning starts 07:00):
-  //   shiftDay = yesterday, shiftDayShift = Off, isCurrentlyWorking = false
-  //   → fall back to the calendar date so the upcoming shift is displayed correctly.
-  //
-  // Also covers 9-5 schedules (no night shift ⇒ shiftDay always equals today).
-  const currentShift = useMemo((): ShiftResult => {
-    const shiftDayShift = calculateShift(shiftDay, myTeam, scheduleType);
-    const isInNightShiftExtension =
-      shiftDayShift.isWorking && isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
-
-    if (isInNightShiftExtension) {
-      return {
-        date: shiftDay,
-        shift: shiftDayShift,
-        // Use shiftDay (not today) so the code is derived from the same date as the
-        // shift object. Using today would call calculateShift(today) internally, which
-        // returns Off on the calendar day after the last night in a series — producing
-        // a mismatched code like "…O" while the shift name still shows "Night".
-        code: getShiftCode(shiftDay, myTeam, scheduleType),
-        teamNumber: myTeam,
-      };
-    }
-
-    const shift = calculateShift(today, myTeam, scheduleType);
-    return {
-      date: today,
-      shift,
-      code: getShiftCode(today, myTeam, scheduleType),
-      teamNumber: myTeam,
-    };
-  }, [myTeam, shiftDay, today, scheduleType]);
-
-  // Anchor next-shift search from shiftDay (not calendar day) so that:
-  // - Night shift extension: search starts from yesterday → finds any remaining
-  //   consecutive night shift or the first post-night working day.
-  // - Pre-shift (e.g. 06:22, Morning at 07:00): search starts from yesterday →
-  //   finds today's upcoming shift and shows "Starts in Xm".
-  const nextShift = useMemo((): UpcomingShiftResult | null => {
-    return getNextShift(shiftDay, myTeam, scheduleType);
-  }, [myTeam, shiftDay, scheduleType]);
-
-  // Calculate off-day progress when team is off
-  // getOffDayProgress calls getCurrentShiftDay internally, so passing today is fine.
-  const offDayProgress = useMemo((): OffDayProgress | null => {
-    return getOffDayProgress(today, myTeam, scheduleType);
-  }, [myTeam, today, scheduleType]);
+  const { today, currentShift, nextShift, offDayProgress } = useLiveShiftStatus(
+    myTeam,
+    scheduleType,
+  );
 
   // Calculate next shift start time for countdown
   const nextShiftStartTime = useMemo(() => {
@@ -152,7 +75,7 @@ export function PersonalizedStatusContent({
     const elapsedHours = Math.floor(clampedElapsedSeconds / 3600);
     const totalHours = Math.round(totalSeconds / 3600);
     return { percentage, elapsedHours, totalHours };
-  }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentShiftStartTime, currentShiftEndTime, today]);
 
   const countdown = useCountdown(nextShiftStartTime);
   const shiftStartCountdown = useCountdown(currentShiftStartTime);
