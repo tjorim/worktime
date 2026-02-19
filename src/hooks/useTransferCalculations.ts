@@ -167,7 +167,8 @@ export function useTransferCalculations({
       return { transfers: [], hasMoreTransfers: false, totalTransfers: 0 };
     }
 
-    const foundTransfers: TransferInfo[] = [];
+    const visibleTransfers: TransferInfo[] = [];
+    let totalTransfers = 0;
 
     // Determine date range
     const startDate = customStartDate ? dayjs(customStartDate) : dayjs();
@@ -272,22 +273,28 @@ export function useTransferCalculations({
           : null,
       ];
 
-      // Add valid transfers
+      // Count all transfers for summary metrics while only storing what we need to display.
+      // This keeps totalTransfers accurate without allocating a full-year transfer array.
       transfers.forEach((transfer) => {
-        if (transfer) {
-          foundTransfers.push(transfer);
+        if (!transfer) {
+          return;
+        }
+
+        totalTransfers += 1;
+
+        if (visibleTransfers.length < limit) {
+          visibleTransfers.push(transfer);
         }
       });
     }
 
-    // Sort transfers by date
-    foundTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
+    // Keep visible rows sorted while avoiding sorting a full transfer list.
+    visibleTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
 
-    const totalTransfers = foundTransfers.length;
     const hasMoreTransfers = totalTransfers > limit;
 
     return {
-      transfers: foundTransfers.slice(0, limit),
+      transfers: visibleTransfers,
       hasMoreTransfers,
       totalTransfers,
     };
