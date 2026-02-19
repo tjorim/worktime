@@ -136,7 +136,7 @@ export function ScheduleDetailModal({
         variant: "dark",
         count: nightShifts,
       },
-    ];
+    ].filter((item) => Object.keys(scheduleConfig.shiftConfig.shiftTimes).includes(item.key));
 
     return {
       workingDays,
@@ -148,7 +148,7 @@ export function ScheduleDetailModal({
       totalWeeklyHours,
       shiftDistribution,
     };
-  }, [weekSchedule]);
+  }, [weekSchedule, scheduleConfig.shiftConfig.shiftTimes]);
 
   // Find current status (weekSchedule always has 7 elements)
   const currentStatus = weekSchedule[0]!;
