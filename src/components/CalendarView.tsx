@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
-import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
-import { isValidDate } from "../lib/hday/validation";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -22,6 +21,7 @@ import {
   serializeEventFormState,
   serializeEventFormStateFromEvent,
 } from "../utils/eventFormState";
+import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
@@ -92,17 +92,26 @@ export function CalendarView({
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
-  // Event form state
-  const [eventType, setEventType] = useState<"range" | "weekly">("range");
-  const [eventWeekday, setEventWeekday] = useState(DEFAULT_WEEKDAY);
-  const [eventStart, setEventStart] = useState("");
-  const [eventEnd, setEventEnd] = useState("");
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventFlags, setEventFlags] = useState<EventFlag[]>([]);
-
-  // Validation errors
-  const [startDateError, setStartDateError] = useState("");
-  const [endDateError, setEndDateError] = useState("");
+  const {
+    eventType,
+    eventWeekday,
+    eventStart,
+    eventEnd,
+    eventTitle,
+    eventFlags,
+    startDateError,
+    endDateError,
+    setEventType,
+    setEventWeekday,
+    setEventStart,
+    setEventEnd,
+    setEventTitle,
+    resetForm,
+    validateForm,
+    prefillFormFromEvent,
+    handleTypeFlagChange,
+    handleTimeFlagChange,
+  } = useEventForm();
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -119,35 +128,6 @@ export function CalendarView({
       setShowDeleteConfirm(false);
     }
   }, [timeOffEnabled]);
-
-  const resetForm = () => {
-    setEventType("range");
-    setEventWeekday(DEFAULT_WEEKDAY);
-    setEventStart("");
-    setEventEnd("");
-    setEventTitle("");
-    setEventFlags([]);
-    setStartDateError("");
-    setEndDateError("");
-  };
-
-  const prefillFormFromEvent = (event: HdayEvent) => {
-    if (event.type === "range") {
-      setEventType("range");
-      setEventStart(event.start || "");
-      setEventEnd(event.end || "");
-      setEventWeekday(DEFAULT_WEEKDAY);
-    } else if (event.type === "weekly") {
-      setEventType("weekly");
-      setEventWeekday(event.weekday || DEFAULT_WEEKDAY);
-      setEventStart("");
-      setEventEnd("");
-    }
-    setEventTitle(event.title || "");
-    setEventFlags(event.flags || []);
-    setStartDateError("");
-    setEndDateError("");
-  };
 
   const isFormDirty = isEventFormDirty(
     buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
@@ -233,58 +213,9 @@ export function CalendarView({
     setShowResetConfirm(false);
   };
 
-  const handleTypeFlagChange = (flag: TypeFlag | "none") => {
-    if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f)));
-    } else {
-      setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TYPE_FLAGS_AS_EVENT_FLAGS.includes(f));
-        return [...filtered, flag];
-      });
-    }
-  };
-
-  const handleTimeFlagChange = (flag: TimeLocationFlag | "none") => {
-    if (flag === "none") {
-      setEventFlags((prev) => prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f)));
-    } else {
-      setEventFlags((prev) => {
-        const filtered = prev.filter((f) => !TIME_LOCATION_FLAGS_AS_EVENT_FLAGS.includes(f));
-        return [...filtered, flag];
-      });
-    }
-  };
-
   const handleSubmitEvent = () => {
     if (!timeOffEnabled) return;
-    // Validate dates with same logic as TimeOffView
-    let valid = true;
-
-    if (eventType === "range") {
-      // Validate start date
-      if (!eventStart) {
-        setStartDateError("Start date is required");
-        valid = false;
-      } else if (!isValidDate(eventStart)) {
-        setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else {
-        setStartDateError("");
-      }
-
-      // Validate end date
-      if (eventEnd && !isValidDate(eventEnd)) {
-        setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else if (eventEnd && eventStart && dayjs(eventEnd).isBefore(dayjs(eventStart))) {
-        setEndDateError("End date must be after start date");
-        valid = false;
-      } else {
-        setEndDateError("");
-      }
-    }
-
-    if (!valid) {
+    if (!validateForm()) {
       toast.showError("Please fix validation errors before saving");
       return;
     }
