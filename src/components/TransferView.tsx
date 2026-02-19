@@ -65,7 +65,6 @@ export function TransferView({
     otherTeam,
     setOtherTeam,
     hasMoreTransfers,
-    totalTransfers,
     validatedMyTeam,
   } = useTransferCalculations({
     myTeam: inputMyTeam,
@@ -121,7 +120,21 @@ export function TransferView({
     }
   }, [useCustomRange]);
 
-  const today = dayjs();
+  const today = useMemo(() => dayjs(), []);
+
+  const transferDateRange = useMemo(() => {
+    if (!transferStats?.earliest || !transferStats?.latest) {
+      return "-";
+    }
+    if (transferStats.earliest.isSame(transferStats.latest, "day")) {
+      return formatDisplayDate(transferStats.earliest.toDate());
+    }
+    return (
+      formatDisplayDate(transferStats.earliest.toDate()) +
+      " to " +
+      formatDisplayDate(transferStats.latest.toDate())
+    );
+  }, [transferStats]);
 
   return (
     <Card>
@@ -286,23 +299,12 @@ export function TransferView({
                           <div className="text-muted small text-uppercase mb-1">
                             Displayed Date Range
                           </div>
-                          <div className="fw-semibold">
-                            {(() => {
-                              if (!transferStats.earliest || !transferStats.latest) {
-                                return "-";
-                              }
-
-                              if (transferStats.earliest.isSame(transferStats.latest, "day")) {
-                                return formatDisplayDate(transferStats.earliest.toDate());
-                              }
-
-                              return (
-                                formatDisplayDate(transferStats.earliest.toDate()) +
-                                " to " +
-                                formatDisplayDate(transferStats.latest.toDate())
-                              );
-                            })()}
-                          </div>
+                          <div className="fw-semibold">{transferDateRange}</div>
+                          {hasMoreTransfers && (
+                            <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                              of visible transfers only
+                            </div>
+                          )}
                         </Card.Body>
                       </Card>
                     </div>
@@ -419,8 +421,8 @@ export function TransferView({
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">
-                    Showing {transfers.length} of {totalTransfers}{" "}
-                    {totalTransfers === 1 ? "transfer" : "transfers"}
+                    Showing {transfers.length} {transfers.length === 1 ? "transfer" : "transfers"}
+                    {hasMoreTransfers && " (more available)"}
                   </small>
                   {hasMoreTransfers && (
                     <Button

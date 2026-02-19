@@ -108,7 +108,6 @@ let mockConsoleWarn: ReturnType<typeof vi.spyOn>;
 const defaultHookReturn = {
   transfers: [],
   hasMoreTransfers: false,
-  totalTransfers: 0,
   availableOtherTeams: [2, 3, 4, 5],
   otherTeam: 2,
   setOtherTeam: vi.fn(),
@@ -296,7 +295,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover",
+          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
       ];
 
@@ -380,7 +379,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover",
+          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
         {
           date: dayjs("2025-01-16"),
@@ -388,7 +387,7 @@ describe("TransferView", () => {
           toTeam: 1,
           fromShiftType: "L" as const,
           toShiftType: "N" as const,
-          type: "takeover",
+          type: "takeover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
       ];
 
@@ -426,7 +425,7 @@ describe("TransferView", () => {
         toTeam: 2,
         fromShiftType: "M" as const,
         toShiftType: "L" as const,
-        type: "handover",
+        type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
       }));
 
       mockUseTransferCalculations.mockReturnValue({
@@ -452,7 +451,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover",
+          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
         {
           date: dayjs("2025-01-16"),
@@ -460,14 +459,13 @@ describe("TransferView", () => {
           toTeam: 1,
           fromShiftType: "L" as const,
           toShiftType: "N" as const,
-          type: "takeover",
+          type: "takeover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
       ];
 
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         transfers: mockTransfers,
-        totalTransfers: 47,
         hasMoreTransfers: true,
       });
 
@@ -476,7 +474,7 @@ describe("TransferView", () => {
       expect(screen.getByText("Handovers")).toBeInTheDocument();
       expect(screen.getByText("Takeovers")).toBeInTheDocument();
       expect(screen.getByText(/Displayed Date Range/)).toBeInTheDocument();
-      expect(screen.getByText(/Showing 2 of 47 transfers/)).toBeInTheDocument();
+      expect(screen.getByText(/Showing 2 transfers \(more available\)/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Load More Transfers/i })).toBeInTheDocument();
     });
 
@@ -488,14 +486,13 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover",
+          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
         },
       ];
 
       mockUseTransferCalculations.mockReturnValue({
         ...defaultHookReturn,
         transfers: mockTransfers,
-        totalTransfers: 1,
       });
 
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);

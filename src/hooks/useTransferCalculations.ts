@@ -26,7 +26,6 @@ interface UseTransferCalculationsProps {
 interface UseTransferCalculationsReturn {
   transfers: TransferInfo[];
   hasMoreTransfers: boolean;
-  totalTransfers: number;
   availableOtherTeams: number[]; // Teams available to compare with (excludes user's team)
   otherTeam: number; // Currently selected other team
   setOtherTeam: (team: number) => void;
@@ -80,7 +79,7 @@ function checkTransfer(
  * @param customEndDate - Optional end date string parseable by dayjs; when provided the scan is constrained to this inclusive end date
  * @returns An object containing:
  *  - `transfers`: an array of transfer records sorted by date (each record contains `date`, `fromTeam`, `toTeam`, `fromShiftType`, `toShiftType`, and `type`)
- *  - `hasMoreTransfers`: `true` if there are likely additional transfers beyond the returned set, `false` otherwise
+ *  - `hasMoreTransfers`: `true` when the limit was reached and the date range is not fully exhausted, `false` otherwise
  *  - `availableOtherTeams`: list of team ids available for comparison (excludes `myTeam`)
  *  - `otherTeam`: the currently selected comparison team id
  *  - `setOtherTeam`: setter function to change the selected comparison team
@@ -159,20 +158,20 @@ export function useTransferCalculations({
   const transfersResult = useMemo(() => {
     // Early return if no valid team or no other teams to compare with
     if (!validatedMyTeam || availableOtherTeams.length === 0) {
-      return { transfers: [], hasMoreTransfers: false, totalTransfers: 0 };
+      return { transfers: [], hasMoreTransfers: false };
     }
 
     // Guard against stale otherTeam value during schedule transitions
     if (!availableOtherTeams.includes(otherTeam)) {
-      return { transfers: [], hasMoreTransfers: false, totalTransfers: 0 };
+      return { transfers: [], hasMoreTransfers: false };
     }
 
-    const visibleTransfers: TransferInfo[] = [];
-    let totalTransfers = 0;
+    const foundTransfers: TransferInfo[] = [];
 
     // Determine date range
     const startDate = customStartDate ? dayjs(customStartDate) : dayjs();
     const endDate = customEndDate ? dayjs(customEndDate) : null;
+    let lastScannedDate = startDate;
 
     // If we have a date range, scan within it; otherwise scan forward from today
     const maxDaysToScan = endDate ? endDate.diff(startDate, "day") + 1 : 365; // Default to scanning 1 year forward
@@ -184,7 +183,7 @@ export function useTransferCalculations({
       );
     }
 
-    for (let day = 0; day < maxDaysToScan; day++) {
+    for (let day = 0; day < maxDaysToScan && foundTransfers.length < limit; day++) {
       const scanDate = startDate.add(day, "day");
       const nextDate = scanDate.add(1, "day");
 
@@ -273,30 +272,26 @@ export function useTransferCalculations({
           : null,
       ];
 
-      // Count all transfers for summary metrics while only storing what we need to display.
-      // This keeps totalTransfers accurate without allocating a full-year transfer array.
+      // Add valid transfers
       transfers.forEach((transfer) => {
-        if (!transfer) {
-          return;
-        }
-
-        totalTransfers += 1;
-
-        if (visibleTransfers.length < limit) {
-          visibleTransfers.push(transfer);
+        if (transfer) {
+          foundTransfers.push(transfer);
         }
       });
+
+      lastScannedDate = scanDate;
     }
 
-    // Keep visible rows sorted while avoiding sorting a full transfer list.
-    visibleTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
+    // Sort transfers by date
+    foundTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
 
-    const hasMoreTransfers = totalTransfers > limit;
+    // Check if there are more transfers available
+    const hasMoreTransfers =
+      foundTransfers.length === limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
 
     return {
-      transfers: visibleTransfers,
+      transfers: foundTransfers,
       hasMoreTransfers,
-      totalTransfers,
     };
   }, [
     validatedMyTeam,
@@ -311,7 +306,6 @@ export function useTransferCalculations({
   return {
     transfers: transfersResult.transfers,
     hasMoreTransfers: transfersResult.hasMoreTransfers,
-    totalTransfers: transfersResult.totalTransfers,
     availableOtherTeams,
     otherTeam,
     setOtherTeam,
