@@ -181,15 +181,19 @@ export function CalendarView({
     setShowEventModal(true);
   };
 
+  const loadEventIntoForm = (event: HdayEvent, mode: "view" | "edit") => {
+    prefillFormFromEvent(event);
+    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+    setModalMode(mode);
+  };
+
   const handleOpenViewModal = (index: number) => {
     if (!timeOffEnabled) return;
     const event = events[index];
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
-    setModalMode("view");
+    loadEventIntoForm(event, "view");
     setShowEventModal(true);
   };
 
@@ -199,9 +203,7 @@ export function CalendarView({
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
-    setModalMode("edit");
+    loadEventIntoForm(event, "edit");
     setShowEventModal(true);
   };
 
@@ -226,9 +228,7 @@ export function CalendarView({
     const event = events[editIndex];
     if (!event) return;
 
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
-    setModalMode("view");
+    loadEventIntoForm(event, "view");
   };
 
   const handleResetForm = () => {

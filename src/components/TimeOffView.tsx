@@ -169,14 +169,21 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setShowEventModal(true);
   }, [resetForm]);
 
+  const loadEventIntoForm = useCallback(
+    (event: HdayEvent, mode: "view" | "edit") => {
+      prefillFormFromEvent(event);
+      setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+      setModalMode(mode);
+    },
+    [prefillFormFromEvent],
+  );
+
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
-    setModalMode("edit");
+    loadEventIntoForm(event, "edit");
     setShowEventModal(true);
   };
 
@@ -202,10 +209,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     if (!event) {
       return;
     }
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
-    setModalMode("view");
-  }, [editIndex, events, prefillFormFromEvent]);
+    loadEventIntoForm(event, "view");
+  }, [editIndex, events, loadEventIntoForm]);
 
   const handleResetForm = () => {
     if (isFormDirty) {
