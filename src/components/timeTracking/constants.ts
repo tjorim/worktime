@@ -194,7 +194,3 @@ export const TIME_TRACKING_STORAGE_KEYS = {
   labels: "worktime_time_tracking_labels",
 };
 
-export const TIME_TRACKING_LIVE_TIME_PRECISION = {
-  dailyLog: "second",
-  weeklySummary: "minute",
-} as const;

@@ -8,7 +8,6 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import {
   buildLabelNameMap,
-  TIME_TRACKING_LIVE_TIME_PRECISION,
   useDefaultLabelColor,
   type TimeTrackingLabel,
 } from "./constants";
@@ -58,9 +57,7 @@ export function TimeTrackingWeeklyView({
   weeklyTargetHours,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
-  const liveTime = useLiveTime({
-    precision: TIME_TRACKING_LIVE_TIME_PRECISION.weeklySummary,
-  });
+  const liveTime = useLiveTime({ precision: "minute" });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
   const isWeeklyCurrent = weekStart.isSame(liveTime.startOf("isoWeek"), "day");
