@@ -247,6 +247,55 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("1 working, 1 off")).toBeInTheDocument();
     });
 
+    it("should hide generic shift countdown and progress after countdown expires", () => {
+      const activeCountdown = {
+        days: 0,
+        hours: 1,
+        minutes: 15,
+        seconds: 0,
+        totalSeconds: 4500,
+        formatted: "1h 15m",
+        isExpired: false,
+      };
+      const expiredCountdown = {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        totalSeconds: 0,
+        formatted: "",
+        isExpired: true,
+      };
+
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce(activeCountdown)
+        .mockReturnValueOnce(activeCountdown)
+        .mockReturnValueOnce(activeCountdown)
+        .mockReturnValueOnce(expiredCountdown);
+
+      const { rerender } = renderWithProviders(
+        <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />,
+      );
+
+      expect(screen.getByText(/^Ends in/)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/Shift progress with \d+ hours and \d+ minutes remaining/),
+      ).toBeInTheDocument();
+
+      rerender(
+        <ToastProvider>
+          <SettingsProvider>
+            <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />
+          </SettingsProvider>
+        </ToastProvider>,
+      );
+
+      expect(screen.queryByText(/^Ends in/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText(/Shift progress with \d+ hours and \d+ minutes remaining/),
+      ).not.toBeInTheDocument();
+    });
+
     it("should show current shift information when team is selected", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 

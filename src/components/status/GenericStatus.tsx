@@ -172,7 +172,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                       variant="warning"
                     />
                   )}
-                  {shiftProgress && (
+                  {shiftEndCountdown && !shiftEndCountdown.isExpired && shiftProgress && (
                     <div className="mt-2">
                       <div className="small text-muted mb-1">
                         Shift progress: {shiftProgress.remainingHours}h{" "}
