@@ -67,8 +67,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Alert variant="danger">
                 <Alert.Heading>Application Error</Alert.Heading>
                 <p>
-                  We're sorry, but something unexpected happened. Please try refreshing the page or
-                  contact support if the problem persists.
+                  We're sorry, but something unexpected happened. Try "Try Again" first, then
+                  use "Reload Page" if the error continues. Contact support if the problem
+                  persists.
                 </p>
                 <hr />
                 <div className="d-flex gap-2">
@@ -79,9 +80,6 @@ export class ErrorBoundary extends Component<Props, State> {
                     Reload Page
                   </Button>
                 </div>
-                <p className="text-muted small mb-0 mt-2">
-                  If the error keeps occurring, try reloading the page.
-                </p>
               </Alert>
 
               {import.meta.env.DEV && this.state.error && (
