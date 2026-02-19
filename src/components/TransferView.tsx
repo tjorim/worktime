@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -11,7 +11,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
-import { formatDisplayDate } from "../utils/dateTimeUtils";
+import { dayjs, formatDisplayDate } from "../utils/dateTimeUtils";
 import { getShift } from "../utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
@@ -65,6 +65,7 @@ export function TransferView({
     otherTeam,
     setOtherTeam,
     hasMoreTransfers,
+    totalTransfers,
     validatedMyTeam,
   } = useTransferCalculations({
     myTeam: inputMyTeam,
@@ -93,6 +94,25 @@ export function TransferView({
       initialSetRef.current = true;
     }
   }, [initialOtherTeam, availableOtherTeams, setOtherTeam]);
+
+  const transferStats = useMemo(() => {
+    if (transfers.length === 0) {
+      return null;
+    }
+
+    const handovers = transfers.filter((transfer) => transfer.type === "handover").length;
+    const takeovers = transfers.length - handovers;
+    const sortedByDate = [...transfers].sort((a, b) => a.date.valueOf() - b.date.valueOf());
+    const earliest = sortedByDate[0]?.date;
+    const latest = sortedByDate.at(-1)?.date;
+
+    return {
+      handovers,
+      takeovers,
+      earliest,
+      latest,
+    };
+  }, [transfers]);
 
   // Clear dates when custom range is disabled
   useEffect(() => {
@@ -136,11 +156,11 @@ export function TransferView({
             />
           </div>
         ) : availableOtherTeams.length === 0 ? (
-          <div className="text-center py-4">
-            <i className="bi bi-people text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <h6 className="text-muted">No Other Teams Available</h6>
-            <p className="text-muted mb-0">No other teams available for transfer analysis.</p>
-          </div>
+          <EmptyState
+            icon="bi-people"
+            title="No Other Teams Available"
+            description="No other teams available for transfer analysis."
+          />
         ) : (
           <>
             {/* Controls */}
@@ -241,12 +261,40 @@ export function TransferView({
               />
             ) : (
               <>
-                <div className="d-flex justify-content-end mb-2">
-                  <small className="text-muted">
-                    Showing {transfers.length} {transfers.length === 1 ? "transfer" : "transfers"}
-                    {hasMoreTransfers && " (more available)"}
-                  </small>
-                </div>
+                {transferStats && (
+                  <div className="row g-3 mb-3">
+                    <div className="col-sm-6 col-lg-3">
+                      <Card className="text-center h-100">
+                        <Card.Body>
+                          <div className="text-muted small text-uppercase mb-1">Handovers</div>
+                          <div className="h4 mb-0">{transferStats.handovers}</div>
+                        </Card.Body>
+                      </Card>
+                    </div>
+                    <div className="col-sm-6 col-lg-3">
+                      <Card className="text-center h-100">
+                        <Card.Body>
+                          <div className="text-muted small text-uppercase mb-1">Takeovers</div>
+                          <div className="h4 mb-0">{transferStats.takeovers}</div>
+                        </Card.Body>
+                      </Card>
+                    </div>
+                    <div className="col-lg-6">
+                      <Card className="h-100">
+                        <Card.Body className="d-flex flex-column justify-content-center">
+                          <div className="text-muted small text-uppercase mb-1">
+                            Displayed Date Range
+                          </div>
+                          <div className="fw-semibold">
+                            {transferStats.earliest && transferStats.latest
+                              ? `${formatDisplayDate(transferStats.earliest.toDate())} to ${formatDisplayDate(transferStats.latest.toDate())}`
+                              : "-"}
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </div>
+                  </div>
+                )}
 
                 <div className="table-responsive">
                   <Table hover className="align-middle mb-0">
@@ -262,9 +310,12 @@ export function TransferView({
                       {transfers.map((transfer) => {
                         const fromShift = getShift(transfer.fromShiftType, scheduleType);
                         const toShift = getShift(transfer.toShiftType, scheduleType);
+                        const isPastTransfer = transfer.date.isBefore(dayjs(), "day");
+
                         return (
                           <tr
                             key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
+                            className={clsx({ "opacity-75": isPastTransfer })}
                           >
                             <td>
                               <div className="d-flex align-items-center">
@@ -277,6 +328,11 @@ export function TransferView({
                                   aria-hidden="true"
                                 ></i>
                                 <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
+                                {isPastTransfer && (
+                                  <Badge bg="secondary" className="ms-2">
+                                    Past
+                                  </Badge>
+                                )}
                               </div>
                             </td>
                             <td>
@@ -348,8 +404,12 @@ export function TransferView({
                   </Table>
                 </div>
 
-                {hasMoreTransfers && (
-                  <div className="text-center mt-3">
+                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
+                  <small className="text-muted">
+                    Showing {transfers.length} of {totalTransfers}{" "}
+                    {totalTransfers === 1 ? "transfer" : "transfers"}
+                  </small>
+                  {hasMoreTransfers && (
                     <Button
                       variant="outline-primary"
                       size="sm"
@@ -358,8 +418,8 @@ export function TransferView({
                       <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
                       Load More Transfers
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </>
             )}
           </>
