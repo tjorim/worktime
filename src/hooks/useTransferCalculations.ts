@@ -287,7 +287,7 @@ export function useTransferCalculations({
 
     // Check if there are more transfers available
     const hasMoreTransfers =
-      foundTransfers.length === limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
+      foundTransfers.length >= limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
 
     return {
       transfers: foundTransfers,

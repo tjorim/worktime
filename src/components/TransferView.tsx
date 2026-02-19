@@ -120,7 +120,7 @@ export function TransferView({
     }
   }, [useCustomRange]);
 
-  const today = useMemo(() => dayjs(), []);
+  const today = dayjs();
 
   const transferDateRange = useMemo(() => {
     if (!transferStats?.earliest || !transferStats?.latest) {

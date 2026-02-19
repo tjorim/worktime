@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "../../src/components/TransferView";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";
+import { useTransferCalculations, TransferType } from "../../src/hooks/useTransferCalculations";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
@@ -295,7 +295,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "handover" as TransferType,
         },
       ];
 
@@ -379,7 +379,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "handover" as TransferType,
         },
         {
           date: dayjs("2025-01-16"),
@@ -387,7 +387,7 @@ describe("TransferView", () => {
           toTeam: 1,
           fromShiftType: "L" as const,
           toShiftType: "N" as const,
-          type: "takeover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "takeover" as TransferType,
         },
       ];
 
@@ -425,7 +425,7 @@ describe("TransferView", () => {
         toTeam: 2,
         fromShiftType: "M" as const,
         toShiftType: "L" as const,
-        type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
+        type: "handover" as TransferType,
       }));
 
       mockUseTransferCalculations.mockReturnValue({
@@ -451,7 +451,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "handover" as TransferType,
         },
         {
           date: dayjs("2025-01-16"),
@@ -459,7 +459,7 @@ describe("TransferView", () => {
           toTeam: 1,
           fromShiftType: "L" as const,
           toShiftType: "N" as const,
-          type: "takeover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "takeover" as TransferType,
         },
       ];
 
@@ -486,7 +486,7 @@ describe("TransferView", () => {
           toTeam: 2,
           fromShiftType: "M" as const,
           toShiftType: "L" as const,
-          type: "handover" as import("../../src/hooks/useTransferCalculations").TransferType,
+          type: "handover" as TransferType,
         },
       ];
 
@@ -497,7 +497,7 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
-      expect(screen.getAllByText("Wed, Jan 15").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
     });
 
