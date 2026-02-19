@@ -266,6 +266,7 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Saturday
         "O", // Sunday
       ],
+
       notes:
         "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.",
     },
