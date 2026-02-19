@@ -56,11 +56,14 @@ export function useLiveShiftStatus(myTeam: number, scheduleType: ScheduleOption)
     return getOffDayProgress(today, myTeam, scheduleType);
   }, [myTeam, scheduleType, today]);
 
-  return {
-    today,
-    shiftDay,
-    currentShift,
-    nextShift,
-    offDayProgress,
-  };
+  return useMemo(
+    () => ({
+      today,
+      shiftDay,
+      currentShift,
+      nextShift,
+      offDayProgress,
+    }),
+    [today, shiftDay, currentShift, nextShift, offDayProgress],
+  );
 }
