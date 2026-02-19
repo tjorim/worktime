@@ -17,9 +17,11 @@ import type {
 } from "../../utils/shiftCalculations";
 import {
   calculateShift,
+  getCurrentShiftDay,
   getNextShift,
   getOffDayProgress,
   getShiftCode,
+  isCurrentlyWorking,
 } from "../../utils/shiftCalculations";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
@@ -52,8 +54,48 @@ export function PersonalizedStatusContent({
   const todayMinuteKey = dayjs().startOf("minute").toISOString();
   const today = useMemo(() => dayjs(todayMinuteKey), [todayMinuteKey]);
 
-  // Calculate current shift for today
+  // NOTE: This component intentionally does NOT use useShiftCalculation().
+  // The hook uses a static dayjs() at mount time and simpler shift logic
+  // (currentShift anchored to the calendar date, nextShift anchored to currentDate).
+  // Here we need (1) a live-updating `today` that re-evaluates every minute, and
+  // (2) the night-shift extension logic below (Cases A/B) that anchors both
+  // currentShift and nextShift to shiftDay when the user is still inside the
+  // previous night's shift window. Using the hook would silently break that logic.
+
+  // Resolve the shift day anchor used for both shift lookup and next-shift search.
+  // During night shift early-morning hours (before nightShiftEnd, e.g. before 07:00),
+  // getCurrentShiftDay returns the previous calendar day.
+  const shiftDay = useMemo(() => getCurrentShiftDay(today, scheduleType), [today, scheduleType]);
+
+  // Determine the current shift, handling two distinct cases:
+  //
+  // Case A – Night-shift extension (e.g. T2 at 06:22 still in the 23:00–07:00 shift):
+  //   shiftDay = yesterday, shiftDayShift = Night, isCurrentlyWorking = true
+  //   → use shiftDay as the date so start/end times anchor to the correct night.
+  //
+  // Case B – Shift not yet started or regular daytime (e.g. T5 at 06:22, Morning starts 07:00):
+  //   shiftDay = yesterday, shiftDayShift = Off, isCurrentlyWorking = false
+  //   → fall back to the calendar date so the upcoming shift is displayed correctly.
+  //
+  // Also covers 9-5 schedules (no night shift ⇒ shiftDay always equals today).
   const currentShift = useMemo((): ShiftResult => {
+    const shiftDayShift = calculateShift(shiftDay, myTeam, scheduleType);
+    const isInNightShiftExtension =
+      shiftDayShift.isWorking && isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
+
+    if (isInNightShiftExtension) {
+      return {
+        date: shiftDay,
+        shift: shiftDayShift,
+        // Use shiftDay (not today) so the code is derived from the same date as the
+        // shift object. Using today would call calculateShift(today) internally, which
+        // returns Off on the calendar day after the last night in a series — producing
+        // a mismatched code like "…O" while the shift name still shows "Night".
+        code: getShiftCode(shiftDay, myTeam, scheduleType),
+        teamNumber: myTeam,
+      };
+    }
+
     const shift = calculateShift(today, myTeam, scheduleType);
     return {
       date: today,
@@ -61,14 +103,19 @@ export function PersonalizedStatusContent({
       code: getShiftCode(today, myTeam, scheduleType),
       teamNumber: myTeam,
     };
-  }, [myTeam, today, scheduleType]);
+  }, [myTeam, shiftDay, today, scheduleType]);
 
-  // Calculate next shift
+  // Anchor next-shift search from shiftDay (not calendar day) so that:
+  // - Night shift extension: search starts from yesterday → finds any remaining
+  //   consecutive night shift or the first post-night working day.
+  // - Pre-shift (e.g. 06:22, Morning at 07:00): search starts from yesterday →
+  //   finds today's upcoming shift and shows "Starts in Xm".
   const nextShift = useMemo((): UpcomingShiftResult | null => {
-    return getNextShift(today, myTeam, scheduleType);
-  }, [myTeam, today, scheduleType]);
+    return getNextShift(shiftDay, myTeam, scheduleType);
+  }, [myTeam, shiftDay, scheduleType]);
 
   // Calculate off-day progress when team is off
+  // getOffDayProgress calls getCurrentShiftDay internally, so passing today is fine.
   const offDayProgress = useMemo((): OffDayProgress | null => {
     return getOffDayProgress(today, myTeam, scheduleType);
   }, [myTeam, today, scheduleType]);
@@ -108,6 +155,7 @@ export function PersonalizedStatusContent({
   }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const countdown = useCountdown(nextShiftStartTime);
+  const shiftStartCountdown = useCountdown(currentShiftStartTime);
   const shiftEndCountdown = useCountdown(currentShiftEndTime);
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
@@ -121,7 +169,7 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
               <i className="bi bi-tag me-1" aria-hidden="true"></i>
-              Your Team Status
+              Today
             </Card.Title>
             <div className="flex-grow-1">
               {hasTeams && <span className="fw-semibold me-1">Team {myTeam}:</span>}
@@ -150,29 +198,40 @@ export function PersonalizedStatusContent({
               {currentShift.shift.start != null && currentShift.shift.end != null && (
                 <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
               )}
-              {currentShift.shift.isWorking && (
-                <>
+              {currentShift.shift.isWorking &&
+                currentShiftStartTime &&
+                !today.isAfter(currentShiftStartTime) && (
                   <CountdownBadge
-                    countdown={shiftEndCountdown}
-                    startTime={currentShiftEndTime}
-                    label="Ends in"
-                    variant="warning"
+                    countdown={shiftStartCountdown}
+                    startTime={currentShiftStartTime}
                   />
-                  {shiftProgress && (
-                    <div className="mt-2">
-                      <div className="small text-muted mb-1">
-                        Shift Progress: {shiftProgress.elapsedHours}h / {shiftProgress.totalHours}h
+                )}
+              {currentShift.shift.isWorking &&
+                currentShiftStartTime &&
+                today.isAfter(currentShiftStartTime) && (
+                  <>
+                    <CountdownBadge
+                      countdown={shiftEndCountdown}
+                      startTime={currentShiftEndTime}
+                      label="Ends in"
+                      variant="warning"
+                    />
+                    {shiftProgress && (
+                      <div className="mt-2">
+                        <div className="small text-muted mb-1">
+                          Shift Progress: {shiftProgress.elapsedHours}h / {shiftProgress.totalHours}
+                          h
+                        </div>
+                        <ProgressBar
+                          now={shiftProgress.percentage}
+                          variant="warning"
+                          className="progress-thin"
+                          aria-label={`Shift progress: ${shiftProgress.elapsedHours} of ${shiftProgress.totalHours} hours`}
+                        />
                       </div>
-                      <ProgressBar
-                        now={shiftProgress.percentage}
-                        variant="warning"
-                        className="progress-thin"
-                        aria-label={`Shift progress: ${shiftProgress.elapsedHours} of ${shiftProgress.totalHours} hours`}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                )}
               {!currentShift.shift.isWorking && offDayProgress && (
                 <div className="mt-2">
                   <div className="small text-muted mb-1">
@@ -195,16 +254,23 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
               <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
-              Your Next Shift
+              Up Next
             </Card.Title>
             <div className="text-muted flex-grow-1">
               {nextShift ? (
                 <div>
                   <div className="fw-semibold">
-                    {nextShift.date.format("ddd, MMM D")} - {nextShift.shift.name}
+                    {nextShift.date.isSame(today, "day")
+                      ? "Today"
+                      : nextShift.date.isSame(today.add(1, "day"), "day")
+                        ? "Tomorrow"
+                        : nextShift.date.format("ddd, MMM D")}{" "}
+                    - {nextShift.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
-                  <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
+                  {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
+                    <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
+                  )}
                 </div>
               ) : (
                 <EmptyState
