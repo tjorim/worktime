@@ -1,8 +1,63 @@
+    it("should reveal hidden events when activating overflow toggle with keyboard", async () => {
+      const user = userEvent.setup();
+      const events: DayEvent[] = [
+        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+      ];
+
+      render(<DayCell {...defaultProps} events={events} />);
+
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      overflowButton.focus();
+      await user.keyboard("{Enter}");
+
+      expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+    });
+
+    it("should collapse hidden events when activating overflow toggle with keyboard", async () => {
+      const user = userEvent.setup();
+      const events: DayEvent[] = [
+        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+      ];
+
+      render(<DayCell {...defaultProps} events={events} />);
+
+      // Expand first
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      overflowButton.focus();
+      await user.keyboard("{Enter}");
+      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+
+      // Collapse with keyboard
+      const hideButton = screen.getByRole("button", { name: "Hide 1 more event" });
+      hideButton.focus();
+      await user.keyboard("{Enter}");
+      expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
+    });
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DayCell, type DayEvent } from "../../../src/components/calendar/DayCell";
 import { dayjs } from "../../../src/utils/dateTimeUtils";
+
+const mockOnViewEvent = vi.fn();
+
+const defaultProps = {
+  date: dayjs("2025-01-15"),
+  isCurrentMonth: true,
+  isToday: false,
+  isWeekend: false,
+  events: [] as DayEvent[],
+  onViewEvent: mockOnViewEvent,
+};
 
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
@@ -72,7 +127,7 @@ describe("DayCell", () => {
       expect(screen.getByRole("button", { name: "View Event 3" })).toBeInTheDocument();
     });
 
-    it("should show overflow count when more than 3 events", () => {
+    it("should show a clickable overflow toggle when more than 3 events", () => {
       const events: DayEvent[] = [
         { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
         { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
@@ -84,7 +139,60 @@ describe("DayCell", () => {
       render(<DayCell {...defaultProps} events={events} />);
 
       // Should show "+2 more" (5 events - 3 visible = 2 hidden)
-      expect(screen.getByText("+2 more")).toBeInTheDocument();
+      const overflowButton = screen.getByRole("button", { name: "Show 2 more events" });
+      expect(overflowButton).toBeInTheDocument();
+      expect(overflowButton).toHaveTextContent("+2 more");
+    });
+
+    it("should use singular label when exactly 1 event is hidden", () => {
+      const events: DayEvent[] = [
+        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+      ];
+
+      render(<DayCell {...defaultProps} events={events} />);
+
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      expect(overflowButton).toBeInTheDocument();
+      expect(overflowButton).toHaveTextContent("+1 more");
+    });
+
+    it("should reveal hidden events when clicking the overflow toggle", async () => {
+      const user = userEvent.setup();
+      const events: DayEvent[] = [
+        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+      ];
+
+      render(<DayCell {...defaultProps} events={events} />);
+
+      await user.click(screen.getByRole("button", { name: "Show 1 more event" }));
+
+      expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+    });
+
+    it("should collapse hidden events when clicking the overflow toggle again", async () => {
+      const user = userEvent.setup();
+      const events: DayEvent[] = [
+        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+      ];
+
+      render(<DayCell {...defaultProps} events={events} />);
+
+      await user.click(screen.getByRole("button", { name: "Show 1 more event" }));
+      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Hide 1 more event" }));
+      expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
     });
 
     it("should display event type label when no title", () => {

@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, type KeyboardEvent } from "react";
+import { useRef, useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -155,7 +155,9 @@ export function DayCell({
   isFocusTarget = false,
   cellRef,
 }: DayCellProps) {
+  const [isOverflowExpanded, setIsOverflowExpanded] = useState(false);
   const visibleEvents = events.slice(0, MAX_EVENTS);
+  const hiddenEvents = events.slice(MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
@@ -194,6 +196,12 @@ export function DayCell({
       clearLongPress();
     };
   }, [clearLongPress]);
+
+  useEffect(() => {
+    if (isOverflowExpanded && hiddenCount === 0) {
+      setIsOverflowExpanded(false);
+    }
+  }, [hiddenCount]); // oxlint-disable-line react-hooks/exhaustive-deps -- only hiddenCount should trigger this effect
 
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
@@ -250,6 +258,67 @@ export function DayCell({
       }
     },
     [onEventContextMenu],
+  );
+
+  const renderEventButton = useCallback(
+    ({ event, index }: DayEvent) => {
+      const colorClass = getEventColorClass(event.flags, event.type);
+      const label = event.title || getEventTypeLabel(event.flags);
+      const symbol = getTimeLocationSymbol(event.flags);
+
+      return (
+        <button
+          key={`${date.format("YYYY-MM-DD")}-${index}`}
+          type="button"
+          className="month-calendar-event"
+          onClick={(eventClick) => {
+            eventClick.stopPropagation();
+            onViewEvent(index);
+          }}
+          onContextMenu={(e) => {
+            if (onEventContextMenu) {
+              e.preventDefault();
+              e.stopPropagation();
+              onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
+            }
+          }}
+          onKeyDown={(e) => handleEventKeyDown(e, index)}
+          onTouchStart={(e) => {
+            if (onEventContextMenu && e.touches[0]) {
+              startLongPress(e.touches[0], (x, y) =>
+                onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+              );
+            }
+          }}
+          onTouchEnd={clearLongPress}
+          onTouchMove={handleTouchMove}
+          aria-label={`View ${label}`}
+        >
+          <span className={clsx("month-calendar-event-color", colorClass)} />
+          <span className="month-calendar-event-label">
+            {symbol && (
+              <span
+                className="month-calendar-event-symbol"
+                role="img"
+                aria-label={SYMBOL_LABELS[symbol] || symbol}
+              >
+                {symbol}
+              </span>
+            )}
+            {label}
+          </span>
+        </button>
+      );
+    },
+    [
+      clearLongPress,
+      date,
+      handleEventKeyDown,
+      handleTouchMove,
+      onEventContextMenu,
+      onViewEvent,
+      startLongPress,
+    ],
   );
 
   return (
@@ -337,57 +406,27 @@ export function DayCell({
             {shiftBadge.code}
           </div>
         )}
-        {visibleEvents.map(({ event, index }) => {
-          const colorClass = getEventColorClass(event.flags, event.type);
-          const label = event.title || getEventTypeLabel(event.flags);
-          const symbol = getTimeLocationSymbol(event.flags);
-
-          return (
+        {visibleEvents.map((dayEvent) => renderEventButton(dayEvent))}
+        {hiddenCount > 0 && (
+          <>
             <button
-              key={`${date.format("YYYY-MM-DD")}-event-${index}`}
               type="button"
-              className="month-calendar-event"
+              className="month-calendar-event-overflow month-calendar-event-overflow-btn"
               onClick={(eventClick) => {
                 eventClick.stopPropagation();
-                onViewEvent(index);
+                setIsOverflowExpanded((current) => !current);
               }}
-              onContextMenu={(e) => {
-                if (onEventContextMenu) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
-                }
-              }}
-              onKeyDown={(e) => handleEventKeyDown(e, index)}
-              onTouchStart={(e) => {
-                if (onEventContextMenu && e.touches[0]) {
-                  startLongPress(e.touches[0], (x, y) =>
-                    onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
-                  );
-                }
-              }}
-              onTouchEnd={clearLongPress}
-              onTouchMove={handleTouchMove}
-              aria-label={`View ${label}`}
+              aria-expanded={isOverflowExpanded}
+              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more ${hiddenCount === 1 ? "event" : "events"}`}
             >
-              <span className={clsx("month-calendar-event-color", colorClass)} />
-              <span className="month-calendar-event-label">
-                {symbol && (
-                  <span
-                    className="month-calendar-event-symbol"
-                    role="img"
-                    aria-label={SYMBOL_LABELS[symbol] || symbol}
-                  >
-                    {symbol}
-                  </span>
-                )}
-                {label}
-              </span>
+              {isOverflowExpanded ? `-${hiddenCount} less` : `+${hiddenCount} more`}
             </button>
-          );
-        })}
-        {hiddenCount > 0 && (
-          <div className="month-calendar-event-overflow text-muted">+{hiddenCount} more</div>
+            {isOverflowExpanded && (
+              <div className="month-calendar-overflow-list">
+                {hiddenEvents.map((dayEvent) => renderEventButton(dayEvent))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

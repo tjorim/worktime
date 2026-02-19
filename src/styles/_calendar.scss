@@ -230,6 +230,31 @@
   font-size: 0.7rem;
 }
 
+.month-calendar-event-overflow-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--bs-secondary-color);
+  font: inherit;
+  line-height: inherit;
+}
+
+.month-calendar-event-overflow-btn:hover,
+.month-calendar-event-overflow-btn:focus-visible {
+  color: var(--wt-month-calendar-event-text);
+  text-decoration: underline;
+}
+
+.month-calendar-overflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 5.5rem;
+  overflow-y: auto;
+}
+
 /* Shift badge in calendar cells */
 .month-calendar-shift-badge {
   display: inline-block;
