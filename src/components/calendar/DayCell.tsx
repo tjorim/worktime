@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, type KeyboardEvent } from "react";
+import { useRef, useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -155,7 +155,9 @@ export function DayCell({
   isFocusTarget = false,
   cellRef,
 }: DayCellProps) {
+  const [isOverflowExpanded, setIsOverflowExpanded] = useState(false);
   const visibleEvents = events.slice(0, MAX_EVENTS);
+  const hiddenEvents = events.slice(MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
@@ -194,6 +196,12 @@ export function DayCell({
       clearLongPress();
     };
   }, [clearLongPress]);
+
+  useEffect(() => {
+    if (hiddenCount === 0) {
+      setIsOverflowExpanded(false);
+    }
+  }, [hiddenCount]);
 
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
@@ -387,7 +395,70 @@ export function DayCell({
           );
         })}
         {hiddenCount > 0 && (
-          <div className="month-calendar-event-overflow text-muted">+{hiddenCount} more</div>
+          <>
+            <button
+              type="button"
+              className="month-calendar-event-overflow month-calendar-event-overflow-btn text-muted"
+              onClick={(eventClick) => {
+                eventClick.stopPropagation();
+                setIsOverflowExpanded((current) => !current);
+              }}
+              aria-expanded={isOverflowExpanded}
+              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more events`}
+            >
+              {isOverflowExpanded ? "Show less" : `+${hiddenCount} more`}
+            </button>
+            {isOverflowExpanded &&
+              hiddenEvents.map(({ event, index }) => {
+                const colorClass = getEventColorClass(event.flags, event.type);
+                const label = event.title || getEventTypeLabel(event.flags);
+                const symbol = getTimeLocationSymbol(event.flags);
+
+                return (
+                  <button
+                    key={`${date.format("YYYY-MM-DD")}-hidden-event-${index}`}
+                    type="button"
+                    className="month-calendar-event"
+                    onClick={(eventClick) => {
+                      eventClick.stopPropagation();
+                      onViewEvent(index);
+                    }}
+                    onContextMenu={(e) => {
+                      if (onEventContextMenu) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
+                      }
+                    }}
+                    onKeyDown={(e) => handleEventKeyDown(e, index)}
+                    onTouchStart={(e) => {
+                      if (onEventContextMenu && e.touches[0]) {
+                        startLongPress(e.touches[0], (x, y) =>
+                          onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+                        );
+                      }
+                    }}
+                    onTouchEnd={clearLongPress}
+                    onTouchMove={handleTouchMove}
+                    aria-label={`View ${label}`}
+                  >
+                    <span className={clsx("month-calendar-event-color", colorClass)} />
+                    <span className="month-calendar-event-label">
+                      {symbol && (
+                        <span
+                          className="month-calendar-event-symbol"
+                          role="img"
+                          aria-label={SYMBOL_LABELS[symbol] || symbol}
+                        >
+                          {symbol}
+                        </span>
+                      )}
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+          </>
         )}
       </div>
     </div>
