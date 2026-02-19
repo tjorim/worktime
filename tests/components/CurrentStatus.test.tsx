@@ -239,9 +239,74 @@ describe("CurrentStatus Component", () => {
           "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
+    });
+
+    it("should show team summary badge in generic status", () => {
+      // The default mock sets up exactly 2 teams: team 1 (working) + team 2 (off)
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("1 working, 1 off")).toBeInTheDocument();
+    });
+
+    it("should show generic shift countdown and progress when countdown is active", () => {
+      const activeCountdown = {
+        days: 0,
+        hours: 1,
+        minutes: 15,
+        seconds: 0,
+        totalSeconds: 4500,
+        formatted: "1h 15m",
+        isExpired: false,
+      };
+
+      // GenericStatusContent calls useCountdown twice per render:
+      //   1st call: countdown (next-shift start time — drives the Next Activity card)
+      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce(activeCountdown) // countdown (next shift)
+        .mockReturnValueOnce(activeCountdown); // shiftEndCountdown (active → shows badge/progress)
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText(/^Ends in/)).toBeInTheDocument();
       expect(
-        screen.getByText("Select your team above for personalized shift tracking"),
+        screen.getByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
       ).toBeInTheDocument();
+    });
+
+    it("should hide generic shift countdown and progress when countdown has expired", () => {
+      const activeCountdown = {
+        days: 0,
+        hours: 1,
+        minutes: 15,
+        seconds: 0,
+        totalSeconds: 4500,
+        formatted: "1h 15m",
+        isExpired: false,
+      };
+      const expiredCountdown = {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        totalSeconds: 0,
+        formatted: "",
+        isExpired: true,
+      };
+
+      // GenericStatusContent calls useCountdown twice per render:
+      //   1st call: countdown (next-shift start time — drives the Next Activity card)
+      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce(activeCountdown) // countdown (next shift)
+        .mockReturnValueOnce(expiredCountdown); // shiftEndCountdown (expired → hides badge/progress)
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.queryByText(/^Ends in/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
+      ).not.toBeInTheDocument();
     });
 
     it("should show current shift information when team is selected", () => {
@@ -423,6 +488,15 @@ describe("CurrentStatus Component", () => {
           "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
+    });
+
+    it("should show empty state when no teams are currently working", () => {
+      vi.mocked(shiftCalculations.getCurrentWorkingTeam).mockReturnValue(null);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("No Teams Working")).toBeInTheDocument();
+      expect(screen.getByText("All teams are currently off duty")).toBeInTheDocument();
     });
 
     it("should handle null next shift gracefully", () => {
