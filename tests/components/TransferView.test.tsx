@@ -108,6 +108,7 @@ let mockConsoleWarn: ReturnType<typeof vi.spyOn>;
 const defaultHookReturn = {
   transfers: [],
   hasMoreTransfers: false,
+  totalTransfers: 0,
   availableOtherTeams: [2, 3, 4, 5],
   otherTeam: 2,
   setOtherTeam: vi.fn(),
@@ -310,7 +311,7 @@ describe("TransferView", () => {
       // Check for badges and icons for team direction
       expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Wed, Jan 15/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Evening/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Handover/).length).toBeGreaterThan(0);
@@ -400,8 +401,8 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check that both transfers are displayed
-      expect(screen.getByText(/Wed, Jan 15/)).toBeInTheDocument();
-      expect(screen.getByText(/Thu, Jan 16/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Thu, Jan 16/).length).toBeGreaterThan(0);
 
       // Check shift types
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
@@ -439,6 +440,82 @@ describe("TransferView", () => {
       // Check for badge-based section header
       expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Summary metrics", () => {
+    it("shows transfer metrics, date range, and progress indicator", () => {
+      const mockTransfers = [
+        {
+          date: dayjs("2025-01-15"),
+          fromTeam: 1,
+          toTeam: 2,
+          fromShiftType: "M" as const,
+          toShiftType: "L" as const,
+          type: "handover",
+        },
+        {
+          date: dayjs("2025-01-16"),
+          fromTeam: 2,
+          toTeam: 1,
+          fromShiftType: "L" as const,
+          toShiftType: "N" as const,
+          type: "takeover",
+        },
+      ];
+
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: mockTransfers,
+        totalTransfers: 47,
+        hasMoreTransfers: true,
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+
+      expect(screen.getByText("Handovers")).toBeInTheDocument();
+      expect(screen.getByText("Takeovers")).toBeInTheDocument();
+      expect(screen.getByText(/Displayed Date Range/)).toBeInTheDocument();
+      expect(screen.getByText(/Showing 2 of 47 transfers/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Load More Transfers/i })).toBeInTheDocument();
+    });
+
+    it("shows a single date in metrics when only one transfer is visible", () => {
+      const mockTransfers = [
+        {
+          date: dayjs("2025-01-15"),
+          fromTeam: 1,
+          toTeam: 2,
+          fromShiftType: "M" as const,
+          toShiftType: "L" as const,
+          type: "handover",
+        },
+      ];
+
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: mockTransfers,
+        totalTransfers: 1,
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+
+      expect(screen.getAllByText("Wed, Jan 15").length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
+    });
+
+    it("uses shared empty state for no other teams", () => {
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        availableOtherTeams: [],
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+
+      expect(screen.getByText("No Other Teams Available")).toBeInTheDocument();
+      expect(
+        screen.getByText("No other teams available for transfer analysis."),
+      ).toBeInTheDocument();
     });
   });
 

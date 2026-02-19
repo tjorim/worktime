@@ -26,6 +26,7 @@ interface UseTransferCalculationsProps {
 interface UseTransferCalculationsReturn {
   transfers: TransferInfo[];
   hasMoreTransfers: boolean;
+  totalTransfers: number;
   availableOtherTeams: number[]; // Teams available to compare with (excludes user's team)
   otherTeam: number; // Currently selected other team
   setOtherTeam: (team: number) => void;
@@ -158,12 +159,12 @@ export function useTransferCalculations({
   const transfersResult = useMemo(() => {
     // Early return if no valid team or no other teams to compare with
     if (!validatedMyTeam || availableOtherTeams.length === 0) {
-      return { transfers: [], hasMoreTransfers: false };
+      return { transfers: [], hasMoreTransfers: false, totalTransfers: 0 };
     }
 
     // Guard against stale otherTeam value during schedule transitions
     if (!availableOtherTeams.includes(otherTeam)) {
-      return { transfers: [], hasMoreTransfers: false };
+      return { transfers: [], hasMoreTransfers: false, totalTransfers: 0 };
     }
 
     const foundTransfers: TransferInfo[] = [];
@@ -182,9 +183,7 @@ export function useTransferCalculations({
       );
     }
 
-    let lastScannedDate = startDate;
-
-    for (let day = 0; day < maxDaysToScan && foundTransfers.length < limit; day++) {
+    for (let day = 0; day < maxDaysToScan; day++) {
       const scanDate = startDate.add(day, "day");
       const nextDate = scanDate.add(1, "day");
 
@@ -279,20 +278,18 @@ export function useTransferCalculations({
           foundTransfers.push(transfer);
         }
       });
-
-      lastScannedDate = scanDate;
     }
 
     // Sort transfers by date
     foundTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
 
-    // Check if there are more transfers available
-    const hasMoreTransfers =
-      foundTransfers.length === limit && (!endDate || lastScannedDate.isBefore(endDate));
+    const totalTransfers = foundTransfers.length;
+    const hasMoreTransfers = totalTransfers > limit;
 
     return {
-      transfers: foundTransfers,
+      transfers: foundTransfers.slice(0, limit),
       hasMoreTransfers,
+      totalTransfers,
     };
   }, [
     validatedMyTeam,
@@ -307,6 +304,7 @@ export function useTransferCalculations({
   return {
     transfers: transfersResult.transfers,
     hasMoreTransfers: transfersResult.hasMoreTransfers,
+    totalTransfers: transfersResult.totalTransfers,
     availableOtherTeams,
     otherTeam,
     setOtherTeam,
