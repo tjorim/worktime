@@ -248,7 +248,33 @@ describe("CurrentStatus Component", () => {
       expect(screen.getByText("1 working, 1 off")).toBeInTheDocument();
     });
 
-    it("should hide generic shift countdown and progress after countdown expires", () => {
+    it("should show generic shift countdown and progress when countdown is active", () => {
+      const activeCountdown = {
+        days: 0,
+        hours: 1,
+        minutes: 15,
+        seconds: 0,
+        totalSeconds: 4500,
+        formatted: "1h 15m",
+        isExpired: false,
+      };
+
+      // GenericStatusContent calls useCountdown twice per render:
+      //   1st call: countdown (next-shift start time — drives the Next Activity card)
+      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce(activeCountdown) // countdown (next shift)
+        .mockReturnValueOnce(activeCountdown); // shiftEndCountdown (active → shows badge/progress)
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText(/^Ends in/)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
+      ).toBeInTheDocument();
+    });
+
+    it("should hide generic shift countdown and progress when countdown has expired", () => {
       const activeCountdown = {
         days: 0,
         hours: 1,
@@ -268,35 +294,14 @@ describe("CurrentStatus Component", () => {
         isExpired: true,
       };
 
+      // GenericStatusContent calls useCountdown twice per render:
+      //   1st call: countdown (next-shift start time — drives the Next Activity card)
+      //   2nd call: shiftEndCountdown (current shift end time — drives the Ends in badge/progress)
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce(activeCountdown) // countdown (next shift)
+        .mockReturnValueOnce(expiredCountdown); // shiftEndCountdown (expired → hides badge/progress)
 
-      // Track call count to control return values for useCountdown
-      let callCount = 0;
-      vi.mocked(useCountdownHook.useCountdown).mockImplementation(() => {
-        // Render 1: call 0 (next shift), call 1 (shift end)
-        // Render 2: call 2 (next shift), call 3 (shift end)
-        if (callCount === 0 || callCount === 1 || callCount === 2) {
-          return activeCountdown;
-        }
-        return expiredCountdown;
-      callCount++;
-      });
-
-      const { rerender } = renderWithProviders(
-        <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />,
-      );
-
-      expect(screen.getByText(/^Ends in/)).toBeInTheDocument();
-      expect(
-        screen.getByLabelText(/Shift progress with (?:\d+ hours and )?\d+ minutes remaining/),
-      ).toBeInTheDocument();
-
-      rerender(
-        <ToastProvider>
-          <SettingsProvider>
-            <CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />
-          </SettingsProvider>
-        </ToastProvider>,
-      );
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.queryByText(/^Ends in/)).not.toBeInTheDocument();
       expect(
