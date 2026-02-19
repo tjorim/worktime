@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
-import { useEffect, useState } from "react";
-import { dayjs } from "../utils/dateTimeUtils";
+import { useMemo } from "react";
+import { useLiveTime } from "./useLiveTime";
 
 export interface CountdownResult {
   days: number;
@@ -29,7 +29,7 @@ export interface CountdownResult {
  * calculateTimeLeft(dayjs().subtract(1, 'hour'))
  * // Returns: { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, totalSeconds: 0, formatted: "" }
  */
-function calculateTimeLeft(targetDate: Dayjs | null): CountdownResult {
+function calculateTimeLeft(targetDate: Dayjs | null, currentTime: Dayjs): CountdownResult {
   if (!targetDate || !targetDate.isValid()) {
     return {
       days: 0,
@@ -42,8 +42,7 @@ function calculateTimeLeft(targetDate: Dayjs | null): CountdownResult {
     };
   }
 
-  const now = dayjs();
-  const diff = targetDate.diff(now, "second");
+  const diff = targetDate.diff(currentTime, "second");
 
   if (diff <= 0) {
     return {
@@ -108,20 +107,12 @@ export function useCountdown(
   targetDate: Dayjs | null,
   updateInterval: number = 1000,
 ): CountdownResult {
-  const [timeLeft, setTimeLeft] = useState<CountdownResult>(() => calculateTimeLeft(targetDate));
+  const liveTime = useLiveTime({ updateInterval });
 
-  useEffect(() => {
-    // Update immediately when targetDate changes
-    setTimeLeft(calculateTimeLeft(targetDate));
-
-    const updateCountdown = () => {
-      setTimeLeft(calculateTimeLeft(targetDate));
-    };
-
-    const interval = setInterval(updateCountdown, updateInterval);
-
-    return () => clearInterval(interval);
-  }, [targetDate, updateInterval]);
+  const timeLeft = useMemo(
+    () => calculateTimeLeft(targetDate, liveTime),
+    [targetDate, liveTime],
+  );
 
   return timeLeft;
 }

@@ -5,7 +5,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { useLiveTime } from "../hooks/useLiveTime";
-import { dayjs, formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
+import { formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "../utils/shiftCalculations";
 import { PersonalizedStatusContent } from "./status/PersonalizedStatus";
@@ -31,8 +31,8 @@ interface CurrentStatusProps {
 export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: CurrentStatusProps) {
   const dateTooltipId = useId();
   const { settings, scheduleType } = useSettings();
-  const liveTime = useLiveTime();
-  const today = dayjs();
+  const liveTime = useLiveTime({ precision: "minute" });
+  const today = liveTime;
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
