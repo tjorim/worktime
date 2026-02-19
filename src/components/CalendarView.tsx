@@ -101,6 +101,8 @@ export function CalendarView({
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(-1);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [initialFormState, setInitialFormState] = useState("");
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
@@ -141,6 +143,19 @@ export function CalendarView({
     setEndDateError("");
   };
 
+  const serializeFormState = (
+    type: "range" | "weekly",
+    weekday: number,
+    start: string,
+    end: string,
+    title: string,
+    flags: EventFlag[],
+  ) => JSON.stringify({ type, weekday, start, end, title, flags: [...flags].sort() });
+
+  const isFormDirty =
+    serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags) !==
+    initialFormState;
+
   const handleAddEventForDate = (date: Dayjs) => {
     if (!timeOffEnabled) return;
     resetForm();
@@ -149,6 +164,16 @@ export function CalendarView({
     setEventType("range");
     setEventStart(date.format("YYYY/MM/DD"));
     setEventEnd(date.format("YYYY/MM/DD"));
+    setInitialFormState(
+      serializeFormState(
+        "range",
+        DEFAULT_WEEKDAY,
+        date.format("YYYY/MM/DD"),
+        date.format("YYYY/MM/DD"),
+        "",
+        [],
+      ),
+    );
     setShowEventModal(true);
   };
 
@@ -159,6 +184,16 @@ export function CalendarView({
 
     setEditIndex(index);
     prefillFormFromEvent(event);
+    setInitialFormState(
+      serializeFormState(
+        event.type === "weekly" ? "weekly" : "range",
+        event.weekday || DEFAULT_WEEKDAY,
+        event.start || "",
+        event.end || "",
+        event.title || "",
+        event.flags || [],
+      ),
+    );
     setModalMode("view");
     setShowEventModal(true);
   };
@@ -170,13 +205,59 @@ export function CalendarView({
 
     setEditIndex(index);
     prefillFormFromEvent(event);
+    setInitialFormState(
+      serializeFormState(
+        event.type === "weekly" ? "weekly" : "range",
+        event.weekday || DEFAULT_WEEKDAY,
+        event.start || "",
+        event.end || "",
+        event.title || "",
+        event.flags || [],
+      ),
+    );
     setModalMode("edit");
     setShowEventModal(true);
   };
 
   const handleSwitchToEdit = () => {
     if (!timeOffEnabled) return;
+    setInitialFormState(
+      serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+    );
     setModalMode("edit");
+  };
+
+  const handleCancelEditMode = () => {
+    if (!timeOffEnabled || editIndex < 0) return;
+
+    const event = events[editIndex];
+    if (!event) return;
+
+    prefillFormFromEvent(event);
+    setInitialFormState(
+      serializeFormState(
+        event.type === "weekly" ? "weekly" : "range",
+        event.weekday || DEFAULT_WEEKDAY,
+        event.start || "",
+        event.end || "",
+        event.title || "",
+        event.flags || [],
+      ),
+    );
+    setModalMode("view");
+  };
+
+  const handleResetForm = () => {
+    if (isFormDirty) {
+      setShowResetConfirm(true);
+      return;
+    }
+    resetForm();
+  };
+
+  const handleConfirmResetForm = () => {
+    resetForm();
+    setShowResetConfirm(false);
   };
 
   const handleTypeFlagChange = (flag: TypeFlag | "none") => {
@@ -278,6 +359,7 @@ export function CalendarView({
     }
 
     setShowEventModal(false);
+    setShowResetConfirm(false);
     resetForm();
   };
 
@@ -338,6 +420,11 @@ export function CalendarView({
       };
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
+
+  const handleHideEventModal = () => {
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+  };
 
   const previewLine = buildPreviewLine({
     eventType,
@@ -432,7 +519,7 @@ export function CalendarView({
             timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
             typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
             timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-            onHide={() => setShowEventModal(false)}
+            onHide={handleHideEventModal}
             onEntered={() => formRef.current?.focus()}
             onEventTypeChange={setEventType}
             onEventTitleChange={setEventTitle}
@@ -441,9 +528,21 @@ export function CalendarView({
             onEndDateChange={setEventEnd}
             onTypeFlagChange={handleTypeFlagChange}
             onTimeFlagChange={handleTimeFlagChange}
-            onResetForm={resetForm}
+            onResetForm={handleResetForm}
             onSubmit={handleSubmitEvent}
             onSwitchToEdit={handleSwitchToEdit}
+            onCancelEditMode={handleCancelEditMode}
+          />
+
+          <ConfirmationDialog
+            isOpen={showResetConfirm}
+            title="Reset Event Form"
+            message="You have unsaved changes. Resetting the form will clear your edits."
+            confirmLabel="Reset"
+            cancelLabel="Keep Editing"
+            variant="warning"
+            onConfirm={handleConfirmResetForm}
+            onCancel={() => setShowResetConfirm(false)}
           />
 
           <ConfirmationDialog

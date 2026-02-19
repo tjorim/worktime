@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import type { HdayEvent } from "../lib/hday/types";
+import type { EventFlag, HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -21,6 +21,7 @@ import {
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   VIEW_MODE_HELP_TEXT,
   TIMEOFF_VIEWS,
+  DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
 
 /**
@@ -111,6 +112,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [initialFormState, setInitialFormState] = useState("");
 
   // Raw .hday editor state (kept in sync but not rendered in UI)
   const [rawEditorText, setRawEditorText] = useState(rawText);
@@ -132,12 +135,29 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const serializeFormState = useCallback(
+    (
+      type: "range" | "weekly",
+      weekday: number,
+      start: string,
+      end: string,
+      title: string,
+      flags: ReadonlyArray<EventFlag>,
+    ) => JSON.stringify({ type, weekday, start, end, title, flags: [...flags].sort() }),
+    [],
+  );
+
+  const isFormDirty =
+    serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags) !==
+    initialFormState;
+
   const handleOpenAddModal = useCallback(() => {
     resetForm();
+    setInitialFormState(serializeFormState("range", DEFAULT_WEEKDAY, "", "", "", []));
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
-  }, [resetForm]);
+  }, [resetForm, serializeFormState]);
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
@@ -145,11 +165,24 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     setEditIndex(index);
     prefillFormFromEvent(event);
+    setInitialFormState(
+      serializeFormState(
+        event.type === "weekly" ? "weekly" : "range",
+        event.weekday || DEFAULT_WEEKDAY,
+        event.start || "",
+        event.end || "",
+        event.title || "",
+        event.flags || [],
+      ),
+    );
     setModalMode("edit");
     setShowEventModal(true);
   };
 
   const handleSwitchToEdit = () => {
+    setInitialFormState(
+      serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+    );
     setModalMode("edit");
   };
 
@@ -162,8 +195,31 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       return;
     }
     prefillFormFromEvent(event);
+    setInitialFormState(
+      serializeFormState(
+        event.type === "weekly" ? "weekly" : "range",
+        event.weekday || DEFAULT_WEEKDAY,
+        event.start || "",
+        event.end || "",
+        event.title || "",
+        event.flags || [],
+      ),
+    );
     setModalMode("view");
-  }, [editIndex, events, prefillFormFromEvent]);
+  }, [editIndex, events, prefillFormFromEvent, serializeFormState]);
+
+  const handleResetForm = () => {
+    if (isFormDirty) {
+      setShowResetConfirm(true);
+      return;
+    }
+    resetForm();
+  };
+
+  const handleConfirmResetForm = () => {
+    resetForm();
+    setShowResetConfirm(false);
+  };
 
   const handleSubmitEvent = () => {
     if (!validateForm()) {
@@ -201,6 +257,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
 
     setShowEventModal(false);
+    setShowResetConfirm(false);
     resetForm();
   };
 
@@ -374,6 +431,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     },
   );
 
+  const handleHideEventModal = () => {
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+  };
+
   const previewLine = buildPreviewLine({
     eventType,
     start: eventStart,
@@ -495,7 +557,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-        onHide={() => setShowEventModal(false)}
+        onHide={handleHideEventModal}
         onEntered={() => formRef.current?.focus()}
         onEventTypeChange={setEventType}
         onEventTitleChange={setEventTitle}
@@ -504,9 +566,21 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onEndDateChange={setEventEnd}
         onTypeFlagChange={handleTypeFlagChange}
         onTimeFlagChange={handleTimeFlagChange}
-        onResetForm={resetForm}
+        onResetForm={handleResetForm}
         onSubmit={handleSubmitEvent}
         onSwitchToEdit={handleSwitchToEdit}
+        onCancelEditMode={handleCancelEditMode}
+      />
+
+      <ConfirmationDialog
+        isOpen={showResetConfirm}
+        title="Reset Event Form"
+        message="You have unsaved changes. Resetting the form will clear your edits."
+        confirmLabel="Reset"
+        cancelLabel="Keep Editing"
+        variant="warning"
+        onConfirm={handleConfirmResetForm}
+        onCancel={() => setShowResetConfirm(false)}
       />
 
       {/* Delete Confirmation Dialog */}
