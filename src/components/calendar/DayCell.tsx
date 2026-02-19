@@ -201,7 +201,7 @@ export function DayCell({
     if (isOverflowExpanded && hiddenCount === 0) {
       setIsOverflowExpanded(false);
     }
-  }, [hiddenCount, isOverflowExpanded]);
+  }, [hiddenCount]); // oxlint-disable-line react-hooks/exhaustive-deps -- only hiddenCount should trigger this effect
 
   /** Start a long-press timer that fires `handler(x, y)` after LONG_PRESS_DURATION ms */
   const startLongPress = useCallback(
