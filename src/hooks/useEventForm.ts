@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
+import type { Dayjs } from "dayjs";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
+import { serializeEventFormState } from "../utils/eventFormState";
 import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
@@ -83,6 +85,33 @@ export function useEventForm() {
   }, [eventType, eventStart, eventEnd]);
 
   /**
+   * Initialize form state for creating a range event on a specific date.
+   * @param date - Day to prefill as start and end date
+   * @returns Serialized initial form state snapshot for dirty-check tracking
+   */
+  const initFormForDate = useCallback((date: Dayjs) => {
+    const formattedDate = date.format("YYYY/MM/DD");
+
+    setEventType("range");
+    setEventWeekday(DEFAULT_WEEKDAY);
+    setEventStart(formattedDate);
+    setEventEnd(formattedDate);
+    setEventTitle("");
+    setEventFlags([]);
+    setStartDateError("");
+    setEndDateError("");
+
+    return serializeEventFormState({
+      type: "range",
+      weekday: DEFAULT_WEEKDAY,
+      start: formattedDate,
+      end: formattedDate,
+      title: "",
+      flags: [],
+    });
+  }, []);
+
+  /**
    * Prefill form fields from an existing event.
    * @param event - The event to load into the form
    */
@@ -157,6 +186,7 @@ export function useEventForm() {
     // Methods
     resetForm,
     validateForm,
+    initFormForDate,
     prefillFormFromEvent,
     handleTypeFlagChange,
     handleTimeFlagChange,

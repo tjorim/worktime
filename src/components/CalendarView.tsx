@@ -108,6 +108,7 @@ export function CalendarView({
     setEventTitle,
     resetForm,
     validateForm,
+    initFormForDate,
     prefillFormFromEvent,
     handleTypeFlagChange,
     handleTimeFlagChange,
@@ -139,19 +140,7 @@ export function CalendarView({
     resetForm();
     setEditIndex(-1);
     setModalMode("add");
-    setEventType("range");
-    setEventStart(date.format("YYYY/MM/DD"));
-    setEventEnd(date.format("YYYY/MM/DD"));
-    setInitialFormState(
-      serializeEventFormState({
-        type: "range",
-        weekday: DEFAULT_WEEKDAY,
-        start: date.format("YYYY/MM/DD"),
-        end: date.format("YYYY/MM/DD"),
-        title: "",
-        flags: [],
-      }),
-    );
+    setInitialFormState(initFormForDate(date));
     setShowEventModal(true);
   };
 
