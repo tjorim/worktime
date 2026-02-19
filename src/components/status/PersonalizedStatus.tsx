@@ -65,10 +65,7 @@ export function PersonalizedStatusContent({
   // Resolve the shift day anchor used for both shift lookup and next-shift search.
   // During night shift early-morning hours (before nightShiftEnd, e.g. before 07:00),
   // getCurrentShiftDay returns the previous calendar day.
-  const shiftDay = useMemo(
-    () => getCurrentShiftDay(today, scheduleType),
-    [today, scheduleType],
-  );
+  const shiftDay = useMemo(() => getCurrentShiftDay(today, scheduleType), [today, scheduleType]);
 
   // Determine the current shift, handling two distinct cases:
   //
@@ -84,8 +81,7 @@ export function PersonalizedStatusContent({
   const currentShift = useMemo((): ShiftResult => {
     const shiftDayShift = calculateShift(shiftDay, myTeam, scheduleType);
     const isInNightShiftExtension =
-      shiftDayShift.isWorking &&
-      isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
+      shiftDayShift.isWorking && isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
 
     if (isInNightShiftExtension) {
       return {
@@ -223,8 +219,8 @@ export function PersonalizedStatusContent({
                     {shiftProgress && (
                       <div className="mt-2">
                         <div className="small text-muted mb-1">
-                          Shift Progress: {shiftProgress.elapsedHours}h /{" "}
-                          {shiftProgress.totalHours}h
+                          Shift Progress: {shiftProgress.elapsedHours}h / {shiftProgress.totalHours}
+                          h
                         </div>
                         <ProgressBar
                           now={shiftProgress.percentage}

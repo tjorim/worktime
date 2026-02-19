@@ -88,7 +88,7 @@ vi.mock("../../src/utils/dateTimeUtils", async (importOriginal) => {
   mockDayjsObj.add.mockReturnValue(mockDayjsObj);
   mockDayjsObj.subtract.mockReturnValue(mockDayjsObj);
   return {
-    ...actual,
+    ...(actual && typeof actual === "object" ? actual : {}),
     dayjs: vi.fn(() => mockDayjsObj),
     formatYYWWD: vi.fn(() => "2430.1"),
     formatTimeByPreference: vi.fn(() => "17:01"),
@@ -290,6 +290,14 @@ describe("CurrentStatus Component", () => {
         code: "2404.2M",
       });
 
+      // Simulate current shift already ended: shiftStart and shiftEnd countdowns expired,
+      // so the next shift countdown (first call) is shown.
+      const expired = { days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, formatted: "", isExpired: true };
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce({ days: 0, hours: 2, minutes: 30, seconds: 0, totalSeconds: 9000, formatted: "2h 30m", isExpired: false }) // countdown
+        .mockReturnValueOnce(expired) // shiftStartCountdown
+        .mockReturnValueOnce(expired); // shiftEndCountdown
+
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText(/Starts in 2h 30m/)).toBeInTheDocument();
@@ -310,6 +318,13 @@ describe("CurrentStatus Component", () => {
         },
         code: "2404.2N",
       });
+
+      // Simulate current shift already ended so the next shift countdown is shown.
+      const expired = { days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, formatted: "", isExpired: true };
+      vi.mocked(useCountdownHook.useCountdown)
+        .mockReturnValueOnce({ days: 0, hours: 2, minutes: 30, seconds: 0, totalSeconds: 9000, formatted: "2h 30m", isExpired: false }) // countdown
+        .mockReturnValueOnce(expired) // shiftStartCountdown
+        .mockReturnValueOnce(expired); // shiftEndCountdown
 
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
@@ -347,15 +362,6 @@ describe("CurrentStatus Component", () => {
           className: "shift-off",
         },
         code: "2404.2O",
-      });
-      vi.mocked(useCountdownHook.useCountdown).mockReturnValue({
-        days: 0,
-        hours: 2,
-        minutes: 30,
-        seconds: 0,
-        totalSeconds: 9000,
-        formatted: "2h 30m",
-        isExpired: false,
       });
 
       vi.mocked(useCountdownHook.useCountdown).mockReturnValue({
