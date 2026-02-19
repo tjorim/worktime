@@ -69,6 +69,7 @@ vi.mock("../../src/utils/dateTimeUtils", async (importOriginal) => {
       toISOString: vi.fn(() => "2024-01-15T00:00:00.000Z"),
     })),
     isSame: vi.fn(() => false),
+    isAfter: vi.fn(() => true),
     format: vi.fn(() => "2024-01-15"),
     diff: vi.fn(() => 28800),
     hour: vi.fn(() => ({
