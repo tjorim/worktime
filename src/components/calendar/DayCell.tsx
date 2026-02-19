@@ -260,6 +260,67 @@ export function DayCell({
     [onEventContextMenu],
   );
 
+  const renderEventButton = useCallback(
+    ({ event, index }: DayEvent, idSuffix: "event" | "hidden-event") => {
+      const colorClass = getEventColorClass(event.flags, event.type);
+      const label = event.title || getEventTypeLabel(event.flags);
+      const symbol = getTimeLocationSymbol(event.flags);
+
+      return (
+        <button
+          key={`${date.format("YYYY-MM-DD")}-${idSuffix}-${index}`}
+          type="button"
+          className="month-calendar-event"
+          onClick={(eventClick) => {
+            eventClick.stopPropagation();
+            onViewEvent(index);
+          }}
+          onContextMenu={(e) => {
+            if (onEventContextMenu) {
+              e.preventDefault();
+              e.stopPropagation();
+              onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
+            }
+          }}
+          onKeyDown={(e) => handleEventKeyDown(e, index)}
+          onTouchStart={(e) => {
+            if (onEventContextMenu && e.touches[0]) {
+              startLongPress(e.touches[0], (x, y) =>
+                onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+              );
+            }
+          }}
+          onTouchEnd={clearLongPress}
+          onTouchMove={handleTouchMove}
+          aria-label={`View ${label}`}
+        >
+          <span className={clsx("month-calendar-event-color", colorClass)} />
+          <span className="month-calendar-event-label">
+            {symbol && (
+              <span
+                className="month-calendar-event-symbol"
+                role="img"
+                aria-label={SYMBOL_LABELS[symbol] || symbol}
+              >
+                {symbol}
+              </span>
+            )}
+            {label}
+          </span>
+        </button>
+      );
+    },
+    [
+      clearLongPress,
+      date,
+      handleEventKeyDown,
+      handleTouchMove,
+      onEventContextMenu,
+      onViewEvent,
+      startLongPress,
+    ],
+  );
+
   return (
     <div
       ref={cellRef}
@@ -345,55 +406,7 @@ export function DayCell({
             {shiftBadge.code}
           </div>
         )}
-        {visibleEvents.map(({ event, index }) => {
-          const colorClass = getEventColorClass(event.flags, event.type);
-          const label = event.title || getEventTypeLabel(event.flags);
-          const symbol = getTimeLocationSymbol(event.flags);
-
-          return (
-            <button
-              key={`${date.format("YYYY-MM-DD")}-event-${index}`}
-              type="button"
-              className="month-calendar-event"
-              onClick={(eventClick) => {
-                eventClick.stopPropagation();
-                onViewEvent(index);
-              }}
-              onContextMenu={(e) => {
-                if (onEventContextMenu) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
-                }
-              }}
-              onKeyDown={(e) => handleEventKeyDown(e, index)}
-              onTouchStart={(e) => {
-                if (onEventContextMenu && e.touches[0]) {
-                  startLongPress(e.touches[0], (x, y) =>
-                    onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
-                  );
-                }
-              }}
-              onTouchEnd={clearLongPress}
-              onTouchMove={handleTouchMove}
-              aria-label={`View ${label}`}
-            >
-              <span className={clsx("month-calendar-event-color", colorClass)} />
-              <span className="month-calendar-event-label">
-                {symbol && (
-                  <span
-                    className="month-calendar-event-symbol"
-                    role="img"
-                    aria-label={SYMBOL_LABELS[symbol] || symbol}
-                  >
-                    {symbol}
-                  </span>
-                )}
-                {label}
-              </span>
-            </button>
-          );
-        })}
+        {visibleEvents.map((dayEvent) => renderEventButton(dayEvent, "event"))}
         {hiddenCount > 0 && (
           <>
             <button
@@ -408,56 +421,7 @@ export function DayCell({
             >
               {isOverflowExpanded ? "Show less" : `+${hiddenCount} more`}
             </button>
-            {isOverflowExpanded &&
-              hiddenEvents.map(({ event, index }) => {
-                const colorClass = getEventColorClass(event.flags, event.type);
-                const label = event.title || getEventTypeLabel(event.flags);
-                const symbol = getTimeLocationSymbol(event.flags);
-
-                return (
-                  <button
-                    key={`${date.format("YYYY-MM-DD")}-hidden-event-${index}`}
-                    type="button"
-                    className="month-calendar-event"
-                    onClick={(eventClick) => {
-                      eventClick.stopPropagation();
-                      onViewEvent(index);
-                    }}
-                    onContextMenu={(e) => {
-                      if (onEventContextMenu) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
-                      }
-                    }}
-                    onKeyDown={(e) => handleEventKeyDown(e, index)}
-                    onTouchStart={(e) => {
-                      if (onEventContextMenu && e.touches[0]) {
-                        startLongPress(e.touches[0], (x, y) =>
-                          onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
-                        );
-                      }
-                    }}
-                    onTouchEnd={clearLongPress}
-                    onTouchMove={handleTouchMove}
-                    aria-label={`View ${label}`}
-                  >
-                    <span className={clsx("month-calendar-event-color", colorClass)} />
-                    <span className="month-calendar-event-label">
-                      {symbol && (
-                        <span
-                          className="month-calendar-event-symbol"
-                          role="img"
-                          aria-label={SYMBOL_LABELS[symbol] || symbol}
-                        >
-                          {symbol}
-                        </span>
-                      )}
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
+            {isOverflowExpanded && hiddenEvents.map((dayEvent) => renderEventButton(dayEvent, "hidden-event"))}
           </>
         )}
       </div>
