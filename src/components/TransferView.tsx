@@ -287,11 +287,21 @@ export function TransferView({
                             Displayed Date Range
                           </div>
                           <div className="fw-semibold">
-                            {transferStats.earliest && transferStats.latest
-                              ? transferStats.earliest.isSame(transferStats.latest, "day")
-                                ? formatDisplayDate(transferStats.earliest.toDate())
-                                : `${formatDisplayDate(transferStats.earliest.toDate())} to ${formatDisplayDate(transferStats.latest.toDate())}`
-                              : "-"}
+                            {(() => {
+                              if (!transferStats.earliest || !transferStats.latest) {
+                                return "-";
+                              }
+
+                              if (transferStats.earliest.isSame(transferStats.latest, "day")) {
+                                return formatDisplayDate(transferStats.earliest.toDate());
+                              }
+
+                              return (
+                                formatDisplayDate(transferStats.earliest.toDate()) +
+                                " to " +
+                                formatDisplayDate(transferStats.latest.toDate())
+                              );
+                            })()}
                           </div>
                         </Card.Body>
                       </Card>
