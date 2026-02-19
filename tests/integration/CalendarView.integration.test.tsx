@@ -640,6 +640,70 @@ describe("CalendarView Integration Tests", () => {
       expect(within(modal).getByText(/Edit Event/i)).toBeInTheDocument();
       expect(within(modal).getByRole("button", { name: /Update/i })).toBeInTheDocument();
     });
+
+    it("shows Cancel button in edit mode and returns to view mode", async () => {
+      const fixtures = createTestFixtures();
+      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
+      setupTimeOffEvents(fixtures.timeOffEvents);
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
+
+      renderCalendarView({ myTeam: 1 });
+
+      const vacationBadge = screen.getAllByText("Vacation")[0];
+      fireEvent.click(vacationBadge);
+
+      const modal = screen.getByRole("dialog");
+      const editButton = within(modal)
+        .getAllByRole("button", { name: /Edit/i })
+        .find((button) => button.textContent === "Edit");
+      expect(editButton).toBeTruthy();
+      fireEvent.click(editButton!);
+
+      expect(within(modal).getByRole("button", { name: /^Cancel$/i })).toBeInTheDocument();
+
+      fireEvent.click(within(modal).getByRole("button", { name: /^Cancel$/i }));
+
+      expect(within(modal).getByText(/View Event/i)).toBeInTheDocument();
+    });
+
+    it("confirms reset in edit mode when form has unsaved changes", async () => {
+      const fixtures = createTestFixtures();
+      setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });
+      setupTimeOffEvents(fixtures.timeOffEvents);
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
+
+      renderCalendarView({ myTeam: 1 });
+
+      const vacationBadge = screen.getAllByText("Vacation")[0];
+      fireEvent.click(vacationBadge);
+
+      const modal = screen.getByRole("dialog");
+      const editButton = within(modal)
+        .getAllByRole("button", { name: /Edit/i })
+        .find((button) => button.textContent === "Edit");
+      expect(editButton).toBeTruthy();
+      fireEvent.click(editButton!);
+
+      const commentInput = within(modal).getByLabelText(/Comment/i);
+      fireEvent.change(commentInput, { target: { value: "Updated title" } });
+
+      fireEvent.click(within(modal).getByRole("button", { name: /Reset form/i }));
+
+      expect(
+        screen.getByRole("dialog", { description: /You have unsaved changes/i }),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Keep Editing/i }));
+      expect(
+        screen.queryByRole("dialog", { description: /You have unsaved changes/i }),
+      ).not.toBeInTheDocument();
+
+      const eventFormDialog = screen.getByRole("dialog");
+      expect(within(eventFormDialog).getByDisplayValue("Updated title")).toBeInTheDocument();
+    });
   });
 
   describe("Delete Confirmation Flow", () => {

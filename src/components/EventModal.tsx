@@ -184,6 +184,7 @@ type EventModalProps = {
   onResetForm: () => void;
   onSubmit: () => void;
   onSwitchToEdit?: () => void;
+  onCancelEditMode?: () => void;
 };
 
 /**
@@ -232,6 +233,7 @@ type EventModalProps = {
  * @param onResetForm - Resets the form to its initial state
  * @param onSubmit - Submits the form to add or update the event
  * @param onSwitchToEdit - Optional callback when Edit button is clicked in view mode to switch to edit mode
+ * @param onCancelEditMode - Optional callback used in edit mode to return to view mode without closing the modal
  * @returns The rendered EventModal component (a Bootstrap Modal containing the editor)
  */
 export function EventModal({
@@ -263,6 +265,7 @@ export function EventModal({
   onResetForm,
   onSubmit,
   onSwitchToEdit,
+  onCancelEditMode,
 }: EventModalProps) {
   return (
     <Modal show={show} onHide={onHide} onEntered={onEntered} size="lg" centered>
@@ -439,6 +442,11 @@ export function EventModal({
           </>
         ) : (
           <>
+            {mode === "edit" && onCancelEditMode && (
+              <Button variant="secondary" onClick={onCancelEditMode}>
+                Cancel
+              </Button>
+            )}
             <Button variant="outline-secondary" onClick={onResetForm}>
               Reset form
             </Button>

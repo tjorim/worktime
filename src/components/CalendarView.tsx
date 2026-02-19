@@ -16,6 +16,12 @@ import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
+import {
+  buildEventFormState,
+  isEventFormDirty,
+  serializeEventFormState,
+  serializeEventFormStateFromEvent,
+} from "../utils/eventFormState";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
@@ -101,6 +107,8 @@ export function CalendarView({
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(-1);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [initialFormState, setInitialFormState] = useState("");
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
@@ -141,6 +149,11 @@ export function CalendarView({
     setEndDateError("");
   };
 
+  const isFormDirty = isEventFormDirty(
+    buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+    initialFormState,
+  );
+
   const handleAddEventForDate = (date: Dayjs) => {
     if (!timeOffEnabled) return;
     resetForm();
@@ -149,7 +162,23 @@ export function CalendarView({
     setEventType("range");
     setEventStart(date.format("YYYY/MM/DD"));
     setEventEnd(date.format("YYYY/MM/DD"));
+    setInitialFormState(
+      serializeEventFormState({
+        type: "range",
+        weekday: DEFAULT_WEEKDAY,
+        start: date.format("YYYY/MM/DD"),
+        end: date.format("YYYY/MM/DD"),
+        title: "",
+        flags: [],
+      }),
+    );
     setShowEventModal(true);
+  };
+
+  const loadEventIntoForm = (event: HdayEvent, mode: "view" | "edit") => {
+    prefillFormFromEvent(event);
+    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+    setModalMode(mode);
   };
 
   const handleOpenViewModal = (index: number) => {
@@ -158,8 +187,7 @@ export function CalendarView({
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setModalMode("view");
+    loadEventIntoForm(event, "view");
     setShowEventModal(true);
   };
 
@@ -169,14 +197,40 @@ export function CalendarView({
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setModalMode("edit");
+    loadEventIntoForm(event, "edit");
     setShowEventModal(true);
   };
 
   const handleSwitchToEdit = () => {
     if (!timeOffEnabled) return;
+    setInitialFormState(
+      serializeEventFormState(
+        buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      ),
+    );
     setModalMode("edit");
+  };
+
+  const handleCancelEditMode = () => {
+    if (!timeOffEnabled || editIndex < 0) return;
+
+    const event = events[editIndex];
+    if (!event) return;
+
+    loadEventIntoForm(event, "view");
+  };
+
+  const handleResetForm = () => {
+    if (isFormDirty) {
+      setShowResetConfirm(true);
+      return;
+    }
+    resetForm();
+  };
+
+  const handleConfirmResetForm = () => {
+    resetForm();
+    setShowResetConfirm(false);
   };
 
   const handleTypeFlagChange = (flag: TypeFlag | "none") => {
@@ -278,6 +332,7 @@ export function CalendarView({
     }
 
     setShowEventModal(false);
+    setShowResetConfirm(false);
     resetForm();
   };
 
@@ -338,6 +393,11 @@ export function CalendarView({
       };
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
+
+  const handleHideEventModal = () => {
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+  };
 
   const previewLine = buildPreviewLine({
     eventType,
@@ -432,7 +492,7 @@ export function CalendarView({
             timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
             typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
             timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-            onHide={() => setShowEventModal(false)}
+            onHide={handleHideEventModal}
             onEntered={() => formRef.current?.focus()}
             onEventTypeChange={setEventType}
             onEventTitleChange={setEventTitle}
@@ -441,9 +501,21 @@ export function CalendarView({
             onEndDateChange={setEventEnd}
             onTypeFlagChange={handleTypeFlagChange}
             onTimeFlagChange={handleTimeFlagChange}
-            onResetForm={resetForm}
+            onResetForm={handleResetForm}
             onSubmit={handleSubmitEvent}
             onSwitchToEdit={handleSwitchToEdit}
+            onCancelEditMode={handleCancelEditMode}
+          />
+
+          <ConfirmationDialog
+            isOpen={showResetConfirm}
+            title="Reset Event Form"
+            message="You have unsaved changes. Resetting the form will clear your edits."
+            confirmLabel="Reset"
+            cancelLabel="Keep Editing"
+            variant="warning"
+            onConfirm={handleConfirmResetForm}
+            onCancel={() => setShowResetConfirm(false)}
           />
 
           <ConfirmationDialog

@@ -12,6 +12,12 @@ import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcut
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
+import {
+  buildEventFormState,
+  isEventFormDirty,
+  serializeEventFormState,
+  serializeEventFormStateFromEvent,
+} from "../utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -21,6 +27,7 @@ import {
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   VIEW_MODE_HELP_TEXT,
   TIMEOFF_VIEWS,
+  DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
 
 /**
@@ -111,6 +118,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [initialFormState, setInitialFormState] = useState("");
 
   // Raw .hday editor state (kept in sync but not rendered in UI)
   const [rawEditorText, setRawEditorText] = useState(rawText);
@@ -132,24 +141,52 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isFormDirty = isEventFormDirty(
+    buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+    initialFormState,
+  );
+
   const handleOpenAddModal = useCallback(() => {
     resetForm();
+    setInitialFormState(
+      serializeEventFormState({
+        type: "range",
+        weekday: DEFAULT_WEEKDAY,
+        start: "",
+        end: "",
+        title: "",
+        flags: [],
+      }),
+    );
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
   }, [resetForm]);
+
+  const loadEventIntoForm = useCallback(
+    (event: HdayEvent, mode: "view" | "edit") => {
+      prefillFormFromEvent(event);
+      setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+      setModalMode(mode);
+    },
+    [prefillFormFromEvent],
+  );
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
     if (!event) return;
 
     setEditIndex(index);
-    prefillFormFromEvent(event);
-    setModalMode("edit");
+    loadEventIntoForm(event, "edit");
     setShowEventModal(true);
   };
 
   const handleSwitchToEdit = () => {
+    setInitialFormState(
+      serializeEventFormState(
+        buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      ),
+    );
     setModalMode("edit");
   };
 
@@ -161,9 +198,21 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     if (!event) {
       return;
     }
-    prefillFormFromEvent(event);
-    setModalMode("view");
-  }, [editIndex, events, prefillFormFromEvent]);
+    loadEventIntoForm(event, "view");
+  }, [editIndex, events, loadEventIntoForm]);
+
+  const handleResetForm = () => {
+    if (isFormDirty) {
+      setShowResetConfirm(true);
+      return;
+    }
+    resetForm();
+  };
+
+  const handleConfirmResetForm = () => {
+    resetForm();
+    setShowResetConfirm(false);
+  };
 
   const handleSubmitEvent = () => {
     if (!validateForm()) {
@@ -201,6 +250,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
 
     setShowEventModal(false);
+    setShowResetConfirm(false);
     resetForm();
   };
 
@@ -374,6 +424,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     },
   );
 
+  const handleHideEventModal = () => {
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+  };
+
   const previewLine = buildPreviewLine({
     eventType,
     start: eventStart,
@@ -495,7 +550,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
-        onHide={() => setShowEventModal(false)}
+        onHide={handleHideEventModal}
         onEntered={() => formRef.current?.focus()}
         onEventTypeChange={setEventType}
         onEventTitleChange={setEventTitle}
@@ -504,9 +559,21 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onEndDateChange={setEventEnd}
         onTypeFlagChange={handleTypeFlagChange}
         onTimeFlagChange={handleTimeFlagChange}
-        onResetForm={resetForm}
+        onResetForm={handleResetForm}
         onSubmit={handleSubmitEvent}
         onSwitchToEdit={handleSwitchToEdit}
+        onCancelEditMode={handleCancelEditMode}
+      />
+
+      <ConfirmationDialog
+        isOpen={showResetConfirm}
+        title="Reset Event Form"
+        message="You have unsaved changes. Resetting the form will clear your edits."
+        confirmLabel="Reset"
+        cancelLabel="Keep Editing"
+        variant="warning"
+        onConfirm={handleConfirmResetForm}
+        onCancel={() => setShowResetConfirm(false)}
       />
 
       {/* Delete Confirmation Dialog */}
