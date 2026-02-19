@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import type { ScheduleOption } from "../../data/rosters";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
@@ -82,6 +83,55 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
 
   const countdown = useCountdown(nextShiftStartTime);
 
+  const teamsSummary = useMemo(() => {
+    if (!hasTeams) return null;
+
+    const allTeamsToday = getAllTeamsShifts(today, scheduleType);
+    const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking).length;
+    return {
+      workingTeams,
+      offTeams: allTeamsToday.length - workingTeams,
+    };
+  }, [hasTeams, scheduleType, teamCount, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+
+  const currentShiftStartTime = useMemo(() => {
+    if (!currentWorkingTeam || currentWorkingTeam.shift.start == null) return null;
+    return setTimeFromFractionalHour(currentWorkingTeam.date, currentWorkingTeam.shift.start);
+  }, [currentWorkingTeam]);
+
+  const currentShiftEndTime = useMemo(() => {
+    if (!currentWorkingTeam || currentWorkingTeam.shift.end == null) return null;
+
+    const shiftStart = currentShiftStartTime;
+    const shiftEnd = setTimeFromFractionalHour(
+      currentWorkingTeam.date,
+      currentWorkingTeam.shift.end,
+    );
+
+    if (!shiftStart) return shiftEnd;
+
+    return shiftEnd.isBefore(shiftStart) ? shiftEnd.add(1, "day") : shiftEnd;
+  }, [currentWorkingTeam, currentShiftStartTime]);
+
+  const shiftEndCountdown = useCountdown(currentShiftEndTime);
+
+  const shiftProgress = useMemo(() => {
+    if (!currentShiftStartTime || !currentShiftEndTime || !currentWorkingTeam) return null;
+
+    const totalSeconds = currentShiftEndTime.diff(currentShiftStartTime, "second");
+    if (totalSeconds <= 0) return null;
+
+    const elapsedSeconds = today.diff(currentShiftStartTime, "second");
+    const clampedElapsedSeconds = Math.max(0, elapsedSeconds);
+    const remainingSeconds = Math.max(0, totalSeconds - clampedElapsedSeconds);
+
+    return {
+      percentage: Math.min(100, Math.max(0, (clampedElapsedSeconds / totalSeconds) * 100)),
+      remainingHours: Math.floor(remainingSeconds / 3600),
+      remainingMinutes: Math.floor((remainingSeconds % 3600) / 60),
+    };
+  }, [currentShiftStartTime, currentShiftEndTime, currentWorkingTeam, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+
   return (
     <Row>
       <Col md={6}>
@@ -114,22 +164,44 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                     <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
                     Currently working
                   </div>
+                  {shiftEndCountdown && !shiftEndCountdown.isExpired && (
+                    <CountdownBadge
+                      countdown={shiftEndCountdown}
+                      startTime={currentShiftEndTime}
+                      label="Ends in"
+                      variant="warning"
+                    />
+                  )}
+                  {shiftProgress && (
+                    <div className="mt-2">
+                      <div className="small text-muted mb-1">
+                        Shift progress: {shiftProgress.remainingHours}h{" "}
+                        {shiftProgress.remainingMinutes}m remaining
+                      </div>
+                      <ProgressBar
+                        now={shiftProgress.percentage}
+                        variant="warning"
+                        className="progress-thin"
+                        aria-label={`Shift progress with ${shiftProgress.remainingHours} hours and ${shiftProgress.remainingMinutes} minutes remaining`}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="text-muted">
-                  <div className="mb-2">
-                    <Badge bg="secondary">No teams working</Badge>
-                  </div>
-                  <div className="small">All teams are currently off duty</div>
+                <EmptyState
+                  icon="bi-moon-stars"
+                  title="No Teams Working"
+                  description="All teams are currently off duty"
+                />
+              )}
+              {teamsSummary && teamsSummary.workingTeams > 0 && (
+                <div className="mt-3">
+                  <Badge bg="info" text="dark">
+                    {teamsSummary.workingTeams} working, {teamsSummary.offTeams} off
+                  </Badge>
                 </div>
               )}
               <hr className="my-3" />
-              {hasTeams && teamCount > 1 && (
-                <div className="small text-muted">
-                  <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
-                  Select your team above for personalized shift tracking and countdown timers
-                </div>
-              )}
             </div>
           </Card.Body>
         </Card>
@@ -150,13 +222,6 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   </div>
                   <ShiftTimeDisplay shift={nextShiftAnyTeam.shift} className="small text-muted" />
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
-                  <hr className="my-3" />
-                  {hasTeams && teamCount > 1 && (
-                    <div className="small text-muted">
-                      <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
-                      Select your team above for personalized shift tracking
-                    </div>
-                  )}
                 </div>
               ) : (
                 <EmptyState
@@ -169,6 +234,14 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
           </Card.Body>
         </Card>
       </Col>
+      {hasTeams && teamCount > 1 && (
+        <Col xs={12} className="mt-3">
+          <div className="small text-muted text-center">
+            <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
+            Select your team above for personalized shift tracking and countdown timers
+          </div>
+        </Col>
+      )}
     </Row>
   );
 }

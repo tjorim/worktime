@@ -239,9 +239,12 @@ describe("CurrentStatus Component", () => {
           "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
-      expect(
-        screen.getByText("Select your team above for personalized shift tracking"),
-      ).toBeInTheDocument();
+    });
+
+    it("should show team summary badge in generic status", () => {
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("1 working, 1 off")).toBeInTheDocument();
     });
 
     it("should show current shift information when team is selected", () => {
@@ -423,6 +426,15 @@ describe("CurrentStatus Component", () => {
           "Select your team above for personalized shift tracking and countdown timers",
         ),
       ).toBeInTheDocument();
+    });
+
+    it("should show empty state when no teams are currently working", () => {
+      vi.mocked(shiftCalculations.getCurrentWorkingTeam).mockReturnValue(null);
+
+      renderWithProviders(<CurrentStatus myTeam={null} onChangeTeam={mockOnChangeTeam} />);
+
+      expect(screen.getByText("No Teams Working")).toBeInTheDocument();
+      expect(screen.getByText("All teams are currently off duty")).toBeInTheDocument();
     });
 
     it("should handle null next shift gracefully", () => {
