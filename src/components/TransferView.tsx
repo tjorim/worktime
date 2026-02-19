@@ -102,9 +102,8 @@ export function TransferView({
 
     const handovers = transfers.filter((transfer) => transfer.type === "handover").length;
     const takeovers = transfers.length - handovers;
-    const sortedByDate = [...transfers].sort((a, b) => a.date.valueOf() - b.date.valueOf());
-    const earliest = sortedByDate[0]?.date;
-    const latest = sortedByDate.at(-1)?.date;
+    const earliest = transfers[0]?.date;
+    const latest = transfers.at(-1)?.date;
 
     return {
       handovers,
