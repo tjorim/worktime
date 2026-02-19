@@ -79,7 +79,7 @@ function checkTransfer(
  * @param customEndDate - Optional end date string parseable by dayjs; when provided the scan is constrained to this inclusive end date
  * @returns An object containing:
  *  - `transfers`: an array of transfer records sorted by date (each record contains `date`, `fromTeam`, `toTeam`, `fromShiftType`, `toShiftType`, and `type`)
- *  - `hasMoreTransfers`: `true` if there are likely additional transfers beyond the returned set, `false` otherwise
+ *  - `hasMoreTransfers`: `true` when the limit was reached and the date range is not fully exhausted, `false` otherwise
  *  - `availableOtherTeams`: list of team ids available for comparison (excludes `myTeam`)
  *  - `otherTeam`: the currently selected comparison team id
  *  - `setOtherTeam`: setter function to change the selected comparison team
@@ -171,6 +171,7 @@ export function useTransferCalculations({
     // Determine date range
     const startDate = customStartDate ? dayjs(customStartDate) : dayjs();
     const endDate = customEndDate ? dayjs(customEndDate) : null;
+    let lastScannedDate = startDate;
 
     // If we have a date range, scan within it; otherwise scan forward from today
     const maxDaysToScan = endDate ? endDate.diff(startDate, "day") + 1 : 365; // Default to scanning 1 year forward
@@ -181,8 +182,6 @@ export function useTransferCalculations({
         "Large date range detected. Consider limiting the range for better performance.",
       );
     }
-
-    let lastScannedDate = startDate;
 
     for (let day = 0; day < maxDaysToScan && foundTransfers.length < limit; day++) {
       const scanDate = startDate.add(day, "day");
@@ -288,7 +287,7 @@ export function useTransferCalculations({
 
     // Check if there are more transfers available
     const hasMoreTransfers =
-      foundTransfers.length === limit && (!endDate || lastScannedDate.isBefore(endDate));
+      foundTransfers.length >= limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
 
     return {
       transfers: foundTransfers,
