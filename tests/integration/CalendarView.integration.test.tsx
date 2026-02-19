@@ -693,10 +693,16 @@ describe("CalendarView Integration Tests", () => {
 
       fireEvent.click(within(modal).getByRole("button", { name: /Reset form/i }));
 
-      expect(screen.getByText(/Reset Event Form/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("dialog", { description: /You have unsaved changes/i }),
+      ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Keep Editing/i }));
-      expect(screen.getByText(/Reset Event Form/i).closest(".modal")).not.toHaveClass("show");
-      expect(within(modal).getByDisplayValue("Updated title")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("dialog", { description: /You have unsaved changes/i }),
+      ).not.toBeInTheDocument();
+
+      const eventFormDialog = screen.getByRole("dialog");
+      expect(within(eventFormDialog).getByDisplayValue("Updated title")).toBeInTheDocument();
     });
   });
 
