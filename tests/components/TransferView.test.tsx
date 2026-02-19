@@ -94,6 +94,20 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
+  getNextShift: vi.fn((date) => ({
+    date: dayjs(date).add(1, "day"),
+    shift: {
+      code: "M",
+      displayCode: "M",
+      emoji: "🌅",
+      name: "Morning",
+      start: 7,
+      end: 15,
+      isWorking: true,
+      className: "shift-morning",
+    },
+    code: "2502.2M",
+  })),
 }));
 
 vi.mock("../../src/utils/config", async (importOriginal) => {
@@ -314,7 +328,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badges and icons for team direction
-      expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
@@ -415,7 +429,7 @@ describe("TransferView", () => {
       expect(screen.getAllByText(/Night/).length).toBeGreaterThan(0);
 
       // Check for badges and icons for team direction
-      expect(screen.getAllByText(/Your Team/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
 
       // Check handover/takeover labels
@@ -443,7 +457,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badge-based section header
-      expect(screen.getAllByText(/Your Team 1/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
     });
   });
@@ -505,6 +519,47 @@ describe("TransferView", () => {
 
       expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
+    });
+
+    it("groups transfer history into accordion buckets", () => {
+      const mockTransfers = [
+        {
+          date: dayjs().add(2, "day"),
+          fromTeam: 1,
+          toTeam: 2,
+          fromShiftType: "M" as const,
+          toShiftType: "L" as const,
+          type: "handover" as TransferType,
+        },
+        {
+          date: dayjs().add(14, "day"),
+          fromTeam: 2,
+          toTeam: 1,
+          fromShiftType: "L" as const,
+          toShiftType: "N" as const,
+          type: "takeover" as TransferType,
+        },
+        {
+          date: dayjs().add(50, "day"),
+          fromTeam: 1,
+          toTeam: 2,
+          fromShiftType: "N" as const,
+          toShiftType: "M" as const,
+          type: "handover" as TransferType,
+        },
+      ];
+
+      mockUseTransferCalculations.mockReturnValue({
+        ...defaultHookReturn,
+        transfers: mockTransfers,
+      });
+
+      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+
+      expect(screen.getAllByText(/Next 7 Days/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Next 30 Days/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Further Ahead/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Past Transfers/).length).toBeGreaterThan(0);
     });
 
     it("uses shared empty state for no other teams", () => {

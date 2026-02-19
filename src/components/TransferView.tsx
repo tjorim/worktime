@@ -4,18 +4,15 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
-import Table from "react-bootstrap/Table";
-import Tooltip from "react-bootstrap/Tooltip";
-import clsx from "clsx";
+import Accordion from "react-bootstrap/Accordion";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations } from "../hooks/useTransferCalculations";
 import { dayjs, formatDisplayDate } from "../utils/dateTimeUtils";
-import { getShift } from "../utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
-import { ShiftBadge } from "./shared/ShiftBadge";
+import { UpcomingShiftsList } from "./schedule/UpcomingShiftsList";
+import { RecentTransfersList } from "./transfer/RecentTransfersList";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -135,6 +132,33 @@ export function TransferView({
       formatDisplayDate(transferStats.latest.toDate())
     );
   }, [transferStats]);
+
+  const groupedTransfers = useMemo(() => {
+    const nextWeek: typeof transfers = [];
+    const nextMonth: typeof transfers = [];
+    const future: typeof transfers = [];
+    const past: typeof transfers = [];
+
+    transfers.forEach((transfer) => {
+      const diffDays = transfer.date.startOf("day").diff(today.startOf("day"), "day");
+      if (diffDays < 0) {
+        past.push(transfer);
+      } else if (diffDays <= 7) {
+        nextWeek.push(transfer);
+      } else if (diffDays <= 30) {
+        nextMonth.push(transfer);
+      } else {
+        future.push(transfer);
+      }
+    });
+
+    return [
+      { key: "next-7", title: "Next 7 Days", items: nextWeek },
+      { key: "next-30", title: "Next 30 Days", items: nextMonth },
+      { key: "further", title: "Further Ahead", items: future },
+      { key: "past", title: "Past Transfers", items: past },
+    ];
+  }, [today, transfers]);
 
   return (
     <Card>
@@ -266,6 +290,21 @@ export function TransferView({
               </Col>
             </Row>
 
+            <Row className="g-3 mb-3">
+              <Col lg={5}>
+                <UpcomingShiftsList teamNumber={myTeam} scheduleType={scheduleType} itemCount={6} />
+              </Col>
+              <Col lg={7}>
+                <RecentTransfersList
+                  title="Recent Transfer Activity"
+                  transfers={transfers.slice(0, 5)}
+                  myTeam={myTeam}
+                  emptyDescription="Transfers between your team and the selected team will appear here."
+                  scheduleType={scheduleType}
+                />
+              </Col>
+            </Row>
+
             {/* Transfer Results */}
             {transfers.length === 0 ? (
               <EmptyState
@@ -311,113 +350,27 @@ export function TransferView({
                   </div>
                 )}
 
-                <div className="table-responsive">
-                  <Table hover className="align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Teams</th>
-                        <th>Transfer Type</th>
-                        <th>Shift Change</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transfers.map((transfer) => {
-                        const fromShift = getShift(transfer.fromShiftType, scheduleType);
-                        const toShift = getShift(transfer.toShiftType, scheduleType);
-                        const isPastTransfer = transfer.date.isBefore(today, "day");
-
-                        return (
-                          <tr
-                            key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
-                            className={clsx({ "opacity-75": isPastTransfer })}
-                          >
-                            <td>
-                              <div className="d-flex align-items-center">
-                                <i
-                                  className={clsx("bi", "me-2", {
-                                    "bi-arrow-right-circle text-success":
-                                      transfer.type === "handover",
-                                    "bi-arrow-left-circle text-info": transfer.type !== "handover",
-                                  })}
-                                  aria-hidden="true"
-                                ></i>
-                                <strong>{formatDisplayDate(transfer.date.toDate())}</strong>
-                                {isPastTransfer && (
-                                  <Badge bg="secondary" className="ms-2">
-                                    Past
-                                  </Badge>
-                                )}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center gap-1">
-                                <Badge
-                                  bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
-                                  className="text-nowrap"
-                                >
-                                  {transfer.fromTeam === myTeam ? "Your " : ""}
-                                  Team {transfer.fromTeam}
-                                </Badge>
-                                <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
-                                <Badge
-                                  bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
-                                  className="text-nowrap"
-                                >
-                                  {transfer.toTeam === myTeam ? "Your " : ""}
-                                  Team {transfer.toTeam}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td>
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={
-                                  <Tooltip
-                                    id={`tooltip-${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
-                                  >
-                                    {transfer.type === "handover"
-                                      ? "Your team transfers to them"
-                                      : "They transfer to your team"}
-                                  </Tooltip>
-                                }
-                              >
-                                <Badge
-                                  bg={transfer.type === "handover" ? "success" : "info"}
-                                  pill
-                                  style={{
-                                    cursor: "help",
-                                  }}
-                                >
-                                  {transfer.type === "handover" ? "Handover" : "Takeover"}
-                                </Badge>
-                              </OverlayTrigger>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center gap-2">
-                                <ShiftBadge
-                                  shift={fromShift}
-                                  showEmoji
-                                  showName
-                                  pill
-                                  showTooltip={false}
-                                />
-                                <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
-                                <ShiftBadge
-                                  shift={toShift}
-                                  showEmoji
-                                  showName
-                                  pill
-                                  showTooltip={false}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                </div>
+                <Accordion defaultActiveKey={groupedTransfers[0]?.key} alwaysOpen>
+                  {groupedTransfers.map((group) => (
+                    <Accordion.Item eventKey={group.key} key={group.key}>
+                      <Accordion.Header>
+                        {group.title}
+                        <Badge bg="secondary" pill className="ms-2">
+                          {group.items.length}
+                        </Badge>
+                      </Accordion.Header>
+                      <Accordion.Body>
+                        <RecentTransfersList
+                          title={group.title}
+                          transfers={group.items}
+                          myTeam={myTeam}
+                          emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
+                          scheduleType={scheduleType}
+                        />
+                      </Accordion.Body>
+                    </Accordion.Item>
+                  ))}
+                </Accordion>
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">
