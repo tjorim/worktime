@@ -48,6 +48,11 @@ export function PersonalizedStatusContent({
 
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
+
+  // NOTE: Intentional exception — do not replace with useShiftCalculation().
+  // PersonalizedStatusContent needs minute-level live updates plus the
+  // night-shift anchoring/extension behavior, which useShiftCalculation
+  // does not provide. Keeping useLiveShiftStatus prevents regressions.
   const { today, currentShift, nextShift, offDayProgress } = useLiveShiftStatus(
     myTeam,
     scheduleType,
