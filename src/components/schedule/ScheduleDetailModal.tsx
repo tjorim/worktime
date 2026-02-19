@@ -10,7 +10,7 @@ import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import clsx from "clsx";
 import { ShiftBadge } from "../shared/ShiftBadge";
-import type { ScheduleOption } from "../../data/rosters";
+import type { ScheduleOption, ShiftCode } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
@@ -19,6 +19,17 @@ import { calculateShift } from "../../utils/shiftCalculations";
 
 // Icon size for small decorative icons (e.g., live indicator dot)
 const SMALL_ICON_SIZE = "0.5rem";
+
+// Display metadata for each working shift code — used to render icons, colors, and labels.
+// Any shift code present in a schedule's shiftTimes but absent here will receive a generic fallback.
+const SHIFT_DISPLAY_META: Partial<
+  Record<ShiftCode, { label: string; icon: string; iconClassName: string; variant: string }>
+> = {
+  M: { label: "Morning Shifts", icon: "bi bi-sun", iconClassName: "text-warning", variant: "warning" },
+  L: { label: "Evening Shifts", icon: "bi bi-sunset", iconClassName: "text-info", variant: "info" },
+  D: { label: "Day Shifts", icon: "bi bi-brightness-high", iconClassName: "text-primary", variant: "primary" },
+  N: { label: "Night Shifts", icon: "bi bi-moon", iconClassName: "text-secondary", variant: "dark" },
+};
 
 interface ScheduleDetailModalProps {
   show: boolean;
@@ -86,10 +97,6 @@ export function ScheduleDetailModal({
   const stats = useMemo(() => {
     const workingDays = weekSchedule.filter((day) => day.shift.code !== "O").length;
     const offDays = 7 - workingDays;
-    const morningShifts = weekSchedule.filter((day) => day.shift.code === "M").length;
-    const eveningShifts = weekSchedule.filter((day) => day.shift.code === "L").length;
-    const nightShifts = weekSchedule.filter((day) => day.shift.code === "N").length;
-    const dayShifts = weekSchedule.filter((day) => day.shift.code === "D").length;
     const totalWeeklyHours = weekSchedule.reduce((sum, day) => {
       if (day.shift.start === null || day.shift.end === null) {
         return sum;
@@ -103,48 +110,22 @@ export function ScheduleDetailModal({
       return sum + duration;
     }, 0);
 
-    const shiftDistribution = [
-      {
-        key: "M",
-        label: "Morning Shifts",
-        icon: "bi bi-sun",
-        iconClassName: "text-warning",
-        variant: "warning",
-        count: morningShifts,
-      },
-      {
-        key: "L",
-        label: "Evening Shifts",
-        icon: "bi bi-sunset",
-        iconClassName: "text-info",
-        variant: "info",
-        count: eveningShifts,
-      },
-      {
-        key: "D",
-        label: "Day Shifts",
-        icon: "bi bi-brightness-high",
-        iconClassName: "text-primary",
-        variant: "primary",
-        count: dayShifts,
-      },
-      {
-        key: "N",
-        label: "Night Shifts",
-        icon: "bi bi-moon",
-        iconClassName: "text-primary",
-        variant: "dark",
-        count: nightShifts,
-      },
-    ].filter((item) => Object.keys(scheduleConfig.shiftConfig.shiftTimes).includes(item.key));
+    const shiftDistribution = (Object.keys(scheduleConfig.shiftConfig.shiftTimes) as ShiftCode[])
+      .filter((code) => code !== "O")
+      .map((code) => {
+        const count = weekSchedule.filter((day) => day.shift.code === code).length;
+        const meta = SHIFT_DISPLAY_META[code] ?? {
+          label: `${code} Shifts`,
+          icon: "bi bi-circle",
+          iconClassName: "text-muted",
+          variant: "secondary",
+        };
+        return { key: code, ...meta, count };
+      });
 
     return {
       workingDays,
       offDays,
-      morningShifts,
-      eveningShifts,
-      nightShifts,
-      dayShifts,
       totalWeeklyHours,
       shiftDistribution,
     };
@@ -383,7 +364,7 @@ export function ScheduleDetailModal({
                       {stats.workingDays}/7 working • {stats.offDays}/7 rest
                     </small>
                   </div>
-                  <ProgressBar>
+                  <ProgressBar aria-label="Working vs rest days over the next 7 days">
                     <ProgressBar
                       now={(stats.workingDays / 7) * 100}
                       variant="success"
@@ -404,7 +385,11 @@ export function ScheduleDetailModal({
                       <i className="bi bi-clock me-1" aria-hidden="true"></i>
                       Total Weekly Hours
                     </span>
-                    <Badge bg="primary">{stats.totalWeeklyHours.toFixed(1)}h</Badge>
+                    <Badge bg="primary">
+                      {Number.isInteger(stats.totalWeeklyHours)
+                        ? `${stats.totalWeeklyHours}h`
+                        : `${stats.totalWeeklyHours.toFixed(1)}h`}
+                    </Badge>
                   </ListGroup.Item>
                 </ListGroup>
               </Card.Body>

@@ -62,7 +62,7 @@ describe("ScheduleDetailModal", () => {
     expect(screen.getByLabelText("Personal 7-day schedule table")).toBeInTheDocument();
     expect(screen.getByText("Working vs Rest Days")).toBeInTheDocument();
     expect(screen.getByText("Total Weekly Hours")).toBeInTheDocument();
-    expect(screen.getByText(/40\.0h/)).toBeInTheDocument();
+    expect(screen.getByText(/40h/)).toBeInTheDocument();
     expect(screen.getByText(/5\/7 \(71%\)/)).toBeInTheDocument();
   });
 
