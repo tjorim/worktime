@@ -232,6 +232,11 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
           </div>
         )}
       </div>
+      {hasParallelShifts && (
+        <div className="text-center mt-2">
+          <small className="text-muted">Multiple teams share this shift start time.</small>
+        </div>
+      )}
     </div>
   );
 }
