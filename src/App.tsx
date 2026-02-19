@@ -42,6 +42,7 @@ function AppContent() {
   >("onboarding");
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
 
   const handleTabChange = useCallback(
@@ -193,6 +194,9 @@ function AppContent() {
             onShowAbout={() => setShowAbout(true)}
             onChangeSchedule={handleChangeSchedule}
             onChangeTeam={handleChangeTeam}
+            showSettings={showSettings}
+            onOpenSettings={() => setShowSettings(true)}
+            onCloseSettings={() => setShowSettings(false)}
           />
           <ErrorBoundary>
             <CurrentStatus
@@ -210,6 +214,7 @@ function AppContent() {
               onTabChange={handleTabChange}
               onChangeSchedule={handleChangeSchedule}
               onChangeTeam={handleChangeTeam}
+              onOpenSettings={() => setShowSettings(true)}
             />
           </ErrorBoundary>
           <WelcomeWizard

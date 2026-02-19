@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { type TouchEvent, useEffect, useId, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -16,6 +16,7 @@ import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "../../utils/shiftCalculations";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -174,6 +175,9 @@ export function TodayView({
   const datePickerId = useId();
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
+  const isMobile = useIsMobile();
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Calculate shifts for the viewing schedule
   const todayShifts = useMemo(() => {
@@ -208,6 +212,41 @@ export function TodayView({
     if (dateString && onDateSelect) {
       onDateSelect(dayjs(dateString));
     }
+  };
+
+  useEffect(() => {
+    const preferredIndex = todayShifts.findIndex((shiftResult) => shiftResult.teamNumber === myTeam);
+    setMobileActiveIndex(preferredIndex >= 0 ? preferredIndex : 0);
+  }, [myTeam, todayShifts]);
+
+  const goToPreviousTeam = () => {
+    setMobileActiveIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const goToNextTeam = () => {
+    setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(event.changedTouches[0]?.clientX ?? null);
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = endX - touchStartX;
+    const swipeThreshold = 40;
+
+    if (Math.abs(deltaX) >= swipeThreshold) {
+      if (deltaX < 0) {
+        goToNextTeam();
+      } else {
+        goToPreviousTeam();
+      }
+    }
+
+    setTouchStartX(null);
   };
 
   return (
@@ -250,20 +289,83 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        <Row className="g-2">
-          {todayShifts.map((shiftResult) => (
-            <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
-              <TeamCard
-                shiftResult={shiftResult}
-                isMyTeam={myTeam === shiftResult.teamNumber}
-                isCurrentlyActive={isCurrentlyActive(shiftResult)}
-                hasTeams={hasTeams}
-                onTeamClick={onTeamClick}
-                scheduleType={scheduleType}
-              />
-            </Col>
-          ))}
-        </Row>
+        {isMobile && hasTeams && todayShifts.length > 0 ? (
+          <div
+            className="mobile-team-carousel"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                goToPreviousTeam();
+              }
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                goToNextTeam();
+              }
+            }}
+            role="region"
+            aria-label="Team schedule carousel"
+            tabIndex={0}
+          >
+            <TeamCard
+              shiftResult={todayShifts[mobileActiveIndex]}
+              isMyTeam={myTeam === todayShifts[mobileActiveIndex]?.teamNumber}
+              isCurrentlyActive={isCurrentlyActive(todayShifts[mobileActiveIndex])}
+              hasTeams={hasTeams}
+              onTeamClick={onTeamClick}
+              scheduleType={scheduleType}
+            />
+            <div className="mobile-team-carousel-controls">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={goToPreviousTeam}
+                aria-label="Show previous team"
+                disabled={mobileActiveIndex === 0}
+              >
+                <i className="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+              <div className="mobile-team-carousel-dots" role="tablist" aria-label="Team position">
+                {todayShifts.map((shiftResult, index) => (
+                  <button
+                    key={shiftResult.teamNumber}
+                    type="button"
+                    className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
+                    aria-label={`Show Team ${shiftResult.teamNumber}`}
+                    aria-selected={index === mobileActiveIndex}
+                    role="tab"
+                    onClick={() => setMobileActiveIndex(index)}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={goToNextTeam}
+                aria-label="Show next team"
+                disabled={mobileActiveIndex === todayShifts.length - 1}
+              >
+                <i className="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Row className="g-2">
+            {todayShifts.map((shiftResult) => (
+              <Col key={shiftResult.teamNumber} xs={12} sm={6} md={4} lg>
+                <TeamCard
+                  shiftResult={shiftResult}
+                  isMyTeam={myTeam === shiftResult.teamNumber}
+                  isCurrentlyActive={isCurrentlyActive(shiftResult)}
+                  hasTeams={hasTeams}
+                  onTeamClick={onTeamClick}
+                  scheduleType={scheduleType}
+                />
+              </Col>
+            ))}
+          </Row>
+        )}
       </Card.Body>
     </Card>
   );

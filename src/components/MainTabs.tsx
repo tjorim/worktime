@@ -1,12 +1,15 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import Button from "react-bootstrap/Button";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import type { ScheduleOption } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
 import type { TabKey } from "../contexts/SettingsContext";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
+import { dayjs } from "../utils/dateTimeUtils";
 import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
@@ -14,31 +17,16 @@ import { TimeOffView } from "./TimeOffView";
 import { TimeTrackingView } from "./timeTracking/TimeTrackingView";
 
 interface MainTabsProps {
-  myTeam: number | null; // The user's team from onboarding
+  myTeam: number | null;
   currentDate: Dayjs;
   setCurrentDate: (date: Dayjs) => void;
   activeTab?: TabKey;
   onTabChange?: (tab: TabKey) => void;
-  onChangeSchedule?: () => void; // Callback to open schedule selector
-  onChangeTeam?: () => void; // Callback to open team selector
+  onChangeSchedule?: () => void;
+  onChangeTeam?: () => void;
+  onOpenSettings?: () => void;
 }
 
-/**
- * Displays a tabbed interface for viewing calendar, schedule views, time off, or time tracking.
- *
- * Supports both internal and external control of the active tab, and notifies when the tab changes.
- * The Calendar tab shows the user's working schedule integrated with time-off and public holidays.
- * The Schedule tab groups Today, Week, and Transfers views together.
- *
- * @param myTeam - The user's team number from onboarding or null
- * @param currentDate - The current date being viewed
- * @param setCurrentDate - Function to update the current date
- * @param activeTab - The currently active tab (defaults to 'calendar')
- * @param onTabChange - Callback invoked when the active tab changes
- * @param onChangeSchedule - Callback to open schedule selector
- * @param onChangeTeam - Callback to open team selector
- * @returns The rendered tabbed interface component.
- */
 export function MainTabs({
   myTeam,
   currentDate,
@@ -47,6 +35,7 @@ export function MainTabs({
   onTabChange,
   onChangeSchedule,
   onChangeTeam,
+  onOpenSettings,
 }: MainTabsProps) {
   const tabsId = useId();
   const [activeKey, setActiveKey] = useSyncedState(activeTab);
@@ -55,6 +44,8 @@ export function MainTabs({
   const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState<ScheduleOption | null>(
     null,
   );
+  const [showMobileActions, setShowMobileActions] = useState(false);
+  const isMobile = useIsMobile();
   const { settings } = useSettings();
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
@@ -110,6 +101,48 @@ export function MainTabs({
       }
     }
   }, [activeKey, availableTabs, setActiveTab]);
+
+  useEffect(() => {
+    if (!isMobile && showMobileActions) {
+      setShowMobileActions(false);
+    }
+  }, [isMobile, showMobileActions]);
+
+  const mobileActions = useMemo(
+    () => [
+      {
+        key: "today",
+        label: activeKey === "schedule" ? "Go to Today" : "Open Schedule",
+        icon: activeKey === "schedule" ? "bi-calendar-day" : "bi-calendar-week",
+        onClick: () => {
+          if (activeKey !== "schedule") {
+            setActiveTab("schedule");
+            return;
+          }
+          setCurrentDate(dayjs());
+        },
+      },
+      {
+        key: "switch-team",
+        label: myTeam ? "Switch Team" : "Set My Team",
+        icon: "bi-people",
+        onClick: () => onChangeTeam?.(),
+      },
+      {
+        key: "settings",
+        label: "Open Settings",
+        icon: "bi-gear",
+        onClick: () => onOpenSettings?.(),
+      },
+      {
+        key: "change-schedule",
+        label: "Change Schedule",
+        icon: "bi-clipboard-list",
+        onClick: () => onChangeSchedule?.(),
+      },
+    ],
+    [activeKey, myTeam, onChangeSchedule, onChangeTeam, onOpenSettings, setActiveTab, setCurrentDate],
+  );
 
   return (
     <>
@@ -189,7 +222,51 @@ export function MainTabs({
         </Tabs>
       </main>
 
-      {/* Schedule Detail Modal */}
+      {isMobile && (
+        <div className="mobile-fab-container">
+          {showMobileActions && (
+            <div
+              className="mobile-fab-backdrop"
+              onClick={() => setShowMobileActions(false)}
+              aria-hidden="true"
+            />
+          )}
+          {showMobileActions && (
+            <div id="mobile-quick-actions" className="mobile-fab-menu" role="menu" aria-label="Quick actions">
+              {mobileActions.map((action) => (
+                <Button
+                  key={action.key}
+                  variant="light"
+                  className="mobile-fab-menu-item"
+                  role="menuitem"
+                  onClick={() => {
+                    action.onClick();
+                    setShowMobileActions(false);
+                  }}
+                >
+                  <i className={`bi ${action.icon} me-2`} aria-hidden="true"></i>
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
+          <Button
+            className="mobile-fab"
+            onClick={() => setShowMobileActions((prev) => !prev)}
+            aria-label={showMobileActions ? "Close quick actions" : "Open quick actions"}
+            aria-expanded={showMobileActions}
+            aria-controls="mobile-quick-actions"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setShowMobileActions(false);
+              }
+            }}
+          >
+            <i className={`bi ${showMobileActions ? "bi-x-lg" : "bi-plus-lg"}`} aria-hidden="true"></i>
+          </Button>
+        </div>
+      )}
+
       {selectedScheduleForDetail && (
         <ScheduleDetailModal
           show={showTeamDetail}

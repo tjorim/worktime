@@ -9,32 +9,48 @@ interface HeaderProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+  showSettings?: boolean;
+  onOpenSettings?: () => void;
+  onCloseSettings?: () => void;
 }
 
-/**
- * Render the application header with title and Settings button.
- *
- * @param onShowAbout - Optional callback invoked when About is accessed from Settings panel
- * @param onChangeSchedule - Optional callback invoked when the work schedule settings are changed
- * @param onChangeTeam - Optional callback invoked when the user wants to change their team
- * @returns The header React element containing the app title and Settings button
- */
-export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
+export function Header({
+  onShowAbout,
+  onChangeSchedule,
+  onChangeTeam,
+  showSettings,
+  onOpenSettings,
+  onCloseSettings,
+}: HeaderProps = {}) {
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  const [showSettings, setShowSettings] = useState(false);
+  const [internalShowSettings, setInternalShowSettings] = useState(false);
+  const isControlled = typeof showSettings === "boolean";
+  const settingsOpen = isControlled ? showSettings : internalShowSettings;
 
-  const handleToggleSettings = useCallback(() => {
-    setShowSettings((prev) => !prev);
-  }, []);
+  const openSettings = useCallback(() => {
+    if (isControlled) {
+      onOpenSettings?.();
+      return;
+    }
+    setInternalShowSettings(true);
+  }, [isControlled, onOpenSettings]);
 
-  const shortcuts = useMemo(
-    () => ({
-      onToggleSettings: handleToggleSettings,
-    }),
-    [handleToggleSettings],
+  const closeSettings = useCallback(() => {
+    if (isControlled) {
+      onCloseSettings?.();
+      return;
+    }
+    setInternalShowSettings(false);
+  }, [isControlled, onCloseSettings]);
+
+  useKeyboardShortcuts(
+    useMemo(
+      () => ({
+        onToggleSettings: openSettings,
+      }),
+      [openSettings],
+    ),
   );
-
-  useKeyboardShortcuts(shortcuts);
 
   return (
     <>
@@ -50,7 +66,7 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
           <Button
             variant="outline-light"
             size="sm"
-            onClick={() => setShowSettings(true)}
+            onClick={openSettings}
             aria-label="Settings"
             title={`Settings (${isMac ? "Cmd" : "Ctrl"}+,)`}
             aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
@@ -61,10 +77,9 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
         </Container>
       </Navbar>
 
-      {/* Settings Panel */}
       <SettingsPanel
-        show={showSettings}
-        onHide={() => setShowSettings(false)}
+        show={settingsOpen}
+        onHide={closeSettings}
         onShowAbout={onShowAbout}
         onChangeSchedule={onChangeSchedule}
         onChangeTeam={onChangeTeam}

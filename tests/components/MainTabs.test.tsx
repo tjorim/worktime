@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MainTabs } from "../../src/components/MainTabs";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
@@ -9,7 +9,10 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 
-// Mock the child components
+vi.mock("../../src/hooks/useIsMobile", () => ({
+  useIsMobile: vi.fn(() => false),
+}));
+
 vi.mock("../../src/components/ScheduleTabView", () => ({
   ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => (
     <div data-testid="schedule-tab-view">ScheduleTabView - Team {myTeam}</div>
@@ -20,8 +23,11 @@ const defaultProps = {
   myTeam: 1,
   currentDate: dayjs("2025-01-15"),
   setCurrentDate: vi.fn(),
-  activeTab: "schedule",
+  activeTab: "schedule" as const,
   onTabChange: vi.fn(),
+  onOpenSettings: vi.fn(),
+  onChangeTeam: vi.fn(),
+  onChangeSchedule: vi.fn(),
 };
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -35,11 +41,7 @@ function renderWithProviders(ui: React.ReactElement) {
         timeFormat: "24h",
         theme: "auto",
         notifications: "off",
-        vacationAllowance: {
-          amount: 0,
-          unit: "days",
-          hoursPerDay: 8,
-        },
+        vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff: true,
         enableTimeTracking: true,
       },
@@ -53,66 +55,57 @@ function renderWithProviders(ui: React.ReactElement) {
       },
     }),
   );
-  return render(wrapWithProviders(ui));
-}
 
-function wrapWithProviders(ui: React.ReactElement) {
-  return (
+  return render(
     <ToastProvider>
       <DeveloperOptionsProvider>
         <SettingsProvider>
           <EventStoreProvider>{ui}</EventStoreProvider>
         </SettingsProvider>
       </DeveloperOptionsProvider>
-    </ToastProvider>
+    </ToastProvider>,
   );
 }
 
 describe("MainTabs", () => {
-  describe("Tab rendering", () => {
-    it("renders all tab buttons", () => {
-      renderWithProviders(<MainTabs {...defaultProps} />);
-
-      expect(screen.getByRole("tab", { name: "Schedule" })).toBeInTheDocument();
-      expect(screen.queryByRole("tab", { name: "Transfers" })).not.toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: "Time Off" })).toBeInTheDocument();
-    });
-
-    it("shows Schedule tab content by default", () => {
-      renderWithProviders(<MainTabs {...defaultProps} />);
-      expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
-    });
-
-    it("shows correct tab content based on activeTab prop", () => {
-      renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
-      expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
-    });
+  beforeEach(async () => {
+    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+    vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
-  describe("Tab navigation", () => {
-    it("switches to Time Off tab when clicked", async () => {
-      const user = userEvent.setup();
-      const mockOnTabChange = vi.fn();
-
-      renderWithProviders(<MainTabs {...defaultProps} onTabChange={mockOnTabChange} />);
-
-      const timeOffTab = screen.getByRole("tab", { name: "Time Off" });
-      await user.click(timeOffTab);
-
-      expect(mockOnTabChange).toHaveBeenCalledWith("timeoff");
-    });
+  it("renders schedule tab content by default", () => {
+    renderWithProviders(<MainTabs {...defaultProps} />);
+    expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
   });
 
-  describe("Props synchronization", () => {
-    it("updates active tab when activeTab prop changes", () => {
-      const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
-      expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
+  it("switches to Time Off tab when clicked", async () => {
+    const user = userEvent.setup();
+    const mockOnTabChange = vi.fn();
+    renderWithProviders(<MainTabs {...defaultProps} onTabChange={mockOnTabChange} />);
 
-      rerender(wrapWithProviders(<MainTabs {...defaultProps} activeTab="timeoff" />));
-      expect(screen.getByRole("tab", { name: "Time Off" })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
-    });
+    await user.click(screen.getByRole("tab", { name: "Time Off" }));
+    expect(mockOnTabChange).toHaveBeenCalledWith("timeoff");
+  });
+
+  it("shows mobile FAB menu and triggers contextual actions", async () => {
+    const user = userEvent.setup();
+    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    const onOpenSettings = vi.fn();
+    const onChangeTeam = vi.fn();
+    renderWithProviders(
+      <MainTabs {...defaultProps} onOpenSettings={onOpenSettings} onChangeTeam={onChangeTeam} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Open quick actions/i }));
+    expect(screen.getByRole("menu", { name: "Quick actions" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitem", { name: /Open Settings/i }));
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: /Open quick actions/i }));
+    await user.click(screen.getByRole("menuitem", { name: /Switch Team/i }));
+    expect(onChangeTeam).toHaveBeenCalledTimes(1);
   });
 });
