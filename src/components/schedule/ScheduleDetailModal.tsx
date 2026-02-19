@@ -423,7 +423,7 @@ export function ScheduleDetailModal({
                       className="px-0 py-2 d-flex justify-content-between"
                     >
                       <span>
-                        <i className={clsx(item.icon, "me-1", item.iconClassName)}></i>
+                        <i className={clsx(item.icon, "me-1", item.iconClassName)} aria-hidden="true"></i>
                         {item.label}
                       </span>
                       <Badge bg={item.variant}>
