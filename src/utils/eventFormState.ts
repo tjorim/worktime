@@ -9,6 +9,24 @@ export type EventFormState = {
   flags: ReadonlyArray<EventFlag>;
 };
 
+export function buildEventFormState(
+  type: "range" | "weekly",
+  weekday: number,
+  start: string,
+  end: string,
+  title: string,
+  flags: ReadonlyArray<EventFlag>,
+): EventFormState {
+  return {
+    type,
+    weekday,
+    start,
+    end,
+    title,
+    flags,
+  };
+}
+
 export function toEventFormStateFromEvent(
   event: HdayEvent,
   defaultWeekday: number,

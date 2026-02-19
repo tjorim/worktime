@@ -13,6 +13,7 @@ import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
 import {
+  buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEvent,
@@ -141,14 +142,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isFormDirty = isEventFormDirty(
-    {
-      type: eventType,
-      weekday: eventWeekday,
-      start: eventStart,
-      end: eventEnd,
-      title: eventTitle,
-      flags: eventFlags,
-    },
+    buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
     initialFormState,
   );
 
@@ -189,14 +183,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleSwitchToEdit = () => {
     setInitialFormState(
-      serializeEventFormState({
-        type: eventType,
-        weekday: eventWeekday,
-        start: eventStart,
-        end: eventEnd,
-        title: eventTitle,
-        flags: eventFlags,
-      }),
+      serializeEventFormState(
+        buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      ),
     );
     setModalMode("edit");
   };

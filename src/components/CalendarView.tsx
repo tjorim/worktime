@@ -17,6 +17,7 @@ import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
 import {
+  buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEvent,
@@ -149,14 +150,7 @@ export function CalendarView({
   };
 
   const isFormDirty = isEventFormDirty(
-    {
-      type: eventType,
-      weekday: eventWeekday,
-      start: eventStart,
-      end: eventEnd,
-      title: eventTitle,
-      flags: eventFlags,
-    },
+    buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
     initialFormState,
   );
 
@@ -210,14 +204,9 @@ export function CalendarView({
   const handleSwitchToEdit = () => {
     if (!timeOffEnabled) return;
     setInitialFormState(
-      serializeEventFormState({
-        type: eventType,
-        weekday: eventWeekday,
-        start: eventStart,
-        end: eventEnd,
-        title: eventTitle,
-        flags: eventFlags,
-      }),
+      serializeEventFormState(
+        buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      ),
     );
     setModalMode("edit");
   };

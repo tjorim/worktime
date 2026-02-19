@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEvent,
@@ -7,6 +8,18 @@ import {
 } from "../../src/utils/eventFormState";
 
 describe("eventFormState", () => {
+  it("builds event form state from primitive fields", () => {
+    const state = buildEventFormState("weekly", 4, "", "", "Training", ["course"]);
+
+    expect(state).toEqual({
+      type: "weekly",
+      weekday: 4,
+      start: "",
+      end: "",
+      title: "Training",
+      flags: ["course"],
+    });
+  });
   it("serializes flags in stable sorted order", () => {
     const serialized = serializeEventFormState({
       type: "range",
