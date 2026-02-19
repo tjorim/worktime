@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "../../../src/components/timeTracking/TimeTrackingWeeklyView";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
@@ -132,6 +132,28 @@ describe("TimeTrackingWeeklyView Component", () => {
       // Check the weekly summary section shows correct total
       const totalElements = screen.getAllByText(/7\.00 hours/i);
       expect(totalElements.length).toBeGreaterThan(0);
+    });
+
+    it("refreshes weekly totals for running tasks", () => {
+      vi.setSystemTime(new Date("2025-01-06T15:00:00Z"));
+
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-task",
+        text: "Support work",
+        label: "Support",
+        startTime: "2025-01-06T09:00:00",
+        stopTime: null,
+      };
+
+      const { container } = renderPanel([runningTask]);
+
+      expect(container.textContent).toContain("6.00 hours");
+
+      act(() => {
+        vi.advanceTimersByTime(2 * 60 * 60 * 1000);
+      });
+
+      expect(container.textContent).toContain("8.00 hours");
     });
 
     it("applies 30-minute break deduction in weekly totals", () => {

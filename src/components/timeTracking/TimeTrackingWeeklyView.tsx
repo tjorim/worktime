@@ -3,6 +3,7 @@ import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
+import { useLiveTime } from "../../hooks/useLiveTime";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
@@ -52,10 +53,11 @@ export function TimeTrackingWeeklyView({
   weeklyTargetHours,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
+  const liveTime = useLiveTime({ precision: "second" });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
-  const isWeeklyCurrent = weekStart.isSame(dayjs().startOf("isoWeek"), "day");
-  const todayIso = dayjs().format("YYYY-MM-DD");
+  const isWeeklyCurrent = weekStart.isSame(liveTime.startOf("isoWeek"), "day");
+  const todayIso = liveTime.format("YYYY-MM-DD");
   const defaultLabelColor = useDefaultLabelColor();
 
   // Extract primitives for stable useMemo dependencies
@@ -82,7 +84,7 @@ export function TimeTrackingWeeklyView({
         })
         .map((task) => {
           const startDayjs = dayjs(task.startTime);
-          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : dayjs();
+          const stopDayjs = task.stopTime ? dayjs(task.stopTime) : liveTime;
           const rawHours = Math.max(stopDayjs.diff(startDayjs, "hour", true), 0);
           const labelName = labelNameById[task.label] ?? "Unknown label";
           return {
@@ -91,7 +93,7 @@ export function TimeTrackingWeeklyView({
             hours: effectiveDurationHours(rawHours, task.includesBreak),
           };
         }),
-    [tasks, start, end, labelNameById],
+    [tasks, start, end, labelNameById, liveTime],
   );
 
   const { summary, dailyTotals, labelNames, weekTotal, weekDays } = useMemo(() => {
