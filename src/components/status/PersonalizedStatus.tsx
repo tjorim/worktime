@@ -159,6 +159,7 @@ export function PersonalizedStatusContent({
   }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const countdown = useCountdown(nextShiftStartTime);
+  const shiftStartCountdown = useCountdown(currentShiftStartTime);
   const shiftEndCountdown = useCountdown(currentShiftEndTime);
   const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
 
@@ -172,7 +173,7 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
               <i className="bi bi-tag me-1" aria-hidden="true"></i>
-              Your Team Status
+              Today
             </Card.Title>
             <div className="flex-grow-1">
               {hasTeams && <span className="fw-semibold me-1">Team {myTeam}:</span>}
@@ -201,6 +202,14 @@ export function PersonalizedStatusContent({
               {currentShift.shift.start != null && currentShift.shift.end != null && (
                 <ShiftTimeDisplay shift={currentShift.shift} className="small text-muted mt-1" />
               )}
+              {currentShift.shift.isWorking &&
+                currentShiftStartTime &&
+                !today.isAfter(currentShiftStartTime) && (
+                  <CountdownBadge
+                    countdown={shiftStartCountdown}
+                    startTime={currentShiftStartTime}
+                  />
+                )}
               {currentShift.shift.isWorking &&
                 currentShiftStartTime &&
                 today.isAfter(currentShiftStartTime) && (
@@ -249,16 +258,23 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
               <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
-              Your Next Shift
+              Up Next
             </Card.Title>
             <div className="text-muted flex-grow-1">
               {nextShift ? (
                 <div>
                   <div className="fw-semibold">
-                    {nextShift.date.format("ddd, MMM D")} - {nextShift.shift.name}
+                    {nextShift.date.isSame(today, "day")
+                      ? "Today"
+                      : nextShift.date.isSame(today.add(1, "day"), "day")
+                        ? "Tomorrow"
+                        : nextShift.date.format("ddd, MMM D")}{" "}
+                    - {nextShift.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
-                  <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
+                  {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
+                    <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} urgency />
+                  )}
                 </div>
               ) : (
                 <EmptyState

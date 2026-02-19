@@ -258,7 +258,7 @@ describe("CurrentStatus Component", () => {
     it("should show next shift information when team is selected", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText("Your Next Shift")).toBeInTheDocument();
+      expect(screen.getByText("Up Next")).toBeInTheDocument();
       expect(screen.getByText(/2024-01-15.*Evening/)).toBeInTheDocument();
       expect(screen.getByText("15:00–23:00")).toBeInTheDocument();
     });

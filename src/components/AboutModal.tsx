@@ -38,7 +38,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <div className="mb-2">
             <i className="bi bi-clock-history text-primary icon-lg"></i>
           </div>
-          <h5 className="mb-2">Worktime - Shift Tracker & Time Off</h5>
+          <h5 className="mb-2">Worktime - Schedule & Time Off</h5>
           <div className="mb-2">
             <Badge bg="primary">
               <i className="bi bi-tag me-1"></i>Version {CONFIG.VERSION}
