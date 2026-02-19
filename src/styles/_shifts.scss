@@ -337,7 +337,7 @@
 
 .card-timeline {
   background: var(--bs-card-bg, #fff);
-  border: 2px solid var(--bs-border-color, #e3f2fd);
+  border: 2px solid var(--bs-border-color);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -569,11 +569,11 @@
 
 /* Connection status */
 .connection-offline {
-  background-color: #dc3545 !important;
+  background-color: var(--bs-danger) !important;
 }
 
 .connection-online {
-  background-color: #198754 !important;
+  background-color: var(--bs-success) !important;
 }
 
 /* Loading states */

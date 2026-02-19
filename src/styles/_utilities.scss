@@ -16,7 +16,8 @@ html {
 
 /* Account for fixed navbar height */
 body {
-  padding-top: 60px;
+  --wt-navbar-height: 60px;
+  padding-top: var(--wt-navbar-height);
 }
 
 /* Calendar legend popover - below fixed navbar (1030) */

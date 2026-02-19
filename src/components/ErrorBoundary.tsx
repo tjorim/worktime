@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <Container className="mt-4">
           <Card>
-            <Card.Header className="bg-danger text-white fw-semibold">
+            <Card.Header className="text-bg-danger fw-semibold">
               <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
               Something went wrong
             </Card.Header>
@@ -79,6 +79,9 @@ export class ErrorBoundary extends Component<Props, State> {
                     Reload Page
                   </Button>
                 </div>
+                <p className="text-muted small mb-0 mt-2">
+                  If the error keeps occurring, try reloading the page.
+                </p>
               </Alert>
 
               {import.meta.env.DEV && this.state.error && (
@@ -91,11 +94,16 @@ export class ErrorBoundary extends Component<Props, State> {
                       <summary className="text-danger fw-bold mb-2">
                         {this.state.error.name}: {this.state.error.message}
                       </summary>
-                      <pre className="small text-muted">{this.state.error.stack}</pre>
+                      <pre className="small text-muted overflow-y-auto" style={{ maxHeight: 300 }}>
+                        {this.state.error.stack}
+                      </pre>
                       {this.state.errorInfo && (
                         <div className="mt-2">
                           <strong>Component Stack:</strong>
-                          <pre className="small text-muted">
+                          <pre
+                            className="small text-muted overflow-y-auto"
+                            style={{ maxHeight: 300 }}
+                          >
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </div>
