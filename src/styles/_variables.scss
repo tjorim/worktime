@@ -62,7 +62,6 @@
 
   /* --- Application Theme --- */
   --wt-primary-color: #0d6efd;
-  --wt-navbar-height: 60px;
 
   /* --- Error Boundary --- */
   --wt-error-stack-max-height: 300px;
@@ -80,6 +79,7 @@
   --wt-team-cal-available: #b3e5ec;
   --wt-team-cal-weekend-cell: #e0e0e0;
   --wt-team-cal-today-ring: var(--bs-warning);
+  --wt-navbar-height: 60px;
 }
 
 /* ============================================================================
