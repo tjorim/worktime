@@ -99,6 +99,36 @@ describe("Shift Calculations", () => {
     });
   });
 
+  describe("2-shift weekend assignment behavior", () => {
+    it("should keep weekdays in the base morning/evening rotation", () => {
+      const weekdayChecks: Array<[string, number]> = [
+        ["2025-07-18", 1],
+        ["2025-07-25", 2],
+        ["2025-08-01", 3],
+        ["2025-08-08", 4],
+      ];
+
+      weekdayChecks.forEach(([date, team]) => {
+        const code = calculateShift(date, team, "2-shift").code;
+        expect(["M", "L"]).toContain(code);
+      });
+    });
+
+    it("should apply weekend day-shift assignments to the correct team", () => {
+      expect(calculateShift("2025-07-19", 1, "2-shift").code).toBe("D");
+      expect(calculateShift("2025-07-19", 2, "2-shift").code).toBe("O");
+
+      expect(calculateShift("2025-07-26", 2, "2-shift").code).toBe("D");
+      expect(calculateShift("2025-07-26", 3, "2-shift").code).toBe("O");
+
+      expect(calculateShift("2025-08-02", 3, "2-shift").code).toBe("D");
+      expect(calculateShift("2025-08-02", 4, "2-shift").code).toBe("O");
+
+      expect(calculateShift("2025-08-09", 4, "2-shift").code).toBe("D");
+      expect(calculateShift("2025-08-09", 1, "2-shift").code).toBe("O");
+    });
+  });
+
   describe("2-shift week 53 continuity", () => {
     it("should continue normal weekly rotation through ISO week 53 into week 1", () => {
       const week52Monday = dayjs("2026-12-21"); // ISO week 52
