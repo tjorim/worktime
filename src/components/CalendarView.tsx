@@ -16,6 +16,7 @@ import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
+import { isEventFormDirty, serializeEventFormState } from "../utils/eventFormState";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { EventModal } from "./EventModal";
@@ -143,18 +144,17 @@ export function CalendarView({
     setEndDateError("");
   };
 
-  const serializeFormState = (
-    type: "range" | "weekly",
-    weekday: number,
-    start: string,
-    end: string,
-    title: string,
-    flags: EventFlag[],
-  ) => JSON.stringify({ type, weekday, start, end, title, flags: [...flags].sort() });
-
-  const isFormDirty =
-    serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags) !==
-    initialFormState;
+  const isFormDirty = isEventFormDirty(
+    {
+      type: eventType,
+      weekday: eventWeekday,
+      start: eventStart,
+      end: eventEnd,
+      title: eventTitle,
+      flags: eventFlags,
+    },
+    initialFormState,
+  );
 
   const handleAddEventForDate = (date: Dayjs) => {
     if (!timeOffEnabled) return;
@@ -165,14 +165,14 @@ export function CalendarView({
     setEventStart(date.format("YYYY/MM/DD"));
     setEventEnd(date.format("YYYY/MM/DD"));
     setInitialFormState(
-      serializeFormState(
-        "range",
-        DEFAULT_WEEKDAY,
-        date.format("YYYY/MM/DD"),
-        date.format("YYYY/MM/DD"),
-        "",
-        [],
-      ),
+      serializeEventFormState({
+        type: "range",
+        weekday: DEFAULT_WEEKDAY,
+        start: date.format("YYYY/MM/DD"),
+        end: date.format("YYYY/MM/DD"),
+        title: "",
+        flags: [],
+      }),
     );
     setShowEventModal(true);
   };
@@ -185,14 +185,14 @@ export function CalendarView({
     setEditIndex(index);
     prefillFormFromEvent(event);
     setInitialFormState(
-      serializeFormState(
-        event.type === "weekly" ? "weekly" : "range",
-        event.weekday || DEFAULT_WEEKDAY,
-        event.start || "",
-        event.end || "",
-        event.title || "",
-        event.flags || [],
-      ),
+      serializeEventFormState({
+        type: event.type === "weekly" ? "weekly" : "range",
+        weekday: event.weekday || DEFAULT_WEEKDAY,
+        start: event.start || "",
+        end: event.end || "",
+        title: event.title || "",
+        flags: event.flags || [],
+      }),
     );
     setModalMode("view");
     setShowEventModal(true);
@@ -206,14 +206,14 @@ export function CalendarView({
     setEditIndex(index);
     prefillFormFromEvent(event);
     setInitialFormState(
-      serializeFormState(
-        event.type === "weekly" ? "weekly" : "range",
-        event.weekday || DEFAULT_WEEKDAY,
-        event.start || "",
-        event.end || "",
-        event.title || "",
-        event.flags || [],
-      ),
+      serializeEventFormState({
+        type: event.type === "weekly" ? "weekly" : "range",
+        weekday: event.weekday || DEFAULT_WEEKDAY,
+        start: event.start || "",
+        end: event.end || "",
+        title: event.title || "",
+        flags: event.flags || [],
+      }),
     );
     setModalMode("edit");
     setShowEventModal(true);
@@ -222,7 +222,14 @@ export function CalendarView({
   const handleSwitchToEdit = () => {
     if (!timeOffEnabled) return;
     setInitialFormState(
-      serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      serializeEventFormState({
+        type: eventType,
+        weekday: eventWeekday,
+        start: eventStart,
+        end: eventEnd,
+        title: eventTitle,
+        flags: eventFlags,
+      }),
     );
     setModalMode("edit");
   };
@@ -235,14 +242,14 @@ export function CalendarView({
 
     prefillFormFromEvent(event);
     setInitialFormState(
-      serializeFormState(
-        event.type === "weekly" ? "weekly" : "range",
-        event.weekday || DEFAULT_WEEKDAY,
-        event.start || "",
-        event.end || "",
-        event.title || "",
-        event.flags || [],
-      ),
+      serializeEventFormState({
+        type: event.type === "weekly" ? "weekly" : "range",
+        weekday: event.weekday || DEFAULT_WEEKDAY,
+        start: event.start || "",
+        end: event.end || "",
+        title: event.title || "",
+        flags: event.flags || [],
+      }),
     );
     setModalMode("view");
   };

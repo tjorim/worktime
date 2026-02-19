@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import type { EventFlag, HdayEvent } from "../lib/hday/types";
+import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
@@ -12,6 +12,7 @@ import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcut
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
+import { isEventFormDirty, serializeEventFormState } from "../utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -135,29 +136,34 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const formRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const serializeFormState = useCallback(
-    (
-      type: "range" | "weekly",
-      weekday: number,
-      start: string,
-      end: string,
-      title: string,
-      flags: ReadonlyArray<EventFlag>,
-    ) => JSON.stringify({ type, weekday, start, end, title, flags: [...flags].sort() }),
-    [],
+  const isFormDirty = isEventFormDirty(
+    {
+      type: eventType,
+      weekday: eventWeekday,
+      start: eventStart,
+      end: eventEnd,
+      title: eventTitle,
+      flags: eventFlags,
+    },
+    initialFormState,
   );
-
-  const isFormDirty =
-    serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags) !==
-    initialFormState;
 
   const handleOpenAddModal = useCallback(() => {
     resetForm();
-    setInitialFormState(serializeFormState("range", DEFAULT_WEEKDAY, "", "", "", []));
+    setInitialFormState(
+      serializeEventFormState({
+        type: "range",
+        weekday: DEFAULT_WEEKDAY,
+        start: "",
+        end: "",
+        title: "",
+        flags: [],
+      }),
+    );
     setEditIndex(-1);
     setModalMode("add");
     setShowEventModal(true);
-  }, [resetForm, serializeFormState]);
+  }, [resetForm]);
 
   const handleOpenEditModal = (index: number) => {
     const event = events[index];
@@ -166,14 +172,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setEditIndex(index);
     prefillFormFromEvent(event);
     setInitialFormState(
-      serializeFormState(
-        event.type === "weekly" ? "weekly" : "range",
-        event.weekday || DEFAULT_WEEKDAY,
-        event.start || "",
-        event.end || "",
-        event.title || "",
-        event.flags || [],
-      ),
+      serializeEventFormState({
+        type: event.type === "weekly" ? "weekly" : "range",
+        weekday: event.weekday || DEFAULT_WEEKDAY,
+        start: event.start || "",
+        end: event.end || "",
+        title: event.title || "",
+        flags: event.flags || [],
+      }),
     );
     setModalMode("edit");
     setShowEventModal(true);
@@ -181,7 +187,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleSwitchToEdit = () => {
     setInitialFormState(
-      serializeFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      serializeEventFormState({
+        type: eventType,
+        weekday: eventWeekday,
+        start: eventStart,
+        end: eventEnd,
+        title: eventTitle,
+        flags: eventFlags,
+      }),
     );
     setModalMode("edit");
   };
@@ -196,17 +209,17 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
     prefillFormFromEvent(event);
     setInitialFormState(
-      serializeFormState(
-        event.type === "weekly" ? "weekly" : "range",
-        event.weekday || DEFAULT_WEEKDAY,
-        event.start || "",
-        event.end || "",
-        event.title || "",
-        event.flags || [],
-      ),
+      serializeEventFormState({
+        type: event.type === "weekly" ? "weekly" : "range",
+        weekday: event.weekday || DEFAULT_WEEKDAY,
+        start: event.start || "",
+        end: event.end || "",
+        title: event.title || "",
+        flags: event.flags || [],
+      }),
     );
     setModalMode("view");
-  }, [editIndex, events, prefillFormFromEvent, serializeFormState]);
+  }, [editIndex, events, prefillFormFromEvent]);
 
   const handleResetForm = () => {
     if (isFormDirty) {
