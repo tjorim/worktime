@@ -1,6 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import type { ScheduleOption } from "../data/rosters";
+import { formatYYWWD } from "../utils/dateTimeUtils";
 import { useLiveTime } from "./useLiveTime";
 import type { OffDayProgress, ShiftResult, UpcomingShiftResult } from "../utils/shiftCalculations";
 import {
@@ -31,10 +32,12 @@ export function useLiveShiftStatus(myTeam: number, scheduleType: ScheduleOption)
       shiftDayShift.isWorking && isCurrentlyWorking(shiftDayShift, shiftDay, today, scheduleType);
 
     if (isInNightShiftExtension) {
+      const nightShiftCode = `${formatYYWWD(shiftDay)}${shiftDayShift.code}`;
+
       return {
         date: shiftDay,
         shift: shiftDayShift,
-        code: getShiftCode(shiftDay, myTeam, scheduleType),
+        code: nightShiftCode,
         teamNumber: myTeam,
       };
     }

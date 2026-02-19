@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLiveShiftStatus } from "../../src/hooks/useLiveShiftStatus";
+import { formatYYWWD } from "../../src/utils/dateTimeUtils";
 import {
   calculateShift,
   getCurrentShiftDay,
@@ -25,9 +26,7 @@ describe("useLiveShiftStatus", () => {
     expect(result.current.shiftDay.format("YYYY-MM-DD")).toBe("2025-07-16");
     expect(result.current.currentShift.date.format("YYYY-MM-DD")).toBe("2025-07-16");
     expect(result.current.currentShift.shift.code).toBe("N");
-    expect(result.current.currentShift.code).toBe(
-      getShiftCode(result.current.shiftDay, 4, "5-shift"),
-    );
+    expect(result.current.currentShift.code).toBe(`${formatYYWWD(result.current.shiftDay)}N`);
   });
 
   it("uses calendar date for currentShift when not currently working", () => {
