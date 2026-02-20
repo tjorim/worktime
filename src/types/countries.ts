@@ -1,8 +1,4 @@
-/**
- * List of countries supported for home/office location tracking.
- * Includes the Benelux region and neighboring countries.
- */
-export const SUPPORTED_COUNTRIES = [
+const countries = [
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
   { code: "DE", name: "Germany" },
@@ -14,12 +10,23 @@ export const SUPPORTED_COUNTRIES = [
 /**
  * ISO 3166-1 alpha-2 country codes supported by Worktime.
  */
-export type CountryCode = (typeof SUPPORTED_COUNTRIES)[number]["code"];
+export type CountryCode = (typeof countries)[number]["code"];
 
 /**
  * Represents a supported country with its ISO code and display name.
  */
-export type Country = (typeof SUPPORTED_COUNTRIES)[number];
+export interface Country {
+  /** ISO 3166-1 alpha-2 country code */
+  code: CountryCode;
+  /** Human-readable country name */
+  name: string;
+}
+
+/**
+ * List of countries supported for home/office location tracking.
+ * Includes the Benelux region and neighboring countries.
+ */
+export const SUPPORTED_COUNTRIES: readonly Country[] = countries;
 
 const validCountryCodes = new Set<string>(SUPPORTED_COUNTRIES.map((c) => c.code));
 
