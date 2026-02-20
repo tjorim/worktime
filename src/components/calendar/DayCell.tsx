@@ -28,6 +28,7 @@ interface DayCellProps {
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office)
+  wfhLimitExceeded?: boolean; // Whether this day's week has exceeded the WFH limit
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
@@ -152,6 +153,7 @@ export function DayCell({
   events,
   shiftBadge,
   workLocation,
+  wfhLimitExceeded = false,
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
@@ -347,6 +349,7 @@ export function DayCell({
         publicHoliday && "is-public-holiday",
         schoolHoliday && "is-school-holiday",
         paydayInfo && "is-payday",
+        wfhLimitExceeded && workLocation?.location === "home" && "wfh-limit-exceeded",
       )}
       onContextMenu={(e) => {
         if (onDayContextMenu) {

@@ -92,6 +92,7 @@ export function SettingsPanel({
     updateTimeTrackingEnabled,
     updateHomeCountry,
     updateOfficeCountry,
+    updateWfhWeeklyLimit,
     resetSettings,
   } = useSettings();
 
@@ -373,6 +374,30 @@ export function SettingsPanel({
                       value={settings.officeCountry ?? ""}
                       onChange={updateOfficeCountry}
                       ariaLabel="Office country"
+                    />
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">WFH Weekly Limit</div>
+                      <small className="text-muted">Max work-from-home days per week</small>
+                    </div>
+                    <Form.Control
+                      type="number"
+                      size="sm"
+                      min={0}
+                      max={7}
+                      step={1}
+                      value={settings.wfhWeeklyLimit}
+                      onChange={(event) => {
+                        const value = parseInt(event.target.value, 10);
+                        if (!isNaN(value) && value >= 0 && value <= 7) {
+                          updateWfhWeeklyLimit(value);
+                        }
+                      }}
+                      style={{ width: "5rem" }}
+                      aria-label="WFH weekly limit"
                     />
                   </div>
                 </ListGroup.Item>

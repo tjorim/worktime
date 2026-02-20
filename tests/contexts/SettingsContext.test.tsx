@@ -149,7 +149,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 3,
+      version: 4,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -166,6 +166,7 @@ describe("SettingsContext unified user state", () => {
         enableTimeTracking: false,
         homeCountry: null,
         officeCountry: null,
+        wfhWeeklyLimit: 2,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -203,6 +204,71 @@ describe("SettingsContext unified user state", () => {
 
     // SettingsContext should not apply theme to DOM - that's App.tsx responsibility
     expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
+  });
+
+
+  describe("WFH weekly limit settings", () => {
+    it("persists sanitized WFH weekly limit updates to localStorage", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      const testAndAssertPersistence = async (limit: number) => {
+        await act(async () => {
+          result.current.updateWfhWeeklyLimit(limit);
+        });
+        expect(result.current.settings.wfhWeeklyLimit).toBe(limit);
+        const stored = window.localStorage.getItem("worktime_user_state");
+        expect(stored).not.toBeNull();
+        const parsedState = JSON.parse(stored as string) as {
+          settings: { wfhWeeklyLimit: number };
+        };
+        expect(parsedState.settings.wfhWeeklyLimit).toBe(limit);
+      };
+
+      await testAndAssertPersistence(5);
+      await testAndAssertPersistence(0);
+    });
+
+    it("updates WFH weekly limit with valid integer values", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(0);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(3);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(3);
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(7);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
+    });
+
+    it("normalizes invalid WFH weekly limit values to default", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(-1);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(Number.NaN);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+    });
+
+    it("floors fractional WFH weekly limit values", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(2.9);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+    });
   });
 
   describe("Vacation Allowance Settings", () => {
@@ -794,6 +860,80 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe("NL");
       expect(result.current.settings.officeCountry).toBe("BE");
+    });
+  });
+
+
+  describe("v3 to v4 migration (WFH weekly limit)", () => {
+    it("adds wfhWeeklyLimit default when upgrading from v3", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 3,
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+            homeCountry: null,
+            officeCountry: null,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+      expect(result.current.myTeam).toBe(2);
+      expect(result.current.scheduleType).toBe("5-shift");
+    });
+
+    it("preserves existing wfhWeeklyLimit when present in v3 state", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 3,
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            homeCountry: "NL",
+            officeCountry: "BE",
+            wfhWeeklyLimit: 0,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
     });
   });
 

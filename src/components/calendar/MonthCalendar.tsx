@@ -8,6 +8,7 @@ import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { isWfhLimitExceeded } from "../../utils/workLocationUtils";
 
 interface MonthCalendarProps {
   events: HdayEvent[];
@@ -25,6 +26,7 @@ interface MonthCalendarProps {
   allowEventActions?: boolean;
   showHomeLocationAction?: boolean;
   showOfficeLocationAction?: boolean;
+  wfhWeeklyLimit?: number;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
     date: dayjs.Dayjs,
@@ -99,6 +101,7 @@ export function MonthCalendar({
   allowEventActions = true,
   showHomeLocationAction = false,
   showOfficeLocationAction = false,
+  wfhWeeklyLimit,
   getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
@@ -252,6 +255,23 @@ export function MonthCalendar({
 
     return map;
   }, [days, events]);
+
+  // Compute which ISO weeks in the current view exceed the WFH limit
+  const wfhLimitExceededWeeks = useMemo(() => {
+    if (wfhWeeklyLimit == null || !workLocationMap) return new Set<string>();
+    const exceeded = new Set<string>();
+    const checkedWeeks = new Set<string>();
+    for (const day of days) {
+      const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
+      if (!checkedWeeks.has(weekKey)) {
+        checkedWeeks.add(weekKey);
+        if (isWfhLimitExceeded(day, workLocationMap, wfhWeeklyLimit)) {
+          exceeded.add(weekKey);
+        }
+      }
+    }
+    return exceeded;
+  }, [days, workLocationMap, wfhWeeklyLimit]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
@@ -456,6 +476,7 @@ export function MonthCalendar({
               const key = day.format(DAY_FORMAT);
               const dayKey = formatHdayDate(day);
               const cellEvents = dayEvents.get(key) ?? [];
+              const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
               return (
                 <DayCell
                   key={key}
@@ -467,6 +488,7 @@ export function MonthCalendar({
                   schoolHoliday={schoolHolidays.get(dayKey)}
                   paydayInfo={paydayMap.get(dayKey)}
                   workLocation={workLocationMap?.get(dayKey)}
+                  wfhLimitExceeded={wfhLimitExceededWeeks.has(weekKey)}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}

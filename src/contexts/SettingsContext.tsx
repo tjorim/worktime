@@ -33,6 +33,7 @@ interface UserSettings {
   enableTimeTracking: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
+  wfhWeeklyLimit: number;
 }
 
 interface SettingsContextType {
@@ -46,6 +47,7 @@ interface SettingsContextType {
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
+  updateWfhWeeklyLimit: (limit: number) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -92,6 +94,7 @@ export const defaultSettings: UserSettings = {
   enableTimeTracking: false,
   homeCountry: null,
   officeCountry: null,
+  wfhWeeklyLimit: 2,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -108,6 +111,14 @@ const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transf
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
 
+const sanitizeWfhWeeklyLimit = (limit: unknown, fallbackLimit: number): number => {
+  if (typeof limit !== "number" || !Number.isFinite(limit) || limit < 0) {
+    return fallbackLimit;
+  }
+
+  return Math.floor(limit);
+};
+
 interface WorktimeUserState {
   version: number;
   hasCompletedOnboarding: boolean;
@@ -119,7 +130,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -265,6 +276,21 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v4: Add wfhWeeklyLimit to settings.
+  4: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        wfhWeeklyLimit: settings.wfhWeeklyLimit ?? defaultSettings.wfhWeeklyLimit,
+      },
+    };
+  },
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -369,6 +395,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? settings.officeCountry
         : defaultSettings.officeCountry;
 
+  const wfhWeeklyLimit = sanitizeWfhWeeklyLimit(
+    settings.wfhWeeklyLimit,
+    defaultSettings.wfhWeeklyLimit,
+  );
+
   // --- Validate lastUsed ---
   const lastUsed = (
     typeof s.lastUsed === "object" && s.lastUsed !== null ? s.lastUsed : {}
@@ -464,6 +495,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       enableTimeTracking,
       homeCountry,
       officeCountry,
+      wfhWeeklyLimit,
     },
     lastUsed: {
       activeTab,
@@ -579,6 +611,17 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, officeCountry: country },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateWfhWeeklyLimit = useCallback(
+    (limit: number) => {
+      const sanitized = sanitizeWfhWeeklyLimit(limit, defaultSettings.wfhWeeklyLimit);
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, wfhWeeklyLimit: sanitized },
       }));
     },
     [setUserState],
@@ -755,6 +798,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateWfhWeeklyLimit,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -782,6 +826,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateWfhWeeklyLimit,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
