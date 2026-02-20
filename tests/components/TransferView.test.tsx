@@ -96,11 +96,17 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
 }));
 
-vi.mock("../../src/utils/config", () => ({
-  CONFIG: {
-    TEAMS_COUNT: 5,
-  },
-}));
+vi.mock("../../src/utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/utils/config")>();
+
+  return {
+    ...actual,
+    CONFIG: {
+      ...actual.CONFIG,
+      TEAMS_COUNT: 5,
+    },
+  };
+});
 
 let mockConsoleWarn: ReturnType<typeof vi.spyOn>;
 
