@@ -1,30 +1,25 @@
 /**
- * ISO 3166-1 alpha-2 country codes supported by Worktime.
- */
-export type CountryCode = "NL" | "BE" | "DE" | "LU" | "FR" | "GB";
-
-/**
- * Represents a supported country with its ISO code and display name.
- */
-export interface Country {
-  /** ISO 3166-1 alpha-2 country code */
-  code: CountryCode;
-  /** Human-readable country name */
-  name: string;
-}
-
-/**
  * List of countries supported for home/office location tracking.
  * Includes the Benelux region and neighboring countries.
  */
-export const SUPPORTED_COUNTRIES: readonly Country[] = [
+export const SUPPORTED_COUNTRIES = [
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
   { code: "DE", name: "Germany" },
   { code: "LU", name: "Luxembourg" },
   { code: "FR", name: "France" },
   { code: "GB", name: "United Kingdom" },
-];
+] as const;
+
+/**
+ * ISO 3166-1 alpha-2 country codes supported by Worktime.
+ */
+export type CountryCode = (typeof SUPPORTED_COUNTRIES)[number]["code"];
+
+/**
+ * Represents a supported country with its ISO code and display name.
+ */
+export type Country = (typeof SUPPORTED_COUNTRIES)[number];
 
 const validCountryCodes = new Set<string>(SUPPORTED_COUNTRIES.map((c) => c.code));
 
