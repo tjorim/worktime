@@ -52,9 +52,16 @@ interface CountrySelectItemProps {
   description: string;
   value: string;
   onUpdate: (country: CountryCode | null) => void;
+  ariaLabel?: string;
 }
 
-function CountrySelectItem({ label, description, value, onUpdate }: CountrySelectItemProps) {
+function CountrySelectItem({
+  label,
+  description,
+  value,
+  onUpdate,
+  ariaLabel,
+}: CountrySelectItemProps) {
   return (
     <ListGroup.Item>
       <div className="d-flex justify-content-between align-items-center">
@@ -62,7 +69,7 @@ function CountrySelectItem({ label, description, value, onUpdate }: CountrySelec
           <div className="fw-medium">{label}</div>
           <small className="text-muted">{description}</small>
         </div>
-        <CountrySelect value={value} onChange={onUpdate} ariaLabel={label} />
+        <CountrySelect value={value} onChange={onUpdate} ariaLabel={ariaLabel ?? label} />
       </div>
     </ListGroup.Item>
   );
@@ -377,12 +384,14 @@ export function SettingsPanel({
                   description="Country where you are based"
                   value={settings.homeCountry ?? ""}
                   onUpdate={updateHomeCountry}
+                  ariaLabel="Home country"
                 />
                 <CountrySelectItem
                   label="Office Country"
                   description="Country where your office is located"
                   value={settings.officeCountry ?? ""}
                   onUpdate={updateOfficeCountry}
+                  ariaLabel="Office country"
                 />
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
