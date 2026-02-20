@@ -279,7 +279,7 @@ const migrations: Record<number, Migration> = {
       ...state,
       settings: {
         ...settings,
-        wfhWeeklyLimit: settings.wfhWeeklyLimit ?? 2,
+        wfhWeeklyLimit: settings.wfhWeeklyLimit ?? defaultSettings.wfhWeeklyLimit,
       },
     };
   },

@@ -333,7 +333,7 @@ export function CalendarView({
         const success = setLocationForDate(date, location);
         if (!success) {
           toast.showError("Configure your country settings to track work locations");
-        } else if (location === "home" && settings.wfhWeeklyLimit > 0) {
+        } else if (location === "home") {
           // Check if adding this WFH day causes the weekly limit to be exceeded
           const dayKey = formatHdayDate(date);
           const wasAlreadyHome = workLocationMap.get(dayKey)?.location === "home";
