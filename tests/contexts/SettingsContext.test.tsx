@@ -208,6 +208,26 @@ describe("SettingsContext unified user state", () => {
 
 
   describe("WFH weekly limit settings", () => {
+    it("persists sanitized WFH weekly limit updates to localStorage", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      const testAndAssertPersistence = async (limit: number) => {
+        await act(async () => {
+          result.current.updateWfhWeeklyLimit(limit);
+        });
+        expect(result.current.settings.wfhWeeklyLimit).toBe(limit);
+        const stored = window.localStorage.getItem("worktime_user_state");
+        expect(stored).not.toBeNull();
+        const parsedState = JSON.parse(stored as string) as {
+          settings: { wfhWeeklyLimit: number };
+        };
+        expect(parsedState.settings.wfhWeeklyLimit).toBe(limit);
+      };
+
+      await testAndAssertPersistence(5);
+      await testAndAssertPersistence(0);
+    });
+
     it("updates WFH weekly limit with valid integer values", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
