@@ -270,6 +270,20 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.wfhWeeklyLimit).toBe(2);
     });
 
+    it("normalizes Infinity WFH weekly limit values to default", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(Number.POSITIVE_INFINITY);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(Number.NEGATIVE_INFINITY);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+    });
+
     it("floors fractional WFH weekly limit values", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 

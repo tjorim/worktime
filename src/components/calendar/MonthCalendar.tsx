@@ -35,6 +35,8 @@ interface MonthCalendarProps {
 
 const DAY_FORMAT = "YYYY-MM-DD";
 
+const getWeekKey = (day: dayjs.Dayjs): string => `${day.isoWeekYear()}-${day.isoWeek()}`;
+
 /**
  * Parses an .hday date string (YYYY/MM/DD) to a dayjs object.
  * Converts slashes to hyphens for compatibility with dayjs.
@@ -262,7 +264,7 @@ export function MonthCalendar({
     const exceeded = new Set<string>();
     const checkedWeeks = new Set<string>();
     for (const day of days) {
-      const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
+      const weekKey = getWeekKey(day);
       if (!checkedWeeks.has(weekKey)) {
         checkedWeeks.add(weekKey);
         if (isWfhLimitExceeded(day, workLocationMap, wfhWeeklyLimit)) {
@@ -476,7 +478,6 @@ export function MonthCalendar({
               const key = day.format(DAY_FORMAT);
               const dayKey = formatHdayDate(day);
               const cellEvents = dayEvents.get(key) ?? [];
-              const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
               return (
                 <DayCell
                   key={key}
@@ -488,7 +489,7 @@ export function MonthCalendar({
                   schoolHoliday={schoolHolidays.get(dayKey)}
                   paydayInfo={paydayMap.get(dayKey)}
                   workLocation={workLocationMap?.get(dayKey)}
-                  wfhLimitExceeded={wfhLimitExceededWeeks.has(weekKey)}
+                  wfhLimitExceeded={wfhLimitExceededWeeks.has(getWeekKey(day))}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}

@@ -336,6 +336,9 @@ export function CalendarView({
         } else if (location === "home") {
           // Check if adding this WFH day causes the weekly limit to be exceeded
           const dayKey = formatHdayDate(date);
+          // setLocationForDate updates state asynchronously, so this workLocationMap read is
+          // still the pre-update snapshot; we use getWfhDaysInWeek on that snapshot and
+          // manually add +1 when needed instead of assuming the map already contains dayKey.
           const wasAlreadyHome = workLocationMap.get(dayKey)?.location === "home";
           const existingCount = getWfhDaysInWeek(date, workLocationMap);
           const newCount = wasAlreadyHome ? existingCount : existingCount + 1;

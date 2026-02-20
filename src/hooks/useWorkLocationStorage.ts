@@ -79,7 +79,7 @@ export function useWorkLocationStorage(year: number) {
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
       const key = formatHdayDate(date);
       const stored =
-        storedLocations[key] ?? prevYearLocations[key] ?? nextYearLocations[key];
+        nextYearLocations[key] ?? storedLocations[key] ?? prevYearLocations[key];
       if (stored) {
         return stored;
       }
@@ -122,10 +122,13 @@ export function useWorkLocationStorage(year: number) {
 
       if (dateYear === year - 1) {
         setPrevYearLocations((prev) => ({ ...prev, [key]: entry }));
+      } else if (dateYear === year) {
+        setStoredLocations((prev) => ({ ...prev, [key]: entry }));
       } else if (dateYear === year + 1) {
         setNextYearLocations((prev) => ({ ...prev, [key]: entry }));
       } else {
-        setStoredLocations((prev) => ({ ...prev, [key]: entry }));
+        console.warn(`Skipping work location update for out-of-range year: ${dateYear}`);
+        return false;
       }
       return true;
     },
@@ -158,10 +161,12 @@ export function useWorkLocationStorage(year: number) {
 
       if (dateYear === year - 1) {
         setPrevYearLocations(removeKey);
+      } else if (dateYear === year) {
+        setStoredLocations(removeKey);
       } else if (dateYear === year + 1) {
         setNextYearLocations(removeKey);
       } else {
-        setStoredLocations(removeKey);
+        console.warn(`Skipping work location clear for out-of-range year: ${dateYear}`);
       }
     },
     [year, setStoredLocations, setPrevYearLocations, setNextYearLocations],
