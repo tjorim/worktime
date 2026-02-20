@@ -111,6 +111,14 @@ const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transf
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
 
+const sanitizeWfhWeeklyLimit = (limit: unknown): number => {
+  if (typeof limit !== "number" || !Number.isFinite(limit) || limit < 0) {
+    return defaultSettings.wfhWeeklyLimit;
+  }
+
+  return Math.floor(limit);
+};
+
 interface WorktimeUserState {
   version: number;
   hasCompletedOnboarding: boolean;
@@ -387,12 +395,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? settings.officeCountry
         : defaultSettings.officeCountry;
 
-  const wfhWeeklyLimit =
-    typeof settings.wfhWeeklyLimit === "number" &&
-    Number.isFinite(settings.wfhWeeklyLimit) &&
-    settings.wfhWeeklyLimit >= 0
-      ? Math.floor(settings.wfhWeeklyLimit)
-      : defaultSettings.wfhWeeklyLimit;
+  const wfhWeeklyLimit = sanitizeWfhWeeklyLimit(settings.wfhWeeklyLimit);
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -612,8 +615,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const updateWfhWeeklyLimit = useCallback(
     (limit: number) => {
-      const sanitized =
-        Number.isFinite(limit) && limit >= 0 ? Math.floor(limit) : defaultSettings.wfhWeeklyLimit;
+      const sanitized = sanitizeWfhWeeklyLimit(limit);
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, wfhWeeklyLimit: sanitized },
