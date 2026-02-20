@@ -309,7 +309,7 @@ export function TodayView({
           >
             <TeamCard
               shiftResult={todayShifts[mobileActiveIndex]}
-              isMyTeam={myTeam === todayShifts[mobileActiveIndex]?.teamNumber}
+              isMyTeam={myTeam === todayShifts[mobileActiveIndex].teamNumber}
               isCurrentlyActive={isCurrentlyActive(todayShifts[mobileActiveIndex])}
               hasTeams={hasTeams}
               onTeamClick={onTeamClick}
