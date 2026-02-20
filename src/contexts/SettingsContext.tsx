@@ -382,12 +382,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
 
-  const homeCountry =
-    settings.homeCountry === null
-      ? null
-      : isValidCountryCode(settings.homeCountry)
-        ? settings.homeCountry
-        : defaultSettings.homeCountry;
+  const homeCountry = isValidCountryCode(settings.homeCountry)
+    ? settings.homeCountry
+    : defaultSettings.homeCountry;
 
   const officeCountry =
     settings.officeCountry === null
