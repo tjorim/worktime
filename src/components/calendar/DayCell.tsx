@@ -4,6 +4,7 @@ import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
+import type { WorkLocationInfo } from "../../types/workLocation";
 import { dayjs } from "../../utils/dateTimeUtils";
 import {
   getEventColorClass,
@@ -26,6 +27,8 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
+  workLocation?: WorkLocationInfo; // Optional work location (home/office)
+  wfhLimitExceeded?: boolean; // Whether this day's week has exceeded the WFH limit
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
@@ -149,6 +152,8 @@ export function DayCell({
   schoolHoliday,
   events,
   shiftBadge,
+  workLocation,
+  wfhLimitExceeded = false,
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
@@ -161,12 +166,20 @@ export function DayCell({
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
+  const workLocationLabel = workLocation
+    ? workLocation.location === "home"
+      ? "Working from home"
+      : "Working from office"
+    : undefined;
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
   }
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
+  }
+  if (workLocationLabel && shiftBadge?.isWorking) {
+    ariaLabelParts.push(workLocationLabel);
   }
   if (publicHoliday) {
     ariaLabelParts.push(publicHoliday.name);
@@ -336,6 +349,7 @@ export function DayCell({
         publicHoliday && "is-public-holiday",
         schoolHoliday && "is-school-holiday",
         paydayInfo && "is-payday",
+        wfhLimitExceeded && workLocation?.location === "home" && "wfh-limit-exceeded",
       )}
       onContextMenu={(e) => {
         if (onDayContextMenu) {
@@ -371,6 +385,19 @@ export function DayCell({
               {indicator.emoji}
             </span>
           ))}
+          {workLocation && shiftBadge?.isWorking && (
+            <span
+              className="month-calendar-day-indicator month-calendar-work-location"
+              title={workLocationLabel}
+            >
+              <i
+                className={clsx(
+                  "bi",
+                  workLocation.location === "home" ? "bi-house" : "bi-building",
+                )}
+              ></i>
+            </span>
+          )}
         </span>
         {onDayContextMenu && (
           <button

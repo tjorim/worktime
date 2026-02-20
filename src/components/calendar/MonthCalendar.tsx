@@ -5,8 +5,10 @@ import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
+import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { isWfhLimitExceeded } from "../../utils/workLocationUtils";
 
 interface MonthCalendarProps {
   events: HdayEvent[];
@@ -14,12 +16,17 @@ interface MonthCalendarProps {
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
   paydayMap?: Map<string, PaydayInfo>;
+  workLocationMap?: WorkLocationMap;
   onMonthChange: (month: dayjs.Dayjs) => void;
   onAddEvent: (date: dayjs.Dayjs) => void;
   onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
+  onSetWorkLocation?: (date: dayjs.Dayjs, location: WorkLocation | null) => void;
   allowEventActions?: boolean;
+  showHomeLocationAction?: boolean;
+  showOfficeLocationAction?: boolean;
+  wfhWeeklyLimit?: number;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
     date: dayjs.Dayjs,
@@ -84,12 +91,17 @@ export function MonthCalendar({
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
   paydayMap = new Map(),
+  workLocationMap,
   onMonthChange,
   onAddEvent,
   onViewEvent,
   onEditEvent,
   onDeleteEvent,
+  onSetWorkLocation,
   allowEventActions = true,
+  showHomeLocationAction = false,
+  showOfficeLocationAction = false,
+  wfhWeeklyLimit,
   getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
@@ -244,20 +256,40 @@ export function MonthCalendar({
     return map;
   }, [days, events]);
 
+  // Compute which ISO weeks in the current view exceed the WFH limit
+  const wfhLimitExceededWeeks = useMemo(() => {
+    if (wfhWeeklyLimit == null || !workLocationMap) return new Set<string>();
+    const exceeded = new Set<string>();
+    const checkedWeeks = new Set<string>();
+    for (const day of days) {
+      const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
+      if (!checkedWeeks.has(weekKey)) {
+        checkedWeeks.add(weekKey);
+        if (isWfhLimitExceeded(day, workLocationMap, wfhWeeklyLimit)) {
+          exceeded.add(weekKey);
+        }
+      }
+    }
+    return exceeded;
+  }, [days, workLocationMap, wfhWeeklyLimit]);
+
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
     [],
   );
 
+  // Combined predicate: show context menu when any action type is available
+  const showContextMenu = allowEventActions || showHomeLocationAction || showOfficeLocationAction;
+
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
     (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
-      if (!allowEventActions) return;
+      if (!showContextMenu) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
     },
-    [allowEventActions],
+    [showContextMenu],
   );
 
   const handleEventContextMenu = useCallback(
@@ -301,13 +333,50 @@ export function MonthCalendar({
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     if (contextMenu?.type === "day" && contextMenu.date) {
-      return [
-        {
+      const items: ContextMenuItem[] = [];
+      if (allowEventActions) {
+        items.push({
           label: "Add new event",
           icon: "bi-plus-circle",
           onClick: () => handleAddEventWrapper(contextMenu.date!),
-        },
-      ];
+        });
+      }
+      if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
+        const date = contextMenu.date;
+        const dayKey = formatHdayDate(date);
+        const hasStoredLocation = !!workLocationMap?.get(dayKey);
+        if (showHomeLocationAction) {
+          items.push({
+            label: "Work from Home",
+            icon: "bi-house",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, "home");
+            },
+          });
+        }
+        if (showOfficeLocationAction) {
+          items.push({
+            label: "Work from Office",
+            icon: "bi-building",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, "office");
+            },
+          });
+        }
+        if (hasStoredLocation) {
+          items.push({
+            label: "Clear Work Location",
+            icon: "bi-x-circle",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, null);
+            },
+          });
+        }
+      }
+      return items;
     }
     if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
       const items: ContextMenuItem[] = [
@@ -407,6 +476,7 @@ export function MonthCalendar({
               const key = day.format(DAY_FORMAT);
               const dayKey = formatHdayDate(day);
               const cellEvents = dayEvents.get(key) ?? [];
+              const weekKey = `${day.isoWeekYear()}-${day.isoWeek()}`;
               return (
                 <DayCell
                   key={key}
@@ -417,10 +487,12 @@ export function MonthCalendar({
                   publicHoliday={publicHolidays.get(dayKey)}
                   schoolHoliday={schoolHolidays.get(dayKey)}
                   paydayInfo={paydayMap.get(dayKey)}
+                  workLocation={workLocationMap?.get(dayKey)}
+                  wfhLimitExceeded={wfhLimitExceededWeeks.has(weekKey)}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}
-                  onDayContextMenu={allowEventActions ? handleDayContextMenu : undefined}
+                  onDayContextMenu={showContextMenu ? handleDayContextMenu : undefined}
                   onEventContextMenu={allowEventActions ? handleEventContextMenu : undefined}
                   isFocusTarget={globalIndex === focusedIndex}
                   cellRef={(el) => {
@@ -434,7 +506,7 @@ export function MonthCalendar({
       </div>
 
       {/* Context menu */}
-      {allowEventActions && (
+      {showContextMenu && (
         <ContextMenu
           isOpen={contextMenu !== null}
           x={contextMenu?.x ?? 0}

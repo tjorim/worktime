@@ -42,8 +42,14 @@ export function useWorkLocationStorage(year: number) {
     storageKey,
     {},
   );
-  const [prevYearLocations] = useLocalStorage<StoredWorkLocations>(prevStorageKey, {});
-  const [nextYearLocations] = useLocalStorage<StoredWorkLocations>(nextStorageKey, {});
+  const [prevYearLocations, setPrevYearLocations] = useLocalStorage<StoredWorkLocations>(
+    prevStorageKey,
+    {},
+  );
+  const [nextYearLocations, setNextYearLocations] = useLocalStorage<StoredWorkLocations>(
+    nextStorageKey,
+    {},
+  );
 
   /**
    * Map of explicitly set work locations for calendar consumption.
@@ -51,8 +57,11 @@ export function useWorkLocationStorage(year: number) {
    * Use getLocationForDate for queries that should fall back to the office default.
    */
   const workLocationMap: WorkLocationMap = useMemo(
-    () => new Map(Object.entries(storedLocations)),
-    [storedLocations],
+    () =>
+      new Map(
+        Object.entries({ ...prevYearLocations, ...storedLocations, ...nextYearLocations }),
+      ),
+    [prevYearLocations, storedLocations, nextYearLocations],
   );
 
   /**
@@ -68,7 +77,8 @@ export function useWorkLocationStorage(year: number) {
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
       const key = formatHdayDate(date);
-      const stored = storedLocations[key];
+      const stored =
+        storedLocations[key] ?? prevYearLocations[key] ?? nextYearLocations[key];
       if (stored) {
         return stored;
       }
@@ -81,7 +91,7 @@ export function useWorkLocationStorage(year: number) {
 
       return null;
     },
-    [storedLocations, settings.officeCountry],
+    [storedLocations, prevYearLocations, nextYearLocations, settings.officeCountry],
   );
 
   /**
@@ -105,14 +115,28 @@ export function useWorkLocationStorage(year: number) {
         return false;
       }
 
-      const key = formatHdayDate(date);
-      setStoredLocations((prev) => ({
-        ...prev,
-        [key]: { location, countryCode },
-      }));
+      const d = dayjs(date);
+      const key = formatHdayDate(d);
+      const dateYear = d.year();
+      const entry = { location, countryCode };
+
+      if (dateYear === year - 1) {
+        setPrevYearLocations((prev) => ({ ...prev, [key]: entry }));
+      } else if (dateYear === year + 1) {
+        setNextYearLocations((prev) => ({ ...prev, [key]: entry }));
+      } else {
+        setStoredLocations((prev) => ({ ...prev, [key]: entry }));
+      }
       return true;
     },
-    [settings.homeCountry, settings.officeCountry, setStoredLocations],
+    [
+      settings.homeCountry,
+      settings.officeCountry,
+      year,
+      setStoredLocations,
+      setPrevYearLocations,
+      setNextYearLocations,
+    ],
   );
 
   /**
@@ -122,14 +146,25 @@ export function useWorkLocationStorage(year: number) {
    */
   const clearLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string) => {
-      const key = formatHdayDate(date);
-      setStoredLocations((prev) => {
+      const d = dayjs(date);
+      const key = formatHdayDate(d);
+      const dateYear = d.year();
+
+      const removeKey = (prev: StoredWorkLocations) => {
         const next = { ...prev };
         delete next[key];
         return next;
-      });
+      };
+
+      if (dateYear === year - 1) {
+        setPrevYearLocations(removeKey);
+      } else if (dateYear === year + 1) {
+        setNextYearLocations(removeKey);
+      } else {
+        setStoredLocations(removeKey);
+      }
     },
-    [setStoredLocations],
+    [year, setStoredLocations, setPrevYearLocations, setNextYearLocations],
   );
 
   /**
