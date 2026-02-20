@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -126,7 +127,7 @@ export function SettingsPanel({
     }
   };
 
-  const handleVersionKeyDown = (e: React.KeyboardEvent) => {
+  const handleVersionKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleVersionClick();

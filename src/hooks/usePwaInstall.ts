@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "../contexts/ToastContext";
+import { useLocalStorage } from "./useLocalStorage";
 import type { BeforeInstallPromptEvent, InstallPromptResult } from "../types/pwa";
 
 const INSTALL_STATE_KEY = "worktime_pwa_install_state";
@@ -22,29 +24,16 @@ const defaultInstallState: InstallState = {
   hasInstalled: false,
 };
 
-const readState = (): InstallState => {
-  try {
-    const raw = localStorage.getItem(INSTALL_STATE_KEY);
-    if (!raw) return defaultInstallState;
-    const parsed = JSON.parse(raw) as Partial<InstallState>;
-    return {
-      visits: Number.isFinite(parsed.visits) ? Math.max(0, Number(parsed.visits)) : 0,
-      totalUsageMs: Number.isFinite(parsed.totalUsageMs)
-        ? Math.max(0, Number(parsed.totalUsageMs))
-        : 0,
-      lastVisitAt: Number.isFinite(parsed.lastVisitAt) ? Number(parsed.lastVisitAt) : null,
-      lastDismissedAt: Number.isFinite(parsed.lastDismissedAt)
-        ? Number(parsed.lastDismissedAt)
-        : null,
-      hasInstalled: parsed.hasInstalled === true,
-    };
-  } catch {
-    return defaultInstallState;
-  }
-};
+const sanitizeInstallState = (state: unknown): InstallState => {
+  const parsed = typeof state === "object" && state !== null ? (state as Partial<InstallState>) : {};
 
-const writeState = (state: InstallState) => {
-  localStorage.setItem(INSTALL_STATE_KEY, JSON.stringify(state));
+  return {
+    visits: Number.isFinite(parsed.visits) ? Math.max(0, Number(parsed.visits)) : 0,
+    totalUsageMs: Number.isFinite(parsed.totalUsageMs) ? Math.max(0, Number(parsed.totalUsageMs)) : 0,
+    lastVisitAt: Number.isFinite(parsed.lastVisitAt) ? Number(parsed.lastVisitAt) : null,
+    lastDismissedAt: Number.isFinite(parsed.lastDismissedAt) ? Number(parsed.lastDismissedAt) : null,
+    hasInstalled: parsed.hasInstalled === true,
+  };
 };
 
 const hasMetEngagementThreshold = (state: InstallState) =>
@@ -53,56 +42,71 @@ const hasMetEngagementThreshold = (state: InstallState) =>
 const hasDismissCooldownElapsed = (state: InstallState) => {
   if (!state.lastDismissedAt) return true;
   const cooldownEndsAt = state.lastDismissedAt + DISMISS_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
-  return Date.now() >= cooldownEndsAt;
+  return dayjs().valueOf() >= cooldownEndsAt;
 };
 
 export function usePwaInstall() {
   const toast = useToast();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installState, setInstallState] = useState<InstallState>(defaultInstallState);
-
-  const refreshInstallState = useCallback(() => {
-    setInstallState(readState());
-  }, []);
+  const [storedInstallState, setStoredInstallState] = useLocalStorage<InstallState>(
+    INSTALL_STATE_KEY,
+    defaultInstallState,
+  );
+  const installState = useMemo(() => sanitizeInstallState(storedInstallState), [storedInstallState]);
+  const installStateRef = useRef(installState);
 
   useEffect(() => {
-    const now = Date.now();
-    const state = readState();
-    const visitCounted = !state.lastVisitAt || now - state.lastVisitAt > 12 * 60 * 60 * 1000;
-    const updatedState = {
-      ...state,
-      visits: visitCounted ? state.visits + 1 : state.visits,
-      lastVisitAt: now,
-    };
+    installStateRef.current = installState;
+  }, [installState]);
 
-    writeState(updatedState);
-    setInstallState(updatedState);
+  const updateInstallState = useCallback(
+    (updater: (prev: InstallState) => InstallState) => {
+      setStoredInstallState((prevRaw) => {
+        const previous = sanitizeInstallState(prevRaw);
+        const next = sanitizeInstallState(updater(previous));
+        installStateRef.current = next;
+        return next;
+      });
+    },
+    [setStoredInstallState],
+  );
+
+  const refreshInstallState = useCallback(() => {
+    const sanitized = sanitizeInstallState(installStateRef.current);
+    installStateRef.current = sanitized;
+    setStoredInstallState(sanitized);
+  }, [setStoredInstallState]);
+
+  useEffect(() => {
+    const now = dayjs().valueOf();
+    const state = installStateRef.current;
+    const visitCounted = !state.lastVisitAt || now - state.lastVisitAt > 12 * 60 * 60 * 1000;
+
+    updateInstallState((current) => ({
+      ...current,
+      visits: visitCounted ? current.visits + 1 : current.visits,
+      lastVisitAt: now,
+    }));
 
     let usageStartTime = now;
     const usageInterval = window.setInterval(() => {
-      const current = readState();
-      const increment = Date.now() - usageStartTime;
-      usageStartTime = Date.now();
-      const next = {
+      const increment = dayjs().valueOf() - usageStartTime;
+      usageStartTime = dayjs().valueOf();
+      updateInstallState((current) => ({
         ...current,
         totalUsageMs: current.totalUsageMs + increment,
-      };
-      writeState(next);
-      setInstallState(next);
+      }));
     }, MS_PER_MINUTE);
 
     return () => {
       clearInterval(usageInterval);
-      const current = readState();
-      const finalIncrement = Date.now() - usageStartTime;
-      const next = {
+      const finalIncrement = dayjs().valueOf() - usageStartTime;
+      updateInstallState((current) => ({
         ...current,
         totalUsageMs: current.totalUsageMs + Math.max(0, finalIncrement),
-      };
-      writeState(next);
-      setInstallState(next);
+      }));
     };
-  }, []);
+  }, [updateInstallState]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -111,13 +115,10 @@ export function usePwaInstall() {
     };
 
     const handleInstalled = () => {
-      const current = readState();
-      const next = {
+      updateInstallState((current) => ({
         ...current,
         hasInstalled: true,
-      };
-      writeState(next);
-      setInstallState(next);
+      }));
       setDeferredPrompt(null);
       toast.showSuccess("Worktime installed successfully.", "bi-phone");
     };
@@ -129,7 +130,7 @@ export function usePwaInstall() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
-  }, [toast]);
+  }, [toast, updateInstallState]);
 
   const canAutoPrompt = useMemo(() => {
     return (
@@ -152,26 +153,21 @@ export function usePwaInstall() {
       try {
         await deferredPrompt.prompt();
         const choice = await deferredPrompt.userChoice;
-        const current = readState();
 
         if (choice.outcome === "accepted") {
-          const next = {
+          updateInstallState((current) => ({
             ...current,
             hasInstalled: true,
-          };
-          writeState(next);
-          setInstallState(next);
+          }));
           setDeferredPrompt(null);
           toast.showSuccess("Installing Worktime…", "bi-download");
           return "accepted";
         }
 
-        const next = {
+        updateInstallState((current) => ({
           ...current,
-          lastDismissedAt: Date.now(),
-        };
-        writeState(next);
-        setInstallState(next);
+          lastDismissedAt: dayjs().valueOf(),
+        }));
         setDeferredPrompt(null);
         toast.showInfo("Install dismissed. We will remind you again in a week.", "bi-clock");
         return "dismissed";
@@ -181,7 +177,7 @@ export function usePwaInstall() {
         return "error";
       }
     },
-    [deferredPrompt, toast],
+    [deferredPrompt, toast, updateInstallState],
   );
 
   return {

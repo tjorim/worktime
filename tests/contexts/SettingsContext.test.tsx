@@ -135,7 +135,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 2,
+      version: 3,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -143,6 +143,7 @@ describe("SettingsContext unified user state", () => {
         timeFormat: "24h",
         theme: "auto",
         notifications: "off",
+        notificationLeadTime: "1h",
         vacationAllowance: {
           yearlyAmounts: {},
           unit: "days",
