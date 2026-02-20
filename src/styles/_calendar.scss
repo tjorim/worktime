@@ -94,6 +94,11 @@
   background: var(--wt-month-calendar-payday-bg);
 }
 
+.month-calendar-day.wfh-limit-exceeded {
+  border-color: var(--bs-warning);
+  box-shadow: inset 0 0 0 1px rgba(var(--bs-warning-rgb), 0.4);
+}
+
 .month-calendar-day.is-today {
   border-color: var(--wt-month-calendar-today-border);
   background: var(--wt-month-calendar-today-bg);
