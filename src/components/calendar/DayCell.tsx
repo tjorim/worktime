@@ -4,6 +4,7 @@ import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
+import type { WorkLocationInfo } from "../../types/workLocation";
 import { dayjs } from "../../utils/dateTimeUtils";
 import {
   getEventColorClass,
@@ -26,6 +27,7 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
+  workLocation?: WorkLocationInfo; // Optional work location (home/office)
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
@@ -149,6 +151,7 @@ export function DayCell({
   schoolHoliday,
   events,
   shiftBadge,
+  workLocation,
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
@@ -167,6 +170,11 @@ export function DayCell({
   }
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
+  }
+  if (workLocation && shiftBadge?.isWorking) {
+    ariaLabelParts.push(
+      workLocation.location === "home" ? "Working from home" : "Working from office",
+    );
   }
   if (publicHoliday) {
     ariaLabelParts.push(publicHoliday.name);
@@ -371,6 +379,22 @@ export function DayCell({
               {indicator.emoji}
             </span>
           ))}
+          {workLocation && shiftBadge?.isWorking && (
+            <span
+              className="month-calendar-day-indicator month-calendar-work-location"
+              title={workLocation.location === "home" ? "Working from home" : "Working from office"}
+              aria-label={
+                workLocation.location === "home" ? "Working from home" : "Working from office"
+              }
+            >
+              <i
+                className={clsx(
+                  "bi",
+                  workLocation.location === "home" ? "bi-house" : "bi-building",
+                )}
+              ></i>
+            </span>
+          )}
         </span>
         {onDayContextMenu && (
           <button

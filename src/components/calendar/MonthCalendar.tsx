@@ -5,6 +5,7 @@ import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
+import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
@@ -14,12 +15,15 @@ interface MonthCalendarProps {
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
   paydayMap?: Map<string, PaydayInfo>;
+  workLocationMap?: WorkLocationMap;
   onMonthChange: (month: dayjs.Dayjs) => void;
   onAddEvent: (date: dayjs.Dayjs) => void;
   onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
+  onSetWorkLocation?: (date: dayjs.Dayjs, location: WorkLocation | null) => void;
   allowEventActions?: boolean;
+  showWorkLocationActions?: boolean;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
     date: dayjs.Dayjs,
@@ -84,12 +88,15 @@ export function MonthCalendar({
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
   paydayMap = new Map(),
+  workLocationMap,
   onMonthChange,
   onAddEvent,
   onViewEvent,
   onEditEvent,
   onDeleteEvent,
+  onSetWorkLocation,
   allowEventActions = true,
+  showWorkLocationActions = false,
   getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
@@ -301,13 +308,43 @@ export function MonthCalendar({
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     if (contextMenu?.type === "day" && contextMenu.date) {
-      return [
+      const items: ContextMenuItem[] = [
         {
           label: "Add new event",
           icon: "bi-plus-circle",
           onClick: () => handleAddEventWrapper(contextMenu.date!),
         },
       ];
+      if (showWorkLocationActions && onSetWorkLocation) {
+        const date = contextMenu.date;
+        items.push(
+          {
+            label: "Work from Home",
+            icon: "bi-house",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, "home");
+            },
+          },
+          {
+            label: "Work from Office",
+            icon: "bi-building",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, "office");
+            },
+          },
+          {
+            label: "Clear Work Location",
+            icon: "bi-x-circle",
+            onClick: () => {
+              handleCloseContextMenu();
+              onSetWorkLocation(date, null);
+            },
+          },
+        );
+      }
+      return items;
     }
     if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
       const items: ContextMenuItem[] = [
@@ -417,6 +454,7 @@ export function MonthCalendar({
                   publicHoliday={publicHolidays.get(dayKey)}
                   schoolHoliday={schoolHolidays.get(dayKey)}
                   paydayInfo={paydayMap.get(dayKey)}
+                  workLocation={workLocationMap?.get(dayKey)}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}

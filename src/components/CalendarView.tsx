@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
 import type { HdayEvent } from "../lib/hday/types";
+import type { WorkLocation } from "../types/workLocation";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -10,6 +11,7 @@ import { useToast } from "../contexts/ToastContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
+import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
@@ -81,6 +83,8 @@ export function CalendarView({
   const currentYear = currentMonth.year();
   const { publicHolidayMap } = usePublicHolidays(currentYear);
   const { schoolHolidayMap } = useSchoolHolidays(currentYear);
+  const { workLocationMap, setLocationForDate, clearLocationForDate } =
+    useWorkLocationStorage(currentYear);
 
   // Get payday information for the year
   const paydayMapForYear = useMemo(
@@ -315,6 +319,17 @@ export function CalendarView({
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
+  // Work location: only show actions when the user has country settings configured
+  const showWorkLocationActions = !!(settings.homeCountry || settings.officeCountry);
+
+  const handleSetWorkLocation = (date: Dayjs, location: WorkLocation | null) => {
+    if (location === null) {
+      clearLocationForDate(date);
+    } else {
+      setLocationForDate(date, location);
+    }
+  };
+
   const handleHideEventModal = () => {
     setShowEventModal(false);
     setShowResetConfirm(false);
@@ -386,12 +401,15 @@ export function CalendarView({
               publicHolidays={publicHolidayMap}
               schoolHolidays={schoolHolidayMap}
               paydayMap={paydayMapForYear}
+              workLocationMap={workLocationMap}
               onMonthChange={setCurrentMonth}
               onAddEvent={handleAddEventForDate}
               onViewEvent={handleOpenViewModal}
               onEditEvent={handleOpenEditModal}
               onDeleteEvent={handleDeleteClick}
+              onSetWorkLocation={handleSetWorkLocation}
               allowEventActions={timeOffEnabled}
+              showWorkLocationActions={showWorkLocationActions}
               getShiftForDate={getShiftForDate}
             />
           )}
