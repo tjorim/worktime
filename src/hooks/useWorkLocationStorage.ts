@@ -167,36 +167,10 @@ export function useWorkLocationStorage(year: number) {
     [year, setStoredLocations, setPrevYearLocations, setNextYearLocations],
   );
 
-  /**
-   * Returns a WorkLocationMap that covers all seven days of the ISO week containing
-   * the given date, merging data from adjacent years when the week spans a year boundary
-   * (e.g. a week covering both 31 Dec and 1 Jan).
-   *
-   * @param weekStartDate - Any date within the target ISO week
-   * @returns A merged WorkLocationMap for the full week
-   */
-  const getLocationsForWeek = useCallback(
-    (weekStartDate: dayjs.Dayjs | Date | string): WorkLocationMap => {
-      const monday = dayjs(weekStartDate).isoWeekday(1);
-      const sunday = monday.add(6, "day");
-
-      if (monday.year() === sunday.year()) {
-        return new Map(Object.entries(storedLocations));
-      }
-
-      // Week spans two years: merge current year with the adjacent year
-      const adjacentLocations =
-        sunday.year() === year + 1 ? nextYearLocations : prevYearLocations;
-      return new Map(Object.entries({ ...storedLocations, ...adjacentLocations }));
-    },
-    [storedLocations, prevYearLocations, nextYearLocations, year],
-  );
-
   return {
     workLocationMap,
     getLocationForDate,
     setLocationForDate,
     clearLocationForDate,
-    getLocationsForWeek,
   };
 }
