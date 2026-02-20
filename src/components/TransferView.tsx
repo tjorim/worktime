@@ -13,6 +13,7 @@ import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { UpcomingShiftsList } from "./schedule/UpcomingShiftsList";
 import { RecentTransfersList } from "./transfer/RecentTransfersList";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -292,16 +293,24 @@ export function TransferView({
 
             <Row className="g-3 mb-3">
               <Col lg={5}>
-                <UpcomingShiftsList teamNumber={myTeam} scheduleType={scheduleType} itemCount={6} />
+                <ErrorBoundary>
+                  <UpcomingShiftsList
+                    teamNumber={myTeam}
+                    scheduleType={scheduleType}
+                    itemCount={6}
+                  />
+                </ErrorBoundary>
               </Col>
               <Col lg={7}>
-                <RecentTransfersList
-                  title="Recent Transfer Activity"
-                  transfers={transfers.slice(0, 5)}
-                  myTeam={myTeam}
-                  emptyDescription="Transfers between your team and the selected team will appear here."
-                  scheduleType={scheduleType}
-                />
+                <ErrorBoundary>
+                  <RecentTransfersList
+                    title="Recent Transfer Activity"
+                    transfers={transfers.slice(0, 5)}
+                    myTeam={myTeam}
+                    emptyDescription="Transfers between your team and the selected team will appear here."
+                    scheduleType={scheduleType}
+                  />
+                </ErrorBoundary>
               </Col>
             </Row>
 
@@ -350,27 +359,29 @@ export function TransferView({
                   </div>
                 )}
 
-                <Accordion defaultActiveKey={groupedTransfers[0]?.key} alwaysOpen>
-                  {groupedTransfers.map((group) => (
-                    <Accordion.Item eventKey={group.key} key={group.key}>
-                      <Accordion.Header>
-                        {group.title}
-                        <Badge bg="secondary" pill className="ms-2">
-                          {group.items.length}
-                        </Badge>
-                      </Accordion.Header>
-                      <Accordion.Body>
-                        <RecentTransfersList
-                          title={group.title}
-                          transfers={group.items}
-                          myTeam={myTeam}
-                          emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
-                          scheduleType={scheduleType}
-                        />
-                      </Accordion.Body>
-                    </Accordion.Item>
-                  ))}
-                </Accordion>
+                <ErrorBoundary>
+                  <Accordion defaultActiveKey={groupedTransfers[0]?.key} alwaysOpen>
+                    {groupedTransfers.map((group) => (
+                      <Accordion.Item eventKey={group.key} key={group.key}>
+                        <Accordion.Header>
+                          {group.title}
+                          <Badge bg="secondary" pill className="ms-2">
+                            {group.items.length}
+                          </Badge>
+                        </Accordion.Header>
+                        <Accordion.Body>
+                          <RecentTransfersList
+                            title={group.title}
+                            transfers={group.items}
+                            myTeam={myTeam}
+                            emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
+                            scheduleType={scheduleType}
+                          />
+                        </Accordion.Body>
+                      </Accordion.Item>
+                    ))}
+                  </Accordion>
+                </ErrorBoundary>
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">

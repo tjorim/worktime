@@ -53,13 +53,13 @@ export function RecentTransfersList({
           <EmptyState icon="bi-calendar-x" title={emptyTitle} description={emptyDescription} />
         ) : (
           <ListGroup variant="flush">
-            {transfers.map((transfer) => {
+            {transfers.map((transfer, index) => {
               const fromShift = getShift(transfer.fromShiftType, scheduleType);
               const toShift = getShift(transfer.toShiftType, scheduleType);
 
               return (
                 <ListGroup.Item
-                  key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}`}
+                  key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}-${transfer.fromShiftType}-${transfer.toShiftType}-${transfer.type}-${index}`}
                   className="px-0 d-flex justify-content-between align-items-start gap-2 flex-wrap"
                 >
                   <div>

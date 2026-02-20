@@ -70,7 +70,7 @@ import type { ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
-type NullableScheduleOption = ScheduleOption | null | undefined;
+export type NullableScheduleOption = ScheduleOption | null | undefined;
 
 export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
@@ -204,7 +204,7 @@ const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
  * @returns The matching shift object for the schedule
  * @throws {Error} If the shift code is not defined in the schedule's shiftTimes
  */
-export const getShift = (code: ShiftType, scheduleOption: ScheduleOption): Shift => {
+export const getShift = (code: ShiftType, scheduleOption?: NullableScheduleOption): Shift => {
   const definition = getShiftTimeDefinition(scheduleOption, code);
   const visuals = SHIFT_VISUALS[code];
 
