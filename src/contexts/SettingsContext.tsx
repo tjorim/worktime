@@ -5,6 +5,7 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { CountryCode } from "../types/countries";
 import { isValidCountryCode } from "../types/countries";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
+import { MAX_WFH_DAYS_PER_WEEK } from "../utils/config";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 
 export type TimeFormat = "12h" | "24h";
@@ -116,7 +117,7 @@ const sanitizeWfhWeeklyLimit = (limit: unknown, fallbackLimit: number): number =
     return fallbackLimit;
   }
 
-  return Math.min(Math.floor(limit), 7);
+  return Math.min(Math.floor(limit), MAX_WFH_DAYS_PER_WEEK);
 };
 
 interface WorktimeUserState {
