@@ -33,6 +33,7 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
+  const { homeCountry, officeCountry } = settings;
 
   const storageKey = `worktime_work_locations_${year}`;
   const prevStorageKey = `worktime_work_locations_${year - 1}`;
@@ -84,14 +85,13 @@ export function useWorkLocationStorage(year: number) {
       }
 
       // Default-to-office: derive country from officeCountry setting
-      const { officeCountry } = settings;
       if (officeCountry) {
         return { location: "office", countryCode: officeCountry };
       }
 
       return null;
     },
-    [storedLocations, prevYearLocations, nextYearLocations, settings.officeCountry],
+    [storedLocations, prevYearLocations, nextYearLocations, officeCountry],
   );
 
   /**
@@ -108,7 +108,7 @@ export function useWorkLocationStorage(year: number) {
    */
   const setLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string, location: WorkLocation): boolean => {
-      const countryCode = location === "home" ? settings.homeCountry : settings.officeCountry;
+      const countryCode = location === "home" ? homeCountry : officeCountry;
 
       // Country must be configured before a location can be stored
       if (!countryCode) {
@@ -130,8 +130,8 @@ export function useWorkLocationStorage(year: number) {
       return true;
     },
     [
-      settings.homeCountry,
-      settings.officeCountry,
+      homeCountry,
+      officeCountry,
       year,
       setStoredLocations,
       setPrevYearLocations,
