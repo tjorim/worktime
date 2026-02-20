@@ -227,6 +227,8 @@ export function TodayView({
     setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
   };
 
+  const activeMobileShift = todayShifts[mobileActiveIndex] ?? todayShifts[0];
+
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     setTouchStartX(event.changedTouches[0]?.clientX ?? null);
   };
@@ -289,7 +291,7 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {isMobile && hasTeams && todayShifts.length > 0 ? (
+        {isMobile && hasTeams && activeMobileShift ? (
           <div
             className="mobile-team-carousel"
             onTouchStart={handleTouchStart}
@@ -308,9 +310,9 @@ export function TodayView({
             tabIndex={0}
           >
             <TeamCard
-              shiftResult={todayShifts[mobileActiveIndex]}
-              isMyTeam={myTeam === todayShifts[mobileActiveIndex].teamNumber}
-              isCurrentlyActive={isCurrentlyActive(todayShifts[mobileActiveIndex])}
+              shiftResult={activeMobileShift}
+              isMyTeam={myTeam === activeMobileShift.teamNumber}
+              isCurrentlyActive={isCurrentlyActive(activeMobileShift)}
               hasTeams={hasTeams}
               onTeamClick={onTeamClick}
               scheduleType={scheduleType}
