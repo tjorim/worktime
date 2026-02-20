@@ -33,6 +33,7 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
+  const officeCountry = settings.officeCountry;
 
   const storageKey = `worktime_work_locations_${year}`;
   const prevStorageKey = `worktime_work_locations_${year - 1}`;
@@ -84,14 +85,13 @@ export function useWorkLocationStorage(year: number) {
       }
 
       // Default-to-office: derive country from officeCountry setting
-      const { officeCountry } = settings;
       if (officeCountry) {
         return { location: "office", countryCode: officeCountry };
       }
 
       return null;
     },
-    [storedLocations, prevYearLocations, nextYearLocations, settings.officeCountry],
+    [storedLocations, prevYearLocations, nextYearLocations, officeCountry],
   );
 
   /**
