@@ -258,7 +258,7 @@ export function MonthCalendar({
 
   // Compute which ISO weeks in the current view exceed the WFH limit
   const wfhLimitExceededWeeks = useMemo(() => {
-    if (!wfhWeeklyLimit || !workLocationMap) return new Set<string>();
+    if (wfhWeeklyLimit == null || !workLocationMap) return new Set<string>();
     const exceeded = new Set<string>();
     const checkedWeeks = new Set<string>();
     for (const day of days) {
