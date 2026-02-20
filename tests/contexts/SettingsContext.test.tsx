@@ -135,7 +135,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 2,
+      version: 3,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -150,6 +150,8 @@ describe("SettingsContext unified user state", () => {
         },
         enableTimeOff: false,
         enableTimeTracking: false,
+        homeCountry: null,
+        officeCountry: null,
       },
       lastUsed: {
         activeTab: "calendar",

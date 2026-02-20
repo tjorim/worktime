@@ -8,6 +8,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { SUPPORTED_COUNTRIES } from "../types/countries";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
@@ -61,6 +62,8 @@ export function SettingsPanel({
     updateTheme,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
+    updateHomeCountry,
+    updateOfficeCountry,
     resetSettings,
   } = useSettings();
 
@@ -302,6 +305,69 @@ export function SettingsPanel({
                         Dark
                       </Button>
                     </ButtonGroup>
+                  </div>
+                </ListGroup.Item>
+              </ListGroup>
+            </div>
+          </div>
+
+          {/* Cross-Border Setup Section */}
+          <div className="border-bottom">
+            <div className="p-3">
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-globe me-2"></i>
+                Cross-Border Setup
+              </h6>
+              <small className="text-muted d-block mb-3">
+                Configure countries for work location tracking
+              </small>
+              <ListGroup variant="flush">
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Home Country</div>
+                      <small className="text-muted">Country where you are based</small>
+                    </div>
+                    <Form.Select
+                      size="sm"
+                      style={{ width: "auto" }}
+                      value={settings.homeCountry ?? ""}
+                      onChange={(event) =>
+                        updateHomeCountry(event.target.value !== "" ? (event.target.value as Parameters<typeof updateHomeCountry>[0]) : null)
+                      }
+                      aria-label="Home country"
+                    >
+                      <option value="">None</option>
+                      {SUPPORTED_COUNTRIES.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Office Country</div>
+                      <small className="text-muted">Country where your office is located</small>
+                    </div>
+                    <Form.Select
+                      size="sm"
+                      style={{ width: "auto" }}
+                      value={settings.officeCountry ?? ""}
+                      onChange={(event) =>
+                        updateOfficeCountry(event.target.value !== "" ? (event.target.value as Parameters<typeof updateOfficeCountry>[0]) : null)
+                      }
+                      aria-label="Office country"
+                    >
+                      <option value="">None</option>
+                      {SUPPORTED_COUNTRIES.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </Form.Select>
                   </div>
                 </ListGroup.Item>
               </ListGroup>

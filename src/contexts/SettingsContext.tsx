@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import type { CountryCode } from "../types/countries";
+import { isValidCountryCode } from "../types/countries";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 
@@ -29,6 +31,8 @@ interface UserSettings {
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
+  homeCountry: CountryCode | null;
+  officeCountry: CountryCode | null;
 }
 
 interface SettingsContextType {
@@ -40,6 +44,8 @@ interface SettingsContextType {
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
+  updateHomeCountry: (country: CountryCode | null) => void;
+  updateOfficeCountry: (country: CountryCode | null) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -84,6 +90,8 @@ export const defaultSettings: UserSettings = {
   },
   enableTimeOff: false,
   enableTimeTracking: false,
+  homeCountry: null,
+  officeCountry: null,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -111,7 +119,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -241,6 +249,22 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v3: Add homeCountry and officeCountry to settings.
+  3: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawState;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        homeCountry: null,
+        officeCountry: null,
+      },
+    };
+  },
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -330,6 +354,20 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.enableTimeTracking === "boolean"
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
+
+  const homeCountry =
+    settings.homeCountry === null
+      ? null
+      : isValidCountryCode(settings.homeCountry)
+        ? settings.homeCountry
+        : defaultSettings.homeCountry;
+
+  const officeCountry =
+    settings.officeCountry === null
+      ? null
+      : isValidCountryCode(settings.officeCountry)
+        ? settings.officeCountry
+        : defaultSettings.officeCountry;
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -424,6 +462,8 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
+      homeCountry,
+      officeCountry,
     },
     lastUsed: {
       activeTab,
@@ -519,6 +559,26 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, enableTimeTracking: enabled },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateHomeCountry = useCallback(
+    (country: CountryCode | null) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, homeCountry: country },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateOfficeCountry = useCallback(
+    (country: CountryCode | null) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, officeCountry: country },
       }));
     },
     [setUserState],
@@ -693,6 +753,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateHomeCountry,
+      updateOfficeCountry,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -718,6 +780,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateHomeCountry,
+      updateOfficeCountry,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
