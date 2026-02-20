@@ -386,12 +386,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     ? settings.homeCountry
     : defaultSettings.homeCountry;
 
-  const officeCountry =
-    settings.officeCountry === null
-      ? null
-      : isValidCountryCode(settings.officeCountry)
-        ? settings.officeCountry
-        : defaultSettings.officeCountry;
+  const officeCountry = isValidCountryCode(settings.officeCountry)
+    ? settings.officeCountry
+    : defaultSettings.officeCountry;
 
   const wfhWeeklyLimit = sanitizeWfhWeeklyLimit(
     settings.wfhWeeklyLimit,
