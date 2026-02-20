@@ -319,18 +319,22 @@ export function CalendarView({
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
-  // Work location: only show actions when the user has country settings configured
-  const showWorkLocationActions = !!(settings.homeCountry || settings.officeCountry);
+  // Show each work-location action only when its specific country is configured
+  const showHomeLocationAction = !!settings.homeCountry;
+  const showOfficeLocationAction = !!settings.officeCountry;
 
   const handleSetWorkLocation = useCallback(
     (date: Dayjs, location: WorkLocation | null) => {
       if (location === null) {
         clearLocationForDate(date);
       } else {
-        setLocationForDate(date, location);
+        const success = setLocationForDate(date, location);
+        if (!success) {
+          toast.showError("Configure your country settings to track work locations");
+        }
       }
     },
-    [clearLocationForDate, setLocationForDate],
+    [clearLocationForDate, setLocationForDate, toast],
   );
 
   const handleHideEventModal = () => {
@@ -412,8 +416,8 @@ export function CalendarView({
               onDeleteEvent={handleDeleteClick}
               onSetWorkLocation={handleSetWorkLocation}
               allowEventActions={timeOffEnabled}
-              allowWorkLocationActions={showWorkLocationActions}
-              showWorkLocationActions={showWorkLocationActions}
+              showHomeLocationAction={showHomeLocationAction}
+              showOfficeLocationAction={showOfficeLocationAction}
               getShiftForDate={getShiftForDate}
             />
           )}

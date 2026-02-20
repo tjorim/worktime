@@ -23,8 +23,8 @@ interface MonthCalendarProps {
   onDeleteEvent?: (index: number) => void;
   onSetWorkLocation?: (date: dayjs.Dayjs, location: WorkLocation | null) => void;
   allowEventActions?: boolean;
-  allowWorkLocationActions?: boolean;
-  showWorkLocationActions?: boolean;
+  showHomeLocationAction?: boolean;
+  showOfficeLocationAction?: boolean;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
     date: dayjs.Dayjs,
@@ -97,8 +97,8 @@ export function MonthCalendar({
   onDeleteEvent,
   onSetWorkLocation,
   allowEventActions = true,
-  allowWorkLocationActions = false,
-  showWorkLocationActions = false,
+  showHomeLocationAction = false,
+  showOfficeLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
   const days = useMemo(() => buildCalendarDays(month), [month]);
@@ -258,15 +258,18 @@ export function MonthCalendar({
     [],
   );
 
+  // Combined predicate: show context menu when any action type is available
+  const showContextMenu = allowEventActions || showHomeLocationAction || showOfficeLocationAction;
+
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
     (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
-      if (!allowEventActions && !allowWorkLocationActions) return;
+      if (!showContextMenu) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
     },
-    [allowEventActions, allowWorkLocationActions],
+    [showContextMenu],
   );
 
   const handleEventContextMenu = useCallback(
@@ -310,35 +313,38 @@ export function MonthCalendar({
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     if (contextMenu?.type === "day" && contextMenu.date) {
-      const items: ContextMenuItem[] = [
-        {
+      const items: ContextMenuItem[] = [];
+      if (allowEventActions) {
+        items.push({
           label: "Add new event",
           icon: "bi-plus-circle",
           onClick: () => handleAddEventWrapper(contextMenu.date!),
-        },
-      ];
-      if (showWorkLocationActions && onSetWorkLocation) {
+        });
+      }
+      if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         const date = contextMenu.date;
         const dayKey = formatHdayDate(date);
         const hasStoredLocation = !!workLocationMap?.get(dayKey);
-        items.push(
-          {
+        if (showHomeLocationAction) {
+          items.push({
             label: "Work from Home",
             icon: "bi-house",
             onClick: () => {
               handleCloseContextMenu();
               onSetWorkLocation(date, "home");
             },
-          },
-          {
+          });
+        }
+        if (showOfficeLocationAction) {
+          items.push({
             label: "Work from Office",
             icon: "bi-building",
             onClick: () => {
               handleCloseContextMenu();
               onSetWorkLocation(date, "office");
             },
-          },
-        );
+          });
+        }
         if (hasStoredLocation) {
           items.push({
             label: "Clear Work Location",
@@ -464,11 +470,7 @@ export function MonthCalendar({
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}
-                  onDayContextMenu={
-                    allowEventActions || allowWorkLocationActions
-                      ? handleDayContextMenu
-                      : undefined
-                  }
+                  onDayContextMenu={showContextMenu ? handleDayContextMenu : undefined}
                   onEventContextMenu={allowEventActions ? handleEventContextMenu : undefined}
                   isFocusTarget={globalIndex === focusedIndex}
                   cellRef={(el) => {
@@ -482,7 +484,7 @@ export function MonthCalendar({
       </div>
 
       {/* Context menu */}
-      {(allowEventActions || allowWorkLocationActions) && (
+      {showContextMenu && (
         <ContextMenu
           isOpen={contextMenu !== null}
           x={contextMenu?.x ?? 0}
