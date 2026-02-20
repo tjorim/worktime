@@ -340,9 +340,13 @@ export function CalendarView({
           const existingCount = getWfhDaysInWeek(date, workLocationMap);
           const newCount = wasAlreadyHome ? existingCount : existingCount + 1;
           if (newCount > settings.wfhWeeklyLimit) {
-            toast.showWarning(
-              `WFH limit reached: ${newCount}/${settings.wfhWeeklyLimit} days this week`,
-            );
+            if (settings.wfhWeeklyLimit === 0) {
+              toast.showWarning("WFH limit reached: No WFH allowed this week");
+            } else {
+              toast.showWarning(
+                `WFH limit reached: ${newCount}/${settings.wfhWeeklyLimit} days this week`,
+              );
+            }
           }
         }
       }
