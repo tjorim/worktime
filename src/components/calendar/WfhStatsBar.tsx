@@ -19,7 +19,12 @@ export function WfhStatsBar({ workLocationMap, wfhWeeklyLimit }: WfhStatsBarProp
   const today = dayjs();
   const wfhCount = getWfhDaysInWeek(today, workLocationMap);
   const limitExceeded = wfhCount > wfhWeeklyLimit;
-  const progressPercent = wfhWeeklyLimit > 0 ? Math.min((wfhCount / wfhWeeklyLimit) * 100, 100) : 0;
+  const progressPercent =
+    wfhWeeklyLimit > 0
+      ? Math.min((wfhCount / wfhWeeklyLimit) * 100, 100)
+      : wfhCount > 0
+        ? 100
+        : 0;
   const progressVariant = limitExceeded ? "warning" : wfhCount === wfhWeeklyLimit ? "info" : "success";
 
   return (

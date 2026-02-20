@@ -395,6 +395,7 @@ export function DayCell({
                   "bi",
                   workLocation.location === "home" ? "bi-house" : "bi-building",
                 )}
+                aria-label={workLocationLabel}
               ></i>
             </span>
           )}
