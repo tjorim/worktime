@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
@@ -322,13 +322,16 @@ export function CalendarView({
   // Work location: only show actions when the user has country settings configured
   const showWorkLocationActions = !!(settings.homeCountry || settings.officeCountry);
 
-  const handleSetWorkLocation = (date: Dayjs, location: WorkLocation | null) => {
-    if (location === null) {
-      clearLocationForDate(date);
-    } else {
-      setLocationForDate(date, location);
-    }
-  };
+  const handleSetWorkLocation = useCallback(
+    (date: Dayjs, location: WorkLocation | null) => {
+      if (location === null) {
+        clearLocationForDate(date);
+      } else {
+        setLocationForDate(date, location);
+      }
+    },
+    [clearLocationForDate, setLocationForDate],
+  );
 
   const handleHideEventModal = () => {
     setShowEventModal(false);
@@ -409,6 +412,7 @@ export function CalendarView({
               onDeleteEvent={handleDeleteClick}
               onSetWorkLocation={handleSetWorkLocation}
               allowEventActions={timeOffEnabled}
+              allowWorkLocationActions={showWorkLocationActions}
               showWorkLocationActions={showWorkLocationActions}
               getShiftForDate={getShiftForDate}
             />

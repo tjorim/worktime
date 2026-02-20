@@ -164,6 +164,11 @@ export function DayCell({
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
+  const workLocationLabel = workLocation
+    ? workLocation.location === "home"
+      ? "Working from home"
+      : "Working from office"
+    : undefined;
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
@@ -171,10 +176,8 @@ export function DayCell({
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
   }
-  if (workLocation && shiftBadge?.isWorking) {
-    ariaLabelParts.push(
-      workLocation.location === "home" ? "Working from home" : "Working from office",
-    );
+  if (workLocationLabel && shiftBadge?.isWorking) {
+    ariaLabelParts.push(workLocationLabel);
   }
   if (publicHoliday) {
     ariaLabelParts.push(publicHoliday.name);
@@ -382,10 +385,7 @@ export function DayCell({
           {workLocation && shiftBadge?.isWorking && (
             <span
               className="month-calendar-day-indicator month-calendar-work-location"
-              title={workLocation.location === "home" ? "Working from home" : "Working from office"}
-              aria-label={
-                workLocation.location === "home" ? "Working from home" : "Working from office"
-              }
+              title={workLocationLabel}
             >
               <i
                 className={clsx(

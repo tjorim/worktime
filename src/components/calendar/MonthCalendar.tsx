@@ -23,6 +23,7 @@ interface MonthCalendarProps {
   onDeleteEvent?: (index: number) => void;
   onSetWorkLocation?: (date: dayjs.Dayjs, location: WorkLocation | null) => void;
   allowEventActions?: boolean;
+  allowWorkLocationActions?: boolean;
   showWorkLocationActions?: boolean;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
@@ -96,6 +97,7 @@ export function MonthCalendar({
   onDeleteEvent,
   onSetWorkLocation,
   allowEventActions = true,
+  allowWorkLocationActions = false,
   showWorkLocationActions = false,
   getShiftForDate,
 }: MonthCalendarProps) {
@@ -259,12 +261,12 @@ export function MonthCalendar({
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
     (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
-      if (!allowEventActions) return;
+      if (!allowEventActions && !allowWorkLocationActions) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
     },
-    [allowEventActions],
+    [allowEventActions, allowWorkLocationActions],
   );
 
   const handleEventContextMenu = useCallback(
@@ -317,6 +319,8 @@ export function MonthCalendar({
       ];
       if (showWorkLocationActions && onSetWorkLocation) {
         const date = contextMenu.date;
+        const dayKey = formatHdayDate(date);
+        const hasStoredLocation = !!workLocationMap?.get(dayKey);
         items.push(
           {
             label: "Work from Home",
@@ -334,15 +338,17 @@ export function MonthCalendar({
               onSetWorkLocation(date, "office");
             },
           },
-          {
+        );
+        if (hasStoredLocation) {
+          items.push({
             label: "Clear Work Location",
             icon: "bi-x-circle",
             onClick: () => {
               handleCloseContextMenu();
               onSetWorkLocation(date, null);
             },
-          },
-        );
+          });
+        }
       }
       return items;
     }
@@ -458,7 +464,11 @@ export function MonthCalendar({
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}
-                  onDayContextMenu={allowEventActions ? handleDayContextMenu : undefined}
+                  onDayContextMenu={
+                    allowEventActions || allowWorkLocationActions
+                      ? handleDayContextMenu
+                      : undefined
+                  }
                   onEventContextMenu={allowEventActions ? handleEventContextMenu : undefined}
                   isFocusTarget={globalIndex === focusedIndex}
                   cellRef={(el) => {
@@ -472,7 +482,7 @@ export function MonthCalendar({
       </div>
 
       {/* Context menu */}
-      {allowEventActions && (
+      {(allowEventActions || allowWorkLocationActions) && (
         <ContextMenu
           isOpen={contextMenu !== null}
           x={contextMenu?.x ?? 0}
