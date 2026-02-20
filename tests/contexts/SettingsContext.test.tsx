@@ -247,6 +247,15 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.wfhWeeklyLimit).toBe(7);
     });
 
+    it("caps WFH weekly limit values above 7", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      await act(async () => {
+        result.current.updateWfhWeeklyLimit(9);
+      });
+      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
+    });
+
     it("normalizes invalid WFH weekly limit values to default", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
@@ -934,6 +943,41 @@ describe("SettingsContext unified user state", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
       expect(result.current.settings.wfhWeeklyLimit).toBe(0);
+    });
+
+    it("caps stored wfhWeeklyLimit above 7 when upgrading from v3", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 3,
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "on",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            homeCountry: "NL",
+            officeCountry: "BE",
+            wfhWeeklyLimit: 12,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
     });
   });
 
