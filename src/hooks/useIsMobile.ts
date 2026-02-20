@@ -16,10 +16,6 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(getIsMobile);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
     const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
 
