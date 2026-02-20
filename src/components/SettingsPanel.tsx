@@ -47,6 +47,27 @@ function CountrySelect({ value, onChange, ariaLabel }: CountrySelectProps) {
   );
 }
 
+interface CountrySelectItemProps {
+  label: string;
+  description: string;
+  value: string;
+  onUpdate: (country: CountryCode | null) => void;
+}
+
+function CountrySelectItem({ label, description, value, onUpdate }: CountrySelectItemProps) {
+  return (
+    <ListGroup.Item>
+      <div className="d-flex justify-content-between align-items-center">
+        <div>
+          <div className="fw-medium">{label}</div>
+          <small className="text-muted">{description}</small>
+        </div>
+        <CountrySelect value={value} onChange={onUpdate} ariaLabel={label} />
+      </div>
+    </ListGroup.Item>
+  );
+}
+
 interface SettingsPanelProps {
   show: boolean;
   onHide: () => void;
@@ -351,32 +372,18 @@ export function SettingsPanel({
                 Configure countries for work location tracking
               </small>
               <ListGroup variant="flush">
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">Home Country</div>
-                      <small className="text-muted">Country where you are based</small>
-                    </div>
-                    <CountrySelect
-                      value={settings.homeCountry ?? ""}
-                      onChange={updateHomeCountry}
-                      ariaLabel="Home country"
-                    />
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">Office Country</div>
-                      <small className="text-muted">Country where your office is located</small>
-                    </div>
-                    <CountrySelect
-                      value={settings.officeCountry ?? ""}
-                      onChange={updateOfficeCountry}
-                      ariaLabel="Office country"
-                    />
-                  </div>
-                </ListGroup.Item>
+                <CountrySelectItem
+                  label="Home Country"
+                  description="Country where you are based"
+                  value={settings.homeCountry ?? ""}
+                  onUpdate={updateHomeCountry}
+                />
+                <CountrySelectItem
+                  label="Office Country"
+                  description="Country where your office is located"
+                  value={settings.officeCountry ?? ""}
+                  onUpdate={updateOfficeCountry}
+                />
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
