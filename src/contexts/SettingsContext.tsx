@@ -116,7 +116,7 @@ const sanitizeWfhWeeklyLimit = (limit: unknown, fallbackLimit: number): number =
     return fallbackLimit;
   }
 
-  return Math.floor(limit);
+  return Math.min(Math.floor(limit), 7);
 };
 
 interface WorktimeUserState {
