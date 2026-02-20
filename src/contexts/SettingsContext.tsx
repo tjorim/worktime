@@ -260,8 +260,8 @@ const migrations: Record<number, Migration> = {
       ...state,
       settings: {
         ...settings,
-        homeCountry: null,
-        officeCountry: null,
+        homeCountry: settings.homeCountry ?? null,
+        officeCountry: settings.officeCountry ?? null,
       },
     };
   },

@@ -17,7 +17,7 @@ export interface Country {
  * List of countries supported for home/office location tracking.
  * Includes the Benelux region and neighboring countries.
  */
-export const SUPPORTED_COUNTRIES: Country[] = [
+export const SUPPORTED_COUNTRIES: readonly Country[] = [
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
   { code: "DE", name: "Germany" },

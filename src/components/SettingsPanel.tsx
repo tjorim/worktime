@@ -8,7 +8,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { SUPPORTED_COUNTRIES } from "../types/countries";
+import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../types/countries";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
@@ -18,6 +18,34 @@ import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
+
+interface CountrySelectProps {
+  value: string;
+  onChange: (country: CountryCode | null) => void;
+  ariaLabel: string;
+}
+
+function CountrySelect({ value, onChange, ariaLabel }: CountrySelectProps) {
+  return (
+    <Form.Select
+      size="sm"
+      style={{ width: "auto" }}
+      value={value}
+      onChange={(event) => {
+        const val = event.target.value;
+        onChange(isValidCountryCode(val) ? val : null);
+      }}
+      aria-label={ariaLabel}
+    >
+      <option value="">None</option>
+      {SUPPORTED_COUNTRIES.map((country) => (
+        <option key={country.code} value={country.code}>
+          {country.name}
+        </option>
+      ))}
+    </Form.Select>
+  );
+}
 
 interface SettingsPanelProps {
   show: boolean;
@@ -328,22 +356,11 @@ export function SettingsPanel({
                       <div className="fw-medium">Home Country</div>
                       <small className="text-muted">Country where you are based</small>
                     </div>
-                    <Form.Select
-                      size="sm"
-                      style={{ width: "auto" }}
+                    <CountrySelect
                       value={settings.homeCountry ?? ""}
-                      onChange={(event) =>
-                        updateHomeCountry(event.target.value !== "" ? (event.target.value as Parameters<typeof updateHomeCountry>[0]) : null)
-                      }
-                      aria-label="Home country"
-                    >
-                      <option value="">None</option>
-                      {SUPPORTED_COUNTRIES.map((country) => (
-                        <option key={country.code} value={country.code}>
-                          {country.name}
-                        </option>
-                      ))}
-                    </Form.Select>
+                      onChange={updateHomeCountry}
+                      ariaLabel="Home country"
+                    />
                   </div>
                 </ListGroup.Item>
                 <ListGroup.Item>
@@ -352,22 +369,11 @@ export function SettingsPanel({
                       <div className="fw-medium">Office Country</div>
                       <small className="text-muted">Country where your office is located</small>
                     </div>
-                    <Form.Select
-                      size="sm"
-                      style={{ width: "auto" }}
+                    <CountrySelect
                       value={settings.officeCountry ?? ""}
-                      onChange={(event) =>
-                        updateOfficeCountry(event.target.value !== "" ? (event.target.value as Parameters<typeof updateOfficeCountry>[0]) : null)
-                      }
-                      aria-label="Office country"
-                    >
-                      <option value="">None</option>
-                      {SUPPORTED_COUNTRIES.map((country) => (
-                        <option key={country.code} value={country.code}>
-                          {country.name}
-                        </option>
-                      ))}
-                    </Form.Select>
+                      onChange={updateOfficeCountry}
+                      ariaLabel="Office country"
+                    />
                   </div>
                 </ListGroup.Item>
               </ListGroup>

@@ -24,6 +24,8 @@ describe("SettingsContext unified user state", () => {
       unit: "days",
       hoursPerDay: 8,
     });
+    expect(result.current.settings.homeCountry).toBe(null);
+    expect(result.current.settings.officeCountry).toBe(null);
     expect(result.current.myTeam).toBe(null);
     expect(result.current.scheduleType).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
@@ -59,6 +61,18 @@ describe("SettingsContext unified user state", () => {
       result.current.setHasCompletedOnboarding(true);
     });
     expect(result.current.hasCompletedOnboarding).toBe(true);
+    await act(async () => {
+      result.current.updateHomeCountry("NL");
+    });
+    expect(result.current.settings.homeCountry).toBe("NL");
+    await act(async () => {
+      result.current.updateOfficeCountry("BE");
+    });
+    expect(result.current.settings.officeCountry).toBe("BE");
+    await act(async () => {
+      result.current.updateHomeCountry(null);
+    });
+    expect(result.current.settings.homeCountry).toBe(null);
   });
 
   it("updates schedule option and persists it", async () => {
@@ -623,6 +637,163 @@ describe("SettingsContext unified user state", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
       expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
+    });
+  });
+
+  describe("Country preferences", () => {
+    it("defaults homeCountry and officeCountry to null", () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.homeCountry).toBe(null);
+      expect(result.current.settings.officeCountry).toBe(null);
+    });
+
+    it("updates homeCountry with a valid code", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateHomeCountry("DE");
+      });
+      expect(result.current.settings.homeCountry).toBe("DE");
+    });
+
+    it("updates officeCountry with a valid code", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateOfficeCountry("LU");
+      });
+      expect(result.current.settings.officeCountry).toBe("LU");
+    });
+
+    it("allows clearing homeCountry back to null", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateHomeCountry("FR");
+      });
+      expect(result.current.settings.homeCountry).toBe("FR");
+      await act(async () => {
+        result.current.updateHomeCountry(null);
+      });
+      expect(result.current.settings.homeCountry).toBe(null);
+    });
+
+    it("rejects invalid homeCountry code and falls back to null", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 3,
+          hasCompletedOnboarding: false,
+          myTeam: null,
+          scheduleType: null,
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            homeCountry: "XX",
+            officeCountry: "INVALID",
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      expect(result.current.settings.homeCountry).toBe(null);
+      expect(result.current.settings.officeCountry).toBe(null);
+    });
+
+    it("persists country changes to localStorage", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateHomeCountry("GB");
+        result.current.updateOfficeCountry("NL");
+      });
+      const stored = window.localStorage.getItem("worktime_user_state");
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.settings.homeCountry).toBe("GB");
+      expect(parsed.settings.officeCountry).toBe("NL");
+    });
+  });
+
+  describe("v2 to v3 migration (country preferences)", () => {
+    it("adds homeCountry and officeCountry as null when upgrading from v2", () => {
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 2,
+          hasCompletedOnboarding: true,
+          myTeam: 1,
+          scheduleType: "5-shift",
+          settings: {
+            timeFormat: "24h",
+            theme: "auto",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: true,
+            enableTimeTracking: false,
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.homeCountry).toBe(null);
+      expect(result.current.settings.officeCountry).toBe(null);
+      // Existing settings should be preserved
+      expect(result.current.myTeam).toBe(1);
+      expect(result.current.scheduleType).toBe("5-shift");
+      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
+    });
+
+    it("preserves existing country values when already present during v2→v3 migration", () => {
+      // Simulate a developer/test scenario where country data exists before v3
+      window.localStorage.setItem(
+        "worktime_user_state",
+        JSON.stringify({
+          version: 2,
+          hasCompletedOnboarding: true,
+          myTeam: 2,
+          scheduleType: "9-5",
+          settings: {
+            timeFormat: "12h",
+            theme: "dark",
+            notifications: "off",
+            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+            enableTimeOff: false,
+            enableTimeTracking: false,
+            homeCountry: "NL",
+            officeCountry: "BE",
+          },
+          lastUsed: {
+            activeTab: "calendar",
+            scheduleView: "today",
+            otherSchedule: null,
+            timeOffView: "table",
+            timeTrackingView: "daily",
+            otherTeam: null,
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useSettings(), { wrapper });
+
+      expect(result.current.settings.homeCountry).toBe("NL");
+      expect(result.current.settings.officeCountry).toBe("BE");
     });
   });
 
