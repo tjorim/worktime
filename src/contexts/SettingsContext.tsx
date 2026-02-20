@@ -382,19 +382,13 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
 
-  const homeCountry =
-    settings.homeCountry === null
-      ? null
-      : isValidCountryCode(settings.homeCountry)
-        ? settings.homeCountry
-        : defaultSettings.homeCountry;
+  const homeCountry = isValidCountryCode(settings.homeCountry)
+    ? settings.homeCountry
+    : defaultSettings.homeCountry;
 
-  const officeCountry =
-    settings.officeCountry === null
-      ? null
-      : isValidCountryCode(settings.officeCountry)
-        ? settings.officeCountry
-        : defaultSettings.officeCountry;
+  const officeCountry = isValidCountryCode(settings.officeCountry)
+    ? settings.officeCountry
+    : defaultSettings.officeCountry;
 
   const wfhWeeklyLimit = sanitizeWfhWeeklyLimit(
     settings.wfhWeeklyLimit,
