@@ -35,11 +35,15 @@ export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
 
   const storageKey = `worktime_work_locations_${year}`;
+  const prevStorageKey = `worktime_work_locations_${year - 1}`;
+  const nextStorageKey = `worktime_work_locations_${year + 1}`;
 
   const [storedLocations, setStoredLocations] = useLocalStorage<StoredWorkLocations>(
     storageKey,
     {},
   );
+  const [prevYearLocations] = useLocalStorage<StoredWorkLocations>(prevStorageKey, {});
+  const [nextYearLocations] = useLocalStorage<StoredWorkLocations>(nextStorageKey, {});
 
   /**
    * Map of explicitly set work locations for calendar consumption.
@@ -77,7 +81,7 @@ export function useWorkLocationStorage(year: number) {
 
       return null;
     },
-    [storedLocations, settings],
+    [storedLocations, settings.officeCountry],
   );
 
   /**
@@ -89,14 +93,16 @@ export function useWorkLocationStorage(year: number) {
    *
    * @param date - The date to set (YYYY/MM/DD string, Date, or Dayjs)
    * @param location - The work location ("home" or "office")
+   * @returns `true` when the location was stored, `false` when the relevant country
+   *   setting (homeCountry or officeCountry) is not configured
    */
   const setLocationForDate = useCallback(
-    (date: dayjs.Dayjs | Date | string, location: WorkLocation) => {
+    (date: dayjs.Dayjs | Date | string, location: WorkLocation): boolean => {
       const countryCode = location === "home" ? settings.homeCountry : settings.officeCountry;
 
       // Country must be configured before a location can be stored
       if (!countryCode) {
-        return;
+        return false;
       }
 
       const key = formatHdayDate(date);
@@ -104,6 +110,7 @@ export function useWorkLocationStorage(year: number) {
         ...prev,
         [key]: { location, countryCode },
       }));
+      return true;
     },
     [settings.homeCountry, settings.officeCountry, setStoredLocations],
   );
@@ -125,10 +132,36 @@ export function useWorkLocationStorage(year: number) {
     [setStoredLocations],
   );
 
+  /**
+   * Returns a WorkLocationMap that covers all seven days of the ISO week containing
+   * the given date, merging data from adjacent years when the week spans a year boundary
+   * (e.g. a week covering both 31 Dec and 1 Jan).
+   *
+   * @param weekStartDate - Any date within the target ISO week
+   * @returns A merged WorkLocationMap for the full week
+   */
+  const getLocationsForWeek = useCallback(
+    (weekStartDate: dayjs.Dayjs | Date | string): WorkLocationMap => {
+      const monday = dayjs(weekStartDate).isoWeekday(1);
+      const sunday = monday.add(6, "day");
+
+      if (monday.year() === sunday.year()) {
+        return new Map(Object.entries(storedLocations));
+      }
+
+      // Week spans two years: merge current year with the adjacent year
+      const adjacentLocations =
+        sunday.year() === year + 1 ? nextYearLocations : prevYearLocations;
+      return new Map(Object.entries({ ...storedLocations, ...adjacentLocations }));
+    },
+    [storedLocations, prevYearLocations, nextYearLocations, year],
+  );
+
   return {
     workLocationMap,
     getLocationForDate,
     setLocationForDate,
     clearLocationForDate,
+    getLocationsForWeek,
   };
 }

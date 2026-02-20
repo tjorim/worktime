@@ -50,7 +50,7 @@ export function getWfhDaysInMonth(
   month: number,
   workLocationMap: WorkLocationMap,
 ): number {
-  const startOfMonth = dayjs(`${year}-${String(month).padStart(2, "0")}-01`);
+  const startOfMonth = dayjs().year(year).month(month - 1).date(1);
   const daysInMonth = startOfMonth.daysInMonth();
   let count = 0;
   for (let d = 1; d <= daysInMonth; d++) {
