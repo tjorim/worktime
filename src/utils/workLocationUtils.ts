@@ -31,39 +31,6 @@ export function getWfhDaysInWeek(date: Dayjs, workLocationMap: WorkLocationMap):
 }
 
 /**
- * Counts the number of WFH (work-from-home) days in a given calendar month.
- *
- * Only considers days present in workLocationMap with location "home".
- * Days without an explicit entry (including office defaults) are not counted.
- *
- * @param year - The calendar year (e.g., 2026)
- * @param month - The calendar month, 1-indexed (1=January, 12=December)
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
- * @returns The number of WFH days in that month
- *
- * @example
- * // Returns 8 if 8 days in February 2026 are set to "home"
- * getWfhDaysInMonth(2026, 2, workLocationMap); // 8
- */
-export function getWfhDaysInMonth(
-  year: number,
-  month: number,
-  workLocationMap: WorkLocationMap,
-): number {
-  const startOfMonth = dayjs().year(year).month(month - 1).date(1);
-  const daysInMonth = startOfMonth.daysInMonth();
-  let count = 0;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const day = startOfMonth.date(d);
-    const info = workLocationMap.get(formatHdayDate(day));
-    if (info?.location === "home") {
-      count++;
-    }
-  }
-  return count;
-}
-
-/**
  * Checks whether the WFH day count for the ISO week containing the given date
  * exceeds the specified limit.
  *
