@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,9 +103,15 @@ describe("MainTabs", () => {
 
     await user.click(screen.getByRole("menuitem", { name: /Open Settings/i }));
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Quick actions" })).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: /Open quick actions/i }));
     await user.click(screen.getByRole("menuitem", { name: /Switch Team/i }));
     expect(onChangeTeam).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Quick actions" })).not.toBeInTheDocument();
+    });
   });
 });
