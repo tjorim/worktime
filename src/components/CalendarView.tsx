@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
 import type { HdayEvent } from "../lib/hday/types";
+import type { WorkLocation } from "../types/workLocation";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
+import { getWfhDaysInWeek } from "../utils/workLocationUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { dayjs } from "../utils/dateTimeUtils";
+import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
+import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
@@ -24,6 +27,7 @@ import {
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
+import { WfhStatsBar } from "./calendar/WfhStatsBar";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
@@ -81,6 +85,8 @@ export function CalendarView({
   const currentYear = currentMonth.year();
   const { publicHolidayMap } = usePublicHolidays(currentYear);
   const { schoolHolidayMap } = useSchoolHolidays(currentYear);
+  const { workLocationMap, setLocationForDate, clearLocationForDate } =
+    useWorkLocationStorage(currentYear);
 
   // Get payday information for the year
   const paydayMapForYear = useMemo(
@@ -315,6 +321,40 @@ export function CalendarView({
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
+  // Show each work-location action only when its specific country is configured
+  const showHomeLocationAction = !!settings.homeCountry;
+  const showOfficeLocationAction = !!settings.officeCountry;
+
+  const handleSetWorkLocation = useCallback(
+    (date: Dayjs, location: WorkLocation | null) => {
+      if (location === null) {
+        clearLocationForDate(date);
+      } else {
+        const success = setLocationForDate(date, location);
+        if (!success) {
+          toast.showError("Configure your country settings to track work locations");
+        } else if (location === "home") {
+          // Check if adding this WFH day causes the weekly limit to be exceeded
+          const dayKey = formatHdayDate(date);
+          // setLocationForDate updates state asynchronously, so this workLocationMap read is
+          // still the pre-update snapshot; we use getWfhDaysInWeek on that snapshot and
+          // manually add +1 when needed instead of assuming the map already contains dayKey.
+          const wasAlreadyHome = workLocationMap.get(dayKey)?.location === "home";
+          const existingCount = getWfhDaysInWeek(date, workLocationMap);
+          const newCount = wasAlreadyHome ? existingCount : existingCount + 1;
+          if (newCount > settings.wfhWeeklyLimit) {
+            const message =
+              settings.wfhWeeklyLimit === 0
+                ? "WFH limit reached: No WFH allowed this week"
+                : `WFH limit reached: ${newCount}/${settings.wfhWeeklyLimit} days this week`;
+            toast.showWarning(message);
+          }
+        }
+      }
+    },
+    [clearLocationForDate, setLocationForDate, toast, settings.wfhWeeklyLimit, workLocationMap],
+  );
+
   const handleHideEventModal = () => {
     setShowEventModal(false);
     setShowResetConfirm(false);
@@ -380,20 +420,33 @@ export function CalendarView({
               )}
             </div>
           ) : (
-            <MonthCalendar
-              events={calendarEvents}
-              month={currentMonth}
-              publicHolidays={publicHolidayMap}
-              schoolHolidays={schoolHolidayMap}
-              paydayMap={paydayMapForYear}
-              onMonthChange={setCurrentMonth}
-              onAddEvent={handleAddEventForDate}
-              onViewEvent={handleOpenViewModal}
-              onEditEvent={handleOpenEditModal}
-              onDeleteEvent={handleDeleteClick}
-              allowEventActions={timeOffEnabled}
-              getShiftForDate={getShiftForDate}
-            />
+            <>
+              {(showHomeLocationAction || showOfficeLocationAction) && (
+                <WfhStatsBar
+                  workLocationMap={workLocationMap}
+                  wfhWeeklyLimit={settings.wfhWeeklyLimit}
+                />
+              )}
+              <MonthCalendar
+                events={calendarEvents}
+                month={currentMonth}
+                publicHolidays={publicHolidayMap}
+                schoolHolidays={schoolHolidayMap}
+                paydayMap={paydayMapForYear}
+                workLocationMap={workLocationMap}
+                onMonthChange={setCurrentMonth}
+                onAddEvent={handleAddEventForDate}
+                onViewEvent={handleOpenViewModal}
+                onEditEvent={handleOpenEditModal}
+                onDeleteEvent={handleDeleteClick}
+                onSetWorkLocation={handleSetWorkLocation}
+                allowEventActions={timeOffEnabled}
+                showHomeLocationAction={showHomeLocationAction}
+                showOfficeLocationAction={showOfficeLocationAction}
+                wfhWeeklyLimit={settings.wfhWeeklyLimit}
+                getShiftForDate={getShiftForDate}
+              />
+            </>
           )}
         </Card.Body>
       </Card>
