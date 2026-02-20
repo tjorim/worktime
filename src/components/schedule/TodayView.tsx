@@ -298,8 +298,7 @@ export function TodayView({
               if (event.key === "ArrowLeft") {
                 event.preventDefault();
                 goToPreviousTeam();
-              }
-              if (event.key === "ArrowRight") {
+              } else if (event.key === "ArrowRight") {
                 event.preventDefault();
                 goToNextTeam();
               }
