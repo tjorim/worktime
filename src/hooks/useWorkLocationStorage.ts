@@ -79,7 +79,7 @@ export function useWorkLocationStorage(year: number) {
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
       const key = formatHdayDate(date);
       const stored =
-        prevYearLocations[key] ?? storedLocations[key] ?? nextYearLocations[key];
+        nextYearLocations[key] ?? storedLocations[key] ?? prevYearLocations[key];
       if (stored) {
         return stored;
       }
