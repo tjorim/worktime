@@ -399,7 +399,7 @@ export function DayCell({
           <div
             className={clsx(
               "month-calendar-shift-badge",
-              shiftBadge.isWorking ? "bg-success" : "bg-secondary",
+              shiftBadge.isWorking ? "text-bg-success" : "text-bg-secondary",
             )}
             title={shiftBadge.label}
           >

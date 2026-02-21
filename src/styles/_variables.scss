@@ -141,9 +141,6 @@
      where #90caf9 would fail WCAG AA contrast (1.75:1 vs required 4.5:1) */
   --wt-primary-color: #0d6efd;
 
-  /* --- Error Boundary --- */
-  --wt-error-stack-max-height: 300px;
-
   /* --- Time Tracking --- */
   /* Default label color for unlabeled tasks in dark mode - slightly lighter for visibility */
   --wt-label-default: #9aa4b2;
