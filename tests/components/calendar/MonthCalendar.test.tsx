@@ -198,7 +198,7 @@ describe("MonthCalendar", () => {
     it("should display public holiday indicators", () => {
       const publicHolidays = new Map([
         [
-          "2025/01/15",
+          "2025-01-15",
           {
             name: "Test Holiday",
             localName: "Test Holiday Local",
@@ -208,15 +208,15 @@ describe("MonthCalendar", () => {
 
       render(<MonthCalendar {...defaultProps} publicHolidays={publicHolidays} />);
 
-      // Should show holiday emoji in the day cell - look for element with aria-label
-      const holidayHeader = screen.getByLabelText(/Test Holiday/i);
-      expect(holidayHeader).toBeInTheDocument();
+      // Holiday indicators are decorative; holiday name is exposed via gridcell accessible name
+      const holidayCell = screen.getByRole("gridcell", { name: /Test Holiday/i });
+      expect(holidayCell).toBeInTheDocument();
     });
 
     it("should display payday indicators", () => {
       const paydayMap = new Map([
         [
-          "2025/01/15",
+          "2025-01-15",
           {
             name: "Payday",
             date: "2025-01-15",
@@ -226,9 +226,9 @@ describe("MonthCalendar", () => {
 
       render(<MonthCalendar {...defaultProps} paydayMap={paydayMap} />);
 
-      // Should show payday in the day cell - look for element with aria-label
-      const paydayHeader = screen.getByLabelText(/Payday/i);
-      expect(paydayHeader).toBeInTheDocument();
+      // Payday indicators are decorative; payday name is exposed via gridcell accessible name
+      const paydayCell = screen.getByRole("gridcell", { name: /Payday/i });
+      expect(paydayCell).toBeInTheDocument();
     });
   });
 });

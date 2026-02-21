@@ -25,10 +25,30 @@ const SMALL_ICON_SIZE = "0.5rem";
 const SHIFT_DISPLAY_META: Partial<
   Record<ShiftCode, { label: string; icon: string; iconClassName: string; variant: string }>
 > = {
-  M: { label: "Morning Shifts", icon: "bi bi-sun", iconClassName: "text-warning", variant: "warning" },
-  L: { label: "Evening Shifts", icon: "bi bi-sunset", iconClassName: "text-info", variant: "info" },
-  D: { label: "Day Shifts", icon: "bi bi-brightness-high", iconClassName: "text-primary", variant: "primary" },
-  N: { label: "Night Shifts", icon: "bi bi-moon", iconClassName: "text-secondary", variant: "dark" },
+  M: {
+    label: "Morning Shifts",
+    icon: "bi bi-sun",
+    iconClassName: "text-warning",
+    variant: "warning",
+  },
+  L: {
+    label: "Evening Shifts",
+    icon: "bi bi-sunset",
+    iconClassName: "text-info",
+    variant: "info",
+  },
+  D: {
+    label: "Day Shifts",
+    icon: "bi bi-brightness-high",
+    iconClassName: "text-primary",
+    variant: "primary",
+  },
+  N: {
+    label: "Night Shifts",
+    icon: "bi bi-moon",
+    iconClassName: "text-secondary",
+    variant: "dark",
+  },
 };
 
 interface ScheduleDetailModalProps {
@@ -423,7 +443,10 @@ export function ScheduleDetailModal({
                       className="px-0 py-2 d-flex justify-content-between"
                     >
                       <span>
-                        <i className={clsx(item.icon, "me-1", item.iconClassName)} aria-hidden="true"></i>
+                        <i
+                          className={clsx(item.icon, "me-1", item.iconClassName)}
+                          aria-hidden="true"
+                        ></i>
                         {item.label}
                       </span>
                       <Badge bg={item.variant}>

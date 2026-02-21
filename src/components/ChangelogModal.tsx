@@ -52,6 +52,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
 
   const renderChangeSection = (title: string, items: string[], textClass: string) => {
     if (items.length === 0) return null;
+    const seen = new Map<string, number>();
 
     return (
       <div className="mb-3">
@@ -60,11 +61,15 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
           {title}
         </h6>
         <ul className="list-unstyled">
-          {items.map((item, index) => (
-            <li key={`${title}-${index}`} className="mb-1">
-              <small className="text-muted">•</small> {item}
-            </li>
-          ))}
+          {items.map((item) => {
+            const occurrence = (seen.get(item) ?? 0) + 1;
+            seen.set(item, occurrence);
+            return (
+              <li key={`${title}-${item}-${occurrence}`} className="mb-1">
+                <small className="text-muted">•</small> {item}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );

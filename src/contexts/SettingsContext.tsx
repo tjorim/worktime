@@ -5,7 +5,6 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { CountryCode } from "../types/countries";
 import { isValidCountryCode } from "../types/countries";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
-import { CONFIG } from "../utils/config";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 
 export type TimeFormat = "12h" | "24h";
@@ -32,9 +31,9 @@ interface UserSettings {
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
+  enableCrossBorderTracking: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
-  wfhWeeklyLimit: number;
 }
 
 interface SettingsContextType {
@@ -46,9 +45,9 @@ interface SettingsContextType {
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
+  updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
-  updateWfhWeeklyLimit: (limit: number) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -93,9 +92,9 @@ export const defaultSettings: UserSettings = {
   },
   enableTimeOff: false,
   enableTimeTracking: false,
+  enableCrossBorderTracking: false,
   homeCountry: null,
   officeCountry: null,
-  wfhWeeklyLimit: 2,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -111,14 +110,6 @@ const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetr
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
-
-const sanitizeWfhWeeklyLimit = (limit: unknown, fallbackLimit: number): number => {
-  if (typeof limit !== "number" || !Number.isFinite(limit) || limit < 0) {
-    return fallbackLimit;
-  }
-
-  return Math.min(Math.floor(limit), CONFIG.MAX_WFH_DAYS_PER_WEEK);
-};
 
 interface WorktimeUserState {
   version: number;
@@ -148,21 +139,30 @@ const defaultUserState: WorktimeUserState = {
 type RawState = Record<string, unknown>;
 type Migration = (state: RawState) => RawState;
 
+interface RawSettings extends UserSettings {
+  lastActiveTab?: TabKey;
+  lastScheduleView?: ScheduleViewKey;
+  lastTimeOffView?: TimeOffViewKey;
+  lastTimeTrackingView?: TimeTrackingViewKey;
+}
+
 const migrations: Record<number, Migration> = {
   // → v1: Move last* view fields from settings into a dedicated lastUsed group.
   //        Rename scheduleOption → scheduleType.
   1: (state) => {
     const settings = (
       typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawState;
+    ) as RawSettings;
 
     const lastUsed = (
       typeof state.lastUsed === "object" && state.lastUsed !== null ? state.lastUsed : {}
     ) as RawState;
 
     // Migrate last* from settings → lastUsed (only if lastUsed doesn't already have them)
-    const pick = (lastUsedKey: string, settingsKey: string) =>
-      lastUsed[lastUsedKey] !== undefined ? lastUsed[lastUsedKey] : settings[settingsKey];
+    const pick = (lastUsedKey: string, settingsKey: keyof RawSettings) =>
+      (lastUsed as RawState)[lastUsedKey] !== undefined
+        ? (lastUsed as RawState)[lastUsedKey]
+        : settings[settingsKey];
 
     const migratedLastUsed: RawState = {
       activeTab: pick("activeTab", "lastActiveTab"),
@@ -198,12 +198,12 @@ const migrations: Record<number, Migration> = {
   2: (state) => {
     const settings = (
       typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawState;
-    const va = (
-      typeof settings.vacationAllowance === "object" && settings.vacationAllowance !== null
-        ? settings.vacationAllowance
-        : {}
-    ) as RawState;
+    ) as RawSettings;
+
+    const va =
+      settings.vacationAllowance && typeof settings.vacationAllowance === "object"
+        ? (settings.vacationAllowance as unknown as RawState)
+        : {};
 
     const oldAmount =
       typeof va.amount === "number" &&
@@ -262,19 +262,24 @@ const migrations: Record<number, Migration> = {
     };
   },
 
-  // → v3: Add homeCountry, officeCountry, and wfhWeeklyLimit to settings.
+  // → v3: Add homeCountry, officeCountry, and enableCrossBorderTracking to settings.
+  // Note: normalizeUserState already applies defaults for any missing field, so this migration
+  // is effectively a no-op for typical v2→v3 upgrades. It exists as an explicit audit trail of
+  // the schema change and ensures the stored JSON immediately reflects the new shape after the
+  // first load, rather than waiting for the next settings save to persist the defaults.
   3: (state) => {
     const settings = (
       typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawState;
+    ) as RawSettings;
 
     return {
       ...state,
       settings: {
         ...settings,
-        homeCountry: settings.homeCountry ?? null,
-        officeCountry: settings.officeCountry ?? null,
-        wfhWeeklyLimit: settings.wfhWeeklyLimit ?? defaultSettings.wfhWeeklyLimit,
+        homeCountry: settings.homeCountry ?? defaultSettings.homeCountry,
+        officeCountry: settings.officeCountry ?? defaultSettings.officeCountry,
+        enableCrossBorderTracking:
+          settings.enableCrossBorderTracking ?? defaultSettings.enableCrossBorderTracking,
       },
     };
   },
@@ -367,6 +372,10 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.enableTimeTracking === "boolean"
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
+  const enableCrossBorderTracking =
+    typeof settings.enableCrossBorderTracking === "boolean"
+      ? settings.enableCrossBorderTracking
+      : defaultSettings.enableCrossBorderTracking;
 
   const homeCountry = isValidCountryCode(settings.homeCountry)
     ? settings.homeCountry
@@ -375,11 +384,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const officeCountry = isValidCountryCode(settings.officeCountry)
     ? settings.officeCountry
     : defaultSettings.officeCountry;
-
-  const wfhWeeklyLimit = sanitizeWfhWeeklyLimit(
-    settings.wfhWeeklyLimit,
-    defaultSettings.wfhWeeklyLimit,
-  );
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -474,9 +478,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
+      enableCrossBorderTracking,
       homeCountry,
       officeCountry,
-      wfhWeeklyLimit,
     },
     lastUsed: {
       activeTab,
@@ -597,12 +601,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
-  const updateWfhWeeklyLimit = useCallback(
-    (limit: number) => {
-      const sanitized = sanitizeWfhWeeklyLimit(limit, defaultSettings.wfhWeeklyLimit);
+  const updateCrossBorderTrackingEnabled = useCallback(
+    (enabled: boolean) => {
       setUserState((prev) => ({
         ...prev,
-        settings: { ...prev.settings, wfhWeeklyLimit: sanitized },
+        settings: { ...prev.settings, enableCrossBorderTracking: enabled },
       }));
     },
     [setUserState],
@@ -777,9 +780,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateWfhWeeklyLimit,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -805,9 +808,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateWfhWeeklyLimit,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,

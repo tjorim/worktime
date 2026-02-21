@@ -78,7 +78,9 @@ export function useLocalStorage<T>(
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key && e.newValue !== null) {
         try {
-          setStoredValue(JSON.parse(e.newValue));
+          const parsed = JSON.parse(e.newValue);
+          latestValueRef.current = parsed;
+          setStoredValue(parsed);
         } catch {
           // Ignore parsing errors
         }
