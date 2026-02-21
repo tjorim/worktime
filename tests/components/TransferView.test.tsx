@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -576,9 +576,6 @@ describe("TransferView", () => {
         const next7Header = screen.getByRole("button", { name: /Next 7 Days/i });
         const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });
         const furtherHeader = screen.getByRole("button", { name: /Further Ahead/i });
-
-        fireEvent.click(next30Header);
-        fireEvent.click(furtherHeader);
 
         const next7Item = next7Header.closest(".accordion-item");
         const next30Item = next30Header.closest(".accordion-item");

@@ -8,7 +8,6 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Accordion from "react-bootstrap/Accordion";
-import Spinner from "react-bootstrap/Spinner";
 import type { ScheduleOption } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTransferCalculations, type TransferInfo } from "../hooks/useTransferCalculations";
@@ -30,27 +29,10 @@ interface TransferItemsListProps {
   transfers: TransferInfo[];
   scheduleType: ScheduleOption;
   myTeam: number;
-  isLoading?: boolean;
-  error?: string | null;
 }
 
-function TransferItemsList({
-  transfers,
-  scheduleType,
-  myTeam,
-  isLoading = false,
-  error = null,
-}: TransferItemsListProps) {
-  return isLoading ? (
-    <div className="d-flex align-items-center gap-2 text-muted">
-      <Spinner animation="border" size="sm" role="status" />
-      Loading transfer history...
-    </div>
-  ) : error ? (
-    <Alert variant="danger" className="mb-0 py-2">
-      {error}
-    </Alert>
-  ) : (
+function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsListProps) {
+  return (
     <ListGroup variant="flush">
       {transfers.map((transfer, index) => {
         const fromShift = getShift(transfer.fromShiftType, scheduleType);
@@ -59,7 +41,7 @@ function TransferItemsList({
 
         return (
           <ListGroup.Item
-            key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}-${transfer.fromShiftType}-${transfer.toShiftType}-${transfer.type}`}
+            key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}-${transfer.fromShiftType}-${transfer.toShiftType}-${transfer.type}-${index}`}
             className={`px-0 py-2 border-0 border-bottom${isLast ? " border-bottom-0" : ""}`}
           >
             <Row className="g-2 align-items-center">
@@ -178,6 +160,7 @@ export function TransferView({
   const [useCustomRange, setUseCustomRange] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+  const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
 
   const { scheduleType } = useSettings();
   const isDateRangeInvalid = useMemo(
@@ -257,6 +240,17 @@ export function TransferView({
     }
   }, [useCustomRange]);
 
+  // Keep day-bucket grouping in sync when the calendar day rolls over.
+  useEffect(() => {
+    const now = dayjs();
+    const nextMidnight = now.add(1, "day").startOf("day");
+    const timeoutId = window.setTimeout(
+      () => setCurrentDay(dayjs().startOf("day")),
+      nextMidnight.diff(now),
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [currentDay]);
+
   const transferDateRange = useMemo(() => {
     if (!transferStats?.earliest || !transferStats?.latest) {
       return "-";
@@ -292,7 +286,7 @@ export function TransferView({
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
   const groupedTransfers = useMemo(() => {
-    const todayStart = dayjs().startOf("day");
+    const todayStart = currentDay.startOf("day");
     const nextWeek: typeof transfers = [];
     const nextMonth: typeof transfers = [];
     const future: typeof transfers = [];
@@ -317,7 +311,7 @@ export function TransferView({
       { key: "further", title: "Further Ahead", items: future },
       { key: "past", title: "Past Transfers", items: past },
     ];
-  }, [transfers]);
+  }, [currentDay, transfers]);
 
   const nonEmptyGroupedTransfers = useMemo(
     () => groupedTransfers.filter((group) => group.items.length > 0),

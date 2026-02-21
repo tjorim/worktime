@@ -49,6 +49,13 @@ npm run generate-changelog  # Generate CHANGELOG.md from data
 npm run generate-icons      # Generate favicon icons
 ```
 
+### Generated Files Workflow
+
+- `CHANGELOG.md` is generated output.
+- Do **not** manually edit `CHANGELOG.md`.
+- Update release notes in `src/data/changelog.ts`, then run `npm run generate-changelog`.
+- When icon assets are updated, regenerate them via `npm run generate-icons` instead of editing generated files directly.
+
 ## Code Style Guidelines
 
 ### Language & Spelling
@@ -86,6 +93,14 @@ npm test -- --coverage      # Run with coverage report
 - **Test Types**: Component tests, hook tests, unit tests
 - **Coverage**: Comprehensive test coverage with data-driven patterns
 - All tests must pass before marking work as complete
+- For focused UI/logic edits, run targeted tests first (e.g., the touched component/util test files), then run broader checks as needed.
+- For type-sensitive or cross-cutting changes, run `npm run build` before handoff.
+
+## Maintaining This Guide
+
+- Keep `AGENTS.md` aligned with actual team workflow as the project evolves.
+- Prefer durable process rules (source-of-truth files, generation steps, validation expectations) over one-off implementation details.
+- If guidance conflicts with repository scripts or current architecture, update this file in the same change.
 
 ### Key Test Files
 
@@ -603,9 +618,25 @@ d1i # Every Monday in office
 - **Code Quality**: oxlint and oxfmt (OXC tools) for ultra-fast linting and formatting
 - **Testing**: Vitest with React Testing Library for component and unit testing
 
-## Recent Improvements
+## Historical Highlights
 
-### v4.4 - Multi-Roster Support (Current)
+These highlights are illustrative, not authoritative for the latest release status. For current release notes, use `src/data/changelog.ts` and regenerate `CHANGELOG.md`.
+
+### Recent Product Enhancements
+
+- **Cross-Border Work Location Tracking**: Home/office country configuration with per-day location assignment from the calendar context menu
+- **Work Location Indicators & Summaries**: Day-cell icons plus weekly and yearly home/office/other summaries for reporting workflows
+- **Per-Year Location Persistence**: Year-scoped localStorage model with migration support for location tracking settings
+- **Calendar Accessibility & Interaction Upgrades**: Keyboard navigation and interactive overflow handling improvements in calendar views
+
+### Transfer & Shift Improvements
+
+- **TransferView Grouping**: Accordion-based transfer history buckets (Next 7 Days, Next 30 Days, Further Ahead, Past Transfers)
+- **TransferView UX Refinements**: Improved spacing, compact mobile layout behavior, richer transfer direction cues, and date-range validation feedback
+- **Shift Visual Centralization**: Consolidated shift emoji/class metadata in `shiftCalculations` to reduce drift across shift rendering paths
+- **Schedule Typing Consistency**: Broader use of `NullableScheduleOption` in schedule-aware utility signatures
+
+### Multi-Roster Support
 
 - **Structured Roster System**: Machine-readable schedule configurations in `src/data/rosters.ts`
 - **Schedule Selection**: Onboarding wizard now includes schedule selection step
@@ -616,7 +647,7 @@ d1i # Every Monday in office
 - **Schedule-Aware Components**: All shift calculations now support multiple roster patterns
 - **Backward Compatibility**: Existing 5-shift users continue working without migration
 
-### v3.1+ - Component Architecture & Performance
+### Component Architecture & Performance
 
 - **ShiftTimeline Component**: Extracted timeline logic from CurrentStatus into dedicated component for better separation of concerns
 - **Enhanced CurrentStatus**: Optimized layout with datetime moved to header area and improved timeline display
@@ -625,14 +656,14 @@ d1i # Every Monday in office
 - **Precision Control**: Second-level updates available when needed for precise timing
 - **Memoized Calculations**: Better performance for shift day computations
 - **Night Shift Fix**: Date codes now correctly use shift day instead of calendar day (2530.5N instead of 2530.6N)
-- **Enhanced Display**: Current status shows combined format "2530.5N • Saturday, Jul 26 • 02:24"
+- **Enhanced Display**: Current status can show combined code/date/time context
 - **Tooltip Context**: Shows both calendar day and shift day for user clarity
 - **Interactive Changelog**: In-app changelog viewer with accordion interface
 - **Toast Notifications**: Global notification system with React Context
 - **Error Boundaries**: Graceful error handling and recovery
 - **Enhanced Testing**: Comprehensive test coverage with data-driven patterns
 
-## Future Extensions
+## Future Extensions (Examples)
 
 - Multi-day calendar overview
 - Export schedule as .ics calendar
