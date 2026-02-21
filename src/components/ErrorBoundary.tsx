@@ -67,9 +67,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Alert variant="danger">
                 <Alert.Heading>Application Error</Alert.Heading>
                 <p>
-                  We're sorry, but something unexpected happened. Click{" "}
-                  <strong>Try Again</strong> first; if the error persists, use{" "}
-                  <strong>Reload Page</strong>. Contact support if the problem persists.
+                  We're sorry, but something unexpected happened. Click <strong>Try Again</strong>{" "}
+                  first; if the error persists, use <strong>Reload Page</strong>. Contact support if
+                  the problem persists.
                 </p>
                 <hr />
                 <div className="d-flex gap-2">
@@ -98,9 +98,7 @@ export class ErrorBoundary extends Component<Props, State> {
                       {this.state.errorInfo && (
                         <div className="mt-2">
                           <strong>Component Stack:</strong>
-                          <pre
-                            className="small text-muted error-stack-trace"
-                          >
+                          <pre className="small text-muted error-stack-trace">
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </div>

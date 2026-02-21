@@ -47,8 +47,8 @@ describe("ErrorBoundary", () => {
       );
 
       expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByText("Try Again")).toBeInTheDocument();
-      expect(screen.getByText("Reload Page")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
     });
 
     it("handles try again button click", async () => {
@@ -60,7 +60,7 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
 
-      const tryAgainButton = screen.getByText("Try Again");
+      const tryAgainButton = screen.getByRole("button", { name: "Try Again" });
       await user.click(tryAgainButton);
 
       // After reset, should show error UI again since component still throws

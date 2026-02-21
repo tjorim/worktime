@@ -220,7 +220,9 @@ describe("ShiftTimeline", () => {
       const currentWorkingTeam = createMockShiftResult(1, "M", today);
       renderWithProviders(<ShiftTimeline currentWorkingTeam={currentWorkingTeam} />);
 
-      expect(screen.queryByText("Multiple teams share this shift start time.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Multiple teams share this shift start time."),
+      ).not.toBeInTheDocument();
     });
   });
 });

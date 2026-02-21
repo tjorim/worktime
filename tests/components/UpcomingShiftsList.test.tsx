@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpcomingShiftsList } from "../../src/components/schedule/UpcomingShiftsList";
 import { getNextShift } from "../../src/utils/shiftCalculations";
 import { dayjs } from "../../src/utils/dateTimeUtils";
@@ -22,6 +22,10 @@ vi.mock("../../src/utils/shiftCalculations", async (importOriginal) => {
 });
 
 const mockGetNextShift = vi.mocked(getNextShift);
+
+beforeEach(() => {
+  mockGetNextShift.mockReset();
+});
 
 describe("UpcomingShiftsList", () => {
   it("renders upcoming shifts", () => {

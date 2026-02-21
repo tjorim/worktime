@@ -3,16 +3,17 @@ import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
+import type { ScheduleOption } from "../../data/rosters";
 import type { TransferInfo } from "../../hooks/useTransferCalculations";
 import { formatDisplayDate, formatYYWWD } from "../../utils/dateTimeUtils";
-import type { NullableScheduleOption } from "../../utils/shiftCalculations";
 import { getShift } from "../../utils/shiftCalculations";
 import { EmptyState } from "../shared/EmptyState";
 
 interface RecentTransfersListProps {
   transfers: TransferInfo[];
   title?: string;
-  scheduleType?: NullableScheduleOption;
+  showHeader?: boolean;
+  scheduleType: ScheduleOption;
   emptyTitle?: string;
   emptyDescription?: string;
   isLoading?: boolean;
@@ -22,6 +23,7 @@ interface RecentTransfersListProps {
 export function RecentTransfersList({
   transfers,
   title = "Recent Transfers",
+  showHeader = true,
   scheduleType,
   emptyTitle = "No Transfers Found",
   emptyDescription = "No transfers available for this section.",
@@ -30,13 +32,15 @@ export function RecentTransfersList({
 }: RecentTransfersListProps) {
   return (
     <Card className="h-100">
-      <Card.Header className="fw-semibold d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <span>
-          <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
-          {title}
-        </span>
-        <Badge bg="secondary">{transfers.length}</Badge>
-      </Card.Header>
+      {showHeader && (
+        <Card.Header className="fw-semibold d-flex align-items-center justify-content-between gap-2 flex-wrap">
+          <span>
+            <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
+            {title}
+          </span>
+          {!isLoading && <Badge bg="secondary">{transfers.length}</Badge>}
+        </Card.Header>
+      )}
       <Card.Body>
         {isLoading ? (
           <div className="d-flex align-items-center gap-2 text-muted">
@@ -73,9 +77,9 @@ export function RecentTransfersList({
                     <Badge bg={transfer.type === "handover" ? "success" : "info"} className="mb-1">
                       {transfer.type === "handover" ? "Handover" : "Takeover"}
                     </Badge>
-                  <small className="text-muted text-nowrap">
-                    {fromShift.name} → {toShift.name}
-                  </small>
+                    <small className="text-muted text-nowrap">
+                      {fromShift.name} → {toShift.name}
+                    </small>
                   </div>
                 </ListGroup.Item>
               );

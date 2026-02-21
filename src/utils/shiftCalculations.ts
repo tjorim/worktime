@@ -204,13 +204,14 @@ const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
  * @returns The matching shift object for the schedule
  * @throws {Error} If the shift code is not defined in the schedule's shiftTimes
  */
-export const getShift = (code: ShiftType, scheduleOption?: NullableScheduleOption): Shift => {
-  const definition = getShiftTimeDefinition(scheduleOption, code);
+export const getShift = (code: ShiftType, scheduleOption: ScheduleOption): Shift => {
+  const schedule = getScheduleForOption(scheduleOption);
+  const definition = schedule.shiftConfig.shiftTimes[code];
   const visuals = SHIFT_VISUALS[code];
 
   if (!definition) {
     throw new Error(
-      `Missing shiftTimes definition for code="${code}" in schedule="${scheduleOption}". ` +
+      `Missing shiftTimes definition for code="${code}" in schedule="${schedule.value}". ` +
         `Ensure all shift codes used in the schedule pattern are defined in shiftTimes.`,
     );
   }

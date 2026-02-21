@@ -133,7 +133,9 @@ const getTeamBadgeRegex = (teamNumber: number) => new RegExp(`^Your Team:\\s*${t
 function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
   const header = screen.getByText(TEAM_TRANSFERS_HEADER).closest(".card-header");
   expect(header).toBeInstanceOf(HTMLElement);
-  expect(within(header as HTMLElement).getByText(getTeamBadgeRegex(teamNumber))).toBeInTheDocument();
+  expect(
+    within(header as HTMLElement).getByText(getTeamBadgeRegex(teamNumber)),
+  ).toBeInTheDocument();
 }
 
 describe("TransferView", () => {
@@ -622,7 +624,8 @@ describe("TransferView", () => {
       expect(screen.getAllByText(/Next 7 Days/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Next 30 Days/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Further Ahead/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Past Transfers/).length).toBeGreaterThan(0);
+      // Empty buckets are intentionally filtered out in TransferView.
+      expect(screen.queryByText(/Past Transfers/)).not.toBeInTheDocument();
 
       const next7Header = screen.getByRole("button", { name: /Next 7 Days/i });
       const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });

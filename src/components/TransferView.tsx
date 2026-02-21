@@ -143,7 +143,7 @@ export function TransferView({
       const diffDays = transfer.date.startOf("day").diff(todayStart, "day");
       if (diffDays < 0) {
         past.push(transfer);
-      } else if (diffDays <= 7) {
+      } else if (diffDays < 7) {
         nextWeek.push(transfer);
       } else if (diffDays <= 30) {
         nextMonth.push(transfer);
@@ -159,6 +159,11 @@ export function TransferView({
       { key: "past", title: "Past Transfers", items: past },
     ];
   }, [transfers]);
+
+  const nonEmptyGroupedTransfers = useMemo(
+    () => groupedTransfers.filter((group) => group.items.length > 0),
+    [groupedTransfers],
+  );
 
   return (
     <Card>
@@ -291,22 +296,12 @@ export function TransferView({
             </Row>
 
             <Row className="g-3 mb-3">
-              <Col lg={5}>
+              <Col lg={12}>
                 <ErrorBoundary>
                   <UpcomingShiftsList
                     teamNumber={myTeam}
                     scheduleType={scheduleType}
                     itemCount={6}
-                  />
-                </ErrorBoundary>
-              </Col>
-              <Col lg={7}>
-                <ErrorBoundary>
-                  <RecentTransfersList
-                    title="Nearest Transfers"
-                    transfers={transfers.slice(0, 5)}
-                    emptyDescription="The next transfers between your team and the selected team will appear here."
-                    scheduleType={scheduleType}
                   />
                 </ErrorBoundary>
               </Col>
@@ -358,8 +353,11 @@ export function TransferView({
                 )}
 
                 <ErrorBoundary>
-                  <Accordion defaultActiveKey={groupedTransfers[0]?.key} alwaysOpen>
-                    {groupedTransfers.map((group) => (
+                  <Accordion
+                    defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
+                    alwaysOpen
+                  >
+                    {nonEmptyGroupedTransfers.map((group) => (
                       <Accordion.Item eventKey={group.key} key={group.key}>
                         <Accordion.Header>
                           {group.title}
@@ -370,6 +368,7 @@ export function TransferView({
                         <Accordion.Body>
                           <RecentTransfersList
                             title={group.title}
+                            showHeader={false}
                             transfers={group.items}
                             emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
                             scheduleType={scheduleType}

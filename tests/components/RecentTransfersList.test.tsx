@@ -31,18 +31,48 @@ describe("RecentTransfersList", () => {
   });
 
   it("renders empty state", () => {
-    render(<RecentTransfersList transfers={[]} />);
+    render(<RecentTransfersList scheduleType="5-shift" transfers={[]} />);
 
     expect(screen.getByText("No Transfers Found")).toBeInTheDocument();
   });
 
   it("renders loading and error states", () => {
-    const { rerender } = render(<RecentTransfersList transfers={[]} isLoading />);
+    const { rerender } = render(
+      <RecentTransfersList scheduleType="5-shift" transfers={[]} isLoading />,
+    );
 
     expect(screen.getByText(/Loading transfer history/i)).toBeInTheDocument();
 
-    rerender(<RecentTransfersList transfers={[]} error="Unable to load transfers" />);
+    rerender(
+      <RecentTransfersList
+        scheduleType="5-shift"
+        transfers={[]}
+        error="Unable to load transfers"
+      />,
+    );
 
     expect(screen.getByText("Unable to load transfers")).toBeInTheDocument();
+  });
+
+  it("can hide the section header when embedded in another container", () => {
+    render(
+      <RecentTransfersList
+        showHeader={false}
+        scheduleType="5-shift"
+        transfers={[
+          {
+            date: dayjs("2025-01-15"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M",
+            toShiftType: "L",
+            type: "handover",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText("Recent Transfers")).not.toBeInTheDocument();
+    expect(screen.getByText("Team 1 → Team 2")).toBeInTheDocument();
   });
 });
