@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import {
-  getWfhDaysInWeek,
   getLocationCountsInWeek,
   aggregateLocationCounts,
 } from "../../src/utils/workLocationUtils";
@@ -23,61 +22,6 @@ const SAT = "2026-02-21";
 const SUN = "2026-02-22";
 // Day in the previous ISO week
 const PREV_FRI = "2026-02-13";
-
-describe("getWfhDaysInWeek", () => {
-  it("returns 0 for an empty map", () => {
-    const map: WorkLocationMap = new Map();
-    expect(getWfhDaysInWeek(dayjs("2026-02-18"), map)).toBe(0);
-  });
-
-  it("counts WFH days in the ISO week", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [WED, HOME],
-      [FRI, HOME],
-    ]);
-    expect(getWfhDaysInWeek(dayjs("2026-02-18"), map)).toBe(3);
-  });
-
-  it("ignores office entries", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, OFFICE],
-      [TUE, HOME],
-    ]);
-    expect(getWfhDaysInWeek(dayjs("2026-02-16"), map)).toBe(1);
-  });
-
-  it("does not count WFH days from adjacent weeks", () => {
-    const map: WorkLocationMap = new Map([
-      [PREV_FRI, HOME], // previous week – must not be counted
-      [MON, HOME],
-    ]);
-    expect(getWfhDaysInWeek(dayjs("2026-02-18"), map)).toBe(1);
-  });
-
-  it("counts all 7 days when every day of the week is WFH", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [TUE, HOME],
-      [WED, HOME],
-      [THU, HOME],
-      [FRI, HOME],
-      [SAT, HOME],
-      [SUN, HOME],
-    ]);
-    expect(getWfhDaysInWeek(dayjs("2026-02-20"), map)).toBe(7);
-  });
-
-  it("gives the same result regardless of which day of the week is used as input", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [FRI, HOME],
-    ]);
-    expect(getWfhDaysInWeek(dayjs("2026-02-16"), map)).toBe(2); // Monday
-    expect(getWfhDaysInWeek(dayjs("2026-02-18"), map)).toBe(2); // Wednesday
-    expect(getWfhDaysInWeek(dayjs("2026-02-22"), map)).toBe(2); // Sunday
-  });
-});
 
 describe("getLocationCountsInWeek", () => {
   it("returns all zeros for an empty map", () => {
@@ -223,22 +167,23 @@ describe("aggregateLocationCounts", () => {
     expect(result[0].label).toBe("Client visit");
   });
 
-  it("does not collide when malformed input contains separators", () => {
-    // Defensive case: corrupted/tampered storage values should not merge into one row.
+  it("skips entries with unknown locations and does not collide on separator characters in other fields", () => {
+    // Defensive case: corrupted/tampered storage values with unknown locations are skipped.
+    // Valid entries with separator characters in countryCode/label must not be merged.
     const entry1 = {
-      location: "other:site",
+      location: "other:site", // invalid — skipped by guard
       countryCode: "DE",
       label: "foo:bar",
     } as unknown as WorkLocationInfo;
     const entry2 = {
       location: "other",
-      countryCode: "DE:FR",
+      countryCode: "DE:FR", // separator in countryCode
       label: "baz",
     } as unknown as WorkLocationInfo;
     const entry3 = {
       location: "other",
       countryCode: "DE",
-      label: "foo:bar",
+      label: "foo:bar", // separator in label
     } as unknown as WorkLocationInfo;
     const map: WorkLocationMap = new Map([
       ["2026-01-01", entry1],
@@ -246,6 +191,7 @@ describe("aggregateLocationCounts", () => {
       ["2026-01-03", entry3],
     ]);
     const result = aggregateLocationCounts(map);
-    expect(result).toHaveLength(3);
+    // entry1 is skipped (unknown location); entry2 and entry3 are distinct rows
+    expect(result).toHaveLength(2);
   });
 });

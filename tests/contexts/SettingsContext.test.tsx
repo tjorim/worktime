@@ -795,6 +795,8 @@ describe("SettingsContext unified user state", () => {
     });
 
     it("preserves existing country values and enableCrossBorderTracking when migrating", () => {
+      // Intentional: include enableCrossBorderTracking in the v2 blob to ensure
+      // the migration preserves already-present values rather than resetting to defaults.
       const { result } = migrateFromV2({
         version: 2,
         hasCompletedOnboarding: true,

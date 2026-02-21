@@ -275,7 +275,6 @@ const migrations: Record<number, Migration> = {
     return {
       ...state,
       settings: {
-        ...defaultSettings,
         ...settings,
         homeCountry: settings.homeCountry ?? defaultSettings.homeCountry,
         officeCountry: settings.officeCountry ?? defaultSettings.officeCountry,

@@ -71,7 +71,7 @@ export function useWorkLocationStorage(year: number) {
    * derived from the user's officeCountry setting. Returns null when
    * neither a stored location nor an officeCountry setting exists.
    *
-   * @param date - The date to query (YYYY/MM/DD string, Date, or Dayjs)
+   * @param date - The date to query (YYYY-MM-DD string, Date, or Dayjs)
    * @returns The WorkLocationInfo for that day, or null if unresolvable
    */
   const getLocationForDate = useCallback(
@@ -105,7 +105,7 @@ export function useWorkLocationStorage(year: number) {
    * The countryCode is captured at write time. Changing homeCountry/officeCountry
    * later does not retroactively update historical entries.
    *
-   * @param date - The date to set (YYYY/MM/DD string, Date, or Dayjs)
+   * @param date - The date to set (YYYY-MM-DD string, Date, or Dayjs)
    * @param location - The work location ("home", "office", or "other")
    * @param extra - For "other" locations: required countryCode and optional label
    * @returns `true` when the location was stored. Returns `false` when the relevant
@@ -172,7 +172,7 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Removes the explicit work location for a given date, reverting to the default.
    *
-   * @param date - The date to clear (YYYY/MM/DD string, Date, or Dayjs)
+   * @param date - The date to clear (YYYY-MM-DD string, Date, or Dayjs)
    */
   const clearLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string) => {

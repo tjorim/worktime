@@ -61,7 +61,7 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
   const [showOtherModal, setShowOtherModal] = useState(false);
 
   const dayjsDate = dayjs(date);
-  const dateKey = dayjsDate.format("YYYY/MM/DD");
+  const dateKey = dayjsDate.format("YYYY-MM-DD");
   const stored = workLocationMap.get(dateKey);
 
   const handleHome = () => {

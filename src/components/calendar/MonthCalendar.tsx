@@ -357,7 +357,6 @@ export function MonthCalendar({
         items.push({
           label: "Other Location…",
           icon: "bi-geo-alt",
-          disabled: currentLocation === "other",
           onClick: () => {
             handleCloseContextMenu();
             onSetOtherLocation(date);

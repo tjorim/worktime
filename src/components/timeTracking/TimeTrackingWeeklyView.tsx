@@ -7,18 +7,12 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
 import { dayjs } from "../../utils/dateTimeUtils";
-import type { WorkLocation } from "../../types/workLocation";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { WORK_LOCATION_ICON_CLASS } from "../calendar/workLocationConstants";
 import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";
-
-const LOCATION_ICON: Record<WorkLocation, string> = {
-  home: "bi-house",
-  office: "bi-building",
-  other: "bi-geo-alt",
-};
 
 type OverviewRow = {
   label: string;
@@ -360,7 +354,7 @@ export function TimeTrackingWeeklyView({
                         {location && (
                           <div className="text-muted mt-1" style={{ fontSize: "0.65rem" }}>
                             <i
-                              className={`bi ${LOCATION_ICON[location.location]}`}
+                              className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
                               aria-hidden="true"
                             />{" "}
                             {location.countryCode}
@@ -404,14 +398,24 @@ export function TimeTrackingWeeklyView({
                         onClick={() => onSwitchToDaily?.(day.iso)}
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                         title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
-                        role={onSwitchToDaily ? "button" : undefined}
-                        tabIndex={onSwitchToDaily ? 0 : undefined}
-                        onKeyDown={
-                          onSwitchToDaily ? createDayKeyDownHandler(day.iso, false) : undefined
-                        }
                       >
                         <th scope="row">
-                          {day.label}
+                          {onSwitchToDaily ? (
+                            <button
+                              type="button"
+                              className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSwitchToDaily(day.iso);
+                              }}
+                              onKeyDown={createDayKeyDownHandler(day.iso, true)}
+                              aria-label={`Open ${day.label} daily log`}
+                            >
+                              {day.label}
+                            </button>
+                          ) : (
+                            day.label
+                          )}
                           {isToday && (
                             <Badge bg="primary" className="ms-2" pill>
                               Today
@@ -423,7 +427,7 @@ export function TimeTrackingWeeklyView({
                               style={{ fontSize: "0.75rem" }}
                             >
                               <i
-                                className={`bi ${LOCATION_ICON[location.location]}`}
+                                className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
                                 aria-hidden="true"
                               />{" "}
                               {location.countryCode}

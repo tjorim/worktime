@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ChangeEvent, SubmitEvent } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -59,14 +60,14 @@ export function OtherLocationModal({
     onHide();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTouched(true);
     if (!isCodeValid) return;
     onConfirm(countryCode, label.trim() || undefined);
   };
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
     setCountryCode(e.target.value.toUpperCase().slice(0, 2));
   };
 
@@ -88,6 +89,7 @@ export function OtherLocationModal({
               maxLength={2}
               isInvalid={touched && !isCodeValid}
               autoFocus
+              aria-required="true"
               aria-describedby="other-location-country-feedback"
             />
             <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
@@ -97,7 +99,7 @@ export function OtherLocationModal({
               ISO 3166-1 alpha-2 code (2 uppercase letters)
             </Form.Text>
           </Form.Group>
-          <Form.Group controlId="other-location-label">
+          <Form.Group>
             <Form.Label htmlFor="other-location-label-input">
               Label <span className="text-muted fw-normal">(optional)</span>
             </Form.Label>

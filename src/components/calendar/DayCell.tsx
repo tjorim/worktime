@@ -6,6 +6,7 @@ import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocationInfo } from "../../types/workLocation";
 import { dayjs } from "../../utils/dateTimeUtils";
+import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import {
   getEventColorClass,
   getEventTypeLabel,
@@ -117,31 +118,16 @@ const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefin
     case "office":
       return "Working from office";
     case "other": {
-      const country = workLocation.countryCode ?? "unknown";
       if (workLocation.label) {
-        return `Other location: ${workLocation.label} (${country})`;
+        return `Other location: ${workLocation.label} (${workLocation.countryCode})`;
       }
-      return `Other location (${country})`;
+      return `Other location (${workLocation.countryCode})`;
     }
     default:
       return undefined;
   }
 };
 
-const getWorkLocationIconClass = (workLocation?: WorkLocationInfo): string | undefined => {
-  if (!workLocation) return undefined;
-
-  switch (workLocation.location) {
-    case "home":
-      return "bi-house";
-    case "office":
-      return "bi-building";
-    case "other":
-      return "bi-geo-alt";
-    default:
-      return undefined;
-  }
-};
 
 /** Minimum touch move distance (px) before canceling long-press */
 const LONG_PRESS_MOVE_THRESHOLD = 10;
@@ -200,7 +186,6 @@ export function DayCell({
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
-  const workLocationIconClass = getWorkLocationIconClass(workLocation);
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
@@ -419,7 +404,7 @@ export function DayCell({
               className="month-calendar-day-indicator month-calendar-work-location"
               title={workLocationLabel}
             >
-              <i className={clsx("bi", workLocationIconClass)}></i>
+              <i className={clsx("bi", WORK_LOCATION_ICON_CLASS[workLocation.location])}></i>
             </span>
           )}
         </span>

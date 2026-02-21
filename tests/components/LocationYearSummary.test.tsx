@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { LocationYearSummary } from "../../src/components/calendar/LocationYearSummary";
@@ -66,8 +66,8 @@ describe("LocationYearSummary", () => {
     const rows = screen.getAllByRole("row");
     const homeRow = rows.find((row) => row.textContent?.includes("Home"));
     const officeRow = rows.find((row) => row.textContent?.includes("Office"));
-    expect(homeRow?.textContent).toContain("2");
-    expect(officeRow?.textContent).toContain("1");
+    expect(within(homeRow!).getByText("2")).toBeInTheDocument();
+    expect(within(officeRow!).getByText("1")).toBeInTheDocument();
   });
 
   it("renders the optional label for other-location rows", () => {

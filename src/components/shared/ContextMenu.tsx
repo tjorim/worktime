@@ -155,8 +155,6 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
 
   if (!isOpen) return null;
 
-  const seen = new Map<string, number>();
-
   return createPortal(
     <div
       ref={menuRef}
@@ -169,13 +167,11 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
         top: `${position.top}px`,
       }}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const baseKey = item.separator
           ? "separator"
           : `item:${item.label}|${item.icon ?? ""}|${item.variant ?? ""}|${item.disabled ? "1" : "0"}`;
-        const occurrence = (seen.get(baseKey) ?? 0) + 1;
-        seen.set(baseKey, occurrence);
-        const itemKey = `${menuId}-${baseKey}-${occurrence}`;
+        const itemKey = `${menuId}-${index}-${baseKey}`;
 
         return item.separator ? (
           <hr key={itemKey} className="context-menu-separator" role="separator" />

@@ -4,33 +4,6 @@ import { dayjs } from "./dateTimeUtils";
 import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
 
 /**
- * Counts the number of WFH (work-from-home) days in the ISO week containing the given date.
- *
- * Only considers days present in workLocationMap with location "home".
- * Days without an explicit entry (including office defaults) are not counted.
- *
- * @param date - Any date within the target ISO week
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
- * @returns The number of WFH days in that week (0-7)
- *
- * @example
- * // Returns 2 if Monday and Tuesday are set to "home" in that week
- * getWfhDaysInWeek(dayjs("2026-02-18"), workLocationMap); // 2
- */
-export function getWfhDaysInWeek(date: Dayjs, workLocationMap: WorkLocationMap): number {
-  const monday = dayjs(date).isoWeekday(1);
-  let count = 0;
-  for (let i = 0; i < 7; i++) {
-    const day = monday.add(i, "day");
-    const info = workLocationMap.get(day.format("YYYY-MM-DD"));
-    if (info?.location === "home") {
-      count++;
-    }
-  }
-  return count;
-}
-
-/**
  * Counts the number of days per location type in the ISO week containing the given date.
  *
  * Only considers days present in workLocationMap with an explicit entry.
@@ -79,6 +52,14 @@ export function aggregateLocationCounts(
   >();
 
   for (const info of workLocationMap.values()) {
+    if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
+      console.warn(
+        "aggregateLocationCounts: skipping entry with unknown location",
+        info.countryCode,
+        info.label,
+      );
+      continue;
+    }
     const label = info.label ?? "";
     const key = buildKey(info.location, info.countryCode, label);
     const existing = counts.get(key);

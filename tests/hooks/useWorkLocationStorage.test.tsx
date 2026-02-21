@@ -318,5 +318,33 @@ describe("useWorkLocationStorage", () => {
       expect(success).toBe(false);
       expect(result.current.workLocationMap.has("2024-01-01")).toBe(false);
     });
+
+    it("returns false and does not store anything for an invalid date string", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      let success!: boolean;
+      act(() => {
+        success = result.current.setLocationForDate("not-a-date", "home");
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.workLocationMap.has("not-a-date")).toBe(false);
+    });
+  });
+
+  describe("clearLocationForDate", () => {
+    it("does not throw and leaves the map unchanged for an out-of-range date", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      act(() => {
+        result.current.clearLocationForDate("2024-01-01");
+      });
+
+      expect(result.current.workLocationMap.has("2024-01-01")).toBe(false);
+    });
   });
 });

@@ -53,7 +53,7 @@ export const changelogData: ChangelogVersion[] = [
     technicalDetails: {
       title: "Cross-Border Work Location Tracking and Calendar Improvements",
       description:
-        "Added per-day work location tracking (home/office/other) with country codes stored in worktime_work_locations_{year} localStorage keys. A new useWorkLocationStorage hook manages three year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.",
+        "Added per-day work location tracking (home/office/other) with country codes stored in worktime_work_locations_{year} localStorage keys. A new useWorkLocationStorage hook manages three-year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.",
     },
   },
   {
@@ -610,7 +610,7 @@ export const changelogData: ChangelogVersion[] = [
 ];
 
 export const futurePlans = {
-  "v4.7.0": {
+  "v4.8.0": {
     title: "Advanced Features",
     features: [
       "Calendar export (.ics format)",
