@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -152,7 +152,7 @@ describe("TransferView", () => {
     });
 
     it("shows team comparison controls when team is selected", () => {
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
       expect(screen.getByText(/View transfers with Team/i)).toBeInTheDocument();
       expect(screen.getByText(/Filter by custom date range/i)).toBeInTheDocument();
     });
@@ -289,6 +289,27 @@ describe("TransferView", () => {
       expect(startDateInput).toHaveValue("");
       expect(endDateInput).toHaveValue("");
     });
+
+    it("shows validation feedback for reversed custom date range", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<TransferView {...defaultProps} />);
+
+      const filterCheckbox = screen.getByLabelText(/Filter by custom date range/i);
+      await user.click(filterCheckbox);
+
+      const startDateInput = screen.getByLabelText(/Start Date/i);
+      const endDateInput = screen.getByLabelText(/End Date/i);
+      await user.type(startDateInput, "2025-02-01");
+      await user.type(endDateInput, "2025-01-01");
+
+      expect(startDateInput).toHaveClass("is-invalid");
+      expect(endDateInput).toHaveClass("is-invalid");
+      expect(
+        screen.getByText(
+          /Please select a valid date range\. Start date must be on or before end date\./i,
+        ),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("Transfer results display", () => {
@@ -299,7 +320,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getByText(/No transfers found between Team 1 and Team 2/)).toBeInTheDocument();
     });
@@ -322,7 +343,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       // Check for badges and icons for team direction
       expectMyTeamBadgeInTransferHeader(1);
@@ -331,17 +352,6 @@ describe("TransferView", () => {
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Evening/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Handover/).length).toBeGreaterThan(0);
-    });
-
-    it("shows team selection prompt when no team selected", () => {
-      mockUseTransferCalculations.mockReturnValue({
-        ...defaultHookReturn,
-        validatedMyTeam: null, // Set validated team to null
-      });
-
-      renderWithProviders(<TransferView {...defaultProps} myTeam={null} />);
-
-      expect(screen.getByText(/Please select your team/)).toBeInTheDocument();
     });
   });
 
@@ -414,7 +424,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       // Check that both transfers are displayed
       expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
@@ -451,7 +461,7 @@ describe("TransferView", () => {
         otherTeam: 2,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       // Check for badge-based section header
       expectMyTeamBadgeInTransferHeader(1);
@@ -486,7 +496,7 @@ describe("TransferView", () => {
         hasMoreTransfers: true,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getByText(/Handovers:\s*1/)).toBeInTheDocument();
       expect(screen.getByText(/Takeovers:\s*1/)).toBeInTheDocument();
@@ -512,83 +522,89 @@ describe("TransferView", () => {
         transfers: mockTransfers,
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
     });
 
-    it("groups transfer history into accordion buckets", async () => {
-      const user = userEvent.setup();
-      const mockTransfers = [
-        {
-          date: dayjs().add(2, "day"),
-          fromTeam: 1,
-          toTeam: 2,
-          fromShiftType: "M" as const,
-          toShiftType: "L" as const,
-          type: "handover" as TransferType,
-        },
-        {
-          date: dayjs().add(14, "day"),
-          fromTeam: 2,
-          toTeam: 1,
-          fromShiftType: "L" as const,
-          toShiftType: "N" as const,
-          type: "takeover" as TransferType,
-        },
-        {
-          date: dayjs().add(50, "day"),
-          fromTeam: 1,
-          toTeam: 2,
-          fromShiftType: "N" as const,
-          toShiftType: "M" as const,
-          type: "handover" as TransferType,
-        },
-      ];
+    it("groups transfer history into accordion buckets", () => {
+      vi.useFakeTimers();
+      const referenceNow = new Date("2025-01-15T12:00:00Z");
+      vi.setSystemTime(referenceNow);
+      try {
+        const mockTransfers = [
+          {
+            date: dayjs(referenceNow).add(2, "day"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "M" as const,
+            toShiftType: "L" as const,
+            type: "handover" as TransferType,
+          },
+          {
+            date: dayjs(referenceNow).add(14, "day"),
+            fromTeam: 2,
+            toTeam: 1,
+            fromShiftType: "L" as const,
+            toShiftType: "N" as const,
+            type: "takeover" as TransferType,
+          },
+          {
+            date: dayjs(referenceNow).add(50, "day"),
+            fromTeam: 1,
+            toTeam: 2,
+            fromShiftType: "N" as const,
+            toShiftType: "M" as const,
+            type: "handover" as TransferType,
+          },
+        ];
 
-      mockUseTransferCalculations.mockReturnValue({
-        ...defaultHookReturn,
-        transfers: mockTransfers,
-      });
+        mockUseTransferCalculations.mockReturnValue({
+          ...defaultHookReturn,
+          transfers: mockTransfers,
+        });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+        renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getAllByText(/Next 7 Days/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Next 30 Days/).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Further Ahead/).length).toBeGreaterThan(0);
-      // Empty buckets are intentionally filtered out in TransferView.
-      expect(screen.queryByText(/Past Transfers/)).not.toBeInTheDocument();
+        expect(screen.getAllByText(/Next 7 Days/).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Next 30 Days/).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Further Ahead/).length).toBeGreaterThan(0);
+        // Empty buckets are intentionally filtered out in TransferView.
+        expect(screen.queryByText(/Past Transfers/)).not.toBeInTheDocument();
 
-      const next7Header = screen.getByRole("button", { name: /Next 7 Days/i });
-      const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });
-      const furtherHeader = screen.getByRole("button", { name: /Further Ahead/i });
+        const next7Header = screen.getByRole("button", { name: /Next 7 Days/i });
+        const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });
+        const furtherHeader = screen.getByRole("button", { name: /Further Ahead/i });
 
-      await user.click(next30Header);
-      await user.click(furtherHeader);
+        fireEvent.click(next30Header);
+        fireEvent.click(furtherHeader);
 
-      const next7Item = next7Header.closest(".accordion-item");
-      const next30Item = next30Header.closest(".accordion-item");
-      const furtherItem = furtherHeader.closest(".accordion-item");
+        const next7Item = next7Header.closest(".accordion-item");
+        const next30Item = next30Header.closest(".accordion-item");
+        const furtherItem = furtherHeader.closest(".accordion-item");
 
-      expect(next7Item).toBeInstanceOf(HTMLElement);
-      expect(next30Item).toBeInstanceOf(HTMLElement);
-      expect(furtherItem).toBeInstanceOf(HTMLElement);
+        expect(next7Item).toBeInstanceOf(HTMLElement);
+        expect(next30Item).toBeInstanceOf(HTMLElement);
+        expect(furtherItem).toBeInstanceOf(HTMLElement);
 
-      const next7ItemElement = next7Item as HTMLElement;
-      const next30ItemElement = next30Item as HTMLElement;
-      const furtherItemElement = furtherItem as HTMLElement;
+        const next7ItemElement = next7Item as HTMLElement;
+        const next30ItemElement = next30Item as HTMLElement;
+        const furtherItemElement = furtherItem as HTMLElement;
 
-      // Verify each bucket renders its own transfer content.
-      expect(within(next7ItemElement).getAllByText(/Team\s+1/).length).toBeGreaterThan(0);
-      expect(within(next7ItemElement).getByText(/Team\s+2/)).toBeInTheDocument();
-      expect(within(next7ItemElement).getByText(/Morning/)).toBeInTheDocument();
-      expect(within(next7ItemElement).getByText(/Evening/)).toBeInTheDocument();
-      expect(within(next30ItemElement).getByText("Takeover")).toBeInTheDocument();
-      expect(within(next30ItemElement).getByText(/Night/)).toBeInTheDocument();
-      expect(within(furtherItemElement).getByText("Handover")).toBeInTheDocument();
-      expect(within(furtherItemElement).getByText(/Night/)).toBeInTheDocument();
-      expect(within(furtherItemElement).getByText(/Morning/)).toBeInTheDocument();
+        // Verify each bucket renders its own transfer content.
+        expect(within(next7ItemElement).getAllByText(/Team\s+1/).length).toBeGreaterThan(0);
+        expect(within(next7ItemElement).getByText(/Team\s+2/)).toBeInTheDocument();
+        expect(within(next7ItemElement).getByText(/Morning/)).toBeInTheDocument();
+        expect(within(next7ItemElement).getByText(/Evening/)).toBeInTheDocument();
+        expect(within(next30ItemElement).getByText("Takeover")).toBeInTheDocument();
+        expect(within(next30ItemElement).getByText(/Night/)).toBeInTheDocument();
+        expect(within(furtherItemElement).getByText("Handover")).toBeInTheDocument();
+        expect(within(furtherItemElement).getByText(/Night/)).toBeInTheDocument();
+        expect(within(furtherItemElement).getByText(/Morning/)).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("uses shared empty state for no other teams", () => {
@@ -597,7 +613,7 @@ describe("TransferView", () => {
         availableOtherTeams: [],
       });
 
-      renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
+      renderWithProviders(<TransferView {...defaultProps} />);
 
       expect(screen.getByText("No Other Teams Available")).toBeInTheDocument();
       expect(

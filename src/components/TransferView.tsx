@@ -30,8 +30,6 @@ interface TransferItemsListProps {
   transfers: TransferInfo[];
   scheduleType: ScheduleOption;
   myTeam: number;
-  emptyTitle?: string;
-  emptyDescription?: string;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -40,8 +38,6 @@ function TransferItemsList({
   transfers,
   scheduleType,
   myTeam,
-  emptyTitle = "No Transfers Found",
-  emptyDescription = "No transfers available for this section.",
   isLoading = false,
   error = null,
 }: TransferItemsListProps) {
@@ -54,8 +50,6 @@ function TransferItemsList({
     <Alert variant="danger" className="mb-0 py-2">
       {error}
     </Alert>
-  ) : transfers.length === 0 ? (
-    <EmptyState icon="bi-calendar-x" title={emptyTitle} description={emptyDescription} />
   ) : (
     <ListGroup variant="flush">
       {transfers.map((transfer, index) => {
@@ -186,6 +180,14 @@ export function TransferView({
   const [customEndDate, setCustomEndDate] = useState("");
 
   const { scheduleType } = useSettings();
+  const isDateRangeInvalid = useMemo(
+    () =>
+      useCustomRange &&
+      Boolean(customStartDate) &&
+      Boolean(customEndDate) &&
+      dayjs(customStartDate).isAfter(dayjs(customEndDate), "day"),
+    [customEndDate, customStartDate, useCustomRange],
+  );
 
   // Use the transfer calculations hook - it validates the team number
   const {
@@ -198,8 +200,8 @@ export function TransferView({
   } = useTransferCalculations({
     myTeam: inputMyTeam,
     limit: transfersToShow,
-    customStartDate: useCustomRange ? customStartDate : undefined,
-    customEndDate: useCustomRange ? customEndDate : undefined,
+    customStartDate: useCustomRange && !isDateRangeInvalid ? customStartDate : undefined,
+    customEndDate: useCustomRange && !isDateRangeInvalid ? customEndDate : undefined,
   });
 
   // Use validated team for display
@@ -224,14 +226,20 @@ export function TransferView({
   }, [initialOtherTeam, availableOtherTeams, setOtherTeam]);
 
   const transferStats = useMemo(() => {
-    if (transfers.length === 0) {
+    const firstTransfer = transfers[0];
+    if (!firstTransfer) {
       return null;
     }
 
     const handovers = transfers.filter((transfer) => transfer.type === "handover").length;
     const takeovers = transfers.length - handovers;
-    const earliest = transfers[0]?.date;
-    const latest = transfers.at(-1)?.date;
+    const { earliest, latest } = transfers.reduce(
+      (acc, transfer) => ({
+        earliest: transfer.date.isBefore(acc.earliest) ? transfer.date : acc.earliest,
+        latest: transfer.date.isAfter(acc.latest) ? transfer.date : acc.latest,
+      }),
+      { earliest: firstTransfer.date, latest: firstTransfer.date },
+    );
 
     return {
       handovers,
@@ -428,7 +436,11 @@ export function TransferView({
                               id={startDateId}
                               value={customStartDate}
                               onChange={(e) => setCustomStartDate(e.target.value)}
+                              isInvalid={isDateRangeInvalid}
                             />
+                            <Form.Control.Feedback type="invalid">
+                              Start date must be on or before end date.
+                            </Form.Control.Feedback>
                           </Col>
                           <Col md={5}>
                             <Form.Label htmlFor={endDateId} className="fw-semibold">
@@ -439,7 +451,11 @@ export function TransferView({
                               id={endDateId}
                               value={customEndDate}
                               onChange={(e) => setCustomEndDate(e.target.value)}
+                              isInvalid={isDateRangeInvalid}
                             />
+                            <Form.Control.Feedback type="invalid">
+                              End date must be on or after start date.
+                            </Form.Control.Feedback>
                           </Col>
                           <Col md={2} className="d-flex align-items-end">
                             <Button
@@ -466,7 +482,11 @@ export function TransferView({
             </Row>
 
             {/* Transfer Results */}
-            {transfers.length === 0 ? (
+            {isDateRangeInvalid ? (
+              <Alert variant="warning" className="mb-0">
+                Please select a valid date range. Start date must be on or before end date.
+              </Alert>
+            ) : transfers.length === 0 ? (
               <EmptyState
                 icon="bi-calendar-x"
                 title="No Transfers Found"
@@ -491,7 +511,6 @@ export function TransferView({
                           <TransferItemsList
                             transfers={group.items}
                             myTeam={myTeam}
-                            emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
                             scheduleType={scheduleType}
                           />
                         </Accordion.Body>
