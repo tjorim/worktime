@@ -57,7 +57,6 @@ export function useLocalStorage<T>(
   }, [
     key,
     setStoredValue,
-    latestValueRef,
     // intentionally excludes initialValue to prevent spurious re-reads
   ]);
 
