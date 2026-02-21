@@ -38,7 +38,7 @@ export function useLocalStorage<T>(
   const initialValueRef = useRef(initialValue);
   initialValueRef.current = initialValue;
 
-  const readValueForKey = (storageKey: string): T => {
+  const readValueForKey = useCallback((storageKey: string): T => {
     if (typeof window === "undefined") {
       return initialValueRef.current;
     }
@@ -49,7 +49,7 @@ export function useLocalStorage<T>(
     } catch {
       return initialValueRef.current;
     }
-  };
+  }, []);
 
   // Re-read localStorage when the key changes after initial mount.
   // Layout effect prevents interactive gaps where functional updates could use stale ref data.
@@ -67,6 +67,7 @@ export function useLocalStorage<T>(
   }, [
     key,
     setStoredValue,
+    readValueForKey,
     // intentionally excludes initialValue to prevent spurious re-reads
   ]);
 

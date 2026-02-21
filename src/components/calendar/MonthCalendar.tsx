@@ -346,8 +346,9 @@ export function MonthCalendar({
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         const date = contextMenu.date;
         const dayKey = formatHdayDate(date);
-        const currentLocation = workLocationMap?.get(dayKey)?.location;
-        const hasStoredLocation = !!workLocationMap?.get(dayKey);
+        const stored = workLocationMap?.get(dayKey);
+        const currentLocation = stored?.location;
+        const hasStoredLocation = !!stored;
         if (showHomeLocationAction) {
           items.push({
             label: "Work from Home",
