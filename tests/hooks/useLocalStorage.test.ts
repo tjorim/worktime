@@ -54,6 +54,43 @@ describe("useLocalStorage", () => {
     expect(window.localStorage.getItem("test_batched_updates")).toBe("3");
   });
 
+  it("re-reads localStorage when key changes", () => {
+    window.localStorage.setItem("test_key_a", '"value-a"');
+    window.localStorage.setItem("test_key_b", '"value-b"');
+
+    const { result, rerender } = renderHook(
+      ({ storageKey }) => useLocalStorage(storageKey, "default"),
+      { initialProps: { storageKey: "test_key_a" } },
+    );
+
+    expect(result.current[0]).toBe("value-a");
+
+    rerender({ storageKey: "test_key_b" });
+
+    expect(result.current[0]).toBe("value-b");
+
+    act(() => {
+      result.current[1]((prev) => `${prev}-updated`);
+    });
+
+    expect(result.current[0]).toBe("value-b-updated");
+    expect(window.localStorage.getItem("test_key_b")).toBe('"value-b-updated"');
+  });
+
+  it("does not re-read when only initialValue changes", () => {
+    window.localStorage.setItem("stable_key", '"stored-value"');
+
+    const { result, rerender } = renderHook(
+      ({ initial }) => useLocalStorage("stable_key", initial),
+      { initialProps: { initial: "default-a" } },
+    );
+
+    expect(result.current[0]).toBe("stored-value");
+
+    rerender({ initial: "default-b" });
+
+    expect(result.current[0]).toBe("stored-value");
+  });
   it("handles malformed JSON gracefully", () => {
     // Set up malformed JSON in localStorage
     window.localStorage.setItem("test_malformed", "invalid-json");
