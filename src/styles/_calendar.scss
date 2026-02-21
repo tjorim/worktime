@@ -364,6 +364,12 @@
   padding: 0.25rem 0;
 }
 
+.context-menu-separator {
+  margin: 0.25rem 0;
+  border: none;
+  border-top: 1px solid var(--wt-context-menu-border);
+}
+
 .context-menu-item {
   display: flex;
   align-items: center;

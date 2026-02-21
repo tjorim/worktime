@@ -204,7 +204,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
   {
     value: "2-shift",
     title: "2-shift",
-    description: "Alternating morning and evening shifts across 4 teams with rotating support weekends.",
+    description:
+      "Alternating morning and evening shifts across 4 teams with rotating support weekends.",
     isAvailable: true,
     shiftConfig: {
       teamCount: 4,

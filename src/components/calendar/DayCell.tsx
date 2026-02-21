@@ -4,7 +4,9 @@ import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
+import type { WorkLocationInfo } from "../../types/workLocation";
 import { dayjs } from "../../utils/dateTimeUtils";
+import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import {
   getEventColorClass,
   getEventTypeLabel,
@@ -26,6 +28,7 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
+  workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
@@ -106,6 +109,26 @@ const getIndicatorDetails = (
   }>;
 };
 
+const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefined => {
+  if (!workLocation) return undefined;
+
+  switch (workLocation.location) {
+    case "home":
+      return "Working from home";
+    case "office":
+      return "Working from office";
+    case "other": {
+      if (workLocation.label) {
+        return `Other location: ${workLocation.label} (${workLocation.countryCode})`;
+      }
+      return `Other location (${workLocation.countryCode})`;
+    }
+    default:
+      return undefined;
+  }
+};
+
+
 /** Minimum touch move distance (px) before canceling long-press */
 const LONG_PRESS_MOVE_THRESHOLD = 10;
 /** Long-press duration (ms) to trigger context menu on touch devices */
@@ -149,6 +172,7 @@ export function DayCell({
   schoolHoliday,
   events,
   shiftBadge,
+  workLocation,
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
@@ -161,12 +185,16 @@ export function DayCell({
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
+  const workLocationLabel = getWorkLocationLabel(workLocation);
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
   }
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
+  }
+  if (workLocationLabel && shiftBadge?.isWorking) {
+    ariaLabelParts.push(workLocationLabel);
   }
   if (publicHoliday) {
     ariaLabelParts.push(publicHoliday.name);
@@ -371,6 +399,14 @@ export function DayCell({
               {indicator.emoji}
             </span>
           ))}
+          {workLocation && shiftBadge?.isWorking && (
+            <span
+              className="month-calendar-day-indicator month-calendar-work-location"
+              title={workLocationLabel}
+            >
+              <i className={clsx("bi", WORK_LOCATION_ICON_CLASS[workLocation.location])}></i>
+            </span>
+          )}
         </span>
         {onDayContextMenu && (
           <button
