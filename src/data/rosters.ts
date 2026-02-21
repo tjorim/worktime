@@ -267,6 +267,8 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Saturday
         "O", // Sunday
       ],
+      // 20 working weekdays across the 28-day cycle at 9h average to 45h/week.
+      weeklyHours: 45,
 
       notes:
         "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.",

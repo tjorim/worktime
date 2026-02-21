@@ -208,6 +208,19 @@ describe("ShiftTimeline", () => {
       // Should render timeline but without arrows
       expect(container.querySelector(".card-timeline")).toBeInTheDocument();
       expect(container.querySelector(".timeline-arrow")).not.toBeInTheDocument();
+      expect(screen.getByText("Multiple teams share this shift start time.")).toBeInTheDocument();
+    });
+
+    it("does not show parallel shift explanation when shifts are sequential", () => {
+      vi.spyOn(shiftCalculations, "getAllTeamsShifts").mockReturnValue([
+        createMockShiftResult(1, "M", today),
+        createMockShiftResult(2, "L", today),
+      ]);
+
+      const currentWorkingTeam = createMockShiftResult(1, "M", today);
+      renderWithProviders(<ShiftTimeline currentWorkingTeam={currentWorkingTeam} />);
+
+      expect(screen.queryByText("Multiple teams share this shift start time.")).not.toBeInTheDocument();
     });
   });
 });

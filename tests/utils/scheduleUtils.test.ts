@@ -222,8 +222,8 @@ describe("scheduleUtils", () => {
       expect(getWeeklyHours("5-shift")).toBeNull();
     });
 
-    it("should return null for 2-shift schedule", () => {
-      expect(getWeeklyHours("2-shift")).toBeNull();
+    it("should return 45 for 2-shift schedule", () => {
+      expect(getWeeklyHours("2-shift")).toBe(45);
     });
 
     it("should fall back to 5-shift when null is provided", () => {

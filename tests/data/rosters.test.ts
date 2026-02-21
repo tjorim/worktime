@@ -120,6 +120,7 @@ describe("Schedule pattern validation", () => {
     expect(schedule).toBeDefined();
     expect(schedule?.isAvailable).toBe(true);
     expect(schedule?.shiftConfig.teamCount).toBe(4);
+    expect(schedule?.shiftConfig.weeklyHours).toBe(45);
   });
 
   it("should have weekend-shift schedule available", () => {
