@@ -164,15 +164,39 @@ export function DayCell({
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
-  const workLocationLabel = workLocation
-    ? workLocation.location === "home"
-      ? "Working from home"
-      : workLocation.location === "office"
-        ? "Working from office"
-        : workLocation.label
-          ? `Other location: ${workLocation.label} (${workLocation.countryCode})`
-          : `Other location (${workLocation.countryCode})`
-    : undefined;
+  const workLocationLabel = (() => {
+    if (!workLocation) return undefined;
+
+    switch (workLocation.location) {
+      case "home":
+        return "Working from home";
+      case "office":
+        return "Working from office";
+      case "other": {
+        const country = workLocation.countryCode ?? "unknown";
+        if (workLocation.label) {
+          return `Other location: ${workLocation.label} (${country})`;
+        }
+        return `Other location (${country})`;
+      }
+      default:
+        return undefined;
+    }
+  })();
+  const workLocationIconClass = (() => {
+    if (!workLocation) return undefined;
+
+    switch (workLocation.location) {
+      case "home":
+        return "bi-house";
+      case "office":
+        return "bi-building";
+      case "other":
+        return "bi-geo-alt";
+      default:
+        return undefined;
+    }
+  })();
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");
@@ -391,16 +415,7 @@ export function DayCell({
               className="month-calendar-day-indicator month-calendar-work-location"
               title={workLocationLabel}
             >
-              <i
-                className={clsx(
-                  "bi",
-                  workLocation.location === "home"
-                    ? "bi-house"
-                    : workLocation.location === "office"
-                      ? "bi-building"
-                      : "bi-geo-alt",
-                )}
-              ></i>
+              <i className={clsx("bi", workLocationIconClass)}></i>
             </span>
           )}
         </span>

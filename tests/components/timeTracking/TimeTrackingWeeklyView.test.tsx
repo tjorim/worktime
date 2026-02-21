@@ -38,52 +38,46 @@ describe("TimeTrackingWeeklyView Component", () => {
     { id: "Meeting", name: "Meeting", color: "#6f42c1" },
   ];
 
-  const renderPanel = (tasks: StoredTimeTrackingTask[], selectedDate = "2025-01-06") =>
+  const defaultProps = {
+    tasks: [],
+    labels: TEST_LABELS,
+    selectedDate: "2025-01-06",
+    onSelectedDateChange: vi.fn(),
+  };
+
+  const renderPanel = (
+    extraProps: Partial<React.ComponentProps<typeof TimeTrackingWeeklyView>> = {},
+  ) =>
     render(
       <SettingsProvider>
-        <TimeTrackingWeeklyView
-          tasks={tasks}
-          labels={TEST_LABELS}
-          selectedDate={selectedDate}
-          onSelectedDateChange={vi.fn()}
-        />
+        <TimeTrackingWeeklyView {...defaultProps} {...extraProps} />
       </SettingsProvider>,
     );
 
   describe("Empty State Handling", () => {
     it("shows informative message when week has no data", () => {
-      renderPanel([]);
+      renderPanel();
 
       expect(screen.getByText(/No Time Tracking Data Yet/i)).toBeInTheDocument();
       expect(screen.getByText(/Start tracking your time in the Daily Log/i)).toBeInTheDocument();
     });
 
     it("shows call-to-action button in empty state when callback provided", () => {
-      render(
-        <SettingsProvider>
-          <TimeTrackingWeeklyView
-            tasks={[]}
-            labels={TEST_LABELS}
-            selectedDate="2025-01-06"
-            onSelectedDateChange={vi.fn()}
-            onSwitchToDaily={vi.fn()}
-          />
-        </SettingsProvider>,
-      );
+      renderPanel({ onSwitchToDaily: vi.fn() });
 
       const ctaButton = screen.getByRole("button", { name: /Go to Daily Log/i });
       expect(ctaButton).toBeInTheDocument();
     });
 
     it("hides CTA button when no callback provided", () => {
-      renderPanel([]);
+      renderPanel();
 
       const ctaButton = screen.queryByRole("button", { name: /Go to Daily Log/i });
       expect(ctaButton).not.toBeInTheDocument();
     });
 
     it("hides summary table when no tasks exist", () => {
-      const { container } = renderPanel([]);
+      const { container } = renderPanel({ tasks: [] });
 
       const dataTable = container.querySelector("table");
       expect(dataTable).not.toBeInTheDocument();
@@ -97,7 +91,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("renders table structure when tasks are present", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       const dataTable = container.querySelector("table");
       expect(dataTable).toBeInTheDocument();
@@ -106,7 +100,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("displays weekday labels in table rows", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       expect(screen.getByText("Monday")).toBeInTheDocument();
       expect(screen.getByText("Tuesday")).toBeInTheDocument();
@@ -119,7 +113,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate(mondayDate, "Meeting", "13:00", "15:00"),
       ];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
       expect(summarySection).toHaveTextContent("Support: 3.00 hours");
@@ -132,7 +126,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate(tuesdayDate, "Support", "08:00", "11:00"),
       ];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       // Check the weekly summary section shows correct total
       const totalElements = screen.getAllByText(/7\.00 hours/i);
@@ -152,7 +146,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         stopTime: null,
       };
 
-      const { container } = renderPanel([runningTask]);
+      const { container } = renderPanel({ tasks: [runningTask] });
 
       expect(container.textContent).toContain("6.00 hours");
 
@@ -166,7 +160,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("applies 30-minute break deduction in weekly totals", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "17:00", true)];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
       expect(summarySection).toHaveTextContent("Support: 7.50 hours");
@@ -200,7 +194,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate(mondayDate, "Break", "12:00", "12:30"),
       ];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       // Check the weekly summary section shows correct total
       expect(screen.getByText(/3\.50 hours/i)).toBeInTheDocument();
@@ -212,7 +206,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate(tuesdayDate, "Development", "09:00", "11:00"),
       ];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       // Use getAllByText for items that appear multiple times
       const totalHoursElements = screen.getAllByText(/Total Hours/i);
@@ -225,7 +219,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("shows daily breakdown chart", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       expect(screen.getByText(/Daily Breakdown/i)).toBeInTheDocument();
     });
@@ -236,7 +230,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate(mondayDate, "Development", "13:00", "17:00"),
       ];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       expect(screen.getByText(/Category Breakdown/i)).toBeInTheDocument();
     });
@@ -248,7 +242,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("uses semantic table headers with scope attributes", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       const headers = container.querySelectorAll("th[scope='col']");
       expect(headers.length).toBeGreaterThan(0);
@@ -257,7 +251,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("includes total hours column in table header", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "12:00")];
 
-      renderPanel(weekTasks);
+      renderPanel({ tasks: weekTasks });
 
       expect(screen.getByRole("columnheader", { name: /Total Hours/i })).toBeInTheDocument();
     });
@@ -265,7 +259,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("displays daily totals with emphasis styling", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "13:00")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       const dailyTotalCells = container.querySelectorAll("td.fw-semibold");
       expect(dailyTotalCells.length).toBeGreaterThan(0);
@@ -274,7 +268,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("formats hour values to two decimal places", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "09:00", "10:15")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       expect(container.textContent).toContain("1.25");
     });
@@ -286,7 +280,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       const week4Task = createTaskForDate("2025-01-20", "Meeting", "14:00", "16:00");
       const mixedTasks = [week3Task, week4Task];
 
-      renderPanel(mixedTasks, "2025-01-06");
+      renderPanel({ tasks: mixedTasks, selectedDate: "2025-01-06" });
 
       const noDataMsg = screen.queryByText(/No Time Tracking Data Yet/i);
       expect(noDataMsg).toBeInTheDocument();
@@ -299,7 +293,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       vi.setSystemTime(new Date("2025-12-29T12:00:00Z"));
       const tasks = [createTaskForDate("2025-12-29", "Support", "09:00", "12:00")];
 
-      renderPanel(tasks, "2025-12-29");
+      renderPanel({ tasks, selectedDate: "2025-12-29" });
 
       expect(screen.getByText(/Week 1 \(2026\)/)).toBeInTheDocument();
     });
@@ -312,7 +306,7 @@ describe("TimeTrackingWeeklyView Component", () => {
         createTaskForDate("2026-01-02", "Support", "09:00", "11:00"),
       ];
 
-      renderPanel(tasks, "2025-12-29");
+      renderPanel({ tasks, selectedDate: "2025-12-29" });
 
       const summarySection = screen.getByText(/Weekly Summary/i).parentElement;
       expect(summarySection).toHaveTextContent("Support: 5.00 hours");
@@ -324,7 +318,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("applies responsive table wrapper", () => {
       const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       const responsiveWrapper = container.querySelector(".table-responsive");
       expect(responsiveWrapper).toBeInTheDocument();
@@ -334,7 +328,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("uses bordered table style for clarity", () => {
       const weekTasks = [createTaskForDate("2025-01-06", "Support", "09:00", "12:00")];
 
-      const { container } = renderPanel(weekTasks);
+      const { container } = renderPanel({ tasks: weekTasks });
 
       const table = container.querySelector("table");
       expect(table).toHaveClass("table-bordered");

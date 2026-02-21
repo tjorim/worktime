@@ -1,46 +1,46 @@
-    it("should reveal hidden events when activating overflow toggle with keyboard", async () => {
-      const user = userEvent.setup();
-      const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
-      ];
+it("should reveal hidden events when activating overflow toggle with keyboard", async () => {
+  const user = userEvent.setup();
+  const events: DayEvent[] = [
+    { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+  ];
 
-      render(<DayCell {...defaultProps} events={events} />);
+  render(<DayCell {...defaultProps} events={events} />);
 
-      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
-      overflowButton.focus();
-      await user.keyboard("{Enter}");
+  const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+  overflowButton.focus();
+  await user.keyboard("{Enter}");
 
-      expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
-    });
+  expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+});
 
-    it("should collapse hidden events when activating overflow toggle with keyboard", async () => {
-      const user = userEvent.setup();
-      const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
-      ];
+it("should collapse hidden events when activating overflow toggle with keyboard", async () => {
+  const user = userEvent.setup();
+  const events: DayEvent[] = [
+    { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+    { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+  ];
 
-      render(<DayCell {...defaultProps} events={events} />);
+  render(<DayCell {...defaultProps} events={events} />);
 
-      // Expand first
-      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
-      overflowButton.focus();
-      await user.keyboard("{Enter}");
-      expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
+  // Expand first
+  const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+  overflowButton.focus();
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
 
-      // Collapse with keyboard
-      const hideButton = screen.getByRole("button", { name: "Hide 1 more event" });
-      hideButton.focus();
-      await user.keyboard("{Enter}");
-      expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
-    });
+  // Collapse with keyboard
+  const hideButton = screen.getByRole("button", { name: "Hide 1 more event" });
+  hideButton.focus();
+  await user.keyboard("{Enter}");
+  expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
+});
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";

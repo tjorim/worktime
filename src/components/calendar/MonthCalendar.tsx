@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
-import { dayjs, formatHdayDate, getWeekdayName } from "../../utils/dateTimeUtils";
+import { dayjs, getWeekdayName } from "../../utils/dateTimeUtils";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
@@ -262,22 +262,14 @@ export function MonthCalendar({
     [],
   );
 
-  // Combined predicate: show context menu when any action type is available
-  const showContextMenu =
-    allowEventActions ||
-    showHomeLocationAction ||
-    showOfficeLocationAction ||
-    showOtherLocationAction;
-
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
     (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
-      if (!showContextMenu) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
     },
-    [showContextMenu],
+    [],
   );
 
   const handleEventContextMenu = useCallback(
@@ -329,12 +321,12 @@ export function MonthCalendar({
           onClick: () => handleAddEventWrapper(contextMenu.date!),
         });
       }
+      // Home/Office actions
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         const date = contextMenu.date;
-        const dayKey = formatHdayDate(date);
+        const dayKey = date.format("YYYY-MM-DD");
         const stored = workLocationMap?.get(dayKey);
         const currentLocation = stored?.location;
-        const hasStoredLocation = !!stored;
         if (showHomeLocationAction) {
           items.push({
             label: "Work from Home",
@@ -357,19 +349,31 @@ export function MonthCalendar({
             },
           });
         }
-        if (showOtherLocationAction && onSetOtherLocation) {
-          items.push({ separator: true });
-          items.push({
-            label: "Other Location…",
-            icon: "bi-geo-alt",
-            disabled: currentLocation === "other",
-            onClick: () => {
-              handleCloseContextMenu();
-              onSetOtherLocation(date);
-            },
-          });
-        }
-        if (hasStoredLocation) {
+      }
+      // Other Location action
+      if (showOtherLocationAction && onSetOtherLocation && contextMenu.date) {
+        const date = contextMenu.date;
+        const dayKey = date.format("YYYY-MM-DD");
+        const stored = workLocationMap?.get(dayKey);
+        const currentLocation = stored?.location;
+        items.push({ separator: true });
+        items.push({
+          label: "Other Location…",
+          icon: "bi-geo-alt",
+          disabled: currentLocation === "other",
+          onClick: () => {
+            handleCloseContextMenu();
+            onSetOtherLocation(date);
+          },
+        });
+      }
+      // Clear Work Location action
+      if (contextMenu.date) {
+        const date = contextMenu.date;
+        const dayKey = date.format("YYYY-MM-DD");
+        const stored = workLocationMap?.get(dayKey);
+        const hasStoredLocation = !!stored;
+        if (hasStoredLocation && onSetWorkLocation) {
           items.push({
             label: "Clear Work Location",
             icon: "bi-x-circle",
@@ -478,7 +482,8 @@ export function MonthCalendar({
             {row.map((day) => {
               const globalIndex = rowIndex * 7 + row.indexOf(day);
               const key = day.format(DAY_FORMAT);
-              const dayKey = formatHdayDate(day);
+              const dayKey = day.format("YYYY-MM-DD");
+              const hdayKey = day.format("YYYY/MM/DD");
               const cellEvents = dayEvents.get(key) ?? [];
               return (
                 <DayCell
@@ -487,14 +492,14 @@ export function MonthCalendar({
                   isCurrentMonth={day.isSame(month, "month")}
                   isToday={day.isSame(today, "day")}
                   isWeekend={day.isoWeekday() >= 6}
-                  publicHoliday={publicHolidays.get(dayKey)}
-                  schoolHoliday={schoolHolidays.get(dayKey)}
-                  paydayInfo={paydayMap.get(dayKey)}
+                  publicHoliday={publicHolidays.get(dayKey) ?? publicHolidays.get(hdayKey)}
+                  schoolHoliday={schoolHolidays.get(dayKey) ?? schoolHolidays.get(hdayKey)}
+                  paydayInfo={paydayMap.get(dayKey) ?? paydayMap.get(hdayKey)}
                   workLocation={workLocationMap?.get(dayKey)}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}
                   onViewEvent={handleViewEventWrapper}
-                  onDayContextMenu={showContextMenu ? handleDayContextMenu : undefined}
+                  onDayContextMenu={handleDayContextMenu}
                   onEventContextMenu={allowEventActions ? handleEventContextMenu : undefined}
                   isFocusTarget={globalIndex === focusedIndex}
                   cellRef={(el) => {
@@ -508,7 +513,7 @@ export function MonthCalendar({
       </div>
 
       {/* Context menu */}
-      {showContextMenu && (
+      {contextMenu !== null && contextMenuItems.length > 0 && (
         <ContextMenu
           isOpen={contextMenu !== null}
           x={contextMenu?.x ?? 0}

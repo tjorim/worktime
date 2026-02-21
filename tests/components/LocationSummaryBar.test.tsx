@@ -1,21 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocationSummaryBar } from "../../src/components/calendar/LocationSummaryBar";
-import type { WorkLocationMap } from "../../src/types/workLocation";
+import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
-const HOME = { location: "home" as const, countryCode: "NL" };
-const OFFICE = { location: "office" as const, countryCode: "BE" };
-const OTHER = { location: "other" as const, countryCode: "DE" };
+const HOME: WorkLocationInfo = { location: "home", countryCode: "NL" };
+const OFFICE: WorkLocationInfo = { location: "office", countryCode: "BE" };
+const OTHER: WorkLocationInfo = { location: "other", countryCode: "DE" };
 
 // System time is pinned to 2026-02-18 (Wednesday, ISO week 8).
 // All test dates must fall in ISO week 8 (Mon Feb 16 – Sun Feb 22)
 // for the component's internal dayjs() call to pick them up.
 const WEEK = {
-  mon: "2026/02/16",
-  tue: "2026/02/17",
-  wed: "2026/02/18",
-  thu: "2026/02/19",
-  fri: "2026/02/20",
+  mon: "2026-02-16",
+  tue: "2026-02-17",
+  wed: "2026-02-18",
+  thu: "2026-02-19",
+  fri: "2026-02-20",
 };
 
 describe("LocationSummaryBar", () => {
@@ -78,9 +78,7 @@ describe("LocationSummaryBar", () => {
   it("has an accessible aria-label on the container when locations are recorded", () => {
     const map: WorkLocationMap = new Map([[WEEK.mon, HOME]]);
     render(<LocationSummaryBar workLocationMap={map} />);
-    expect(
-      document.querySelector('[aria-label="Work locations this week"]'),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Work locations this week")).toBeInTheDocument();
   });
 
   it("does not show 'No locations' message when at least one entry exists", () => {

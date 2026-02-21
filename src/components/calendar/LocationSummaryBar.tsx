@@ -4,20 +4,25 @@ import type { WorkLocationMap } from "../../types/workLocation";
 
 interface LocationSummaryBarProps {
   workLocationMap: WorkLocationMap;
+  today?: Parameters<typeof dayjs>[0]; // Accepts Dayjs | string | undefined
 }
 
 /**
  * Displays the current week's work location counts (home / office / other).
  * Only non-zero counts are shown. Reflects the current ISO week (today's date).
  */
-export function LocationSummaryBar({ workLocationMap }: LocationSummaryBarProps) {
-  const today = dayjs();
-  const counts = getLocationCountsInWeek(today, workLocationMap);
+
+export function LocationSummaryBar({ workLocationMap, today }: LocationSummaryBarProps) {
+  const day = dayjs(today ?? undefined);
+  const counts = getLocationCountsInWeek(day, workLocationMap);
   const hasAny = counts.home > 0 || counts.office > 0 || counts.other > 0;
 
   if (!hasAny) {
     return (
-      <div className="location-summary-bar d-flex align-items-center gap-2 px-1 py-2 text-muted small">
+      <div
+        className="location-summary-bar d-flex align-items-center gap-2 px-1 py-2 text-muted small"
+        aria-label="Work locations this week"
+      >
         <i className="bi bi-calendar-week flex-shrink-0" aria-hidden="true"></i>
         No locations recorded this week
       </div>

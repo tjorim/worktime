@@ -8,7 +8,7 @@ import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
+import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
@@ -482,7 +482,7 @@ export function CalendarView({
         <OtherLocationModal
           show={showOtherLocationModal}
           date={otherLocationDate}
-          existing={workLocationMap.get(formatHdayDate(otherLocationDate))}
+          existing={workLocationMap.get(otherLocationDate.format("YYYY-MM-DD"))}
           onHide={() => setShowOtherLocationModal(false)}
           onConfirm={handleOtherLocationConfirm}
         />

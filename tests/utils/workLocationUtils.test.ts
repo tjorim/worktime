@@ -3,24 +3,24 @@ import { dayjs } from "../../src/utils/dateTimeUtils";
 import {
   getWfhDaysInWeek,
   getLocationCountsInWeek,
-  aggregateLocationsByYear,
+  aggregateLocationCounts,
 } from "../../src/utils/workLocationUtils";
-import type { WorkLocationMap } from "../../src/types/workLocation";
+import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
-const HOME = { location: "home" as const, countryCode: "NL" };
-const OFFICE = { location: "office" as const, countryCode: "BE" };
-const OTHER_DE = { location: "other" as const, countryCode: "DE" };
+const HOME: WorkLocationInfo = { location: "home", countryCode: "NL" };
+const OFFICE: WorkLocationInfo = { location: "office", countryCode: "BE" };
+const OTHER_DE: WorkLocationInfo = { location: "other", countryCode: "DE" };
 
 // ISO week 8 of 2026: Mon Feb 16 – Sun Feb 22
-const MON = "2026/02/16";
-const TUE = "2026/02/17";
-const WED = "2026/02/18";
-const THU = "2026/02/19";
-const FRI = "2026/02/20";
-const SAT = "2026/02/21";
-const SUN = "2026/02/22";
+const MON = "2026-02-16";
+const TUE = "2026-02-17";
+const WED = "2026-02-18";
+const THU = "2026-02-19";
+const FRI = "2026-02-20";
+const SAT = "2026-02-21";
+const SUN = "2026-02-22";
 // Day in the previous ISO week
-const PREV_FRI = "2026/02/13";
+const PREV_FRI = "2026-02-13";
 
 describe("getWfhDaysInWeek", () => {
   it("returns 0 for an empty map", () => {
@@ -67,7 +67,10 @@ describe("getWfhDaysInWeek", () => {
   });
 
   it("gives the same result regardless of which day of the week is used as input", () => {
-    const map: WorkLocationMap = new Map([[MON, HOME], [FRI, HOME]]);
+    const map: WorkLocationMap = new Map([
+      [MON, HOME],
+      [FRI, HOME],
+    ]);
     expect(getWfhDaysInWeek(dayjs("2026-02-16"), map)).toBe(2); // Monday
     expect(getWfhDaysInWeek(dayjs("2026-02-18"), map)).toBe(2); // Wednesday
     expect(getWfhDaysInWeek(dayjs("2026-02-22"), map)).toBe(2); // Sunday
@@ -120,24 +123,36 @@ describe("getLocationCountsInWeek", () => {
       [MON, HOME],
       [FRI, OFFICE],
     ]);
-    expect(getLocationCountsInWeek(dayjs("2026-02-16"), map)).toEqual({ home: 1, office: 1, other: 0 });
-    expect(getLocationCountsInWeek(dayjs("2026-02-18"), map)).toEqual({ home: 1, office: 1, other: 0 });
-    expect(getLocationCountsInWeek(dayjs("2026-02-22"), map)).toEqual({ home: 1, office: 1, other: 0 });
+    expect(getLocationCountsInWeek(dayjs("2026-02-16"), map)).toEqual({
+      home: 1,
+      office: 1,
+      other: 0,
+    });
+    expect(getLocationCountsInWeek(dayjs("2026-02-18"), map)).toEqual({
+      home: 1,
+      office: 1,
+      other: 0,
+    });
+    expect(getLocationCountsInWeek(dayjs("2026-02-22"), map)).toEqual({
+      home: 1,
+      office: 1,
+      other: 0,
+    });
   });
 });
 
 describe("aggregateLocationsByYear", () => {
   it("returns an empty array for an empty map", () => {
-    expect(aggregateLocationsByYear(new Map())).toEqual([]);
+    expect(aggregateLocationCounts(new Map())).toEqual([]);
   });
 
   it("groups entries by (location, countryCode) and sums day counts", () => {
     const map: WorkLocationMap = new Map([
-      ["2026/01/05", HOME],
-      ["2026/01/06", HOME],
-      ["2026/01/07", OFFICE],
+      ["2026-01-05", HOME],
+      ["2026-01-06", HOME],
+      ["2026-01-07", OFFICE],
     ]);
-    const result = aggregateLocationsByYear(map);
+    const result = aggregateLocationCounts(map);
     // Two distinct groups
     expect(result).toHaveLength(2);
     const homeRow = result.find((r) => r.location === "home");
@@ -148,23 +163,31 @@ describe("aggregateLocationsByYear", () => {
 
   it("sorts by days descending", () => {
     const map: WorkLocationMap = new Map([
-      ["2026/01/05", OFFICE],
-      ["2026/01/06", HOME],
-      ["2026/01/07", HOME],
-      ["2026/01/08", HOME],
+      ["2026-01-05", OFFICE], // 1 day office
+      ["2026-01-06", HOME], // 2 days home
+      ["2026-01-07", HOME],
+      ["2026-01-08", OTHER_DE], // 3 days other (DE)
+      ["2026-01-09", OTHER_DE],
+      ["2026-01-10", OTHER_DE],
     ]);
-    const result = aggregateLocationsByYear(map);
-    expect(result[0].days).toBeGreaterThanOrEqual(result[1].days);
+    const result = aggregateLocationCounts(map);
+    // Assert full descending order
+    for (let i = 1; i < result.length; i++) {
+      expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+    }
+    // Also compare to a sorted copy
+    const sorted = [...result].sort((a, b) => b.days - a.days);
+    expect(result).toEqual(sorted);
   });
 
   it("creates separate rows for other-location entries with different country codes", () => {
-    const OTHER_US = { location: "other" as const, countryCode: "US" };
+    const OTHER_US: WorkLocationInfo = { location: "other", countryCode: "US" };
     const map: WorkLocationMap = new Map([
-      ["2026/01/05", OTHER_DE],
-      ["2026/01/06", OTHER_US],
-      ["2026/01/07", OTHER_DE],
+      ["2026-01-05", OTHER_DE],
+      ["2026-01-06", OTHER_US],
+      ["2026-01-07", OTHER_DE],
     ]);
-    const result = aggregateLocationsByYear(map);
+    const result = aggregateLocationCounts(map);
     expect(result).toHaveLength(2);
     const deRow = result.find((r) => r.countryCode === "DE");
     const usRow = result.find((r) => r.countryCode === "US");
@@ -173,20 +196,28 @@ describe("aggregateLocationsByYear", () => {
   });
 
   it("creates separate rows for other-location entries with the same country but different labels", () => {
-    const OTHER_DE_LABEL = { location: "other" as const, countryCode: "DE", label: "Berlin office" };
-    const OTHER_DE_NOLABEL = { location: "other" as const, countryCode: "DE" };
+    const OTHER_DE_LABEL: WorkLocationInfo = {
+      location: "other",
+      countryCode: "DE",
+      label: "Berlin office",
+    };
+    const OTHER_DE_NOLABEL: WorkLocationInfo = { location: "other", countryCode: "DE" };
     const map: WorkLocationMap = new Map([
-      ["2026/01/05", OTHER_DE_LABEL],
-      ["2026/01/06", OTHER_DE_NOLABEL],
+      ["2026-01-05", OTHER_DE_LABEL],
+      ["2026-01-06", OTHER_DE_NOLABEL],
     ]);
-    const result = aggregateLocationsByYear(map);
+    const result = aggregateLocationCounts(map);
     expect(result).toHaveLength(2);
   });
 
   it("preserves the label on other-location rows", () => {
-    const OTHER_LABELED = { location: "other" as const, countryCode: "DE", label: "Client visit" };
-    const map: WorkLocationMap = new Map([["2026/01/05", OTHER_LABELED]]);
-    const result = aggregateLocationsByYear(map);
+    const OTHER_LABELED: WorkLocationInfo = {
+      location: "other",
+      countryCode: "DE",
+      label: "Client visit",
+    };
+    const map: WorkLocationMap = new Map([["2026-01-05", OTHER_LABELED]]);
+    const result = aggregateLocationCounts(map);
     expect(result[0].label).toBe("Client visit");
   });
 });

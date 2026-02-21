@@ -1,3 +1,13 @@
+// Helper to get initial values for countryCode and label
+const getInitialOtherLocation = (existing?: WorkLocationInfo) => {
+  if (existing?.location === "other") {
+    return {
+      countryCode: existing.countryCode ?? "",
+      label: existing.label ?? "",
+    };
+  }
+  return { countryCode: "", label: "" };
+};
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -28,20 +38,18 @@ export function OtherLocationModal({
   onHide,
   onConfirm,
 }: OtherLocationModalProps) {
-  const [countryCode, setCountryCode] = useState(
-    existing?.location === "other" ? (existing.countryCode ?? "") : "",
-  );
-  const [label, setLabel] = useState(
-    existing?.location === "other" ? (existing.label ?? "") : "",
-  );
+  const initial = getInitialOtherLocation(existing);
+  const [countryCode, setCountryCode] = useState(initial.countryCode);
+  const [label, setLabel] = useState(initial.label);
   const [touched, setTouched] = useState(false);
 
   const isCodeValid = isValidIsoAlpha2(countryCode);
 
   const handleShow = () => {
-    // Reset to existing values when modal opens
-    setCountryCode(existing?.location === "other" ? (existing.countryCode ?? "") : "");
-    setLabel(existing?.location === "other" ? (existing.label ?? "") : "");
+    // Reset to initial values when modal opens
+    const { countryCode, label } = getInitialOtherLocation(existing);
+    setCountryCode(countryCode);
+    setLabel(label);
     setTouched(false);
   };
 
@@ -84,7 +92,9 @@ export function OtherLocationModal({
             <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
               Enter a valid 2-letter ISO country code (e.g. DE, US, FR).
             </Form.Control.Feedback>
-            <Form.Text className="text-muted">ISO 3166-1 alpha-2 code (2 uppercase letters)</Form.Text>
+            <Form.Text className="text-muted">
+              ISO 3166-1 alpha-2 code (2 uppercase letters)
+            </Form.Text>
           </Form.Group>
           <Form.Group controlId="other-location-label">
             <Form.Label>
@@ -94,7 +104,8 @@ export function OtherLocationModal({
               type="text"
               placeholder="e.g. Berlin office, Client visit"
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              maxLength={100}
+              onChange={(e) => setLabel(e.target.value.slice(0, 100))}
             />
           </Form.Group>
         </Modal.Body>

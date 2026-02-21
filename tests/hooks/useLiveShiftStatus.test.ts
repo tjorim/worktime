@@ -47,7 +47,9 @@ describe("useLiveShiftStatus", () => {
     const expectedShiftDay = getCurrentShiftDay(result.current.today, "5-shift");
     const expectedNextShift = getNextShift(expectedShiftDay, 5, "5-shift");
 
-    expect(result.current.nextShift?.date.toISOString()).toBe(expectedNextShift?.date.toISOString());
+    expect(result.current.nextShift?.date.toISOString()).toBe(
+      expectedNextShift?.date.toISOString(),
+    );
     expect(result.current.nextShift?.shift.code).toBe(expectedNextShift?.shift.code);
   });
 
@@ -62,6 +64,8 @@ describe("useLiveShiftStatus", () => {
     });
 
     expect(result.current.today.isAfter(initialTime)).toBe(true);
-    expect(result.current.currentShift.shift.code).toBe(calculateShift(result.current.today, 1, "9-5").code);
+    expect(result.current.currentShift.shift.code).toBe(
+      calculateShift(result.current.today, 1, "9-5").code,
+    );
   });
 });

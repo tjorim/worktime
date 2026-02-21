@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 
-import { dayjs, formatHdayDate } from "./dateTimeUtils";
+import { dayjs } from "./dateTimeUtils";
 import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
 
 /**
@@ -10,7 +10,7 @@ import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
  * Days without an explicit entry (including office defaults) are not counted.
  *
  * @param date - Any date within the target ISO week
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
+ * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
  * @returns The number of WFH days in that week (0-7)
  *
  * @example
@@ -22,7 +22,7 @@ export function getWfhDaysInWeek(date: Dayjs, workLocationMap: WorkLocationMap):
   let count = 0;
   for (let i = 0; i < 7; i++) {
     const day = monday.add(i, "day");
-    const info = workLocationMap.get(formatHdayDate(day));
+    const info = workLocationMap.get(day.format("YYYY-MM-DD"));
     if (info?.location === "home") {
       count++;
     }
@@ -37,7 +37,7 @@ export function getWfhDaysInWeek(date: Dayjs, workLocationMap: WorkLocationMap):
  * Days without an explicit entry are not counted.
  *
  * @param date - Any date within the target ISO week
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
+ * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
  * @returns Record of counts per WorkLocation type
  *
  * @example
@@ -51,7 +51,7 @@ export function getLocationCountsInWeek(
   const monday = dayjs(date).isoWeekday(1);
   const counts: Record<WorkLocation, number> = { home: 0, office: 0, other: 0 };
   for (let i = 0; i < 7; i++) {
-    const info = workLocationMap.get(formatHdayDate(monday.add(i, "day")));
+    const info = workLocationMap.get(monday.add(i, "day").format("YYYY-MM-DD"));
     if (info) {
       counts[info.location]++;
     }
@@ -64,10 +64,10 @@ export function getLocationCountsInWeek(
  * keyed by (location, countryCode, label) for use in annual tax reporting.
  * Returns entries sorted by count descending.
  *
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
+ * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
  * @returns Array of grouped entries with day counts, sorted by days descending
  */
-export function aggregateLocationsByYear(
+export function aggregateLocationCounts(
   workLocationMap: WorkLocationMap,
 ): Array<{ location: WorkLocation; countryCode: string; label?: string; days: number }> {
   const counts = new Map<

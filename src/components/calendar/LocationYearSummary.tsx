@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import { useToast } from "../../contexts/ToastContext";
-import { aggregateLocationsByYear } from "../../utils/workLocationUtils";
+import { aggregateLocationCounts } from "../../utils/workLocationUtils";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
 
 interface LocationYearSummaryProps {
@@ -32,7 +32,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   const toast = useToast();
 
   // Filter the map to only the requested year
-  const yearPrefix = `${year}/`;
+  const yearPrefix = `${year}-`;
   const yearMap: WorkLocationMap = useMemo(() => {
     const filtered: WorkLocationMap = new Map();
     for (const [key, value] of workLocationMap.entries()) {
@@ -43,7 +43,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
     return filtered;
   }, [workLocationMap, yearPrefix]);
 
-  const rows = useMemo(() => aggregateLocationsByYear(yearMap), [yearMap]);
+  const rows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
 
   const handleCopy = () => {
     const header = `Work Location Summary — ${year}`;
@@ -66,9 +66,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
 
   if (rows.length === 0) {
     return (
-      <div className="text-muted small fst-italic py-2">
-        No work locations recorded for {year}.
-      </div>
+      <div className="text-muted small fst-italic py-2">No work locations recorded for {year}.</div>
     );
   }
 
@@ -93,8 +91,8 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
+          {rows.map((row) => (
+            <tr key={`${row.location}-${row.countryCode}-${row.label ?? ""}`}>
               <td>
                 <i className={`bi ${LOCATION_ICON[row.location]} me-1`} aria-hidden="true"></i>
                 {LOCATION_LABEL[row.location]}

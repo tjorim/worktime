@@ -6,19 +6,11 @@ import { OtherLocationModal } from "../../src/components/calendar/OtherLocationM
 
 const DATE = dayjs("2026-02-18");
 
-function renderModal(
-  props: Partial<React.ComponentProps<typeof OtherLocationModal>> = {},
-) {
+function renderModal(props: Partial<React.ComponentProps<typeof OtherLocationModal>> = {}) {
   const onHide = vi.fn();
   const onConfirm = vi.fn();
   render(
-    <OtherLocationModal
-      show={true}
-      date={DATE}
-      onHide={onHide}
-      onConfirm={onConfirm}
-      {...props}
-    />,
+    <OtherLocationModal show={true} date={DATE} onHide={onHide} onConfirm={onConfirm} {...props} />,
   );
   return { onHide, onConfirm };
 }
@@ -26,9 +18,7 @@ function renderModal(
 describe("OtherLocationModal", () => {
   it("renders the modal title with the formatted date", () => {
     renderModal();
-    expect(
-      screen.getByText(/Other Location — Wednesday, 18 Feb 2026/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Other Location — Wednesday, 18 Feb 2026/)).toBeInTheDocument();
   });
 
   it("renders the country code and label form fields", () => {
@@ -72,21 +62,24 @@ describe("OtherLocationModal", () => {
     fireEvent.change(screen.getByPlaceholderText("e.g. Berlin office, Client visit"), {
       target: { value: "Berlin office" },
     });
-    fireEvent.submit(document.querySelector("form")!);
+    const confirmButton = screen.getByRole("button", { name: /save/i });
+    fireEvent.click(confirmButton);
     expect(onConfirm).toHaveBeenCalledWith("DE", "Berlin office");
   });
 
   it("calls onConfirm with undefined label when label is empty", () => {
     const { onConfirm } = renderModal();
     fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "FR" } });
-    fireEvent.submit(document.querySelector("form")!);
+    const confirmButton = screen.getByRole("button", { name: /save/i });
+    fireEvent.click(confirmButton);
     expect(onConfirm).toHaveBeenCalledWith("FR", undefined);
   });
 
   it("does not call onConfirm when country code is invalid on submit", () => {
     const { onConfirm } = renderModal();
     fireEvent.change(screen.getByLabelText("Country Code"), { target: { value: "D" } });
-    fireEvent.submit(document.querySelector("form")!);
+    const confirmButton = screen.getByRole("button", { name: /save/i });
+    fireEvent.click(confirmButton);
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
@@ -95,9 +88,7 @@ describe("OtherLocationModal", () => {
     const input = screen.getByLabelText("Country Code");
     fireEvent.change(input, { target: { value: "D" } });
     fireEvent.blur(input);
-    expect(
-      screen.getByText(/Enter a valid 2-letter ISO country code/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Enter a valid 2-letter ISO country code/)).toBeInTheDocument();
   });
 
   it("calls onHide when Cancel button is clicked", () => {

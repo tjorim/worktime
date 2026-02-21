@@ -29,22 +29,22 @@ const mockedUseSchoolHolidays = vi.mocked(useSchoolHolidays);
 const createTestFixtures = () => {
   // Public holidays fixture - New Year's Day
   const publicHolidayMap = new Map<string, PublicHolidayInfo>([
-    ["2025/01/01", { name: "New Year's Day", localName: "Nieuwjaarsdag" }],
-    ["2025/12/25", { name: "Christmas Day", localName: "Kerstmis" }],
-    ["2025/12/26", { name: "Boxing Day", localName: "Tweede Kerstdag" }],
+    ["2025-01-01", { name: "New Year's Day", localName: "Nieuwjaarsdag" }],
+    ["2025-12-25", { name: "Christmas Day", localName: "Kerstmis" }],
+    ["2025-12-26", { name: "Boxing Day", localName: "Tweede Kerstdag" }],
   ]);
 
   // School holidays fixture - Winter break
   const schoolHolidayMap = new Map<string, SchoolHolidayInfo>([
-    ["2025/01/06", { name: "Winter Holiday", localName: "Wintervakantie" }],
-    ["2025/01/07", { name: "Winter Holiday", localName: "Wintervakantie" }],
-    ["2025/01/08", { name: "Winter Holiday", localName: "Wintervakantie" }],
+    ["2025-01-06", { name: "Winter Holiday", localName: "Wintervakantie" }],
+    ["2025-01-07", { name: "Winter Holiday", localName: "Wintervakantie" }],
+    ["2025-01-08", { name: "Winter Holiday", localName: "Wintervakantie" }],
   ]);
 
   // Payday fixture - 25th or nearest business day
   const paydayMap = new Map<string, PaydayInfo>([
-    ["2025/01/24", { name: "Payday" }],
-    ["2025/02/25", { name: "Payday" }],
+    ["2025-01-24", { name: "Payday" }],
+    ["2025-02-25", { name: "Payday" }],
   ]);
 
   // Time-off events fixture
@@ -61,8 +61,8 @@ const createTestFixtures = () => {
       type: "weekly",
       weekday: 5, // Friday
       title: "Remote Work",
-      flags: ["office"],
-      raw: "d5i # Remote Work",
+      flags: ["in"],
+      raw: "d5k # Remote Work",
     },
   ];
 
@@ -144,13 +144,13 @@ describe("CalendarView Integration Tests", () => {
     // Set default mock return values
     mockedUsePublicHolidays.mockReturnValue({
       publicHolidayMap: new Map(),
-      isLoading: false,
+      loading: false,
       error: null,
     });
 
     mockedUseSchoolHolidays.mockReturnValue({
       schoolHolidayMap: new Map(),
-      isLoading: false,
+      loading: false,
       error: null,
     });
   });
@@ -166,13 +166,13 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUsePublicHolidays.mockReturnValue({
         publicHolidayMap: fixtures.publicHolidayMap,
-        isLoading: false,
+        loading: false,
         error: null,
       });
 
       mockedUseSchoolHolidays.mockReturnValue({
         schoolHolidayMap: fixtures.schoolHolidayMap,
-        isLoading: false,
+        loading: false,
         error: null,
       });
 
@@ -189,13 +189,13 @@ describe("CalendarView Integration Tests", () => {
       const shiftBadges = screen.getAllByText(/^[MLNDO]$/);
       expect(shiftBadges.length).toBeGreaterThan(0);
 
-      // Verify public holiday indicator appears
-      const holidayEmojis = screen.getAllByText("🎉");
-      expect(holidayEmojis.length).toBeGreaterThan(0);
+      // Verify public holiday is exposed through day-cell accessible name
+      const holidayCell = screen.getByRole("gridcell", { name: /New Year's Day/i });
+      expect(holidayCell).toBeInTheDocument();
 
-      // Verify payday indicator appears
-      const paydayEmojis = screen.getAllByText("💶");
-      expect(paydayEmojis.length).toBeGreaterThan(0);
+      // Verify payday is exposed through day-cell accessible name
+      const paydayCell = screen.getByRole("gridcell", { name: /Payday/i });
+      expect(paydayCell).toBeInTheDocument();
     });
 
     it("renders day cells with time-off events when enabled", () => {
@@ -205,7 +205,7 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUsePublicHolidays.mockReturnValue({
         publicHolidayMap: fixtures.publicHolidayMap,
-        isLoading: false,
+        loading: false,
         error: null,
       });
 
@@ -215,8 +215,10 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events are rendered (may appear multiple times across date range)
-      expect(screen.getAllByText("Vacation").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Remote Work").length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /View Remote Work/i }).length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("combines school holidays with roster shifts", () => {
@@ -225,7 +227,7 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUseSchoolHolidays.mockReturnValue({
         schoolHolidayMap: fixtures.schoolHolidayMap,
-        isLoading: false,
+        loading: false,
         error: null,
       });
 
@@ -234,9 +236,11 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      // Verify school holiday indicator appears
-      const schoolEmojis = screen.getAllByText("🏫");
-      expect(schoolEmojis.length).toBeGreaterThan(0);
+      // Verify school holiday is exposed through day-cell accessible name
+      const schoolHolidayCells = screen.getAllByRole("gridcell", {
+        name: /School Holiday: Winter Holiday/i,
+      });
+      expect(schoolHolidayCells.length).toBeGreaterThan(0);
     });
 
     it("displays all data sources on a single day when overlapping", () => {
@@ -258,7 +262,7 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUseSchoolHolidays.mockReturnValue({
         schoolHolidayMap: fixtures.schoolHolidayMap,
-        isLoading: false,
+        loading: false,
         error: null,
       });
 
@@ -268,8 +272,10 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify both school holiday and time-off event appear (school holiday appears multiple days)
-      expect(screen.getAllByText("🏫").length).toBeGreaterThan(0);
-      expect(screen.getByText("Personal Day")).toBeInTheDocument();
+      expect(
+        screen.getAllByRole("gridcell", { name: /School Holiday: Winter Holiday/i }).length,
+      ).toBeGreaterThan(0);
+      expect(screen.getByRole("button", { name: /View Personal Day/i })).toBeInTheDocument();
     });
   });
 
@@ -313,7 +319,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence since it spans multiple days)
-      const vacationBadges = screen.getAllByText("Vacation");
+      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
       expect(vacationBadges.length).toBeGreaterThan(0);
       const vacationBadge = vacationBadges[0];
 
@@ -343,7 +349,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence)
-      const vacationBadges = screen.getAllByText("Vacation");
+      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
       const vacationBadge = vacationBadges[0];
 
       // Right-click the event using fireEvent
@@ -465,8 +471,8 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events are NOT displayed
-      expect(screen.queryByText("Vacation")).not.toBeInTheDocument();
-      expect(screen.queryByText("Remote Work")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /View Vacation/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /View Remote Work/i })).not.toBeInTheDocument();
     });
 
     it("shows time-off events when feature is enabled", () => {
@@ -480,8 +486,10 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events ARE displayed (may appear multiple times)
-      expect(screen.getAllByText("Vacation").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Remote Work").length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /View Remote Work/i }).length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("does not show event modal when time-off is disabled", () => {
@@ -590,7 +598,7 @@ describe("CalendarView Integration Tests", () => {
 
       // Verify modal closes and event is added
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByText("Doctor Appointment")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /View Doctor Appointment/i })).toBeInTheDocument();
     });
 
     it("validates date input when adding events", async () => {
@@ -622,7 +630,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Click on an event to view it (get first occurrence) using fireEvent
-      const vacationBadges = screen.getAllByText("Vacation");
+      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
       const vacationBadge = vacationBadges[0];
       fireEvent.click(vacationBadge);
 
@@ -651,7 +659,7 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      const vacationBadge = screen.getAllByText("Vacation")[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
       fireEvent.click(vacationBadge);
 
       const modal = screen.getByRole("dialog");
@@ -678,7 +686,7 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      const vacationBadge = screen.getAllByText("Vacation")[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
       fireEvent.click(vacationBadge);
 
       const modal = screen.getByRole("dialog");
@@ -711,7 +719,7 @@ describe("CalendarView Integration Tests", () => {
      * Helper function to open the delete confirmation dialog for the first vacation event.
      */
     const openDeleteConfirmationForVacation = () => {
-      const vacationBadge = screen.getAllByText("Vacation")[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
       fireEvent.contextMenu(vacationBadge);
       fireEvent.click(screen.getByText("Delete event"));
     };
@@ -741,7 +749,7 @@ describe("CalendarView Integration Tests", () => {
       fireEvent.click(cancelButton);
 
       // Verify event still exists
-      expect(screen.getAllByText("Vacation").length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
     });
 
     it("deletes event when user confirms", async () => {
@@ -752,7 +760,7 @@ describe("CalendarView Integration Tests", () => {
       fireEvent.click(deleteButton);
 
       // Verify event is removed
-      expect(screen.queryByText("Vacation")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /View Vacation/i })).not.toBeInTheDocument();
     });
   });
 });

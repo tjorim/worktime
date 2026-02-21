@@ -204,7 +204,11 @@ export function TimeTrackingWeeklyView({
             description="Start tracking your time in the Daily Log to see your weekly breakdown here."
             ctaButton={
               onSwitchToDaily
-                ? { label: "Go to Daily Log", onClick: () => onSwitchToDaily(todayIso), icon: "bi-plus-circle" }
+                ? {
+                    label: "Go to Daily Log",
+                    onClick: () => onSwitchToDaily(todayIso),
+                    icon: "bi-plus-circle",
+                  }
                 : undefined
             }
           />
@@ -348,8 +352,11 @@ export function TimeTrackingWeeklyView({
                         </div>
                         {location && (
                           <div className="text-muted mt-1" style={{ fontSize: "0.65rem" }}>
-                            <i className={`bi ${LOCATION_ICON[location.location]}`} aria-hidden="true" />
-                            {" "}{location.countryCode}
+                            <i
+                              className={`bi ${LOCATION_ICON[location.location]}`}
+                              aria-hidden="true"
+                            />{" "}
+                            {location.countryCode}
                           </div>
                         )}
                       </div>
@@ -390,6 +397,18 @@ export function TimeTrackingWeeklyView({
                         onClick={() => onSwitchToDaily?.(day.iso)}
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                         title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
+                        role={onSwitchToDaily ? "button" : undefined}
+                        tabIndex={onSwitchToDaily ? 0 : undefined}
+                        onKeyDown={
+                          onSwitchToDaily
+                            ? (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  if (e.key === " ") e.preventDefault();
+                                  onSwitchToDaily?.(day.iso);
+                                }
+                              }
+                            : undefined
+                        }
                       >
                         <th scope="row">
                           {day.label}
@@ -399,9 +418,15 @@ export function TimeTrackingWeeklyView({
                             </Badge>
                           )}
                           {location && (
-                            <span className="ms-2 text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
-                              <i className={`bi ${LOCATION_ICON[location.location]}`} aria-hidden="true" />
-                              {" "}{location.countryCode}
+                            <span
+                              className="ms-2 text-muted fw-normal"
+                              style={{ fontSize: "0.75rem" }}
+                            >
+                              <i
+                                className={`bi ${LOCATION_ICON[location.location]}`}
+                                aria-hidden="true"
+                              />{" "}
+                              {location.countryCode}
                             </span>
                           )}
                         </th>

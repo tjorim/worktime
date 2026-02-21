@@ -169,7 +169,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
     >
       {items.map((item, index) =>
         item.separator ? (
-          <hr key={`${menuId}-sep-${index}`} className="context-menu-separator" />
+          <hr key={`${menuId}-sep-${index}`} className="context-menu-separator" role="separator" />
         ) : (
           <button
             key={`${menuId}-item-${index}`}
@@ -178,7 +178,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
             className={clsx("context-menu-item", item.variant === "danger" && "danger")}
             onClick={() => handleItemClick(item)}
             disabled={item.disabled}
-            aria-label={item.label}
+            {...(!item.label && item.icon ? { "aria-label": item.label } : {})}
           >
             {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
             {item.label}

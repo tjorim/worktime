@@ -2,13 +2,13 @@ import { useCallback, useMemo } from "react";
 
 import { useSettings } from "../contexts/SettingsContext";
 import { isValidIsoAlpha2 } from "../types/countries";
-import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
+import { dayjs } from "../utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
 
 /**
  * Raw storage shape persisted to localStorage.
- * Keys are date strings in YYYY/MM/DD format; values are WorkLocationInfo objects.
+ * Keys are date strings in YYYY-MM-DD format; values are WorkLocationInfo objects.
  */
 type StoredWorkLocations = Record<string, WorkLocationInfo>;
 
@@ -30,7 +30,7 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
  * setLocationForDate(dayjs(), "home");
  *
  * // Query a specific date (falls back to office default when not set)
- * const info = getLocationForDate("2026/02/20"); // { location: "office", countryCode: "NL" }
+ * const info = getLocationForDate("2026-02-20"); // { location: "office", countryCode: "NL" }
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
@@ -76,7 +76,7 @@ export function useWorkLocationStorage(year: number) {
    */
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
-      const key = formatHdayDate(date);
+      const key = dayjs(date).format("YYYY-MM-DD");
       const stored = workLocationMap.get(key);
       if (stored) {
         return stored;
@@ -131,11 +131,11 @@ export function useWorkLocationStorage(year: number) {
       }
 
       const d = dayjs(date);
-      const key = formatHdayDate(d);
+      const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
       const entry: WorkLocationInfo = {
         location,
-        countryCode,
+        countryCode: countryCode as `${Uppercase<string>}${Uppercase<string>}`,
         ...(extra?.label ? { label: extra.label } : {}),
       };
 
@@ -169,7 +169,7 @@ export function useWorkLocationStorage(year: number) {
   const clearLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string) => {
       const d = dayjs(date);
-      const key = formatHdayDate(d);
+      const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
 
       const removeKey = (prev: StoredWorkLocations) => {

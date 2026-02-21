@@ -137,8 +137,11 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
         onHide={() => setShowOtherModal(false)}
         onConfirm={(countryCode, label) => {
           const ok = setLocationForDate(dayjsDate, "other", { countryCode, label });
-          if (!ok) toast.showError("Could not save location — check the country code");
-          setShowOtherModal(false);
+          if (ok) {
+            setShowOtherModal(false);
+          } else {
+            toast.showError("Could not save location — check the country code");
+          }
         }}
       />
     </>
@@ -155,7 +158,8 @@ function formatDuration(totalSeconds: number) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TimeTrackingDailyView({ // oxlint-disable-line max-lines-per-function
+export function TimeTrackingDailyView({
+  // oxlint-disable-line max-lines-per-function
   tasks,
   labels,
   templates = [],

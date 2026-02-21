@@ -1,3 +1,7 @@
+/**
+ * Branded type for validated ISO 3166-1 alpha-2 codes
+ */
+export type IsoAlpha2 = string & { readonly __isoAlpha2: unique symbol };
 const countries = [
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
@@ -42,6 +46,6 @@ export function isValidCountryCode(value: unknown): value is CountryCode {
  * Use this to validate free-text country codes for "other" work locations,
  * which may not be in the curated SUPPORTED_COUNTRIES list.
  */
-export function isValidIsoAlpha2(value: unknown): value is string {
+export function isValidIsoAlpha2(value: unknown): value is IsoAlpha2 {
   return typeof value === "string" && /^[A-Z]{2}$/.test(value);
 }

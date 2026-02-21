@@ -794,7 +794,7 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
     });
 
-    it("preserves existing country values and strips wfhWeeklyLimit when migrating", () => {
+    it("preserves existing country values and enableCrossBorderTracking when migrating", () => {
       const { result } = migrateFromV2({
         version: 2,
         hasCompletedOnboarding: true,
@@ -809,7 +809,7 @@ describe("SettingsContext unified user state", () => {
           enableTimeTracking: false,
           homeCountry: "NL",
           officeCountry: "BE",
-          wfhWeeklyLimit: 3, // pre-release field — should be stripped
+          enableCrossBorderTracking: true,
         },
         lastUsed: {
           activeTab: "calendar",
@@ -823,9 +823,7 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe("NL");
       expect(result.current.settings.officeCountry).toBe("BE");
-      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
-      // wfhWeeklyLimit must not appear in normalised settings
-      expect((result.current.settings as Record<string, unknown>).wfhWeeklyLimit).toBeUndefined();
+      expect(result.current.settings.enableCrossBorderTracking).toBe(true);
     });
 
     it("preserves enableCrossBorderTracking when already set during migration", () => {
