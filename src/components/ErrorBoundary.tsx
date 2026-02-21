@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <Container className="mt-4">
           <Card>
-            <Card.Header className="bg-danger text-white fw-semibold">
+            <Card.Header className="text-bg-danger fw-semibold">
               <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
               Something went wrong
             </Card.Header>
@@ -67,8 +67,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Alert variant="danger">
                 <Alert.Heading>Application Error</Alert.Heading>
                 <p>
-                  We're sorry, but something unexpected happened. Please try refreshing the page or
-                  contact support if the problem persists.
+                  We're sorry, but something unexpected happened. Click{" "}
+                  <strong>Try Again</strong> first; if the error persists, use{" "}
+                  <strong>Reload Page</strong>. Contact support if the problem persists.
                 </p>
                 <hr />
                 <div className="d-flex gap-2">
@@ -91,11 +92,15 @@ export class ErrorBoundary extends Component<Props, State> {
                       <summary className="text-danger fw-bold mb-2">
                         {this.state.error.name}: {this.state.error.message}
                       </summary>
-                      <pre className="small text-muted">{this.state.error.stack}</pre>
+                      <pre className="small text-muted error-stack-trace">
+                        {this.state.error.stack}
+                      </pre>
                       {this.state.errorInfo && (
                         <div className="mt-2">
                           <strong>Component Stack:</strong>
-                          <pre className="small text-muted">
+                          <pre
+                            className="small text-muted error-stack-trace"
+                          >
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </div>

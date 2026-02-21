@@ -63,6 +63,9 @@
   /* --- Application Theme --- */
   --wt-primary-color: #0d6efd;
 
+  /* --- Error Boundary --- */
+  --wt-error-stack-max-height: 300px;
+
   /* --- Time Tracking --- */
   /* Default label color for unlabeled tasks - matches Bootstrap's $gray-600/text-muted */
   --wt-label-default: #6c757d;
@@ -75,6 +78,8 @@
   --wt-team-cal-weekend: #d6d8db;
   --wt-team-cal-available: #b3e5ec;
   --wt-team-cal-weekend-cell: #e0e0e0;
+  --wt-team-cal-today-ring: var(--bs-warning);
+  --wt-navbar-height: 60px;
 }
 
 /* ============================================================================
@@ -148,6 +153,7 @@
   --wt-team-cal-weekend: #3a3f44;
   --wt-team-cal-available: #004d5c;
   --wt-team-cal-weekend-cell: #383838;
+  --wt-team-cal-today-ring: #ffda6a;
 
   /* ==========================================================================
      BOOTSTRAP VARIABLE OVERRIDES (Dark Mode)
