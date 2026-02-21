@@ -407,10 +407,7 @@ export function SettingsPanel({
                       step={1}
                       value={settings.wfhWeeklyLimit}
                       onChange={(event) => {
-                        const value = parseInt(event.target.value, 10);
-                        if (!isNaN(value) && value >= 0 && value <= MAX_WFH_DAYS_PER_WEEK) {
-                          updateWfhWeeklyLimit(value);
-                        }
+                        updateWfhWeeklyLimit(parseInt(event.target.value, 10));
                       }}
                       style={{ width: "5rem" }}
                       aria-label="WFH weekly limit"

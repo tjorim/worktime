@@ -149,7 +149,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 4,
+      version: 3,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -768,7 +768,7 @@ describe("SettingsContext unified user state", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
-          version: 3,
+          version: 2,
           hasCompletedOnboarding: false,
           myTeam: null,
           scheduleType: null,
@@ -811,8 +811,8 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
-  describe("v2 to v3 migration (country preferences)", () => {
-    it("adds homeCountry and officeCountry as null when upgrading from v2", () => {
+  describe("v2 to v3 migration (country + WFH preferences)", () => {
+    it("adds homeCountry/officeCountry defaults and wfhWeeklyLimit when upgrading from v2", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
@@ -843,13 +843,14 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe(null);
       expect(result.current.settings.officeCountry).toBe(null);
+      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
       // Existing settings should be preserved
       expect(result.current.myTeam).toBe(1);
       expect(result.current.scheduleType).toBe("5-shift");
       expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
     });
 
-    it("preserves existing country values when already present during v2→v3 migration", () => {
+    it("preserves existing country and wfh values when already present during v2→v3 migration", () => {
       // Simulate a developer/test scenario where country data exists before v3
       window.localStorage.setItem(
         "worktime_user_state",
@@ -867,6 +868,7 @@ describe("SettingsContext unified user state", () => {
             enableTimeTracking: false,
             homeCountry: "NL",
             officeCountry: "BE",
+            wfhWeeklyLimit: 0,
           },
           lastUsed: {
             activeTab: "calendar",
@@ -883,16 +885,17 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe("NL");
       expect(result.current.settings.officeCountry).toBe("BE");
+      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
     });
   });
 
 
-  describe("v3 to v4 migration (WFH weekly limit)", () => {
-    it("adds wfhWeeklyLimit default when upgrading from v3", () => {
+  describe("v2 to v3 migration sanitizes WFH weekly limit", () => {
+    it("adds wfhWeeklyLimit default when upgrading from v2", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
-          version: 3,
+          version: 2,
           hasCompletedOnboarding: true,
           myTeam: 2,
           scheduleType: "5-shift",
@@ -924,11 +927,11 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.scheduleType).toBe("5-shift");
     });
 
-    it("preserves existing wfhWeeklyLimit when present in v3 state", () => {
+    it("preserves existing wfhWeeklyLimit when present in v2 state", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
-          version: 3,
+          version: 2,
           hasCompletedOnboarding: true,
           myTeam: 1,
           scheduleType: "9-5",
@@ -959,11 +962,11 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.wfhWeeklyLimit).toBe(0);
     });
 
-    it("caps stored wfhWeeklyLimit above 7 when upgrading from v3", () => {
+    it("caps stored wfhWeeklyLimit above 7 when upgrading from v2", () => {
       window.localStorage.setItem(
         "worktime_user_state",
         JSON.stringify({
-          version: 3,
+          version: 2,
           hasCompletedOnboarding: true,
           myTeam: 1,
           scheduleType: "9-5",

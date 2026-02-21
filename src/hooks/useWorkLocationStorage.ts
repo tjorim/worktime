@@ -78,8 +78,7 @@ export function useWorkLocationStorage(year: number) {
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
       const key = formatHdayDate(date);
-      const stored =
-        nextYearLocations[key] ?? storedLocations[key] ?? prevYearLocations[key];
+      const stored = workLocationMap.get(key);
       if (stored) {
         return stored;
       }
@@ -91,7 +90,7 @@ export function useWorkLocationStorage(year: number) {
 
       return null;
     },
-    [storedLocations, prevYearLocations, nextYearLocations, officeCountry],
+    [workLocationMap, officeCountry],
   );
 
   /**
