@@ -33,6 +33,8 @@ export function useLocalStorage<T>(
   const latestValueRef = useRef(storedValue);
   latestValueRef.current = storedValue;
   const didMountRef = useRef(false);
+  const initialValueRef = useRef(initialValue);
+  initialValueRef.current = initialValue;
 
   // Re-read localStorage when the key changes after initial mount
   useEffect(() => {
@@ -45,14 +47,19 @@ export function useLocalStorage<T>(
 
     try {
       const item = window.localStorage.getItem(key);
-      const nextValue = item ? JSON.parse(item) : initialValue;
+      const nextValue = item ? JSON.parse(item) : initialValueRef.current;
       latestValueRef.current = nextValue;
       setStoredValue(nextValue);
     } catch {
-      latestValueRef.current = initialValue;
-      setStoredValue(initialValue);
+      latestValueRef.current = initialValueRef.current;
+      setStoredValue(initialValueRef.current);
     }
-  }, [initialValue, key, setStoredValue, latestValueRef]);
+  }, [
+    key,
+    setStoredValue,
+    latestValueRef,
+    // intentionally excludes initialValue to prevent spurious re-reads
+  ]);
 
   // Listen for changes to this key in other tabs
   useEffect(() => {
