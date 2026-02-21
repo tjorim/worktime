@@ -32,9 +32,30 @@ export function useLocalStorage<T>(
   // This prevents stale closure issues when batching updates
   const latestValueRef = useRef(storedValue);
   latestValueRef.current = storedValue;
+  const keyRef = useRef(key);
   const didMountRef = useRef(false);
   const initialValueRef = useRef(initialValue);
   initialValueRef.current = initialValue;
+
+  const readValueForKey = (storageKey: string): T => {
+    if (typeof window === "undefined") {
+      return initialValueRef.current;
+    }
+
+    try {
+      const item = window.localStorage.getItem(storageKey);
+      return item ? JSON.parse(item) : initialValueRef.current;
+    } catch {
+      return initialValueRef.current;
+    }
+  };
+
+  // Keep ref in sync during render so functional updates don't use stale data
+  // if key changes before this hook's key-change effect runs.
+  if (keyRef.current !== key) {
+    keyRef.current = key;
+    latestValueRef.current = readValueForKey(key);
+  }
 
   // Re-read localStorage when the key changes after initial mount
   useEffect(() => {
@@ -45,15 +66,9 @@ export function useLocalStorage<T>(
       return;
     }
 
-    try {
-      const item = window.localStorage.getItem(key);
-      const nextValue = item ? JSON.parse(item) : initialValueRef.current;
-      latestValueRef.current = nextValue;
-      setStoredValue(nextValue);
-    } catch {
-      latestValueRef.current = initialValueRef.current;
-      setStoredValue(initialValueRef.current);
-    }
+    const nextValue = readValueForKey(key);
+    latestValueRef.current = nextValue;
+    setStoredValue(nextValue);
   }, [
     key,
     setStoredValue,
