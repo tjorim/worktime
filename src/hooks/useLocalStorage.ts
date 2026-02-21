@@ -32,6 +32,27 @@ export function useLocalStorage<T>(
   // This prevents stale closure issues when batching updates
   const latestValueRef = useRef(storedValue);
   latestValueRef.current = storedValue;
+  const didMountRef = useRef(false);
+
+  // Re-read localStorage when the key changes after initial mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    try {
+      const item = window.localStorage.getItem(key);
+      const nextValue = item ? JSON.parse(item) : initialValue;
+      latestValueRef.current = nextValue;
+      setStoredValue(nextValue);
+    } catch {
+      latestValueRef.current = initialValue;
+      setStoredValue(initialValue);
+    }
+  }, [initialValue, key, setStoredValue, latestValueRef]);
 
   // Listen for changes to this key in other tabs
   useEffect(() => {

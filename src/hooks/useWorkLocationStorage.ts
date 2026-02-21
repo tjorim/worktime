@@ -59,9 +59,7 @@ export function useWorkLocationStorage(year: number) {
    */
   const workLocationMap: WorkLocationMap = useMemo(
     () =>
-      new Map(
-        Object.entries({ ...prevYearLocations, ...storedLocations, ...nextYearLocations }),
-      ),
+      new Map(Object.entries({ ...prevYearLocations, ...storedLocations, ...nextYearLocations })),
     [prevYearLocations, storedLocations, nextYearLocations],
   );
 
@@ -102,8 +100,10 @@ export function useWorkLocationStorage(year: number) {
    *
    * @param date - The date to set (YYYY/MM/DD string, Date, or Dayjs)
    * @param location - The work location ("home" or "office")
-   * @returns `true` when the location was stored, `false` when the relevant country
-   *   setting (homeCountry or officeCountry) is not configured
+   * @returns `true` when the location was stored. Returns `false` when the relevant
+   *   country setting (homeCountry or officeCountry) is not configured, or when the
+   *   date year is outside the allowed {year-1, year, year+1} range (which also logs
+   *   a warning). Callers can inspect logs to distinguish the failure mode.
    */
   const setLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string, location: WorkLocation): boolean => {

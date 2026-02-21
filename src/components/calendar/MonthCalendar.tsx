@@ -346,11 +346,13 @@ export function MonthCalendar({
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         const date = contextMenu.date;
         const dayKey = formatHdayDate(date);
+        const currentLocation = workLocationMap?.get(dayKey)?.location;
         const hasStoredLocation = !!workLocationMap?.get(dayKey);
         if (showHomeLocationAction) {
           items.push({
             label: "Work from Home",
             icon: "bi-house",
+            disabled: currentLocation === "home",
             onClick: () => {
               handleCloseContextMenu();
               onSetWorkLocation(date, "home");
@@ -361,6 +363,7 @@ export function MonthCalendar({
           items.push({
             label: "Work from Office",
             icon: "bi-building",
+            disabled: currentLocation === "office",
             onClick: () => {
               handleCloseContextMenu();
               onSetWorkLocation(date, "office");

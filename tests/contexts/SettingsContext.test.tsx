@@ -206,7 +206,6 @@ describe("SettingsContext unified user state", () => {
     expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
   });
 
-
   describe("WFH weekly limit settings", () => {
     it("persists sanitized WFH weekly limit updates to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
@@ -812,187 +811,101 @@ describe("SettingsContext unified user state", () => {
   });
 
   describe("v2 to v3 migration (country + WFH preferences)", () => {
-    it("adds homeCountry/officeCountry defaults and wfhWeeklyLimit when upgrading from v2", () => {
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: 1,
-          scheduleType: "5-shift",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
+    const migrateFromV2 = (state: Record<string, unknown>) => {
+      window.localStorage.setItem("worktime_user_state", JSON.stringify(state));
+      return renderHook(() => useSettings(), { wrapper });
+    };
 
-      const { result } = renderHook(() => useSettings(), { wrapper });
+    it("adds defaults and preserves existing values", () => {
+      const { result } = migrateFromV2({
+        version: 2,
+        hasCompletedOnboarding: true,
+        myTeam: 1,
+        scheduleType: "5-shift",
+        settings: {
+          timeFormat: "24h",
+          theme: "auto",
+          notifications: "off",
+          vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: true,
+          enableTimeTracking: false,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
+        },
+      });
 
       expect(result.current.settings.homeCountry).toBe(null);
       expect(result.current.settings.officeCountry).toBe(null);
       expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-      // Existing settings should be preserved
       expect(result.current.myTeam).toBe(1);
       expect(result.current.scheduleType).toBe("5-shift");
       expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
     });
 
-    it("preserves existing country and wfh values when already present during v2→v3 migration", () => {
-      // Simulate a developer/test scenario where country data exists before v3
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: 2,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "off",
-            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: false,
-            enableTimeTracking: false,
-            homeCountry: "NL",
-            officeCountry: "BE",
-            wfhWeeklyLimit: 0,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
+    it("preserves existing values when already present during v2→v3 migration", () => {
+      const { result } = migrateFromV2({
+        version: 2,
+        hasCompletedOnboarding: true,
+        myTeam: 2,
+        scheduleType: "9-5",
+        settings: {
+          timeFormat: "12h",
+          theme: "dark",
+          notifications: "off",
+          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: false,
+          enableTimeTracking: false,
+          homeCountry: "NL",
+          officeCountry: "BE",
+          wfhWeeklyLimit: 0,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
+        },
+      });
 
       expect(result.current.settings.homeCountry).toBe("NL");
       expect(result.current.settings.officeCountry).toBe("BE");
       expect(result.current.settings.wfhWeeklyLimit).toBe(0);
     });
-  });
 
-
-  describe("v2 to v3 migration sanitizes WFH weekly limit", () => {
-    it("adds wfhWeeklyLimit default when upgrading from v2", () => {
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: 2,
-          scheduleType: "5-shift",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-            homeCountry: null,
-            officeCountry: null,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-      expect(result.current.myTeam).toBe(2);
-      expect(result.current.scheduleType).toBe("5-shift");
-    });
-
-    it("preserves existing wfhWeeklyLimit when present in v2 state", () => {
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: 1,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "on",
-            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: false,
-            enableTimeTracking: false,
-            homeCountry: "NL",
-            officeCountry: "BE",
-            wfhWeeklyLimit: 0,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
-    });
-
-    it("caps stored wfhWeeklyLimit above 7 when upgrading from v2", () => {
-      window.localStorage.setItem(
-        "worktime_user_state",
-        JSON.stringify({
-          version: 2,
-          hasCompletedOnboarding: true,
-          myTeam: 1,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "on",
-            vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: false,
-            enableTimeTracking: false,
-            homeCountry: "NL",
-            officeCountry: "BE",
-            wfhWeeklyLimit: 12,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
+    it("sanitizes WFH weekly limit when present", () => {
+      const { result } = migrateFromV2({
+        version: 2,
+        hasCompletedOnboarding: true,
+        myTeam: 1,
+        scheduleType: "9-5",
+        settings: {
+          timeFormat: "12h",
+          theme: "dark",
+          notifications: "on",
+          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
+          enableTimeOff: false,
+          enableTimeTracking: false,
+          homeCountry: "NL",
+          officeCountry: "BE",
+          wfhWeeklyLimit: 12,
+        },
+        lastUsed: {
+          activeTab: "calendar",
+          scheduleView: "today",
+          otherSchedule: null,
+          timeOffView: "table",
+          timeTrackingView: "daily",
+          otherTeam: null,
+        },
+      });
 
       expect(result.current.settings.wfhWeeklyLimit).toBe(7);
     });

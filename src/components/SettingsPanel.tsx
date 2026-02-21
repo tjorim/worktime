@@ -11,7 +11,7 @@ import { useToast } from "../contexts/ToastContext";
 import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../types/countries";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import { CONFIG, MAX_WFH_DAYS_PER_WEEK } from "../utils/config";
+import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
 import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
@@ -403,7 +403,7 @@ export function SettingsPanel({
                       type="number"
                       size="sm"
                       min={0}
-                      max={MAX_WFH_DAYS_PER_WEEK}
+                      max={CONFIG.MAX_WFH_DAYS_PER_WEEK}
                       step={1}
                       value={settings.wfhWeeklyLimit}
                       onChange={(event) => {
