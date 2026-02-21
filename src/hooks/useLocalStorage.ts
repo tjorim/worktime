@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Synchronises a React state value with window.localStorage.
@@ -32,7 +34,6 @@ export function useLocalStorage<T>(
   // This prevents stale closure issues when batching updates
   const latestValueRef = useRef(storedValue);
   latestValueRef.current = storedValue;
-  const keyRef = useRef(key);
   const didMountRef = useRef(false);
   const initialValueRef = useRef(initialValue);
   initialValueRef.current = initialValue;
@@ -50,15 +51,9 @@ export function useLocalStorage<T>(
     }
   };
 
-  // Keep ref in sync during render so functional updates don't use stale data
-  // if key changes before this hook's key-change effect runs.
-  if (keyRef.current !== key) {
-    keyRef.current = key;
-    latestValueRef.current = readValueForKey(key);
-  }
-
-  // Re-read localStorage when the key changes after initial mount
-  useEffect(() => {
+  // Re-read localStorage when the key changes after initial mount.
+  // Layout effect prevents interactive gaps where functional updates could use stale ref data.
+  useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
 
     if (!didMountRef.current) {
