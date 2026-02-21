@@ -14,9 +14,52 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: "4.7.0",
+    date: "2026-02-21",
+    status: "current",
+    added: [
+      "Cross-Border Work Tracking: Configure home and office countries to track where you work each day directly from the calendar context menu",
+      "WFH Weekly Limit: Set a maximum number of work-from-home days per week with toast warnings when exceeded",
+      "WFH Stats Bar: Progress bar above the calendar showing current week's WFH usage vs. the configured limit",
+      "Work Location Indicators: Home and office icons on calendar day cells for days with an explicit location set",
+      "Work Location Storage: Per-year localStorage persistence for work location overrides with year-boundary support (year ± 1)",
+      "Settings Migration v3: Adds homeCountry, officeCountry, and wfhWeeklyLimit to user settings with safe defaults for existing users",
+      "Shift Remaining Countdown: Progress bar and urgency indicators showing time remaining in the current shift (#284)",
+      "Calendar Keyboard Accessibility: Full keyboard navigation and touch support for the monthly calendar grid (#281)",
+      "Accessibility Improvements: Screen reader enhancements, focus management, and ARIA label coverage across components (#282)",
+      "Calendar Overflow: '+N more' events indicator is now interactive and opens an event list (#303)",
+      "Teams-at-a-Glance Summary: GenericStatus now shows a compact overview of all teams' current shifts (#302)",
+      "TransferView Enhancements: Summary metrics, past-row styling, and loop optimization for transfer analysis (#301)",
+      "ScheduleDetailModal Enhancements: Progress visuals and weekly metrics panel (#299)",
+      "EventModal: Cancel button and reset confirmation in edit mode to prevent accidental data loss (#304)",
+      "TimeTrackingWeeklyView: Live-updating weekly totals for running timers (#297)",
+    ],
+    changed: [
+      "Calendar Context Menu: Includes Work from Home, Work from Office, and Clear Work Location actions when countries are configured",
+      "Settings Panel: New Cross-Border Setup section with country selectors and WFH limit input (disabled until a country is configured)",
+      "2-shift Onboarding: Description updated to mention teams for clarity (#298)",
+      "Schedule Labels: Removed 'coming soon' labels for 2-shift and weekend shift schedules (#283)",
+      "Task Rows: Restored inline edit/delete buttons for quicker task management (#279)",
+      "2-shift Reference Date: Aligned with existing roster anchors for accurate calculations (#231)",
+    ],
+    fixed: [
+      "useLocalStorage: Re-reads storage when the key changes between renders, preventing stale values after year transitions",
+      "Night-Shift and Pre-Shift Countdown: Corrected countdown display for night shifts and pre-shift transitions (#294)",
+      "TeamScheduleView: Fixed misaligned legend colours and weekly off mapping (#290)",
+      "Legacy .hday Parsing: Fixed parsing of missing holidays in legacy holidaytool format (#289)",
+      "SettingsPanel: Fixed footer layout and dark mode badge contrast (#285)",
+      "ScheduleDetailModal: Fixed horizontal scrollbar on hover (#233)",
+    ],
+    technicalDetails: {
+      title: "Cross-Border Work Location Tracking and Calendar Improvements",
+      description:
+        "Added per-day work location tracking (home/office) with country codes stored in worktime_work_locations_{year} localStorage keys. A new useWorkLocationStorage hook manages three year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. The WfhStatsBar component shows current-week WFH usage and is only rendered when viewing the current month. The WFH limit input in SettingsPanel is disabled until at least one country is configured. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.",
+    },
+  },
+  {
     version: "4.6.1",
     date: "2026-02-14",
-    status: "current",
+    status: "released",
     added: [],
     changed: [
       "2-shift Roster Completion: Added full 4-team support rotation with working-weekend day shifts and explicit week-53/week-1 continuity coverage (2653 → 2701)",

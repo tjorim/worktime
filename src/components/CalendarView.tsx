@@ -347,6 +347,9 @@ export function CalendarView({
               settings.wfhWeeklyLimit === 0
                 ? "WFH limit reached: No WFH allowed this week"
                 : `WFH limit reached: ${newCount}/${settings.wfhWeeklyLimit} days this week`;
+            // Intentional warn-but-not-block UX: the day is already stored above.
+            // The toast informs the user without preventing the action, leaving
+            // them free to clear a different day if needed.
             toast.showWarning(message);
           }
         }
@@ -421,12 +424,13 @@ export function CalendarView({
             </div>
           ) : (
             <>
-              {(showHomeLocationAction || showOfficeLocationAction) && (
-                <WfhStatsBar
-                  workLocationMap={workLocationMap}
-                  wfhWeeklyLimit={settings.wfhWeeklyLimit}
-                />
-              )}
+              {(showHomeLocationAction || showOfficeLocationAction) &&
+                currentMonth.isSame(dayjs(), "month") && (
+                  <WfhStatsBar
+                    workLocationMap={workLocationMap}
+                    wfhWeeklyLimit={settings.wfhWeeklyLimit}
+                  />
+                )}
               <MonthCalendar
                 events={calendarEvents}
                 month={currentMonth}

@@ -263,6 +263,10 @@ const migrations: Record<number, Migration> = {
   },
 
   // → v3: Add homeCountry, officeCountry, and wfhWeeklyLimit to settings.
+  // Note: normalizeUserState already applies defaults for any missing field, so this migration
+  // is effectively a no-op for typical v2→v3 upgrades. It exists as an explicit audit trail of
+  // the schema change and ensures the stored JSON immediately reflects the new shape after the
+  // first load, rather than waiting for the next settings save to persist the defaults.
   3: (state) => {
     const settings = (
       typeof state.settings === "object" && state.settings !== null ? state.settings : {}

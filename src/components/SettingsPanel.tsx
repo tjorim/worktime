@@ -397,7 +397,11 @@ export function SettingsPanel({
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
                       <div className="fw-medium">WFH Weekly Limit</div>
-                      <small className="text-muted">Max work-from-home days per week</small>
+                      <small className="text-muted">
+                        {settings.homeCountry || settings.officeCountry
+                          ? "Max work-from-home days per week"
+                          : "Set a home or office country first"}
+                      </small>
                     </div>
                     <Form.Control
                       type="number"
@@ -411,6 +415,7 @@ export function SettingsPanel({
                       }}
                       style={{ width: "5rem" }}
                       aria-label="WFH weekly limit"
+                      disabled={!settings.homeCountry && !settings.officeCountry}
                     />
                   </div>
                 </ListGroup.Item>
