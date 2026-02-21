@@ -11,16 +11,10 @@ import { hasIsoAlpha2Format } from "./countries";
 export type WorkLocation = "home" | "office" | "other";
 
 /**
- * ISO 3166-1 alpha-2 country code (e.g., "NL", "DE", "BE").
- * Branded as `IsoAlpha2`; callers should normalize/validate at input boundaries.
+ * Validates and normalizes a string as an ISO 3166-1 alpha-2 code.
+ * Returns the normalized branded value or null if invalid.
  */
-export type CountryCode = IsoAlpha2;
-
-/**
- * Validates and normalizes a string as CountryCode if it matches ISO 3166-1 alpha-2 format.
- * Returns normalized branded value or null if invalid.
- */
-export function toCountryCode(value: string): CountryCode | null {
+export function toCountryCode(value: string): IsoAlpha2 | null {
   const normalized = value.trim().toUpperCase();
   return hasIsoAlpha2Format(normalized) ? normalized : null;
 }
@@ -52,7 +46,7 @@ export interface WorkLocationInfo {
    * Captured at write time — changing country settings does not retroactively update stored entries.
    * Used for tax/regulatory compliance when working across borders.
    */
-  countryCode: CountryCode;
+  countryCode: IsoAlpha2;
 
   /**
    * Optional free-text annotation for "other" locations (e.g. "Berlin office", "Client NL").

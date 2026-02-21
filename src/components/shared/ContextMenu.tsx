@@ -87,6 +87,9 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
     };
   }, [isOpen, onClose]);
 
+  // Count only navigable (non-separator) items for the keyboard handler dependency
+  const navigableCount = items.filter((item) => !item.separator).length;
+
   // Keyboard handlers
   useEffect(() => {
     if (!isOpen) return;
@@ -135,7 +138,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, items.length]);
+  }, [isOpen, onClose, navigableCount]);
 
   // Return focus to trigger element when menu closes
   const prevOpenRef = useRef(false);

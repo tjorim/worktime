@@ -25,9 +25,15 @@ export function getLocationCountsInWeek(
   const counts: Record<WorkLocation, number> = { home: 0, office: 0, other: 0 };
   for (let i = 0; i < 7; i++) {
     const info = workLocationMap.get(monday.add(i, "day").format("YYYY-MM-DD"));
-    if (info) {
-      counts[info.location]++;
+    if (!info) continue;
+    if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
+      console.warn(
+        "getLocationCountsInWeek: skipping entry with unknown location",
+        info.countryCode,
+      );
+      continue;
     }
+    counts[info.location]++;
   }
   return counts;
 }

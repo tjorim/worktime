@@ -76,7 +76,9 @@ export function useWorkLocationStorage(year: number) {
    */
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
-      const key = dayjs(date).format("YYYY-MM-DD");
+      const d = dayjs(date);
+      if (!d.isValid()) return null;
+      const key = d.format("YYYY-MM-DD");
       const stored = workLocationMap.get(key);
       if (stored) {
         return stored;

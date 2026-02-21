@@ -89,7 +89,7 @@ const setupUserState = (
   localStorage.setItem(
     "worktime_user_state",
     JSON.stringify({
-      version: 2,
+      version: 3,
       hasCompletedOnboarding: true,
       myTeam,
       scheduleType,
@@ -100,6 +100,9 @@ const setupUserState = (
         vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
         enableTimeOff,
         enableTimeTracking: false,
+        homeCountry: null,
+        officeCountry: null,
+        enableCrossBorderTracking: false,
       },
       lastUsed: {
         activeTab: "calendar",

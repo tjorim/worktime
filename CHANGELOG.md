@@ -51,9 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SettingsPanel: Fixed footer layout and dark mode badge contrast (#285)
 - ScheduleDetailModal: Fixed horizontal scrollbar on hover (#233)
 
-### Cross-Border Work Location Tracking and Calendar Improvements
+#### Cross-Border Work Location Tracking and Calendar Improvements
 
-Added per-day work location tracking (home/office/other) with country codes stored in worktime*work_locations*{year} localStorage keys. A new useWorkLocationStorage hook manages three-year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.
+Added per-day work location tracking (home/office/other) with country codes stored in worktime_work_locations_{year} localStorage keys. A new useWorkLocationStorage hook manages three-year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.
 
 ## [4.6.1] - 2026-02-14
 
@@ -84,7 +84,7 @@ Added per-day work location tracking (home/office/other) with country codes stor
 ### Changed
 
 - ShiftTimeline: Now handles single-team schedules and parallel shift scenarios correctly
-- SCSS Architecture: Split main.scss into 4 focused partials (\_variables, \_shifts, \_calendar, \_utilities) with --wt-\* custom property naming
+- SCSS Architecture: Split main.scss into 4 focused partials (_variables, _shifts, _calendar, _utilities) with --wt-* custom property naming
 - WelcomeWizard: Extracted into configuration-driven navigation with separate step components (WelcomeWizard.tsx simplified significantly)
 - TimeOffView: Refactored from 882 to 469 lines by extracting components (EventTable, TimeOffToolbar) and hooks
 - Onboarding Flow: Extended with time-off and time-tracking setup steps and feature toggles
@@ -101,9 +101,9 @@ Added per-day work location tracking (home/office/other) with country codes stor
 - Selection State: Fixed stale selection indices after single-item deletion in TimeOffView
 - Wizard Navigation: Fixed various flow issues in change-team and change-schedule modes
 
-### Time Tracking Feature and Major Refactoring
+#### Time Tracking Feature and Major Refactoring
 
-Added a complete time tracking system with 16 component files in src/components/timeTracking/, a useTimeTrackingStorage hook for localStorage persistence, and timeUtils for time calculations. A new TimeTrackingView was created as the main container with daily/weekly/config tab navigation. This includes TimeTrackingDailyView (for task entry, timeline progress bar, and daily task list), TimeTrackingWeeklyView (for an analytics dashboard with circular progress charts and category breakdown), and TimeTrackingConfigView (for labels/templates management and JSON import/export). The SCSS was refactored into 4 partials with a --wt-\* variable naming convention. WelcomeWizard was extracted into a configuration-driven system with separate step components, and TimeOffView was reduced from 882 to 469 lines. State migration v2 was added for yearly vacation amounts, including migration error recovery with a raw state backup. Finally, comprehensive integration test suites were added for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard. All 1057 tests are passing.
+Added a complete time tracking system with 16 component files in src/components/timeTracking/, a useTimeTrackingStorage hook for localStorage persistence, and timeUtils for time calculations. A new TimeTrackingView was created as the main container with daily/weekly/config tab navigation. This includes TimeTrackingDailyView (for task entry, timeline progress bar, and daily task list), TimeTrackingWeeklyView (for an analytics dashboard with circular progress charts and category breakdown), and TimeTrackingConfigView (for labels/templates management and JSON import/export). The SCSS was refactored into 4 partials with a --wt-* variable naming convention. WelcomeWizard was extracted into a configuration-driven system with separate step components, and TimeOffView was reduced from 882 to 469 lines. State migration v2 was added for yearly vacation amounts, including migration error recovery with a raw state backup. Finally, comprehensive integration test suites were added for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard. All 1057 tests are passing.
 
 ## [4.5.2] - 2026-01-30
 
@@ -125,7 +125,7 @@ Added a complete time tracking system with 16 component files in src/components/
 
 - Team Number Normalization: ScheduleDetailModal now normalizes team number to prevent invalid-team errors when switching between schedules with different team counts
 
-### Roster System Improvements and Theming
+#### Roster System Improvements and Theming
 
 Shift definitions were made roster-specific by migrating display info (shift names, display codes) into each schedule's shiftTimes configuration, eliminating the shared global shift definition. The weekend shift schedule was enabled as a selectable option. Validation for roster shift times was added, and a roster-specific night-shift cutoff was implemented for accurate shift-day mapping. Additionally, schedule lookups were optimized by replacing array iteration with Map-based resolution. The Calendar view was moved to the first tab position. Bootstrap theming was refactored from CSS overrides to Sass source variables. A bug was fixed in ScheduleDetailModal to normalize the team number, preventing invalid-team errors. In total, 61 files were changed with 3687 insertions and 2007 deletions.
 
@@ -159,7 +159,7 @@ Shift definitions were made roster-specific by migrating display info (shift nam
 - Fixed Navbar: Added body padding to prevent content from being hidden under fixed navbar
 - Theme Override: Fixed CSS selector to exclude navbar from dark theme background override
 
-### Calendar View and Keyboard Shortcuts
+#### Calendar View and Keyboard Shortcuts
 
 Created CalendarView.tsx (466 lines) as a new main tab displaying working days with shift information, time-off events, and public holiday indicators. Implemented CalendarLegend.tsx (76 lines) with OverlayTrigger popover showing event type colors and day indicator emojis. Added workingDayUtils.ts (210 lines) with getWorkingDaysForMonth(), getShiftForDate(), and event overlay logic. Extended useKeyboardShortcuts hook with tab switching (c/s/t/o), date navigation (arrows, Ctrl+H/J/K), and settings toggle (Ctrl+,). Added time-off specific shortcuts to TimeOffView: Ctrl+I import, Ctrl+S export, Delete for bulk delete, Escape to cancel edit, Ctrl+Z/Y for undo/redo. Added KeyboardShortcutsModal for discoverability. Grouped Today and Schedule views under unified Schedule tab. Refactored Header.tsx to use Bootstrap Navbar component with fixed='top', bg='primary', and data-bs-theme='dark' for proper theming. Removed About button from header (accessible via Settings panel). Moved MonthCalendar and DayCell from timeoff/ to calendar/ directory with simplified implementation. Fixed schedule display before 7 AM, schedule dropdown sync after onboarding, mobile layout overflow, and navbar z-index issues. All 787 tests passing.
 
@@ -176,14 +176,14 @@ Created CalendarView.tsx (466 lines) as a new main tab displaying working days w
 ### Changed
 
 - CurrentStatus Architecture: Refactored from 486-line monolithic component to clean 40-line router delegating to PersonalizedStatus and GenericStatus (following NextShift PR #34 pattern)
-- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without \*FiveShift wrapper functions
+- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without *FiveShift wrapper functions
 - Component Organization: Created status/ and shared/ subdirectories for better code organization and discoverability
 - Transfer Tab Visibility: Transfer tab now always visible to enable future cross-schedule coordination features
 - TodayView Shift Calculations: Moved from MainTabs into component for cross-schedule viewing support
 
-### Schedule-Generic Component Refactoring
+#### Schedule-Generic Component Refactoring
 
-Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed \*FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use team counts to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
+Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed *FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use team counts to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
 
 ## [4.4.1] - 2026-01-10
 
@@ -208,7 +208,7 @@ Comprehensive refactoring to make all components schedule-generic and eliminate 
 - Change-Team Navigation: Users can now navigate back from team selection to change schedule without wizard closing
 - Schedule Pattern Integrity: Validation catches configuration errors (wrong cycle length, invalid shift codes, non-sequential days)
 
-### Code Review Fixes and Schedule Validation
+#### Code Review Fixes and Schedule Validation
 
 Addressed critical and major issues from PR #47 code review. Added validateSchedulePattern() function with three validations: pattern length matches cycleLengthDays, day indices are sequential from 1, and shift codes are valid (M/L/N/D/O only). Simplified team reset logic in App.tsx to always reset when changing schedules regardless of team count. Removed implicit schedule defaulting useEffect from WelcomeWizard that was creating side-effects during navigation. Fixed wizard navigation to properly handle change-team and change-schedule modes without showing vacation step. Added JSDoc documentation to getTotalSteps() and getStepIndex() functions. Updated reference date comments for all four schedule types. Created tests/data/rosters.test.ts with 14 comprehensive validation tests. Updated WelcomeWizard tests to verify no implicit defaulting occurs. All 685 tests passing with zero linting errors.
 
@@ -244,7 +244,7 @@ Addressed critical and major issues from PR #47 code review. Added validateSched
 - Form Input Validation: Added real-time validation feedback for vacation amount and hours-per-day inputs with aria-describedby
 - LocalStorage Migration: Gracefully handles missing or corrupted vacation allowance data from older versions via normalizeUserState
 
-### Vacation Statistics Dashboard Implementation
+#### Vacation Statistics Dashboard Implementation
 
 Implemented comprehensive vacation statistics and allowance tracking system completing HdayPlanner feature parity item 4.2. Created VacationStatsPanel component (276 lines) with allowance settings form (amount, unit, hours-per-day), usage progress visualization with ProgressBar, remaining days/hours display, and event type breakdown table filtering by year. Added vacationCalculations utility module (259 lines) with functions for stats calculation (calculateVacationStats), allowance conversion (getAllowanceDays, getAllowanceHours), year extraction from events (getAvailableYears), value sanitization (sanitizeVacationAllowance), and formatting (formatVacationValue). Extended WelcomeWizard component with vacation allowance step including validation helper (validateVacationAmount) and three exit paths (complete, skip team, defer). Updated SettingsContext with vacationAllowance settings (VacationAllowanceSettings type: amount, unit, hoursPerDay) and normalizeUserState function for safe localStorage migration. Added 32 comprehensive tests for VacationStatsPanel covering rendering, form controls, user interactions, validation states, and year filtering. Added 60 tests for vacationCalculations covering event type classification logic (holiday default, explicit flags, half-day handling), date range calculations, weekly event counting, year boundary clamping, and edge cases (zero allowance, NaN, negative values, inverted ranges). All 472 tests passing with excellent coverage. Completes HdayPlanner integration gap - total effort reduced from 7-9h to 2-3h (advanced keyboard nav only).
 
@@ -273,7 +273,7 @@ Implemented comprehensive vacation statistics and allowance tracking system comp
 - Test Coverage: Fixed 'multiple elements' test failure by scoping date search to table
 - Callback Optimization: Removed unnecessary rawEditorError dependency from handleRawEditorChange
 
-### Raw .hday Content Editor Implementation
+#### Raw .hday Content Editor Implementation
 
 Implemented comprehensive raw .hday content editor as a dedicated tab view. Created RawContentPanel component (69 lines) with visual validation feedback and unsaved changes indicator. Added selection clearing logic to prevent stale selections after import/apply operations. Improved file import flow to reset raw editor state. Optimized callback dependencies for better performance. Added 11 unit tests for RawContentPanel and 4 integration tests for TimeOffView raw editor workflows. Refactored nested ternary operators and visually hidden redundant labels for better code quality and accessibility. All 529 tests passing with comprehensive coverage.
 
@@ -305,7 +305,7 @@ Implemented comprehensive raw .hday content editor as a dedicated tab view. Crea
 - TypeScript Type Safety: Added undefined checks for optional weekday property
 - Hidden File Input: Added aria-label for accessibility compliance
 
-### Month Calendar Grid View Implementation
+#### Month Calendar Grid View Implementation
 
 Implemented comprehensive month calendar grid view for time-off management. Created MonthCalendar (299 lines) and DayCell (244 lines) components with full accessibility support including keyboard navigation, ARIA labels, and screen reader compatibility. Added view mode toggle to TimeOffView for switching between calendar and table views. Includes public holiday, school holiday, and payday indicators with emoji visualization. Added 45 comprehensive tests (20 MonthCalendar + 25 DayCell) covering rendering, navigation, events, accessibility, and keyboard interactions. Fixed December payday calculation bug and improved code quality with TypeScript documentation and SCSS organization. All 517 tests passing.
 
@@ -326,7 +326,7 @@ Implemented comprehensive month calendar grid view for time-off management. Crea
 - EventStoreContext: Added history/future stacks and UNDO/REDO actions to reducer
 - MainTabs: Pass isActive prop to TimeOffView for keyboard shortcut management
 
-### Time Off Event History & Bulk Operations
+#### Time Off Event History & Bulk Operations
 
 Implemented undo/redo functionality and bulk operations for time-off events. Added history and future stacks to EventStoreContext with 50-state limit. Created checkbox-based multi-select UI with bulk delete, bulk duplicate, select all, and clear selection. Added keyboard shortcuts for undo (Ctrl+Z), redo (Ctrl+Y, Ctrl+Shift+Z) with proper event handling. Toast notifications provide user feedback. Added 15+ tests covering undo/redo flows and bulk operations.
 
@@ -384,7 +384,7 @@ Implemented undo/redo functionality and bulk operations for time-off events. Add
 - 🚫 BREAKING: Removed all PWA functionality (9 files total) to eliminate cache issues where users get stuck on old versions
 - Benefits: Force refresh works (Ctrl+F5), simpler deployment, -1600 lines of code, standard browser caching
 
-### Worktime v4.0: Complete Rebrand + Time-Off Integration + PWA Removal
+#### Worktime v4.0: Complete Rebrand + Time-Off Integration + PWA Removal
 
 Complete rebrand from NextShift to Worktime. Merged HdayPlanner's .hday time-off management. Created src/lib/hday/ parser (482 lines), src/lib/events/ converters, EventStoreContext for state management, TimeOffView and EventModal components. Removed all PWA functionality (service workers, install prompts, offline status) to avoid cache-related issues - users can now force refresh. Upgraded build toolchain to Vite 8 beta and OXC tools. All 460 tests passing (139 .hday parser + 50 integration tests + 271 existing tests).
 
@@ -401,7 +401,7 @@ Complete rebrand from NextShift to Worktime. Merged HdayPlanner's .hday time-off
 - TransferView.tsx: Added edge case handling for empty availableOtherTeams
 - shiftCalculations.ts: Added isCurrentlyWorking() as shared utility function
 
-### Code Quality Improvements
+#### Code Quality Improvements
 
 Extracted shared utilities for shift activity detection. Enhanced edge case handling for single-team configurations.
 
@@ -434,7 +434,7 @@ Extracted shared utilities for shift activity detection. Enhanced edge case hand
 - Cross-test Contamination: Fixed test cleanup to properly restore mocked globals
 - Same-tab Event Handling: Custom events ensure consent changes are immediately reflected across components
 
-### GDPR Privacy Compliance System
+#### GDPR Privacy Compliance System
 
 Implemented comprehensive cookie consent system with CookieConsentContext, consent-aware useLocalStorage hook, automatic data migration, and integrated privacy controls. Enhanced Welcome Wizard with 4-step flow including privacy preferences. Added Privacy & Data section to Settings with granular consent management.
 
@@ -493,7 +493,7 @@ Implemented comprehensive cookie consent system with CookieConsentContext, conse
 - Cross-day timeline: Fixed timeline to show next shift from tomorrow when needed
 - Test environment: dayjs plugin loading and configuration in test suite
 
-### Major Architecture & Component Updates
+#### Major Architecture & Component Updates
 
 Added WelcomeWizard.tsx for onboarding, SettingsPanel.tsx with Offcanvas UI, SettingsContext.tsx for global preferences, dateTimeUtils.ts for centralized date handling. Enhanced App.tsx with complete onboarding flow, CurrentStatus.tsx with null team support, Header.tsx with settings integration. Critical fixes to ISO week numbering and date code calculations.
 
@@ -516,7 +516,7 @@ Added WelcomeWizard.tsx for onboarding, SettingsPanel.tsx with Offcanvas UI, Set
 
 - Component testing and integration issues
 
-### UI Foundation
+#### UI Foundation
 
 Established Bootstrap UI component integration and accessibility improvements.
 
@@ -550,7 +550,7 @@ Established Bootstrap UI component integration and accessibility improvements.
 - Code formatting and linting issues
 - Unicode emoji compatibility in test patterns
 
-### Technical Highlights
+#### Technical Highlights
 
 This release focused on UX improvements and code quality, adding 42 comprehensive tests for shift calculations, updating component tests for new UI elements, and refactoring business logic for better maintainability.
 
@@ -578,7 +578,7 @@ This release focused on UX improvements and code quality, adding 42 comprehensiv
 - Team highlighting for user's selected team
 - Mobile-optimized touch interface
 
-### Technical Stack
+#### Technical Stack
 
 Built with React 19 with TypeScript, Vite build system with PWA plugin, Day.js for date handling, React Bootstrap components, Vitest testing framework, and Biome for linting and formatting.
 

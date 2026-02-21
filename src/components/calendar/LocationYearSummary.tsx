@@ -35,6 +35,11 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   const rows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
 
   const handleCopy = () => {
+    if (!navigator?.clipboard) {
+      toast.showError("Clipboard not available");
+      return;
+    }
+
     const header = `Work Location Summary — ${year}`;
     const divider = "-".repeat(header.length);
     const lines = [

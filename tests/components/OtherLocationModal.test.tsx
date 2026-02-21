@@ -12,10 +12,10 @@ const cc = (value: string) => toCountryCode(value)!;
 function renderModal(props: Partial<React.ComponentProps<typeof OtherLocationModal>> = {}) {
   const onHide = vi.fn();
   const onConfirm = vi.fn();
-  render(
+  const renderResult = render(
     <OtherLocationModal show={true} date={DATE} onHide={onHide} onConfirm={onConfirm} {...props} />,
   );
-  return { onHide, onConfirm };
+  return { onHide, onConfirm, ...renderResult };
 }
 
 describe("OtherLocationModal", () => {

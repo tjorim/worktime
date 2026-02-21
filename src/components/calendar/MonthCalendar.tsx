@@ -353,7 +353,7 @@ export function MonthCalendar({
       }
       // Other Location action
       if (showOtherLocationAction && onSetOtherLocation) {
-        items.push({ separator: true });
+        if (items.length) items.push({ separator: true });
         items.push({
           label: "Other Location…",
           icon: "bi-geo-alt",

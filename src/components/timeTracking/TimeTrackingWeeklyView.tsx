@@ -408,7 +408,6 @@ export function TimeTrackingWeeklyView({
                                 e.stopPropagation();
                                 onSwitchToDaily(day.iso);
                               }}
-                              onKeyDown={createDayKeyDownHandler(day.iso, true)}
                               aria-label={`Open ${day.label} daily log`}
                             >
                               {day.label}
