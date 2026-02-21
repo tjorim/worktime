@@ -3,24 +3,13 @@ import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import { useToast } from "../../contexts/ToastContext";
 import { aggregateLocationCounts } from "../../utils/workLocationUtils";
-import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
+import type { WorkLocationMap } from "../../types/workLocation";
+import { WORK_LOCATION_ICON_CLASS, WORK_LOCATION_LABEL } from "./workLocationConstants";
 
 interface LocationYearSummaryProps {
   year: number;
   workLocationMap: WorkLocationMap;
 }
-
-const LOCATION_ICON: Record<WorkLocation, string> = {
-  home: "bi-house",
-  office: "bi-building",
-  other: "bi-geo-alt",
-};
-
-const LOCATION_LABEL: Record<WorkLocation, string> = {
-  home: "Home",
-  office: "Office",
-  other: "Other",
-};
 
 /**
  * Renders an annual work location summary grouped by (location, country, label).
@@ -32,8 +21,8 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   const toast = useToast();
 
   // Filter the map to only the requested year
-  const yearPrefix = `${year}-`;
   const yearMap: WorkLocationMap = useMemo(() => {
+    const yearPrefix = `${year}-`;
     const filtered: WorkLocationMap = new Map();
     for (const [key, value] of workLocationMap.entries()) {
       if (key.startsWith(yearPrefix)) {
@@ -41,7 +30,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       }
     }
     return filtered;
-  }, [workLocationMap, yearPrefix]);
+  }, [workLocationMap, year]);
 
   const rows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
 
@@ -52,7 +41,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       header,
       divider,
       ...rows.map((row) => {
-        const locationLabel = LOCATION_LABEL[row.location];
+        const locationLabel = WORK_LOCATION_LABEL[row.location];
         const desc = row.label ? `${row.countryCode} (${row.label})` : row.countryCode;
         return `${locationLabel.padEnd(8)} ${desc.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""}`;
       }),
@@ -94,8 +83,11 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           {rows.map((row) => (
             <tr key={`${row.location}-${row.countryCode}-${row.label ?? ""}`}>
               <td>
-                <i className={`bi ${LOCATION_ICON[row.location]} me-1`} aria-hidden="true"></i>
-                {LOCATION_LABEL[row.location]}
+                <i
+                  className={`bi ${WORK_LOCATION_ICON_CLASS[row.location]} me-1`}
+                  aria-hidden="true"
+                ></i>
+                {WORK_LOCATION_LABEL[row.location]}
                 {row.label && <span className="text-muted ms-1 small">({row.label})</span>}
               </td>
               <td>{row.countryCode}</td>

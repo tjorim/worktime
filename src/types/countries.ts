@@ -42,10 +42,10 @@ export function isValidCountryCode(value: unknown): value is CountryCode {
 }
 
 /**
- * Returns true for any 2-uppercase-letter ISO 3166-1 alpha-2 code.
- * Use this to validate free-text country codes for "other" work locations,
- * which may not be in the curated SUPPORTED_COUNTRIES list.
+ * Returns true for any string matching the ISO 3166-1 alpha-2 format (two ASCII uppercase letters).
+ * Format-only validation: does NOT check membership in the official ISO 3166-1 list.
+ * Use for free-text country codes (e.g., "other" work locations).
  */
-export function isValidIsoAlpha2(value: unknown): value is IsoAlpha2 {
+export function hasIsoAlpha2Format(value: unknown): value is IsoAlpha2 {
   return typeof value === "string" && /^[A-Z]{2}$/.test(value);
 }

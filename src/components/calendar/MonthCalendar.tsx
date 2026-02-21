@@ -314,19 +314,20 @@ export function MonthCalendar({
   const getContextMenuItems = (): ContextMenuItem[] => {
     if (contextMenu?.type === "day" && contextMenu.date) {
       const items: ContextMenuItem[] = [];
+      const date = contextMenu.date;
+      const dayKey = date.format("YYYY-MM-DD");
+      const stored = workLocationMap?.get(dayKey);
+      const currentLocation = stored?.location;
+      const hasStoredLocation = !!stored;
       if (allowEventActions) {
         items.push({
           label: "Add new event",
           icon: "bi-plus-circle",
-          onClick: () => handleAddEventWrapper(contextMenu.date!),
+          onClick: () => handleAddEventWrapper(date),
         });
       }
       // Home/Office actions
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
-        const date = contextMenu.date;
-        const dayKey = date.format("YYYY-MM-DD");
-        const stored = workLocationMap?.get(dayKey);
-        const currentLocation = stored?.location;
         if (showHomeLocationAction) {
           items.push({
             label: "Work from Home",
@@ -351,11 +352,7 @@ export function MonthCalendar({
         }
       }
       // Other Location action
-      if (showOtherLocationAction && onSetOtherLocation && contextMenu.date) {
-        const date = contextMenu.date;
-        const dayKey = date.format("YYYY-MM-DD");
-        const stored = workLocationMap?.get(dayKey);
-        const currentLocation = stored?.location;
+      if (showOtherLocationAction && onSetOtherLocation) {
         items.push({ separator: true });
         items.push({
           label: "Other Location…",
@@ -368,21 +365,15 @@ export function MonthCalendar({
         });
       }
       // Clear Work Location action
-      if (contextMenu.date) {
-        const date = contextMenu.date;
-        const dayKey = date.format("YYYY-MM-DD");
-        const stored = workLocationMap?.get(dayKey);
-        const hasStoredLocation = !!stored;
-        if (hasStoredLocation && onSetWorkLocation) {
-          items.push({
-            label: "Clear Work Location",
-            icon: "bi-x-circle",
-            onClick: () => {
-              handleCloseContextMenu();
-              onSetWorkLocation(date, null);
-            },
-          });
-        }
+      if (hasStoredLocation && onSetWorkLocation) {
+        items.push({
+          label: "Clear Work Location",
+          icon: "bi-x-circle",
+          onClick: () => {
+            handleCloseContextMenu();
+            onSetWorkLocation(date, null);
+          },
+        });
       }
       return items;
     }

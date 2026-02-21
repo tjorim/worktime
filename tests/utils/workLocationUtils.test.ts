@@ -5,11 +5,13 @@ import {
   getLocationCountsInWeek,
   aggregateLocationCounts,
 } from "../../src/utils/workLocationUtils";
+import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
-const HOME: WorkLocationInfo = { location: "home", countryCode: "NL" };
-const OFFICE: WorkLocationInfo = { location: "office", countryCode: "BE" };
-const OTHER_DE: WorkLocationInfo = { location: "other", countryCode: "DE" };
+const cc = (value: string) => toCountryCode(value)!;
+const HOME: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
+const OFFICE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
+const OTHER_DE: WorkLocationInfo = { location: "other", countryCode: cc("DE") };
 
 // ISO week 8 of 2026: Mon Feb 16 – Sun Feb 22
 const MON = "2026-02-16";
@@ -141,7 +143,7 @@ describe("getLocationCountsInWeek", () => {
   });
 });
 
-describe("aggregateLocationsByYear", () => {
+describe("aggregateLocationCounts", () => {
   it("returns an empty array for an empty map", () => {
     expect(aggregateLocationCounts(new Map())).toEqual([]);
   });
@@ -181,7 +183,7 @@ describe("aggregateLocationsByYear", () => {
   });
 
   it("creates separate rows for other-location entries with different country codes", () => {
-    const OTHER_US: WorkLocationInfo = { location: "other", countryCode: "US" };
+    const OTHER_US: WorkLocationInfo = { location: "other", countryCode: cc("US") };
     const map: WorkLocationMap = new Map([
       ["2026-01-05", OTHER_DE],
       ["2026-01-06", OTHER_US],
@@ -198,10 +200,10 @@ describe("aggregateLocationsByYear", () => {
   it("creates separate rows for other-location entries with the same country but different labels", () => {
     const OTHER_DE_LABEL: WorkLocationInfo = {
       location: "other",
-      countryCode: "DE",
+      countryCode: cc("DE"),
       label: "Berlin office",
     };
-    const OTHER_DE_NOLABEL: WorkLocationInfo = { location: "other", countryCode: "DE" };
+    const OTHER_DE_NOLABEL: WorkLocationInfo = { location: "other", countryCode: cc("DE") };
     const map: WorkLocationMap = new Map([
       ["2026-01-05", OTHER_DE_LABEL],
       ["2026-01-06", OTHER_DE_NOLABEL],
@@ -213,11 +215,37 @@ describe("aggregateLocationsByYear", () => {
   it("preserves the label on other-location rows", () => {
     const OTHER_LABELED: WorkLocationInfo = {
       location: "other",
-      countryCode: "DE",
+      countryCode: cc("DE"),
       label: "Client visit",
     };
     const map: WorkLocationMap = new Map([["2026-01-05", OTHER_LABELED]]);
     const result = aggregateLocationCounts(map);
     expect(result[0].label).toBe("Client visit");
+  });
+
+  it("does not collide when malformed input contains separators", () => {
+    // Defensive case: corrupted/tampered storage values should not merge into one row.
+    const entry1 = {
+      location: "other:site",
+      countryCode: "DE",
+      label: "foo:bar",
+    } as unknown as WorkLocationInfo;
+    const entry2 = {
+      location: "other",
+      countryCode: "DE:FR",
+      label: "baz",
+    } as unknown as WorkLocationInfo;
+    const entry3 = {
+      location: "other",
+      countryCode: "DE",
+      label: "foo:bar",
+    } as unknown as WorkLocationInfo;
+    const map: WorkLocationMap = new Map([
+      ["2026-01-01", entry1],
+      ["2026-01-02", entry2],
+      ["2026-01-03", entry3],
+    ]);
+    const result = aggregateLocationCounts(map);
+    expect(result).toHaveLength(3);
   });
 });

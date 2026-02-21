@@ -1,6 +1,12 @@
 import { dayjs } from "../../utils/dateTimeUtils";
 import { getLocationCountsInWeek } from "../../utils/workLocationUtils";
 import type { WorkLocationMap } from "../../types/workLocation";
+import {
+  WORK_LOCATION_ICON_CLASS,
+  WORK_LOCATION_LABEL,
+  WORK_LOCATION_ORDER,
+  WORK_LOCATION_WEEKLY_TITLE,
+} from "./workLocationConstants";
 
 interface LocationSummaryBarProps {
   workLocationMap: WorkLocationMap;
@@ -13,9 +19,9 @@ interface LocationSummaryBarProps {
  */
 
 export function LocationSummaryBar({ workLocationMap, today }: LocationSummaryBarProps) {
-  const day = dayjs(today ?? undefined);
+  const day = dayjs(today);
   const counts = getLocationCountsInWeek(day, workLocationMap);
-  const hasAny = counts.home > 0 || counts.office > 0 || counts.other > 0;
+  const hasAny = WORK_LOCATION_ORDER.some((location) => counts[location] > 0);
 
   if (!hasAny) {
     return (
@@ -35,24 +41,23 @@ export function LocationSummaryBar({ workLocationMap, today }: LocationSummaryBa
       aria-label="Work locations this week"
     >
       <span className="text-muted small flex-shrink-0">This week:</span>
-      {counts.home > 0 && (
-        <span className="small d-flex align-items-center gap-1" title="Work from home days">
-          <i className="bi bi-house" aria-hidden="true"></i>
-          {counts.home}
-        </span>
-      )}
-      {counts.office > 0 && (
-        <span className="small d-flex align-items-center gap-1" title="Office days">
-          <i className="bi bi-building" aria-hidden="true"></i>
-          {counts.office}
-        </span>
-      )}
-      {counts.other > 0 && (
-        <span className="small d-flex align-items-center gap-1" title="Other location days">
-          <i className="bi bi-geo-alt" aria-hidden="true"></i>
-          {counts.other}
-        </span>
-      )}
+      {WORK_LOCATION_ORDER.map((location) => {
+        const count = counts[location];
+        if (count <= 0) {
+          return null;
+        }
+        return (
+          <span
+            key={location}
+            className="small d-flex align-items-center gap-1"
+            title={WORK_LOCATION_WEEKLY_TITLE[location]}
+          >
+            <i className={`bi ${WORK_LOCATION_ICON_CLASS[location]}`} aria-hidden="true"></i>
+            <span className="visually-hidden">{WORK_LOCATION_LABEL[location]} days:</span>
+            {count}
+          </span>
+        );
+      })}
     </div>
   );
 }

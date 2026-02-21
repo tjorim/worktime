@@ -1,3 +1,6 @@
+import type { IsoAlpha2 } from "./countries";
+import { hasIsoAlpha2Format } from "./countries";
+
 /**
  * Represents where a user is working from on a given day.
  *
@@ -6,6 +9,21 @@
  * - "other": Any other location (worldwide office, customer site, conference, etc.)
  */
 export type WorkLocation = "home" | "office" | "other";
+
+/**
+ * ISO 3166-1 alpha-2 country code (e.g., "NL", "DE", "BE").
+ * Branded as `IsoAlpha2`; callers should normalize/validate at input boundaries.
+ */
+export type CountryCode = IsoAlpha2;
+
+/**
+ * Validates and normalizes a string as CountryCode if it matches ISO 3166-1 alpha-2 format.
+ * Returns normalized branded value or null if invalid.
+ */
+export function toCountryCode(value: string): CountryCode | null {
+  const normalized = value.trim().toUpperCase();
+  return hasIsoAlpha2Format(normalized) ? normalized : null;
+}
 
 /**
  * Represents work location information for a specific day.
@@ -34,7 +52,6 @@ export interface WorkLocationInfo {
    * Captured at write time — changing country settings does not retroactively update stored entries.
    * Used for tax/regulatory compliance when working across borders.
    */
-
   countryCode: CountryCode;
 
   /**
@@ -42,11 +59,6 @@ export interface WorkLocationInfo {
    */
   label?: string;
 }
-
-/**
- * ISO 3166-1 alpha-2 country code type: two uppercase letters
- */
-export type CountryCode = `${Uppercase<string>}${Uppercase<string>}`;
 
 /**
  * Map of work locations keyed by date string (YYYY-MM-DD format).

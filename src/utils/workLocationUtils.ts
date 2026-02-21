@@ -70,24 +70,29 @@ export function getLocationCountsInWeek(
 export function aggregateLocationCounts(
   workLocationMap: WorkLocationMap,
 ): Array<{ location: WorkLocation; countryCode: string; label?: string; days: number }> {
+  const buildKey = (location: WorkLocation, countryCode: string, label: string): string =>
+    `${location.length}:${location}|${countryCode.length}:${countryCode}|${label.length}:${label}`;
+
   const counts = new Map<
     string,
     { location: WorkLocation; countryCode: string; label?: string; days: number }
   >();
 
   for (const info of workLocationMap.values()) {
-    const key = `${info.location}:${info.countryCode}:${info.label ?? ""}`;
+    const label = info.label ?? "";
+    const key = buildKey(info.location, info.countryCode, label);
     const existing = counts.get(key);
     if (existing) {
       existing.days++;
-    } else {
-      counts.set(key, {
-        location: info.location,
-        countryCode: info.countryCode,
-        ...(info.label ? { label: info.label } : {}),
-        days: 1,
-      });
+      continue;
     }
+
+    counts.set(key, {
+      location: info.location,
+      countryCode: info.countryCode,
+      ...(info.label ? { label: info.label } : {}),
+      days: 1,
+    });
   }
 
   return Array.from(counts.values()).sort((a, b) => b.days - a.days);

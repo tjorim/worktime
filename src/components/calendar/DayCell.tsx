@@ -108,6 +108,41 @@ const getIndicatorDetails = (
   }>;
 };
 
+const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefined => {
+  if (!workLocation) return undefined;
+
+  switch (workLocation.location) {
+    case "home":
+      return "Working from home";
+    case "office":
+      return "Working from office";
+    case "other": {
+      const country = workLocation.countryCode ?? "unknown";
+      if (workLocation.label) {
+        return `Other location: ${workLocation.label} (${country})`;
+      }
+      return `Other location (${country})`;
+    }
+    default:
+      return undefined;
+  }
+};
+
+const getWorkLocationIconClass = (workLocation?: WorkLocationInfo): string | undefined => {
+  if (!workLocation) return undefined;
+
+  switch (workLocation.location) {
+    case "home":
+      return "bi-house";
+    case "office":
+      return "bi-building";
+    case "other":
+      return "bi-geo-alt";
+    default:
+      return undefined;
+  }
+};
+
 /** Minimum touch move distance (px) before canceling long-press */
 const LONG_PRESS_MOVE_THRESHOLD = 10;
 /** Long-press duration (ms) to trigger context menu on touch devices */
@@ -164,39 +199,8 @@ export function DayCell({
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
-  const workLocationLabel = (() => {
-    if (!workLocation) return undefined;
-
-    switch (workLocation.location) {
-      case "home":
-        return "Working from home";
-      case "office":
-        return "Working from office";
-      case "other": {
-        const country = workLocation.countryCode ?? "unknown";
-        if (workLocation.label) {
-          return `Other location: ${workLocation.label} (${country})`;
-        }
-        return `Other location (${country})`;
-      }
-      default:
-        return undefined;
-    }
-  })();
-  const workLocationIconClass = (() => {
-    if (!workLocation) return undefined;
-
-    switch (workLocation.location) {
-      case "home":
-        return "bi-house";
-      case "office":
-        return "bi-building";
-      case "other":
-        return "bi-geo-alt";
-      default:
-        return undefined;
-    }
-  })();
+  const workLocationLabel = getWorkLocationLabel(workLocation);
+  const workLocationIconClass = getWorkLocationIconClass(workLocation);
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
     ariaLabelParts.push("Today");

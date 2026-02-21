@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { LocationYearSummary } from "../../src/components/calendar/LocationYearSummary";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
 function renderSummary(year: number, workLocationMap: WorkLocationMap) {
@@ -14,9 +15,14 @@ function renderSummary(year: number, workLocationMap: WorkLocationMap) {
   );
 }
 
-const HOME_NL: WorkLocationInfo = { location: "home", countryCode: "NL" };
-const OFFICE_BE: WorkLocationInfo = { location: "office", countryCode: "BE" };
-const OTHER_DE: WorkLocationInfo = { location: "other", countryCode: "DE", label: "Berlin office" };
+const cc = (value: string) => toCountryCode(value)!;
+const HOME_NL: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
+const OFFICE_BE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
+const OTHER_DE: WorkLocationInfo = {
+  location: "other",
+  countryCode: cc("DE"),
+  label: "Berlin office",
+};
 
 describe("LocationYearSummary", () => {
   it("shows an empty-state message when the map has no entries for the year", () => {
@@ -57,11 +63,11 @@ describe("LocationYearSummary", () => {
       ["2026-01-07", OFFICE_BE],
     ]);
     renderSummary(2026, map);
-    // Two home days in one row, one office day in another
-    const cells = screen.getAllByRole("cell");
-    const textContent = cells.map((c) => c.textContent);
-    expect(textContent).toContain("2");
-    expect(textContent).toContain("1");
+    const rows = screen.getAllByRole("row");
+    const homeRow = rows.find((row) => row.textContent?.includes("Home"));
+    const officeRow = rows.find((row) => row.textContent?.includes("Office"));
+    expect(homeRow?.textContent).toContain("2");
+    expect(officeRow?.textContent).toContain("1");
   });
 
   it("renders the optional label for other-location rows", () => {
@@ -115,12 +121,13 @@ describe("LocationYearSummary", () => {
       const map: WorkLocationMap = new Map([["2026-01-05", HOME_NL]]);
       renderSummary(2026, map);
       await userEvent.click(screen.getByRole("button", { name: /Copy/i }));
-      expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
-      const text = (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mock
-        .calls[0][0] as string;
-      expect(text).toMatch(/Work Location Summary — 2026/);
-      expect(text).toMatch(/Home/);
-      expect(text).toMatch(/NL/);
+      const writeTextMock = vi.mocked(navigator.clipboard.writeText);
+      expect(writeTextMock).toHaveBeenCalledOnce();
+      expect(writeTextMock).toHaveBeenCalledWith(
+        expect.stringContaining("Work Location Summary — 2026"),
+      );
+      expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("Home"));
+      expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("NL"));
     });
   });
 });

@@ -368,37 +368,6 @@ export function SettingsPanel({
             </div>
           </div>
 
-          {/* Cross-Border Setup Section — only shown when the feature is enabled */}
-          {settings.enableCrossBorderTracking && (
-            <div className="border-bottom">
-              <div className="p-3">
-                <h6 className="text-muted mb-3">
-                  <i className="bi bi-globe me-2"></i>
-                  Cross-Border Setup
-                </h6>
-                <small className="text-muted d-block mb-3">
-                  Configure countries for work location tracking
-                </small>
-                <ListGroup variant="flush">
-                  <CountrySelectItem
-                    label="Home Country"
-                    description="Country where you are based"
-                    value={settings.homeCountry ?? ""}
-                    onUpdate={updateHomeCountry}
-                    ariaLabel="Home country"
-                  />
-                  <CountrySelectItem
-                    label="Office Country"
-                    description="Country where your office is located"
-                    value={settings.officeCountry ?? ""}
-                    onUpdate={updateOfficeCountry}
-                    ariaLabel="Office country"
-                  />
-                </ListGroup>
-              </div>
-            </div>
-          )}
-
           {/* Feature Toggles */}
           <div className="border-bottom">
             <div className="p-3">
@@ -461,6 +430,37 @@ export function SettingsPanel({
               </ListGroup>
             </div>
           </div>
+
+          {/* Cross-Border Setup Section — only shown when the feature is enabled */}
+          {settings.enableCrossBorderTracking && (
+            <div className="border-bottom">
+              <div className="p-3">
+                <h6 className="text-muted mb-3">
+                  <i className="bi bi-globe me-2"></i>
+                  Cross-Border Setup
+                </h6>
+                <small className="text-muted d-block mb-3">
+                  Configure countries for work location tracking
+                </small>
+                <ListGroup variant="flush">
+                  <CountrySelectItem
+                    label="Home Country"
+                    description="Country where you are based"
+                    value={settings.homeCountry ?? ""}
+                    onUpdate={updateHomeCountry}
+                    ariaLabel="Home country"
+                  />
+                  <CountrySelectItem
+                    label="Office Country"
+                    description="Country where your office is located"
+                    value={settings.officeCountry ?? ""}
+                    onUpdate={updateOfficeCountry}
+                    ariaLabel="Office country"
+                  />
+                </ListGroup>
+              </div>
+            </div>
+          )}
 
           {/* Information Section */}
           <div className="border-bottom">

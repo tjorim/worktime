@@ -1,11 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocationSummaryBar } from "../../src/components/calendar/LocationSummaryBar";
+import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
-const HOME: WorkLocationInfo = { location: "home", countryCode: "NL" };
-const OFFICE: WorkLocationInfo = { location: "office", countryCode: "BE" };
-const OTHER: WorkLocationInfo = { location: "other", countryCode: "DE" };
+const cc = (value: string) => toCountryCode(value)!;
+const HOME: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
+const OFFICE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
+const OTHER: WorkLocationInfo = { location: "other", countryCode: cc("DE") };
 
 // System time is pinned to 2026-02-18 (Wednesday, ISO week 8).
 // All test dates must fall in ISO week 8 (Mon Feb 16 – Sun Feb 22)
@@ -32,6 +34,7 @@ describe("LocationSummaryBar", () => {
     const map: WorkLocationMap = new Map();
     render(<LocationSummaryBar workLocationMap={map} />);
     expect(screen.getByText("No locations recorded this week")).toBeInTheDocument();
+    expect(screen.getByLabelText("Work locations this week")).toBeInTheDocument();
   });
 
   it("shows home count when only home entries exist", () => {
@@ -66,6 +69,16 @@ describe("LocationSummaryBar", () => {
     expect(screen.getByTitle("Work from home days")).toHaveTextContent("1");
     expect(screen.getByTitle("Office days")).toHaveTextContent("1");
     expect(screen.getByTitle("Other location days")).toHaveTextContent("1");
+  });
+
+  it("excludes entries from other weeks", () => {
+    const map: WorkLocationMap = new Map([
+      ["2026-02-09", HOME], // Previous ISO week (week 7)
+      [WEEK.mon, OFFICE], // Current ISO week (week 8)
+    ]);
+    render(<LocationSummaryBar workLocationMap={map} />);
+    expect(screen.getByTitle("Office days")).toHaveTextContent("1");
+    expect(screen.queryByTitle("Work from home days")).not.toBeInTheDocument();
   });
 
   it("hides zero-count location types", () => {

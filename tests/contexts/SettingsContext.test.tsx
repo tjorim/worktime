@@ -825,36 +825,6 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.settings.officeCountry).toBe("BE");
       expect(result.current.settings.enableCrossBorderTracking).toBe(true);
     });
-
-    it("preserves enableCrossBorderTracking when already set during migration", () => {
-      const { result } = migrateFromV2({
-        version: 2,
-        hasCompletedOnboarding: true,
-        myTeam: 1,
-        scheduleType: "5-shift",
-        settings: {
-          timeFormat: "24h",
-          theme: "auto",
-          notifications: "off",
-          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-          enableTimeOff: false,
-          enableTimeTracking: false,
-          homeCountry: "NL",
-          officeCountry: "BE",
-          enableCrossBorderTracking: true,
-        },
-        lastUsed: {
-          activeTab: "calendar",
-          scheduleView: "today",
-          otherSchedule: null,
-          timeOffView: "table",
-          timeTrackingView: "daily",
-          otherTeam: null,
-        },
-      });
-
-      expect(result.current.settings.enableCrossBorderTracking).toBe(true);
-    });
   });
 
   describe("Atomic onboarding completion", () => {

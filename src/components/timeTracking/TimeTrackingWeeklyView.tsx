@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import ProgressBar from "react-bootstrap/ProgressBar";
@@ -164,6 +164,16 @@ export function TimeTrackingWeeklyView({
       .sort((a, b) => b.hours - a.hours);
   }, [summary, weekTotal, labelNameToColor, defaultLabelColor]);
 
+  const createDayKeyDownHandler =
+    (dayIso: string, preventEnterDefault: boolean) => (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        if (e.key === " " || preventEnterDefault) {
+          e.preventDefault();
+        }
+        onSwitchToDaily?.(dayIso);
+      }
+    };
+
   return (
     <Card className="shadow-sm">
       <Card.Header>
@@ -301,12 +311,9 @@ export function TimeTrackingWeeklyView({
                         role={onSwitchToDaily ? "button" : undefined}
                         tabIndex={onSwitchToDaily ? 0 : undefined}
                         onClick={() => onSwitchToDaily?.(day.iso)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onSwitchToDaily?.(day.iso);
-                          }
-                        }}
+                        onKeyDown={
+                          onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined
+                        }
                         title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                       >
@@ -400,14 +407,7 @@ export function TimeTrackingWeeklyView({
                         role={onSwitchToDaily ? "button" : undefined}
                         tabIndex={onSwitchToDaily ? 0 : undefined}
                         onKeyDown={
-                          onSwitchToDaily
-                            ? (e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  if (e.key === " ") e.preventDefault();
-                                  onSwitchToDaily?.(day.iso);
-                                }
-                              }
-                            : undefined
+                          onSwitchToDaily ? createDayKeyDownHandler(day.iso, false) : undefined
                         }
                       >
                         <th scope="row">

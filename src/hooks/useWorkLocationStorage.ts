@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from "react";
 
 import { useSettings } from "../contexts/SettingsContext";
-import { isValidIsoAlpha2 } from "../types/countries";
 import { dayjs } from "../utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
+import { toCountryCode } from "../types/workLocation";
 
 /**
  * Raw storage shape persisted to localStorage.
@@ -84,7 +84,10 @@ export function useWorkLocationStorage(year: number) {
 
       // Default-to-office: derive country from officeCountry setting
       if (officeCountry) {
-        return { location: "office", countryCode: officeCountry };
+        const parsedOfficeCountry = toCountryCode(officeCountry);
+        if (parsedOfficeCountry) {
+          return { location: "office", countryCode: parsedOfficeCountry };
+        }
       }
 
       return null;
@@ -125,17 +128,22 @@ export function useWorkLocationStorage(year: number) {
         countryCode = extra?.countryCode ?? null;
       }
 
+      const parsedCountryCode = countryCode ? toCountryCode(countryCode) : null;
       // Country must be a valid ISO alpha-2 code before a location can be stored
-      if (!countryCode || !isValidIsoAlpha2(countryCode)) {
+      if (!parsedCountryCode) {
         return false;
       }
 
       const d = dayjs(date);
+      if (!d.isValid()) {
+        console.warn("Invalid date passed to setLocationForDate:", date);
+        return false;
+      }
       const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
       const entry: WorkLocationInfo = {
         location,
-        countryCode: countryCode as `${Uppercase<string>}${Uppercase<string>}`,
+        countryCode: parsedCountryCode,
         ...(extra?.label ? { label: extra.label } : {}),
       };
 
@@ -169,6 +177,10 @@ export function useWorkLocationStorage(year: number) {
   const clearLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string) => {
       const d = dayjs(date);
+      if (!d.isValid()) {
+        console.warn("Invalid date passed to clearLocationForDate:", date);
+        return;
+      }
       const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
 

@@ -171,17 +171,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("shows weekly progress when weeklyTargetHours is provided", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "08:00", "12:00")];
 
-      render(
-        <SettingsProvider>
-          <TimeTrackingWeeklyView
-            tasks={weekTasks}
-            labels={TEST_LABELS}
-            selectedDate="2025-01-06"
-            onSelectedDateChange={vi.fn()}
-            weeklyTargetHours={40}
-          />
-        </SettingsProvider>,
-      );
+      renderPanel({ tasks: weekTasks, weeklyTargetHours: 40 });
 
       expect(screen.getByText(/Weekly Progress/i)).toBeInTheDocument();
       expect(screen.getByText(/4\.0h \/ 40\.0h/i)).toBeInTheDocument();

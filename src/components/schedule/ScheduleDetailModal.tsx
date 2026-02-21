@@ -31,7 +31,12 @@ const SHIFT_DISPLAY_META: Partial<
     iconClassName: "text-warning",
     variant: "warning",
   },
-  L: { label: "Evening Shifts", icon: "bi bi-sunset", iconClassName: "text-info", variant: "info" },
+  L: {
+    label: "Evening Shifts",
+    icon: "bi bi-sunset",
+    iconClassName: "text-info",
+    variant: "info",
+  },
   D: {
     label: "Day Shifts",
     icon: "bi bi-brightness-high",

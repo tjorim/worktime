@@ -1,3 +1,11 @@
+import { useState } from "react";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Modal from "react-bootstrap/Modal";
+import type { Dayjs } from "dayjs";
+import { hasIsoAlpha2Format } from "../../types/countries";
+import type { WorkLocationInfo } from "../../types/workLocation";
+
 // Helper to get initial values for countryCode and label
 const getInitialOtherLocation = (existing?: WorkLocationInfo) => {
   if (existing?.location === "other") {
@@ -8,13 +16,6 @@ const getInitialOtherLocation = (existing?: WorkLocationInfo) => {
   }
   return { countryCode: "", label: "" };
 };
-import { useState } from "react";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
-import type { Dayjs } from "dayjs";
-import { isValidIsoAlpha2 } from "../../types/countries";
-import type { WorkLocationInfo } from "../../types/workLocation";
 
 interface OtherLocationModalProps {
   show: boolean;
@@ -43,7 +44,7 @@ export function OtherLocationModal({
   const [label, setLabel] = useState(initial.label);
   const [touched, setTouched] = useState(false);
 
-  const isCodeValid = isValidIsoAlpha2(countryCode);
+  const isCodeValid = hasIsoAlpha2Format(countryCode);
 
   const handleShow = () => {
     // Reset to initial values when modal opens
@@ -97,10 +98,11 @@ export function OtherLocationModal({
             </Form.Text>
           </Form.Group>
           <Form.Group controlId="other-location-label">
-            <Form.Label>
+            <Form.Label htmlFor="other-location-label-input">
               Label <span className="text-muted fw-normal">(optional)</span>
             </Form.Label>
             <Form.Control
+              id="other-location-label-input"
               type="text"
               placeholder="e.g. Berlin office, Client visit"
               value={label}
@@ -113,7 +115,7 @@ export function OtherLocationModal({
           <Button variant="outline-secondary" onClick={handleHide}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={touched && !isCodeValid}>
+          <Button type="submit" variant="primary" disabled={!isCodeValid}>
             Save
           </Button>
         </Modal.Footer>

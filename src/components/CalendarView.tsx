@@ -80,6 +80,7 @@ export function CalendarView({
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
+  const isCurrentMonth = currentMonth.isSame(dayjs(), "month");
   const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
 
   // Fetch holidays for the current month's year
@@ -359,6 +360,7 @@ export function CalendarView({
       const success = setLocationForDate(otherLocationDate, "other", { countryCode, label });
       if (!success) {
         toast.showError("Could not save location — check the country code");
+        return;
       }
       setShowOtherLocationModal(false);
     },
@@ -445,7 +447,7 @@ export function CalendarView({
             </div>
           ) : (
             <>
-              {crossBorderEnabled && currentMonth.isSame(dayjs(), "month") && (
+              {crossBorderEnabled && isCurrentMonth && (
                 <LocationSummaryBar workLocationMap={workLocationMap} />
               )}
               <MonthCalendar

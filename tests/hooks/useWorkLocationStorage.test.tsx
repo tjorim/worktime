@@ -243,9 +243,9 @@ describe("useWorkLocationStorage", () => {
       expect(result.current.workLocationMap.has("2026-02-18")).toBe(false);
     });
 
-    it("historical entry preserves its countryCode even when settings change", () => {
+    it("historical entry preserves its countryCode after remount with changed settings", () => {
       // Write an "other" entry with DE
-      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+      const { result, unmount } = renderHook(() => useWorkLocationStorage(2026), {
         wrapper: makeWrapper("NL", "BE"),
       });
 
@@ -253,8 +253,15 @@ describe("useWorkLocationStorage", () => {
         result.current.setLocationForDate("2026-02-18", "other", { countryCode: "DE" });
       });
 
+      // Simulate settings change by remounting with a new SettingsProvider state.
+      // (renderHook.rerender does not replace wrapper/context providers.)
+      unmount();
+      const { result: remounted } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("FR", "DE"),
+      });
+
       // The stored entry must still carry DE, unaffected by settings
-      expect(result.current.workLocationMap.get("2026-02-18")).toEqual({
+      expect(remounted.current.workLocationMap.get("2026-02-18")).toEqual({
         location: "other",
         countryCode: "DE",
       });
