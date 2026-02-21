@@ -118,9 +118,9 @@ export function SettingsPanel({
     updateTheme,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
+    updateCrossBorderTrackingEnabled,
     updateHomeCountry,
     updateOfficeCountry,
-    updateWfhWeeklyLimit,
     resetSettings,
   } = useSettings();
 
@@ -368,61 +368,6 @@ export function SettingsPanel({
             </div>
           </div>
 
-          {/* Cross-Border Setup Section */}
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-globe me-2"></i>
-                Cross-Border Setup
-              </h6>
-              <small className="text-muted d-block mb-3">
-                Configure countries for work location tracking
-              </small>
-              <ListGroup variant="flush">
-                <CountrySelectItem
-                  label="Home Country"
-                  description="Country where you are based"
-                  value={settings.homeCountry ?? ""}
-                  onUpdate={updateHomeCountry}
-                  ariaLabel="Home country"
-                />
-                <CountrySelectItem
-                  label="Office Country"
-                  description="Country where your office is located"
-                  value={settings.officeCountry ?? ""}
-                  onUpdate={updateOfficeCountry}
-                  ariaLabel="Office country"
-                />
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">WFH Weekly Limit</div>
-                      <small className="text-muted">
-                        {settings.homeCountry || settings.officeCountry
-                          ? "Max work-from-home days per week"
-                          : "Set a home or office country first"}
-                      </small>
-                    </div>
-                    <Form.Control
-                      type="number"
-                      size="sm"
-                      min={0}
-                      max={CONFIG.MAX_WFH_DAYS_PER_WEEK}
-                      step={1}
-                      value={settings.wfhWeeklyLimit}
-                      onChange={(event) => {
-                        updateWfhWeeklyLimit(parseInt(event.target.value, 10));
-                      }}
-                      style={{ width: "5rem" }}
-                      aria-label="WFH weekly limit"
-                      disabled={!settings.homeCountry && !settings.officeCountry}
-                    />
-                  </div>
-                </ListGroup.Item>
-              </ListGroup>
-            </div>
-          </div>
-
           {/* Feature Toggles */}
           <div className="border-bottom">
             <div className="p-3">
@@ -465,9 +410,57 @@ export function SettingsPanel({
                     </div>
                   </div>
                 </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Cross-Border Tracking</div>
+                      <small className="text-muted">
+                        Track work location per day for tax reporting
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-crossborder"
+                      checked={settings.enableCrossBorderTracking}
+                      onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
+                      aria-label="Toggle cross-border tracking"
+                    />
+                  </div>
+                </ListGroup.Item>
               </ListGroup>
             </div>
           </div>
+
+          {/* Cross-Border Setup Section — only shown when the feature is enabled */}
+          {settings.enableCrossBorderTracking && (
+            <div className="border-bottom">
+              <div className="p-3">
+                <h6 className="text-muted mb-3">
+                  <i className="bi bi-globe me-2"></i>
+                  Cross-Border Setup
+                </h6>
+                <small className="text-muted d-block mb-3">
+                  Configure countries for work location tracking
+                </small>
+                <ListGroup variant="flush">
+                  <CountrySelectItem
+                    label="Home Country"
+                    description="Country where you are based"
+                    value={settings.homeCountry ?? ""}
+                    onUpdate={updateHomeCountry}
+                    ariaLabel="Home country"
+                  />
+                  <CountrySelectItem
+                    label="Office Country"
+                    description="Country where your office is located"
+                    value={settings.officeCountry ?? ""}
+                    onUpdate={updateOfficeCountry}
+                    ariaLabel="Office country"
+                  />
+                </ListGroup>
+              </div>
+            </div>
+          )}
 
           {/* Information Section */}
           <div className="border-bottom">

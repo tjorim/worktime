@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from "react";
 
 import { useSettings } from "../contexts/SettingsContext";
-import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
+import { dayjs } from "../utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
+import { toCountryCode } from "../types/workLocation";
 
 /**
  * Raw storage shape persisted to localStorage.
- * Keys are date strings in YYYY/MM/DD format; values are WorkLocationInfo objects.
+ * Keys are date strings in YYYY-MM-DD format; values are WorkLocationInfo objects.
  */
 type StoredWorkLocations = Record<string, WorkLocationInfo>;
 
@@ -29,7 +30,7 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
  * setLocationForDate(dayjs(), "home");
  *
  * // Query a specific date (falls back to office default when not set)
- * const info = getLocationForDate("2026/02/20"); // { location: "office", countryCode: "NL" }
+ * const info = getLocationForDate("2026-02-20"); // { location: "office", countryCode: "NL" }
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
@@ -70,12 +71,12 @@ export function useWorkLocationStorage(year: number) {
    * derived from the user's officeCountry setting. Returns null when
    * neither a stored location nor an officeCountry setting exists.
    *
-   * @param date - The date to query (YYYY/MM/DD string, Date, or Dayjs)
+   * @param date - The date to query (YYYY-MM-DD string, Date, or Dayjs)
    * @returns The WorkLocationInfo for that day, or null if unresolvable
    */
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
-      const key = formatHdayDate(date);
+      const key = dayjs(date).format("YYYY-MM-DD");
       const stored = workLocationMap.get(key);
       if (stored) {
         return stored;
@@ -83,7 +84,10 @@ export function useWorkLocationStorage(year: number) {
 
       // Default-to-office: derive country from officeCountry setting
       if (officeCountry) {
-        return { location: "office", countryCode: officeCountry };
+        const parsedOfficeCountry = toCountryCode(officeCountry);
+        if (parsedOfficeCountry) {
+          return { location: "office", countryCode: parsedOfficeCountry };
+        }
       }
 
       return null;
@@ -94,30 +98,54 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Stores an explicit work location for a given date.
    *
-   * The country code is derived from the user's homeCountry setting (for "home")
-   * or officeCountry setting (for "office"). If the relevant country setting is
-   * not configured, the call is a no-op.
+   * For "home" and "office" locations, the country code is derived from the user's
+   * homeCountry / officeCountry setting. For "other" locations, the caller must
+   * supply a valid ISO 3166-1 alpha-2 code via `extra.countryCode`.
    *
-   * @param date - The date to set (YYYY/MM/DD string, Date, or Dayjs)
-   * @param location - The work location ("home" or "office")
+   * The countryCode is captured at write time. Changing homeCountry/officeCountry
+   * later does not retroactively update historical entries.
+   *
+   * @param date - The date to set (YYYY-MM-DD string, Date, or Dayjs)
+   * @param location - The work location ("home", "office", or "other")
+   * @param extra - For "other" locations: required countryCode and optional label
    * @returns `true` when the location was stored. Returns `false` when the relevant
-   *   country setting (homeCountry or officeCountry) is not configured, or when the
+   *   country setting is not configured or the code is invalid, or when the
    *   date year is outside the allowed {year-1, year, year+1} range (which also logs
    *   a warning). Callers can inspect logs to distinguish the failure mode.
    */
   const setLocationForDate = useCallback(
-    (date: dayjs.Dayjs | Date | string, location: WorkLocation): boolean => {
-      const countryCode = location === "home" ? homeCountry : officeCountry;
+    (
+      date: dayjs.Dayjs | Date | string,
+      location: WorkLocation,
+      extra?: { countryCode?: string; label?: string },
+    ): boolean => {
+      let countryCode: string | null;
+      if (location === "home") {
+        countryCode = homeCountry;
+      } else if (location === "office") {
+        countryCode = officeCountry;
+      } else {
+        countryCode = extra?.countryCode ?? null;
+      }
 
-      // Country must be configured before a location can be stored
-      if (!countryCode) {
+      const parsedCountryCode = countryCode ? toCountryCode(countryCode) : null;
+      // Country must be a valid ISO alpha-2 code before a location can be stored
+      if (!parsedCountryCode) {
         return false;
       }
 
       const d = dayjs(date);
-      const key = formatHdayDate(d);
+      if (!d.isValid()) {
+        console.warn("Invalid date passed to setLocationForDate:", date);
+        return false;
+      }
+      const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
-      const entry = { location, countryCode };
+      const entry: WorkLocationInfo = {
+        location,
+        countryCode: parsedCountryCode,
+        ...(extra?.label ? { label: extra.label } : {}),
+      };
 
       if (dateYear === year - 1) {
         setPrevYearLocations((prev) => ({ ...prev, [key]: entry }));
@@ -144,12 +172,16 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Removes the explicit work location for a given date, reverting to the default.
    *
-   * @param date - The date to clear (YYYY/MM/DD string, Date, or Dayjs)
+   * @param date - The date to clear (YYYY-MM-DD string, Date, or Dayjs)
    */
   const clearLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string) => {
       const d = dayjs(date);
-      const key = formatHdayDate(d);
+      if (!d.isValid()) {
+        console.warn("Invalid date passed to clearLocationForDate:", date);
+        return;
+      }
+      const key = d.format("YYYY-MM-DD");
       const dateYear = d.year();
 
       const removeKey = (prev: StoredWorkLocations) => {

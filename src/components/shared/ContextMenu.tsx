@@ -2,13 +2,16 @@ import { useEffect, useRef, useState, useId, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 
-export interface ContextMenuItem {
-  label: string;
-  icon?: string;
-  onClick: () => void;
-  variant?: "danger";
-  disabled?: boolean;
-}
+export type ContextMenuItem =
+  | {
+      separator?: false;
+      label: string;
+      icon?: string;
+      onClick: () => void;
+      variant?: "danger";
+      disabled?: boolean;
+    }
+  | { separator: true };
 
 interface ContextMenuProps {
   isOpen: boolean;
@@ -103,7 +106,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
           e.preventDefault();
           {
             const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
-            const next = (currentIndex + 1) % items.length;
+            const next = (currentIndex + 1) % menuItems.length;
             menuItems[next]?.focus();
           }
           break;
@@ -111,7 +114,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
           e.preventDefault();
           {
             const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
-            const next = (currentIndex - 1 + items.length) % items.length;
+            const next = (currentIndex - 1 + menuItems.length) % menuItems.length;
             menuItems[next]?.focus();
           }
           break;
@@ -121,7 +124,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
           break;
         case "End":
           e.preventDefault();
-          menuItems[items.length - 1]?.focus();
+          menuItems[menuItems.length - 1]?.focus();
           break;
         case "Tab":
           e.preventDefault();
@@ -144,6 +147,7 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
   }, [isOpen, triggerRef]);
 
   const handleItemClick = (item: ContextMenuItem) => {
+    if (item.separator) return;
     if (item.disabled) return;
     onClose();
     item.onClick();
@@ -163,20 +167,28 @@ export function ContextMenu({ isOpen, x, y, onClose, items, triggerRef }: Contex
         top: `${position.top}px`,
       }}
     >
-      {items.map((item, index) => (
-        <button
-          key={`${menuId}-item-${index}`}
-          type="button"
-          role="menuitem"
-          className={clsx("context-menu-item", item.variant === "danger" && "danger")}
-          onClick={() => handleItemClick(item)}
-          disabled={item.disabled}
-          aria-label={item.label}
-        >
-          {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
-          {item.label}
-        </button>
-      ))}
+      {items.map((item, index) => {
+        const baseKey = item.separator
+          ? "separator"
+          : `item:${item.label}|${item.icon ?? ""}|${item.variant ?? ""}|${item.disabled ? "1" : "0"}`;
+        const itemKey = `${menuId}-${index}-${baseKey}`;
+
+        return item.separator ? (
+          <hr key={itemKey} className="context-menu-separator" role="separator" />
+        ) : (
+          <button
+            key={itemKey}
+            type="button"
+            role="menuitem"
+            className={clsx("context-menu-item", item.variant === "danger" && "danger")}
+            onClick={() => handleItemClick(item)}
+            disabled={item.disabled}
+          >
+            {item.icon && <i className={clsx("bi", item.icon)} aria-hidden="true"></i>}
+            {item.label}
+          </button>
+        );
+      })}
     </div>,
     document.body,
   );

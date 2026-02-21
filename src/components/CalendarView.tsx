@@ -5,11 +5,10 @@ import type { Dayjs } from "dayjs";
 import type { HdayEvent } from "../lib/hday/types";
 import type { WorkLocation } from "../types/workLocation";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
-import { getWfhDaysInWeek } from "../utils/workLocationUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
+import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
@@ -27,7 +26,9 @@ import {
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
-import { WfhStatsBar } from "./calendar/WfhStatsBar";
+import { LocationSummaryBar } from "./calendar/LocationSummaryBar";
+import { LocationYearSummary } from "./calendar/LocationYearSummary";
+import { OtherLocationModal } from "./calendar/OtherLocationModal";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
@@ -79,6 +80,7 @@ export function CalendarView({
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
+  const isCurrentMonth = currentMonth.isSame(dayjs(), "month");
   const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
 
   // Fetch holidays for the current month's year
@@ -98,6 +100,12 @@ export function CalendarView({
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+
+  // Other location modal state
+  const [showOtherLocationModal, setShowOtherLocationModal] = useState(false);
+  const [otherLocationDate, setOtherLocationDate] = useState<Dayjs>(dayjs());
+  // Annual summary toggle
+  const [showAnnualSummary, setShowAnnualSummary] = useState(false);
 
   const {
     eventType,
@@ -321,9 +329,12 @@ export function CalendarView({
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
-  // Show each work-location action only when its specific country is configured
-  const showHomeLocationAction = !!settings.homeCountry;
-  const showOfficeLocationAction = !!settings.officeCountry;
+  // Cross-border tracking feature flag
+  const crossBorderEnabled = settings.enableCrossBorderTracking;
+  // Show each work-location action only when the feature is on and its country is configured
+  const showHomeLocationAction = crossBorderEnabled && !!settings.homeCountry;
+  const showOfficeLocationAction = crossBorderEnabled && !!settings.officeCountry;
+  const showOtherLocationAction = crossBorderEnabled;
 
   const handleSetWorkLocation = useCallback(
     (date: Dayjs, location: WorkLocation | null) => {
@@ -333,29 +344,27 @@ export function CalendarView({
         const success = setLocationForDate(date, location);
         if (!success) {
           toast.showError("Configure your country settings to track work locations");
-        } else if (location === "home") {
-          // Check if adding this WFH day causes the weekly limit to be exceeded
-          const dayKey = formatHdayDate(date);
-          // setLocationForDate updates state asynchronously, so this workLocationMap read is
-          // still the pre-update snapshot; we use getWfhDaysInWeek on that snapshot and
-          // manually add +1 when needed instead of assuming the map already contains dayKey.
-          const wasAlreadyHome = workLocationMap.get(dayKey)?.location === "home";
-          const existingCount = getWfhDaysInWeek(date, workLocationMap);
-          const newCount = wasAlreadyHome ? existingCount : existingCount + 1;
-          if (newCount > settings.wfhWeeklyLimit) {
-            const message =
-              settings.wfhWeeklyLimit === 0
-                ? "WFH limit reached: No WFH allowed this week"
-                : `WFH limit reached: ${newCount}/${settings.wfhWeeklyLimit} days this week`;
-            // Intentional warn-but-not-block UX: the day is already stored above.
-            // The toast informs the user without preventing the action, leaving
-            // them free to clear a different day if needed.
-            toast.showWarning(message);
-          }
         }
       }
     },
-    [clearLocationForDate, setLocationForDate, toast, settings.wfhWeeklyLimit, workLocationMap],
+    [clearLocationForDate, setLocationForDate, toast],
+  );
+
+  const handleSetOtherLocation = useCallback((date: Dayjs) => {
+    setOtherLocationDate(date);
+    setShowOtherLocationModal(true);
+  }, []);
+
+  const handleOtherLocationConfirm = useCallback(
+    (countryCode: string, label?: string) => {
+      const success = setLocationForDate(otherLocationDate, "other", { countryCode, label });
+      if (!success) {
+        toast.showError("Could not save location — check the country code");
+        return;
+      }
+      setShowOtherLocationModal(false);
+    },
+    [setLocationForDate, otherLocationDate, toast],
   );
 
   const handleHideEventModal = () => {
@@ -386,7 +395,21 @@ export function CalendarView({
               Select your schedule to see your working calendar
             </small>
           ) : (
-            <CalendarLegend showEventTypes={timeOffEnabled} />
+            <div className="d-flex align-items-center gap-2">
+              {crossBorderEnabled && (
+                <Button
+                  size="sm"
+                  variant={showAnnualSummary ? "secondary" : "outline-secondary"}
+                  onClick={() => setShowAnnualSummary((prev) => !prev)}
+                  aria-pressed={showAnnualSummary}
+                  title="Toggle annual location summary"
+                >
+                  <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
+                  Annual summary
+                </Button>
+              )}
+              <CalendarLegend showEventTypes={timeOffEnabled} />
+            </div>
           )}
         </Card.Header>
         <Card.Body>
@@ -424,13 +447,9 @@ export function CalendarView({
             </div>
           ) : (
             <>
-              {(showHomeLocationAction || showOfficeLocationAction) &&
-                currentMonth.isSame(dayjs(), "month") && (
-                  <WfhStatsBar
-                    workLocationMap={workLocationMap}
-                    wfhWeeklyLimit={settings.wfhWeeklyLimit}
-                  />
-                )}
+              {crossBorderEnabled && isCurrentMonth && (
+                <LocationSummaryBar workLocationMap={workLocationMap} />
+              )}
               <MonthCalendar
                 events={calendarEvents}
                 month={currentMonth}
@@ -444,16 +463,32 @@ export function CalendarView({
                 onEditEvent={handleOpenEditModal}
                 onDeleteEvent={handleDeleteClick}
                 onSetWorkLocation={handleSetWorkLocation}
+                onSetOtherLocation={handleSetOtherLocation}
                 allowEventActions={timeOffEnabled}
                 showHomeLocationAction={showHomeLocationAction}
                 showOfficeLocationAction={showOfficeLocationAction}
-                wfhWeeklyLimit={settings.wfhWeeklyLimit}
+                showOtherLocationAction={showOtherLocationAction}
                 getShiftForDate={getShiftForDate}
               />
+              {crossBorderEnabled && showAnnualSummary && (
+                <div className="mt-3">
+                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
+                </div>
+              )}
             </>
           )}
         </Card.Body>
       </Card>
+
+      {crossBorderEnabled && (
+        <OtherLocationModal
+          show={showOtherLocationModal}
+          date={otherLocationDate}
+          existing={workLocationMap.get(otherLocationDate.format("YYYY-MM-DD"))}
+          onHide={() => setShowOtherLocationModal(false)}
+          onConfirm={handleOtherLocationConfirm}
+        />
+      )}
 
       {timeOffEnabled && (
         <>

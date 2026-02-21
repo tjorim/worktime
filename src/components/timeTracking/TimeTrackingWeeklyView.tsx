@@ -1,11 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
+import { useSettings } from "../../contexts/SettingsContext";
 import { useLiveTime } from "../../hooks/useLiveTime";
+import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { WORK_LOCATION_ICON_CLASS } from "../calendar/workLocationConstants";
 import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
@@ -25,7 +28,7 @@ type TimeTrackingWeeklyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;
-  onSwitchToDaily?: () => void;
+  onSwitchToDaily?: (date: string) => void;
 };
 
 function getWeekDateRange(year: number, week: number): [string, string] {
@@ -53,6 +56,8 @@ export function TimeTrackingWeeklyView({
   weeklyTargetHours,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
+  const { settings } = useSettings();
+  const crossBorderEnabled = settings.enableCrossBorderTracking;
   const liveTime = useLiveTime({ precision: "minute" });
   const weeklyDate = dayjs(selectedDate);
   const weekStart = weeklyDate.startOf("isoWeek");
@@ -62,6 +67,7 @@ export function TimeTrackingWeeklyView({
 
   // Extract primitives for stable useMemo dependencies
   const year = weekStart.isoWeekYear();
+  const { getLocationForDate } = useWorkLocationStorage(year);
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
@@ -152,6 +158,16 @@ export function TimeTrackingWeeklyView({
       .sort((a, b) => b.hours - a.hours);
   }, [summary, weekTotal, labelNameToColor, defaultLabelColor]);
 
+  const createDayKeyDownHandler =
+    (dayIso: string, preventEnterDefault: boolean) => (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        if (e.key === " " || preventEnterDefault) {
+          e.preventDefault();
+        }
+        onSwitchToDaily?.(dayIso);
+      }
+    };
+
   return (
     <Card className="shadow-sm">
       <Card.Header>
@@ -192,7 +208,11 @@ export function TimeTrackingWeeklyView({
             description="Start tracking your time in the Daily Log to see your weekly breakdown here."
             ctaButton={
               onSwitchToDaily
-                ? { label: "Go to Daily Log", onClick: onSwitchToDaily, icon: "bi-plus-circle" }
+                ? {
+                    label: "Go to Daily Log",
+                    onClick: () => onSwitchToDaily(todayIso),
+                    icon: "bi-plus-circle",
+                  }
                 : undefined
             }
           />
@@ -276,11 +296,20 @@ export function TimeTrackingWeeklyView({
                   // Divide by 5 working days instead of 7 to show realistic daily targets
                   const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / 5 : 8;
                   const percentage = Math.min((dayTotal / targetDaily) * 100, 100);
+                  const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
 
                   return (
                     <div key={day.iso} className="col">
                       <div
-                        className={`text-center p-2 rounded ${isToday ? "bg-primary bg-opacity-10" : ""}`}
+                        className={`text-center p-2 rounded ${isToday ? "bg-primary bg-opacity-10" : ""}${onSwitchToDaily ? " hover-highlight" : ""}`}
+                        role={onSwitchToDaily ? "button" : undefined}
+                        tabIndex={onSwitchToDaily ? 0 : undefined}
+                        onClick={() => onSwitchToDaily?.(day.iso)}
+                        onKeyDown={
+                          onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined
+                        }
+                        title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
+                        style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                       >
                         <div
                           className={`small mb-1 ${isToday ? "fw-bold text-primary" : "text-muted"}`}
@@ -322,6 +351,15 @@ export function TimeTrackingWeeklyView({
                         <div className="text-muted" style={{ fontSize: "0.7rem" }}>
                           {percentage.toFixed(0)}%
                         </div>
+                        {location && (
+                          <div className="text-muted mt-1" style={{ fontSize: "0.65rem" }}>
+                            <i
+                              className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
+                              aria-hidden="true"
+                            />{" "}
+                            {location.countryCode}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -352,14 +390,48 @@ export function TimeTrackingWeeklyView({
                     const daySummary = dailyTotals[day.iso] ?? {};
                     const dayTotal = dailyHourTotals[index] ?? 0;
                     const isToday = day.iso === todayIso;
+                    const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
                     return (
-                      <tr key={day.iso} className={isToday ? "table-primary" : ""}>
+                      <tr
+                        key={day.iso}
+                        className={isToday ? "table-primary" : ""}
+                        onClick={() => onSwitchToDaily?.(day.iso)}
+                        style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
+                        title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
+                      >
                         <th scope="row">
-                          {day.label}
+                          {onSwitchToDaily ? (
+                            <button
+                              type="button"
+                              className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSwitchToDaily(day.iso);
+                              }}
+                              onKeyDown={createDayKeyDownHandler(day.iso, true)}
+                              aria-label={`Open ${day.label} daily log`}
+                            >
+                              {day.label}
+                            </button>
+                          ) : (
+                            day.label
+                          )}
                           {isToday && (
                             <Badge bg="primary" className="ms-2" pill>
                               Today
                             </Badge>
+                          )}
+                          {location && (
+                            <span
+                              className="ms-2 text-muted fw-normal"
+                              style={{ fontSize: "0.75rem" }}
+                            >
+                              <i
+                                className={`bi ${WORK_LOCATION_ICON_CLASS[location.location]}`}
+                                aria-hidden="true"
+                              />{" "}
+                              {location.countryCode}
+                            </span>
                           )}
                         </th>
                         {labelNames.map((label) => {

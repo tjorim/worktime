@@ -91,6 +91,7 @@ describe("useLocalStorage", () => {
 
     expect(result.current[0]).toBe("stored-value");
   });
+
   it("handles malformed JSON gracefully", () => {
     // Set up malformed JSON in localStorage
     window.localStorage.setItem("test_malformed", "invalid-json");
