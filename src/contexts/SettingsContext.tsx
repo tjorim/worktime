@@ -131,7 +131,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 4;
+const CURRENT_VERSION = 3;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -262,7 +262,7 @@ const migrations: Record<number, Migration> = {
     };
   },
 
-  // → v3: Add homeCountry and officeCountry to settings.
+  // → v3: Add homeCountry, officeCountry, and wfhWeeklyLimit to settings.
   3: (state) => {
     const settings = (
       typeof state.settings === "object" && state.settings !== null ? state.settings : {}
@@ -274,20 +274,6 @@ const migrations: Record<number, Migration> = {
         ...settings,
         homeCountry: settings.homeCountry ?? null,
         officeCountry: settings.officeCountry ?? null,
-      },
-    };
-  },
-
-  // → v4: Add wfhWeeklyLimit to settings.
-  4: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawState;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
         wfhWeeklyLimit: settings.wfhWeeklyLimit ?? defaultSettings.wfhWeeklyLimit,
       },
     };
