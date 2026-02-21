@@ -60,9 +60,11 @@ describe("UpcomingShiftsList", () => {
 
     expect(screen.getByText("Upcoming Shifts")).toBeInTheDocument();
     expect(screen.getByText("2502.5")).toBeInTheDocument();
+    expect(screen.queryByText("2502.5M")).not.toBeInTheDocument();
     expect(screen.getByText("Morning")).toBeInTheDocument();
     expect(screen.getByText("07:00")).toBeInTheDocument();
     expect(screen.getByText("2502.6")).toBeInTheDocument();
+    expect(screen.queryByText("2502.6L")).not.toBeInTheDocument();
     expect(screen.getByText("Late")).toBeInTheDocument();
   });
 

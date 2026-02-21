@@ -11,7 +11,6 @@ import { EmptyState } from "../shared/EmptyState";
 
 interface RecentTransfersListProps {
   transfers: TransferInfo[];
-  myTeam: number | null;
   title?: string;
   scheduleType?: NullableScheduleOption;
   emptyTitle?: string;
@@ -22,7 +21,6 @@ interface RecentTransfersListProps {
 
 export function RecentTransfersList({
   transfers,
-  myTeam,
   title = "Recent Transfers",
   scheduleType,
   emptyTitle = "No Transfers Found",
@@ -75,10 +73,9 @@ export function RecentTransfersList({
                     <Badge bg={transfer.type === "handover" ? "success" : "info"} className="mb-1">
                       {transfer.type === "handover" ? "Handover" : "Takeover"}
                     </Badge>
-                    <small className="text-muted text-nowrap">
-                      {fromShift.name} → {toShift.name}
-                    </small>
-                    {myTeam && <small className="text-muted">Your team: Team {myTeam}</small>}
+                  <small className="text-muted text-nowrap">
+                    {fromShift.name} → {toShift.name}
+                  </small>
                   </div>
                 </ListGroup.Item>
               );

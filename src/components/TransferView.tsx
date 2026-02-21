@@ -118,8 +118,6 @@ export function TransferView({
     }
   }, [useCustomRange]);
 
-  const today = dayjs();
-
   const transferDateRange = useMemo(() => {
     if (!transferStats?.earliest || !transferStats?.latest) {
       return "-";
@@ -135,13 +133,14 @@ export function TransferView({
   }, [transferStats]);
 
   const groupedTransfers = useMemo(() => {
+    const todayStart = dayjs().startOf("day");
     const nextWeek: typeof transfers = [];
     const nextMonth: typeof transfers = [];
     const future: typeof transfers = [];
     const past: typeof transfers = [];
 
     transfers.forEach((transfer) => {
-      const diffDays = transfer.date.startOf("day").diff(today.startOf("day"), "day");
+      const diffDays = transfer.date.startOf("day").diff(todayStart, "day");
       if (diffDays < 0) {
         past.push(transfer);
       } else if (diffDays <= 7) {
@@ -159,7 +158,7 @@ export function TransferView({
       { key: "further", title: "Further Ahead", items: future },
       { key: "past", title: "Past Transfers", items: past },
     ];
-  }, [today, transfers]);
+  }, [transfers]);
 
   return (
     <Card>
@@ -304,10 +303,9 @@ export function TransferView({
               <Col lg={7}>
                 <ErrorBoundary>
                   <RecentTransfersList
-                    title="Recent Transfer Activity"
+                    title="Nearest Transfers"
                     transfers={transfers.slice(0, 5)}
-                    myTeam={myTeam}
-                    emptyDescription="Transfers between your team and the selected team will appear here."
+                    emptyDescription="The next transfers between your team and the selected team will appear here."
                     scheduleType={scheduleType}
                   />
                 </ErrorBoundary>
@@ -373,7 +371,6 @@ export function TransferView({
                           <RecentTransfersList
                             title={group.title}
                             transfers={group.items}
-                            myTeam={myTeam}
                             emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
                             scheduleType={scheduleType}
                           />

@@ -1,11 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "../../src/components/TransferView";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations, TransferType } from "../../src/hooks/useTransferCalculations";
-import { dayjs } from "../../src/utils/dateTimeUtils";
+import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
+import { getNextShift } from "../../src/utils/shiftCalculations";
 
 // Mock useSettings to provide scheduleType
 vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
@@ -44,6 +45,7 @@ vi.mock("../../src/hooks/useTransferCalculations", () => ({
 }));
 
 const mockUseTransferCalculations = vi.mocked(useTransferCalculations);
+const mockGetNextShift = vi.mocked(getNextShift);
 
 vi.mock("../../src/utils/shiftCalculations", () => ({
   getShift: vi.fn((code) => {
@@ -94,20 +96,7 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
-  getNextShift: vi.fn((date) => ({
-    date: dayjs(date).add(1, "day"),
-    shift: {
-      code: "M",
-      displayCode: "M",
-      emoji: "🌅",
-      name: "Morning",
-      start: 7,
-      end: 15,
-      isWorking: true,
-      className: "shift-morning",
-    },
-    code: "2502.2M",
-  })),
+  getNextShift: vi.fn(),
 }));
 
 vi.mock("../../src/utils/config", async (importOriginal) => {
@@ -138,9 +127,82 @@ const defaultProps = {
   myTeam: 1,
 };
 
+const TEAM_TRANSFERS_HEADER = "Team Transfers";
+const getTeamBadgeRegex = (teamNumber: number) => new RegExp(`^Your Team:\\s*${teamNumber}$`);
+
+function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
+  const header = screen.getByText(TEAM_TRANSFERS_HEADER).closest(".card-header");
+  expect(header).toBeInstanceOf(HTMLElement);
+  expect(within(header as HTMLElement).getByText(getTeamBadgeRegex(teamNumber))).toBeInTheDocument();
+}
+
 describe("TransferView", () => {
   beforeEach(() => {
     mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
+    let chainLength = 0;
+    let expectedNextInput: string | null = null;
+    const shiftSequence = [
+      {
+        code: "M",
+        displayCode: "M",
+        emoji: "🌅",
+        name: "Morning",
+        start: 7,
+        end: 15,
+        isWorking: true,
+        className: "shift-morning",
+      },
+      {
+        code: "L",
+        displayCode: "E",
+        emoji: "🌆",
+        name: "Evening",
+        start: 15,
+        end: 23,
+        isWorking: true,
+        className: "shift-late",
+      },
+      {
+        code: "N",
+        displayCode: "N",
+        emoji: "🌙",
+        name: "Night",
+        start: 23,
+        end: 7,
+        isWorking: true,
+        className: "shift-night",
+      },
+    ] as const;
+
+    mockGetNextShift.mockReset();
+    mockGetNextShift.mockImplementation((fromDate) => {
+      const inputDate = dayjs(fromDate).startOf("day");
+      if (!inputDate.isValid()) {
+        return null;
+      }
+
+      // Start a fresh sequence for each independent search chain.
+      if (!expectedNextInput || !inputDate.isSame(dayjs(expectedNextInput), "day")) {
+        chainLength = 0;
+      }
+
+      if (chainLength >= 6) {
+        expectedNextInput = null;
+        return null;
+      }
+
+      const nextDate = inputDate.add(1, "day");
+      const shift = shiftSequence[chainLength % shiftSequence.length];
+      chainLength += 1;
+      expectedNextInput = nextDate.toISOString();
+
+      return {
+        date: nextDate,
+        shift,
+        code: `${formatYYWWD(nextDate)}${shift.code}`,
+      };
+    });
+
     mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -328,7 +390,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badges and icons for team direction
-      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
+      expectMyTeamBadgeInTransferHeader(1);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Wed, Jan 15/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Morning/).length).toBeGreaterThan(0);
@@ -429,7 +491,7 @@ describe("TransferView", () => {
       expect(screen.getAllByText(/Night/).length).toBeGreaterThan(0);
 
       // Check for badges and icons for team direction
-      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
+      expectMyTeamBadgeInTransferHeader(1);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
 
       // Check handover/takeover labels
@@ -457,7 +519,7 @@ describe("TransferView", () => {
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
       // Check for badge-based section header
-      expect(screen.getAllByText(/Your Team: 1|Your team: Team 1/).length).toBeGreaterThan(0);
+      expectMyTeamBadgeInTransferHeader(1);
       expect(screen.getAllByText(/Team 2/).length).toBeGreaterThan(0);
     });
   });
@@ -521,7 +583,8 @@ describe("TransferView", () => {
       expect(screen.queryByText(/Wed, Jan 15 to Wed, Jan 15/)).not.toBeInTheDocument();
     });
 
-    it("groups transfer history into accordion buckets", () => {
+    it("groups transfer history into accordion buckets", async () => {
+      const user = userEvent.setup();
       const mockTransfers = [
         {
           date: dayjs().add(2, "day"),
@@ -560,6 +623,33 @@ describe("TransferView", () => {
       expect(screen.getAllByText(/Next 30 Days/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Further Ahead/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Past Transfers/).length).toBeGreaterThan(0);
+
+      const next7Header = screen.getByRole("button", { name: /Next 7 Days/i });
+      const next30Header = screen.getByRole("button", { name: /Next 30 Days/i });
+      const furtherHeader = screen.getByRole("button", { name: /Further Ahead/i });
+
+      await user.click(next30Header);
+      await user.click(furtherHeader);
+
+      const next7Item = next7Header.closest(".accordion-item");
+      const next30Item = next30Header.closest(".accordion-item");
+      const furtherItem = furtherHeader.closest(".accordion-item");
+
+      expect(next7Item).toBeInstanceOf(HTMLElement);
+      expect(next30Item).toBeInstanceOf(HTMLElement);
+      expect(furtherItem).toBeInstanceOf(HTMLElement);
+
+      const next7ItemElement = next7Item as HTMLElement;
+      const next30ItemElement = next30Item as HTMLElement;
+      const furtherItemElement = furtherItem as HTMLElement;
+
+      // Verify each bucket renders its own transfer content.
+      expect(within(next7ItemElement).getByText("Team 1 → Team 2")).toBeInTheDocument();
+      expect(within(next7ItemElement).getByText("Morning → Evening")).toBeInTheDocument();
+      expect(within(next30ItemElement).getByText("Team 2 → Team 1")).toBeInTheDocument();
+      expect(within(next30ItemElement).getByText("Takeover")).toBeInTheDocument();
+      expect(within(furtherItemElement).getByText("Team 1 → Team 2")).toBeInTheDocument();
+      expect(within(furtherItemElement).getByText("Night → Morning")).toBeInTheDocument();
     });
 
     it("uses shared empty state for no other teams", () => {

@@ -84,9 +84,7 @@ export function UpcomingShiftsList({
                   <small className="text-muted">{entry.shift.name}</small>
                 </div>
                 <small className="text-muted text-nowrap">
-                  {entry.shift.start == null
-                    ? "No start time"
-                    : getLocalizedShiftTime(entry.shift.start, null, timeFormat)}
+                  {getLocalizedShiftTime(entry.shift.start, null, timeFormat) ?? "No start time"}
                 </small>
               </ListGroup.Item>
             ))}
