@@ -102,8 +102,8 @@ export function TimeTrackingView() {
           selectedDate={selectedWeeklyDate}
           onSelectedDateChange={setSelectedWeeklyDate}
           weeklyTargetHours={weeklyTargetHours}
-          onSwitchToDaily={() => {
-            setSelectedDailyDate(dayjs().format("YYYY-MM-DD"));
+          onSwitchToDaily={(date) => {
+            setSelectedDailyDate(date);
             setViewMode("daily");
           }}
         />

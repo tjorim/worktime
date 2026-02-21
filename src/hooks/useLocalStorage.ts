@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Synchronises a React state value with window.localStorage.
@@ -32,6 +34,42 @@ export function useLocalStorage<T>(
   // This prevents stale closure issues when batching updates
   const latestValueRef = useRef(storedValue);
   latestValueRef.current = storedValue;
+  const didMountRef = useRef(false);
+  const initialValueRef = useRef(initialValue);
+  initialValueRef.current = initialValue;
+
+  const readValueForKey = useCallback((storageKey: string): T => {
+    if (typeof window === "undefined") {
+      return initialValueRef.current;
+    }
+
+    try {
+      const item = window.localStorage.getItem(storageKey);
+      return item ? JSON.parse(item) : initialValueRef.current;
+    } catch {
+      return initialValueRef.current;
+    }
+  }, []);
+
+  // Re-read localStorage when the key changes after initial mount.
+  // Layout effect prevents interactive gaps where functional updates could use stale ref data.
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    const nextValue = readValueForKey(key);
+    latestValueRef.current = nextValue;
+    setStoredValue(nextValue);
+  }, [
+    key,
+    setStoredValue,
+    readValueForKey,
+    // intentionally excludes initialValue to prevent spurious re-reads
+  ]);
 
   // Listen for changes to this key in other tabs
   useEffect(() => {
@@ -40,7 +78,9 @@ export function useLocalStorage<T>(
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key && e.newValue !== null) {
         try {
-          setStoredValue(JSON.parse(e.newValue));
+          const parsed = JSON.parse(e.newValue);
+          latestValueRef.current = parsed;
+          setStoredValue(parsed);
         } catch {
           // Ignore parsing errors
         }

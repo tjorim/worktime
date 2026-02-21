@@ -8,6 +8,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../types/countries";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
@@ -17,6 +18,62 @@ import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
+
+interface CountrySelectProps {
+  value: string;
+  onChange: (country: CountryCode | null) => void;
+  ariaLabel: string;
+}
+
+function CountrySelect({ value, onChange, ariaLabel }: CountrySelectProps) {
+  return (
+    <Form.Select
+      size="sm"
+      style={{ width: "auto" }}
+      value={value}
+      onChange={(event) => {
+        const val = event.target.value;
+        onChange(isValidCountryCode(val) ? val : null);
+      }}
+      aria-label={ariaLabel}
+    >
+      <option value="">None</option>
+      {SUPPORTED_COUNTRIES.map((country) => (
+        <option key={country.code} value={country.code}>
+          {country.name}
+        </option>
+      ))}
+    </Form.Select>
+  );
+}
+
+interface CountrySelectItemProps {
+  label: string;
+  description: string;
+  value: string;
+  onUpdate: (country: CountryCode | null) => void;
+  ariaLabel?: string;
+}
+
+function CountrySelectItem({
+  label,
+  description,
+  value,
+  onUpdate,
+  ariaLabel,
+}: CountrySelectItemProps) {
+  return (
+    <ListGroup.Item>
+      <div className="d-flex justify-content-between align-items-center">
+        <div>
+          <div className="fw-medium">{label}</div>
+          <small className="text-muted">{description}</small>
+        </div>
+        <CountrySelect value={value} onChange={onUpdate} ariaLabel={ariaLabel ?? label} />
+      </div>
+    </ListGroup.Item>
+  );
+}
 
 interface SettingsPanelProps {
   show: boolean;
@@ -61,6 +118,9 @@ export function SettingsPanel({
     updateTheme,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
+    updateCrossBorderTrackingEnabled,
+    updateHomeCountry,
+    updateOfficeCountry,
     resetSettings,
   } = useSettings();
 
@@ -350,9 +410,57 @@ export function SettingsPanel({
                     </div>
                   </div>
                 </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">Cross-Border Tracking</div>
+                      <small className="text-muted">
+                        Track work location per day for tax reporting
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-crossborder"
+                      checked={settings.enableCrossBorderTracking}
+                      onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
+                      aria-label="Toggle cross-border tracking"
+                    />
+                  </div>
+                </ListGroup.Item>
               </ListGroup>
             </div>
           </div>
+
+          {/* Cross-Border Setup Section — only shown when the feature is enabled */}
+          {settings.enableCrossBorderTracking && (
+            <div className="border-bottom">
+              <div className="p-3">
+                <h6 className="text-muted mb-3">
+                  <i className="bi bi-globe me-2"></i>
+                  Cross-Border Setup
+                </h6>
+                <small className="text-muted d-block mb-3">
+                  Configure countries for work location tracking
+                </small>
+                <ListGroup variant="flush">
+                  <CountrySelectItem
+                    label="Home Country"
+                    description="Country where you are based"
+                    value={settings.homeCountry ?? ""}
+                    onUpdate={updateHomeCountry}
+                    ariaLabel="Home country"
+                  />
+                  <CountrySelectItem
+                    label="Office Country"
+                    description="Country where your office is located"
+                    value={settings.officeCountry ?? ""}
+                    onUpdate={updateOfficeCountry}
+                    ariaLabel="Office country"
+                  />
+                </ListGroup>
+              </div>
+            </div>
+          )}
 
           {/* Information Section */}
           <div className="border-bottom">

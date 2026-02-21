@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
 import type { HdayEvent } from "../lib/hday/types";
+import type { WorkLocation } from "../types/workLocation";
 import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -10,6 +11,7 @@ import { useToast } from "../contexts/ToastContext";
 import { dayjs } from "../utils/dateTimeUtils";
 import { usePublicHolidays } from "../hooks/usePublicHolidays";
 import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
+import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
 import { getMonthlyPaydayMap } from "../utils/paydayUtils";
 import { calculateShift } from "../utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "../data/rosters";
@@ -24,6 +26,9 @@ import {
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
+import { LocationSummaryBar } from "./calendar/LocationSummaryBar";
+import { LocationYearSummary } from "./calendar/LocationYearSummary";
+import { OtherLocationModal } from "./calendar/OtherLocationModal";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
@@ -75,12 +80,15 @@ export function CalendarView({
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
+  const isCurrentMonth = currentMonth.isSame(dayjs(), "month");
   const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
 
   // Fetch holidays for the current month's year
   const currentYear = currentMonth.year();
   const { publicHolidayMap } = usePublicHolidays(currentYear);
   const { schoolHolidayMap } = useSchoolHolidays(currentYear);
+  const { workLocationMap, setLocationForDate, clearLocationForDate } =
+    useWorkLocationStorage(currentYear);
 
   // Get payday information for the year
   const paydayMapForYear = useMemo(
@@ -92,6 +100,12 @@ export function CalendarView({
   const [showEventModal, setShowEventModal] = useState(false);
   const [editIndex, setEditIndex] = useState(-1);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+
+  // Other location modal state
+  const [showOtherLocationModal, setShowOtherLocationModal] = useState(false);
+  const [otherLocationDate, setOtherLocationDate] = useState<Dayjs>(dayjs());
+  // Annual summary toggle
+  const [showAnnualSummary, setShowAnnualSummary] = useState(false);
 
   const {
     eventType,
@@ -315,6 +329,44 @@ export function CalendarView({
     };
   }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
 
+  // Cross-border tracking feature flag
+  const crossBorderEnabled = settings.enableCrossBorderTracking;
+  // Show each work-location action only when the feature is on and its country is configured
+  const showHomeLocationAction = crossBorderEnabled && !!settings.homeCountry;
+  const showOfficeLocationAction = crossBorderEnabled && !!settings.officeCountry;
+  const showOtherLocationAction = crossBorderEnabled;
+
+  const handleSetWorkLocation = useCallback(
+    (date: Dayjs, location: WorkLocation | null) => {
+      if (location === null) {
+        clearLocationForDate(date);
+      } else {
+        const success = setLocationForDate(date, location);
+        if (!success) {
+          toast.showError("Configure your country settings to track work locations");
+        }
+      }
+    },
+    [clearLocationForDate, setLocationForDate, toast],
+  );
+
+  const handleSetOtherLocation = useCallback((date: Dayjs) => {
+    setOtherLocationDate(date);
+    setShowOtherLocationModal(true);
+  }, []);
+
+  const handleOtherLocationConfirm = useCallback(
+    (countryCode: string, label?: string) => {
+      const success = setLocationForDate(otherLocationDate, "other", { countryCode, label });
+      if (!success) {
+        toast.showError("Could not save location — check the country code");
+        return;
+      }
+      setShowOtherLocationModal(false);
+    },
+    [setLocationForDate, otherLocationDate, toast],
+  );
+
   const handleHideEventModal = () => {
     setShowEventModal(false);
     setShowResetConfirm(false);
@@ -343,7 +395,21 @@ export function CalendarView({
               Select your schedule to see your working calendar
             </small>
           ) : (
-            <CalendarLegend showEventTypes={timeOffEnabled} />
+            <div className="d-flex align-items-center gap-2">
+              {crossBorderEnabled && (
+                <Button
+                  size="sm"
+                  variant={showAnnualSummary ? "secondary" : "outline-secondary"}
+                  onClick={() => setShowAnnualSummary((prev) => !prev)}
+                  aria-pressed={showAnnualSummary}
+                  title="Toggle annual location summary"
+                >
+                  <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
+                  Annual summary
+                </Button>
+              )}
+              <CalendarLegend showEventTypes={timeOffEnabled} />
+            </div>
           )}
         </Card.Header>
         <Card.Body>
@@ -380,23 +446,49 @@ export function CalendarView({
               )}
             </div>
           ) : (
-            <MonthCalendar
-              events={calendarEvents}
-              month={currentMonth}
-              publicHolidays={publicHolidayMap}
-              schoolHolidays={schoolHolidayMap}
-              paydayMap={paydayMapForYear}
-              onMonthChange={setCurrentMonth}
-              onAddEvent={handleAddEventForDate}
-              onViewEvent={handleOpenViewModal}
-              onEditEvent={handleOpenEditModal}
-              onDeleteEvent={handleDeleteClick}
-              allowEventActions={timeOffEnabled}
-              getShiftForDate={getShiftForDate}
-            />
+            <>
+              {crossBorderEnabled && isCurrentMonth && (
+                <LocationSummaryBar workLocationMap={workLocationMap} />
+              )}
+              <MonthCalendar
+                events={calendarEvents}
+                month={currentMonth}
+                publicHolidays={publicHolidayMap}
+                schoolHolidays={schoolHolidayMap}
+                paydayMap={paydayMapForYear}
+                workLocationMap={workLocationMap}
+                onMonthChange={setCurrentMonth}
+                onAddEvent={handleAddEventForDate}
+                onViewEvent={handleOpenViewModal}
+                onEditEvent={handleOpenEditModal}
+                onDeleteEvent={handleDeleteClick}
+                onSetWorkLocation={handleSetWorkLocation}
+                onSetOtherLocation={handleSetOtherLocation}
+                allowEventActions={timeOffEnabled}
+                showHomeLocationAction={showHomeLocationAction}
+                showOfficeLocationAction={showOfficeLocationAction}
+                showOtherLocationAction={showOtherLocationAction}
+                getShiftForDate={getShiftForDate}
+              />
+              {crossBorderEnabled && showAnnualSummary && (
+                <div className="mt-3">
+                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
+                </div>
+              )}
+            </>
           )}
         </Card.Body>
       </Card>
+
+      {crossBorderEnabled && (
+        <OtherLocationModal
+          show={showOtherLocationModal}
+          date={otherLocationDate}
+          existing={workLocationMap.get(otherLocationDate.format("YYYY-MM-DD"))}
+          onHide={() => setShowOtherLocationModal(false)}
+          onConfirm={handleOtherLocationConfirm}
+        />
+      )}
 
       {timeOffEnabled && (
         <>

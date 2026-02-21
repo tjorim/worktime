@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
 import { ToastProvider } from "../../../src/contexts/ToastContext";
+import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
@@ -53,7 +54,7 @@ describe("TimeTrackingDailyView", () => {
       templates: TEST_TEMPLATES,
       selectedDate: dayjs().format("YYYY-MM-DD"),
       onSelectedDateChange: vi.fn(),
-      onAddTask: vi.fn().mockReturnValue(true),
+      onAddTask: vi.fn().mockResolvedValue(true),
       onUpdateTaskTimes: vi.fn(),
       onRemoveTask: vi.fn(),
       onToggleBreak: vi.fn(),
@@ -65,19 +66,22 @@ describe("TimeTrackingDailyView", () => {
     vi.unstubAllGlobals();
   });
 
-  const renderView = (overrides: Partial<typeof mockProps> = {}) =>
-    render(
-      <ToastProvider>
-        <TimeTrackingDailyView {...mockProps} {...overrides} />
-      </ToastProvider>,
+  const renderView = (overrides: Partial<typeof mockProps> = {}) => {
+    return render(
+      <SettingsProvider>
+        <ToastProvider>
+          <TimeTrackingDailyView {...mockProps} {...overrides} />
+        </ToastProvider>
+      </SettingsProvider>,
     );
+  };
 
   describe("Quick Timer", () => {
     it("starts a timer when a task name is provided", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-01T10:15:30"));
       vi.stubGlobal("crypto", { randomUUID: () => "task-123" } as unknown as Crypto);
-      const onAddTask = vi.fn().mockReturnValue(true);
+      const onAddTask = vi.fn().mockResolvedValue(true);
 
       renderView({ onAddTask });
 

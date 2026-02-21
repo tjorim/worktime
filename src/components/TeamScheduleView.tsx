@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SubmitEvent } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -186,7 +187,7 @@ export function TeamScheduleView() {
     }
   }, [teamId, connectionStatus, teamData, isLoading, hasAttemptedFetch, fetchTeamData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setHasAttemptedFetch(false); // Reset attempt flag to allow manual retry
     fetchTeamData();

@@ -74,7 +74,7 @@ ${Object.entries(futurePlans)
       }
 
       if (version.technicalDetails) {
-        versionSection += `### ${version.technicalDetails.title}\n\n`;
+        versionSection += `#### ${version.technicalDetails.title}\n\n`;
         versionSection += `${version.technicalDetails.description}\n\n`;
       }
 
