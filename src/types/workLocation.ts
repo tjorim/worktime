@@ -1,12 +1,11 @@
-import type { CountryCode } from "./countries";
-
 /**
  * Represents where a user is working from on a given day.
  *
  * - "home": Working from home (WFH)
  * - "office": Working from the office
+ * - "other": Any other location (worldwide office, customer site, conference, etc.)
  */
-export type WorkLocation = "home" | "office";
+export type WorkLocation = "home" | "office" | "other";
 
 /**
  * Represents work location information for a specific day.
@@ -20,20 +19,27 @@ export type WorkLocation = "home" | "office";
  *   location: "home",
  *   countryCode: "NL"
  * });
+ *
+ * @note The countryCode is captured at write time from the caller-supplied value or settings.
+ * Changing homeCountry/officeCountry later does not retroactively update historical entries.
  */
 export interface WorkLocationInfo {
   /**
    * Where the user is working from on this day.
-   * Used for WFH tracking and limit enforcement.
    */
   location: WorkLocation;
 
   /**
-   * ISO 3166-1 alpha-2 country code for the work location.
-   * Derived from the user's homeCountry (for WFH) or officeCountry (for office days) setting.
+   * ISO 3166-1 alpha-2 country code for the work location (any 2 uppercase letters).
+   * Captured at write time — changing country settings does not retroactively update stored entries.
    * Used for tax/regulatory compliance when working across borders.
    */
-  countryCode: CountryCode;
+  countryCode: string;
+
+  /**
+   * Optional free-text annotation for "other" locations (e.g. "Berlin office", "Client NL").
+   */
+  label?: string;
 }
 
 /**

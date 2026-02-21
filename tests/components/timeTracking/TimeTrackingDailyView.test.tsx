@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
 import { ToastProvider } from "../../../src/contexts/ToastContext";
+import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
@@ -67,9 +68,11 @@ describe("TimeTrackingDailyView", () => {
 
   const renderView = (overrides: Partial<typeof mockProps> = {}) =>
     render(
-      <ToastProvider>
-        <TimeTrackingDailyView {...mockProps} {...overrides} />
-      </ToastProvider>,
+      <SettingsProvider>
+        <ToastProvider>
+          <TimeTrackingDailyView {...mockProps} {...overrides} />
+        </ToastProvider>
+      </SettingsProvider>,
     );
 
   describe("Quick Timer", () => {

@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 
 import { dayjs, formatHdayDate } from "./dateTimeUtils";
-import type { WorkLocationMap } from "../types/workLocation";
+import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
 
 /**
  * Counts the number of WFH (work-from-home) days in the ISO week containing the given date.
@@ -31,22 +31,64 @@ export function getWfhDaysInWeek(date: Dayjs, workLocationMap: WorkLocationMap):
 }
 
 /**
- * Checks whether the WFH day count for the ISO week containing the given date
- * exceeds the specified limit.
+ * Counts the number of days per location type in the ISO week containing the given date.
+ *
+ * Only considers days present in workLocationMap with an explicit entry.
+ * Days without an explicit entry are not counted.
  *
  * @param date - Any date within the target ISO week
  * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
- * @param limit - Maximum number of WFH days allowed per week
- * @returns True if the WFH count strictly exceeds the limit, false otherwise
+ * @returns Record of counts per WorkLocation type
  *
  * @example
- * // Returns true if 4 WFH days are set and limit is 3
- * isWfhLimitExceeded(dayjs("2026-02-18"), workLocationMap, 3); // true
+ * // Returns { home: 2, office: 3, other: 1 }
+ * getLocationCountsInWeek(dayjs("2026-02-18"), workLocationMap);
  */
-export function isWfhLimitExceeded(
+export function getLocationCountsInWeek(
   date: Dayjs,
   workLocationMap: WorkLocationMap,
-  limit: number,
-): boolean {
-  return getWfhDaysInWeek(date, workLocationMap) > limit;
+): Record<WorkLocation, number> {
+  const monday = dayjs(date).isoWeekday(1);
+  const counts: Record<WorkLocation, number> = { home: 0, office: 0, other: 0 };
+  for (let i = 0; i < 7; i++) {
+    const info = workLocationMap.get(formatHdayDate(monday.add(i, "day")));
+    if (info) {
+      counts[info.location]++;
+    }
+  }
+  return counts;
+}
+
+/**
+ * Aggregates all stored entries in workLocationMap into a grouped summary
+ * keyed by (location, countryCode, label) for use in annual tax reporting.
+ * Returns entries sorted by count descending.
+ *
+ * @param workLocationMap - Map of explicitly set work locations keyed by YYYY/MM/DD
+ * @returns Array of grouped entries with day counts, sorted by days descending
+ */
+export function aggregateLocationsByYear(
+  workLocationMap: WorkLocationMap,
+): Array<{ location: WorkLocation; countryCode: string; label?: string; days: number }> {
+  const counts = new Map<
+    string,
+    { location: WorkLocation; countryCode: string; label?: string; days: number }
+  >();
+
+  for (const info of workLocationMap.values()) {
+    const key = `${info.location}:${info.countryCode}:${info.label ?? ""}`;
+    const existing = counts.get(key);
+    if (existing) {
+      existing.days++;
+    } else {
+      counts.set(key, {
+        location: info.location,
+        countryCode: info.countryCode,
+        ...(info.label ? { label: info.label } : {}),
+        days: 1,
+      });
+    }
+  }
+
+  return Array.from(counts.values()).sort((a, b) => b.days - a.days);
 }

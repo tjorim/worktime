@@ -26,6 +26,7 @@ describe("SettingsContext unified user state", () => {
     });
     expect(result.current.settings.homeCountry).toBe(null);
     expect(result.current.settings.officeCountry).toBe(null);
+    expect(result.current.settings.enableCrossBorderTracking).toBe(false);
     expect(result.current.myTeam).toBe(null);
     expect(result.current.scheduleType).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
@@ -164,9 +165,9 @@ describe("SettingsContext unified user state", () => {
         },
         enableTimeOff: false,
         enableTimeTracking: false,
+        enableCrossBorderTracking: false,
         homeCountry: null,
         officeCountry: null,
-        wfhWeeklyLimit: 2,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -206,90 +207,35 @@ describe("SettingsContext unified user state", () => {
     expect(document.documentElement.getAttribute("data-bs-theme")).toBeNull();
   });
 
-  describe("WFH weekly limit settings", () => {
-    it("persists sanitized WFH weekly limit updates to localStorage", async () => {
+  describe("Cross-border tracking settings", () => {
+    it("defaults enableCrossBorderTracking to false", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-
-      const testAndAssertPersistence = async (limit: number) => {
-        await act(async () => {
-          result.current.updateWfhWeeklyLimit(limit);
-        });
-        expect(result.current.settings.wfhWeeklyLimit).toBe(limit);
-        const stored = window.localStorage.getItem("worktime_user_state");
-        expect(stored).not.toBeNull();
-        const parsedState = JSON.parse(stored as string) as {
-          settings: { wfhWeeklyLimit: number };
-        };
-        expect(parsedState.settings.wfhWeeklyLimit).toBe(limit);
-      };
-
-      await testAndAssertPersistence(5);
-      await testAndAssertPersistence(0);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
     });
 
-    it("updates WFH weekly limit with valid integer values", async () => {
+    it("toggles enableCrossBorderTracking via updateCrossBorderTrackingEnabled", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
 
       await act(async () => {
-        result.current.updateWfhWeeklyLimit(0);
+        result.current.updateCrossBorderTrackingEnabled(true);
       });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(true);
 
       await act(async () => {
-        result.current.updateWfhWeeklyLimit(3);
+        result.current.updateCrossBorderTrackingEnabled(false);
       });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(3);
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(7);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
     });
 
-    it("caps WFH weekly limit values above 7", async () => {
+    it("persists enableCrossBorderTracking to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
-
       await act(async () => {
-        result.current.updateWfhWeeklyLimit(9);
+        result.current.updateCrossBorderTrackingEnabled(true);
       });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
-    });
-
-    it("normalizes invalid WFH weekly limit values to default", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(-1);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(Number.NaN);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-    });
-
-    it("normalizes Infinity WFH weekly limit values to default", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(Number.POSITIVE_INFINITY);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(Number.NEGATIVE_INFINITY);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
-    });
-
-    it("floors fractional WFH weekly limit values", async () => {
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      await act(async () => {
-        result.current.updateWfhWeeklyLimit(2.9);
-      });
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+      const stored = window.localStorage.getItem("worktime_user_state");
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.settings.enableCrossBorderTracking).toBe(true);
     });
   });
 
@@ -810,7 +756,7 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
-  describe("v2 to v3 migration (country + WFH preferences)", () => {
+  describe("v2 to v3 migration (country + cross-border tracking)", () => {
     const migrateFromV2 = (state: Record<string, unknown>) => {
       window.localStorage.setItem("worktime_user_state", JSON.stringify(state));
       return renderHook(() => useSettings(), { wrapper });
@@ -842,13 +788,13 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe(null);
       expect(result.current.settings.officeCountry).toBe(null);
-      expect(result.current.settings.wfhWeeklyLimit).toBe(2);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
       expect(result.current.myTeam).toBe(1);
       expect(result.current.scheduleType).toBe("5-shift");
       expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
     });
 
-    it("preserves existing values when already present during v2→v3 migration", () => {
+    it("preserves existing country values and strips wfhWeeklyLimit when migrating", () => {
       const { result } = migrateFromV2({
         version: 2,
         hasCompletedOnboarding: true,
@@ -863,7 +809,7 @@ describe("SettingsContext unified user state", () => {
           enableTimeTracking: false,
           homeCountry: "NL",
           officeCountry: "BE",
-          wfhWeeklyLimit: 0,
+          wfhWeeklyLimit: 3, // pre-release field — should be stripped
         },
         lastUsed: {
           activeTab: "calendar",
@@ -877,25 +823,27 @@ describe("SettingsContext unified user state", () => {
 
       expect(result.current.settings.homeCountry).toBe("NL");
       expect(result.current.settings.officeCountry).toBe("BE");
-      expect(result.current.settings.wfhWeeklyLimit).toBe(0);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
+      // wfhWeeklyLimit must not appear in normalised settings
+      expect((result.current.settings as Record<string, unknown>).wfhWeeklyLimit).toBeUndefined();
     });
 
-    it("sanitizes WFH weekly limit when present", () => {
+    it("preserves enableCrossBorderTracking when already set during migration", () => {
       const { result } = migrateFromV2({
         version: 2,
         hasCompletedOnboarding: true,
         myTeam: 1,
-        scheduleType: "9-5",
+        scheduleType: "5-shift",
         settings: {
-          timeFormat: "12h",
-          theme: "dark",
-          notifications: "on",
+          timeFormat: "24h",
+          theme: "auto",
+          notifications: "off",
           vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
           enableTimeOff: false,
           enableTimeTracking: false,
           homeCountry: "NL",
           officeCountry: "BE",
-          wfhWeeklyLimit: 12,
+          enableCrossBorderTracking: true,
         },
         lastUsed: {
           activeTab: "calendar",
@@ -907,7 +855,7 @@ describe("SettingsContext unified user state", () => {
         },
       });
 
-      expect(result.current.settings.wfhWeeklyLimit).toBe(7);
+      expect(result.current.settings.enableCrossBorderTracking).toBe(true);
     });
   });
 

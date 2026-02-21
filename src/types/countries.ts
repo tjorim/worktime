@@ -36,3 +36,12 @@ const validCountryCodes = new Set<string>(SUPPORTED_COUNTRIES.map((c) => c.code)
 export function isValidCountryCode(value: unknown): value is CountryCode {
   return typeof value === "string" && validCountryCodes.has(value);
 }
+
+/**
+ * Returns true for any 2-uppercase-letter ISO 3166-1 alpha-2 code.
+ * Use this to validate free-text country codes for "other" work locations,
+ * which may not be in the curated SUPPORTED_COUNTRIES list.
+ */
+export function isValidIsoAlpha2(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Z]{2}$/.test(value);
+}

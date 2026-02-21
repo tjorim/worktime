@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "../../../src/components/timeTracking/TimeTrackingWeeklyView";
+import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 
 describe("TimeTrackingWeeklyView Component", () => {
@@ -39,12 +40,14 @@ describe("TimeTrackingWeeklyView Component", () => {
 
   const renderPanel = (tasks: StoredTimeTrackingTask[], selectedDate = "2025-01-06") =>
     render(
-      <TimeTrackingWeeklyView
-        tasks={tasks}
-        labels={TEST_LABELS}
-        selectedDate={selectedDate}
-        onSelectedDateChange={vi.fn()}
-      />,
+      <SettingsProvider>
+        <TimeTrackingWeeklyView
+          tasks={tasks}
+          labels={TEST_LABELS}
+          selectedDate={selectedDate}
+          onSelectedDateChange={vi.fn()}
+        />
+      </SettingsProvider>,
     );
 
   describe("Empty State Handling", () => {
@@ -57,13 +60,15 @@ describe("TimeTrackingWeeklyView Component", () => {
 
     it("shows call-to-action button in empty state when callback provided", () => {
       render(
-        <TimeTrackingWeeklyView
-          tasks={[]}
-          labels={TEST_LABELS}
-          selectedDate="2025-01-06"
-          onSelectedDateChange={vi.fn()}
-          onSwitchToDaily={vi.fn()}
-        />,
+        <SettingsProvider>
+          <TimeTrackingWeeklyView
+            tasks={[]}
+            labels={TEST_LABELS}
+            selectedDate="2025-01-06"
+            onSelectedDateChange={vi.fn()}
+            onSwitchToDaily={vi.fn()}
+          />
+        </SettingsProvider>,
       );
 
       const ctaButton = screen.getByRole("button", { name: /Go to Daily Log/i });
@@ -173,13 +178,15 @@ describe("TimeTrackingWeeklyView Component", () => {
       const weekTasks = [createTaskForDate(mondayDate, "Support", "08:00", "12:00")];
 
       render(
-        <TimeTrackingWeeklyView
-          tasks={weekTasks}
-          labels={TEST_LABELS}
-          selectedDate="2025-01-06"
-          onSelectedDateChange={vi.fn()}
-          weeklyTargetHours={40}
-        />,
+        <SettingsProvider>
+          <TimeTrackingWeeklyView
+            tasks={weekTasks}
+            labels={TEST_LABELS}
+            selectedDate="2025-01-06"
+            onSelectedDateChange={vi.fn()}
+            weeklyTargetHours={40}
+          />
+        </SettingsProvider>,
       );
 
       expect(screen.getByText(/Weekly Progress/i)).toBeInTheDocument();

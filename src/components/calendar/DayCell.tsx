@@ -27,8 +27,7 @@ interface DayCellProps {
   schoolHoliday?: SchoolHolidayInfo;
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
-  workLocation?: WorkLocationInfo; // Optional work location (home/office)
-  wfhLimitExceeded?: boolean; // Whether this day's week has exceeded the WFH limit
+  workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
   onViewEvent: (index: number) => void;
   onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
@@ -153,7 +152,6 @@ export function DayCell({
   events,
   shiftBadge,
   workLocation,
-  wfhLimitExceeded = false,
   onViewEvent,
   onDayContextMenu,
   onEventContextMenu,
@@ -169,7 +167,11 @@ export function DayCell({
   const workLocationLabel = workLocation
     ? workLocation.location === "home"
       ? "Working from home"
-      : "Working from office"
+      : workLocation.location === "office"
+        ? "Working from office"
+        : workLocation.label
+          ? `Other location: ${workLocation.label} (${workLocation.countryCode})`
+          : `Other location (${workLocation.countryCode})`
     : undefined;
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
@@ -349,7 +351,6 @@ export function DayCell({
         publicHoliday && "is-public-holiday",
         schoolHoliday && "is-school-holiday",
         paydayInfo && "is-payday",
-        wfhLimitExceeded && workLocation?.location === "home" && "wfh-limit-exceeded",
       )}
       onContextMenu={(e) => {
         if (onDayContextMenu) {
@@ -393,7 +394,11 @@ export function DayCell({
               <i
                 className={clsx(
                   "bi",
-                  workLocation.location === "home" ? "bi-house" : "bi-building",
+                  workLocation.location === "home"
+                    ? "bi-house"
+                    : workLocation.location === "office"
+                      ? "bi-building"
+                      : "bi-geo-alt",
                 )}
               ></i>
             </span>

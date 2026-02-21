@@ -26,7 +26,7 @@ function makeWrapper(homeCountry: string | null = "NL", officeCountry: string | 
         enableTimeTracking: false,
         homeCountry,
         officeCountry,
-        wfhWeeklyLimit: 2,
+        enableCrossBorderTracking: false,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -174,6 +174,89 @@ describe("useWorkLocationStorage", () => {
       expect(result.current.getLocationForDate("2026/02/18")).toEqual({
         location: "home",
         countryCode: "NL",
+      });
+    });
+  });
+
+  describe('"other" location type', () => {
+    it("stores an other-location entry with the supplied countryCode and label", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026/02/18", "other", {
+          countryCode: "DE",
+          label: "Berlin office",
+        });
+      });
+
+      expect(result.current.workLocationMap.get("2026/02/18")).toEqual({
+        location: "other",
+        countryCode: "DE",
+        label: "Berlin office",
+      });
+    });
+
+    it("stores an other-location entry without a label when label is omitted", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026/02/18", "other", { countryCode: "FR" });
+      });
+
+      const entry = result.current.workLocationMap.get("2026/02/18");
+      expect(entry?.location).toBe("other");
+      expect(entry?.countryCode).toBe("FR");
+      expect(entry?.label).toBeUndefined();
+    });
+
+    it("returns false and does not store when countryCode is missing for other", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      let success!: boolean;
+      act(() => {
+        success = result.current.setLocationForDate("2026/02/18", "other");
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.workLocationMap.has("2026/02/18")).toBe(false);
+    });
+
+    it("returns false and does not store when countryCode is not a valid ISO alpha-2", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(),
+      });
+
+      let success!: boolean;
+      act(() => {
+        success = result.current.setLocationForDate("2026/02/18", "other", {
+          countryCode: "DEU", // 3 letters — invalid
+        });
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.workLocationMap.has("2026/02/18")).toBe(false);
+    });
+
+    it("historical entry preserves its countryCode even when settings change", () => {
+      // Write an "other" entry with DE
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("NL", "BE"),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026/02/18", "other", { countryCode: "DE" });
+      });
+
+      // The stored entry must still carry DE, unaffected by settings
+      expect(result.current.workLocationMap.get("2026/02/18")).toEqual({
+        location: "other",
+        countryCode: "DE",
       });
     });
   });

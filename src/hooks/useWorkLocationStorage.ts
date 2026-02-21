@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 
 import { useSettings } from "../contexts/SettingsContext";
+import { isValidIsoAlpha2 } from "../types/countries";
 import { dayjs, formatHdayDate } from "../utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
@@ -94,30 +95,49 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Stores an explicit work location for a given date.
    *
-   * The country code is derived from the user's homeCountry setting (for "home")
-   * or officeCountry setting (for "office"). If the relevant country setting is
-   * not configured, the call is a no-op.
+   * For "home" and "office" locations, the country code is derived from the user's
+   * homeCountry / officeCountry setting. For "other" locations, the caller must
+   * supply a valid ISO 3166-1 alpha-2 code via `extra.countryCode`.
+   *
+   * The countryCode is captured at write time. Changing homeCountry/officeCountry
+   * later does not retroactively update historical entries.
    *
    * @param date - The date to set (YYYY/MM/DD string, Date, or Dayjs)
-   * @param location - The work location ("home" or "office")
+   * @param location - The work location ("home", "office", or "other")
+   * @param extra - For "other" locations: required countryCode and optional label
    * @returns `true` when the location was stored. Returns `false` when the relevant
-   *   country setting (homeCountry or officeCountry) is not configured, or when the
+   *   country setting is not configured or the code is invalid, or when the
    *   date year is outside the allowed {year-1, year, year+1} range (which also logs
    *   a warning). Callers can inspect logs to distinguish the failure mode.
    */
   const setLocationForDate = useCallback(
-    (date: dayjs.Dayjs | Date | string, location: WorkLocation): boolean => {
-      const countryCode = location === "home" ? homeCountry : officeCountry;
+    (
+      date: dayjs.Dayjs | Date | string,
+      location: WorkLocation,
+      extra?: { countryCode?: string; label?: string },
+    ): boolean => {
+      let countryCode: string | null;
+      if (location === "home") {
+        countryCode = homeCountry;
+      } else if (location === "office") {
+        countryCode = officeCountry;
+      } else {
+        countryCode = extra?.countryCode ?? null;
+      }
 
-      // Country must be configured before a location can be stored
-      if (!countryCode) {
+      // Country must be a valid ISO alpha-2 code before a location can be stored
+      if (!countryCode || !isValidIsoAlpha2(countryCode)) {
         return false;
       }
 
       const d = dayjs(date);
       const key = formatHdayDate(d);
       const dateYear = d.year();
-      const entry = { location, countryCode };
+      const entry: WorkLocationInfo = {
+        location,
+        countryCode,
+        ...(extra?.label ? { label: extra.label } : {}),
+      };
 
       if (dateYear === year - 1) {
         setPrevYearLocations((prev) => ({ ...prev, [key]: entry }));

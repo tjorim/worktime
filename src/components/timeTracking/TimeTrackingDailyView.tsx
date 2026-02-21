@@ -5,11 +5,14 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
+import { useSettings } from "../../contexts/SettingsContext";
 import { useToast } from "../../contexts/ToastContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
+import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { ConfirmationDialog } from "../ConfirmationDialog";
+import { OtherLocationModal } from "../calendar/OtherLocationModal";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
@@ -45,6 +48,103 @@ function todayIso() {
   return dayjs().format("YYYY-MM-DD");
 }
 
+interface WorkLocationDayHeaderProps {
+  date: string; // YYYY-MM-DD
+}
+
+function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
+  const { settings } = useSettings();
+  const year = dayjs(date).year();
+  const { workLocationMap, setLocationForDate, clearLocationForDate } =
+    useWorkLocationStorage(year);
+  const toast = useToast();
+  const [showOtherModal, setShowOtherModal] = useState(false);
+
+  const dayjsDate = dayjs(date);
+  const dateKey = dayjsDate.format("YYYY/MM/DD");
+  const stored = workLocationMap.get(dateKey);
+
+  const handleHome = () => {
+    const ok = setLocationForDate(dayjsDate, "home");
+    if (!ok) toast.showError("Configure your home country in Settings to track this location");
+  };
+
+  const handleOffice = () => {
+    const ok = setLocationForDate(dayjsDate, "office");
+    if (!ok) toast.showError("Configure your office country in Settings to track this location");
+  };
+
+  const handleClear = () => {
+    clearLocationForDate(dayjsDate);
+  };
+
+  const showHome = !!settings.homeCountry;
+  const showOffice = !!settings.officeCountry;
+
+  return (
+    <>
+      <div className="d-flex align-items-center gap-2 flex-wrap">
+        {showHome && (
+          <Button
+            size="sm"
+            variant={stored?.location === "home" ? "primary" : "outline-secondary"}
+            onClick={handleHome}
+            aria-pressed={stored?.location === "home"}
+            title="Work from home"
+          >
+            <i className="bi bi-house me-1" aria-hidden="true"></i>
+            Home
+          </Button>
+        )}
+        {showOffice && (
+          <Button
+            size="sm"
+            variant={stored?.location === "office" ? "primary" : "outline-secondary"}
+            onClick={handleOffice}
+            aria-pressed={stored?.location === "office"}
+            title="Work from office"
+          >
+            <i className="bi bi-building me-1" aria-hidden="true"></i>
+            Office
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant={stored?.location === "other" ? "primary" : "outline-secondary"}
+          onClick={() => setShowOtherModal(true)}
+          aria-pressed={stored?.location === "other"}
+          title="Other location"
+        >
+          <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
+          Other…
+        </Button>
+        {stored && (
+          <Button
+            size="sm"
+            variant="outline-danger"
+            onClick={handleClear}
+            aria-label="Clear work location"
+            title="Clear work location"
+          >
+            <i className="bi bi-x" aria-hidden="true"></i>
+          </Button>
+        )}
+      </div>
+      <OtherLocationModal
+        show={showOtherModal}
+        date={dayjsDate}
+        existing={stored}
+        onHide={() => setShowOtherModal(false)}
+        onConfirm={(countryCode, label) => {
+          const ok = setLocationForDate(dayjsDate, "other", { countryCode, label });
+          if (!ok) toast.showError("Could not save location — check the country code");
+          setShowOtherModal(false);
+        }}
+      />
+    </>
+  );
+}
+
 function formatDuration(totalSeconds: number) {
   const clampedSeconds = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(clampedSeconds / 3600);
@@ -55,7 +155,7 @@ function formatDuration(totalSeconds: number) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TimeTrackingDailyView({
+export function TimeTrackingDailyView({ // oxlint-disable-line max-lines-per-function
   tasks,
   labels,
   templates = [],
@@ -74,6 +174,7 @@ export function TimeTrackingDailyView({
   const [stop, setStop] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [error, setError] = useState("");
+  const { settings } = useSettings();
   const toast = useToast();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const liveTime = useLiveTime({ precision: "second" });
@@ -366,6 +467,7 @@ export function TimeTrackingDailyView({
               </Badge>
             )}
           </div>
+          {settings.enableCrossBorderTracking && <WorkLocationDayHeader date={date} />}
         </div>
       </Card.Header>
       <Card.Body>
