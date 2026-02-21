@@ -1,18 +1,22 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Accordion from "react-bootstrap/Accordion";
+import Spinner from "react-bootstrap/Spinner";
+import type { ScheduleOption } from "../data/rosters";
 import { useSettings } from "../contexts/SettingsContext";
-import { useTransferCalculations } from "../hooks/useTransferCalculations";
-import { dayjs, formatDisplayDate } from "../utils/dateTimeUtils";
+import { useTransferCalculations, type TransferInfo } from "../hooks/useTransferCalculations";
+import { dayjs, formatDisplayDate, formatYYWWD } from "../utils/dateTimeUtils";
+import { getShift } from "../utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
-import { UpcomingShiftsList } from "./schedule/UpcomingShiftsList";
-import { RecentTransfersList } from "./transfer/RecentTransfersList";
+import { ShiftBadge } from "./shared/ShiftBadge";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 interface TransferViewProps {
@@ -20,6 +24,133 @@ interface TransferViewProps {
   initialOtherTeam?: number | null; // Initial other team (e.g., from Team Detail Modal)
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+}
+
+interface TransferItemsListProps {
+  transfers: TransferInfo[];
+  scheduleType: ScheduleOption;
+  myTeam: number;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  isLoading?: boolean;
+  error?: string | null;
+}
+
+function TransferItemsList({
+  transfers,
+  scheduleType,
+  myTeam,
+  emptyTitle = "No Transfers Found",
+  emptyDescription = "No transfers available for this section.",
+  isLoading = false,
+  error = null,
+}: TransferItemsListProps) {
+  return isLoading ? (
+    <div className="d-flex align-items-center gap-2 text-muted">
+      <Spinner animation="border" size="sm" role="status" />
+      Loading transfer history...
+    </div>
+  ) : error ? (
+    <Alert variant="danger" className="mb-0 py-2">
+      {error}
+    </Alert>
+  ) : transfers.length === 0 ? (
+    <EmptyState icon="bi-calendar-x" title={emptyTitle} description={emptyDescription} />
+  ) : (
+    <ListGroup variant="flush">
+      {transfers.map((transfer, index) => {
+        const fromShift = getShift(transfer.fromShiftType, scheduleType);
+        const toShift = getShift(transfer.toShiftType, scheduleType);
+        const isLast = index === transfers.length - 1;
+
+        return (
+          <ListGroup.Item
+            key={`${transfer.date.toISOString()}-${transfer.fromTeam}-${transfer.toTeam}-${transfer.fromShiftType}-${transfer.toShiftType}-${transfer.type}`}
+            className={`px-0 py-2 border-0 border-bottom${isLast ? " border-bottom-0" : ""}`}
+          >
+            <Row className="g-2 align-items-center">
+              <Col xs={4} md={3}>
+                <div className="fw-semibold d-flex align-items-center gap-2">
+                  <i
+                    className={`bi ${transfer.type === "handover" ? "bi-arrow-right-circle text-success" : "bi-arrow-left-circle text-info"}`}
+                    aria-hidden="true"
+                  ></i>
+                  {formatYYWWD(transfer.date)}
+                </div>
+                <small className="text-muted">{formatDisplayDate(transfer.date.toDate())}</small>
+              </Col>
+              <Col xs={8} md={4}>
+                <small className="text-muted text-uppercase mb-1 d-none d-md-block">Teams</small>
+                <div className="d-flex align-items-center gap-1 flex-nowrap">
+                  <Badge
+                    bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
+                    className="text-nowrap"
+                    pill
+                  >
+                    {transfer.fromTeam === myTeam ? (
+                      <>
+                        <span className="d-none d-md-inline">Your </span>
+                        {`Team ${transfer.fromTeam}`}
+                      </>
+                    ) : (
+                      `Team ${transfer.fromTeam}`
+                    )}
+                  </Badge>
+                  <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                  <Badge
+                    bg={transfer.toTeam === myTeam ? "primary" : "secondary"}
+                    className="text-nowrap"
+                    pill
+                  >
+                    {transfer.toTeam === myTeam ? (
+                      <>
+                        <span className="d-none d-md-inline">Your </span>
+                        {`Team ${transfer.toTeam}`}
+                      </>
+                    ) : (
+                      `Team ${transfer.toTeam}`
+                    )}
+                  </Badge>
+                </div>
+              </Col>
+              <Col xs={4} md={2}>
+                <div className="d-flex flex-column align-items-start align-items-md-center">
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">Type</small>
+                  <Badge bg={transfer.type === "handover" ? "success" : "info"} pill>
+                    {transfer.type === "handover" ? "Handover" : "Takeover"}
+                  </Badge>
+                </div>
+              </Col>
+              <Col xs={8} md={3}>
+                <div className="d-flex flex-column align-items-start align-items-md-end">
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">Shift</small>
+                  <div className="d-flex align-items-center gap-2 flex-nowrap justify-content-md-end">
+                    <ShiftBadge
+                      shift={fromShift}
+                      showEmoji
+                      showName
+                      pill
+                      size="sm"
+                      showTooltip={false}
+                    />
+                    <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+                    <ShiftBadge
+                      shift={toShift}
+                      showEmoji
+                      showName
+                      pill
+                      size="sm"
+                      showTooltip={false}
+                    />
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </ListGroup.Item>
+        );
+      })}
+    </ListGroup>
+  );
 }
 
 /**
@@ -132,6 +263,26 @@ export function TransferView({
     );
   }, [transferStats]);
 
+  const displayedDateRangeValue = useMemo(() => {
+    if (!useCustomRange) {
+      return transferDateRange;
+    }
+    if (!customStartDate && !customEndDate) {
+      return "All dates";
+    }
+    if (customStartDate && customEndDate) {
+      return (
+        formatDisplayDate(dayjs(customStartDate).toDate()) +
+        " to " +
+        formatDisplayDate(dayjs(customEndDate).toDate())
+      );
+    }
+    if (customStartDate) {
+      return `From ${formatDisplayDate(dayjs(customStartDate).toDate())}`;
+    }
+    return `Until ${formatDisplayDate(dayjs(customEndDate).toDate())}`;
+  }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
+
   const groupedTransfers = useMemo(() => {
     const todayStart = dayjs().startOf("day");
     const nextWeek: typeof transfers = [];
@@ -207,7 +358,7 @@ export function TransferView({
         ) : (
           <>
             {/* Controls */}
-            <Row className="mb-3">
+            <Row className="mb-3 gy-3">
               <Col md={4}>
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
@@ -225,85 +376,92 @@ export function TransferView({
                     </option>
                   ))}
                 </Form.Select>
+                {transferStats && (
+                  <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+                    <span className="text-muted small text-uppercase">Transfer Flow</span>
+                    <Badge bg="success" pill className="d-inline-flex align-items-center gap-1">
+                      <i className="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                      Handovers: {transferStats.handovers}
+                    </Badge>
+                    <Badge bg="info" pill className="d-inline-flex align-items-center gap-1">
+                      <i className="bi bi-arrow-left-circle" aria-hidden="true"></i>
+                      Takeovers: {transferStats.takeovers}
+                    </Badge>
+                  </div>
+                )}
               </Col>
               <Col md={8}>
-                <Form.Check
-                  type="checkbox"
-                  id={showPastCheckboxId}
-                  label="Filter by custom date range"
-                  checked={useCustomRange}
-                  onChange={(e) => setUseCustomRange(e.target.checked)}
-                  className="mb-3"
-                />
-              </Col>
-            </Row>
-
-            {useCustomRange && (
-              <Row className="mb-3">
-                <Col md={5}>
-                  <Form.Label htmlFor={startDateId} className="fw-semibold">
-                    <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
-                    Start Date:
-                  </Form.Label>
-                  <Form.Control
-                    type="date"
-                    id={startDateId}
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                  />
-                </Col>
-                <Col md={5}>
-                  <Form.Label htmlFor={endDateId} className="fw-semibold">
-                    End Date:
-                  </Form.Label>
-                  <Form.Control
-                    type="date"
-                    id={endDateId}
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                  />
-                </Col>
-                <Col md={2} className="d-flex align-items-end">
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    className="w-100"
-                    style={{ minHeight: "38px" }}
-                    onClick={() => {
-                      setCustomStartDate("");
-                      setCustomEndDate("");
-                    }}
-                    disabled={!customStartDate && !customEndDate}
-                  >
-                    <i className="bi bi-x-circle me-1" aria-hidden="true"></i>
-                    Clear
-                  </Button>
-                </Col>
-              </Row>
-            )}
-
-            <Row className="mb-3">
-              <Col>
-                <Form.Text className="text-muted">
-                  <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
-                  Shows transfers between your team and the selected team
-                  {useCustomRange
-                    ? " within the specified date range"
-                    : ". Check the box above to filter by date range"}
-                  .
-                </Form.Text>
-              </Col>
-            </Row>
-
-            <Row className="g-3 mb-3">
-              <Col lg={12}>
-                <ErrorBoundary>
-                  <UpcomingShiftsList
-                    teamNumber={myTeam}
-                    scheduleType={scheduleType}
-                    itemCount={6}
-                  />
-                </ErrorBoundary>
+                <Card className="h-100">
+                  <Card.Body>
+                    <div className="text-muted small text-uppercase mb-1">Displayed Date Range</div>
+                    <div className="fw-semibold">{displayedDateRangeValue}</div>
+                    <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                      Transfers between your team and the selected team.
+                    </div>
+                    {useCustomRange ? (
+                      <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                        selected filter range
+                      </div>
+                    ) : hasMoreTransfers ? (
+                      <div className="text-muted" style={{ fontSize: "0.75em" }}>
+                        of visible transfers only
+                      </div>
+                    ) : null}
+                    <hr className="my-3" />
+                    <Form.Check
+                      type="checkbox"
+                      id={showPastCheckboxId}
+                      label="Filter by custom date range"
+                      checked={useCustomRange}
+                      onChange={(e) => setUseCustomRange(e.target.checked)}
+                    />
+                    {useCustomRange && (
+                      <>
+                        <Row className="g-2 mt-1">
+                          <Col md={5}>
+                            <Form.Label htmlFor={startDateId} className="fw-semibold">
+                              <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
+                              Start Date:
+                            </Form.Label>
+                            <Form.Control
+                              type="date"
+                              id={startDateId}
+                              value={customStartDate}
+                              onChange={(e) => setCustomStartDate(e.target.value)}
+                            />
+                          </Col>
+                          <Col md={5}>
+                            <Form.Label htmlFor={endDateId} className="fw-semibold">
+                              End Date:
+                            </Form.Label>
+                            <Form.Control
+                              type="date"
+                              id={endDateId}
+                              value={customEndDate}
+                              onChange={(e) => setCustomEndDate(e.target.value)}
+                            />
+                          </Col>
+                          <Col md={2} className="d-flex align-items-end">
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              className="w-100"
+                              style={{ minHeight: "38px" }}
+                              onClick={() => {
+                                setCustomStartDate("");
+                                setCustomEndDate("");
+                              }}
+                              disabled={!customStartDate && !customEndDate}
+                            >
+                              <i className="bi bi-x-circle me-1" aria-hidden="true"></i>
+                              Clear
+                            </Button>
+                          </Col>
+                        </Row>
+                      </>
+                    )}
+                  </Card.Body>
+                </Card>
               </Col>
             </Row>
 
@@ -316,42 +474,6 @@ export function TransferView({
               />
             ) : (
               <>
-                {transferStats && (
-                  <div className="row g-3 mb-3">
-                    <div className="col-sm-6 col-lg-3">
-                      <Card className="text-center h-100">
-                        <Card.Body>
-                          <div className="text-muted small text-uppercase mb-1">Handovers</div>
-                          <div className="h4 mb-0">{transferStats.handovers}</div>
-                        </Card.Body>
-                      </Card>
-                    </div>
-                    <div className="col-sm-6 col-lg-3">
-                      <Card className="text-center h-100">
-                        <Card.Body>
-                          <div className="text-muted small text-uppercase mb-1">Takeovers</div>
-                          <div className="h4 mb-0">{transferStats.takeovers}</div>
-                        </Card.Body>
-                      </Card>
-                    </div>
-                    <div className="col-lg-6">
-                      <Card className="h-100">
-                        <Card.Body className="d-flex flex-column justify-content-center">
-                          <div className="text-muted small text-uppercase mb-1">
-                            Displayed Date Range
-                          </div>
-                          <div className="fw-semibold">{transferDateRange}</div>
-                          {hasMoreTransfers && (
-                            <div className="text-muted" style={{ fontSize: "0.75em" }}>
-                              of visible transfers only
-                            </div>
-                          )}
-                        </Card.Body>
-                      </Card>
-                    </div>
-                  </div>
-                )}
-
                 <ErrorBoundary>
                   <Accordion
                     defaultActiveKey={nonEmptyGroupedTransfers.map((group) => group.key)}
@@ -366,10 +488,9 @@ export function TransferView({
                           </Badge>
                         </Accordion.Header>
                         <Accordion.Body>
-                          <RecentTransfersList
-                            title={group.title}
-                            showHeader={false}
+                          <TransferItemsList
                             transfers={group.items}
+                            myTeam={myTeam}
                             emptyDescription={`No transfers in the ${group.title.toLowerCase()} bucket.`}
                             scheduleType={scheduleType}
                           />

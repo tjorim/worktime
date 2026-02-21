@@ -5,8 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "../../src/components/TransferView";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations, TransferType } from "../../src/hooks/useTransferCalculations";
-import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
-import { getNextShift } from "../../src/utils/shiftCalculations";
+import { dayjs } from "../../src/utils/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
 vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
@@ -45,7 +44,6 @@ vi.mock("../../src/hooks/useTransferCalculations", () => ({
 }));
 
 const mockUseTransferCalculations = vi.mocked(useTransferCalculations);
-const mockGetNextShift = vi.mocked(getNextShift);
 
 vi.mock("../../src/utils/shiftCalculations", () => ({
   getShift: vi.fn((code) => {
@@ -96,7 +94,6 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
     return shifts[code] || shifts.M;
   }),
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
-  getNextShift: vi.fn(),
 }));
 
 vi.mock("../../src/utils/config", async (importOriginal) => {
@@ -141,70 +138,6 @@ function expectMyTeamBadgeInTransferHeader(teamNumber: number) {
 describe("TransferView", () => {
   beforeEach(() => {
     mockUseTransferCalculations.mockReturnValue(defaultHookReturn);
-    let chainLength = 0;
-    let expectedNextInput: string | null = null;
-    const shiftSequence = [
-      {
-        code: "M",
-        displayCode: "M",
-        emoji: "🌅",
-        name: "Morning",
-        start: 7,
-        end: 15,
-        isWorking: true,
-        className: "shift-morning",
-      },
-      {
-        code: "L",
-        displayCode: "E",
-        emoji: "🌆",
-        name: "Evening",
-        start: 15,
-        end: 23,
-        isWorking: true,
-        className: "shift-late",
-      },
-      {
-        code: "N",
-        displayCode: "N",
-        emoji: "🌙",
-        name: "Night",
-        start: 23,
-        end: 7,
-        isWorking: true,
-        className: "shift-night",
-      },
-    ] as const;
-
-    mockGetNextShift.mockReset();
-    mockGetNextShift.mockImplementation((fromDate) => {
-      const inputDate = dayjs(fromDate).startOf("day");
-      if (!inputDate.isValid()) {
-        return null;
-      }
-
-      // Start a fresh sequence for each independent search chain.
-      if (!expectedNextInput || !inputDate.isSame(dayjs(expectedNextInput), "day")) {
-        chainLength = 0;
-      }
-
-      if (chainLength >= 6) {
-        expectedNextInput = null;
-        return null;
-      }
-
-      const nextDate = inputDate.add(1, "day");
-      const shift = shiftSequence[chainLength % shiftSequence.length];
-      chainLength += 1;
-      expectedNextInput = nextDate.toISOString();
-
-      return {
-        date: nextDate,
-        shift,
-        code: `${formatYYWWD(nextDate)}${shift.code}`,
-      };
-    });
-
     mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -555,8 +488,8 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} myTeam={1} />);
 
-      expect(screen.getByText("Handovers")).toBeInTheDocument();
-      expect(screen.getByText("Takeovers")).toBeInTheDocument();
+      expect(screen.getByText(/Handovers:\s*1/)).toBeInTheDocument();
+      expect(screen.getByText(/Takeovers:\s*1/)).toBeInTheDocument();
       expect(screen.getByText(/Displayed Date Range/)).toBeInTheDocument();
       expect(screen.getByText(/Showing 2 transfers \(more available\)/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Load More Transfers/i })).toBeInTheDocument();
@@ -647,12 +580,15 @@ describe("TransferView", () => {
       const furtherItemElement = furtherItem as HTMLElement;
 
       // Verify each bucket renders its own transfer content.
-      expect(within(next7ItemElement).getByText("Team 1 → Team 2")).toBeInTheDocument();
-      expect(within(next7ItemElement).getByText("Morning → Evening")).toBeInTheDocument();
-      expect(within(next30ItemElement).getByText("Team 2 → Team 1")).toBeInTheDocument();
+      expect(within(next7ItemElement).getAllByText(/Team\s+1/).length).toBeGreaterThan(0);
+      expect(within(next7ItemElement).getByText(/Team\s+2/)).toBeInTheDocument();
+      expect(within(next7ItemElement).getByText(/Morning/)).toBeInTheDocument();
+      expect(within(next7ItemElement).getByText(/Evening/)).toBeInTheDocument();
       expect(within(next30ItemElement).getByText("Takeover")).toBeInTheDocument();
-      expect(within(furtherItemElement).getByText("Team 1 → Team 2")).toBeInTheDocument();
-      expect(within(furtherItemElement).getByText("Night → Morning")).toBeInTheDocument();
+      expect(within(next30ItemElement).getByText(/Night/)).toBeInTheDocument();
+      expect(within(furtherItemElement).getByText("Handover")).toBeInTheDocument();
+      expect(within(furtherItemElement).getByText(/Night/)).toBeInTheDocument();
+      expect(within(furtherItemElement).getByText(/Morning/)).toBeInTheDocument();
     });
 
     it("uses shared empty state for no other teams", () => {

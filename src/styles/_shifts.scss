@@ -89,16 +89,6 @@
 }
 
 /* Large shift badge styling */
-.shift-badge-sm {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-}
-
-.shift-badge-lg {
-  font-size: 1rem;
-  padding: 0.5rem 1rem;
-}
-
 /* Shift codes */
 .shift-code {
   font-weight: 600;
@@ -107,6 +97,17 @@
   border-radius: 0.375rem;
   display: inline-block;
   min-width: 2rem;
+}
+
+/* Size modifiers must override base shift-code dimensions */
+.shift-code.shift-badge-sm {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.shift-code.shift-badge-lg {
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
 }
 
 /* ============================================================================
