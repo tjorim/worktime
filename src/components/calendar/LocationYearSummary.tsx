@@ -71,7 +71,12 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
           {year} Location Summary
         </span>
-        <Button size="sm" variant="outline-secondary" onClick={handleCopy} aria-label="Copy location summary to clipboard">
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          onClick={handleCopy}
+          aria-label="Copy location summary to clipboard"
+        >
           <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
           Copy
         </Button>

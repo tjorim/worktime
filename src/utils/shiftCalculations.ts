@@ -70,7 +70,7 @@ import type { ScheduleOption } from "../data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 
-type NullableScheduleOption = ScheduleOption | null | undefined;
+export type NullableScheduleOption = ScheduleOption | null | undefined;
 
 export type ShiftType = "M" | "L" | "N" | "D" | "O";
 
@@ -140,7 +140,16 @@ const getShiftTimeDefinition = (scheduleOption: NullableScheduleOption, code: Sh
   return schedule.shiftConfig.shiftTimes[code];
 };
 
-const buildShiftTemplate = (code: ShiftType, emoji: string, className: string): Shift =>
+// Mapping of shift codes to their visual properties (emoji and CSS class)
+const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
+  M: { emoji: "🌅", className: "shift-morning" },
+  L: { emoji: "🌆", className: "shift-late" },
+  N: { emoji: "🌙", className: "shift-night" },
+  D: { emoji: "☀️", className: "shift-day" },
+  O: { emoji: "🏠", className: "shift-off" },
+};
+
+const buildShiftTemplateFromVisuals = (code: ShiftType): Shift =>
   buildShift(
     code,
     {
@@ -149,16 +158,16 @@ const buildShiftTemplate = (code: ShiftType, emoji: string, className: string): 
       end: null,
       displayCode: code,
     },
-    emoji,
-    className,
+    SHIFT_VISUALS[code].emoji,
+    SHIFT_VISUALS[code].className,
   );
 
 export const SHIFTS = Object.freeze({
-  MORNING: Object.freeze(buildShiftTemplate("M", "🌅", "shift-morning")),
-  LATE: Object.freeze(buildShiftTemplate("L", "🌆", "shift-late")),
-  DAY: Object.freeze(buildShiftTemplate("D", "☀️", "shift-day")),
-  NIGHT: Object.freeze(buildShiftTemplate("N", "🌙", "shift-night")),
-  OFF: Object.freeze(buildShiftTemplate("O", "🏠", "shift-off")),
+  MORNING: Object.freeze(buildShiftTemplateFromVisuals("M")),
+  LATE: Object.freeze(buildShiftTemplateFromVisuals("L")),
+  DAY: Object.freeze(buildShiftTemplateFromVisuals("D")),
+  NIGHT: Object.freeze(buildShiftTemplateFromVisuals("N")),
+  OFF: Object.freeze(buildShiftTemplateFromVisuals("O")),
 });
 
 const scheduleHasNightShift = (scheduleOption: NullableScheduleOption): boolean => {
@@ -187,15 +196,6 @@ const getReferenceDateForSchedule = (scheduleOption?: NullableScheduleOption): D
   return referenceDate.startOf("day");
 };
 
-// Mapping of shift codes to their visual properties (emoji and CSS class)
-const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
-  M: { emoji: "🌅", className: "shift-morning" },
-  L: { emoji: "🌆", className: "shift-late" },
-  N: { emoji: "🌙", className: "shift-night" },
-  D: { emoji: "☀️", className: "shift-day" },
-  O: { emoji: "🏠", className: "shift-off" },
-};
-
 /**
  * Retrieve a shift definition for a given shift code and schedule.
  *
@@ -205,12 +205,13 @@ const SHIFT_VISUALS: Record<ShiftType, { emoji: string; className: string }> = {
  * @throws {Error} If the shift code is not defined in the schedule's shiftTimes
  */
 export const getShift = (code: ShiftType, scheduleOption: ScheduleOption): Shift => {
-  const definition = getShiftTimeDefinition(scheduleOption, code);
+  const schedule = getScheduleForOption(scheduleOption);
+  const definition = schedule.shiftConfig.shiftTimes[code];
   const visuals = SHIFT_VISUALS[code];
 
   if (!definition) {
     throw new Error(
-      `Missing shiftTimes definition for code="${code}" in schedule="${scheduleOption}". ` +
+      `Missing shiftTimes definition for code="${code}" in schedule="${schedule.value}". ` +
         `Ensure all shift codes used in the schedule pattern are defined in shiftTimes.`,
     );
   }
@@ -324,7 +325,7 @@ export function calculateShift(
     );
     return getShift("O", schedule.value);
   }
-  return getShift(shiftCode, schedule.value);
+  return getShift(shiftCode as ShiftType, schedule.value);
 }
 
 /**
@@ -427,9 +428,11 @@ export function getShiftCode(
  *
  * Searches up to the schedule's cycle length ahead to find the next working shift.
  * Returns null if team number is invalid or no working shift is found in the cycle.
+ * Unlike `calculateShift`, this function does not throw for invalid teams because it behaves
+ * as a safe "find" operation where `null` indicates no resolvable next shift.
  *
  * @param fromDate - Date to start the search from (exclusive)
- * @param teamNumber - Team identifier; must be within the schedule's valid team range
+ * @param teamNumber - Team identifier; invalid values return `null` (no exception)
  * @param scheduleOption - Optional schedule type; defaults to 5-shift if not provided
  * @returns The upcoming shift result containing `date`, `shift` and `code`, or `null` if no working shift is found within the shift cycle
  *
@@ -645,7 +648,7 @@ export function isCurrentlyWorking(
  */
 export function getCurrentWorkingTeam(
   currentTime: Dayjs,
-  scheduleType?: ScheduleOption | null | undefined,
+  scheduleType?: NullableScheduleOption,
 ): ShiftResult | null {
   const today = currentTime.startOf("day");
 

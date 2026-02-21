@@ -128,7 +128,6 @@ const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefin
   }
 };
 
-
 /** Minimum touch move distance (px) before canceling long-press */
 const LONG_PRESS_MOVE_THRESHOLD = 10;
 /** Long-press duration (ms) to trigger context menu on touch devices */

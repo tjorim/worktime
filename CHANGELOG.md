@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Calendar Overflow: '+N more' events indicator is now interactive and opens an event list (#303)
 - Teams-at-a-Glance Summary: GenericStatus now shows a compact overview of all teams' current shifts (#302)
 - TransferView Enhancements: Summary metrics, past-row styling, and loop optimization for transfer analysis (#301)
+- TransferView Accordion Grouping: TransferView now groups history into Next 7 Days, Next 30 Days, Further Ahead, and Past Transfers sections
+- UpcomingShiftsList Component: Added UpcomingShiftsList to surface upcoming shifts in transfer workflows
+- RecentTransfersList Component: Added RecentTransfersList for reusable transfer history rendering
+- NullableScheduleOption Type: Exported NullableScheduleOption for consistent optional schedule typing across schedule-aware logic
+- shiftCalculations Visual Centralization: Centralized shift emoji/class visuals in shiftCalculations to keep shift display metadata consistent
 - ScheduleDetailModal Enhancements: Progress visuals and weekly metrics panel (#299)
 - EventModal: Cancel button and reset confirmation in edit mode to prevent accidental data loss (#304)
 - TimeTrackingWeeklyView: Live-updating weekly totals for running timers (#297)
@@ -53,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Cross-Border Work Location Tracking and Calendar Improvements
 
-Added per-day work location tracking (home/office/other) with country codes stored in worktime_work_locations_{year} localStorage keys. A new useWorkLocationStorage hook manages three-year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.
+Added per-day work location tracking (home/office/other) with country codes stored in `worktime_work_locations_{year}` localStorage keys. A new useWorkLocationStorage hook manages three-year buckets (prev/current/next) and exposes set/clear/get methods. WorkLocationMap (Map<string, WorkLocationInfo>) flows from the hook through CalendarView into MonthCalendar and DayCell. LocationSummaryBar provides current-week home/office/other totals, and LocationYearSummary provides grouped annual totals with copy-to-clipboard export support. Settings state schema v3 now includes homeCountry, officeCountry, and enableCrossBorderTracking defaults/migration support. New types in src/types/countries.ts and src/types/workLocation.ts; new utilities in src/utils/workLocationUtils.ts. Additionally includes a round of calendar UX improvements merged from main: shift countdown, keyboard accessibility, interactive overflow, TransferView/ScheduleDetailModal enhancements, and several bug fixes.
 
 ## [4.6.1] - 2026-02-14
 
@@ -84,7 +89,7 @@ Added per-day work location tracking (home/office/other) with country codes stor
 ### Changed
 
 - ShiftTimeline: Now handles single-team schedules and parallel shift scenarios correctly
-- SCSS Architecture: Split main.scss into 4 focused partials (_variables, _shifts, _calendar, _utilities) with --wt-* custom property naming
+- SCSS Architecture: Split main.scss into 4 focused partials (\_variables, \_shifts, \_calendar, \_utilities) with --wt-\* custom property naming
 - WelcomeWizard: Extracted into configuration-driven navigation with separate step components (WelcomeWizard.tsx simplified significantly)
 - TimeOffView: Refactored from 882 to 469 lines by extracting components (EventTable, TimeOffToolbar) and hooks
 - Onboarding Flow: Extended with time-off and time-tracking setup steps and feature toggles
@@ -103,7 +108,7 @@ Added per-day work location tracking (home/office/other) with country codes stor
 
 #### Time Tracking Feature and Major Refactoring
 
-Added a complete time tracking system with 16 component files in src/components/timeTracking/, a useTimeTrackingStorage hook for localStorage persistence, and timeUtils for time calculations. A new TimeTrackingView was created as the main container with daily/weekly/config tab navigation. This includes TimeTrackingDailyView (for task entry, timeline progress bar, and daily task list), TimeTrackingWeeklyView (for an analytics dashboard with circular progress charts and category breakdown), and TimeTrackingConfigView (for labels/templates management and JSON import/export). The SCSS was refactored into 4 partials with a --wt-* variable naming convention. WelcomeWizard was extracted into a configuration-driven system with separate step components, and TimeOffView was reduced from 882 to 469 lines. State migration v2 was added for yearly vacation amounts, including migration error recovery with a raw state backup. Finally, comprehensive integration test suites were added for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard. All 1057 tests are passing.
+Added a complete time tracking system with 16 component files in src/components/timeTracking/, a useTimeTrackingStorage hook for localStorage persistence, and timeUtils for time calculations. A new TimeTrackingView was created as the main container with daily/weekly/config tab navigation. This includes TimeTrackingDailyView (for task entry, timeline progress bar, and daily task list), TimeTrackingWeeklyView (for an analytics dashboard with circular progress charts and category breakdown), and TimeTrackingConfigView (for labels/templates management and JSON import/export). The SCSS was refactored into 4 partials with a --wt-\* variable naming convention. WelcomeWizard was extracted into a configuration-driven system with separate step components, and TimeOffView was reduced from 882 to 469 lines. State migration v2 was added for yearly vacation amounts, including migration error recovery with a raw state backup. Finally, comprehensive integration test suites were added for TimeOffView, TimeTrackingView, CalendarView, and WelcomeWizard. All 1057 tests are passing.
 
 ## [4.5.2] - 2026-01-30
 
@@ -176,14 +181,14 @@ Created CalendarView.tsx (466 lines) as a new main tab displaying working days w
 ### Changed
 
 - CurrentStatus Architecture: Refactored from 486-line monolithic component to clean 40-line router delegating to PersonalizedStatus and GenericStatus (following NextShift PR #34 pattern)
-- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without *FiveShift wrapper functions
+- Schedule-Generic Components: All components (ScheduleView, TodayView, TransferView) now work with any schedule type without \*FiveShift wrapper functions
 - Component Organization: Created status/ and shared/ subdirectories for better code organization and discoverability
 - Transfer Tab Visibility: Transfer tab now always visible to enable future cross-schedule coordination features
 - TodayView Shift Calculations: Moved from MainTabs into component for cross-schedule viewing support
 
 #### Schedule-Generic Component Refactoring
 
-Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed *FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use team counts to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
+Comprehensive refactoring to make all components schedule-generic and eliminate hardcoded 5-shift assumptions. Created shared component library with ShiftBadge.tsx (71 lines), ShiftTimeDisplay.tsx (32 lines), and CountdownBadge.tsx (38 lines) for consistent shift display. Split CurrentStatus.tsx from 486 lines to 40-line router with PersonalizedStatus.tsx (325 lines) and GenericStatus.tsx (274 lines) following NextShift PR #34 pattern of splitting by team selection rather than schedule type. Removed \*FiveShift wrapper functions from ScheduleView, TodayView, and TransferView - all components now use team counts to adapt UI dynamically. Added cross-schedule viewing with schedule selector dropdowns in ScheduleView and TodayView headers allowing users to view any available schedule type (e.g., 9-5 user can see 5-shift team schedules). Renamed TeamDetailModal to ScheduleDetailModal and adapted for single-user schedules (shows 'My Schedule Details' for 9-5, 'Team X Details' for 5-shift). Transfer tab now always visible across all schedule types to enable future cross-schedule coordination. Completed TODO.md items: CurrentStatus Component Refactoring (item 8), Multi-Roster Pattern Support (item 16 - component architecture aspect), TeamDetailModal Enhancement (item 6 - partial). All 722 tests passing. Zero breaking changes to public APIs - all changes are internal improvements.
 
 ## [4.4.1] - 2026-01-10
 
