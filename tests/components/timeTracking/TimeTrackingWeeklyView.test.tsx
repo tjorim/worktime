@@ -178,6 +178,19 @@ describe("TimeTrackingWeeklyView Component", () => {
       expect(screen.getByText(/36\.0h remaining/i)).toBeInTheDocument();
     });
 
+    it("handles zero weekly target without NaN percentages", () => {
+      const weekTasks = [createTaskForDate(mondayDate, "Support", "08:00", "12:00")];
+
+      const { container } = renderPanel({
+        tasks: weekTasks,
+        weeklyTargetHours: 0,
+        weeklyWorkingDays: 5,
+      });
+
+      expect(container.textContent).not.toContain("NaN");
+      expect(screen.getByLabelText(/Monday: 4\.0 hours, 0% of daily target/i)).toBeInTheDocument();
+    });
+
     it("includes all labels in work hour totals", () => {
       const weekTasks = [
         createTaskForDate(mondayDate, "Support", "09:00", "12:00"),

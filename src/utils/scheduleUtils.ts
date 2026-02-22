@@ -79,16 +79,6 @@ export function hasMultipleTeams(scheduleOption: ScheduleOption | null | undefin
 }
 
 /**
- * Get the weekly target hours for a given schedule option.
- *
- * Returns the configured `weeklyHours` from the roster config, or `null` when
- * the value has not been determined yet (e.g. for schedules still in development).
- */
-export function getWeeklyHours(scheduleOption: ScheduleOption | null | undefined): number | null {
-  return getScheduleConfig(scheduleOption).shiftConfig.weeklyHours ?? null;
-}
-
-/**
  * Get the effective team number for the user, handling single-user schedules.
  *
  * For schedules with teamCount === 1 (single-user schedules like '9-5'),

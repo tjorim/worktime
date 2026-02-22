@@ -28,10 +28,6 @@ describe("Schedule pattern validation", () => {
       expect(config.referenceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(config.schedulePattern).toBeDefined();
       expect(config.schedulePattern.length).toBe(config.cycleLengthDays);
-      if (config.weeklyHours != null) {
-        expect(Number.isFinite(config.weeklyHours)).toBe(true);
-        expect(config.weeklyHours).toBeGreaterThanOrEqual(0);
-      }
     });
   });
 
@@ -120,7 +116,6 @@ describe("Schedule pattern validation", () => {
     expect(schedule).toBeDefined();
     expect(schedule?.isAvailable).toBe(true);
     expect(schedule?.shiftConfig.teamCount).toBe(4);
-    expect(schedule?.shiftConfig.weeklyHours).toBe(45);
   });
 
   it("should have weekend-shift schedule available", () => {

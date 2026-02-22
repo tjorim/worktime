@@ -28,6 +28,7 @@ type TimeTrackingWeeklyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;
+  weeklyWorkingDays?: number;
   onSwitchToDaily?: (date: string) => void;
 };
 
@@ -54,6 +55,7 @@ export function TimeTrackingWeeklyView({
   selectedDate,
   onSelectedDateChange,
   weeklyTargetHours,
+  weeklyWorkingDays,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
   const { settings } = useSettings();
@@ -168,6 +170,13 @@ export function TimeTrackingWeeklyView({
       }
     };
 
+  const targetWorkingDays = weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
+  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
+  const weeklyProgressPercent =
+    weeklyTargetHours && weeklyTargetHours > 0
+      ? Math.min((weekTotal / weeklyTargetHours) * 100, 100)
+      : 0;
+
   return (
     <Card className="shadow-sm">
       <Card.Header>
@@ -224,26 +233,40 @@ export function TimeTrackingWeeklyView({
             {/* Week Progress Indicator */}
             {weeklyTargetHours !== undefined && (
               <div className="mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Weekly Progress</span>
-                  <span className="text-muted">
-                    {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
-                    <Badge
-                      bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
-                      className="ms-2"
-                    >
-                      {weekTotal >= weeklyTargetHours
-                        ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
-                        : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
-                    </Badge>
-                  </span>
-                </div>
-                <ProgressBar
-                  now={Math.min((weekTotal / weeklyTargetHours) * 100, 100)}
-                  variant={weekTotal >= weeklyTargetHours ? "success" : "primary"}
-                  style={{ height: "1.5rem" }}
-                  label={`${((weekTotal / weeklyTargetHours) * 100).toFixed(0)}%`}
-                />
+                {weeklyTargetHours > 0 ? (
+                  <>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="fw-semibold">Weekly Progress</span>
+                      <span className="text-muted">
+                        {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
+                        <Badge
+                          bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
+                          className="ms-2"
+                        >
+                          {weekTotal >= weeklyTargetHours
+                            ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
+                            : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
+                        </Badge>
+                      </span>
+                    </div>
+                    <ProgressBar
+                      now={weeklyProgressPercent}
+                      variant={weekTotal >= weeklyTargetHours ? "success" : "primary"}
+                      style={{ height: "1.5rem" }}
+                      label={`${weeklyProgressPercent.toFixed(0)}%`}
+                    />
+                  </>
+                ) : (
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="fw-semibold">Weekly Progress</span>
+                    <span className="text-muted">
+                      {weekTotal.toFixed(1)}h / 0.0h
+                      <Badge bg="secondary" className="ms-2">
+                        Target unavailable
+                      </Badge>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -293,9 +316,8 @@ export function TimeTrackingWeeklyView({
                 {weekDays.map((day, index) => {
                   const dayTotal = dailyHourTotals[index] ?? 0;
                   const isToday = day.iso === todayIso;
-                  // Divide by 5 working days instead of 7 to show realistic daily targets
-                  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / 5 : 8;
-                  const percentage = Math.min((dayTotal / targetDaily) * 100, 100);
+                  const percentage =
+                    targetDaily > 0 ? Math.min((dayTotal / targetDaily) * 100, 100) : 0;
                   const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
 
                   return (
