@@ -172,6 +172,10 @@ export function TimeTrackingWeeklyView({
 
   const targetWorkingDays = weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
   const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
+  const weeklyProgressPercent =
+    weeklyTargetHours && weeklyTargetHours > 0
+      ? Math.min((weekTotal / weeklyTargetHours) * 100, 100)
+      : 0;
 
   return (
     <Card className="shadow-sm">
@@ -229,26 +233,40 @@ export function TimeTrackingWeeklyView({
             {/* Week Progress Indicator */}
             {weeklyTargetHours !== undefined && (
               <div className="mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Weekly Progress</span>
-                  <span className="text-muted">
-                    {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
-                    <Badge
-                      bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
-                      className="ms-2"
-                    >
-                      {weekTotal >= weeklyTargetHours
-                        ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
-                        : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
-                    </Badge>
-                  </span>
-                </div>
-                <ProgressBar
-                  now={Math.min((weekTotal / weeklyTargetHours) * 100, 100)}
-                  variant={weekTotal >= weeklyTargetHours ? "success" : "primary"}
-                  style={{ height: "1.5rem" }}
-                  label={`${((weekTotal / weeklyTargetHours) * 100).toFixed(0)}%`}
-                />
+                {weeklyTargetHours > 0 ? (
+                  <>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="fw-semibold">Weekly Progress</span>
+                      <span className="text-muted">
+                        {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
+                        <Badge
+                          bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
+                          className="ms-2"
+                        >
+                          {weekTotal >= weeklyTargetHours
+                            ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
+                            : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
+                        </Badge>
+                      </span>
+                    </div>
+                    <ProgressBar
+                      now={weeklyProgressPercent}
+                      variant={weekTotal >= weeklyTargetHours ? "success" : "primary"}
+                      style={{ height: "1.5rem" }}
+                      label={`${weeklyProgressPercent.toFixed(0)}%`}
+                    />
+                  </>
+                ) : (
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="fw-semibold">Weekly Progress</span>
+                    <span className="text-muted">
+                      {weekTotal.toFixed(1)}h / 0.0h
+                      <Badge bg="secondary" className="ms-2">
+                        Target unavailable
+                      </Badge>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

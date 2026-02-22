@@ -46,7 +46,10 @@ export function TimeTrackingView() {
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
 
-  const effectiveTeam = useMemo(() => getEffectiveTeam(myTeam, scheduleType), [myTeam, scheduleType]);
+  const effectiveTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleType),
+    [myTeam, scheduleType],
+  );
   const weeklyTarget = useMemo(
     () =>
       effectiveTeam != null

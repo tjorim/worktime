@@ -1148,12 +1148,34 @@ describe("getOffDayProgress Function Tests", () => {
       expect(result).toEqual({ weeklyHours: 40, workingDays: 5 });
     });
 
+    it("should default to 5-shift when schedule option is omitted", () => {
+      const omittedSchedule = calculateWeeklyShiftTarget("2025-01-06", 1);
+      const explicitFiveShift = calculateWeeklyShiftTarget("2025-01-06", 1, "5-shift");
+
+      expect(omittedSchedule).toEqual(explicitFiveShift);
+      expect(omittedSchedule).toEqual({ weeklyHours: 48, workingDays: 6 });
+    });
+
+    it("should derive explicit 5-shift weekly targets", () => {
+      const result = calculateWeeklyShiftTarget("2025-01-13", 1, "5-shift");
+
+      expect(result).toEqual({ weeklyHours: 24, workingDays: 3 });
+    });
+
     it("should derive variable weekly targets for 2-shift support and regular weeks", () => {
       const supportWeek = calculateWeeklyShiftTarget("2025-01-06", 2, "2-shift");
       const regularWeek = calculateWeeklyShiftTarget("2025-01-13", 2, "2-shift");
 
       expect(supportWeek).toEqual({ weeklyHours: 63, workingDays: 7 });
       expect(regularWeek).toEqual({ weeklyHours: 45, workingDays: 5 });
+    });
+
+    it("should derive weekend-shift targets on edge dates", () => {
+      const weekOne = calculateWeeklyShiftTarget("2025-01-06", 1, "weekend-shift");
+      const yearBoundaryWeek = calculateWeeklyShiftTarget("2024-12-30", 1, "weekend-shift");
+
+      expect(weekOne).toEqual({ weeklyHours: 25.5, workingDays: 3 });
+      expect(yearBoundaryWeek).toEqual({ weeklyHours: 25.5, workingDays: 3 });
     });
   });
 });
