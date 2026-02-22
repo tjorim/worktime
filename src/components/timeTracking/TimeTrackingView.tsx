@@ -1,7 +1,7 @@
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
@@ -46,11 +46,14 @@ export function TimeTrackingView() {
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
 
-  const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
-  const weeklyTarget =
-    effectiveTeam != null
-      ? calculateWeeklyShiftTarget(selectedWeeklyDate, effectiveTeam, scheduleType)
-      : null;
+  const effectiveTeam = useMemo(() => getEffectiveTeam(myTeam, scheduleType), [myTeam, scheduleType]);
+  const weeklyTarget = useMemo(
+    () =>
+      effectiveTeam != null
+        ? calculateWeeklyShiftTarget(selectedWeeklyDate, effectiveTeam, scheduleType)
+        : null,
+    [selectedWeeklyDate, effectiveTeam, scheduleType],
+  );
 
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
