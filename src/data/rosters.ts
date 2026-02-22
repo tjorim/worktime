@@ -26,7 +26,6 @@ export type ShiftRosterConfig = {
   schedulePattern: ShiftCode[]; // M=morning/early, L=evening/late, N=night, D=day, O=off
   referenceDate: string; // ISO date string (YYYY-MM-DD) for shift calculation anchor
   // Optional fields
-  weeklyHours?: number | null; // Target working hours per week for this schedule (null/undefined = not yet determined)
   notes?: string; // Developer reference only - describes schedule characteristics, not displayed in UI
 };
 
@@ -43,7 +42,7 @@ export type ScheduleRoster = {
  * Throws an error if validation fails.
  */
 function validateSchedulePattern(config: ShiftRosterConfig): void {
-  const { schedulePattern, cycleLengthDays, teamCount, referenceDate, weeklyHours } = config;
+  const { schedulePattern, cycleLengthDays, teamCount, referenceDate } = config;
 
   // Validation 1: Pattern length matches cycle length
   if (schedulePattern.length !== cycleLengthDays) {
@@ -158,13 +157,6 @@ function validateSchedulePattern(config: ShiftRosterConfig): void {
         `Pattern must contain at least one working shift (all days are marked as "O" - off)`,
     );
   }
-
-  // Validation 8: Optional weekly hours must be a finite non-negative number when provided
-  if (weeklyHours != null && (!Number.isFinite(weeklyHours) || weeklyHours < 0)) {
-    throw new Error(
-      `Schedule pattern validation failed: weeklyHours must be a finite non-negative number when provided.`,
-    );
-  }
 }
 
 export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
@@ -196,7 +188,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Saturday
         "O", // Sunday
       ],
-      weeklyHours: 40,
       notes: "Weekday-only coverage.",
       // 9-5 uses "Day" shift - no overrides needed
     },
@@ -268,7 +259,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "O", // Sunday
       ],
       // 20 working weekdays across the 28-day cycle at 9h average to 45h/week.
-      weeklyHours: 45,
 
       notes:
         "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.",
@@ -323,7 +313,6 @@ export const SCHEDULE_OPTIONS: ScheduleRoster[] = [
         "L", // Saturday
         "L", // Sunday
       ],
-      weeklyHours: 25.5,
       notes: "Weekend-only coverage with early/late rotation. Friday coverage uses the day shift.",
     },
   },
