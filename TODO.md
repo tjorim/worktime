@@ -1,6 +1,6 @@
 # Worktime Development Roadmap
 
-**Current Version**: 4.6.0
+**Current Version**: 4.7.0
 **Branch**: `main`
 **Status**: Active Development
 
@@ -13,21 +13,6 @@ This document serves as a general to-do list and development roadmap for Worktim
 ### 🚀 High-Priority Items
 
 Critical features and improvements that significantly impact user experience.
-
-#### 1. Missing HdayPlanner Utility Functions
-
-- **Component**: Helper functions from HdayPlanner
-- **Source**: `HdayPlanner/frontend/src/lib/hday.ts`
-- **Functions**:
-  - `sortEvents()` - Sort events by date and type (stable ordering)
-  - `getEventClass()` - Map event flags to CSS class names
-- **Current Worktime**: buildPreviewLine exists, but sorting/class mapping missing
-- **Implementation**: Port utility functions to Worktime
-- **Files to Modify**:
-  - `src/lib/hday/utils.ts` - Add sortEvents and getEventClass
-  - `src/components/TimeOffView.tsx` - Use sortEvents for table display
-- **Estimated Effort**: 1–2 hours
-- **Status**: 🔲 Planned
 
 ### 🎯 Medium-Priority Items
 
@@ -66,17 +51,6 @@ Features that enhance functionality with moderate development effort.
   - Create `src/components/common/TeamSelector.tsx`
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Planned
-
-#### 6. Enhanced List Groups
-
-- **Component**: `react-bootstrap/ListGroup`
-- **Use Cases**:
-  - Upcoming shifts list
-  - Recent transfers list
-  - Clean, organized data display
-- **Implementation**: New components for data lists
-- **Estimated Effort**: 2–3 hours
-- **Status**: 🔲 Future
 
 #### 7. ScheduleDetailModal Enhancement
 
@@ -138,16 +112,6 @@ Advanced features for future development phases.
   - Better mobile navigation
 - **Implementation**: Responsive team display
 - **Estimated Effort**: 5–6 hours
-- **Status**: 🔲 Future
-
-#### 13. Accordion for Transfer History
-
-- **Component**: `react-bootstrap/Accordion`
-- **Use Cases**:
-  - Collapsible transfer sections by date range
-  - Organized historical data
-- **Implementation**: Update TransferView component
-- **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
 #### 14. Notification System Implementation
@@ -293,7 +257,6 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-1. **Missing Utility Functions** - sortEvents and getEventClass for time-off table
 2. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
 
 ### 📋 Backlog (Code Quality)
@@ -302,7 +265,6 @@ Advanced features for future development phases.
 
 ### 📋 Backlog (Features)
 
-5. **Enhanced List Groups** - Better data organization
 6. **ScheduleDetailModal Enhancement** - Activate disabled features
 7. **Enhanced Error Boundaries** - Better error handling
 
@@ -314,7 +276,6 @@ Advanced features for future development phases.
 ### 📋 Backlog (UI/UX)
 
 10. **Mobile Carousel** - Improved mobile navigation
-11. **Transfer History Accordion** - Organized historical data
 12. **Notification System** - Browser notifications for shifts and time-off
 13. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
 14. **Floating Action Button** - Quick actions overlay
