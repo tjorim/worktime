@@ -118,16 +118,25 @@ describe("TodayView", () => {
     renderWithProviders(<TodayView {...defaultProps} />);
 
     const carousel = screen.getByLabelText("Team schedule carousel");
-    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
 
     fireEvent.touchStart(carousel, { changedTouches: [{ clientX: 200 }] });
     fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 100 }] });
-    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
 
     fireEvent.touchStart(carousel, { changedTouches: [{ clientX: 100 }] });
     fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 180 }] });
-    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     expect(screen.queryByText("Team 2")).not.toBeInTheDocument();
   });
 
@@ -140,12 +149,18 @@ describe("TodayView", () => {
     const carousel = screen.getByLabelText("Team schedule carousel");
     carousel.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
 
     const dot = screen.getByRole("button", { name: "Show Team 3" });
     await user.click(dot);
-    expect(screen.getByRole("button", { name: "Show Team 3" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 3" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     expect(screen.queryByText("Team 2")).not.toBeInTheDocument();
   });
 
@@ -161,10 +176,16 @@ describe("TodayView", () => {
     expect(nextButton).toHaveFocus();
 
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
 
     await user.keyboard("{ArrowLeft}");
-    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
   it("handles empty shifts without crashing", () => {

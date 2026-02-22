@@ -122,6 +122,21 @@ export function MainTabs({
     }
   }, [showMobileActions]);
 
+  useEffect(() => {
+    if (!showMobileActions) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowMobileActions(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showMobileActions]);
+
   const mobileActions = useMemo(
     () => [
       {
@@ -155,7 +170,15 @@ export function MainTabs({
         onClick: () => onChangeSchedule?.(),
       },
     ],
-    [activeKey, myTeam, onChangeSchedule, onChangeTeam, onOpenSettings, setActiveTab, setCurrentDate],
+    [
+      activeKey,
+      myTeam,
+      onChangeSchedule,
+      onChangeTeam,
+      onOpenSettings,
+      setActiveTab,
+      setCurrentDate,
+    ],
   );
 
   return (
@@ -253,9 +276,7 @@ export function MainTabs({
               aria-label="Quick actions"
               ref={menuRef}
               onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setShowMobileActions(false);
-                } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                   event.preventDefault();
                   const items = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
                   if (!items?.length) return;
@@ -292,13 +313,11 @@ export function MainTabs({
             aria-label={showMobileActions ? "Close quick actions" : "Open quick actions"}
             aria-expanded={showMobileActions}
             aria-controls="mobile-quick-actions"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                setShowMobileActions(false);
-              }
-            }}
           >
-            <i className={`bi ${showMobileActions ? "bi-x-lg" : "bi-plus-lg"}`} aria-hidden="true"></i>
+            <i
+              className={`bi ${showMobileActions ? "bi-x-lg" : "bi-plus-lg"}`}
+              aria-hidden="true"
+            ></i>
           </Button>
         </div>
       )}

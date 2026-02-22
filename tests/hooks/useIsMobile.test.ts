@@ -44,11 +44,13 @@ describe("useIsMobile", () => {
           onchange: null,
           addListener: vi.fn(),
           removeListener: vi.fn(),
-          addEventListener: vi.fn((eventName: string, listener: (event: MediaQueryListEvent) => void) => {
-            if (query === MOBILE_MEDIA_QUERY && eventName === "change") {
-              changeListener = listener;
-            }
-          }),
+          addEventListener: vi.fn(
+            (eventName: string, listener: (event: MediaQueryListEvent) => void) => {
+              if (query === MOBILE_MEDIA_QUERY && eventName === "change") {
+                changeListener = listener;
+              }
+            },
+          ),
           removeEventListener: vi.fn(),
           dispatchEvent: vi.fn(),
         }) as MediaQueryList,

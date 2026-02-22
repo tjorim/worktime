@@ -219,7 +219,9 @@ export function TodayView({
   };
 
   useEffect(() => {
-    const preferredIndex = todayShifts.findIndex((shiftResult) => shiftResult.teamNumber === myTeam);
+    const preferredIndex = todayShifts.findIndex(
+      (shiftResult) => shiftResult.teamNumber === myTeam,
+    );
     setMobileActiveIndex(preferredIndex >= 0 ? preferredIndex : 0);
   }, [myTeam, todayShifts]);
 

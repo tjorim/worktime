@@ -115,6 +115,26 @@ describe("MainTabs", () => {
     });
   });
 
+  it("closes menu with Escape key regardless of focused element", async () => {
+    const user = userEvent.setup();
+    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    renderWithProviders(<MainTabs {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: /Open quick actions/i }));
+    expect(screen.getByRole("menu", { name: "Quick actions" })).toBeInTheDocument();
+
+    // Focus is on the first menu item, not the FAB button
+    const items = screen.getAllByRole("menuitem");
+    expect(items[0]).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Quick actions" })).not.toBeInTheDocument();
+    });
+  });
+
   it("supports arrow key navigation between menu items", async () => {
     const user = userEvent.setup();
     const { useIsMobile } = await import("../../src/hooks/useIsMobile");
