@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
@@ -46,6 +46,9 @@ export function MainTabs({
   );
   const [showMobileActions, setShowMobileActions] = useState(false);
   const isMobile = useIsMobile();
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const prevShowMobileActionsRef = useRef(false);
   const { settings } = useSettings();
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
@@ -107,6 +110,17 @@ export function MainTabs({
       setShowMobileActions(false);
     }
   }, [isMobile, showMobileActions]);
+
+  useEffect(() => {
+    const prev = prevShowMobileActionsRef.current;
+    prevShowMobileActionsRef.current = showMobileActions;
+    if (showMobileActions && !prev) {
+      const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+      firstItem?.focus();
+    } else if (!showMobileActions && prev) {
+      fabRef.current?.focus();
+    }
+  }, [showMobileActions]);
 
   const mobileActions = useMemo(
     () => [
@@ -232,7 +246,18 @@ export function MainTabs({
             />
           )}
           {showMobileActions && (
-            <div id="mobile-quick-actions" className="mobile-fab-menu" role="menu" aria-label="Quick actions">
+            <div
+              id="mobile-quick-actions"
+              className="mobile-fab-menu"
+              role="menu"
+              aria-label="Quick actions"
+              ref={menuRef}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setShowMobileActions(false);
+                }
+              }}
+            >
               {mobileActions.map((action) => (
                 <Button
                   key={action.key}
@@ -251,6 +276,7 @@ export function MainTabs({
             </div>
           )}
           <Button
+            ref={fabRef}
             className="mobile-fab"
             onClick={() => setShowMobileActions((prev) => !prev)}
             aria-label={showMobileActions ? "Close quick actions" : "Open quick actions"}

@@ -43,12 +43,24 @@ export function Header({
     setInternalShowSettings(false);
   }, [isControlled, onCloseSettings]);
 
+  const toggleSettings = useCallback(() => {
+    if (isControlled) {
+      if (settingsOpen) {
+        onCloseSettings?.();
+      } else {
+        onOpenSettings?.();
+      }
+      return;
+    }
+    setInternalShowSettings((prev) => !prev);
+  }, [isControlled, settingsOpen, onOpenSettings, onCloseSettings]);
+
   useKeyboardShortcuts(
     useMemo(
       () => ({
-        onToggleSettings: openSettings,
+        onToggleSettings: toggleSettings,
       }),
-      [openSettings],
+      [toggleSettings],
     ),
   );
 

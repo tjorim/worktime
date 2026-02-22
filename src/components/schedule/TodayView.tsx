@@ -1,4 +1,4 @@
-import { type TouchEvent, useEffect, useId, useMemo, useState } from "react";
+import { type TouchEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -219,13 +219,13 @@ export function TodayView({
     setMobileActiveIndex(preferredIndex >= 0 ? preferredIndex : 0);
   }, [myTeam, todayShifts]);
 
-  const goToPreviousTeam = () => {
+  const goToPreviousTeam = useCallback(() => {
     setMobileActiveIndex((prev) => Math.max(0, prev - 1));
-  };
+  }, []);
 
-  const goToNextTeam = () => {
+  const goToNextTeam = useCallback(() => {
     setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
-  };
+  }, [todayShifts.length]);
 
   const activeMobileShift = todayShifts[mobileActiveIndex] ?? todayShifts[0];
 

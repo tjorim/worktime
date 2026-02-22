@@ -19,7 +19,6 @@ export function useIsMobile() {
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
     const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
 
-    setIsMobile(mediaQuery.matches);
     mediaQuery.addEventListener("change", onChange);
 
     return () => {
