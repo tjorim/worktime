@@ -109,6 +109,11 @@ export interface OffDayProgress {
   total: number;
 }
 
+export interface WeeklyShiftTarget {
+  weeklyHours: number;
+  workingDays: number;
+}
+
 const getScheduleForOption = (scheduleOption?: NullableScheduleOption) =>
   getScheduleConfig(scheduleOption);
 
@@ -326,6 +331,50 @@ export function calculateShift(
     return getShift("O", schedule.value);
   }
   return getShift(shiftCode as ShiftType, schedule.value);
+}
+
+const getShiftDurationHours = (shift: Shift): number => {
+  if (shift.start == null || shift.end == null || !shift.isWorking) {
+    return 0;
+  }
+
+  if (shift.end > shift.start) {
+    return shift.end - shift.start;
+  }
+
+  return 24 - shift.start + shift.end;
+};
+
+/**
+ * Calculate weekly target hours by summing the scheduled working shifts for a team in the ISO week.
+ *
+ * @param dateInWeek - Any date inside the ISO week to evaluate
+ * @param teamNumber - Team number for which to calculate schedule-based targets
+ * @param scheduleOption - Schedule type to use
+ * @returns Weekly scheduled hours and number of scheduled working days in that week
+ */
+export function calculateWeeklyShiftTarget(
+  dateInWeek: string | Date | Dayjs,
+  teamNumber: number,
+  scheduleOption?: NullableScheduleOption,
+): WeeklyShiftTarget {
+  const weekStart = dayjs(dateInWeek).startOf("isoWeek");
+
+  let weeklyHours = 0;
+  let workingDays = 0;
+
+  for (let offset = 0; offset < 7; offset++) {
+    const date = weekStart.add(offset, "day");
+    const shift = calculateShift(date, teamNumber, scheduleOption);
+    const shiftDuration = getShiftDurationHours(shift);
+
+    if (shiftDuration > 0) {
+      workingDays += 1;
+      weeklyHours += shiftDuration;
+    }
+  }
+
+  return { weeklyHours, workingDays };
 }
 
 /**

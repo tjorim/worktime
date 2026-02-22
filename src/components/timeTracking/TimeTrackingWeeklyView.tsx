@@ -28,6 +28,7 @@ type TimeTrackingWeeklyViewProps = {
   selectedDate: string;
   onSelectedDateChange: (date: string) => void;
   weeklyTargetHours?: number;
+  weeklyWorkingDays?: number;
   onSwitchToDaily?: (date: string) => void;
 };
 
@@ -54,6 +55,7 @@ export function TimeTrackingWeeklyView({
   selectedDate,
   onSelectedDateChange,
   weeklyTargetHours,
+  weeklyWorkingDays,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
   const { settings } = useSettings();
@@ -293,8 +295,10 @@ export function TimeTrackingWeeklyView({
                 {weekDays.map((day, index) => {
                   const dayTotal = dailyHourTotals[index] ?? 0;
                   const isToday = day.iso === todayIso;
-                  // Divide by 5 working days instead of 7 to show realistic daily targets
-                  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / 5 : 8;
+                  const targetWorkingDays =
+                    weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
+                  const targetDaily =
+                    weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
                   const percentage = Math.min((dayTotal / targetDaily) * 100, 100);
                   const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
 

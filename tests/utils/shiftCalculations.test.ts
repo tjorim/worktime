@@ -11,6 +11,7 @@ import {
   getShiftCode,
   isCurrentlyWorking,
   SHIFTS,
+  calculateWeeklyShiftTarget,
 } from "../../src/utils/shiftCalculations";
 
 describe("Shift Calculations", () => {
@@ -1137,6 +1138,22 @@ describe("getOffDayProgress Function Tests", () => {
           }
         }
       }
+    });
+  });
+
+  describe("calculateWeeklyShiftTarget", () => {
+    it("should derive weekly hours and working days from the 9-5 roster", () => {
+      const result = calculateWeeklyShiftTarget("2025-01-08", 1, "9-5");
+
+      expect(result).toEqual({ weeklyHours: 40, workingDays: 5 });
+    });
+
+    it("should derive variable weekly targets for 2-shift support and regular weeks", () => {
+      const supportWeek = calculateWeeklyShiftTarget("2025-01-06", 2, "2-shift");
+      const regularWeek = calculateWeeklyShiftTarget("2025-01-13", 2, "2-shift");
+
+      expect(supportWeek).toEqual({ weeklyHours: 63, workingDays: 7 });
+      expect(regularWeek).toEqual({ weeklyHours: 45, workingDays: 5 });
     });
   });
 });

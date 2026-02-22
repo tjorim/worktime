@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
-import { getWeeklyHours } from "../../utils/scheduleUtils";
+import { calculateWeeklyShiftTarget } from "../../utils/shiftCalculations";
+import { getEffectiveTeam } from "../../utils/scheduleUtils";
 import { TimeTrackingConfigView } from "./TimeTrackingConfigView";
 import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
@@ -21,7 +22,7 @@ const TIME_TRACKING_VIEWS = ["daily", "weekly", "config"] as const;
 const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
 
 export function TimeTrackingView() {
-  const { scheduleType, lastUsed, updateLastTimeTrackingView } = useSettings();
+  const { myTeam, scheduleType, lastUsed, updateLastTimeTrackingView } = useSettings();
   const {
     tasks,
     templates,
@@ -45,7 +46,11 @@ export function TimeTrackingView() {
     updateLastTimeTrackingView(viewMode);
   }, [updateLastTimeTrackingView, viewMode]);
 
-  const weeklyTargetHours = getWeeklyHours(scheduleType) ?? undefined;
+  const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
+  const weeklyTarget =
+    effectiveTeam != null
+      ? calculateWeeklyShiftTarget(selectedWeeklyDate, effectiveTeam, scheduleType)
+      : null;
 
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
@@ -101,7 +106,8 @@ export function TimeTrackingView() {
           labels={labels}
           selectedDate={selectedWeeklyDate}
           onSelectedDateChange={setSelectedWeeklyDate}
-          weeklyTargetHours={weeklyTargetHours}
+          weeklyTargetHours={weeklyTarget?.weeklyHours}
+          weeklyWorkingDays={weeklyTarget?.workingDays}
           onSwitchToDaily={(date) => {
             setSelectedDailyDate(date);
             setViewMode("daily");
