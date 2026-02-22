@@ -405,5 +405,5 @@ Advanced features for future development phases.
 
 ---
 
-**Last Updated**: 2026-02-09
-**Next Review**: After v4.7.0
+**Last Updated**: 2026-02-22
+**Next Review**: After v4.8.0
