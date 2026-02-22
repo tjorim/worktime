@@ -170,6 +170,9 @@ export function TimeTrackingWeeklyView({
       }
     };
 
+  const targetWorkingDays = weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
+  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
+
   return (
     <Card className="shadow-sm">
       <Card.Header>
@@ -295,11 +298,8 @@ export function TimeTrackingWeeklyView({
                 {weekDays.map((day, index) => {
                   const dayTotal = dailyHourTotals[index] ?? 0;
                   const isToday = day.iso === todayIso;
-                  const targetWorkingDays =
-                    weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
-                  const targetDaily =
-                    weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
-                  const percentage = Math.min((dayTotal / targetDaily) * 100, 100);
+                  const percentage =
+                    targetDaily > 0 ? Math.min((dayTotal / targetDaily) * 100, 100) : 0;
                   const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
 
                   return (
