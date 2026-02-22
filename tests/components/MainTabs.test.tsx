@@ -114,4 +114,31 @@ describe("MainTabs", () => {
       expect(screen.queryByRole("menu", { name: "Quick actions" })).not.toBeInTheDocument();
     });
   });
+
+  it("supports arrow key navigation between menu items", async () => {
+    const user = userEvent.setup();
+    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    renderWithProviders(<MainTabs {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: /Open quick actions/i }));
+    const items = screen.getAllByRole("menuitem");
+    expect(items[0]).toHaveFocus();
+
+    await user.keyboard("{ArrowDown}");
+    expect(items[1]).toHaveFocus();
+
+    await user.keyboard("{ArrowDown}");
+    expect(items[2]).toHaveFocus();
+
+    // Wraps from last to first
+    await user.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}");
+    expect(items[0]).toHaveFocus();
+
+    // ArrowUp wraps from first to last
+    await user.keyboard("{ArrowUp}");
+    expect(items[items.length - 1]).toHaveFocus();
+  });
 });

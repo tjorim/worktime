@@ -9,6 +9,7 @@ import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
 import { getAllTeamsShifts } from "../../src/utils/shiftCalculations";
+import { useIsMobile } from "../../src/hooks/useIsMobile";
 
 const mockTodayShiftsData: ShiftResult[] = [
   {
@@ -89,8 +90,9 @@ const defaultProps = {
 };
 
 describe("TodayView", () => {
-  beforeEach(async () => {
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(getAllTeamsShifts).mockReturnValue(mockTodayShiftsData);
     vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
@@ -102,34 +104,35 @@ describe("TodayView", () => {
     expect(screen.queryByLabelText("Team schedule carousel")).not.toBeInTheDocument();
   });
 
-  it("calls onDateSelect when date picker changes", () => {
+  it("calls onDateSelect with the selected date when date picker changes", () => {
     const onDateSelect = vi.fn();
     renderWithProviders(<TodayView {...defaultProps} onDateSelect={onDateSelect} />);
     fireEvent.change(screen.getByLabelText(/Jump to date/i), { target: { value: "2025-01-20" } });
-    expect(onDateSelect).toHaveBeenCalled();
+    expect(onDateSelect).toHaveBeenCalledOnce();
+    expect(onDateSelect.mock.calls[0][0].format("YYYY-MM-DD")).toBe("2025-01-20");
   });
 
-  it("swipes left/right between team cards on mobile", async () => {
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+  it("swipes left/right between team cards on mobile", () => {
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     renderWithProviders(<TodayView {...defaultProps} />);
 
     const carousel = screen.getByLabelText("Team schedule carousel");
-    expect(screen.getByText("Team 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
 
     fireEvent.touchStart(carousel, { changedTouches: [{ clientX: 200 }] });
     fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 100 }] });
-    expect(screen.getByText("Team 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
 
     fireEvent.touchStart(carousel, { changedTouches: [{ clientX: 100 }] });
     fireEvent.touchEnd(carousel, { changedTouches: [{ clientX: 180 }] });
-    expect(screen.getByText("Team 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("Team 2")).not.toBeInTheDocument();
   });
 
   it("supports keyboard navigation and dot indicators on mobile", async () => {
     const user = userEvent.setup();
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     renderWithProviders(<TodayView {...defaultProps} />);
@@ -137,16 +140,37 @@ describe("TodayView", () => {
     const carousel = screen.getByLabelText("Team schedule carousel");
     carousel.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByText("Team 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
 
-    const dot = screen.getByRole("tab", { name: "Show Team 3" });
+    const dot = screen.getByRole("button", { name: "Show Team 3" });
     await user.click(dot);
-    expect(screen.getByText("Team 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Team 3" })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("Team 2")).not.toBeInTheDocument();
+  });
+
+  it("arrow keys work when a child button has focus", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    renderWithProviders(<TodayView {...defaultProps} />);
+
+    // Focus a child button, not the carousel container
+    const nextButton = screen.getByRole("button", { name: "Show next team" });
+    nextButton.focus();
+    expect(nextButton).toHaveFocus();
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("button", { name: "Show Team 2" })).toHaveAttribute("aria-current", "true");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("button", { name: "Show Team 1" })).toHaveAttribute("aria-current", "true");
   });
 
   it("handles empty shifts without crashing", () => {
     vi.mocked(getAllTeamsShifts).mockReturnValueOnce([]);
     renderWithProviders(<TodayView {...defaultProps} />);
-    expect(screen.getByText(/All Teams|Schedule/)).toBeInTheDocument();
+    expect(screen.getByText("All Teams")).toBeInTheDocument();
+    expect(screen.queryByText("Team 1")).not.toBeInTheDocument();
   });
 });

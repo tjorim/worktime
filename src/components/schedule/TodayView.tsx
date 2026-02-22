@@ -176,13 +176,17 @@ export function TodayView({
   const scheduleType = viewingScheduleType;
   const hasTeams = hasMultipleTeams(viewingScheduleType);
   const isMobile = useIsMobile();
-  const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  // Calculate shifts for the viewing schedule
+  // Calculate shifts for the viewing schedule (must precede mobileActiveIndex state)
   const todayShifts = useMemo(() => {
     return getAllTeamsShifts(currentDate, viewingScheduleType);
   }, [currentDate, viewingScheduleType]);
+
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(() => {
+    const preferredIndex = todayShifts.findIndex((s) => s.teamNumber === myTeam);
+    return preferredIndex >= 0 ? preferredIndex : 0;
+  });
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Keyboard shortcuts (only active when this tab is visible)
   const shortcuts = useMemo(
@@ -296,6 +300,7 @@ export function TodayView({
             className="mobile-team-carousel"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onTouchCancel={() => setTouchStartX(null)}
             onKeyDown={(event) => {
               if (event.key === "ArrowLeft") {
                 event.preventDefault();
@@ -327,15 +332,14 @@ export function TodayView({
               >
                 <i className="bi bi-chevron-left" aria-hidden="true"></i>
               </button>
-              <div className="mobile-team-carousel-dots" role="tablist" aria-label="Team position">
+              <div className="mobile-team-carousel-dots" role="group" aria-label="Select team">
                 {todayShifts.map((shiftResult, index) => (
                   <button
                     key={shiftResult.teamNumber}
                     type="button"
                     className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
                     aria-label={`Show Team ${shiftResult.teamNumber}`}
-                    aria-selected={index === mobileActiveIndex}
-                    role="tab"
+                    aria-current={index === mobileActiveIndex ? "true" : undefined}
                     onClick={() => setMobileActiveIndex(index)}
                   />
                 ))}

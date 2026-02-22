@@ -255,6 +255,16 @@ export function MainTabs({
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   setShowMobileActions(false);
+                } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const items = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+                  if (!items?.length) return;
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement);
+                  const next =
+                    event.key === "ArrowDown"
+                      ? items[(idx + 1) % items.length]
+                      : items[(idx - 1 + items.length) % items.length];
+                  next?.focus();
                 }
               }}
             >

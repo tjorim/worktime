@@ -1,8 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MOBILE_MEDIA_QUERY, useIsMobile } from "../../src/hooks/useIsMobile";
 
 describe("useIsMobile", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("uses shared mobile media query", () => {
     expect(MOBILE_MEDIA_QUERY).toBe("(max-width: 767.98px)");
   });
@@ -59,5 +63,28 @@ describe("useIsMobile", () => {
     });
 
     expect(result.current).toBe(true);
+  });
+
+  it("removes event listener on unmount", () => {
+    const removeEventListenerMock = vi.fn();
+
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: removeEventListenerMock,
+          dispatchEvent: vi.fn(),
+        }) as MediaQueryList,
+    );
+
+    const { unmount } = renderHook(() => useIsMobile());
+    unmount();
+
+    expect(removeEventListenerMock).toHaveBeenCalledWith("change", expect.any(Function));
   });
 });
