@@ -10,15 +10,11 @@ This document serves as a general to-do list and development roadmap for Worktim
 
 ## Development To-dos
 
-### 🚀 High-Priority Items
-
-Critical features and improvements that significantly impact user experience.
-
 ### 🎯 Medium-Priority Items
 
 Features that enhance functionality with moderate development effort.
 
-#### 4. Cross-Schedule Transfer View Enhancement
+#### 1. Cross-Schedule Transfer View Enhancement
 
 - **Component**: TransferView with cross-schedule coordination
 - **Use Cases**:
@@ -37,7 +33,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 4-5 hours
 - **Status**: 🔲 Planned (enables cross-roster coordination)
 
-#### 5. Reusable TeamSelector Component
+#### 2. Reusable TeamSelector Component
 
 - **Component**: Extract common team selection logic
 - **Use Cases**:
@@ -52,7 +48,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Planned
 
-#### 7. ScheduleDetailModal Enhancement
+#### 3. ScheduleDetailModal Enhancement
 
 - **Component**: Improve existing schedule detail modal
 - **Use Cases**:
@@ -63,7 +59,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 1–2 hours
 - **Status**: 🔲 Future
 
-#### 8. Enhanced Error Boundaries
+#### 4. Enhanced Error Boundaries
 
 - **Component**: More granular error handling
 - **Use Cases**:
@@ -74,7 +70,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 9. Time-Off TransferView Overlays
+#### 5. Time-Off TransferView Overlays
 
 - **Component**: Time-off event visualization on TransferView
 - **Use Cases**:
@@ -86,7 +82,7 @@ Features that enhance functionality with moderate development effort.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 10. iCal Subscription Link (Backend Required)
+#### 6. iCal Subscription Link (Backend Required)
 
 - **Component**: Server-side iCal feed for calendar app integration
 - **Use Cases**:
@@ -95,7 +91,7 @@ Features that enhance functionality with moderate development effort.
   - Combined feed with shifts and time-off events
   - Per-user personalized feed (user's team, schedule type, time-off)
 - **Implementation**: Backend endpoint serving RFC 5545 iCalendar (.ics) format
-- **Prerequisite**: Backend sync (item 15) must be in place first
+- **Prerequisite**: Backend sync (item 11) must be in place first
 - **Note**: Replaces the previous client-side .ics file export approach — a subscription link is more useful than a one-time download
 - **Status**: 🔲 Future (blocked on backend)
 - **See also**: `backend/README.md` for endpoint specification
@@ -104,7 +100,7 @@ Features that enhance functionality with moderate development effort.
 
 Advanced features for future development phases.
 
-#### 12. Carousel for Mobile Team View
+#### 7. Carousel for Mobile Team View
 
 - **Component**: `react-bootstrap/Carousel`
 - **Use Cases**:
@@ -114,7 +110,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 5–6 hours
 - **Status**: 🔲 Future
 
-#### 14. Notification System Implementation
+#### 8. Notification System Implementation
 
 - **Component**: Browser notification functionality
 - **Use Cases**:
@@ -125,7 +121,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 4–5 hours
 - **Status**: 🔲 Future
 
-#### 15. Advanced Accessibility Features
+#### 9. Advanced Accessibility Features
 
 - **Component**: Enhanced accessibility support
 - **Use Cases**:
@@ -137,7 +133,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 3–4 hours
 - **Status**: 🔲 Future
 
-#### 16. Floating Action Button
+#### 10. Floating Action Button
 
 - **Component**: Custom positioned `react-bootstrap/Button`
 - **Use Cases**:
@@ -149,7 +145,7 @@ Advanced features for future development phases.
 - **Estimated Effort**: 2–3 hours
 - **Status**: 🔲 Future
 
-#### 17. Backend with Shared .hday Files (Team Collaboration)
+#### 11. Backend with Shared .hday Files (Team Collaboration)
 
 - **Component**: Backend API + shared network storage for multi-user .hday time-off collaboration
 - **Current State**: Offline-first localStorage, single-user only
@@ -257,32 +253,32 @@ Advanced features for future development phases.
 
 ### 🔲 Next Up
 
-2. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
+1. **Cross-Schedule Transfer View Enhancement** - Enable cross-roster coordination and overlap detection
 
 ### 📋 Backlog (Code Quality)
 
-4. **Reusable TeamSelector Component** - Reduce code duplication
+2. **Reusable TeamSelector Component** - Reduce code duplication
 
 ### 📋 Backlog (Features)
 
-6. **ScheduleDetailModal Enhancement** - Activate disabled features
-7. **Enhanced Error Boundaries** - Better error handling
+3. **ScheduleDetailModal Enhancement** - Activate disabled features
+4. **Enhanced Error Boundaries** - Better error handling
 
 ### 📋 Backlog (Time-Off Management)
 
-8. **Time-Off TransferView Overlays** - Event indicators on transfer view
-9. **iCal Subscription Link** - Server-side calendar feed (blocked on backend)
+5. **Time-Off TransferView Overlays** - Event indicators on transfer view
+6. **iCal Subscription Link** - Server-side calendar feed (blocked on backend)
 
 ### 📋 Backlog (UI/UX)
 
-10. **Mobile Carousel** - Improved mobile navigation
-12. **Notification System** - Browser notifications for shifts and time-off
-13. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
-14. **Floating Action Button** - Quick actions overlay
+7. **Mobile Carousel** - Improved mobile navigation
+8. **Notification System** - Browser notifications for shifts and time-off
+9. **Advanced Accessibility** - Enhanced screen reader support, high contrast mode
+10. **Floating Action Button** - Quick actions overlay
 
 ### 📋 Aspirational (Long-Term Vision)
 
-15. **Backend with Shared Files** - Team collaboration with real-time .hday sync (40-60 hours, major undertaking, includes optional unified store)
+11. **Backend with Shared Files** - Team collaboration with real-time .hday sync (40-60 hours, major undertaking, includes optional unified store)
 
 ## Technical Requirements
 
