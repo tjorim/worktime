@@ -367,6 +367,7 @@ export function DayCell({
       onContextMenu={(e) => {
         if (onDayContextMenu) {
           e.preventDefault();
+          e.stopPropagation();
           onDayContextMenu(date, e.clientX, e.clientY, e.currentTarget as HTMLElement);
         }
       }}
