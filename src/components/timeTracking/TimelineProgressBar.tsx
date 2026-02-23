@@ -21,6 +21,8 @@ type TimelineProgressBarProps = {
   labels: TimeTrackingLabel[];
   targetHours?: number;
   liveTime?: dayjs.Dayjs;
+  /** Whether the selected date is today. Shows the Now line when true. */
+  isToday?: boolean;
 };
 
 type TaskSegment = {
@@ -54,6 +56,7 @@ export function TimelineProgressBar({
   labels,
   targetHours = DEFAULT_TARGET_HOURS,
   liveTime,
+  isToday,
 }: TimelineProgressBarProps) {
   // Validate and sanitize targetHours: ensure it's finite and > 0
   const sanitizedTargetHours =
@@ -117,11 +120,22 @@ export function TimelineProgressBar({
   const isOvertime = totalPercentage > 100;
   const hasBreakSegments = segments.some((s) => s.includesBreak);
 
+  // Position of the "Now" line as a percentage of the target, based on
+  // elapsed clock time since the earliest task start.
+  const nowPct = useMemo(() => {
+    if (!isToday || !liveTime || tasks.length === 0) return null;
+    const firstStartMs = Math.min(...tasks.map((t) => dayjs(t.startTime).valueOf()));
+    const elapsedHours = liveTime.diff(dayjs(firstStartMs), "hour", true);
+    if (elapsedHours < 0) return 0;
+    return Math.min((elapsedHours / sanitizedTargetHours) * 100, 100);
+  }, [isToday, liveTime, tasks, sanitizedTargetHours]);
+
   return (
     <div className="my-3">
       {/* Stacked Progress Bar */}
       {segments.length > 0 ? (
-        <BootstrapProgressBar>
+        <div style={{ position: "relative" }}>
+          <BootstrapProgressBar>
           {segments.map((segment) => {
             const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
             const norm = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
@@ -206,7 +220,24 @@ export function TimelineProgressBar({
               />
             );
           })}
-        </BootstrapProgressBar>
+          </BootstrapProgressBar>
+          {nowPct !== null && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${nowPct}%`,
+                width: "2px",
+                backgroundColor: "var(--bs-danger)",
+                transform: "translateX(-50%)",
+                pointerEvents: "none",
+              }}
+              data-testid="now-line"
+              aria-label={`Current time: ${liveTime!.format("HH:mm")}`}
+            />
+          )}
+        </div>
       ) : (
         <BootstrapProgressBar now={0} />
       )}

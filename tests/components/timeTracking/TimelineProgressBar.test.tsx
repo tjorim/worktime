@@ -5,6 +5,7 @@ import { TimelineProgressBar } from "../../../src/components/timeTracking/Timeli
 import { BREAK_DURATION_MINUTES } from "../../../src/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
+import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [{ id: "Support", name: "Support", color: "#c82333" }];
 
@@ -102,6 +103,33 @@ describe("TimelineProgressBar", () => {
       const { container } = render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       expect(container.textContent).toContain("8.00h");
+    });
+  });
+
+  describe("Now line", () => {
+    const task = makeTask(); // 08:00–16:00
+
+    it("does not render when isToday is false", () => {
+      const liveTime = dayjs("2026-02-07T12:00");
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday={false} />);
+      expect(screen.queryByTestId("now-line")).not.toBeInTheDocument();
+    });
+
+    it("does not render when liveTime is absent", () => {
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} isToday />);
+      expect(screen.queryByTestId("now-line")).not.toBeInTheDocument();
+    });
+
+    it("renders when isToday and liveTime are provided", () => {
+      const liveTime = dayjs("2026-02-07T12:00");
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
+      expect(screen.getByTestId("now-line")).toBeInTheDocument();
+    });
+
+    it("has an aria-label showing the current time", () => {
+      const liveTime = dayjs("2026-02-07T10:30");
+      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
+      expect(screen.getByLabelText("Current time: 10:30")).toBeInTheDocument();
     });
   });
 });

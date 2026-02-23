@@ -14,7 +14,6 @@ import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { OtherLocationModal } from "../calendar/OtherLocationModal";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
-import { DailyTimeline } from "./DailyTimeline";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "./TaskEntryForm";
 import {
@@ -575,9 +574,7 @@ export function TimeTrackingDailyView({
           onStartNow={handleStartNow}
         />
 
-        <TimelineProgressBar tasks={dailyTasks} labels={labels} liveTime={liveTime} />
-
-        <DailyTimeline
+        <TimelineProgressBar
           tasks={dailyTasks}
           labels={labels}
           liveTime={liveTime}
