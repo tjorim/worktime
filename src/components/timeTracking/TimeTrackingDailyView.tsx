@@ -584,6 +584,8 @@ export function TimeTrackingDailyView({
           onUpdateTask={handleUpdateTask}
           onRemoveTask={onRemoveTask}
           onToggleBreak={onToggleBreak}
+          liveTime={liveTime}
+          isToday={isDailyCurrent}
         />
       </Card.Body>
 
