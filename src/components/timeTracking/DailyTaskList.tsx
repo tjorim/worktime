@@ -127,16 +127,17 @@ export function DailyTaskList({
     const nowMinutes = liveTime.hour() * 60 + liveTime.minute();
 
     for (let i = 0; i < tasks.length; i++) {
-      const taskStart = dayjs(tasks[i].startTime);
+      const task = tasks[i]!;
+      const taskStart = dayjs(task.startTime);
       const taskStartMinutes = taskStart.hour() * 60 + taskStart.minute();
 
       if (nowMinutes < taskStartMinutes) {
         return { type: "separator", insertBeforeIndex: i };
       }
 
-      const taskStopMinutes = tasks[i].stopTime
+      const taskStopMinutes = task.stopTime
         ? (() => {
-            const s = dayjs(tasks[i].stopTime!);
+            const s = dayjs(task.stopTime!);
             return s.hour() * 60 + s.minute();
           })()
         : Infinity;
