@@ -212,6 +212,14 @@ describe("appBackup", () => {
     it("rejects when labels is not an array", () => {
       expect(validateAppBackupPayload({ labels: 123 })).toBe(false);
     });
+
+    it("rejects when workLocations is null", () => {
+      expect(validateAppBackupPayload({ workLocations: null })).toBe(false);
+    });
+
+    it("rejects when workLocations is an array", () => {
+      expect(validateAppBackupPayload({ workLocations: [] })).toBe(false);
+    });
   });
 
   describe("restoreAppBackup", () => {
