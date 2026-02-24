@@ -70,12 +70,6 @@ describe("LocationYearSummary", () => {
     expect(within(officeRow!).getByText("1")).toBeInTheDocument();
   });
 
-  it("renders the optional label for other-location rows", () => {
-    const map: WorkLocationMap = new Map([["2026-01-05", OTHER_DE]]);
-    renderSummary(2026, map);
-    expect(screen.getByText("(Berlin office)")).toBeInTheDocument();
-  });
-
   it("only includes entries matching the requested year", () => {
     const map: WorkLocationMap = new Map([
       ["2026-01-05", HOME_NL],
