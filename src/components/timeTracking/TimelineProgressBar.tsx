@@ -136,8 +136,8 @@ export function TimelineProgressBar({
       const taskStart = dayjs(task.startTime);
       const taskStop = dayjs(task.stopTime ?? liveTime);
 
-      if (!taskStop.isAfter(taskStart)) continue;
       if (!liveTime.isAfter(taskStart)) break;
+      if (!taskStop.isAfter(taskStart)) continue;
 
       const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
       const overlapHours = intervalEnd.diff(taskStart, "hour", true);
