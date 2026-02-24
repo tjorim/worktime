@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -10,6 +11,8 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../types/countries";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
+import { validateAppBackupPayload, restoreAppBackup } from "../utils/appBackup";
+import { BackupDialog } from "./BackupDialog";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { CONFIG } from "../utils/config";
 import { hasMultipleTeams } from "../utils/scheduleUtils";
@@ -104,10 +107,12 @@ export function SettingsPanel({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
   const versionClickCountRef = useRef(0);
   const versionClickTimeoutRef = useRef<number | null>(null);
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
@@ -261,6 +266,24 @@ export function SettingsPanel({
       toast.showWarning(
         `Cleared ${successParts.join(", ")} but failed to clear ${errors.join(", ")}`,
       );
+    }
+  };
+
+  const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!validateAppBackupPayload(parsed)) {
+        toast.showError("Restore failed. Please select a valid backup file.");
+        return;
+      }
+      restoreAppBackup(parsed);
+    } catch {
+      toast.showError("Restore failed. Please select a valid backup file.");
+    } finally {
+      event.target.value = "";
     }
   };
 
@@ -572,6 +595,30 @@ export function SettingsPanel({
                     <i className="bi bi-share text-muted"></i>
                   </div>
                 </ListGroup.Item>
+                <ListGroup.Item action onClick={() => setShowBackupDialog(true)}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">
+                        <i className="bi bi-download me-2"></i>
+                        Backup App Data
+                      </div>
+                      <small className="text-muted">Export a backup of your data</small>
+                    </div>
+                    <i className="bi bi-chevron-right text-muted"></i>
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">
+                        <i className="bi bi-upload me-2"></i>
+                        Restore Backup
+                      </div>
+                      <small className="text-muted">Restore from a backup file</small>
+                    </div>
+                    <i className="bi bi-chevron-right text-muted"></i>
+                  </div>
+                </ListGroup.Item>
                 <ListGroup.Item action onClick={handleClearData} className="text-danger">
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
@@ -618,6 +665,19 @@ export function SettingsPanel({
 
       {/* Developer Options Modal */}
       <DevOptionsPanel show={showDevOptions} onHide={handleDevOptionsClose} />
+
+      {/* Backup Dialog */}
+      <BackupDialog show={showBackupDialog} onHide={() => setShowBackupDialog(false)} />
+
+      {/* Hidden file input for restore */}
+      <input
+        ref={restoreFileInputRef}
+        type="file"
+        accept="application/json"
+        className="d-none"
+        aria-label="Restore backup file"
+        onChange={handleRestoreFileChange}
+      />
 
       {/* Reset Confirmation Modal */}
       <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>

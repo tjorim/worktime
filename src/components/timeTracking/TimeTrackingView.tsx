@@ -34,9 +34,8 @@ export function TimeTrackingView() {
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    updateTemplates,
     updateLabels,
-    exportData,
-    importData,
   } = useTimeTrackingStorage();
   const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
   const [selectedDailyDate, setSelectedDailyDate] = useState(dayjs().format("YYYY-MM-DD"));
@@ -135,9 +134,8 @@ export function TimeTrackingView() {
               onAddTemplate={addTemplate}
               onUpdateTemplate={updateTemplate}
               onDeleteTemplate={deleteTemplate}
+              onUpdateTemplates={updateTemplates}
               onUpdateLabels={updateLabels}
-              onExportData={exportData}
-              onImportData={importData}
             />
           </Card.Body>
         </Card>

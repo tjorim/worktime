@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
-import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
+import { buildPreviewLine, normalizeEventFlags, sortEvents, toLine } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -72,7 +72,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     deleteEvent,
     deleteEvents,
     importHday,
-    exportHday,
     canUndo,
     canRedo,
     undo,
@@ -371,14 +370,20 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleExport = useCallback(() => {
-    const hdayContent = exportHday();
-
-    if (!hdayContent.trim()) {
+    if (events.length === 0) {
       toast.showError("No events to export");
       return;
     }
 
-    // Export as downloadable file
+    let hdayContent: string;
+    try {
+      hdayContent = sortEvents(events).map((e) => toLine(e)).join("\n") + "\n";
+    } catch (error) {
+      console.error("Failed to serialize events:", error);
+      toast.showError("Failed to export events");
+      return;
+    }
+
     const blob = new Blob([hdayContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -390,7 +395,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     URL.revokeObjectURL(url);
 
     toast.showSuccess("Exported timeoff.hday", "bi-upload");
-  }, [exportHday, toast]);
+  }, [events, toast]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -598,6 +603,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setShowBulkDeleteConfirm(false)}
       />
+
     </div>
   );
 }

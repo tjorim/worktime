@@ -59,9 +59,6 @@ interface EventStoreContextType {
   /** Import .hday text (replaces all events) */
   importHday: (text: string) => void;
 
-  /** Export current events as .hday text */
-  exportHday: () => string;
-
   /** Clear all events */
   clearAll: () => void;
 
@@ -305,13 +302,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   }, []);
 
   /**
-   * Export current events as .hday text
-   */
-  const exportHday = useCallback(() => {
-    return rawText;
-  }, [rawText]);
-
-  /**
    * Clear all events
    */
   const clearAll = useCallback(() => {
@@ -336,7 +326,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEvent,
       deleteEvents,
       importHday,
-      exportHday,
       clearAll,
       canUndo: state.history.length > 0,
       canRedo: state.future.length > 0,
@@ -352,7 +341,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEvent,
       deleteEvents,
       importHday,
-      exportHday,
       clearAll,
       state.history.length,
       state.future.length,

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
   sanitizeLabels,
   type TimeTrackingLabel,
 } from "../components/timeTracking/constants";
-import { isValidRange, isValidTimeString } from "../components/timeTracking/timeUtils";
+import { isValidRange } from "../components/timeTracking/timeUtils";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
@@ -20,11 +20,6 @@ type RawTask = {
   includesBreak?: boolean;
 };
 
-type ImportPayload = {
-  tasks?: unknown[];
-  templates?: unknown[];
-  labels?: unknown[];
-};
 
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
@@ -88,19 +83,6 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return task;
 }
 
-function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === "string" &&
-    typeof v.text === "string" &&
-    typeof v.label === "string" &&
-    v.label.trim().length > 0 &&
-    isValidTimeString(v.start) &&
-    isValidTimeString(v.stop) &&
-    isValidRange(v.start, v.stop)
-  );
-}
 
 export function useTimeTrackingStorage() {
   const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);
@@ -116,24 +98,6 @@ export function useTimeTrackingStorage() {
   const labels = useMemo(() => sanitizeLabels(rawLabels), [rawLabels]);
 
   const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(convertToTask), [rawTasks]);
-
-  // Refs for stable exportData callback
-  const rawTasksRef = useRef(rawTasks);
-  const templatesRef = useRef(templates);
-  const labelsRef = useRef(labels);
-
-  // Synchronize refs with committed state to maintain stable references for callbacks
-  useEffect(() => {
-    rawTasksRef.current = rawTasks;
-  }, [rawTasks]);
-
-  useEffect(() => {
-    templatesRef.current = templates;
-  }, [templates]);
-
-  useEffect(() => {
-    labelsRef.current = labels;
-  }, [labels]);
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
@@ -255,42 +219,11 @@ export function useTimeTrackingStorage() {
     [setTemplates],
   );
 
-  const exportData = useCallback((date: string) => {
-    const payload = {
-      tasks: rawTasksRef.current,
-      templates: templatesRef.current,
-      labels: labelsRef.current,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `worktime-time-tracking-${date}.json`;
-    anchor.click();
-    // Revoke after the browser has started the download. A single rAF defers
-    // to the next paint, which is sufficient for the navigation to begin.
-    requestAnimationFrame(() => {
-      URL.revokeObjectURL(url);
-    });
-  }, []);
-
-  const importData = useCallback(
-    (payload: ImportPayload) => {
-      if (Array.isArray(payload.tasks)) {
-        const validTasks = payload.tasks.filter(isValidRawTask);
-        setRawTasks(validTasks);
-      }
-      if (Array.isArray(payload.templates)) {
-        const validTemplates = payload.templates.filter(isValidTemplate);
-        setTemplates(validTemplates);
-      }
-      if (Array.isArray(payload.labels)) {
-        setRawLabels(sanitizeLabels(payload.labels));
-      }
+  const updateTemplates = useCallback(
+    (nextTemplates: TimeTrackingTemplate[]) => {
+      setTemplates(nextTemplates);
     },
-    [setRawTasks, setTemplates, setRawLabels],
+    [setTemplates],
   );
 
   const updateLabels = useCallback(
@@ -311,8 +244,7 @@ export function useTimeTrackingStorage() {
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    updateTemplates,
     updateLabels,
-    exportData,
-    importData,
   };
 }

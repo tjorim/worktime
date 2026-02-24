@@ -329,7 +329,8 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Export/i }));
+      // With no events, clicking Export shows an error toast directly (no dialog)
+      await user.click(screen.getByRole("button", { name: /Export events/i }));
 
       // Verify error toast appears
       expect(screen.getByText("No events to export")).toBeInTheDocument();
