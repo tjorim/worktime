@@ -27,6 +27,36 @@ export type AppBackupPayload = {
   labels?: unknown[];
 };
 
+/**
+ * Options controlling which sections and which year to include in a backup.
+ * Omitted include flags default to true (include everything).
+ */
+export type BackupOptions = {
+  /** When set, filters tasks and work location data to this year only. */
+  year?: number;
+  includeUserState?: boolean;
+  includeTimeOff?: boolean;
+  includeWorkLocations?: boolean;
+  includeTasks?: boolean;
+  includeTemplates?: boolean;
+  includeLabels?: boolean;
+};
+
+/**
+ * Summary of which data categories are present in localStorage.
+ * Used to drive the BackupDialog UI — only categories with data are shown.
+ */
+export type BackupDataPresence = {
+  hasUserState: boolean;
+  hasTimeOff: boolean;
+  hasWorkLocations: boolean;
+  hasTasks: boolean;
+  hasTemplates: boolean;
+  hasLabels: boolean;
+  /** Years that have tasks or work location data, sorted newest-first. */
+  availableYears: number[];
+};
+
 function safeParseJson(key: string): unknown {
   try {
     const item = localStorage.getItem(key);
@@ -49,32 +79,134 @@ function getWorkLocationEntries(): Record<string, unknown> {
   return result;
 }
 
+function getWorkLocationEntriesForYear(year: number): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const key = `${WORK_LOCATIONS_PREFIX}${year}`;
+  const data = safeParseJson(key);
+  if (data !== undefined) result[String(year)] = data;
+  return result;
+}
+
+/**
+ * Inspect localStorage and return a summary of which data categories exist
+ * and which years have year-scoped data (tasks, work locations).
+ */
+export function checkBackupDataPresence(): BackupDataPresence {
+  const hasUserState = localStorage.getItem(USER_STATE_KEY) !== null;
+  const hasTimeOff = !!localStorage.getItem(TIME_OFF_STORAGE_KEY);
+
+  const taskYears = new Set<number>();
+  const tasksData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
+  const hasTasks = Array.isArray(tasksData) && tasksData.length > 0;
+  if (hasTasks && Array.isArray(tasksData)) {
+    for (const task of tasksData) {
+      if (task && typeof task === "object") {
+        const t = task as Record<string, unknown>;
+        if (typeof t.startTime === "string") {
+          const year = parseInt(t.startTime.slice(0, 4), 10);
+          if (!isNaN(year)) taskYears.add(year);
+        }
+      }
+    }
+  }
+
+  const templatesData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.templates);
+  const hasTemplates = Array.isArray(templatesData) && templatesData.length > 0;
+
+  const labelsData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.labels);
+  const hasLabels = Array.isArray(labelsData) && labelsData.length > 0;
+
+  const workLocationYears = new Set<number>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(WORK_LOCATIONS_PREFIX)) {
+      const year = parseInt(key.slice(WORK_LOCATIONS_PREFIX.length), 10);
+      if (!isNaN(year)) workLocationYears.add(year);
+    }
+  }
+  const hasWorkLocations = workLocationYears.size > 0;
+
+  const availableYears = Array.from(new Set([...taskYears, ...workLocationYears])).sort(
+    (a, b) => b - a,
+  );
+
+  return {
+    hasUserState,
+    hasTimeOff,
+    hasWorkLocations,
+    hasTasks,
+    hasTemplates,
+    hasLabels,
+    availableYears,
+  };
+}
+
 /**
  * Collect all backed-up app data from localStorage into a payload object.
+ * Pass `options` to restrict which sections are included or to filter by year.
  */
-export function buildBackupPayload(): AppBackupPayload {
+export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
+  const include = {
+    userState: options?.includeUserState ?? true,
+    timeOff: options?.includeTimeOff ?? true,
+    workLocations: options?.includeWorkLocations ?? true,
+    tasks: options?.includeTasks ?? true,
+    templates: options?.includeTemplates ?? true,
+    labels: options?.includeLabels ?? true,
+  };
+
   const payload: AppBackupPayload = {
     exportedAt: new Date().toISOString(),
     version: 1,
   };
 
-  const userState = safeParseJson(USER_STATE_KEY);
-  if (userState !== undefined) payload.userState = userState;
+  if (include.userState) {
+    const userState = safeParseJson(USER_STATE_KEY);
+    if (userState !== undefined) payload.userState = userState;
+  }
 
-  const timeOff = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-  if (timeOff) payload.timeOff = timeOff;
+  if (include.timeOff) {
+    const timeOff = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+    if (timeOff) payload.timeOff = timeOff;
+  }
 
-  const workLocations = getWorkLocationEntries();
-  if (Object.keys(workLocations).length > 0) payload.workLocations = workLocations;
+  if (include.workLocations) {
+    const workLocations =
+      options?.year !== undefined
+        ? getWorkLocationEntriesForYear(options.year)
+        : getWorkLocationEntries();
+    if (Object.keys(workLocations).length > 0) payload.workLocations = workLocations;
+  }
 
-  const tasks = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
-  if (Array.isArray(tasks)) payload.tasks = tasks;
+  if (include.tasks) {
+    const allTasks = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
+    if (Array.isArray(allTasks)) {
+      const tasks =
+        options?.year !== undefined
+          ? allTasks.filter((t: unknown) => {
+              if (t && typeof t === "object") {
+                const task = t as Record<string, unknown>;
+                return (
+                  typeof task.startTime === "string" &&
+                  task.startTime.startsWith(`${options.year}-`)
+                );
+              }
+              return false;
+            })
+          : allTasks;
+      if (tasks.length > 0) payload.tasks = tasks;
+    }
+  }
 
-  const templates = safeParseJson(TIME_TRACKING_STORAGE_KEYS.templates);
-  if (Array.isArray(templates)) payload.templates = templates;
+  if (include.templates) {
+    const templates = safeParseJson(TIME_TRACKING_STORAGE_KEYS.templates);
+    if (Array.isArray(templates)) payload.templates = templates;
+  }
 
-  const labels = safeParseJson(TIME_TRACKING_STORAGE_KEYS.labels);
-  if (Array.isArray(labels)) payload.labels = labels;
+  if (include.labels) {
+    const labels = safeParseJson(TIME_TRACKING_STORAGE_KEYS.labels);
+    if (Array.isArray(labels)) payload.labels = labels;
+  }
 
   return payload;
 }
@@ -83,9 +215,10 @@ export function buildBackupPayload(): AppBackupPayload {
  * Build a backup payload and trigger a browser download of the JSON file.
  *
  * @param date - ISO date string (YYYY-MM-DD) used in the filename.
+ * @param options - Optional section/year filter for partial backups.
  */
-export function downloadAppBackup(date: string): void {
-  const payload = buildBackupPayload();
+export function downloadAppBackup(date: string, options?: BackupOptions): void {
+  const payload = buildBackupPayload(options);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

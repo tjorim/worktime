@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildBackupPayload,
+  checkBackupDataPresence,
   downloadAppBackup,
   restoreAppBackup,
   validateAppBackupPayload,
@@ -77,6 +78,91 @@ describe("appBackup", () => {
       localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify({ bad: true }));
       const payload = buildBackupPayload();
       expect(payload.tasks).toBeUndefined();
+    });
+
+    it("excludes sections when include flags are false", () => {
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 1 }));
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/01/15 # Vacation\n");
+      const payload = buildBackupPayload({ includeUserState: false, includeTimeOff: false });
+      expect(payload.userState).toBeUndefined();
+      expect(payload.timeOff).toBeUndefined();
+    });
+
+    it("filters tasks by year when year option is provided", () => {
+      const tasks = [
+        { id: "t1", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
+        { id: "t2", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
+      ];
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      const payload = buildBackupPayload({ year: 2025 });
+      expect(payload.tasks).toEqual([tasks[0]]);
+    });
+
+    it("filters work locations to the selected year", () => {
+      const loc2025 = { "2025-06-01": { location: "home" } };
+      const loc2026 = { "2026-02-24": { location: "office" } };
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify(loc2025));
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify(loc2026));
+      const payload = buildBackupPayload({ year: 2025 });
+      expect(payload.workLocations).toEqual({ "2025": loc2025 });
+    });
+
+    it("omits filtered tasks when none match the selected year", () => {
+      const tasks = [{ id: "t1", text: "A", label: "l1", startTime: "2026-02-24T09:00" }];
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      const payload = buildBackupPayload({ year: 2025 });
+      expect(payload.tasks).toBeUndefined();
+    });
+  });
+
+  describe("checkBackupDataPresence", () => {
+    it("returns all false and empty years when localStorage is empty", () => {
+      const presence = checkBackupDataPresence();
+      expect(presence.hasUserState).toBe(false);
+      expect(presence.hasTimeOff).toBe(false);
+      expect(presence.hasWorkLocations).toBe(false);
+      expect(presence.hasTasks).toBe(false);
+      expect(presence.hasTemplates).toBe(false);
+      expect(presence.hasLabels).toBe(false);
+      expect(presence.availableYears).toEqual([]);
+    });
+
+    it("detects user state", () => {
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 1 }));
+      expect(checkBackupDataPresence().hasUserState).toBe(true);
+    });
+
+    it("detects time off data", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/01/15 # Vacation\n");
+      expect(checkBackupDataPresence().hasTimeOff).toBe(true);
+    });
+
+    it("detects tasks and extracts their years", () => {
+      const tasks = [
+        { id: "t1", startTime: "2025-06-01T09:00" },
+        { id: "t2", startTime: "2026-02-24T09:00" },
+      ];
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      const presence = checkBackupDataPresence();
+      expect(presence.hasTasks).toBe(true);
+      expect(presence.availableYears).toEqual([2026, 2025]);
+    });
+
+    it("detects work locations and includes their years", () => {
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify({}));
+      const presence = checkBackupDataPresence();
+      expect(presence.hasWorkLocations).toBe(true);
+      expect(presence.availableYears).toContain(2025);
+    });
+
+    it("merges task years and work location years, sorted newest-first", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([{ id: "t1", startTime: "2024-01-01T09:00" }]),
+      );
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify({}));
+      const presence = checkBackupDataPresence();
+      expect(presence.availableYears).toEqual([2026, 2024]);
     });
   });
 
