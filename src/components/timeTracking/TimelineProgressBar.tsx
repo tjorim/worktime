@@ -44,13 +44,10 @@ type TaskSegment = {
 
 
 function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: dayjs.Dayjs): number {
-  const sortedTasks = [...tasks].sort(
-    (a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf(),
-  );
-
   let elapsedVisualHours = 0;
 
-  for (const task of sortedTasks) {
+  // Assumes tasks are already sorted by startTime in the parent view.
+  for (const task of tasks) {
     const taskStart = dayjs(task.startTime);
     const taskStop = dayjs(task.stopTime ?? liveTime);
 
