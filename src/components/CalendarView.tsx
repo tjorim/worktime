@@ -26,7 +26,6 @@ import {
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
-import { LocationSummaryBar } from "./calendar/LocationSummaryBar";
 import { LocationYearSummary } from "./calendar/LocationYearSummary";
 import { OtherLocationModal } from "./calendar/OtherLocationModal";
 import { EventModal } from "./EventModal";
@@ -447,9 +446,6 @@ export function CalendarView({
             </div>
           ) : (
             <>
-              {crossBorderEnabled && isCurrentMonth && (
-                <LocationSummaryBar workLocationMap={workLocationMap} />
-              )}
               <MonthCalendar
                 events={calendarEvents}
                 month={currentMonth}
