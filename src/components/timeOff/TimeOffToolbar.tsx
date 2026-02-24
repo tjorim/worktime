@@ -1,7 +1,6 @@
 import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Dropdown from "react-bootstrap/Dropdown";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
 
 type TimeOffToolbarProps = {
@@ -20,8 +19,7 @@ type TimeOffToolbarProps = {
 
   // Import/Export
   onImport: () => void;
-  onExportYear: (year: number | "all") => void;
-  availableYears: number[];
+  onExport: () => void;
 
   // Add event
   onAddEvent: () => void;
@@ -46,8 +44,7 @@ function TimeOffToolbarComponent({
   onClearSelection,
   onBulkDelete,
   onImport,
-  onExportYear,
-  availableYears,
+  onExport,
   onAddEvent,
   viewMode,
 }: TimeOffToolbarProps) {
@@ -63,26 +60,10 @@ function TimeOffToolbarComponent({
             <i className="bi bi-download me-1" aria-hidden="true"></i>
             Import
           </Button>
-          <Dropdown as="span">
-            <Dropdown.Toggle
-              variant="outline-primary"
-              size="sm"
-              aria-label="Export events"
-              id="export-dropdown"
-            >
-              <i className="bi bi-upload me-1" aria-hidden="true"></i>
-              Export
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => onExportYear("all")}>All years</Dropdown.Item>
-              {availableYears.length > 0 && <Dropdown.Divider />}
-              {availableYears.map((year) => (
-                <Dropdown.Item key={year} onClick={() => onExportYear(year)}>
-                  {year}
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown>
+          <Button variant="outline-primary" size="sm" onClick={onExport} aria-label="Export events">
+            <i className="bi bi-upload me-1" aria-hidden="true"></i>
+            Export
+          </Button>
           <Button
             variant="outline-secondary"
             size="sm"

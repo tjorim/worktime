@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
-import { buildPreviewLine, normalizeEventFlags, toLine } from "../lib/hday/parser";
+import { buildPreviewLine, normalizeEventFlags, sortEvents, toLine } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -18,6 +18,8 @@ import {
   serializeEventFormState,
   serializeEventFormStateFromEvent,
 } from "../utils/eventFormState";
+import { ExportDialog } from "./timeOff/ExportDialog";
+import type { ExportGroup } from "./timeOff/ExportDialog";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -72,7 +74,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     deleteEvent,
     deleteEvents,
     importHday,
-    exportHday,
     canUndo,
     canRedo,
     undo,
@@ -370,52 +371,94 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
   };
 
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
+  const [showExportDialog, setShowExportDialog] = useState(false);
+
+  const exportGroups = useMemo((): ExportGroup[] => {
+    const yearMap = new Map<number, typeof events>();
+    const weeklyEvents: typeof events = [];
+    const unknownEvents: typeof events = [];
+
     for (const event of events) {
       if (event.type === "range" && event.start) {
         const year = parseInt(event.start.split("/")[0] ?? "", 10);
         if (!isNaN(year)) {
-          years.add(year);
+          const bucket = yearMap.get(year) ?? [];
+          bucket.push(event);
+          yearMap.set(year, bucket);
         }
+      } else if (event.type === "weekly") {
+        weeklyEvents.push(event);
+      } else {
+        unknownEvents.push(event);
       }
     }
-    return Array.from(years).sort((a, b) => b - a); // newest first
+
+    const groups: ExportGroup[] = [];
+
+    for (const year of Array.from(yearMap.keys()).sort((a, b) => b - a)) {
+      const yearEvents = yearMap.get(year)!;
+      groups.push({
+        id: `year-${year}`,
+        label: `${year} (${yearEvents.length} event${yearEvents.length !== 1 ? "s" : ""})`,
+        count: yearEvents.length,
+        events: yearEvents,
+      });
+    }
+
+    if (weeklyEvents.length > 0) {
+      groups.push({
+        id: "weekly",
+        label: `Recurring weekly (${weeklyEvents.length} event${weeklyEvents.length !== 1 ? "s" : ""})`,
+        count: weeklyEvents.length,
+        events: weeklyEvents,
+      });
+    }
+
+    if (unknownEvents.length > 0) {
+      groups.push({
+        id: "unknown",
+        label: `Other (${unknownEvents.length} event${unknownEvents.length !== 1 ? "s" : ""})`,
+        count: unknownEvents.length,
+        events: unknownEvents,
+      });
+    }
+
+    return groups;
   }, [events]);
 
-  const handleExportYear = useCallback(
-    (year: number | "all") => {
-      let hdayContent: string;
-      let filename: string;
+  const handleExport = useCallback(() => {
+    if (events.length === 0) {
+      toast.showError("No events to export");
+      return;
+    }
+    setShowExportDialog(true);
+  }, [events.length, toast]);
 
-      if (year === "all") {
-        hdayContent = exportHday();
-        filename = "timeoff.hday";
-      } else {
-        const filtered = events.filter(
-          (e) =>
-            (e.type === "range" && e.start?.startsWith(`${year}/`)) ||
-            e.type === "weekly" ||
-            e.type === "unknown",
-        );
-        if (filtered.length === 0) {
-          toast.showError(`No events to export for ${year}`);
-          return;
-        }
-        try {
-          hdayContent = filtered.map((e) => toLine(e)).join("\n") + "\n";
-        } catch (error) {
-          console.error("Failed to serialize events:", error);
-          toast.showError("Failed to export events");
-          return;
-        }
-        filename = `timeoff-${year}.hday`;
-      }
+  const handleExportGroups = useCallback(
+    (selectedGroups: ExportGroup[]) => {
+      const allEvents = sortEvents(selectedGroups.flatMap((g) => g.events));
 
-      if (!hdayContent.trim()) {
+      if (allEvents.length === 0) {
         toast.showError("No events to export");
         return;
       }
+
+      let hdayContent: string;
+      try {
+        hdayContent = allEvents.map((e) => toLine(e)).join("\n") + "\n";
+      } catch (error) {
+        console.error("Failed to serialize events:", error);
+        toast.showError("Failed to export events");
+        return;
+      }
+
+      // Use a year-specific filename only when exactly one year group is selected
+      const yearGroups = selectedGroups.filter((g) => g.id.startsWith("year-"));
+      const nonYearGroups = selectedGroups.filter((g) => !g.id.startsWith("year-"));
+      const filename =
+        yearGroups.length === 1 && nonYearGroups.length === 0
+          ? `timeoff-${yearGroups[0]!.id.slice(5)}.hday`
+          : "timeoff.hday";
 
       const blob = new Blob([hdayContent], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
@@ -429,7 +472,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       toast.showSuccess(`Exported ${filename}`, "bi-upload");
     },
-    [events, exportHday, toast],
+    [toast],
   );
 
   const handleUndo = useCallback(() => {
@@ -450,7 +493,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       onUndo: handleUndo,
       onRedo: handleRedo,
       onImport: handleImport,
-      onExport: () => handleExportYear("all"),
+      onExport: handleExport,
       onBulkDelete: () => setShowBulkDeleteConfirm(true),
       onCancelEditMode: handleCancelEditMode,
     },
@@ -529,8 +572,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onClearSelection={handleClearSelection}
           onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}
-          onExportYear={handleExportYear}
-          availableYears={availableYears}
+          onExport={handleExport}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
           events={events}
@@ -638,6 +680,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         variant="danger"
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setShowBulkDeleteConfirm(false)}
+      />
+
+      <ExportDialog
+        show={showExportDialog}
+        onHide={() => setShowExportDialog(false)}
+        groups={exportGroups}
+        onExport={handleExportGroups}
       />
     </div>
   );
