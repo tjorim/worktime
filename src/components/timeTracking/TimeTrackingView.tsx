@@ -35,7 +35,6 @@ export function TimeTrackingView() {
     updateTemplate,
     deleteTemplate,
     updateLabels,
-    exportData,
     importData,
   } = useTimeTrackingStorage();
   const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
@@ -136,7 +135,6 @@ export function TimeTrackingView() {
               onUpdateTemplate={updateTemplate}
               onDeleteTemplate={deleteTemplate}
               onUpdateLabels={updateLabels}
-              onExportData={exportData}
               onImportData={importData}
             />
           </Card.Body>

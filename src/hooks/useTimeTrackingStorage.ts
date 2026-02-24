@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
   TIME_TRACKING_STORAGE_KEYS,
@@ -116,24 +116,6 @@ export function useTimeTrackingStorage() {
   const labels = useMemo(() => sanitizeLabels(rawLabels), [rawLabels]);
 
   const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(convertToTask), [rawTasks]);
-
-  // Refs for stable exportData callback
-  const rawTasksRef = useRef(rawTasks);
-  const templatesRef = useRef(templates);
-  const labelsRef = useRef(labels);
-
-  // Synchronize refs with committed state to maintain stable references for callbacks
-  useEffect(() => {
-    rawTasksRef.current = rawTasks;
-  }, [rawTasks]);
-
-  useEffect(() => {
-    templatesRef.current = templates;
-  }, [templates]);
-
-  useEffect(() => {
-    labelsRef.current = labels;
-  }, [labels]);
 
   const addTask = useCallback(
     (payload: StoredTimeTrackingTask): Promise<boolean> => {
@@ -255,27 +237,6 @@ export function useTimeTrackingStorage() {
     [setTemplates],
   );
 
-  const exportData = useCallback((date: string) => {
-    const payload = {
-      tasks: rawTasksRef.current,
-      templates: templatesRef.current,
-      labels: labelsRef.current,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `worktime-time-tracking-${date}.json`;
-    anchor.click();
-    // Revoke after the browser has started the download. A single rAF defers
-    // to the next paint, which is sufficient for the navigation to begin.
-    requestAnimationFrame(() => {
-      URL.revokeObjectURL(url);
-    });
-  }, []);
-
   const importData = useCallback(
     (payload: ImportPayload) => {
       if (Array.isArray(payload.tasks)) {
@@ -312,7 +273,6 @@ export function useTimeTrackingStorage() {
     updateTemplate,
     deleteTemplate,
     updateLabels,
-    exportData,
     importData,
   };
 }

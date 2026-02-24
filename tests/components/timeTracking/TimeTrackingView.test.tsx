@@ -26,7 +26,6 @@ vi.mock("../../../src/hooks/useTimeTrackingStorage", () => ({
     updateTemplate: vi.fn(),
     deleteTemplate: vi.fn(),
     updateLabels: vi.fn(),
-    exportData: vi.fn(),
     importData: vi.fn(),
   })),
 }));
