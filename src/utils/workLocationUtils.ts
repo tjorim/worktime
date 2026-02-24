@@ -44,5 +44,7 @@ export function aggregateLocationCounts(
     });
   }
 
-  return Array.from(counts.values()).sort((a, b) => b.days - a.days);
+  return Array.from(counts.values()).sort(
+    (a, b) => a.countryCode.localeCompare(b.countryCode) || b.days - a.days,
+  );
 }

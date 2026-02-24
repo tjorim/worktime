@@ -28,23 +28,24 @@ describe("aggregateLocationCounts", () => {
     expect(officeRow).toEqual({ location: "office", countryCode: "BE", days: 1 });
   });
 
-  it("sorts by days descending", () => {
+  it("sorts by countryCode ascending, then days descending within the same country", () => {
+    // HOME=NL(2), OFFICE=BE(1), OTHER_DE=DE(3) → by country: BE, DE, NL
     const map: WorkLocationMap = new Map([
-      ["2026-01-05", OFFICE], // 1 day office
-      ["2026-01-06", HOME], // 2 days home
+      ["2026-01-05", OFFICE], // BE, 1 day
+      ["2026-01-06", HOME], // NL, 2 days
       ["2026-01-07", HOME],
-      ["2026-01-08", OTHER_DE], // 3 days other (DE)
+      ["2026-01-08", OTHER_DE], // DE, 3 days
       ["2026-01-09", OTHER_DE],
       ["2026-01-10", OTHER_DE],
     ]);
     const result = aggregateLocationCounts(map);
-    // Assert full descending order
+    expect(result.map((r) => r.countryCode)).toEqual(["BE", "DE", "NL"]);
+    // Within the same country, days are descending
     for (let i = 1; i < result.length; i++) {
-      expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+      if (result[i - 1].countryCode === result[i].countryCode) {
+        expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+      }
     }
-    // Also compare to a sorted copy
-    const sorted = [...result].sort((a, b) => b.days - a.days);
-    expect(result).toEqual(sorted);
   });
 
   it("creates separate rows for other-location entries with different country codes", () => {
