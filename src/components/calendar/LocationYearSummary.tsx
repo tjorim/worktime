@@ -47,8 +47,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       divider,
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
-        const desc = row.label ? `${row.countryCode} (${row.label})` : row.countryCode;
-        return `${locationLabel.padEnd(8)} ${desc.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""}`;
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""}`;
       }),
     ];
 
@@ -91,14 +90,13 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.location}-${row.countryCode}-${row.label ?? ""}`}>
+            <tr key={`${row.location}-${row.countryCode}`}>
               <td>
                 <i
                   className={`bi ${WORK_LOCATION_ICON_CLASS[row.location]} me-1`}
                   aria-hidden="true"
                 ></i>
                 {WORK_LOCATION_LABEL[row.location]}
-                {row.label && <span className="text-muted ms-1 small">({row.label})</span>}
               </td>
               <td>{row.countryCode}</td>
               <td className="text-end">{row.days}</td>

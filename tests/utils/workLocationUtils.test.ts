@@ -63,7 +63,7 @@ describe("aggregateLocationCounts", () => {
     expect(usRow?.days).toBe(1);
   });
 
-  it("creates separate rows for other-location entries with the same country but different labels", () => {
+  it("merges other-location entries with the same country regardless of label", () => {
     const OTHER_DE_LABEL: WorkLocationInfo = {
       location: "other",
       countryCode: cc("DE"),
@@ -75,18 +75,8 @@ describe("aggregateLocationCounts", () => {
       ["2026-01-06", OTHER_DE_NOLABEL],
     ]);
     const result = aggregateLocationCounts(map);
-    expect(result).toHaveLength(2);
-  });
-
-  it("preserves the label on other-location rows", () => {
-    const OTHER_LABELED: WorkLocationInfo = {
-      location: "other",
-      countryCode: cc("DE"),
-      label: "Client visit",
-    };
-    const map: WorkLocationMap = new Map([["2026-01-05", OTHER_LABELED]]);
-    const result = aggregateLocationCounts(map);
-    expect(result[0].label).toBe("Client visit");
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ location: "other", countryCode: "DE", days: 2 });
   });
 
   it("skips entries with unknown locations and does not collide on separator characters in other fields", () => {
@@ -117,13 +107,13 @@ describe("aggregateLocationCounts", () => {
     expect(result).toHaveLength(2);
     // entry1 must be absent — no row should carry its invalid location
     expect(result.some((r) => r.location === ("other:site" as WorkLocation))).toBe(false);
-    // entry2 must appear as its own distinct row
+    // entry2 must appear as its own distinct row (countryCode "DE:FR" differs from entry3's "DE")
     expect(result).toContainEqual(
-      expect.objectContaining({ location: "other", countryCode: "DE:FR", label: "baz" }),
+      expect.objectContaining({ location: "other", countryCode: "DE:FR" }),
     );
-    // entry3 must appear as its own distinct row (separator chars in label don't merge it with entry2)
+    // entry3 must appear as its own distinct row
     expect(result).toContainEqual(
-      expect.objectContaining({ location: "other", countryCode: "DE", label: "foo:bar" }),
+      expect.objectContaining({ location: "other", countryCode: "DE" }),
     );
   });
 });
