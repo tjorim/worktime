@@ -21,6 +21,8 @@ type TimelineProgressBarProps = {
   labels: TimeTrackingLabel[];
   targetHours?: number;
   liveTime?: dayjs.Dayjs;
+  /** Whether the selected date is today. Shows the Now line when true. */
+  isToday?: boolean;
 };
 
 type TaskSegment = {
@@ -40,6 +42,29 @@ type TaskSegment = {
   afterBreakHours?: number;
 };
 
+
+function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: dayjs.Dayjs): number {
+  let elapsedVisualHours = 0;
+
+  // Assumes tasks are already sorted by startTime in the parent view.
+  for (const task of tasks) {
+    const taskStart = dayjs(task.startTime);
+    const taskStop = dayjs(task.stopTime ?? liveTime);
+
+    if (!liveTime.isAfter(taskStart)) break;
+    if (!taskStop.isAfter(taskStart)) continue;
+
+    const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
+    const overlapHours = intervalEnd.diff(taskStart, "hour", true);
+
+    if (overlapHours > 0) {
+      elapsedVisualHours += overlapHours;
+    }
+  }
+
+  return elapsedVisualHours;
+}
+
 const LABEL_STYLE: React.CSSProperties = {
   fontSize: "0.7rem",
   fontWeight: 600,
@@ -54,6 +79,7 @@ export function TimelineProgressBar({
   labels,
   targetHours = DEFAULT_TARGET_HOURS,
   liveTime,
+  isToday,
 }: TimelineProgressBarProps) {
   // Validate and sanitize targetHours: ensure it's finite and > 0
   const sanitizedTargetHours =
@@ -113,19 +139,30 @@ export function TimelineProgressBar({
     [segments],
   );
   const visualTotalPercentage = totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
+  const normalizationFactor = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
 
   const isOvertime = totalPercentage > 100;
   const hasBreakSegments = segments.some((s) => s.includesBreak);
+
+  // Position of the "Now" line mapped to the same rendered timeline scale as the segments.
+  // This avoids drifting into task gaps or clamping before compressed overtime segments.
+  const nowPct = useMemo(() => {
+    if (!isToday || !liveTime || tasks.length === 0) return null;
+
+    const elapsedVisualHours = calculateElapsedVisualHours(tasks, liveTime);
+
+    const scaledPct = (elapsedVisualHours / sanitizedTargetHours) * 100 * normalizationFactor;
+    return Math.max(0, Math.min(scaledPct, 100));
+  }, [isToday, liveTime, tasks, sanitizedTargetHours, normalizationFactor]);
 
   return (
     <div className="my-3">
       {/* Stacked Progress Bar */}
       {segments.length > 0 ? (
-        <BootstrapProgressBar>
+        <div style={{ position: "relative" }}>
+          <BootstrapProgressBar>
           {segments.map((segment) => {
             const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
-            const norm = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
-
             // For segments with a break, render three sub-segments positioned
             // according to where the break falls within the lunch window.
             if (
@@ -134,9 +171,12 @@ export function TimelineProgressBar({
               segment.beforeBreakHours != null &&
               segment.afterBreakHours != null
             ) {
-              const beforePct = (segment.beforeBreakHours / sanitizedTargetHours) * 100 * norm;
-              const breakPct = (segment.breakHours / sanitizedTargetHours) * 100 * norm;
-              const afterPct = (segment.afterBreakHours / sanitizedTargetHours) * 100 * norm;
+              const beforePct =
+                (segment.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const breakPct =
+                (segment.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const afterPct =
+                (segment.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
 
               // Show label on whichever work portion is larger
               const showLabelOnBefore = beforePct >= afterPct;
@@ -190,7 +230,7 @@ export function TimelineProgressBar({
             }
 
             // Regular segment (no break)
-            const normalizedPercent = segment.percentage * norm;
+            const normalizedPercent = segment.percentage * normalizationFactor;
             return (
               <BootstrapProgressBar
                 key={segment.id}
@@ -206,7 +246,24 @@ export function TimelineProgressBar({
               />
             );
           })}
-        </BootstrapProgressBar>
+          </BootstrapProgressBar>
+          {nowPct !== null && liveTime && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${nowPct}%`,
+                width: "2px",
+                backgroundColor: "var(--bs-danger)",
+                transform: "translateX(-50%)",
+                pointerEvents: "none",
+              }}
+              data-testid="now-line"
+              aria-label={`Current time: ${liveTime.format("HH:mm")}`}
+            />
+          )}
+        </div>
       ) : (
         <BootstrapProgressBar now={0} />
       )}

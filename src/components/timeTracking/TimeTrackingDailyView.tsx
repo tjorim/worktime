@@ -574,7 +574,12 @@ export function TimeTrackingDailyView({
           onStartNow={handleStartNow}
         />
 
-        <TimelineProgressBar tasks={dailyTasks} labels={labels} liveTime={liveTime} />
+        <TimelineProgressBar
+          tasks={dailyTasks}
+          labels={labels}
+          liveTime={liveTime}
+          isToday={isDailyCurrent}
+        />
 
         <DailyTaskList
           tasks={dailyTasks}
@@ -584,6 +589,8 @@ export function TimeTrackingDailyView({
           onUpdateTask={handleUpdateTask}
           onRemoveTask={onRemoveTask}
           onToggleBreak={onToggleBreak}
+          liveTime={liveTime}
+          isToday={isDailyCurrent}
         />
       </Card.Body>
 
