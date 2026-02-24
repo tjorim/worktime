@@ -29,8 +29,8 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
  * // Set today as WFH
  * setLocationForDate(dayjs(), "home");
  *
- * // Query a specific date (falls back to office default when not set)
- * const info = getLocationForDate("2026-02-20"); // { location: "office", countryCode: "NL" }
+ * // Query a specific date — returns null when nothing has been explicitly set
+ * const info = getLocationForDate("2026-02-20"); // null if not set
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
@@ -56,7 +56,6 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Map of explicitly set work locations for calendar consumption.
    * Only contains days where the user has explicitly set a location.
-   * Use getLocationForDate for queries that should fall back to the office default.
    */
   const workLocationMap: WorkLocationMap = useMemo(
     () =>
@@ -65,36 +64,21 @@ export function useWorkLocationStorage(year: number) {
   );
 
   /**
-   * Returns the work location for a given date.
-   *
-   * If no explicit location is stored, falls back to the office default
-   * derived from the user's officeCountry setting. Returns null when
-   * neither a stored location nor an officeCountry setting exists.
+   * Returns the explicitly stored work location for a given date, or null if
+   * none has been set. Never assumes a default — callers must handle the null
+   * case rather than relying on an implicit office fallback.
    *
    * @param date - The date to query (YYYY-MM-DD string, Date, or Dayjs)
-   * @returns The WorkLocationInfo for that day, or null if unresolvable
+   * @returns The WorkLocationInfo for that day, or null if no location was set
    */
   const getLocationForDate = useCallback(
     (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
       const d = dayjs(date);
       if (!d.isValid()) return null;
       const key = d.format("YYYY-MM-DD");
-      const stored = workLocationMap.get(key);
-      if (stored) {
-        return stored;
-      }
-
-      // Default-to-office: derive country from officeCountry setting
-      if (officeCountry) {
-        const parsedOfficeCountry = toCountryCode(officeCountry);
-        if (parsedOfficeCountry) {
-          return { location: "office", countryCode: parsedOfficeCountry };
-        }
-      }
-
-      return null;
+      return workLocationMap.get(key) ?? null;
     },
-    [workLocationMap, officeCountry],
+    [workLocationMap],
   );
 
   /**

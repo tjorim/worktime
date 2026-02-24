@@ -143,15 +143,12 @@ describe("useWorkLocationStorage", () => {
   });
 
   describe("getLocationForDate", () => {
-    it("falls back to office with officeCountry when no explicit entry exists", () => {
+    it("returns null when no explicit entry exists, regardless of officeCountry", () => {
       const { result } = renderHook(() => useWorkLocationStorage(2026), {
         wrapper: makeWrapper("NL", "BE"),
       });
 
-      expect(result.current.getLocationForDate("2026-02-18")).toEqual({
-        location: "office",
-        countryCode: "BE",
-      });
+      expect(result.current.getLocationForDate("2026-02-18")).toBeNull();
     });
 
     it("returns null when no explicit entry and officeCountry is not configured", () => {
@@ -162,7 +159,7 @@ describe("useWorkLocationStorage", () => {
       expect(result.current.getLocationForDate("2026-02-18")).toBeNull();
     });
 
-    it("returns the explicit stored location, overriding the office default", () => {
+    it("returns the explicit stored location", () => {
       const { result } = renderHook(() => useWorkLocationStorage(2026), {
         wrapper: makeWrapper(),
       });
