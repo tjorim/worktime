@@ -114,5 +114,15 @@ describe("aggregateLocationCounts", () => {
     const result = aggregateLocationCounts(map);
     // entry1 is skipped (unknown location); entry2 and entry3 are distinct rows
     expect(result).toHaveLength(2);
+    // entry1 must be absent — no row should carry its invalid location
+    expect(result.some((r) => r.location === ("other:site" as WorkLocation))).toBe(false);
+    // entry2 must appear as its own distinct row
+    expect(result).toContainEqual(
+      expect.objectContaining({ location: "other", countryCode: "DE:FR", label: "baz" }),
+    );
+    // entry3 must appear as its own distinct row (separator chars in label don't merge it with entry2)
+    expect(result).toContainEqual(
+      expect.objectContaining({ location: "other", countryCode: "DE", label: "foo:bar" }),
+    );
   });
 });
