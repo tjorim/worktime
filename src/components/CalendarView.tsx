@@ -446,6 +446,11 @@ export function CalendarView({
             </div>
           ) : (
             <>
+              {crossBorderEnabled && showAnnualSummary && (
+                <div className="mb-3">
+                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
+                </div>
+              )}
               <MonthCalendar
                 events={calendarEvents}
                 month={currentMonth}
@@ -466,11 +471,6 @@ export function CalendarView({
                 showOtherLocationAction={showOtherLocationAction}
                 getShiftForDate={getShiftForDate}
               />
-              {crossBorderEnabled && showAnnualSummary && (
-                <div className="mt-3">
-                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
-                </div>
-              )}
             </>
           )}
         </Card.Body>
