@@ -42,6 +42,32 @@ type TaskSegment = {
   afterBreakHours?: number;
 };
 
+
+function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: dayjs.Dayjs): number {
+  const sortedTasks = [...tasks].sort(
+    (a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf(),
+  );
+
+  let elapsedVisualHours = 0;
+
+  for (const task of sortedTasks) {
+    const taskStart = dayjs(task.startTime);
+    const taskStop = dayjs(task.stopTime ?? liveTime);
+
+    if (!liveTime.isAfter(taskStart)) break;
+    if (!taskStop.isAfter(taskStart)) continue;
+
+    const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
+    const overlapHours = intervalEnd.diff(taskStart, "hour", true);
+
+    if (overlapHours > 0) {
+      elapsedVisualHours += overlapHours;
+    }
+  }
+
+  return elapsedVisualHours;
+}
+
 const LABEL_STYLE: React.CSSProperties = {
   fontSize: "0.7rem",
   fontWeight: 600,
@@ -126,26 +152,7 @@ export function TimelineProgressBar({
   const nowPct = useMemo(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
 
-    const sortedTasks = [...tasks].sort(
-      (a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf(),
-    );
-
-    let elapsedVisualHours = 0;
-
-    for (const task of sortedTasks) {
-      const taskStart = dayjs(task.startTime);
-      const taskStop = dayjs(task.stopTime ?? liveTime);
-
-      if (!liveTime.isAfter(taskStart)) break;
-      if (!taskStop.isAfter(taskStart)) continue;
-
-      const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
-      const overlapHours = intervalEnd.diff(taskStart, "hour", true);
-
-      if (overlapHours > 0) {
-        elapsedVisualHours += overlapHours;
-      }
-    }
+    const elapsedVisualHours = calculateElapsedVisualHours(tasks, liveTime);
 
     const scaledPct = (elapsedVisualHours / sanitizedTargetHours) * 100 * normalizationFactor;
     return Math.max(0, Math.min(scaledPct, 100));
