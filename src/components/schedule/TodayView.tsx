@@ -147,76 +147,27 @@ function TeamCard({
   );
 }
 
-/**
- * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
- *
- * Works with any schedule type - automatically adapts to single-user or multi-team schedules. Shifts are calculated
- * internally based on the selected viewing schedule, supporting cross-schedule viewing functionality.
- *
- * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
- * @param currentDate - The date being displayed
- * @param onPreviousDay - Handler invoked when the "Previous" button is pressed
- * @param onNextDay - Handler invoked when the "Next" button is pressed
- * @param onTodayClick - Handler invoked when the "Today" button is pressed.
- * @param onTeamClick - Optional handler invoked with a team number and schedule type when a team card is activated (click or keyboard).
- * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
- */
-export function TodayView({
+
+function TodayMobileCarousel({
+  todayShifts,
   myTeam,
-  currentDate,
-  onPreviousDay,
-  onNextDay,
-  onTodayClick,
-  onDateSelect,
+  hasTeams,
   onTeamClick,
-  isActive = false,
-  viewingScheduleType,
-}: TodayViewProps) {
-  const datePickerId = useId();
-  const scheduleType = viewingScheduleType;
-  const hasTeams = hasMultipleTeams(viewingScheduleType);
-  const isMobile = useIsMobile();
-
-  // Calculate shifts for the viewing schedule (must precede mobileActiveIndex state)
-  const todayShifts = useMemo(() => {
-    return getAllTeamsShifts(currentDate, viewingScheduleType);
-  }, [currentDate, viewingScheduleType]);
-
+  scheduleType,
+  isCurrentlyActive,
+}: {
+  todayShifts: ShiftResult[];
+  myTeam: number | null;
+  hasTeams: boolean;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
+  scheduleType: ScheduleOption;
+  isCurrentlyActive: (shiftResult: ShiftResult) => boolean;
+}) {
   const [mobileActiveIndex, setMobileActiveIndex] = useState(() => {
     const preferredIndex = todayShifts.findIndex((s) => s.teamNumber === myTeam);
     return preferredIndex >= 0 ? preferredIndex : 0;
   });
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-
-  // Keyboard shortcuts (only active when this tab is visible)
-  const shortcuts = useMemo(
-    () =>
-      isActive
-        ? {
-            onToday: onTodayClick,
-            onPrevious: onPreviousDay,
-            onNext: onNextDay,
-          }
-        : {},
-    [isActive, onTodayClick, onPreviousDay, onNextDay],
-  );
-  useKeyboardShortcuts(shortcuts);
-
-  const isCurrentlyActive = (shiftResult: ShiftResult) => {
-    if (!shiftResult.shift.isWorking) return false;
-    const now = dayjs();
-    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
-  };
-
-  const today = dayjs();
-  const displayDate = currentDate;
-  const isToday = displayDate.isSame(today, "day");
-  const canSelectDate = Boolean(onDateSelect);
-  const handleDateChange = (dateString: string) => {
-    if (dateString && onDateSelect) {
-      onDateSelect(dayjs(dateString));
-    }
-  };
 
   useEffect(() => {
     const preferredIndex = todayShifts.findIndex(
@@ -255,6 +206,138 @@ export function TodayView({
     }
 
     setTouchStartX(null);
+  };
+
+  if (!activeMobileShift) {
+    return null;
+  }
+
+  return (
+    <div
+      className="mobile-team-carousel"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => setTouchStartX(null)}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          goToPreviousTeam();
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          goToNextTeam();
+        }
+      }}
+      role="region"
+      aria-label="Team schedule carousel"
+      tabIndex={0}
+    >
+      <TeamCard
+        shiftResult={activeMobileShift}
+        isMyTeam={myTeam === activeMobileShift.teamNumber}
+        isCurrentlyActive={isCurrentlyActive(activeMobileShift)}
+        hasTeams={hasTeams}
+        onTeamClick={onTeamClick}
+        scheduleType={scheduleType}
+      />
+      <div className="mobile-team-carousel-controls">
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={goToPreviousTeam}
+          aria-label="Show previous team"
+          disabled={mobileActiveIndex === 0}
+        >
+          <i className="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div className="mobile-team-carousel-dots" role="group" aria-label="Select team">
+          {todayShifts.map((shiftResult, index) => (
+            <button
+              key={shiftResult.teamNumber}
+              type="button"
+              className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
+              aria-label={`Show Team ${shiftResult.teamNumber}`}
+              aria-current={index === mobileActiveIndex ? "true" : undefined}
+              onClick={() => setMobileActiveIndex(index)}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={goToNextTeam}
+          aria-label="Show next team"
+          disabled={mobileActiveIndex === todayShifts.length - 1}
+        >
+          <i className="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
+ *
+ * Works with any schedule type - automatically adapts to single-user or multi-team schedules. Shifts are calculated
+ * internally based on the selected viewing schedule, supporting cross-schedule viewing functionality.
+ *
+ * @param myTeam - Current user's team number, or `null`; used to visually highlight the user's team card.
+ * @param currentDate - The date being displayed
+ * @param onPreviousDay - Handler invoked when the "Previous" button is pressed
+ * @param onNextDay - Handler invoked when the "Next" button is pressed
+ * @param onTodayClick - Handler invoked when the "Today" button is pressed.
+ * @param onTeamClick - Optional handler invoked with a team number and schedule type when a team card is activated (click or keyboard).
+ * @returns A React element representing the Today card containing a responsive grid of team cards and any time-off alerts.
+ */
+export function TodayView({
+  myTeam,
+  currentDate,
+  onPreviousDay,
+  onNextDay,
+  onTodayClick,
+  onDateSelect,
+  onTeamClick,
+  isActive = false,
+  viewingScheduleType,
+}: TodayViewProps) {
+  const datePickerId = useId();
+  const scheduleType = viewingScheduleType;
+  const hasTeams = hasMultipleTeams(viewingScheduleType);
+  const isMobile = useIsMobile();
+
+  // Calculate shifts for the viewing schedule
+  const todayShifts = useMemo(() => {
+    return getAllTeamsShifts(currentDate, viewingScheduleType);
+  }, [currentDate, viewingScheduleType]);
+
+  // Keyboard shortcuts (only active when this tab is visible)
+  const shortcuts = useMemo(
+    () =>
+      isActive
+        ? {
+            onToday: onTodayClick,
+            onPrevious: onPreviousDay,
+            onNext: onNextDay,
+          }
+        : {},
+    [isActive, onTodayClick, onPreviousDay, onNextDay],
+  );
+  useKeyboardShortcuts(shortcuts);
+
+  const isCurrentlyActive = (shiftResult: ShiftResult) => {
+    if (!shiftResult.shift.isWorking) return false;
+    const now = dayjs();
+    return isCurrentlyWorking(shiftResult.shift, shiftResult.date, now, scheduleType);
+  };
+
+  const today = dayjs();
+  const displayDate = currentDate;
+  const isToday = displayDate.isSame(today, "day");
+  const canSelectDate = Boolean(onDateSelect);
+  const handleDateChange = (dateString: string) => {
+    if (dateString && onDateSelect) {
+      onDateSelect(dayjs(dateString));
+    }
   };
 
   return (
@@ -297,66 +380,15 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {isMobile && hasTeams && activeMobileShift ? (
-          <div
-            className="mobile-team-carousel"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={() => setTouchStartX(null)}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                goToPreviousTeam();
-              } else if (event.key === "ArrowRight") {
-                event.preventDefault();
-                goToNextTeam();
-              }
-            }}
-            role="region"
-            aria-label="Team schedule carousel"
-            tabIndex={0}
-          >
-            <TeamCard
-              shiftResult={activeMobileShift}
-              isMyTeam={myTeam === activeMobileShift.teamNumber}
-              isCurrentlyActive={isCurrentlyActive(activeMobileShift)}
-              hasTeams={hasTeams}
-              onTeamClick={onTeamClick}
-              scheduleType={scheduleType}
-            />
-            <div className="mobile-team-carousel-controls">
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={goToPreviousTeam}
-                aria-label="Show previous team"
-                disabled={mobileActiveIndex === 0}
-              >
-                <i className="bi bi-chevron-left" aria-hidden="true"></i>
-              </button>
-              <div className="mobile-team-carousel-dots" role="group" aria-label="Select team">
-                {todayShifts.map((shiftResult, index) => (
-                  <button
-                    key={shiftResult.teamNumber}
-                    type="button"
-                    className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
-                    aria-label={`Show Team ${shiftResult.teamNumber}`}
-                    aria-current={index === mobileActiveIndex ? "true" : undefined}
-                    onClick={() => setMobileActiveIndex(index)}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={goToNextTeam}
-                aria-label="Show next team"
-                disabled={mobileActiveIndex === todayShifts.length - 1}
-              >
-                <i className="bi bi-chevron-right" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
+        {isMobile && hasTeams ? (
+          <TodayMobileCarousel
+            todayShifts={todayShifts}
+            myTeam={myTeam}
+            hasTeams={hasTeams}
+            onTeamClick={onTeamClick}
+            scheduleType={scheduleType}
+            isCurrentlyActive={isCurrentlyActive}
+          />
         ) : (
           <Row className="g-2">
             {todayShifts.map((shiftResult) => (

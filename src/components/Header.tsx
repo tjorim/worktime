@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
@@ -26,6 +26,11 @@ export function Header({
   const [internalShowSettings, setInternalShowSettings] = useState(false);
   const isControlled = typeof showSettings === "boolean";
   const settingsOpen = isControlled ? showSettings : internalShowSettings;
+  const latestSettingsRef = useRef(settingsOpen);
+
+  useEffect(() => {
+    latestSettingsRef.current = settingsOpen;
+  }, [settingsOpen]);
 
   const openSettings = useCallback(() => {
     if (isControlled) {
@@ -45,7 +50,7 @@ export function Header({
 
   const toggleSettings = useCallback(() => {
     if (isControlled) {
-      if (settingsOpen) {
+      if (latestSettingsRef.current) {
         onCloseSettings?.();
       } else {
         onOpenSettings?.();
@@ -53,7 +58,7 @@ export function Header({
       return;
     }
     setInternalShowSettings((prev) => !prev);
-  }, [isControlled, settingsOpen, onOpenSettings, onCloseSettings]);
+  }, [isControlled, onOpenSettings, onCloseSettings]);
 
   useKeyboardShortcuts(
     useMemo(

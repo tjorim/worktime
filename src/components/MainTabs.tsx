@@ -106,10 +106,10 @@ export function MainTabs({
   }, [activeKey, availableTabs, setActiveTab]);
 
   useEffect(() => {
-    if (!isMobile && showMobileActions) {
+    if (!isMobile) {
       setShowMobileActions(false);
     }
-  }, [isMobile, showMobileActions]);
+  }, [isMobile]);
 
   useEffect(() => {
     const prev = prevShowMobileActionsRef.current;
@@ -295,9 +295,15 @@ export function MainTabs({
                   variant="light"
                   className="mobile-fab-menu-item"
                   role="menuitem"
+                  tabIndex={-1}
                   onClick={() => {
                     action.onClick();
                     setShowMobileActions(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Tab") {
+                      setShowMobileActions(false);
+                    }
                   }}
                 >
                   <i className={`bi ${action.icon} me-2`} aria-hidden="true"></i>
@@ -312,7 +318,8 @@ export function MainTabs({
             onClick={() => setShowMobileActions((prev) => !prev)}
             aria-label={showMobileActions ? "Close quick actions" : "Open quick actions"}
             aria-expanded={showMobileActions}
-            aria-controls="mobile-quick-actions"
+            aria-haspopup="menu"
+            aria-controls={showMobileActions ? "mobile-quick-actions" : undefined}
           >
             <i
               className={`bi ${showMobileActions ? "bi-x-lg" : "bi-plus-lg"}`}
