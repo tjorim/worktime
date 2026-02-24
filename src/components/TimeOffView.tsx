@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
 import type { HdayEvent } from "../lib/hday/types";
 import { buildPreviewLine, normalizeEventFlags, sortEvents, toLine } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
@@ -31,111 +29,6 @@ import {
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
-
-type ExportGroup = {
-  id: string;
-  label: string;
-  count: number;
-  events: HdayEvent[];
-};
-
-function ExportDialog({
-  show,
-  onHide,
-  groups,
-  onExport,
-}: {
-  show: boolean;
-  onHide: () => void;
-  groups: ExportGroup[];
-  onExport: (selectedGroups: ExportGroup[]) => void;
-}) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const titleId = useId();
-
-  useEffect(() => {
-    if (show) {
-      setSelectedIds(new Set(groups.map((g) => g.id)));
-    }
-  }, [show, groups]);
-
-  const handleToggle = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const selectedGroups = groups.filter((g) => selectedIds.has(g.id));
-  const totalSelected = selectedGroups.reduce((sum, g) => sum + g.count, 0);
-  const allSelected = selectedGroups.length === groups.length;
-
-  const handleExport = () => {
-    onExport(selectedGroups);
-    onHide();
-  };
-
-  return (
-    <Modal show={show} onHide={onHide} centered aria-labelledby={titleId}>
-      <Modal.Header closeButton>
-        <Modal.Title id={titleId}>
-          <i className="bi bi-upload me-2" aria-hidden="true"></i>
-          Export Time Off Events
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <p className="text-muted small mb-3">Select which events to include in the export file.</p>
-        <div className="d-flex gap-3 mb-3">
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0"
-            onClick={() => setSelectedIds(new Set(groups.map((g) => g.id)))}
-            disabled={allSelected}
-          >
-            Select all
-          </Button>
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0"
-            onClick={() => setSelectedIds(new Set())}
-            disabled={selectedGroups.length === 0}
-          >
-            Deselect all
-          </Button>
-        </div>
-        <div className="d-flex flex-column gap-2">
-          {groups.map((group) => (
-            <Form.Check
-              key={group.id}
-              type="checkbox"
-              id={`export-group-${group.id}`}
-              label={group.label}
-              checked={selectedIds.has(group.id)}
-              onChange={() => handleToggle(group.id)}
-            />
-          ))}
-        </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onHide}>
-          Cancel
-        </Button>
-        <Button variant="primary" onClick={handleExport} disabled={selectedGroups.length === 0}>
-          <i className="bi bi-upload me-1" aria-hidden="true"></i>
-          Export
-          {totalSelected > 0 ? ` (${totalSelected} event${totalSelected !== 1 ? "s" : ""})` : ""}
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
-}
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -476,111 +369,33 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
   };
 
-  const [showExportDialog, setShowExportDialog] = useState(false);
-
-  const exportGroups = useMemo((): ExportGroup[] => {
-    const yearMap = new Map<number, typeof events>();
-    const weeklyEvents: typeof events = [];
-    const unknownEvents: typeof events = [];
-
-    for (const event of events) {
-      if (event.type === "range" && event.start) {
-        const year = parseInt(event.start.split("/")[0] ?? "", 10);
-        if (!isNaN(year)) {
-          const bucket = yearMap.get(year) ?? [];
-          bucket.push(event);
-          yearMap.set(year, bucket);
-        } else {
-          unknownEvents.push(event);
-        }
-      } else if (event.type === "weekly") {
-        weeklyEvents.push(event);
-      } else {
-        unknownEvents.push(event);
-      }
-    }
-
-    const groups: ExportGroup[] = [];
-
-    for (const year of Array.from(yearMap.keys()).sort((a, b) => b - a)) {
-      const yearEvents = yearMap.get(year)!;
-      groups.push({
-        id: `year-${year}`,
-        label: `${year} (${yearEvents.length} event${yearEvents.length !== 1 ? "s" : ""})`,
-        count: yearEvents.length,
-        events: yearEvents,
-      });
-    }
-
-    if (weeklyEvents.length > 0) {
-      groups.push({
-        id: "weekly",
-        label: `Recurring weekly (${weeklyEvents.length} event${weeklyEvents.length !== 1 ? "s" : ""})`,
-        count: weeklyEvents.length,
-        events: weeklyEvents,
-      });
-    }
-
-    if (unknownEvents.length > 0) {
-      groups.push({
-        id: "unknown",
-        label: `Other (${unknownEvents.length} event${unknownEvents.length !== 1 ? "s" : ""})`,
-        count: unknownEvents.length,
-        events: unknownEvents,
-      });
-    }
-
-    return groups;
-  }, [events]);
-
   const handleExport = useCallback(() => {
     if (events.length === 0) {
       toast.showError("No events to export");
       return;
     }
-    setShowExportDialog(true);
-  }, [events.length, toast]);
 
-  const handleExportGroups = useCallback(
-    (selectedGroups: ExportGroup[]) => {
-      const allEvents = sortEvents(selectedGroups.flatMap((g) => g.events));
+    let hdayContent: string;
+    try {
+      hdayContent = sortEvents(events).map((e) => toLine(e)).join("\n") + "\n";
+    } catch (error) {
+      console.error("Failed to serialize events:", error);
+      toast.showError("Failed to export events");
+      return;
+    }
 
-      if (allEvents.length === 0) {
-        toast.showError("No events to export");
-        return;
-      }
+    const blob = new Blob([hdayContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "timeoff.hday";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-      let hdayContent: string;
-      try {
-        hdayContent = allEvents.map((e) => toLine(e)).join("\n") + "\n";
-      } catch (error) {
-        console.error("Failed to serialize events:", error);
-        toast.showError("Failed to export events");
-        return;
-      }
-
-      // Use a year-specific filename only when exactly one year group is selected
-      const yearGroups = selectedGroups.filter((g) => g.id.startsWith("year-"));
-      const nonYearGroups = selectedGroups.filter((g) => !g.id.startsWith("year-"));
-      const filename =
-        yearGroups.length === 1 && nonYearGroups.length === 0
-          ? `timeoff-${yearGroups[0]!.id.slice(5)}.hday`
-          : "timeoff.hday";
-
-      const blob = new Blob([hdayContent], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.showSuccess(`Exported ${filename}`, "bi-upload");
-    },
-    [toast],
-  );
+    toast.showSuccess("Exported timeoff.hday", "bi-upload");
+  }, [events, toast]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -789,12 +604,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onCancel={() => setShowBulkDeleteConfirm(false)}
       />
 
-      <ExportDialog
-        show={showExportDialog}
-        onHide={() => setShowExportDialog(false)}
-        groups={exportGroups}
-        onExport={handleExportGroups}
-      />
     </div>
   );
 }
