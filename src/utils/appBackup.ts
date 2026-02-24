@@ -107,7 +107,7 @@ export function checkBackupDataPresence(): BackupDataPresence {
   const taskYears = new Set<number>();
   const tasksData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
   const hasTasks = Array.isArray(tasksData) && tasksData.length > 0;
-  if (hasTasks && Array.isArray(tasksData)) {
+  if (hasTasks) {
     for (const task of tasksData) {
       if (task && typeof task === "object") {
         const t = task as Record<string, unknown>;
