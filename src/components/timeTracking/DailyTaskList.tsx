@@ -127,7 +127,9 @@ export function DailyTaskList({
     const nowMinutes = liveTime.hour() * 60 + liveTime.minute();
 
     for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i]!;
+      const task = tasks[i];
+      // noUncheckedIndexedAccess keeps indexed array access as possibly undefined.
+      if (!task) continue;
       const taskStart = dayjs(task.startTime);
       const taskStartMinutes = taskStart.hour() * 60 + taskStart.minute();
 
@@ -135,12 +137,8 @@ export function DailyTaskList({
         return { type: "separator", insertBeforeIndex: i };
       }
 
-      const taskStopMinutes = task.stopTime
-        ? (() => {
-            const s = dayjs(task.stopTime!);
-            return s.hour() * 60 + s.minute();
-          })()
-        : Infinity;
+      const stopDayjs = task.stopTime ? dayjs(task.stopTime) : null;
+      const taskStopMinutes = stopDayjs ? stopDayjs.hour() * 60 + stopDayjs.minute() : Infinity;
 
       if (nowMinutes < taskStopMinutes) {
         return { type: "within", taskIndex: i };
