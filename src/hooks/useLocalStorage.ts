@@ -117,10 +117,18 @@ export function useLocalStorage<T>(
         if (typeof window !== "undefined") {
           try {
             const serialized = JSON.stringify(valueToStore);
+            const oldValue = window.localStorage.getItem(key);
             window.localStorage.setItem(key, serialized);
             isSelfDispatch.current = true;
             try {
-              window.dispatchEvent(new StorageEvent("storage", { key, newValue: serialized }));
+              window.dispatchEvent(
+                new StorageEvent("storage", {
+                  key,
+                  newValue: serialized,
+                  oldValue,
+                  storageArea: window.localStorage,
+                }),
+              );
             } finally {
               isSelfDispatch.current = false;
             }
