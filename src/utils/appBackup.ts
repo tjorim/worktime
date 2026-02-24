@@ -109,13 +109,8 @@ export function checkBackupDataPresence(): BackupDataPresence {
   const hasTasks = Array.isArray(tasksData) && tasksData.length > 0;
   if (hasTasks) {
     for (const task of tasksData) {
-      if (task && typeof task === "object") {
-        const t = task as Record<string, unknown>;
-        if (typeof t.startTime === "string") {
-          const year = parseInt(t.startTime.slice(0, 4), 10);
-          if (!isNaN(year)) taskYears.add(year);
-        }
-      }
+      const year = getTaskYear(task);
+      if (year !== null) taskYears.add(year);
     }
   }
 
