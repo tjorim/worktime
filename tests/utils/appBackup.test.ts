@@ -276,6 +276,41 @@ describe("appBackup", () => {
       expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!)).toEqual(labels);
     });
 
+    it("preserves existing tasks from years not included in the backup payload", () => {
+      const existingTasks = [
+        { id: "t-2025", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
+        { id: "t-2026", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
+      ];
+      const backupTasks = [
+        { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },
+      ];
+
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(existingTasks));
+      restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
+
+      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual([
+        existingTasks[1],
+        backupTasks[0],
+      ]);
+    });
+
+    it("replaces existing tasks from years included in the backup payload", () => {
+      const existingTasks = [
+        { id: "t-2025", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
+        { id: "t-2025-b", text: "B", label: "l1", startTime: "2025-06-02T09:00" },
+      ];
+      const backupTasks = [
+        { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },
+      ];
+
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(existingTasks));
+      restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
+
+      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual(
+        backupTasks,
+      );
+    });
+
     it("leaves unspecified sections untouched", () => {
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 5 }));
       restoreAppBackup({ exportedAt: "", version: 1, labels: [] });

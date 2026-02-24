@@ -88,6 +88,14 @@ function getWorkLocationEntriesForYear(year: number): Record<string, unknown> {
   return result;
 }
 
+function getTaskYear(task: unknown): number | null {
+  if (!task || typeof task !== "object") return null;
+  const taskObj = task as Record<string, unknown>;
+  if (typeof taskObj.startTime !== "string") return null;
+  const year = parseInt(taskObj.startTime.slice(0, 4), 10);
+  return isNaN(year) ? null : year;
+}
+
 /**
  * Inspect localStorage and return a summary of which data categories exist
  * and which years have year-scoped data (tasks, work locations).
@@ -311,7 +319,26 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
   }
 
   if (Array.isArray(payload.tasks)) {
-    localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(payload.tasks));
+    const existingTasks = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
+    if (!Array.isArray(existingTasks)) {
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(payload.tasks));
+    } else {
+      const incomingYears = new Set<number>();
+      for (const task of payload.tasks) {
+        const year = getTaskYear(task);
+        if (year !== null) incomingYears.add(year);
+      }
+
+      const tasksToKeep = existingTasks.filter((task) => {
+        const year = getTaskYear(task);
+        return year === null || !incomingYears.has(year);
+      });
+
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([...tasksToKeep, ...payload.tasks]),
+      );
+    }
   }
 
   if (Array.isArray(payload.templates)) {
