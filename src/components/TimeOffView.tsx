@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import type { HdayEvent } from "../lib/hday/types";
-import { buildPreviewLine, normalizeEventFlags } from "../lib/hday/parser";
+import { buildPreviewLine, normalizeEventFlags, toLine } from "../lib/hday/parser";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -370,27 +370,67 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     }
   };
 
-  const handleExport = useCallback(() => {
-    const hdayContent = exportHday();
-
-    if (!hdayContent.trim()) {
-      toast.showError("No events to export");
-      return;
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const event of events) {
+      if (event.type === "range" && event.start) {
+        const year = parseInt(event.start.split("/")[0] ?? "", 10);
+        if (!isNaN(year)) {
+          years.add(year);
+        }
+      }
     }
+    return Array.from(years).sort((a, b) => b - a); // newest first
+  }, [events]);
 
-    // Export as downloadable file
-    const blob = new Blob([hdayContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "timeoff.hday";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleExportYear = useCallback(
+    (year: number | "all") => {
+      let hdayContent: string;
+      let filename: string;
 
-    toast.showSuccess("Exported timeoff.hday", "bi-upload");
-  }, [exportHday, toast]);
+      if (year === "all") {
+        hdayContent = exportHday();
+        filename = "timeoff.hday";
+      } else {
+        const filtered = events.filter(
+          (e) =>
+            (e.type === "range" && e.start?.startsWith(`${year}/`)) ||
+            e.type === "weekly" ||
+            e.type === "unknown",
+        );
+        if (filtered.length === 0) {
+          toast.showError(`No events to export for ${year}`);
+          return;
+        }
+        try {
+          hdayContent = filtered.map((e) => toLine(e)).join("\n") + "\n";
+        } catch (error) {
+          console.error("Failed to serialize events:", error);
+          toast.showError("Failed to export events");
+          return;
+        }
+        filename = `timeoff-${year}.hday`;
+      }
+
+      if (!hdayContent.trim()) {
+        toast.showError("No events to export");
+        return;
+      }
+
+      const blob = new Blob([hdayContent], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.showSuccess(`Exported ${filename}`, "bi-upload");
+    },
+    [events, exportHday, toast],
+  );
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
@@ -410,7 +450,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       onUndo: handleUndo,
       onRedo: handleRedo,
       onImport: handleImport,
-      onExport: handleExport,
+      onExport: () => handleExportYear("all"),
       onBulkDelete: () => setShowBulkDeleteConfirm(true),
       onCancelEditMode: handleCancelEditMode,
     },
@@ -489,7 +529,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onClearSelection={handleClearSelection}
           onBulkDelete={() => setShowBulkDeleteConfirm(true)}
           onImport={handleImport}
-          onExport={handleExport}
+          onExportYear={handleExportYear}
+          availableYears={availableYears}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
           events={events}

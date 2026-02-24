@@ -329,7 +329,9 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
+      // Open the export dropdown and select "All years"
       await user.click(screen.getByRole("button", { name: /Export/i }));
+      await user.click(screen.getByRole("button", { name: /All years/i }));
 
       // Verify error toast appears
       expect(screen.getByText("No events to export")).toBeInTheDocument();

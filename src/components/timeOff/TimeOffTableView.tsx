@@ -69,7 +69,8 @@ type TimeOffTableViewProps = {
   onClearSelection: () => void;
   onBulkDelete: () => void;
   onImport: () => void;
-  onExport: () => void;
+  onExportYear: (year: number | "all") => void;
+  availableYears: number[];
   onAddEvent: () => void;
   viewMode: TimeOffViewMode;
   events: HdayEvent[];
@@ -97,7 +98,8 @@ export function TimeOffTableView({
   onClearSelection,
   onBulkDelete,
   onImport,
-  onExport,
+  onExportYear,
+  availableYears,
   onAddEvent,
   viewMode,
   events,
@@ -135,7 +137,8 @@ export function TimeOffTableView({
           onClearSelection={onClearSelection}
           onBulkDelete={onBulkDelete}
           onImport={onImport}
-          onExport={onExport}
+          onExportYear={onExportYear}
+          availableYears={availableYears}
           onAddEvent={onAddEvent}
           viewMode={viewMode}
         />
