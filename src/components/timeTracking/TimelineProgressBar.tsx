@@ -243,7 +243,7 @@ export function TimelineProgressBar({
             );
           })}
           </BootstrapProgressBar>
-          {nowPct !== null && (
+          {nowPct !== null && liveTime && (
             <div
               style={{
                 position: "absolute",
@@ -256,7 +256,7 @@ export function TimelineProgressBar({
                 pointerEvents: "none",
               }}
               data-testid="now-line"
-              aria-label={`Current time: ${liveTime!.format("HH:mm")}`}
+              aria-label={`Current time: ${liveTime.format("HH:mm")}`}
             />
           )}
         </div>

@@ -167,5 +167,21 @@ describe("TimelineProgressBar", () => {
       // 9h elapsed in a 10h rendered bar => 90% after normalization.
       expect(getNowLineLeft()).toBe("90%");
     });
+
+    it("tracks clock time within break-enabled tasks using the rendered scale", () => {
+      const taskWithBreak = makeTask({ includesBreak: true });
+
+      render(
+        <TimelineProgressBar
+          tasks={[taskWithBreak]}
+          labels={TEST_LABELS}
+          liveTime={dayjs("2026-02-07T12:30")}
+          isToday
+        />,
+      );
+
+      // 4.5h elapsed from 08:00 to 12:30 on an 8h visual timeline => 56.25%.
+      expect(getNowLineLeft()).toBe("56.25%");
+    });
   });
 });
