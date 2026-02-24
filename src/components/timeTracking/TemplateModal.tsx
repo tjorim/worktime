@@ -56,6 +56,7 @@ export function TemplateModal({
             <Form.Control
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
+              placeholder="e.g., Daily Standup"
               aria-required="true"
               required
             />

@@ -115,7 +115,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
-  const handleStartEdit = (label: TimeTrackingLabel) => {
+  const handleEdit = (label: TimeTrackingLabel) => {
     setEditLabelId(label.id);
     setLabelForm({
       name: label.name,
@@ -161,8 +161,8 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       toast.showSuccess("Label added.");
     }
 
-    setEditLabelId(null);
     resetForm();
+    setEditLabelId(null);
     setModalMode(null);
   };
 
@@ -260,7 +260,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       size="sm"
                       variant="outline-secondary"
                       aria-label={`Edit ${label.name}`}
-                      onClick={() => handleStartEdit(label)}
+                      onClick={() => handleEdit(label)}
                     >
                       Edit
                     </Button>

@@ -89,7 +89,6 @@ export function TemplatesPanel({
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TimeTrackingTemplate | null>(
     null,
   );
-  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     text: "",
     label: labels[0]?.id ?? "",
@@ -104,6 +103,8 @@ export function TemplatesPanel({
       start: "",
       stop: "",
     });
+
+  const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
 
   useEffect(() => {
     setTemplatesJson(JSON.stringify({ templates }, null, 2));
@@ -134,6 +135,17 @@ export function TemplatesPanel({
     } catch {
       setError("Invalid templates JSON. Please check the format and try again.");
     }
+  };
+
+  const handleEdit = (template: TimeTrackingTemplate) => {
+    setEditTemplateId(template.id);
+    setTemplateForm({
+      text: template.text,
+      label: template.label,
+      start: template.start,
+      stop: template.stop,
+    });
+    setModalMode("edit");
   };
 
   const handleSave = () => {
@@ -172,15 +184,13 @@ export function TemplatesPanel({
     setModalMode(null);
   };
 
-  const handleEdit = (template: TimeTrackingTemplate) => {
-    setEditTemplateId(template.id);
-    setTemplateForm({
-      text: template.text,
-      label: template.label,
-      start: template.start,
-      stop: template.stop,
-    });
-    setModalMode("edit");
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteTemplate) {
+      return;
+    }
+    onDeleteTemplate(pendingDeleteTemplate.id);
+    toast.showSuccess("Template deleted.");
+    setPendingDeleteTemplate(null);
   };
 
   return (
@@ -190,7 +200,7 @@ export function TemplatesPanel({
           {error}
         </Alert>
       )}
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 className="mb-0">
           <i className="bi bi-clipboard-check me-2" aria-hidden="true"></i>
           Templates
@@ -206,67 +216,68 @@ export function TemplatesPanel({
           Add Template
         </Button>
       </div>
-      {templates.length === 0 ? (
-        <div className="mt-3 border rounded bg-body-tertiary">
-          <EmptyState
-            icon="bi-file-earmark-text"
-            title="No Templates Yet"
-            description="Templates let you quickly add recurring tasks. Create a template for tasks you log regularly."
-            ctaButton={{
-              label: "Add Your First Template",
-              onClick: () => {
-                resetForm();
-                setEditTemplateId(null);
-                setModalMode("create");
-              },
-            }}
-          />
-        </div>
-      ) : (
-        <ListGroup className="mt-2">
-          {templates.map((template) => (
-            <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
-              <span className="me-auto">
-                {template.text} ({template.start}-{template.stop}) [
-                {labelNameById[template.label] ?? "Unknown label"}]
-              </span>
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                aria-label={`Edit ${template.text}`}
-                onClick={() => handleEdit(template)}
-              >
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
-                aria-label={`Delete ${template.text}`}
-                onClick={() => setPendingDeleteTemplate(template)}
-              >
-                Delete
-              </Button>
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-      )}
+      <div className="d-flex flex-column gap-3">
+        {templates.length === 0 ? (
+          <div className="border rounded bg-body-tertiary">
+            <EmptyState
+              icon="bi-file-earmark-text"
+              title="No Templates Yet"
+              description="Templates let you quickly add recurring tasks. Create a template for tasks you log regularly."
+              ctaButton={{
+                label: "Add Your First Template",
+                onClick: () => {
+                  resetForm();
+                  setEditTemplateId(null);
+                  setModalMode("create");
+                },
+              }}
+            />
+          </div>
+        ) : (
+          <ListGroup>
+            {templates.map((template) => (
+              <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
+                <span className="me-auto">
+                  {template.text} ({template.start}-{template.stop}) [
+                  {labelNameById[template.label] ?? "Unknown label"}]
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  aria-label={`Edit ${template.text}`}
+                  onClick={() => handleEdit(template)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  aria-label={`Delete ${template.text}`}
+                  onClick={() => setPendingDeleteTemplate(template)}
+                >
+                  Delete
+                </Button>
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
+        )}
 
-      <RawJsonEditor
-        className="mt-3"
-        label="Templates"
-        value={templatesJson}
-        formatHint={`{"templates":[{"id":"template-1","text":"Support","label":"label-1","start":"09:00","stop":"11:00"}]}`}
-        onChange={setTemplatesJson}
-        onCopy={handleCopy}
-        onApply={handleApplyJson}
-      >
-        <details className="mt-3">
-          <summary className="small text-muted">Example templates JSON</summary>
-          <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
-            <code>{EXAMPLE_TEMPLATES_JSON}</code>
-          </pre>
-        </details>
-      </RawJsonEditor>
+        <RawJsonEditor
+          label="Templates"
+          value={templatesJson}
+          formatHint={`{"templates":[{"id":"template-1","text":"Support","label":"label-1","start":"09:00","stop":"11:00"}]}`}
+          onChange={setTemplatesJson}
+          onCopy={handleCopy}
+          onApply={handleApplyJson}
+        >
+          <details className="mt-3">
+            <summary className="small text-muted">Example templates JSON</summary>
+            <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
+              <code>{EXAMPLE_TEMPLATES_JSON}</code>
+            </pre>
+          </details>
+        </RawJsonEditor>
+      </div>
 
       <TemplateModal
         show={modalMode !== null}
@@ -289,13 +300,7 @@ export function TemplatesPanel({
         message={pendingDeleteTemplate ? `Delete "${pendingDeleteTemplate.text}"?` : ""}
         confirmLabel="Delete"
         variant="danger"
-        onConfirm={() => {
-          if (pendingDeleteTemplate) {
-            onDeleteTemplate(pendingDeleteTemplate.id);
-            toast.showSuccess("Template deleted.");
-          }
-          setPendingDeleteTemplate(null);
-        }}
+        onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDeleteTemplate(null)}
       />
     </div>
