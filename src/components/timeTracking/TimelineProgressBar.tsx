@@ -116,19 +116,40 @@ export function TimelineProgressBar({
     [segments],
   );
   const visualTotalPercentage = totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
+  const normalizationFactor = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
 
   const isOvertime = totalPercentage > 100;
   const hasBreakSegments = segments.some((s) => s.includesBreak);
 
-  // Position of the "Now" line as a percentage of the target, based on
-  // elapsed clock time since the earliest task start.
+  // Position of the "Now" line mapped to the same rendered timeline scale as the segments.
+  // This avoids drifting into task gaps or clamping before compressed overtime segments.
   const nowPct = useMemo(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
-    const firstStartMs = Math.min(...tasks.map((t) => dayjs(t.startTime).valueOf()));
-    const elapsedHours = liveTime.diff(dayjs(firstStartMs), "hour", true);
-    if (elapsedHours < 0) return 0;
-    return Math.min((elapsedHours / sanitizedTargetHours) * 100, 100);
-  }, [isToday, liveTime, tasks, sanitizedTargetHours]);
+
+    const sortedTasks = [...tasks].sort(
+      (a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf(),
+    );
+
+    let elapsedVisualHours = 0;
+
+    for (const task of sortedTasks) {
+      const taskStart = dayjs(task.startTime);
+      const taskStop = dayjs(task.stopTime ?? liveTime);
+
+      if (!taskStop.isAfter(taskStart)) continue;
+      if (!liveTime.isAfter(taskStart)) break;
+
+      const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
+      const overlapHours = intervalEnd.diff(taskStart, "hour", true);
+
+      if (overlapHours > 0) {
+        elapsedVisualHours += overlapHours;
+      }
+    }
+
+    const scaledPct = (elapsedVisualHours / sanitizedTargetHours) * 100 * normalizationFactor;
+    return Math.max(0, Math.min(scaledPct, 100));
+  }, [isToday, liveTime, tasks, sanitizedTargetHours, normalizationFactor]);
 
   return (
     <div className="my-3">
@@ -138,8 +159,6 @@ export function TimelineProgressBar({
           <BootstrapProgressBar>
           {segments.map((segment) => {
             const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
-            const norm = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
-
             // For segments with a break, render three sub-segments positioned
             // according to where the break falls within the lunch window.
             if (
@@ -148,9 +167,12 @@ export function TimelineProgressBar({
               segment.beforeBreakHours != null &&
               segment.afterBreakHours != null
             ) {
-              const beforePct = (segment.beforeBreakHours / sanitizedTargetHours) * 100 * norm;
-              const breakPct = (segment.breakHours / sanitizedTargetHours) * 100 * norm;
-              const afterPct = (segment.afterBreakHours / sanitizedTargetHours) * 100 * norm;
+              const beforePct =
+                (segment.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const breakPct =
+                (segment.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+              const afterPct =
+                (segment.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
 
               // Show label on whichever work portion is larger
               const showLabelOnBefore = beforePct >= afterPct;
@@ -204,7 +226,7 @@ export function TimelineProgressBar({
             }
 
             // Regular segment (no break)
-            const normalizedPercent = segment.percentage * norm;
+            const normalizedPercent = segment.percentage * normalizationFactor;
             return (
               <BootstrapProgressBar
                 key={segment.id}

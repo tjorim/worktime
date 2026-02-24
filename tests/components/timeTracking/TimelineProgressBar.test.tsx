@@ -108,6 +108,7 @@ describe("TimelineProgressBar", () => {
 
   describe("Now line", () => {
     const task = makeTask(); // 08:00–16:00
+    const getNowLineLeft = () => screen.getByTestId("now-line").style.left;
 
     it("does not render when isToday is false", () => {
       const liveTime = dayjs("2026-02-07T12:00");
@@ -130,6 +131,41 @@ describe("TimelineProgressBar", () => {
       const liveTime = dayjs("2026-02-07T10:30");
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
       expect(screen.getByLabelText("Current time: 10:30")).toBeInTheDocument();
+    });
+
+    it("aligns with rendered segments when there is a gap between tasks", () => {
+      const tasksWithGap: StoredTimeTrackingTask[] = [
+        makeTask({ id: "task-1", startTime: "2026-02-07T08:00", stopTime: "2026-02-07T10:00" }),
+        makeTask({ id: "task-2", startTime: "2026-02-07T12:00", stopTime: "2026-02-07T16:00" }),
+      ];
+
+      render(
+        <TimelineProgressBar
+          tasks={tasksWithGap}
+          labels={TEST_LABELS}
+          liveTime={dayjs("2026-02-07T11:00")}
+          isToday
+        />,
+      );
+
+      // One 2h segment completed on an 8h target => 25%.
+      expect(getNowLineLeft()).toBe("25%");
+    });
+
+    it("uses the same overtime compression scale as rendered segments", () => {
+      const overtimeTask = makeTask({ stopTime: "2026-02-07T18:00" }); // 10h => compressed to 100%
+
+      render(
+        <TimelineProgressBar
+          tasks={[overtimeTask]}
+          labels={TEST_LABELS}
+          liveTime={dayjs("2026-02-07T17:00")}
+          isToday
+        />,
+      );
+
+      // 9h elapsed in a 10h rendered bar => 90% after normalization.
+      expect(getNowLineLeft()).toBe("90%");
     });
   });
 });
