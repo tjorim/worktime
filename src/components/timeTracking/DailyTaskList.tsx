@@ -128,6 +128,7 @@ export function DailyTaskList({
 
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
+      // noUncheckedIndexedAccess keeps indexed array access as possibly undefined.
       if (!task) continue;
       const taskStart = dayjs(task.startTime);
       const taskStartMinutes = taskStart.hour() * 60 + taskStart.minute();

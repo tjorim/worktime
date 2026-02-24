@@ -107,29 +107,28 @@ describe("TimelineProgressBar", () => {
   });
 
   describe("Now line", () => {
-    const task = makeTask(); // 08:00–16:00
     const getNowLineLeft = () => screen.getByTestId("now-line").style.left;
 
     it("does not render when isToday is false", () => {
       const liveTime = dayjs("2026-02-07T12:00");
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday={false} />);
+      render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} liveTime={liveTime} isToday={false} />);
       expect(screen.queryByTestId("now-line")).not.toBeInTheDocument();
     });
 
     it("does not render when liveTime is absent", () => {
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} isToday />);
+      render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} isToday />);
       expect(screen.queryByTestId("now-line")).not.toBeInTheDocument();
     });
 
     it("renders when isToday and liveTime are provided", () => {
       const liveTime = dayjs("2026-02-07T12:00");
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
+      render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
       expect(screen.getByTestId("now-line")).toBeInTheDocument();
     });
 
     it("has an aria-label showing the current time", () => {
       const liveTime = dayjs("2026-02-07T10:30");
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
+      render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} liveTime={liveTime} isToday />);
       expect(screen.getByLabelText("Current time: 10:30")).toBeInTheDocument();
     });
 
