@@ -24,7 +24,7 @@ type TemplatesPanelProps = {
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
-  onApplyTemplatesJson: (templates: TimeTrackingTemplate[]) => void;
+  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void;
 };
 
 const EXAMPLE_TEMPLATES: TimeTrackingTemplate[] = [
@@ -79,7 +79,7 @@ export function TemplatesPanel({
   onAddTemplate,
   onUpdateTemplate,
   onDeleteTemplate,
-  onApplyTemplatesJson,
+  onUpdateTemplates,
 }: TemplatesPanelProps) {
   const [error, setError] = useState("");
   const toast = useToast();
@@ -130,7 +130,7 @@ export function TemplatesPanel({
         return;
       }
 
-      onApplyTemplatesJson(sanitizeTemplates(parsed.templates ?? []));
+      onUpdateTemplates(sanitizeTemplates(parsed.templates ?? []));
       toast.showSuccess("Templates updated.");
     } catch {
       setError("Invalid templates JSON. Please check the format and try again.");

@@ -546,110 +546,39 @@ describe("useTimeTrackingStorage", () => {
     });
   });
 
-  describe("importData", () => {
-    it("imports valid tasks, templates, and labels", () => {
+  describe("updateTemplates", () => {
+    it("replaces all templates", () => {
       const { result } = renderHook(() => useTimeTrackingStorage());
 
       act(() => {
-        result.current.importData({
-          tasks: [
-            {
-              id: "t1",
-              text: "Task",
-              label: "Support",
-              startTime: "2026-02-07T08:00",
-              stopTime: "2026-02-07T09:00",
-            },
-          ],
-          templates: [
-            { id: "tpl-1", text: "Template", label: "Support", start: "08:00", stop: "09:00" },
-          ],
-          labels: [{ id: "lbl-1", name: "Support", color: "#3B82F6" }],
-        });
-      });
-
-      expect(result.current.tasks).toHaveLength(1);
-      expect(result.current.templates).toHaveLength(1);
-      expect(result.current.labels).toHaveLength(1);
-    });
-
-    it("filters out invalid tasks during import", () => {
-      const { result } = renderHook(() => useTimeTrackingStorage());
-
-      act(() => {
-        result.current.importData({
-          tasks: [
-            { id: "bad", text: "Bad", label: "Support", startTime: "invalid" },
-            {
-              id: "good",
-              text: "Good",
-              label: "Support",
-              startTime: "2026-02-07T08:00",
-              stopTime: "2026-02-07T09:00",
-            },
-          ],
-          templates: [],
-          labels: [],
-        });
-      });
-
-      expect(result.current.tasks).toHaveLength(1);
-      expect(result.current.tasks[0].id).toBe("good");
-    });
-
-    it("filters out invalid templates during import", () => {
-      const { result } = renderHook(() => useTimeTrackingStorage());
-
-      act(() => {
-        result.current.importData({
-          tasks: [],
-          templates: [
-            { id: "bad", text: "Bad", label: "Support", start: "invalid", stop: "09:00" },
-            { id: "good", text: "Good", label: "Support", start: "08:00", stop: "09:00" },
-          ],
-          labels: [],
-        });
+        result.current.updateTemplates([
+          { id: "tpl-1", text: "Template", label: "Support", start: "08:00", stop: "09:00" },
+        ]);
       });
 
       expect(result.current.templates).toHaveLength(1);
-      expect(result.current.templates[0].id).toBe("good");
+      expect(result.current.templates[0].id).toBe("tpl-1");
     });
 
-    it("replaces all existing data on import", () => {
+    it("replaces existing templates", () => {
       window.localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
+        TIME_TRACKING_STORAGE_KEYS.templates,
         JSON.stringify([
-          {
-            id: "old",
-            text: "Old",
-            label: "Support",
-            startTime: "2026-02-07T08:00",
-            stopTime: "2026-02-07T09:00",
-          },
+          { id: "old", text: "Old", label: "Support", start: "08:00", stop: "09:00" },
         ]),
       );
 
       const { result } = renderHook(() => useTimeTrackingStorage());
-      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.templates).toHaveLength(1);
 
       act(() => {
-        result.current.importData({
-          tasks: [
-            {
-              id: "new",
-              text: "New",
-              label: "Dev",
-              startTime: "2026-02-08T10:00",
-              stopTime: "2026-02-08T11:00",
-            },
-          ],
-          templates: [],
-          labels: [],
-        });
+        result.current.updateTemplates([
+          { id: "new", text: "New", label: "Dev", start: "09:00", stop: "10:00" },
+        ]);
       });
 
-      expect(result.current.tasks).toHaveLength(1);
-      expect(result.current.tasks[0].id).toBe("new");
+      expect(result.current.templates).toHaveLength(1);
+      expect(result.current.templates[0].id).toBe("new");
     });
   });
 });

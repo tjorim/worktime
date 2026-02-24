@@ -3,12 +3,6 @@ import { LabelsPanel } from "./LabelsPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 
-type ImportPayload = {
-  tasks?: unknown[];
-  templates?: unknown[];
-  labels?: unknown[];
-};
-
 type TimeTrackingConfigViewProps = {
   labels: TimeTrackingLabel[];
   templates: TimeTrackingTemplate[];
@@ -16,8 +10,8 @@ type TimeTrackingConfigViewProps = {
   onAddTemplate: (payload: Omit<TimeTrackingTemplate, "id">) => void;
   onUpdateTemplate: (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => void;
   onDeleteTemplate: (id: string) => void;
+  onUpdateTemplates: (templates: TimeTrackingTemplate[]) => void;
   onUpdateLabels: (labels: TimeTrackingLabel[]) => void;
-  onImportData: (payload: ImportPayload) => void;
 };
 
 export function TimeTrackingConfigView({
@@ -27,8 +21,8 @@ export function TimeTrackingConfigView({
   onAddTemplate,
   onUpdateTemplate,
   onDeleteTemplate,
+  onUpdateTemplates,
   onUpdateLabels,
-  onImportData,
 }: TimeTrackingConfigViewProps) {
   return (
     <div className="d-flex flex-column gap-3">
@@ -45,7 +39,7 @@ export function TimeTrackingConfigView({
         onAddTemplate={onAddTemplate}
         onUpdateTemplate={onUpdateTemplate}
         onDeleteTemplate={onDeleteTemplate}
-        onApplyTemplatesJson={(sanitized) => onImportData({ templates: sanitized })}
+        onUpdateTemplates={onUpdateTemplates}
       />
     </div>
   );

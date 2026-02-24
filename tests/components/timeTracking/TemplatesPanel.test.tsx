@@ -21,7 +21,7 @@ function renderPanel(overrides: Partial<Parameters<typeof TemplatesPanel>[0]> = 
   const onAddTemplate = vi.fn();
   const onUpdateTemplate = vi.fn();
   const onDeleteTemplate = vi.fn();
-  const onApplyTemplatesJson = vi.fn();
+  const onUpdateTemplates = vi.fn();
 
   const result = render(
     <ToastProvider>
@@ -31,13 +31,13 @@ function renderPanel(overrides: Partial<Parameters<typeof TemplatesPanel>[0]> = 
         onAddTemplate={onAddTemplate}
         onUpdateTemplate={onUpdateTemplate}
         onDeleteTemplate={onDeleteTemplate}
-        onApplyTemplatesJson={onApplyTemplatesJson}
+        onUpdateTemplates={onUpdateTemplates}
         {...overrides}
       />
     </ToastProvider>,
   );
 
-  return { onAddTemplate, onUpdateTemplate, onDeleteTemplate, onApplyTemplatesJson, ...result };
+  return { onAddTemplate, onUpdateTemplate, onDeleteTemplate, onUpdateTemplates, ...result };
 }
 
 describe("TemplatesPanel", () => {

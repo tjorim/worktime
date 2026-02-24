@@ -20,11 +20,6 @@ type RawTask = {
   includesBreak?: boolean;
 };
 
-type ImportPayload = {
-  tasks?: unknown[];
-  templates?: unknown[];
-  labels?: unknown[];
-};
 
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
@@ -237,21 +232,11 @@ export function useTimeTrackingStorage() {
     [setTemplates],
   );
 
-  const importData = useCallback(
-    (payload: ImportPayload) => {
-      if (Array.isArray(payload.tasks)) {
-        const validTasks = payload.tasks.filter(isValidRawTask);
-        setRawTasks(validTasks);
-      }
-      if (Array.isArray(payload.templates)) {
-        const validTemplates = payload.templates.filter(isValidTemplate);
-        setTemplates(validTemplates);
-      }
-      if (Array.isArray(payload.labels)) {
-        setRawLabels(sanitizeLabels(payload.labels));
-      }
+  const updateTemplates = useCallback(
+    (nextTemplates: TimeTrackingTemplate[]) => {
+      setTemplates(nextTemplates);
     },
-    [setRawTasks, setTemplates, setRawLabels],
+    [setTemplates],
   );
 
   const updateLabels = useCallback(
@@ -272,7 +257,7 @@ export function useTimeTrackingStorage() {
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    updateTemplates,
     updateLabels,
-    importData,
   };
 }
