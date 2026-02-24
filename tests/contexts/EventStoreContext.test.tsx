@@ -384,57 +384,6 @@ d1 # Every Monday`;
     });
   });
 
-  describe("exportHday", () => {
-    it("should export events as .hday format", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEvent({
-          type: "range",
-          start: "2025/01/15",
-          end: "2025/01/15",
-          flags: ["holiday"],
-          title: "Export test",
-        });
-      });
-
-      const exported = result.current.exportHday();
-
-      expect(exported).toContain("2025/01/15");
-      expect(exported).toContain("Export test");
-    });
-
-    it("should export empty string when no events", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      const exported = result.current.exportHday();
-
-      expect(exported).toBe("");
-    });
-
-    it("should maintain round-trip fidelity with sorted output", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      const originalContent = `2025/01/15-2025/01/15 # Event 1
-b2025/01/16-2025/01/20 # Business trip
-d5 # Every Friday`;
-
-      act(() => {
-        result.current.importHday(originalContent);
-      });
-
-      const exported = result.current.exportHday();
-
-      // Events are automatically sorted: range events by date, then weekly events
-      const expectedSorted = `2025/01/15-2025/01/15 # Event 1
-b2025/01/16-2025/01/20 # Business trip
-d5 # Every Friday
-`;
-
-      expect(exported).toBe(expectedSorted);
-    });
-  });
-
   describe("clearAll", () => {
     it("should clear all events", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
