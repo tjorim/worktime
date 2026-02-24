@@ -30,14 +30,13 @@ type LabelsPanelProps = {
   onUpdateLabels: (labels: TimeTrackingLabel[]) => void;
 };
 
-const EXAMPLE_LABELS_JSON = `{
-  "labels": [
-    { "id": "label-1", "name": "Support", "color": "#3B82F6" },
-    { "id": "label-2", "name": "Project", "color": "#10B981" },
-    { "id": "label-3", "name": "Meetings", "color": "#F59E0B" },
-    { "id": "label-4", "name": "Admin", "color": "#8B5CF6" }
-  ]
-}`;
+const EXAMPLE_LABELS: TimeTrackingLabel[] = [
+  { id: "label-1", name: "Support", color: "#3B82F6" },
+  { id: "label-2", name: "Project", color: "#10B981" },
+  { id: "label-3", name: "Meetings", color: "#F59E0B" },
+  { id: "label-4", name: "Admin", color: "#8B5CF6" },
+];
+const EXAMPLE_LABELS_JSON = JSON.stringify({ labels: EXAMPLE_LABELS }, null, 2);
 
 function validateLabelsImportPayload(parsed: unknown): parsed is { labels?: unknown[] } {
   if (!parsed || typeof parsed !== "object") {
@@ -116,7 +115,8 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     }
   };
 
-  const handleStartEdit = (label: TimeTrackingLabel) => {
+  const handleEdit = (label: TimeTrackingLabel) => {
+    setError("");
     setEditLabelId(label.id);
     setLabelForm({
       name: label.name,
@@ -162,8 +162,8 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       toast.showSuccess("Label added.");
     }
 
-    setEditLabelId(null);
     resetForm();
+    setEditLabelId(null);
     setModalMode(null);
   };
 
@@ -196,6 +196,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         <Button
           size="sm"
           onClick={() => {
+            setError("");
             resetForm();
             setEditLabelId(null);
             setModalMode("create");
@@ -220,6 +221,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               ctaButton={{
                 label: "Add Your First Label",
                 onClick: () => {
+                  setError("");
                   resetForm();
                   setEditLabelId(null);
                   setModalMode("create");
@@ -261,7 +263,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       size="sm"
                       variant="outline-secondary"
                       aria-label={`Edit ${label.name}`}
-                      onClick={() => handleStartEdit(label)}
+                      onClick={() => handleEdit(label)}
                     >
                       Edit
                     </Button>

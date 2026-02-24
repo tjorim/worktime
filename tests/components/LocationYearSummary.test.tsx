@@ -18,11 +18,6 @@ function renderSummary(year: number, workLocationMap: WorkLocationMap) {
 const cc = (value: string) => toCountryCode(value)!;
 const HOME_NL: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
 const OFFICE_BE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
-const OTHER_DE: WorkLocationInfo = {
-  location: "other",
-  countryCode: cc("DE"),
-  label: "Berlin office",
-};
 
 describe("LocationYearSummary", () => {
   it("shows an empty-state message when the map has no entries for the year", () => {
