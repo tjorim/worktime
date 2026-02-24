@@ -1,61 +1,20 @@
-import type { Dayjs } from "dayjs";
-
-import { dayjs } from "./dateTimeUtils";
 import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
 
 /**
- * Counts the number of days per location type in the ISO week containing the given date.
- *
- * Only considers days present in workLocationMap with an explicit entry.
- * Days without an explicit entry are not counted.
- *
- * @param date - Any date within the target ISO week
- * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
- * @returns Record of counts per WorkLocation type
- *
- * @example
- * // Returns { home: 2, office: 3, other: 1 }
- * getLocationCountsInWeek(dayjs("2026-02-18"), workLocationMap);
- */
-export function getLocationCountsInWeek(
-  date: Dayjs,
-  workLocationMap: WorkLocationMap,
-): Record<WorkLocation, number> {
-  const monday = dayjs(date).isoWeekday(1);
-  const counts: Record<WorkLocation, number> = { home: 0, office: 0, other: 0 };
-  for (let i = 0; i < 7; i++) {
-    const info = workLocationMap.get(monday.add(i, "day").format("YYYY-MM-DD"));
-    if (!info) continue;
-    if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
-      console.warn(
-        "getLocationCountsInWeek: skipping entry with unknown location",
-        info.countryCode,
-      );
-      continue;
-    }
-    counts[info.location]++;
-  }
-  return counts;
-}
-
-/**
  * Aggregates all stored entries in workLocationMap into a grouped summary
- * keyed by (location, countryCode, label) for use in annual tax reporting.
- * Returns entries sorted by count descending.
+ * keyed by (location, countryCode) for use in annual tax reporting.
+ * Returns entries sorted by countryCode ascending, then days descending.
  *
  * @param workLocationMap - Map of explicitly set work locations keyed by YYYY-MM-DD
- * @returns Array of grouped entries with day counts, sorted by days descending
+ * @returns Array of grouped entries with day counts
  */
 export function aggregateLocationCounts(
   workLocationMap: WorkLocationMap,
-): Array<{ location: WorkLocation; countryCode: string; label?: string; days: number }> {
-  const buildKey = (location: WorkLocation, countryCode: string, label: string): string =>
-    `${location.length}:${location}|${countryCode.length}:${countryCode}|${label.length}:${label}`;
+): Array<{ location: WorkLocation; countryCode: string; days: number }> {
+  const buildKey = (location: WorkLocation, countryCode: string): string =>
+    `${location.length}:${location}|${countryCode.length}:${countryCode}`;
 
-  const counts = new Map<
-    string,
-    { location: WorkLocation; countryCode: string; label?: string; days: number }
-  >();
+  const counts = new Map<string, { location: WorkLocation; countryCode: string; days: number }>();
 
   for (const info of workLocationMap.values()) {
     if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
@@ -66,8 +25,7 @@ export function aggregateLocationCounts(
       );
       continue;
     }
-    const label = info.label ?? "";
-    const key = buildKey(info.location, info.countryCode, label);
+    const key = buildKey(info.location, info.countryCode);
     const existing = counts.get(key);
     if (existing) {
       existing.days++;
@@ -77,10 +35,11 @@ export function aggregateLocationCounts(
     counts.set(key, {
       location: info.location,
       countryCode: info.countryCode,
-      ...(info.label ? { label: info.label } : {}),
       days: 1,
     });
   }
 
-  return Array.from(counts.values()).sort((a, b) => b.days - a.days);
+  return Array.from(counts.values()).sort(
+    (a, b) => a.countryCode.localeCompare(b.countryCode) || b.days - a.days,
+  );
 }

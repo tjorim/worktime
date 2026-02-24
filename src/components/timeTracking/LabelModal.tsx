@@ -39,7 +39,7 @@ export function LabelModal({
             onSubmit();
           }}
         >
-          <Form.Group controlId="timeTrackingLabelName" className="mb-3">
+          <Form.Group controlId="labelName" className="mb-3">
             <Form.Label>Label name</Form.Label>
             <Form.Control
               value={value.name}
@@ -49,7 +49,7 @@ export function LabelModal({
               required
             />
           </Form.Group>
-          <Form.Group controlId="timeTrackingLabelColor">
+          <Form.Group controlId="labelColor">
             <Form.Label>Label color</Form.Label>
             <div className="d-flex gap-2 align-items-center">
               <Form.Control

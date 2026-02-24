@@ -18,11 +18,6 @@ function renderSummary(year: number, workLocationMap: WorkLocationMap) {
 const cc = (value: string) => toCountryCode(value)!;
 const HOME_NL: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
 const OFFICE_BE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
-const OTHER_DE: WorkLocationInfo = {
-  location: "other",
-  countryCode: cc("DE"),
-  label: "Berlin office",
-};
 
 describe("LocationYearSummary", () => {
   it("shows an empty-state message when the map has no entries for the year", () => {
@@ -68,12 +63,6 @@ describe("LocationYearSummary", () => {
     const officeRow = rows.find((row) => row.textContent?.includes("Office"));
     expect(within(homeRow!).getByText("2")).toBeInTheDocument();
     expect(within(officeRow!).getByText("1")).toBeInTheDocument();
-  });
-
-  it("renders the optional label for other-location rows", () => {
-    const map: WorkLocationMap = new Map([["2026-01-05", OTHER_DE]]);
-    renderSummary(2026, map);
-    expect(screen.getByText("(Berlin office)")).toBeInTheDocument();
   });
 
   it("only includes entries matching the requested year", () => {

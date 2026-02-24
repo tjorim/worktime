@@ -37,6 +37,9 @@ export function useLocalStorage<T>(
   const didMountRef = useRef(false);
   const initialValueRef = useRef(initialValue);
   initialValueRef.current = initialValue;
+  // Prevents the hook instance that dispatched a synthetic StorageEvent from
+  // re-processing its own event (it already updated state directly in setValue).
+  const isSelfDispatch = useRef(false);
 
   const readValueForKey = useCallback((storageKey: string): T => {
     if (typeof window === "undefined") {
@@ -76,6 +79,8 @@ export function useLocalStorage<T>(
     if (typeof window === "undefined") return;
 
     const handleStorageChange = (e: StorageEvent) => {
+      // Skip events we dispatched ourselves (already updated state directly in setValue).
+      if (isSelfDispatch.current) return;
       if (e.key === key && e.newValue !== null) {
         try {
           const parsed = JSON.parse(e.newValue);
@@ -106,10 +111,27 @@ export function useLocalStorage<T>(
         // Update state
         setStoredValue(valueToStore);
 
-        // Persist to localStorage
+        // Persist to localStorage and notify other same-tab instances watching the
+        // same key. The browser only fires the native `storage` event for cross-tab
+        // changes, so we dispatch a synthetic one to keep same-tab instances in sync.
         if (typeof window !== "undefined") {
           try {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            const serialized = JSON.stringify(valueToStore);
+            const oldValue = window.localStorage.getItem(key);
+            window.localStorage.setItem(key, serialized);
+            isSelfDispatch.current = true;
+            try {
+              window.dispatchEvent(
+                new StorageEvent("storage", {
+                  key,
+                  newValue: serialized,
+                  oldValue,
+                  storageArea: window.localStorage,
+                }),
+              );
+            } finally {
+              isSelfDispatch.current = false;
+            }
           } catch {
             // Handle storage quota exceeded or other localStorage errors silently
             // App continues to function normally even if storage fails

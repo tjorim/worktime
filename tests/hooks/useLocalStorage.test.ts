@@ -101,4 +101,23 @@ describe("useLocalStorage", () => {
     // Should fallback to initial value when JSON is malformed
     expect(result.current[0]).toBe("fallback");
   });
+
+  it("syncs same-tab instances watching the same key", () => {
+    // Two independent hook instances using the same key, simulating e.g.
+    // CalendarView and TimeTrackingWeeklyView both calling
+    // useWorkLocationStorage(2026) which internally calls useLocalStorage with
+    // the same "worktime_work_locations_2026" key.
+    const hookA = renderHook(() => useLocalStorage("test_same_tab_sync", "initial"));
+    const hookB = renderHook(() => useLocalStorage("test_same_tab_sync", "initial"));
+
+    act(() => {
+      hookA.result.current[1]("updated-by-a");
+    });
+
+    // Hook A should reflect the update directly
+    expect(hookA.result.current[0]).toBe("updated-by-a");
+
+    // Hook B should also reflect the update without a page reload
+    expect(hookB.result.current[0]).toBe("updated-by-a");
+  });
 });

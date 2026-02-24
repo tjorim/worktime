@@ -26,7 +26,6 @@ import {
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
-import { LocationSummaryBar } from "./calendar/LocationSummaryBar";
 import { LocationYearSummary } from "./calendar/LocationYearSummary";
 import { OtherLocationModal } from "./calendar/OtherLocationModal";
 import { EventModal } from "./EventModal";
@@ -80,7 +79,6 @@ export function CalendarView({
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
-  const isCurrentMonth = currentMonth.isSame(dayjs(), "month");
   const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
 
   // Fetch holidays for the current month's year
@@ -447,8 +445,10 @@ export function CalendarView({
             </div>
           ) : (
             <>
-              {crossBorderEnabled && isCurrentMonth && (
-                <LocationSummaryBar workLocationMap={workLocationMap} />
+              {crossBorderEnabled && showAnnualSummary && (
+                <div className="mb-3">
+                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
+                </div>
               )}
               <MonthCalendar
                 events={calendarEvents}
@@ -470,11 +470,6 @@ export function CalendarView({
                 showOtherLocationAction={showOtherLocationAction}
                 getShiftForDate={getShiftForDate}
               />
-              {crossBorderEnabled && showAnnualSummary && (
-                <div className="mt-3">
-                  <LocationYearSummary year={currentYear} workLocationMap={workLocationMap} />
-                </div>
-              )}
             </>
           )}
         </Card.Body>

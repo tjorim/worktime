@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import {
-  getLocationCountsInWeek,
-  aggregateLocationCounts,
-} from "../../src/utils/workLocationUtils";
+import { aggregateLocationCounts } from "../../src/utils/workLocationUtils";
 import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
 
@@ -11,81 +7,6 @@ const cc = (value: string) => toCountryCode(value)!;
 const HOME: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
 const OFFICE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
 const OTHER_DE: WorkLocationInfo = { location: "other", countryCode: cc("DE") };
-
-// ISO week 8 of 2026: Mon Feb 16 – Sun Feb 22
-const MON = "2026-02-16";
-const TUE = "2026-02-17";
-const WED = "2026-02-18";
-const THU = "2026-02-19";
-const FRI = "2026-02-20";
-const SAT = "2026-02-21";
-const SUN = "2026-02-22";
-// Day in the previous ISO week
-const PREV_FRI = "2026-02-13";
-
-describe("getLocationCountsInWeek", () => {
-  it("returns all zeros for an empty map", () => {
-    const map: WorkLocationMap = new Map();
-    const counts = getLocationCountsInWeek(dayjs("2026-02-18"), map);
-    expect(counts).toEqual({ home: 0, office: 0, other: 0 });
-  });
-
-  it("counts home, office, and other entries separately", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [TUE, OFFICE],
-      [WED, OTHER_DE],
-      [THU, HOME],
-    ]);
-    const counts = getLocationCountsInWeek(dayjs("2026-02-18"), map);
-    expect(counts).toEqual({ home: 2, office: 1, other: 1 });
-  });
-
-  it("does not count entries from the previous week", () => {
-    const map: WorkLocationMap = new Map([
-      [PREV_FRI, HOME],
-      [MON, OFFICE],
-    ]);
-    const counts = getLocationCountsInWeek(dayjs("2026-02-18"), map);
-    expect(counts).toEqual({ home: 0, office: 1, other: 0 });
-  });
-
-  it("counts all seven days when the full week has entries", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [TUE, HOME],
-      [WED, OFFICE],
-      [THU, OFFICE],
-      [FRI, OTHER_DE],
-      [SAT, OTHER_DE],
-      [SUN, HOME],
-    ]);
-    const counts = getLocationCountsInWeek(dayjs("2026-02-18"), map);
-    expect(counts).toEqual({ home: 3, office: 2, other: 2 });
-  });
-
-  it("gives the same result regardless of which weekday is passed as input", () => {
-    const map: WorkLocationMap = new Map([
-      [MON, HOME],
-      [FRI, OFFICE],
-    ]);
-    expect(getLocationCountsInWeek(dayjs("2026-02-16"), map)).toEqual({
-      home: 1,
-      office: 1,
-      other: 0,
-    });
-    expect(getLocationCountsInWeek(dayjs("2026-02-18"), map)).toEqual({
-      home: 1,
-      office: 1,
-      other: 0,
-    });
-    expect(getLocationCountsInWeek(dayjs("2026-02-22"), map)).toEqual({
-      home: 1,
-      office: 1,
-      other: 0,
-    });
-  });
-});
 
 describe("aggregateLocationCounts", () => {
   it("returns an empty array for an empty map", () => {
@@ -107,23 +28,24 @@ describe("aggregateLocationCounts", () => {
     expect(officeRow).toEqual({ location: "office", countryCode: "BE", days: 1 });
   });
 
-  it("sorts by days descending", () => {
+  it("sorts by countryCode ascending, then days descending within the same country", () => {
+    // HOME=NL(2), OFFICE=BE(1), OTHER_DE=DE(3) → by country: BE, DE, NL
     const map: WorkLocationMap = new Map([
-      ["2026-01-05", OFFICE], // 1 day office
-      ["2026-01-06", HOME], // 2 days home
+      ["2026-01-05", OFFICE], // BE, 1 day
+      ["2026-01-06", HOME], // NL, 2 days
       ["2026-01-07", HOME],
-      ["2026-01-08", OTHER_DE], // 3 days other (DE)
+      ["2026-01-08", OTHER_DE], // DE, 3 days
       ["2026-01-09", OTHER_DE],
       ["2026-01-10", OTHER_DE],
     ]);
     const result = aggregateLocationCounts(map);
-    // Assert full descending order
+    expect(result.map((r) => r.countryCode)).toEqual(["BE", "DE", "NL"]);
+    // Within the same country, days are descending
     for (let i = 1; i < result.length; i++) {
-      expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+      if (result[i - 1].countryCode === result[i].countryCode) {
+        expect(result[i - 1].days).toBeGreaterThanOrEqual(result[i].days);
+      }
     }
-    // Also compare to a sorted copy
-    const sorted = [...result].sort((a, b) => b.days - a.days);
-    expect(result).toEqual(sorted);
   });
 
   it("creates separate rows for other-location entries with different country codes", () => {
@@ -141,7 +63,7 @@ describe("aggregateLocationCounts", () => {
     expect(usRow?.days).toBe(1);
   });
 
-  it("creates separate rows for other-location entries with the same country but different labels", () => {
+  it("merges other-location entries with the same country regardless of label", () => {
     const OTHER_DE_LABEL: WorkLocationInfo = {
       location: "other",
       countryCode: cc("DE"),
@@ -153,18 +75,8 @@ describe("aggregateLocationCounts", () => {
       ["2026-01-06", OTHER_DE_NOLABEL],
     ]);
     const result = aggregateLocationCounts(map);
-    expect(result).toHaveLength(2);
-  });
-
-  it("preserves the label on other-location rows", () => {
-    const OTHER_LABELED: WorkLocationInfo = {
-      location: "other",
-      countryCode: cc("DE"),
-      label: "Client visit",
-    };
-    const map: WorkLocationMap = new Map([["2026-01-05", OTHER_LABELED]]);
-    const result = aggregateLocationCounts(map);
-    expect(result[0].label).toBe("Client visit");
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ location: "other", countryCode: "DE", days: 2 });
   });
 
   it("skips entries with unknown locations and does not collide on separator characters in other fields", () => {
@@ -193,5 +105,15 @@ describe("aggregateLocationCounts", () => {
     const result = aggregateLocationCounts(map);
     // entry1 is skipped (unknown location); entry2 and entry3 are distinct rows
     expect(result).toHaveLength(2);
+    // entry1 must be absent — no row should carry its invalid location
+    expect(result.some((r) => r.location === ("other:site" as WorkLocation))).toBe(false);
+    // entry2 must appear as its own distinct row (countryCode "DE:FR" differs from entry3's "DE")
+    expect(result).toContainEqual(
+      expect.objectContaining({ location: "other", countryCode: "DE:FR" }),
+    );
+    // entry3 must appear as its own distinct row
+    expect(result).toContainEqual(
+      expect.objectContaining({ location: "other", countryCode: "DE" }),
+    );
   });
 });
