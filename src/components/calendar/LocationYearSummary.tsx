@@ -33,6 +33,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   }, [workLocationMap, year]);
 
   const rows = useMemo(() => aggregateLocationCounts(yearMap), [yearMap]);
+  const totalDays = useMemo(() => rows.reduce((sum, r) => sum + r.days, 0), [rows]);
 
   const handleCopy = () => {
     if (!navigator?.clipboard) {
@@ -47,8 +48,8 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       divider,
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
-        const desc = row.label ? `${row.countryCode} (${row.label})` : row.countryCode;
-        return `${locationLabel.padEnd(8)} ${desc.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""}`;
+        const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""} (${pct}%)`;
       }),
     ];
 
@@ -87,21 +88,24 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
             <th>Location</th>
             <th>Country</th>
             <th className="text-end">Days</th>
+            <th className="text-end">%</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.location}-${row.countryCode}-${row.label ?? ""}`}>
+            <tr key={`${row.location}-${row.countryCode}`}>
               <td>
                 <i
                   className={`bi ${WORK_LOCATION_ICON_CLASS[row.location]} me-1`}
                   aria-hidden="true"
                 ></i>
                 {WORK_LOCATION_LABEL[row.location]}
-                {row.label && <span className="text-muted ms-1 small">({row.label})</span>}
               </td>
               <td>{row.countryCode}</td>
               <td className="text-end">{row.days}</td>
+              <td className="text-end text-muted">
+                {totalDays > 0 ? `${Math.round((row.days / totalDays) * 100)}%` : "—"}
+              </td>
             </tr>
           ))}
         </tbody>
