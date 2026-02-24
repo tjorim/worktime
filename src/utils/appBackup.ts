@@ -273,7 +273,9 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
       if (!yearData || typeof yearData !== "object" || Array.isArray(yearData)) return false;
       for (const dayEntry of Object.values(yearData as Record<string, unknown>)) {
         if (!dayEntry || typeof dayEntry !== "object") return false;
-        if (typeof (dayEntry as Record<string, unknown>).location !== "string") return false;
+        const entry = dayEntry as Record<string, unknown>;
+        if (typeof entry.location !== "string") return false;
+        if (typeof entry.countryCode !== "string") return false;
       }
     }
   }

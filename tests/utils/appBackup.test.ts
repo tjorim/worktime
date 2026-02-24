@@ -220,6 +220,22 @@ describe("appBackup", () => {
     it("rejects when workLocations is an array", () => {
       expect(validateAppBackupPayload({ workLocations: [] })).toBe(false);
     });
+
+    it("rejects when a work location entry is missing countryCode", () => {
+      expect(
+        validateAppBackupPayload({
+          workLocations: { "2026": { "2026-02-24": { location: "home" } } },
+        }),
+      ).toBe(false);
+    });
+
+    it("rejects when a work location entry has a non-string countryCode", () => {
+      expect(
+        validateAppBackupPayload({
+          workLocations: { "2026": { "2026-02-24": { location: "home", countryCode: 1 } } },
+        }),
+      ).toBe(false);
+    });
   });
 
   describe("restoreAppBackup", () => {
