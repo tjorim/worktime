@@ -2,7 +2,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -21,6 +21,11 @@ export type EditRequest = {
   info?: string;
 };
 
+type NowPosition =
+  | { type: "separator"; insertBeforeIndex: number }
+  | { type: "within"; taskIndex: number }
+  | null;
+
 type DailyTaskListProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
@@ -35,7 +40,29 @@ type DailyTaskListProps = {
   }) => Promise<boolean> | boolean;
   onRemoveTask: (id: string) => void;
   onToggleBreak: (taskId: string, includesBreak: boolean) => void;
+  /** Live current time, used to render the "Now" indicator. */
+  liveTime?: dayjs.Dayjs;
+  /** Whether the selected date is today. */
+  isToday?: boolean;
 };
+
+function NowIndicator({ liveTime }: { liveTime: dayjs.Dayjs }) {
+  return (
+    <div
+      className="d-flex align-items-center gap-2 px-3 py-1"
+      role="separator"
+      aria-label={`Current time: ${liveTime.format("HH:mm")}`}
+      data-testid="now-indicator"
+    >
+      <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
+      <Badge bg="danger" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }}>
+        <i className="bi bi-clock me-1" aria-hidden="true" />
+        {liveTime.format("HH:mm")}
+      </Badge>
+      <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
+    </div>
+  );
+}
 
 export function DailyTaskList({
   tasks,
@@ -45,6 +72,8 @@ export function DailyTaskList({
   onUpdateTask,
   onRemoveTask,
   onToggleBreak,
+  liveTime,
+  isToday,
 }: DailyTaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [externalEditingTask, setExternalEditingTask] = useState<StoredTimeTrackingTask | null>(
@@ -91,6 +120,33 @@ export function DailyTaskList({
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
+
+  const nowPosition = useMemo<NowPosition>(() => {
+    if (!isToday || !liveTime || tasks.length === 0) return null;
+
+    const nowMinutes = liveTime.hour() * 60 + liveTime.minute();
+
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      // noUncheckedIndexedAccess keeps indexed array access as possibly undefined.
+      if (!task) continue;
+      const taskStart = dayjs(task.startTime);
+      const taskStartMinutes = taskStart.hour() * 60 + taskStart.minute();
+
+      if (nowMinutes < taskStartMinutes) {
+        return { type: "separator", insertBeforeIndex: i };
+      }
+
+      const stopDayjs = task.stopTime ? dayjs(task.stopTime) : null;
+      const taskStopMinutes = stopDayjs ? stopDayjs.hour() * 60 + stopDayjs.minute() : Infinity;
+
+      if (nowMinutes < taskStopMinutes) {
+        return { type: "within", taskIndex: i };
+      }
+    }
+
+    return { type: "separator", insertBeforeIndex: tasks.length };
+  }, [isToday, liveTime, tasks]);
 
   const closeEditModal = useCallback(() => {
     setEditingTaskId(null);
@@ -308,63 +364,81 @@ export function DailyTaskList({
     <>
       {tasks.length === 0 ? null : (
         <ListGroup className="mt-3">
-          {tasks.map((task) => {
+          {nowPosition?.type === "separator" && nowPosition.insertBeforeIndex === 0 && liveTime && (
+            <NowIndicator liveTime={liveTime} />
+          )}
+          {tasks.map((task, index) => {
             const startDisplay = dayjs(task.startTime).format("HH:mm");
             const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
             const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
+            const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
             return (
-              <ListGroup.Item key={task.id} onContextMenu={(e) => handleContextMenu(e, task.id)}>
-                <div className="d-flex justify-content-between align-items-start gap-2">
-                  <div className="flex-grow-1">
-                    <div className="fw-semibold">
-                      {task.text}{" "}
-                      <span
-                        className="time-tracking-label"
-                        style={{
-                          backgroundColor: labelBackground,
-                          color: labelTextColor,
-                        }}
-                      >
-                        {labelNameById[task.label] ?? "Unknown label"}
-                      </span>
-                      {task.includesBreak && (
-                        <Badge
-                          bg="secondary"
-                          className="ms-2"
-                          title={`${BREAK_DURATION_MINUTES}min break deducted`}
-                          aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+              <Fragment key={task.id}>
+                <ListGroup.Item
+                  onContextMenu={(e) => handleContextMenu(e, task.id)}
+                  style={isCurrentTask ? { borderLeft: "3px solid var(--bs-danger)" } : undefined}
+                >
+                  <div className="d-flex justify-content-between align-items-start gap-2">
+                    <div className="flex-grow-1">
+                      <div className="fw-semibold">
+                        {task.text}{" "}
+                        <span
+                          className="time-tracking-label"
+                          style={{
+                            backgroundColor: labelBackground,
+                            color: labelTextColor,
+                          }}
                         >
-                          <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                          {BREAK_DURATION_MINUTES}min
-                        </Badge>
-                      )}
+                          {labelNameById[task.label] ?? "Unknown label"}
+                        </span>
+                        {isCurrentTask && (
+                          <Badge bg="danger" className="ms-2" aria-label="Currently active task">
+                            <i className="bi bi-clock me-1" aria-hidden="true" />
+                            Now
+                          </Badge>
+                        )}
+                        {task.includesBreak && (
+                          <Badge
+                            bg="secondary"
+                            className="ms-2"
+                            title={`${BREAK_DURATION_MINUTES}min break deducted`}
+                            aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+                          >
+                            <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                            {BREAK_DURATION_MINUTES}min
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="small text-muted">
+                        Start: {startDisplay} · Stop: {stopDisplay}
+                      </div>
                     </div>
-                    <div className="small text-muted">
-                      Start: {startDisplay} · Stop: {stopDisplay}
+                    <div className="d-none d-md-flex gap-1 flex-shrink-0">
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        aria-label={`Edit ${task.text}`}
+                        onClick={() => openEditModal(task)}
+                      >
+                        <i className="bi bi-pencil" aria-hidden="true"></i>
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        aria-label={`Delete ${task.text}`}
+                        onClick={() => onRemoveTask(task.id)}
+                      >
+                        <i className="bi bi-trash" aria-hidden="true"></i>
+                      </Button>
                     </div>
                   </div>
-                  <div className="d-none d-md-flex gap-1 flex-shrink-0">
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      aria-label={`Edit ${task.text}`}
-                      onClick={() => openEditModal(task)}
-                    >
-                      <i className="bi bi-pencil" aria-hidden="true"></i>
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      aria-label={`Delete ${task.text}`}
-                      onClick={() => onRemoveTask(task.id)}
-                    >
-                      <i className="bi bi-trash" aria-hidden="true"></i>
-                    </Button>
-                  </div>
-                </div>
-              </ListGroup.Item>
+                </ListGroup.Item>
+                {nowPosition?.type === "separator" &&
+                  nowPosition.insertBeforeIndex === index + 1 &&
+                  liveTime && <NowIndicator liveTime={liveTime} />}
+              </Fragment>
             );
           })}
         </ListGroup>
