@@ -9,6 +9,11 @@ import type { TimeTrackingLabel } from "./constants";
 import { LabelsPanel } from "./LabelsPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
+import {
+  downloadAppBackup,
+  validateAppBackupPayload,
+  restoreAppBackup,
+} from "../../utils/appBackup";
 
 type ImportPayload = {
   tasks?: unknown[];
@@ -70,6 +75,7 @@ export function TimeTrackingConfigView({
   const [error, setError] = useState("");
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,6 +94,26 @@ export function TimeTrackingConfigView({
       toast.showSuccess("Imported time tracking data.");
     } catch {
       setError("Import failed. Please select a valid export file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleBackupImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!validateAppBackupPayload(parsed)) {
+        setError("Restore failed. Please select a valid backup file.");
+        return;
+      }
+      restoreAppBackup(parsed);
+    } catch {
+      setError("Restore failed. Please select a valid backup file.");
     } finally {
       event.target.value = "";
     }
@@ -132,6 +158,30 @@ export function TimeTrackingConfigView({
           type="file"
           accept="application/json"
           onChange={handleImport}
+          hidden
+        />
+      </div>
+
+      <div className="d-flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          onClick={() => downloadAppBackup(dayjs().format("YYYY-MM-DD"))}
+        >
+          Export Backup
+        </Button>
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          onClick={() => backupFileInputRef.current?.click()}
+        >
+          Restore Backup
+        </Button>
+        <Form.Control
+          ref={backupFileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleBackupImport}
           hidden
         />
       </div>

@@ -1,0 +1,205 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  buildBackupPayload,
+  downloadAppBackup,
+  restoreAppBackup,
+  validateAppBackupPayload,
+} from "../../src/utils/appBackup";
+import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
+import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+
+const USER_STATE_KEY = "worktime_user_state";
+const WORK_LOCATIONS_PREFIX = "worktime_work_locations_";
+
+describe("appBackup", () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  describe("buildBackupPayload", () => {
+    it("returns version 1 and exportedAt timestamp", () => {
+      const payload = buildBackupPayload();
+      expect(payload.version).toBe(1);
+      expect(typeof payload.exportedAt).toBe("string");
+      expect(new Date(payload.exportedAt).toISOString()).toBe(payload.exportedAt);
+    });
+
+    it("omits sections absent from localStorage", () => {
+      const payload = buildBackupPayload();
+      expect(payload.userState).toBeUndefined();
+      expect(payload.timeOff).toBeUndefined();
+      expect(payload.workLocations).toBeUndefined();
+      expect(payload.tasks).toBeUndefined();
+      expect(payload.templates).toBeUndefined();
+      expect(payload.labels).toBeUndefined();
+    });
+
+    it("includes userState when present", () => {
+      const state = { version: 2, myTeam: 3, scheduleType: "5-shift" };
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify(state));
+      const payload = buildBackupPayload();
+      expect(payload.userState).toEqual(state);
+    });
+
+    it("includes timeOff raw text when present", () => {
+      const raw = "2026/01/15 # Vacation\n";
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, raw);
+      const payload = buildBackupPayload();
+      expect(payload.timeOff).toBe(raw);
+    });
+
+    it("includes work locations for all stored years", () => {
+      const loc2025 = { "2025-06-01": { location: "home", countryCode: "NL" } };
+      const loc2026 = { "2026-02-24": { location: "office", countryCode: "DE" } };
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify(loc2025));
+      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify(loc2026));
+      const payload = buildBackupPayload();
+      expect(payload.workLocations).toEqual({ "2025": loc2025, "2026": loc2026 });
+    });
+
+    it("includes time tracking tasks, templates and labels", () => {
+      const tasks = [
+        { id: "t1", text: "Task", label: "l1", startTime: "2026-02-24T09:00", stopTime: null },
+      ];
+      const templates = [{ id: "tp1", text: "Template", label: "l1", start: "09:00", stop: "17:00" }];
+      const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(templates));
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(labels));
+      const payload = buildBackupPayload();
+      expect(payload.tasks).toEqual(tasks);
+      expect(payload.templates).toEqual(templates);
+      expect(payload.labels).toEqual(labels);
+    });
+
+    it("omits tasks/templates/labels when stored value is not an array", () => {
+      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify({ bad: true }));
+      const payload = buildBackupPayload();
+      expect(payload.tasks).toBeUndefined();
+    });
+  });
+
+  describe("validateAppBackupPayload", () => {
+    it("accepts a minimal payload with only userState", () => {
+      expect(validateAppBackupPayload({ userState: {} })).toBe(true);
+    });
+
+    it("accepts a full payload", () => {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: 1,
+        userState: {},
+        timeOff: "2026/01/01 # Vacation\n",
+        workLocations: { "2026": {} },
+        tasks: [],
+        templates: [],
+        labels: [],
+      };
+      expect(validateAppBackupPayload(payload)).toBe(true);
+    });
+
+    it("rejects null", () => {
+      expect(validateAppBackupPayload(null)).toBe(false);
+    });
+
+    it("rejects a primitive", () => {
+      expect(validateAppBackupPayload("string")).toBe(false);
+    });
+
+    it("rejects an empty object with no recognisable sections", () => {
+      expect(validateAppBackupPayload({})).toBe(false);
+    });
+
+    it("rejects when timeOff is not a string", () => {
+      expect(validateAppBackupPayload({ timeOff: 42 })).toBe(false);
+    });
+
+    it("rejects when tasks is not an array", () => {
+      expect(validateAppBackupPayload({ tasks: "bad" })).toBe(false);
+    });
+
+    it("rejects when templates is not an array", () => {
+      expect(validateAppBackupPayload({ templates: {} })).toBe(false);
+    });
+
+    it("rejects when labels is not an array", () => {
+      expect(validateAppBackupPayload({ labels: 123 })).toBe(false);
+    });
+  });
+
+  describe("restoreAppBackup", () => {
+    beforeEach(() => {
+      vi.spyOn(window.location, "reload").mockImplementation(() => {});
+    });
+
+    it("writes userState to localStorage and reloads", () => {
+      const state = { version: 2, myTeam: 1 };
+      restoreAppBackup({ exportedAt: "", version: 1, userState: state });
+      expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toEqual(state);
+      expect(window.location.reload).toHaveBeenCalledOnce();
+    });
+
+    it("writes timeOff as a plain string", () => {
+      const raw = "2026/01/15 # Vacation\n";
+      restoreAppBackup({ exportedAt: "", version: 1, timeOff: raw });
+      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBe(raw);
+    });
+
+    it("writes work locations for each year", () => {
+      const locs = { "2026": { "2026-02-24": { location: "home", countryCode: "NL" } } };
+      restoreAppBackup({ exportedAt: "", version: 1, workLocations: locs });
+      expect(JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_PREFIX}2026`)!)).toEqual(
+        locs["2026"],
+      );
+    });
+
+    it("writes time tracking tasks, templates and labels", () => {
+      const tasks = [{ id: "t1", text: "T", label: "l1", startTime: "2026-02-24T09:00" }];
+      const templates = [{ id: "tp1", text: "T", label: "l1", start: "09:00", stop: "17:00" }];
+      const labels = [{ id: "l1", name: "Work", color: "#198754" }];
+      restoreAppBackup({ exportedAt: "", version: 1, tasks, templates, labels });
+      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual(tasks);
+      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!)).toEqual(
+        templates,
+      );
+      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!)).toEqual(labels);
+    });
+
+    it("leaves unspecified sections untouched", () => {
+      localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 5 }));
+      restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
+      // userState was not in payload, should still be in localStorage
+      expect(JSON.parse(localStorage.getItem(USER_STATE_KEY)!)).toEqual({ myTeam: 5 });
+    });
+
+    it("always calls window.location.reload", () => {
+      restoreAppBackup({ exportedAt: "", version: 1, labels: [] });
+      expect(window.location.reload).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("downloadAppBackup", () => {
+    it("creates a download link with the correct filename and triggers a click", () => {
+      const mockClick = vi.fn();
+      const mockCreateObjectURL = vi.fn().mockReturnValue("blob:fake-url");
+      const mockRevokeObjectURL = vi.fn();
+      URL.createObjectURL = mockCreateObjectURL;
+      URL.revokeObjectURL = mockRevokeObjectURL;
+
+      const mockAnchor = {
+        href: "",
+        download: "",
+        click: mockClick,
+      };
+      vi.spyOn(document, "createElement").mockReturnValue(
+        mockAnchor as unknown as HTMLElement,
+      );
+
+      downloadAppBackup("2026-02-24");
+
+      expect(mockAnchor.download).toBe("worktime-backup-2026-02-24.json");
+      expect(mockClick).toHaveBeenCalledOnce();
+    });
+  });
+});
