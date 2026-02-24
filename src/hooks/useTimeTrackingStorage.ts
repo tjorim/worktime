@@ -5,7 +5,7 @@ import {
   sanitizeLabels,
   type TimeTrackingLabel,
 } from "../components/timeTracking/constants";
-import { isValidRange, isValidTimeString } from "../components/timeTracking/timeUtils";
+import { isValidRange } from "../components/timeTracking/timeUtils";
 import type {
   StoredTimeTrackingTask,
   TimeTrackingTemplate,
@@ -83,19 +83,6 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   return task;
 }
 
-function isValidTemplate(value: unknown): value is TimeTrackingTemplate {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === "string" &&
-    typeof v.text === "string" &&
-    typeof v.label === "string" &&
-    v.label.trim().length > 0 &&
-    isValidTimeString(v.start) &&
-    isValidTimeString(v.stop) &&
-    isValidRange(v.start, v.stop)
-  );
-}
 
 export function useTimeTrackingStorage() {
   const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);
