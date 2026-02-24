@@ -79,7 +79,6 @@ export function CalendarView({
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
-  const isCurrentMonth = currentMonth.isSame(dayjs(), "month");
   const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
 
   // Fetch holidays for the current month's year
