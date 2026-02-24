@@ -69,7 +69,7 @@ export function TimeTrackingWeeklyView({
 
   // Extract primitives for stable useMemo dependencies
   const year = weekStart.isoWeekYear();
-  const { getLocationForDate } = useWorkLocationStorage(year);
+  const { workLocationMap } = useWorkLocationStorage(year);
   const isoWeek = weekStart.isoWeek();
   const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
 
@@ -318,7 +318,7 @@ export function TimeTrackingWeeklyView({
                   const isToday = day.iso === todayIso;
                   const percentage =
                     targetDaily > 0 ? Math.min((dayTotal / targetDaily) * 100, 100) : 0;
-                  const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
+                  const location = crossBorderEnabled ? (workLocationMap.get(day.iso) ?? null) : null;
 
                   return (
                     <div key={day.iso} className="col">
@@ -412,7 +412,7 @@ export function TimeTrackingWeeklyView({
                     const daySummary = dailyTotals[day.iso] ?? {};
                     const dayTotal = dailyHourTotals[index] ?? 0;
                     const isToday = day.iso === todayIso;
-                    const location = crossBorderEnabled ? getLocationForDate(day.iso) : null;
+                    const location = crossBorderEnabled ? (workLocationMap.get(day.iso) ?? null) : null;
                     return (
                       <tr
                         key={day.iso}
