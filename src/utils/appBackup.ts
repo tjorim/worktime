@@ -12,6 +12,7 @@
 
 import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
+import { isValidScheduleType } from "./scheduleUtils";
 
 const USER_STATE_KEY = "worktime_user_state";
 const WORK_LOCATIONS_PREFIX = "worktime_work_locations_";
@@ -241,7 +242,7 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   if (!parsed || typeof parsed !== "object") return false;
   const p = parsed as Record<string, unknown>;
 
-  // Must have at least one recognisable section
+  // Must have at least one recognizable section
   const hasAnySection =
     "userState" in p ||
     "timeOff" in p ||
@@ -250,6 +251,32 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     "templates" in p ||
     "labels" in p;
   if (!hasAnySection) return false;
+
+  if ("userState" in p && p.userState !== undefined) {
+    const us = p.userState;
+    if (!us || typeof us !== "object" || Array.isArray(us)) return false;
+    const usObj = us as Record<string, unknown>;
+    if (
+      "scheduleType" in usObj &&
+      usObj.scheduleType !== null &&
+      usObj.scheduleType !== undefined &&
+      !isValidScheduleType(usObj.scheduleType)
+    ) {
+      return false;
+    }
+  }
+
+  if ("workLocations" in p && p.workLocations !== undefined) {
+    const wl = p.workLocations;
+    if (!wl || typeof wl !== "object" || Array.isArray(wl)) return false;
+    for (const yearData of Object.values(wl as Record<string, unknown>)) {
+      if (!yearData || typeof yearData !== "object" || Array.isArray(yearData)) return false;
+      for (const dayEntry of Object.values(yearData as Record<string, unknown>)) {
+        if (!dayEntry || typeof dayEntry !== "object") return false;
+        if (typeof (dayEntry as Record<string, unknown>).location !== "string") return false;
+      }
+    }
+  }
 
   if ("timeOff" in p && p.timeOff !== undefined && typeof p.timeOff !== "string") return false;
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;

@@ -193,7 +193,7 @@ describe("appBackup", () => {
       expect(validateAppBackupPayload("string")).toBe(false);
     });
 
-    it("rejects an empty object with no recognisable sections", () => {
+    it("rejects an empty object with no recognizable sections", () => {
       expect(validateAppBackupPayload({})).toBe(false);
     });
 

@@ -385,6 +385,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           const bucket = yearMap.get(year) ?? [];
           bucket.push(event);
           yearMap.set(year, bucket);
+        } else {
+          unknownEvents.push(event);
         }
       } else if (event.type === "weekly") {
         weeklyEvents.push(event);

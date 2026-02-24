@@ -79,12 +79,13 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       </Modal.Header>
       <Modal.Body>
         {showYearFilter && presence && (
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="yearSelect">
             <Form.Label className="fw-medium">Year</Form.Label>
             <Form.Select
               size="sm"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
+              aria-describedby="yearHelp"
             >
               <option value="all">All years</option>
               {presence.availableYears.map((year) => (
@@ -93,7 +94,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
                 </option>
               ))}
             </Form.Select>
-            <Form.Text className="text-muted">
+            <Form.Text id="yearHelp" className="text-muted">
               Year filter applies to tasks and work location data.
             </Form.Text>
           </Form.Group>
