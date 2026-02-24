@@ -27,6 +27,15 @@ type TemplatesPanelProps = {
   onApplyTemplatesJson: (templates: TimeTrackingTemplate[]) => void;
 };
 
+const EXAMPLE_TEMPLATES_JSON = `{
+  "templates": [
+    { "id": "template-1", "text": "Support", "label": "label-1", "start": "09:00", "stop": "11:00" },
+    { "id": "template-2", "text": "Project work", "label": "label-2", "start": "11:00", "stop": "13:00" },
+    { "id": "template-3", "text": "Team meeting", "label": "label-3", "start": "14:00", "stop": "15:00" },
+    { "id": "template-4", "text": "Admin tasks", "label": "label-4", "start": "15:00", "stop": "17:00" }
+  ]
+}`;
+
 function validateTemplatesImportPayload(parsed: unknown): parsed is { templates?: unknown[] } {
   if (!parsed || typeof parsed !== "object") {
     return false;
@@ -251,7 +260,14 @@ export function TemplatesPanel({
         onChange={setTemplatesJson}
         onCopy={handleCopy}
         onApply={handleApplyJson}
-      />
+      >
+        <details className="mt-3">
+          <summary className="small text-muted">Example templates JSON</summary>
+          <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
+            <code>{EXAMPLE_TEMPLATES_JSON}</code>
+          </pre>
+        </details>
+      </RawJsonEditor>
 
       <TemplateModal
         show={modalMode !== null}
