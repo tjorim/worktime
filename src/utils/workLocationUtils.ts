@@ -14,10 +14,7 @@ export function aggregateLocationCounts(
   const buildKey = (location: WorkLocation, countryCode: string): string =>
     `${location.length}:${location}|${countryCode.length}:${countryCode}`;
 
-  const counts = new Map<
-    string,
-    { location: WorkLocation; countryCode: string; days: number }
-  >();
+  const counts = new Map<string, { location: WorkLocation; countryCode: string; days: number }>();
 
   for (const info of workLocationMap.values()) {
     if (info.location !== "home" && info.location !== "office" && info.location !== "other") {
