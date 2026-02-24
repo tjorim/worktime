@@ -138,6 +138,7 @@ export function TemplatesPanel({
   };
 
   const handleEdit = (template: TimeTrackingTemplate) => {
+    setError("");
     setEditTemplateId(template.id);
     setTemplateForm({
       text: template.text,
@@ -208,6 +209,7 @@ export function TemplatesPanel({
         <Button
           size="sm"
           onClick={() => {
+            setError("");
             resetForm();
             setEditTemplateId(null);
             setModalMode("create");
@@ -226,6 +228,7 @@ export function TemplatesPanel({
               ctaButton={{
                 label: "Add Your First Template",
                 onClick: () => {
+                  setError("");
                   resetForm();
                   setEditTemplateId(null);
                   setModalMode("create");

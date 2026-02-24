@@ -116,6 +116,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
   };
 
   const handleEdit = (label: TimeTrackingLabel) => {
+    setError("");
     setEditLabelId(label.id);
     setLabelForm({
       name: label.name,
@@ -195,6 +196,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         <Button
           size="sm"
           onClick={() => {
+            setError("");
             resetForm();
             setEditLabelId(null);
             setModalMode("create");
@@ -219,6 +221,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               ctaButton={{
                 label: "Add Your First Label",
                 onClick: () => {
+                  setError("");
                   resetForm();
                   setEditLabelId(null);
                   setModalMode("create");
