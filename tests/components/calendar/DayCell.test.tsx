@@ -354,6 +354,42 @@ describe("DayCell", () => {
     });
   });
 
+
+
+  describe("Work Location Indicators", () => {
+    it("shows work location indicator even when the shift is off", () => {
+      const { container } = render(
+        <DayCell
+          {...defaultProps}
+          isWeekend={true}
+          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          workLocation={{ location: "home", countryCode: "NL" }}
+        />,
+      );
+
+      const indicator = container.querySelector(".month-calendar-work-location");
+      expect(indicator).toBeInTheDocument();
+
+      const header = screen.getByLabelText(/Working from home/i);
+      expect(header).toBeInTheDocument();
+    });
+
+    it("shows work location indicator when no shift badge is provided", () => {
+      const { container } = render(
+        <DayCell
+          {...defaultProps}
+          workLocation={{ location: "office", countryCode: "BE" }}
+        />,
+      );
+
+      const indicator = container.querySelector(".month-calendar-work-location");
+      expect(indicator).toBeInTheDocument();
+
+      const header = screen.getByLabelText(/Working from office/i);
+      expect(header).toBeInTheDocument();
+    });
+  });
+
   describe("Day Header", () => {
     it("should render day header with correct CSS class", () => {
       const { container } = render(<DayCell {...defaultProps} />);
