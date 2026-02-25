@@ -388,7 +388,7 @@ export function TimeTrackingDailyView({
       }
     }
     const taskDate =
-      dailyTasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
+      tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
 

@@ -172,6 +172,37 @@ describe("TimeTrackingDailyView", () => {
       );
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
     });
+
+    it("keeps a cross-day running task on its original start date when saving from edit modal", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-02T00:05:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-4",
+        text: "Overnight maintenance",
+        label: "Support",
+        startTime: "2025-01-01T23:55",
+      };
+
+      renderView({
+        tasks: [runningTask],
+        selectedDate: "2025-01-02",
+        onUpdateTaskTimes,
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      const dialog = screen.getByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText(/^Stop$/i), { target: { value: "23:59" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "running-4",
+        newText: "Overnight maintenance",
+        newLabel: "Support",
+        newStartTime: "2025-01-01T23:55",
+        newStopTime: "2025-01-01T23:59",
+      });
+    });
   });
 
   describe("Task Form Rendering", () => {
