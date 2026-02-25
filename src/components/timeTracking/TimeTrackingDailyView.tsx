@@ -392,12 +392,17 @@ export function TimeTrackingDailyView({
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
 
-    // Overlap checking: only check if we have a stop time
+    // Overlap checking: only check if we have a stop time.
+    // Use the edited task's own date (not the currently selected view date)
+    // so cross-day edits validate against the correct day.
     if (payload.stop) {
-      const dailyForOverlap = dailyTasks.map((t) => ({
-        id: t.id,
-        start: dayjs(t.startTime).format("HH:mm"),
-        stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
+      const sameDayTasks = tasks.filter(
+        (task) => dayjs(task.startTime).format("YYYY-MM-DD") === taskDate,
+      );
+      const dailyForOverlap = sameDayTasks.map((task) => ({
+        id: task.id,
+        start: dayjs(task.startTime).format("HH:mm"),
+        stop: (task.stopTime ? dayjs(task.stopTime) : dayjs()).format("HH:mm"),
       }));
       if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
         setError("Time range overlaps an existing task.");

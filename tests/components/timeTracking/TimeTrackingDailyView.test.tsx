@@ -203,6 +203,73 @@ describe("TimeTrackingDailyView", () => {
         newStopTime: "2025-01-01T23:59",
       });
     });
+
+    it("keeps a Friday running task on Friday when stopped from Monday", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-06T08:00:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const runningTask: StoredTimeTrackingTask = {
+        id: "running-weekend",
+        text: "Friday production watch",
+        label: "Support",
+        startTime: "2025-01-03T16:30",
+      };
+
+      renderView({
+        tasks: [runningTask],
+        selectedDate: "2025-01-06",
+        onUpdateTaskTimes,
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      const dialog = screen.getByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText(/^Stop$/i), { target: { value: "17:00" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
+
+      expect(onUpdateTaskTimes).toHaveBeenCalledWith({
+        id: "running-weekend",
+        newText: "Friday production watch",
+        newLabel: "Support",
+        newStartTime: "2025-01-03T16:30",
+        newStopTime: "2025-01-03T17:00",
+      });
+    });
+
+    it("checks overlap against the task's original day during cross-day edit", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-06T08:00:00"));
+      const onUpdateTaskTimes = vi.fn();
+      const tasks: StoredTimeTrackingTask[] = [
+        {
+          id: "friday-existing",
+          text: "Friday handover",
+          label: "Meeting",
+          startTime: "2025-01-03T16:00",
+          stopTime: "2025-01-03T17:00",
+        },
+        {
+          id: "running-weekend-overlap",
+          text: "Friday production watch",
+          label: "Support",
+          startTime: "2025-01-03T15:30",
+        },
+      ];
+
+      renderView({
+        tasks,
+        selectedDate: "2025-01-06",
+        onUpdateTaskTimes,
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Stop Timer/i }));
+      const dialog = screen.getByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText(/^Stop$/i), { target: { value: "16:30" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Save Changes/i }));
+
+      expect(onUpdateTaskTimes).not.toHaveBeenCalled();
+      const alerts = screen.getAllByRole("alert");
+      expect(alerts.some((alert) => /Time range overlaps an existing task/i.test(alert.textContent ?? ""))).toBe(true);
+    });
   });
 
   describe("Task Form Rendering", () => {
