@@ -52,7 +52,6 @@ updates:
           - "oxlint"
           - "oxfmt"
 
-
   # Monitor Python dependencies for backend API
   - package-ecosystem: "pip"
     directory: "/backend"
