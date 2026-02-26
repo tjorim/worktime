@@ -192,7 +192,7 @@ export function DayCell({
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
   }
-  if (workLocationLabel && shiftBadge?.isWorking) {
+  if (workLocationLabel) {
     ariaLabelParts.push(workLocationLabel);
   }
   if (publicHoliday) {
@@ -399,7 +399,7 @@ export function DayCell({
               {indicator.emoji}
             </span>
           ))}
-          {workLocation && shiftBadge?.isWorking && (
+          {workLocation && (
             <span
               className="month-calendar-day-indicator month-calendar-work-location"
               title={workLocationLabel}

@@ -354,6 +354,60 @@ describe("DayCell", () => {
     });
   });
 
+
+
+  describe("Work Location Indicators", () => {
+    it("shows work location indicator even when the shift is off", () => {
+      render(
+        <DayCell
+          {...defaultProps}
+          isWeekend={true}
+          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          workLocation={{ location: "home", countryCode: "NL" }}
+        />,
+      );
+
+      const indicator = screen.getByTitle("Working from home");
+      expect(indicator).toBeInTheDocument();
+
+      const header = screen.getByLabelText(/Working from home/i);
+      expect(header).toBeInTheDocument();
+    });
+
+    it("shows work location indicator when no shift badge is provided", () => {
+      render(
+        <DayCell
+          {...defaultProps}
+          workLocation={{ location: "office", countryCode: "BE" }}
+        />,
+      );
+
+      const indicator = screen.getByTitle("Working from office");
+      expect(indicator).toBeInTheDocument();
+
+      const header = screen.getByLabelText(/Working from office/i);
+      expect(header).toBeInTheDocument();
+    });
+
+    it("shows work location alongside school holiday indicators", () => {
+      render(
+        <DayCell
+          {...defaultProps}
+          isWeekend={true}
+          schoolHoliday={{ name: "Winter Break", localName: "Wintervakantie" }}
+          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          workLocation={{ location: "home", countryCode: "NL" }}
+        />,
+      );
+
+      expect(screen.getByText("🏫")).toBeInTheDocument();
+      const indicator = screen.getByTitle("Working from home");
+      expect(indicator).toBeInTheDocument();
+      expect(screen.getByLabelText(/School Holiday: Winter Break/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Working from home/i)).toBeInTheDocument();
+    });
+  });
+
   describe("Day Header", () => {
     it("should render day header with correct CSS class", () => {
       const { container } = render(<DayCell {...defaultProps} />);
