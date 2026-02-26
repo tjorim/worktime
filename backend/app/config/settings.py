@@ -5,7 +5,6 @@ settings with sensible defaults for development and production environments.
 """
 
 import logging
-import os
 from pathlib import Path
 
 from pydantic import field_validator
@@ -44,6 +43,11 @@ class Settings(BaseSettings):
     # Cache configuration
     CACHE_TTL: int = 10
     CACHE_ENABLED: bool = True
+
+    # Database configuration
+    DATABASE_PATH: str = "./data/worktime.db"
+    DATABASE_ECHO: bool = False
+    DATABASE_ENABLED: bool = True
     
     @field_validator("CORS_ORIGINS")
     @classmethod
@@ -70,6 +74,25 @@ class Settings(BaseSettings):
         """Validate cache TTL is positive."""
         if v < 0:
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
+        return v
+
+    @field_validator("DATABASE_PATH")
+    @classmethod
+    def validate_database_path(cls, v: str) -> str:
+        """Validate database path and ensure parent directory is writable/creatable."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_PATH cannot be empty")
+
+        db_path = Path(v).expanduser()
+        parent = db_path.parent
+
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            raise ValueError(
+                f"DATABASE_PATH parent directory cannot be created or accessed: {parent} ({e})"
+            ) from e
+
         return v
     
     def get_cors_origins_list(self) -> list[str]:
@@ -125,6 +148,7 @@ class Settings(BaseSettings):
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
         logger.info(f"Share Directory: {self.get_share_dir_path()}")
+        logger.info(f"Database Path:   {Path(self.DATABASE_PATH).resolve()}")
         
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
@@ -138,6 +162,9 @@ class Settings(BaseSettings):
         # Log cache configuration
         cache_status = "enabled" if self.CACHE_ENABLED else "disabled"
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
+
+        db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
         logger.info("=" * 60)
 
 

@@ -20,6 +20,7 @@ from .api.team import router as team_router
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
+from .database import init_db
 from .middleware.timing import TimingMiddleware
 
 # Configure logging
@@ -93,6 +94,17 @@ async def lifespan(app: FastAPI):
             f"   The health endpoint will report current status."
         )
     
+    # Initialize database before accepting connections
+    if settings.DATABASE_ENABLED:
+        try:
+            init_db()
+            logger.info("✓ Database initialized")
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {e}")
+            raise
+    else:
+        logger.info("Database initialization skipped (DATABASE_ENABLED=false)")
+
     # Warm cache in background if enabled
     if settings.CACHE_ENABLED:
         # Start cache warming in background - don't block startup
