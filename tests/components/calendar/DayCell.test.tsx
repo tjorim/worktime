@@ -358,7 +358,7 @@ describe("DayCell", () => {
 
   describe("Work Location Indicators", () => {
     it("shows work location indicator even when the shift is off", () => {
-      const { container } = render(
+      render(
         <DayCell
           {...defaultProps}
           isWeekend={true}
@@ -367,7 +367,7 @@ describe("DayCell", () => {
         />,
       );
 
-      const indicator = container.querySelector(".month-calendar-work-location");
+      const indicator = screen.getByTitle("Working from home");
       expect(indicator).toBeInTheDocument();
 
       const header = screen.getByLabelText(/Working from home/i);
@@ -375,14 +375,14 @@ describe("DayCell", () => {
     });
 
     it("shows work location indicator when no shift badge is provided", () => {
-      const { container } = render(
+      render(
         <DayCell
           {...defaultProps}
           workLocation={{ location: "office", countryCode: "BE" }}
         />,
       );
 
-      const indicator = container.querySelector(".month-calendar-work-location");
+      const indicator = screen.getByTitle("Working from office");
       expect(indicator).toBeInTheDocument();
 
       const header = screen.getByLabelText(/Working from office/i);
@@ -390,7 +390,7 @@ describe("DayCell", () => {
     });
 
     it("shows work location alongside school holiday indicators", () => {
-      const { container } = render(
+      render(
         <DayCell
           {...defaultProps}
           isWeekend={true}
@@ -401,7 +401,7 @@ describe("DayCell", () => {
       );
 
       expect(screen.getByText("🏫")).toBeInTheDocument();
-      const indicator = container.querySelector(".month-calendar-work-location");
+      const indicator = screen.getByTitle("Working from home");
       expect(indicator).toBeInTheDocument();
       expect(screen.getByLabelText(/School Holiday: Winter Break/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Working from home/i)).toBeInTheDocument();
