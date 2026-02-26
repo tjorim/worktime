@@ -21,7 +21,8 @@ def test_default_settings():
     assert settings.CACHE_ENABLED is True
     assert settings.CACHE_TTL == 10
     assert settings.DATABASE_ENABLED is True
-    assert settings.DATABASE_PATH == "./data/worktime.db"
+    assert Path(settings.DATABASE_PATH).is_absolute()
+    assert settings.DATABASE_PATH.endswith("data/worktime.db")
     assert settings.DATABASE_ECHO is False
 
 
@@ -193,9 +194,20 @@ def test_database_path_validation_creates_parent_directory():
 
         settings = Settings(DATABASE_PATH=str(database_file))
 
-        assert settings.DATABASE_PATH == str(database_file)
+        assert settings.DATABASE_PATH == str(database_file.resolve())
         assert database_parent.exists()
         assert database_parent.is_dir()
+
+
+
+def test_database_path_validation_expands_user_home(monkeypatch):
+    """Test DATABASE_PATH expands home-directory shorthand."""
+    fake_home = Path("/tmp/worktime-home")
+    monkeypatch.setenv("HOME", str(fake_home))
+
+    settings = Settings(DATABASE_PATH="~/worktime-db/worktime.db")
+
+    assert settings.DATABASE_PATH == str((fake_home / "worktime-db" / "worktime.db").resolve())
 
 
 def test_database_path_validation_rejects_empty_value():

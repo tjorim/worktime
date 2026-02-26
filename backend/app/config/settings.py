@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         if not v or not v.strip():
             raise ValueError("DATABASE_PATH cannot be empty")
 
-        db_path = Path(v).expanduser()
+        db_path = Path(v).expanduser().resolve()
         parent = db_path.parent
 
         try:
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
                 f"DATABASE_PATH parent directory cannot be created or accessed: {parent} ({e})"
             ) from e
 
-        return v
+        return str(db_path)
     
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
