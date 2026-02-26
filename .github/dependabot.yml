@@ -52,9 +52,9 @@ updates:
           - "oxlint"
           - "oxfmt"
 
-  # Monitor git submodules (HdayPlanner and NextShift)
-  - package-ecosystem: "gitsubmodule"
-    directory: "/"
+  # Monitor Python dependencies for backend API
+  - package-ecosystem: "pip"
+    directory: "/backend"
     schedule:
       interval: "weekly"
       day: "friday"
@@ -63,11 +63,12 @@ updates:
     assignees:
       - "tjorim"
     commit-message:
-      prefix: "deps(submodules)"
+      prefix: "deps(backend)"
       include: "scope"
     labels:
       - "dependencies"
-      - "submodules"
+      - "backend"
+      - "python"
 
   # Monitor GitHub Actions
   - package-ecosystem: "github-actions"

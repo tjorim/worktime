@@ -63,7 +63,9 @@ describe("appBackup", () => {
       const tasks = [
         { id: "t1", text: "Task", label: "l1", startTime: "2026-02-24T09:00", stopTime: null },
       ];
-      const templates = [{ id: "tp1", text: "Template", label: "l1", start: "09:00", stop: "17:00" }];
+      const templates = [
+        { id: "tp1", text: "Template", label: "l1", start: "09:00", stop: "17:00" },
+      ];
       const labels = [{ id: "l1", name: "Work", color: "#198754" }];
       localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
       localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(templates));
@@ -337,9 +339,7 @@ describe("appBackup", () => {
         download: "",
         click: mockClick,
       };
-      vi.spyOn(document, "createElement").mockReturnValue(
-        mockAnchor as unknown as HTMLElement,
-      );
+      vi.spyOn(document, "createElement").mockReturnValue(mockAnchor as unknown as HTMLElement);
 
       downloadAppBackup("2026-02-24");
 

@@ -20,7 +20,6 @@ type RawTask = {
   includesBreak?: boolean;
 };
 
-
 const ISO_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 function isValidTaskDateRange(startTime: string, stopTime?: string | null): boolean {
@@ -82,7 +81,6 @@ function convertToTask(raw: RawTask): StoredTimeTrackingTask {
   }
   return task;
 }
-
 
 export function useTimeTrackingStorage() {
   const [rawTasks, setRawTasks] = useLocalStorage<RawTask[]>(TIME_TRACKING_STORAGE_KEYS.tasks, []);

@@ -42,8 +42,10 @@ type TaskSegment = {
   afterBreakHours?: number;
 };
 
-
-function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: dayjs.Dayjs): number {
+function calculateElapsedVisualHours(
+  tasks: StoredTimeTrackingTask[],
+  liveTime: dayjs.Dayjs,
+): number {
   let elapsedVisualHours = 0;
 
   // Assumes tasks are already sorted by startTime in the parent view.
@@ -161,91 +163,91 @@ export function TimelineProgressBar({
       {segments.length > 0 ? (
         <div style={{ position: "relative" }}>
           <BootstrapProgressBar>
-          {segments.map((segment) => {
-            const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
-            // For segments with a break, render three sub-segments positioned
-            // according to where the break falls within the lunch window.
-            if (
-              segment.includesBreak &&
-              segment.breakHours != null &&
-              segment.beforeBreakHours != null &&
-              segment.afterBreakHours != null
-            ) {
-              const beforePct =
-                (segment.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-              const breakPct =
-                (segment.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-              const afterPct =
-                (segment.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+            {segments.map((segment) => {
+              const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
+              // For segments with a break, render three sub-segments positioned
+              // according to where the break falls within the lunch window.
+              if (
+                segment.includesBreak &&
+                segment.breakHours != null &&
+                segment.beforeBreakHours != null &&
+                segment.afterBreakHours != null
+              ) {
+                const beforePct =
+                  (segment.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                const breakPct =
+                  (segment.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                const afterPct =
+                  (segment.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
 
-              // Show label on whichever work portion is larger
-              const showLabelOnBefore = beforePct >= afterPct;
-              const labelOnBefore = showLabelOnBefore && beforePct > 10;
-              const labelOnAfter = !showLabelOnBefore && afterPct > 10;
+                // Show label on whichever work portion is larger
+                const showLabelOnBefore = beforePct >= afterPct;
+                const labelOnBefore = showLabelOnBefore && beforePct > 10;
+                const labelOnAfter = !showLabelOnBefore && afterPct > 10;
 
-              const parts: React.ReactNode[] = [];
+                const parts: React.ReactNode[] = [];
 
-              if (beforePct > 0) {
-                parts.push(
-                  <BootstrapProgressBar
-                    key={segment.id}
-                    now={beforePct}
-                    style={{ backgroundColor: segment.color, color: segment.textColor }}
-                    title={tooltipText}
-                    aria-label={tooltipText}
-                    label={
-                      labelOnBefore ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
-                    }
-                  />,
-                );
-              }
-
-              parts.push(
-                <BootstrapProgressBar
-                  key={`${segment.id}-break`}
-                  now={breakPct}
-                  style={{ backgroundColor: segment.color, opacity: 0.3 }}
-                  title={`Break: ${BREAK_DURATION_MINUTES}min`}
-                  aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
-                  data-testid={`break-segment-${segment.id}`}
-                />,
-              );
-
-              if (afterPct > 0) {
-                parts.push(
-                  <BootstrapProgressBar
-                    key={`${segment.id}-after`}
-                    now={afterPct}
-                    style={{ backgroundColor: segment.color, color: segment.textColor }}
-                    title={tooltipText}
-                    aria-label={tooltipText}
-                    label={
-                      labelOnAfter ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
-                    }
-                  />,
-                );
-              }
-
-              return parts;
-            }
-
-            // Regular segment (no break)
-            const normalizedPercent = segment.percentage * normalizationFactor;
-            return (
-              <BootstrapProgressBar
-                key={segment.id}
-                now={normalizedPercent}
-                style={{ backgroundColor: segment.color, color: segment.textColor }}
-                title={tooltipText}
-                aria-label={tooltipText}
-                label={
-                  normalizedPercent > 10 ? (
-                    <span style={LABEL_STYLE}>{segment.text}</span>
-                  ) : undefined
+                if (beforePct > 0) {
+                  parts.push(
+                    <BootstrapProgressBar
+                      key={segment.id}
+                      now={beforePct}
+                      style={{ backgroundColor: segment.color, color: segment.textColor }}
+                      title={tooltipText}
+                      aria-label={tooltipText}
+                      label={
+                        labelOnBefore ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
+                      }
+                    />,
+                  );
                 }
-              />
-            );
-          })}
+
+                parts.push(
+                  <BootstrapProgressBar
+                    key={`${segment.id}-break`}
+                    now={breakPct}
+                    style={{ backgroundColor: segment.color, opacity: 0.3 }}
+                    title={`Break: ${BREAK_DURATION_MINUTES}min`}
+                    aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
+                    data-testid={`break-segment-${segment.id}`}
+                  />,
+                );
+
+                if (afterPct > 0) {
+                  parts.push(
+                    <BootstrapProgressBar
+                      key={`${segment.id}-after`}
+                      now={afterPct}
+                      style={{ backgroundColor: segment.color, color: segment.textColor }}
+                      title={tooltipText}
+                      aria-label={tooltipText}
+                      label={
+                        labelOnAfter ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
+                      }
+                    />,
+                  );
+                }
+
+                return parts;
+              }
+
+              // Regular segment (no break)
+              const normalizedPercent = segment.percentage * normalizationFactor;
+              return (
+                <BootstrapProgressBar
+                  key={segment.id}
+                  now={normalizedPercent}
+                  style={{ backgroundColor: segment.color, color: segment.textColor }}
+                  title={tooltipText}
+                  aria-label={tooltipText}
+                  label={
+                    normalizedPercent > 10 ? (
+                      <span style={LABEL_STYLE}>{segment.text}</span>
+                    ) : undefined
+                  }
+                />
+              );
+            })}
           </BootstrapProgressBar>
           {nowPct !== null && liveTime && (
             <div

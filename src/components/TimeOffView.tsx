@@ -377,7 +377,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     let hdayContent: string;
     try {
-      hdayContent = sortEvents(events).map((e) => toLine(e)).join("\n") + "\n";
+      hdayContent =
+        sortEvents(events)
+          .map((e) => toLine(e))
+          .join("\n") + "\n";
     } catch (error) {
       console.error("Failed to serialize events:", error);
       toast.showError("Failed to export events");
@@ -603,7 +606,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setShowBulkDeleteConfirm(false)}
       />
-
     </div>
   );
 }
