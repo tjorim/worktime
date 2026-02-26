@@ -2,10 +2,28 @@
 
 from unittest.mock import Mock
 
+import pytest
 from sqlmodel import SQLModel
 
+from app.database import engine as database_engine
 from app.database.engine import create_engine, get_session
 from app.database.init import init_db
+
+
+@pytest.fixture(autouse=True)
+def reset_database_engine_singleton() -> None:
+    """Reset database engine singleton between tests for isolation."""
+    existing_engine = database_engine._engine
+    database_engine._engine = None
+
+    if existing_engine is not None:
+        existing_engine.dispose()
+
+    yield
+
+    if database_engine._engine is not None:
+        database_engine._engine.dispose()
+    database_engine._engine = None
 
 
 class TestDatabaseEngine:
