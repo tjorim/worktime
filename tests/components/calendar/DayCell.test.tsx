@@ -388,6 +388,24 @@ describe("DayCell", () => {
       const header = screen.getByLabelText(/Working from office/i);
       expect(header).toBeInTheDocument();
     });
+
+    it("shows work location alongside school holiday indicators", () => {
+      const { container } = render(
+        <DayCell
+          {...defaultProps}
+          isWeekend={true}
+          schoolHoliday={{ name: "Winter Break", localName: "Wintervakantie" }}
+          shiftBadge={{ code: "O", label: "Off", isWorking: false }}
+          workLocation={{ location: "home", countryCode: "NL" }}
+        />,
+      );
+
+      expect(screen.getByText("🏫")).toBeInTheDocument();
+      const indicator = container.querySelector(".month-calendar-work-location");
+      expect(indicator).toBeInTheDocument();
+      expect(screen.getByLabelText(/School Holiday: Winter Break/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Working from home/i)).toBeInTheDocument();
+    });
   });
 
   describe("Day Header", () => {
