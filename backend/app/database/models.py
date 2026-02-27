@@ -1,6 +1,6 @@
 """SQLModel database table definitions for Worktime persistence."""
 
-from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
+from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -21,11 +21,11 @@ class User(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False),
     )
     created_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
     updated_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
@@ -50,7 +50,7 @@ class TimeTrackingLabel(SQLModel, table=True):
     name: str
     color: str
     created_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -74,7 +74,7 @@ class TimeTrackingTask(SQLModel, table=True):
     stop_time: dt_datetime | None = None
     includes_break: bool = Field(default=False)
     created_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -94,7 +94,7 @@ class TimeTrackingTemplate(SQLModel, table=True):
     start_time: dt_time
     stop_time: dt_time
     created_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -113,7 +113,7 @@ class WorkLocation(SQLModel, table=True):
     country_code: str = Field(max_length=2)
     label: str | None = None
     created_at: dt_datetime = Field(
-        default_factory=dt_datetime.utcnow,
+        default_factory=lambda: dt_datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 

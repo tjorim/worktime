@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlmodel import Session, col, delete, select
 
@@ -72,7 +72,7 @@ def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
     user = get_user(session, user_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
     session.refresh(user)
