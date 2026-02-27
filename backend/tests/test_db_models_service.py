@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.database.models import TimeTrackingLabel, TimeTrackingTask
 from app.models.db_schemas import (
     LabelCreate,
     TaskCreate,
@@ -131,4 +132,8 @@ def test_work_location_upsert(session: Session) -> None:
 
 def test_template_time_types_can_be_constructed() -> None:
     assert time(8, 30).isoformat() == "08:30:00"
+
+def test_task_label_relationship_back_populates_pairing() -> None:
+    assert TimeTrackingLabel.tasks.property.back_populates == "label"
+    assert TimeTrackingTask.label.property.back_populates == "tasks"
 
