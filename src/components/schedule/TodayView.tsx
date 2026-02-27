@@ -1,4 +1,4 @@
-import { type TouchEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { type TouchEvent, useCallback, useId, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -147,6 +147,128 @@ function TeamCard({
   );
 }
 
+
+function TodayMobileCarousel({
+  todayShifts,
+  myTeam,
+  hasTeams,
+  onTeamClick,
+  scheduleType,
+  isCurrentlyActive,
+}: {
+  todayShifts: ShiftResult[];
+  myTeam: number | null;
+  hasTeams: boolean;
+  onTeamClick?: (teamNumber: number, scheduleType: ScheduleOption | null) => void;
+  scheduleType: ScheduleOption;
+  isCurrentlyActive: (shiftResult: ShiftResult) => boolean;
+}) {
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(() => {
+    const preferredIndex = todayShifts.findIndex((s) => s.teamNumber === myTeam);
+    return preferredIndex >= 0 ? preferredIndex : 0;
+  });
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+
+  const goToPreviousTeam = useCallback(() => {
+    setMobileActiveIndex((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const goToNextTeam = useCallback(() => {
+    setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
+  }, [todayShifts.length]);
+
+  const activeMobileShift = todayShifts[mobileActiveIndex];
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    setTouchStartX(event.changedTouches[0]?.clientX ?? null);
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null) return;
+
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = endX - touchStartX;
+    const swipeThreshold = 40;
+
+    if (Math.abs(deltaX) >= swipeThreshold) {
+      if (deltaX < 0) {
+        goToNextTeam();
+      } else {
+        goToPreviousTeam();
+      }
+    }
+
+    setTouchStartX(null);
+  };
+
+  if (!activeMobileShift) {
+    return null;
+  }
+
+  return (
+    <div
+      className="mobile-team-carousel"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => setTouchStartX(null)}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          goToPreviousTeam();
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          goToNextTeam();
+        }
+      }}
+      role="region"
+      aria-label="Team schedule carousel"
+      tabIndex={0}
+    >
+      <TeamCard
+        shiftResult={activeMobileShift}
+        isMyTeam={myTeam === activeMobileShift.teamNumber}
+        isCurrentlyActive={isCurrentlyActive(activeMobileShift)}
+        hasTeams={hasTeams}
+        onTeamClick={onTeamClick}
+        scheduleType={scheduleType}
+      />
+      <div className="mobile-team-carousel-controls">
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={goToPreviousTeam}
+          aria-label="Show previous team"
+          disabled={mobileActiveIndex === 0}
+        >
+          <i className="bi bi-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div className="mobile-team-carousel-dots" role="group" aria-label="Select team">
+          {todayShifts.map((shiftResult, index) => (
+            <button
+              key={shiftResult.teamNumber}
+              type="button"
+              className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
+              aria-label={`Show Team ${shiftResult.teamNumber}`}
+              aria-current={index === mobileActiveIndex ? "true" : undefined}
+              onClick={() => setMobileActiveIndex(index)}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={goToNextTeam}
+          aria-label="Show next team"
+          disabled={mobileActiveIndex === todayShifts.length - 1}
+        >
+          <i className="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Render a card listing all teams scheduled for the given date, with date navigation and optional per-team interactivity.
  *
@@ -177,16 +299,10 @@ export function TodayView({
   const hasTeams = hasMultipleTeams(viewingScheduleType);
   const isMobile = useIsMobile();
 
-  // Calculate shifts for the viewing schedule (must precede mobileActiveIndex state)
+  // Calculate shifts for the viewing schedule
   const todayShifts = useMemo(() => {
     return getAllTeamsShifts(currentDate, viewingScheduleType);
   }, [currentDate, viewingScheduleType]);
-
-  const [mobileActiveIndex, setMobileActiveIndex] = useState(() => {
-    const preferredIndex = todayShifts.findIndex((s) => s.teamNumber === myTeam);
-    return preferredIndex >= 0 ? preferredIndex : 0;
-  });
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Keyboard shortcuts (only active when this tab is visible)
   const shortcuts = useMemo(
@@ -216,45 +332,6 @@ export function TodayView({
     if (dateString && onDateSelect) {
       onDateSelect(dayjs(dateString));
     }
-  };
-
-  useEffect(() => {
-    const preferredIndex = todayShifts.findIndex(
-      (shiftResult) => shiftResult.teamNumber === myTeam,
-    );
-    setMobileActiveIndex(preferredIndex >= 0 ? preferredIndex : 0);
-  }, [myTeam, todayShifts]);
-
-  const goToPreviousTeam = useCallback(() => {
-    setMobileActiveIndex((prev) => Math.max(0, prev - 1));
-  }, []);
-
-  const goToNextTeam = useCallback(() => {
-    setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
-  }, [todayShifts.length]);
-
-  const activeMobileShift = todayShifts[mobileActiveIndex] ?? todayShifts[0];
-
-  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    setTouchStartX(event.changedTouches[0]?.clientX ?? null);
-  };
-
-  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
-    if (touchStartX === null) return;
-
-    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
-    const deltaX = endX - touchStartX;
-    const swipeThreshold = 40;
-
-    if (Math.abs(deltaX) >= swipeThreshold) {
-      if (deltaX < 0) {
-        goToNextTeam();
-      } else {
-        goToPreviousTeam();
-      }
-    }
-
-    setTouchStartX(null);
   };
 
   return (
@@ -297,66 +374,16 @@ export function TodayView({
         </div>
       </Card.Header>
       <Card.Body>
-        {isMobile && hasTeams && activeMobileShift ? (
-          <div
-            className="mobile-team-carousel"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={() => setTouchStartX(null)}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") {
-                event.preventDefault();
-                goToPreviousTeam();
-              } else if (event.key === "ArrowRight") {
-                event.preventDefault();
-                goToNextTeam();
-              }
-            }}
-            role="region"
-            aria-label="Team schedule carousel"
-            tabIndex={0}
-          >
-            <TeamCard
-              shiftResult={activeMobileShift}
-              isMyTeam={myTeam === activeMobileShift.teamNumber}
-              isCurrentlyActive={isCurrentlyActive(activeMobileShift)}
-              hasTeams={hasTeams}
-              onTeamClick={onTeamClick}
-              scheduleType={scheduleType}
-            />
-            <div className="mobile-team-carousel-controls">
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={goToPreviousTeam}
-                aria-label="Show previous team"
-                disabled={mobileActiveIndex === 0}
-              >
-                <i className="bi bi-chevron-left" aria-hidden="true"></i>
-              </button>
-              <div className="mobile-team-carousel-dots" role="group" aria-label="Select team">
-                {todayShifts.map((shiftResult, index) => (
-                  <button
-                    key={shiftResult.teamNumber}
-                    type="button"
-                    className={clsx("mobile-team-dot", index === mobileActiveIndex && "active")}
-                    aria-label={`Show Team ${shiftResult.teamNumber}`}
-                    aria-current={index === mobileActiveIndex ? "true" : undefined}
-                    onClick={() => setMobileActiveIndex(index)}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={goToNextTeam}
-                aria-label="Show next team"
-                disabled={mobileActiveIndex === todayShifts.length - 1}
-              >
-                <i className="bi bi-chevron-right" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
+        {isMobile && hasTeams ? (
+          <TodayMobileCarousel
+            key={myTeam ?? "no-team"}
+            todayShifts={todayShifts}
+            myTeam={myTeam}
+            hasTeams={hasTeams}
+            onTeamClick={onTeamClick}
+            scheduleType={scheduleType}
+            isCurrentlyActive={isCurrentlyActive}
+          />
         ) : (
           <Row className="g-2">
             {todayShifts.map((shiftResult) => (

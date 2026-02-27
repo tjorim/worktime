@@ -7,6 +7,7 @@ import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsCon
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+import { useIsMobile } from "../../src/hooks/useIsMobile";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 
 vi.mock("../../src/hooks/useIsMobile", () => ({
@@ -68,8 +69,7 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("MainTabs", () => {
-  beforeEach(async () => {
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
+  beforeEach(() => {
     vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
@@ -89,7 +89,6 @@ describe("MainTabs", () => {
 
   it("shows mobile FAB menu and triggers contextual actions", async () => {
     const user = userEvent.setup();
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     const onOpenSettings = vi.fn();
@@ -117,7 +116,6 @@ describe("MainTabs", () => {
 
   it("closes menu with Escape key regardless of focused element", async () => {
     const user = userEvent.setup();
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     renderWithProviders(<MainTabs {...defaultProps} />);
@@ -137,7 +135,6 @@ describe("MainTabs", () => {
 
   it("supports arrow key navigation between menu items", async () => {
     const user = userEvent.setup();
-    const { useIsMobile } = await import("../../src/hooks/useIsMobile");
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     renderWithProviders(<MainTabs {...defaultProps} />);
