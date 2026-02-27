@@ -1,49 +1,6 @@
 # AGENTS.md
 
-Minimal guide for AI coding agents working in this repository.
-
-## 1) Project at a glance
-
-**Worktime** is a React + TypeScript shift planner with local-first storage.
-
-Primary responsibilities (ordered by current practical user value):
-- Time tracking with task support (daily logging, summaries, and workflow visibility)
-- Shift tracking for multiple rosters (`5-shift`, `9-5`, `2-shift`, `weekend-shift`)
-- Time-off management with `.hday` import/export
-- Calendar planning with holiday/payday overlays
-- Team handover/transfer visibility
-- Vacation allowance tracking and yearly statistics
-- Productivity UX support (keyboard shortcuts + onboarding/setup flows)
-- Optional backend-assisted team schedule data for shared-network environments
-
-## 2) Currently implemented product features (high-signal)
-
-- Time tracking with task-level workflows and productivity logging
-- Onboarding flow for schedule + team setup
-- Schedule tab with Today + upcoming views
-- Monthly calendar with shift badges, time-off overlays, holidays, and paydays
-- Transfer view for handover/takeover analysis between teams
-- Time-off tab with CRUD + import/export for `.hday`
-- Vacation statistics and yearly allowance tracking
-- Keyboard shortcuts modal and shortcut-driven navigation/actions
-- Local persistence of user settings and state migrations
-
-When uncertain about feature status, verify in:
-- `README.md`
-- `src/data/changelog.ts`
-
-## 3) Optional/experimental backend (important)
-
-Worktime has an **optional backend integration** for shared team/user data on network storage.
-
-- Frontend remains usable without backend (local-only mode)
-- Backend setup and API details are documented in `backend/README.md`
-- Frontend backend controls live in developer options UI (`src/components/DevOptionsPanel.tsx`)
-- Team schedule API-backed flows are surfaced in `src/components/TeamScheduleView.tsx`
-
-Treat backend features as integration-sensitive: prefer explicit checks and graceful fallback when disconnected.
-
-## 4) Commands you will actually use
+## Commands
 
 ```bash
 npm run dev                # Vite dev server (localhost:8000)
@@ -51,62 +8,29 @@ npm run lint               # oxlint
 npm run format             # oxfmt
 npm run test               # vitest
 npm run build              # production build
-npm run preview            # serve dist/
-npm run generate-changelog # generate CHANGELOG.md from data
-npm run generate-icons     # generate favicon icons
+npm run preview            # serve dist/ — run build first or changes won't appear
+npm run generate-changelog # regenerate CHANGELOG.md from src/data/changelog.ts
+npm run generate-icons     # regenerate icons in public/assets/icons/
 ```
 
-Non-obvious rule:
-- `npm run preview` serves `dist/`, so run `npm run build` first or recent changes will not appear.
+Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.
 
-## 5) Source-of-truth files
+## Source-of-truth files
 
-- **Roster definitions**: `src/data/rosters.ts`
-- **Shift calculation core**: `src/utils/shiftCalculations.ts`
-- **User settings + migrations**: `src/contexts/SettingsContext.tsx`
-- **.hday parser**: `src/lib/hday/parser.ts`
-- **Release notes source**: `src/data/changelog.ts`
+- `src/data/rosters.ts` — roster/schedule definitions
+- `src/utils/shiftCalculations.ts` — core shift logic
+- `src/contexts/SettingsContext.tsx` — user settings and state migrations
+- `src/lib/hday/parser.ts` — .hday parser
+- `src/data/changelog.ts` — release notes source
 
-Generated artifacts:
-- `CHANGELOG.md` is generated; update `src/data/changelog.ts` then run `npm run generate-changelog`
-- Icons in `public/assets/icons/` are generated with `npm run generate-icons`
+## Conventions
 
-## 6) Non-negotiable conventions
+- **American English** spelling in all code, comments, and UI text
+- Lint must pass (`npm run lint`); suppress inline only with a clear explanation
+- **Do not commit automatically** — Jorim handles all commits; only commit when explicitly asked
 
-- Use **American English** spelling in code/comments/UI text
-- Keep lint clean (`npm run lint`)
-- If lint suppression is necessary, keep it local and explain why
+## Testing
 
-## 7) Architecture notes worth knowing
-
-### Multi-roster model
-- Rosters are structured and validated at module load.
-- Every roster uses `referenceDate` + `referenceTeam` anchoring.
-- Shift utilities accept optional `scheduleType`; null/undefined defaults to `5-shift` for backward compatibility.
-
-### User state model
-- localStorage key: `worktime_user_state`
-- State is versioned/migrated in `SettingsContext`
-- On migration failure/missing migration, preserve `rawStateBackup` and set `hasMigrationError` (do not hard-fail)
-
-### `.hday` behavior
-- Round-trip fidelity matters (import then export should preserve semantics)
-- Parser correctness is central to event workflows
-
-## 8) Testing expectations
-
-- Run targeted tests for touched areas first, then broader checks
-- For type-sensitive/cross-cutting changes, run `npm run build` before handoff
-- High-signal tests:
-  - `tests/data/rosters.test.ts`
-  - `tests/utils/shiftCalculations.test.ts`
-  - `tests/lib/hday.test.ts`
-  - `tests/contexts/SettingsContext.test.tsx`
-
-## 9) Practical workflow for agents
-
-1. Identify affected source-of-truth files
-2. Make the smallest coherent change
-3. Run relevant lint/tests/build
-4. Update tests with behavior changes
-5. Keep this file concise and durable; avoid bloated autogenerated-style reference content
+- Run targeted tests for touched files first, then broader checks
+- For type-sensitive or cross-cutting changes, run `npm run build` before handoff
+- High-signal test files: `tests/data/rosters.test.ts`, `tests/utils/shiftCalculations.test.ts`, `tests/lib/hday.test.ts`, `tests/contexts/SettingsContext.test.tsx`
