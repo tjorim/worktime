@@ -10,18 +10,26 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
-from app.models.db_schemas import LabelCreate, TaskCreate, UserCreate, WorkLocationCreate
+from app.models.db_schemas import (
+    LabelCreate,
+    TaskCreate,
+    TemplateCreate,
+    UserCreate,
+    WorkLocationCreate,
+)
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
     create_label,
     create_or_update_work_location,
     create_task,
+    create_template,
     create_user,
     delete_label,
     get_label,
     get_running_task,
     get_task,
+    get_template,
     list_tasks,
 )
 
@@ -175,3 +183,24 @@ def test_get_task_is_scoped_to_user(session: Session) -> None:
 
     with pytest.raises(NotFoundError):
         get_task(session, other.id, task.id)
+
+
+def test_get_template_is_scoped_to_user(session: Session) -> None:
+    owner = create_user(session, UserCreate(username="tpl_owner", display_name="Tpl Owner"))
+    other = create_user(session, UserCreate(username="tpl_other", display_name="Tpl Other"))
+
+    template = create_template(
+        session,
+        owner.id,
+        TemplateCreate(
+            text="Reusable",
+            start_time=time(9, 0),
+            stop_time=time(17, 0),
+        ),
+    )
+
+    fetched = get_template(session, owner.id, template.id)
+    assert fetched.id == template.id
+
+    with pytest.raises(NotFoundError):
+        get_template(session, other.id, template.id)

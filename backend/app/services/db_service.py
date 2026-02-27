@@ -267,9 +267,10 @@ def create_template(session: Session, user_id: int, payload: TemplateCreate) -> 
     return template
 
 
-def get_template(session: Session, template_id: str) -> TimeTrackingTemplate:
+def get_template(session: Session, user_id: int, template_id: str) -> TimeTrackingTemplate:
+    """Get a template scoped to a specific user to prevent cross-user access."""
     template = session.get(TimeTrackingTemplate, template_id)
-    if template is None:
+    if template is None or template.user_id != user_id:
         raise NotFoundError("template not found")
     return template
 
@@ -287,9 +288,7 @@ def list_templates_for_user(session: Session, user_id: int) -> list[TimeTracking
 def update_template(
     session: Session, user_id: int, template_id: str, payload: TemplateUpdate
 ) -> TimeTrackingTemplate:
-    template = get_template(session, template_id)
-    if template.user_id != user_id:
-        raise NotFoundError("template not found")
+    template = get_template(session, user_id, template_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
@@ -304,9 +303,7 @@ def update_template(
 
 
 def delete_template(session: Session, user_id: int, template_id: str) -> None:
-    template = get_template(session, template_id)
-    if template.user_id != user_id:
-        raise NotFoundError("template not found")
+    template = get_template(session, user_id, template_id)
     session.delete(template)
     session.commit()
 
