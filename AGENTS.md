@@ -46,12 +46,14 @@ Treat backend features as integration-sensitive: prefer explicit checks and grac
 ## 4) Commands you will actually use
 
 ```bash
-npm run dev      # Vite dev server (localhost:8000)
-npm run lint     # oxlint
-npm run format   # oxfmt
-npm run test     # vitest
-npm run build    # production build
-npm run preview  # serve dist/
+npm run dev                # Vite dev server (localhost:8000)
+npm run lint               # oxlint
+npm run format             # oxfmt
+npm run test               # vitest
+npm run build              # production build
+npm run preview            # serve dist/
+npm run generate-changelog # generate CHANGELOG.md from data
+npm run generate-icons     # generate favicon icons
 ```
 
 Non-obvious rule:
