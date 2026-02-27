@@ -1,4 +1,4 @@
-import { type TouchEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { type TouchEvent, useCallback, useId, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
@@ -169,12 +169,6 @@ function TodayMobileCarousel({
   });
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  useEffect(() => {
-    const preferredIndex = todayShifts.findIndex(
-      (shiftResult) => shiftResult.teamNumber === myTeam,
-    );
-    setMobileActiveIndex(preferredIndex >= 0 ? preferredIndex : 0);
-  }, [myTeam, todayShifts]);
 
   const goToPreviousTeam = useCallback(() => {
     setMobileActiveIndex((prev) => Math.max(0, prev - 1));
@@ -382,6 +376,7 @@ export function TodayView({
       <Card.Body>
         {isMobile && hasTeams ? (
           <TodayMobileCarousel
+            key={myTeam ?? "no-team"}
             todayShifts={todayShifts}
             myTeam={myTeam}
             hasTeams={hasTeams}
