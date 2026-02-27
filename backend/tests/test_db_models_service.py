@@ -21,6 +21,7 @@ from app.services.db_service import (
     delete_label,
     get_label,
     get_running_task,
+    get_task,
     list_tasks,
 )
 
@@ -152,3 +153,25 @@ def test_get_label_is_scoped_to_user(session: Session) -> None:
 
     with pytest.raises(NotFoundError):
         get_label(session, other.id, label.id)
+
+
+def test_get_task_is_scoped_to_user(session: Session) -> None:
+    owner = create_user(session, UserCreate(username="task_owner", display_name="Task Owner"))
+    other = create_user(session, UserCreate(username="task_other", display_name="Task Other"))
+
+    task = create_task(
+        session,
+        owner.id,
+        TaskCreate(
+            text="Private task",
+            start_time=datetime(2026, 5, 1, 9, 0),
+            stop_time=None,
+            includes_break=False,
+        ),
+    )
+
+    fetched = get_task(session, owner.id, task.id)
+    assert fetched.id == task.id
+
+    with pytest.raises(NotFoundError):
+        get_task(session, other.id, task.id)

@@ -191,9 +191,10 @@ def create_task(session: Session, user_id: int, payload: TaskCreate) -> TimeTrac
     return task
 
 
-def get_task(session: Session, task_id: str) -> TimeTrackingTask:
+def get_task(session: Session, user_id: int, task_id: str) -> TimeTrackingTask:
+    """Get a task scoped to a specific user to prevent cross-user access."""
     task = session.get(TimeTrackingTask, task_id)
-    if task is None:
+    if task is None or task.user_id != user_id:
         raise NotFoundError("task not found")
     return task
 
@@ -227,9 +228,7 @@ def get_running_task(session: Session, user_id: int) -> TimeTrackingTask | None:
 
 
 def update_task(session: Session, user_id: int, task_id: str, payload: TaskUpdate) -> TimeTrackingTask:
-    task = get_task(session, task_id)
-    if task.user_id != user_id:
-        raise NotFoundError("task not found")
+    task = get_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
@@ -250,9 +249,7 @@ def update_task(session: Session, user_id: int, task_id: str, payload: TaskUpdat
 
 
 def delete_task(session: Session, user_id: int, task_id: str) -> None:
-    task = get_task(session, task_id)
-    if task.user_id != user_id:
-        raise NotFoundError("task not found")
+    task = get_task(session, user_id, task_id)
     session.delete(task)
     session.commit()
 
