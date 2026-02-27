@@ -184,7 +184,7 @@ function TodayMobileCarousel({
     setMobileActiveIndex((prev) => Math.min(todayShifts.length - 1, prev + 1));
   }, [todayShifts.length]);
 
-  const activeMobileShift = todayShifts[mobileActiveIndex] ?? todayShifts[0];
+  const activeMobileShift = todayShifts[mobileActiveIndex];
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     setTouchStartX(event.changedTouches[0]?.clientX ?? null);
