@@ -10,21 +10,18 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
-from app.models.db_schemas import (
-    LabelCreate,
-    TaskCreate,
-    UserCreate,
-    WorkLocationCreate
-)
+from app.models.db_schemas import LabelCreate, TaskCreate, UserCreate, WorkLocationCreate
 from app.services.db_service import (
     ConflictError,
+    NotFoundError,
     create_label,
     create_or_update_work_location,
     create_task,
     create_user,
     delete_label,
+    get_label,
     get_running_task,
-    list_tasks
+    list_tasks,
 )
 
 
@@ -133,6 +130,7 @@ def test_work_location_upsert(session: Session) -> None:
 def test_template_time_types_can_be_constructed() -> None:
     assert time(8, 30).isoformat() == "08:30:00"
 
+
 def test_task_label_relationship_back_populates_pairing() -> None:
     assert TimeTrackingLabel.tasks.property.back_populates == "label"
     assert TimeTrackingTask.label.property.back_populates == "tasks"
@@ -142,3 +140,15 @@ def test_task_label_relationship_back_populates_pairing() -> None:
 def test_template_label_relationship_back_populates_pairing() -> None:
     assert TimeTrackingLabel.templates.property.back_populates == "label"
     assert TimeTrackingTemplate.label.property.back_populates == "templates"
+
+
+def test_get_label_is_scoped_to_user(session: Session) -> None:
+    owner = create_user(session, UserCreate(username="owner", display_name="Owner"))
+    other = create_user(session, UserCreate(username="other", display_name="Other"))
+    label = create_label(session, owner.id, LabelCreate(name="Private", color="#123456"))
+
+    fetched = get_label(session, owner.id, label.id)
+    assert fetched.id == label.id
+
+    with pytest.raises(NotFoundError):
+        get_label(session, other.id, label.id)

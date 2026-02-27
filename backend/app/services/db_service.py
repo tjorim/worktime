@@ -122,11 +122,9 @@ def create_label(session: Session, user_id: int, payload: LabelCreate) -> TimeTr
     return label
 
 
-def get_label(session: Session, label_id: str) -> TimeTrackingLabel:
-    label = session.get(TimeTrackingLabel, label_id)
-    if label is None:
-        raise NotFoundError("label not found")
-    return label
+def get_label(session: Session, user_id: int, label_id: str) -> TimeTrackingLabel:
+    """Get a label scoped to a specific user to prevent cross-user access."""
+    return _ensure_label_for_user(session, user_id, label_id)
 
 
 def list_labels_for_user(session: Session, user_id: int) -> list[TimeTrackingLabel]:
