@@ -64,7 +64,9 @@ def get_user_by_username(session: Session, username: str) -> User | None:
     return session.exec(select(User).where(User.username == username)).first()
 
 
-def list_users(session: Session) -> list[User]:
+def list_users(session: Session, *, is_admin: bool = False) -> list[User]:
+    if not is_admin:
+        raise ValidationError("listing all users requires admin scope")
     return list(session.exec(select(User).order_by(User.id)).all())
 
 

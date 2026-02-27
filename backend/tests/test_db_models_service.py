@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 
 import pytest
-from pydantic import ValidationError
+from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -20,6 +20,7 @@ from app.models.db_schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
+    ValidationError as ServiceValidationError,
     create_label,
     create_or_update_work_location,
     create_task,
@@ -30,6 +31,7 @@ from app.services.db_service import (
     get_running_task,
     get_task,
     get_template,
+    list_users,
     list_tasks,
 )
 
@@ -47,14 +49,25 @@ def session() -> Session:
 
 
 def test_schema_validates_color_and_country_code() -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(PydanticValidationError):
         LabelCreate(name="Client", color="#12")
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(PydanticValidationError):
         WorkLocationCreate(
             date=date(2026, 2, 26),
             country_code="NET",
         )
+
+
+def test_list_users_requires_admin_scope(session: Session) -> None:
+    create_user(session, UserCreate(username="alice-admin-test", display_name="Alice"))
+    create_user(session, UserCreate(username="bob-admin-test", display_name="Bob"))
+
+    with pytest.raises(ServiceValidationError):
+        list_users(session)
+
+    users = list_users(session, is_admin=True)
+    assert len(users) == 2
 
 
 def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
