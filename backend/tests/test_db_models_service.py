@@ -53,6 +53,9 @@ def test_schema_validates_color_and_country_code() -> None:
         LabelCreate(name="Client", color="#12")
 
     with pytest.raises(PydanticValidationError):
+        LabelCreate(name="Client", color="#12GG34")
+
+    with pytest.raises(PydanticValidationError):
         WorkLocationCreate(
             date=date(2026, 2, 26),
             country_code="NET",

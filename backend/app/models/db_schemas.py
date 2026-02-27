@@ -47,7 +47,9 @@ class LabelCreate(BaseModel):
         if len(value) != 7 or not value.startswith("#"):
             raise ValueError("color must be in #RRGGBB format")
         hex_part = value[1:]
-        if not all(ch in "0123456789abcdefABCDEF" for ch in hex_part):
+        try:
+            int(hex_part, 16)
+        except ValueError:
             raise ValueError("color must be in #RRGGBB format")
         return value.upper()
 
