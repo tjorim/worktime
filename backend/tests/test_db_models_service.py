@@ -87,11 +87,11 @@ def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
         )
 
 
-def test_delete_label_cascades_to_tasks(session: Session) -> None:
+def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
     user = create_user(session, UserCreate(username="bob", display_name="Bob"))
     label = create_label(session, user.id, LabelCreate(name="Ops", color="#445566"))
 
-    create_task(
+    task = create_task(
         session,
         user.id,
         TaskCreate(
@@ -102,11 +102,27 @@ def test_delete_label_cascades_to_tasks(session: Session) -> None:
             includes_break=False,
         ),
     )
+    template = create_template(
+        session,
+        user.id,
+        TemplateCreate(
+            text="Deploy template",
+            label_id=label.id,
+            start_time=time(8, 0),
+            stop_time=time(16, 0),
+        ),
+    )
 
     delete_label(session, user.id, label.id)
 
-    assert list_tasks(session, user_id=user.id) == []
+    tasks = list_tasks(session, user_id=user.id)
+    assert len(tasks) == 1
+    assert tasks[0].id == task.id
+    assert tasks[0].label_id is None
     assert get_running_task(session, user.id) is None
+
+    persisted_template = get_template(session, user.id, template.id)
+    assert persisted_template.label_id is None
 
 
 def test_work_location_upsert(session: Session) -> None:

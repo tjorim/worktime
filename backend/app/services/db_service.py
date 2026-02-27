@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete, select, update
 
 from app.database.models import (
     TimeTrackingLabel,
@@ -163,8 +163,16 @@ def update_label(session: Session, user_id: int, label_id: str, payload: LabelUp
 def delete_label(session: Session, user_id: int, label_id: str) -> None:
     label = _ensure_label_for_user(session, user_id, label_id)
 
-    session.exec(delete(TimeTrackingTask).where(TimeTrackingTask.label_id == label_id))
-    session.exec(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.label_id == label_id))
+    session.exec(
+        update(TimeTrackingTask)
+        .where(TimeTrackingTask.label_id == label_id)
+        .values(label_id=None)
+    )
+    session.exec(
+        update(TimeTrackingTemplate)
+        .where(TimeTrackingTemplate.label_id == label_id)
+        .values(label_id=None)
+    )
     session.delete(label)
     session.commit()
 
