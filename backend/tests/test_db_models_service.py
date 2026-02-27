@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.database.models import TimeTrackingLabel, TimeTrackingTask
+from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
 from app.models.db_schemas import (
     LabelCreate,
     TaskCreate,
@@ -137,3 +137,8 @@ def test_task_label_relationship_back_populates_pairing() -> None:
     assert TimeTrackingLabel.tasks.property.back_populates == "label"
     assert TimeTrackingTask.label.property.back_populates == "tasks"
 
+
+
+def test_template_label_relationship_back_populates_pairing() -> None:
+    assert TimeTrackingLabel.templates.property.back_populates == "label"
+    assert TimeTrackingTemplate.label.property.back_populates == "templates"
