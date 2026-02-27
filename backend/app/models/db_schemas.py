@@ -44,13 +44,12 @@ class LabelCreate(BaseModel):
     @field_validator("color")
     @classmethod
     def validate_hex_color(cls, value: str) -> str:
-        if len(value) != 7 or not value.startswith("#"):
+        if not value.startswith("#") or len(value) != 7:
             raise ValueError("color must be in #RRGGBB format")
-        hex_part = value[1:]
         try:
-            int(hex_part, 16)
-        except ValueError:
-            raise ValueError("color must be in #RRGGBB format")
+            int(value[1:], 16)
+        except ValueError as error:
+            raise ValueError("color must be in #RRGGBB format") from error
         return value.upper()
 
 
