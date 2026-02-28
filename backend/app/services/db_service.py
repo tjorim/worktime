@@ -40,6 +40,10 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
+ADMIN_SCOPE_REQUIRED_MSG = "listing all users requires admin scope"
+MAX_USER_LIST_LIMIT = 1000
+
+
 def _get_non_nullable_model_fields(model: type) -> set[str]:
     return {
         column.name
@@ -81,7 +85,13 @@ def list_users(
     limit: int = 100,
 ) -> tuple[list[User], int]:
     if not is_admin:
-        raise ValidationError("listing all users requires admin scope")
+        raise ValidationError(ADMIN_SCOPE_REQUIRED_MSG)
+    if offset < 0:
+        raise ValidationError(f"offset must be >= 0, got: {offset}")
+    if limit < 1:
+        raise ValidationError(f"limit must be >= 1, got: {limit}")
+    if limit > MAX_USER_LIST_LIMIT:
+        raise ValidationError(f"limit must be <= {MAX_USER_LIST_LIMIT}, got: {limit}")
 
     total = int(session.exec(select(sql_func.count()).select_from(User)).one())
     users = list(

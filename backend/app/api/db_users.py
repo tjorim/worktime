@@ -30,8 +30,12 @@ router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user_endpoint(
     payload: UserCreate,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserRead:
+    if not principal.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         user = create_user(session, payload)
     except ConflictError as error:
