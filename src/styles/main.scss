@@ -26,7 +26,7 @@
 @use "calendar";
 @use "shifts";
 
-/* Frappe Gantt */
+/* Frappe Gantt (CSS must be imported separately when JS is bundled via ESM) */
 @import "../../node_modules/frappe-gantt/dist/frappe-gantt.css";
 
 /* Bootstrap Icons */

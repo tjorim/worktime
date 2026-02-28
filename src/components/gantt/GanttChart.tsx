@@ -40,6 +40,8 @@ export function GanttChart({
     let didCancel = false;
 
     const initGantt = async () => {
+      // In the Vite build we load the Gantt JS via ESM import, so no standalone
+      // <script src="frappe-gantt.umd.js"> tag is needed.
       const { default: Gantt } = await import("frappe-gantt");
       if (didCancel) {
         return;
