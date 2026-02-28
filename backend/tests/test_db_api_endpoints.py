@@ -341,12 +341,14 @@ def test_work_location_endpoints() -> None:
         )
         assert list_response.status_code == 200
         assert list_response.json()["total"] == 1
+        assert "X-Db-Query-Ms" in list_response.headers
 
         by_date_response = client.get(
             f"/v1/db/work-locations/2026-01-02?user_id={user_id}",
             headers=headers,
         )
         assert by_date_response.status_code == 200
+        assert "X-Db-Query-Ms" in by_date_response.headers
 
         delete_response = client.delete(
             f"/v1/db/work-locations/?user_id={user_id}&date=2026-01-02",

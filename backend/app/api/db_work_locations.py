@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from app.api.auth import get_authenticated_user_id, require_user_match
@@ -22,6 +23,7 @@ from app.services.db_service import (
     get_work_location,
     list_work_locations,
 )
+from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/v1/db/work-locations", tags=["Database Work Locations"])
 
@@ -52,17 +54,25 @@ def list_work_locations_endpoint(
     start_date: date | None = None,
     end_date: date | None = None,
     session: Session = Depends(get_session),
-) -> WorkLocationListResponse:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
-    locations = list_work_locations(
-        session,
-        user_id=user_id,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    return WorkLocationListResponse(
+    timings: dict[str, float] = {}
+    with time_operation("query", timings):
+        locations = list_work_locations(
+            session,
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    response = WorkLocationListResponse(
         items=[WorkLocationRead.model_validate(item, from_attributes=True) for item in locations],
         total=len(locations),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=response.model_dump(mode="json"),
+        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
     )
 
 
@@ -72,14 +82,21 @@ def get_work_location_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
-) -> WorkLocationRead:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
+    timings: dict[str, float] = {}
     try:
-        location = get_work_location(session, user_id, value_date)
+        with time_operation("query", timings):
+            location = get_work_location(session, user_id, value_date)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
-    return WorkLocationRead.model_validate(location, from_attributes=True)
+    response = WorkLocationRead.model_validate(location, from_attributes=True)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=response.model_dump(mode="json"),
+        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+    )
 
 
 @router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
