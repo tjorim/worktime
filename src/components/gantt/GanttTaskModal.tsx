@@ -45,11 +45,22 @@ function createInitialValue(task?: GanttTask): FormState {
   };
 }
 
-function parseDeps(dependencies?: string): string[] {
-  return (dependencies ?? "")
-    .split(",")
-    .map((d) => d.trim())
-    .filter(Boolean);
+function parseDeps(dependencies?: unknown): string[] {
+  if (typeof dependencies === "string") {
+    return dependencies
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
+  }
+
+  if (Array.isArray(dependencies)) {
+    return dependencies
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
 export function GanttTaskModal({
