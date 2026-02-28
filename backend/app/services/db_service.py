@@ -39,6 +39,14 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
+def _get_non_nullable_model_fields(model: type) -> set[str]:
+    return {
+        column.name
+        for column in model.__table__.columns
+        if not column.nullable and not column.primary_key
+    }
+
+
 # User operations
 
 def create_user(session: Session, payload: UserCreate) -> User:
@@ -73,9 +81,10 @@ def list_users(session: Session, *, is_admin: bool = False) -> list[User]:
 def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
     user = get_user(session, user_id)
     data = payload.model_dump(exclude_unset=True)
-    for required_field in ("display_name", "settings"):
-        if required_field in data and data[required_field] is None:
-            raise ValidationError(f"{required_field} cannot be null")
+    non_nullable_fields = _get_non_nullable_model_fields(User)
+    for field, value in data.items():
+        if field in non_nullable_fields and value is None:
+            raise ValidationError(f"{field} cannot be null")
 
     for field, value in data.items():
         setattr(user, field, value)
