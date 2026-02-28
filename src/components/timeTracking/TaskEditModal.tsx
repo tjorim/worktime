@@ -51,6 +51,11 @@ export function TaskEditModal({
     return stop.diff(start, "minute") < BREAK_DURATION_MINUTES;
   }, [value.start, value.stop]);
 
+  const selectedLabelOption = useMemo(() => {
+    const selected = labels.find((l) => l.id === value.label);
+    return selected ? { value: selected.id, label: selected.name } : null;
+  }, [labels, value.label]);
+
   return (
     <Modal show={show} onHide={onClose} centered>
       <Modal.Header closeButton>
@@ -91,11 +96,7 @@ export function TaskEditModal({
               inputId="editTaskLabel"
               placeholder="Select a label"
               options={labels.map((l) => ({ value: l.id, label: l.name }))}
-              value={
-                labels.find((l) => l.id === value.label)
-                  ? { value: value.label, label: labels.find((l) => l.id === value.label)!.name }
-                  : null
-              }
+              value={selectedLabelOption}
               onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
               classNames={bootstrapSelectClassNames}
             />

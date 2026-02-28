@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -38,6 +39,10 @@ export function TemplateModal({
   const isLabelSelectionDisabled = labels.length === 0;
   const labelExists = labels.some((l) => l.id === value.label);
   const isSubmitDisabled = isLabelSelectionDisabled || !value.label || !labelExists;
+  const selectedLabelOption = useMemo(() => {
+    const selected = labels.find((l) => l.id === value.label);
+    return selected ? { value: selected.id, label: selected.name } : null;
+  }, [labels, value.label]);
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -76,11 +81,7 @@ export function TemplateModal({
               placeholder={isLabelSelectionDisabled ? "Add labels first" : "Select a label"}
               aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
               options={labels.map((l) => ({ value: l.id, label: l.name }))}
-              value={
-                labels.find((l) => l.id === value.label)
-                  ? { value: value.label, label: labels.find((l) => l.id === value.label)!.name }
-                  : null
-              }
+              value={selectedLabelOption}
               onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
               classNames={bootstrapSelectClassNames}
             />
