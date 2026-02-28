@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
 import type { GanttTask } from "../../types/gantt";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -15,6 +16,7 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [enableHorizontalScroll, setEnableHorizontalScroll] = useState(true);
 
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
 
@@ -71,19 +73,29 @@ export function GanttView() {
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <ButtonGroup aria-label="Select Gantt chart scale">
-          {GANTT_VIEW_MODES.map((mode) => (
-            <Button
-              key={mode}
-              variant={viewMode === mode ? "primary" : "outline-primary"}
-              size="sm"
-              aria-pressed={viewMode === mode}
-              onClick={() => setViewMode(mode)}
-            >
-              {mode}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <ButtonGroup aria-label="Select Gantt chart scale">
+            {GANTT_VIEW_MODES.map((mode) => (
+              <Button
+                key={mode}
+                variant={viewMode === mode ? "primary" : "outline-primary"}
+                size="sm"
+                aria-pressed={viewMode === mode}
+                onClick={() => setViewMode(mode)}
+              >
+                {mode}
+              </Button>
+            ))}
+          </ButtonGroup>
+
+          <Form.Check
+            type="switch"
+            id="gantt-horizontal-scroll"
+            label="Horizontal scroll"
+            checked={enableHorizontalScroll}
+            onChange={(event) => setEnableHorizontalScroll(event.target.checked)}
+          />
+        </div>
 
         <Button size="sm" onClick={handleAddTask}>
           <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
@@ -97,6 +109,7 @@ export function GanttView() {
         onTaskClick={handleTaskClick}
         onDateChange={handleDateChange}
         onProgressChange={handleProgressChange}
+        enableHorizontalScroll={enableHorizontalScroll}
       />
 
       <GanttTaskModal

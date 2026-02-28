@@ -11,6 +11,7 @@ interface GanttChartProps {
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
+  enableHorizontalScroll?: boolean;
 }
 
 export function GanttChart({
@@ -19,6 +20,7 @@ export function GanttChart({
   onTaskClick,
   onDateChange,
   onProgressChange,
+  enableHorizontalScroll = true,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
@@ -94,7 +96,14 @@ export function GanttChart({
     );
   }
 
-  return <div ref={containerRef} className="border rounded bg-body" />;
+  return (
+    <div
+      className={`border rounded bg-body ${enableHorizontalScroll ? "overflow-auto" : "overflow-hidden"}`}
+      data-testid="gantt-scroll-container"
+    >
+      <div ref={containerRef} />
+    </div>
+  );
 }
 
 export type { GanttViewMode };
