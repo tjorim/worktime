@@ -4,6 +4,10 @@ import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "../types
 
 const GANTT_STORAGE_KEY = "worktime_gantt_tasks";
 
+type NewGanttTaskInput = Omit<RawGanttTask, "id">;
+
+type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;
+
 function toTask(raw: RawGanttTask): GanttTask {
   return {
     ...raw,
@@ -17,7 +21,7 @@ export function useGanttTasks() {
   const tasks = useMemo(() => rawTasks.filter(isValidRawGanttTask).map(toTask), [rawTasks]);
 
   const addTask = useCallback(
-    (payload: Omit<GanttTask, "id">) => {
+    (payload: NewGanttTaskInput) => {
       const createdTask: RawGanttTask = {
         id: crypto.randomUUID(),
         name: payload.name,
@@ -36,7 +40,7 @@ export function useGanttTasks() {
   );
 
   const updateTask = useCallback(
-    (id: string, changes: Partial<Omit<GanttTask, "id">>) => {
+    (id: string, changes: GanttTaskChanges) => {
       setRawTasks((prev) =>
         prev.map((raw) => {
           if (raw.id !== id) {

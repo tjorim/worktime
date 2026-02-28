@@ -5,19 +5,13 @@ export interface GanttTask {
   name: string;
   start: string;
   end: string;
-  progress?: number;
+  progress: number;
   dependencies?: string;
   notes?: string;
 }
 
-export type RawGanttTask = {
-  id: string;
-  name: string;
-  start: string;
-  end: string;
+export type RawGanttTask = Omit<GanttTask, "progress"> & {
   progress?: number;
-  dependencies?: string;
-  notes?: string;
 };
 
 function isValidProgress(value: unknown): value is number {
