@@ -884,7 +884,7 @@ migrations are disabled by default.
 
 To enable them in a development environment, set the following environment variable:
 
-```
+```bash
 AUTO_MIGRATE=true
 ```
 

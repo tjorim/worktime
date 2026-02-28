@@ -82,3 +82,21 @@ def test_me_without_token_returns_401(
 ) -> None:
     response = db_client.get("/v1/auth/me")
     assert response.status_code == 401
+
+
+def test_login_rate_limit_returns_429_after_repeated_failures(
+    db_client: TestClient,
+) -> None:
+    for _ in range(5):
+        response = db_client.post(
+            "/v1/auth/token",
+            json={"username": "throttle-user", "password": "wrong-password"},
+        )
+        assert response.status_code in (401, 429)
+
+    limited_response = db_client.post(
+        "/v1/auth/token",
+        json={"username": "throttle-user", "password": "wrong-password"},
+    )
+    assert limited_response.status_code == 429
+    assert "Retry-After" in limited_response.headers
