@@ -225,6 +225,31 @@ def test_db_time_tracking_endpoints() -> None:
         session.close()
 
 
+def test_work_location_endpoints_require_auth_and_user_match() -> None:
+    client, session = _build_client()
+    try:
+        owner_id = client.post(
+            "/v1/db/users/",
+            json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}},
+        ).json()["id"]
+        other_id = client.post(
+            "/v1/db/users/",
+            json={"username": "loc-other", "display_name": "Location Other", "settings": {}},
+        ).json()["id"]
+
+        unauthenticated = client.get(f"/v1/db/work-locations/?user_id={owner_id}")
+        assert unauthenticated.status_code == 401
+
+        forbidden = client.get(
+            f"/v1/db/work-locations/?user_id={owner_id}",
+            headers=_auth_headers(other_id),
+        )
+        assert forbidden.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+        session.close()
+
+
 def test_work_location_endpoints() -> None:
     client, session = _build_client()
     try:
@@ -232,10 +257,12 @@ def test_work_location_endpoints() -> None:
             "/v1/db/users/",
             json={"username": "loc-user", "display_name": "Location User", "settings": {}},
         ).json()["id"]
+        headers = _auth_headers(user_id)
 
         create_response = client.post(
             f"/v1/db/work-locations/?user_id={user_id}",
             json={"date": "2026-01-02", "country_code": "nl", "label": "Home"},
+            headers=headers,
         )
         assert create_response.status_code == 201
         assert create_response.json()["country_code"] == "NL"
@@ -243,30 +270,48 @@ def test_work_location_endpoints() -> None:
         update_response = client.post(
             f"/v1/db/work-locations/?user_id={user_id}",
             json={"date": "2026-01-02", "country_code": "BE", "label": "Client"},
+            headers=headers,
         )
         assert update_response.status_code == 201
         assert update_response.json()["label"] == "Client"
 
         list_response = client.get(
-            f"/v1/db/work-locations/?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03"
+            f"/v1/db/work-locations/?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03",
+            headers=headers,
         )
         assert list_response.status_code == 200
         assert list_response.json()["total"] == 1
 
-        by_date_response = client.get(f"/v1/db/work-locations/2026-01-02?user_id={user_id}")
+        by_date_response = client.get(
+            f"/v1/db/work-locations/2026-01-02?user_id={user_id}",
+            headers=headers,
+        )
         assert by_date_response.status_code == 200
 
-        delete_response = client.delete(f"/v1/db/work-locations/?user_id={user_id}&date=2026-01-02")
+        delete_response = client.delete(
+            f"/v1/db/work-locations/?user_id={user_id}&date=2026-01-02",
+            headers=headers,
+        )
         assert delete_response.status_code == 204
 
-        missing_response = client.get(f"/v1/db/work-locations/2026-01-02?user_id={user_id}")
+        missing_response = client.get(
+            f"/v1/db/work-locations/2026-01-02?user_id={user_id}",
+            headers=headers,
+        )
         assert missing_response.status_code == 404
 
         invalid_country_response = client.post(
             f"/v1/db/work-locations/?user_id={user_id}",
             json={"date": "2026-01-03", "country_code": "ZZ", "label": None},
+            headers=headers,
         )
         assert invalid_country_response.status_code == 422
+
+        missing_body_response = client.post(
+            f"/v1/db/work-locations/?user_id={user_id}",
+            headers=headers,
+        )
+        assert missing_body_response.status_code == 422
     finally:
         app.dependency_overrides.clear()
         session.close()
