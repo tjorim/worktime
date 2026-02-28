@@ -92,7 +92,7 @@ def test_login_rate_limit_returns_429_after_repeated_failures(
             "/v1/auth/token",
             json={"username": "throttle-user", "password": "wrong-password"},
         )
-        assert response.status_code in (401, 429)
+        assert response.status_code == 401
 
     limited_response = db_client.post(
         "/v1/auth/token",

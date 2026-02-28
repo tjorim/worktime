@@ -90,13 +90,7 @@ def login(
     try:
         user = authenticate_user(session, payload.username, payload.password)
     except ValidationError as error:
-        retry_after = rate_limiter.register_failure(throttle_key)
-        if rate_limiter.is_limited(throttle_key) is not None:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many login attempts. Please try again later.",
-                headers={"Retry-After": str(retry_after)},
-            ) from error
+        rate_limiter.register_failure(throttle_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
