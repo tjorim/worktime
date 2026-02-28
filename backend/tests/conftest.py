@@ -83,3 +83,30 @@ def auth_headers() -> Callable[..., dict[str, str]]:
         return {"Authorization": f"Bearer {token}"}
 
     return _headers
+
+@pytest.fixture()
+def create_user_factory() -> Callable[..., int]:
+    """Create users through the DB user endpoint for integration tests."""
+
+    def _create_user(
+        db_client: TestClient,
+        headers: dict[str, str],
+        username: str,
+        *,
+        display_name: str | None = None,
+        settings_payload: dict | None = None,
+    ) -> int:
+        response = db_client.post(
+            "/v1/db/users/",
+            json={
+                "username": username,
+                "display_name": display_name or username.title(),
+                "settings": settings_payload or {},
+            },
+            headers=headers,
+        )
+        assert response.status_code == 201
+        return response.json()["id"]
+
+    return _create_user
+

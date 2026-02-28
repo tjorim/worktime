@@ -7,23 +7,15 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 
 
-def _create_user(db_client: TestClient, headers: dict[str, str], username: str) -> int:
-    response = db_client.post(
-        "/v1/db/users/",
-        json={"username": username, "display_name": username.title(), "settings": {}},
-        headers=headers,
-    )
-    assert response.status_code == 201
-    return response.json()["id"]
-
 
 def test_work_location_upsert_and_filtering(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
-    owner_id = _create_user(db_client, admin_headers, "loc-owner")
-    other_id = _create_user(db_client, admin_headers, "loc-other")
+    owner_id = create_user_factory(db_client, admin_headers, "loc-owner")
+    other_id = create_user_factory(db_client, admin_headers, "loc-other")
 
     owner_headers = auth_headers(owner_id)
     other_headers = auth_headers(other_id)
@@ -71,9 +63,10 @@ def test_work_location_upsert_and_filtering(
 def test_work_location_country_code_validation(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
-    user_id = _create_user(db_client, admin_headers, "loc-validation")
+    user_id = create_user_factory(db_client, admin_headers, "loc-validation")
     headers = auth_headers(user_id)
 
     invalid_country_code = db_client.post(

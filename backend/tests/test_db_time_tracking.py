@@ -8,22 +8,14 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 
 
-def _create_user(db_client: TestClient, headers: dict[str, str], username: str) -> int:
-    response = db_client.post(
-        "/v1/db/users/",
-        json={"username": username, "display_name": username.title(), "settings": {}},
-        headers=headers,
-    )
-    assert response.status_code == 201
-    return response.json()["id"]
-
 
 def test_label_crud_and_cascade_delete(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
-    user_id = _create_user(db_client, admin_headers, "labels-owner")
+    user_id = create_user_factory(db_client, admin_headers, "labels-owner")
     headers = auth_headers(user_id)
 
     label_response = db_client.post(
@@ -70,10 +62,11 @@ def test_label_crud_and_cascade_delete(
 def test_task_constraints_and_filtering(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
-    user_id = _create_user(db_client, admin_headers, "task-owner")
-    other_user_id = _create_user(db_client, admin_headers, "task-other")
+    user_id = create_user_factory(db_client, admin_headers, "task-owner")
+    other_user_id = create_user_factory(db_client, admin_headers, "task-other")
 
     headers = auth_headers(user_id)
     other_headers = auth_headers(other_user_id)
@@ -182,9 +175,10 @@ def test_task_constraints_and_filtering(
 def test_template_crud(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
-    user_id = _create_user(db_client, admin_headers, "template-owner")
+    user_id = create_user_factory(db_client, admin_headers, "template-owner")
     headers = auth_headers(user_id)
 
     label_response = db_client.post(
