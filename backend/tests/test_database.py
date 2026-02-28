@@ -60,6 +60,7 @@ class TestDatabaseInit:
 
     def test_init_db_runs_alembic_upgrade(self, monkeypatch):
         """init_db should run alembic upgrade to head."""
+        monkeypatch.setenv("AUTO_MIGRATE", "true")
         upgrade_mock = Mock()
         monkeypatch.setattr("app.database.init.command.upgrade", upgrade_mock)
 

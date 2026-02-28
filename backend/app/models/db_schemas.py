@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 import pycountry
 
 T = TypeVar("T")
@@ -197,6 +197,12 @@ class GanttTaskCreate(BaseModel):
     dependencies: str | None = None
     notes: str | None = None
 
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "GanttTaskCreate":
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
+
 
 class GanttTaskRead(BaseModel):
     id: str
@@ -217,6 +223,12 @@ class GanttTaskUpdate(BaseModel):
     progress: int | None = Field(default=None, ge=0, le=100)
     dependencies: str | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "GanttTaskUpdate":
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
 
 
 class GanttTaskListResponse(ListResponse[GanttTaskRead]):
