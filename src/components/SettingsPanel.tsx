@@ -123,6 +123,7 @@ export function SettingsPanel({
     updateTheme,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
+    updateGanttEnabled,
     updateCrossBorderTrackingEnabled,
     updateHomeCountry,
     updateOfficeCountry,
@@ -436,6 +437,23 @@ export function SettingsPanel({
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
+                      <div className="fw-medium">Personal Gantt</div>
+                      <small className="text-muted">
+                        Timeline view for tracking personal tasks and projects
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-gantt"
+                      checked={settings.enableGantt}
+                      onChange={(event) => updateGanttEnabled(event.target.checked)}
+                      aria-label="Toggle personal gantt"
+                    />
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
                       <div className="fw-medium">Cross-Border Tracking</div>
                       <small className="text-muted">
                         Track work location per day for tax reporting
@@ -661,6 +679,7 @@ export function SettingsPanel({
         onHide={handleShortcutsClose}
         enableTimeOff={settings.enableTimeOff}
         enableTimeTracking={settings.enableTimeTracking}
+        enableGantt={settings.enableGantt}
       />
 
       {/* Developer Options Modal */}

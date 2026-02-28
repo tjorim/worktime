@@ -51,6 +51,9 @@ export default defineConfig(() => ({
             if (id.includes("dayjs")) {
               return "vendor-utils";
             }
+            if (id.includes("frappe-gantt")) {
+              return "vendor-gantt";
+            }
           }
         },
       },
