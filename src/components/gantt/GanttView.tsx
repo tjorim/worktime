@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
@@ -23,15 +23,18 @@ export function GanttView() {
     setShowModal(true);
   };
 
-  const handleTaskClick = (taskId: string) => {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) {
-      return;
-    }
+  const handleTaskClick = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) {
+        return;
+      }
 
-    setEditingTask(task);
-    setShowModal(true);
-  };
+      setEditingTask(task);
+      setShowModal(true);
+    },
+    [tasks],
+  );
 
   const handleSaveTask = (payload: GanttTaskFormInput) => {
     if (editingTask) {
@@ -49,13 +52,19 @@ export function GanttView() {
     setEditingTask(null);
   };
 
-  const handleDateChange = (taskId: string, start: string, end: string) => {
-    updateTask(taskId, { start, end });
-  };
+  const handleDateChange = useCallback(
+    (taskId: string, start: string, end: string) => {
+      updateTask(taskId, { start, end });
+    },
+    [updateTask],
+  );
 
-  const handleProgressChange = (taskId: string, progress: number) => {
-    updateTask(taskId, { progress });
-  };
+  const handleProgressChange = useCallback(
+    (taskId: string, progress: number) => {
+      updateTask(taskId, { progress });
+    },
+    [updateTask],
+  );
 
   const handleDeleteTask = () => {
     if (!editingTask) {
