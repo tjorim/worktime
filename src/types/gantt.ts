@@ -1,5 +1,23 @@
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+function isValidISODate(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) {
+    return false;
+  }
+
+  const [yearString, monthString, dayString] = value.split("-");
+  const year = Number(yearString);
+  const month = Number(monthString);
+  const day = Number(dayString);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    parsedDate.getUTCFullYear() === year &&
+    parsedDate.getUTCMonth() === month - 1 &&
+    parsedDate.getUTCDate() === day
+  );
+}
+
 export interface GanttTask {
   id: string;
   name: string;
@@ -33,7 +51,7 @@ export function isValidRawGanttTask(value: unknown): value is RawGanttTask {
     return false;
   }
 
-  if (!ISO_DATE_RE.test(task.start) || !ISO_DATE_RE.test(task.end)) {
+  if (!isValidISODate(task.start) || !isValidISODate(task.end)) {
     return false;
   }
 

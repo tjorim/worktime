@@ -13,7 +13,8 @@ describe("useGanttTasks", () => {
       "worktime_gantt_tasks",
       JSON.stringify([
         { id: "ok", name: "Valid", start: "2026-02-01", end: "2026-02-03" },
-        { id: "bad", name: "Broken", start: "2026/02/01", end: "2026-02-03" },
+        { id: "bad-format", name: "Broken", start: "2026/02/01", end: "2026-02-03" },
+        { id: "bad-calendar", name: "Impossible", start: "2026-02-31", end: "2026-03-03" },
       ]),
     );
 
@@ -44,7 +45,6 @@ describe("useGanttTasks", () => {
     expect(result.current.tasks).toHaveLength(1);
     expect(result.current.tasks[0].progress).toBe(0);
   });
-
 
   it("keeps provided progress when adding a task", () => {
     vi.stubGlobal("crypto", {
