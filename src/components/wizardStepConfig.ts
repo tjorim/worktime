@@ -11,7 +11,9 @@ export type WizardStep =
   | "schedule-selection"
   | "team-selection"
   | "timeoff-setup"
-  | "time-tracking-setup";
+  | "time-tracking-setup"
+  | "gantt-setup"
+  | "work-location-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
 
@@ -120,11 +122,22 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     id: "time-tracking-setup",
     title: "Time Tracking",
     isVisible: (ctx) => ctx.mode === "onboarding",
-    getNextStep: () => null, // Always closes wizard after time tracking setup
-    getPrevStep: () => {
-      // In onboarding, time off setup is always part of the flow
-      return "timeoff-setup";
-    },
+    getNextStep: () => "gantt-setup",
+    getPrevStep: () => "timeoff-setup",
+  },
+  {
+    id: "gantt-setup",
+    title: "Personal Gantt Chart",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "work-location-setup",
+    getPrevStep: () => "time-tracking-setup",
+  },
+  {
+    id: "work-location-setup",
+    title: "Cross-Border Tracking",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => null,
+    getPrevStep: () => "gantt-setup",
   },
 ];
 

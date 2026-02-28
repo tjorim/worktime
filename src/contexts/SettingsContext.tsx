@@ -79,6 +79,10 @@ interface SettingsContextType {
       vacationAllowance?: Partial<VacationAllowanceSettings>;
       enableTimeOff?: boolean;
       enableTimeTracking?: boolean;
+      enableGantt?: boolean;
+      enableCrossBorderTracking?: boolean;
+      homeCountry?: CountryCode | null;
+      officeCountry?: CountryCode | null;
     },
   ) => void;
 }
@@ -776,6 +780,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         vacationAllowance?: Partial<VacationAllowanceSettings>;
         enableTimeOff?: boolean;
         enableTimeTracking?: boolean;
+        enableGantt?: boolean;
+        enableCrossBorderTracking?: boolean;
+        homeCountry?: CountryCode | null;
+        officeCountry?: CountryCode | null;
       },
     ) => {
       setUserState((prev) => ({
@@ -799,6 +807,22 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             preferences?.enableTimeTracking !== undefined
               ? preferences.enableTimeTracking
               : prev.settings.enableTimeTracking,
+          enableGantt:
+            preferences?.enableGantt !== undefined
+              ? preferences.enableGantt
+              : prev.settings.enableGantt,
+          enableCrossBorderTracking:
+            preferences?.enableCrossBorderTracking !== undefined
+              ? preferences.enableCrossBorderTracking
+              : prev.settings.enableCrossBorderTracking,
+          homeCountry:
+            preferences?.homeCountry !== undefined
+              ? preferences.homeCountry
+              : prev.settings.homeCountry,
+          officeCountry:
+            preferences?.officeCountry !== undefined
+              ? preferences.officeCountry
+              : prev.settings.officeCountry,
         },
       }));
     },

@@ -65,10 +65,32 @@ export function Step2Features({
           </Col>
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
-              <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
+              <i className="bi bi-clock-history text-success me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Time Tracking</h6>
                 <small className="text-muted">Log tasks and review weekly summaries</small>
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={6}>
+            <div className="d-flex align-items-start">
+              <i className="bi bi-bar-chart-steps text-warning me-3 mt-1 icon-feature"></i>
+              <div>
+                <h6 className="mb-1">Personal Gantt Chart</h6>
+                <small className="text-muted">
+                  Plan projects on a visual timeline with dependencies
+                </small>
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={6}>
+            <div className="d-flex align-items-start">
+              <i className="bi bi-globe text-primary me-3 mt-1 icon-feature"></i>
+              <div>
+                <h6 className="mb-1">Cross-Border Tracking</h6>
+                <small className="text-muted">
+                  Log where you work each day for tax reporting
+                </small>
               </div>
             </div>
           </Col>

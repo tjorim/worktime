@@ -10,6 +10,7 @@ import {
   hasMultipleTeams,
   isValidScheduleType,
 } from "../utils/scheduleUtils";
+import { type CountryCode, isValidCountryCode } from "../types/countries";
 import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
 import {
   type WizardStep,
@@ -25,6 +26,8 @@ import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
 import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
 import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
+import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
+import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 
 /**
  * Validates vacation amount input.
@@ -53,6 +56,10 @@ export type WizardCompletionPayload = {
   vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
+  enableGantt?: boolean;
+  enableCrossBorderTracking?: boolean;
+  homeCountry?: CountryCode | null;
+  officeCountry?: CountryCode | null;
 };
 
 interface WelcomeWizardProps {
@@ -116,6 +123,18 @@ export function WelcomeWizard({
   );
   const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState<boolean>(
     settings.enableTimeTracking ?? false,
+  );
+  const [isGanttEnabled, setIsGanttEnabled] = useState<boolean>(
+    settings.enableGantt ?? false,
+  );
+  const [isCrossBorderEnabled, setIsCrossBorderEnabled] = useState<boolean>(
+    settings.enableCrossBorderTracking ?? false,
+  );
+  const [homeCountry, setHomeCountry] = useState<CountryCode | null>(
+    isValidCountryCode(settings.homeCountry) ? settings.homeCountry : null,
+  );
+  const [officeCountry, setOfficeCountry] = useState<CountryCode | null>(
+    isValidCountryCode(settings.officeCountry) ? settings.officeCountry : null,
   );
 
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
@@ -184,6 +203,10 @@ export function WelcomeWizard({
   };
 
   const handleTimeTrackingComplete = () => {
+    nextStep();
+  };
+
+  const handleWorkLocationComplete = () => {
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
@@ -192,6 +215,10 @@ export function WelcomeWizard({
       vacationAllowance: vacationPayload,
       enableTimeOff: isTimeOffEnabled,
       enableTimeTracking: isTimeTrackingEnabled,
+      enableGantt: isGanttEnabled,
+      enableCrossBorderTracking: isCrossBorderEnabled,
+      homeCountry: isCrossBorderEnabled ? homeCountry : undefined,
+      officeCountry: isCrossBorderEnabled ? officeCountry : undefined,
     });
   };
 
@@ -334,6 +361,28 @@ export function WelcomeWizard({
                 onToggle={setIsTimeTrackingEnabled}
                 onPrev={prevStep}
                 onComplete={handleTimeTrackingComplete}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {effectiveStep === "gantt-setup" && (
+              <Step7GanttSetup
+                isEnabled={isGanttEnabled}
+                onToggle={setIsGanttEnabled}
+                onPrev={prevStep}
+                onNext={nextStep}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {effectiveStep === "work-location-setup" && (
+              <Step8WorkLocationSetup
+                isEnabled={isCrossBorderEnabled}
+                onToggle={setIsCrossBorderEnabled}
+                homeCountry={homeCountry}
+                officeCountry={officeCountry}
+                onHomeCountryChange={setHomeCountry}
+                onOfficeCountryChange={setOfficeCountry}
+                onPrev={prevStep}
+                onComplete={handleWorkLocationComplete}
                 firstButtonRef={firstButtonRef}
               />
             )}
