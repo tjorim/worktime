@@ -198,7 +198,7 @@ class WorkLocation(SQLModel, table=True):
 
     __table_args__ = (
         Index(
-            "ix_unique_active_work_location_user_date",
+            "uq_active_work_location_user_date",
             "user_id",
             "date",
             unique=True,
