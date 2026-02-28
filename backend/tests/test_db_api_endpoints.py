@@ -141,13 +141,17 @@ def test_db_user_crud_endpoints(db_client: tuple[TestClient, Session]) -> None:
     assert admin_list_response.json()["total"] == 2
     assert len(admin_list_response.json()["items"]) == 2
 
-    paged_admin_list_response = client.get(
-        "/v1/db/users/?offset=1&limit=1",
+    max_limit_list_response = client.get(
+        "/v1/db/users/?offset=0&limit=1000",
         headers=_auth_headers(user_id, is_admin=True),
     )
-    assert paged_admin_list_response.status_code == 200
-    assert paged_admin_list_response.json()["total"] == 2
-    assert len(paged_admin_list_response.json()["items"]) == 1
+    assert max_limit_list_response.status_code == 200
+
+    above_max_limit_list_response = client.get(
+        "/v1/db/users/?offset=0&limit=1001",
+        headers=_auth_headers(user_id, is_admin=True),
+    )
+    assert above_max_limit_list_response.status_code == 422
 
     forbidden_delete = client.delete(
         f"/v1/db/users/{other_user_id}",

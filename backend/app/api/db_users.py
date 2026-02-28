@@ -22,6 +22,7 @@ from app.services.db_service import (
     get_user_by_username,
     list_users,
     update_user,
+    MAX_USER_LIST_LIMIT,
 )
 
 router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
@@ -47,7 +48,7 @@ def create_user_endpoint(
 @router.get("/", response_model=UserListResponse)
 def list_users_endpoint(
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=MAX_USER_LIST_LIMIT),
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserListResponse:
