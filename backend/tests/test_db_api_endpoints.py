@@ -351,7 +351,7 @@ def test_work_location_endpoints() -> None:
         assert "X-Db-Query-Ms" in by_date_response.headers
 
         delete_response = client.delete(
-            f"/v1/db/work-locations/?user_id={user_id}&date=2026-01-02",
+            f"/v1/db/work-locations/2026-01-02?user_id={user_id}",
             headers=headers,
         )
         assert delete_response.status_code == 204

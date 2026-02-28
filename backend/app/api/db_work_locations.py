@@ -99,10 +99,10 @@ def get_work_location_endpoint(
     )
 
 
-@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{value_date}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_work_location_endpoint(
+    value_date: date,
     user_id: int = Query(..., ge=1),
-    value_date: date = Query(..., alias="date"),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> Response:
