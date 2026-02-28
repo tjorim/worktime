@@ -634,6 +634,12 @@ describe("WelcomeWizard", () => {
       const saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
       expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(35);
       expect(saved.settings?.vacationAllowance?.unit).toBe("days");
+      expect(saved.settings).toEqual(
+        expect.objectContaining({
+          enableGantt: expect.any(Boolean),
+          enableCrossBorderTracking: expect.any(Boolean),
+        }),
+      );
       expect(saved.hasCompletedOnboarding).toBe(true);
       expect(saved.myTeam).toBeNull(); // No team was selected
     });
@@ -664,6 +670,12 @@ describe("WelcomeWizard", () => {
       const currentYear = String(new Date().getFullYear());
       let saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
       expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25);
+      expect(saved.settings).toEqual(
+        expect.objectContaining({
+          enableGantt: expect.any(Boolean),
+          enableCrossBorderTracking: expect.any(Boolean),
+        }),
+      );
       expect(saved.myTeam).toBe(1);
 
       // Now open the wizard in change-team mode via Settings panel
@@ -685,6 +697,12 @@ describe("WelcomeWizard", () => {
       saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
       expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25); // Unchanged from onboarding
       expect(saved.settings?.vacationAllowance?.unit).toBe("days");
+      expect(saved.settings).toEqual(
+        expect.objectContaining({
+          enableGantt: expect.any(Boolean),
+          enableCrossBorderTracking: expect.any(Boolean),
+        }),
+      );
       expect(saved.myTeam).toBe(2); // Team was changed
     });
 

@@ -243,9 +243,16 @@ describe("WelcomeWizard Configuration System", () => {
       const nextStep = workLocationConfig.getNextStep(context);
       expect(nextStep).toBeNull();
     });
+
   });
 
   describe("Step Configuration - Backward Navigation", () => {
+    const onboardingPostTimeTrackingContext: WizardContext = {
+      mode: "onboarding",
+      shouldShowTeamSelection: false,
+      enableTimeOff: true,
+    };
+
     it("should go back from features to welcome", () => {
       const context: WizardContext = {
         mode: "onboarding",
@@ -268,6 +275,18 @@ describe("WelcomeWizard Configuration System", () => {
       const scheduleConfig = getStepConfig("schedule-selection");
       const prevStep = scheduleConfig.getPrevStep(context);
       expect(prevStep).toBe("features");
+    });
+
+    it("should go back to time tracking setup from gantt setup in onboarding", () => {
+      const ganttConfig = getStepConfig("gantt-setup");
+      const prevStep = ganttConfig.getPrevStep(onboardingPostTimeTrackingContext);
+      expect(prevStep).toBe("time-tracking-setup");
+    });
+
+    it("should go back to gantt setup from work location setup in onboarding", () => {
+      const workLocationConfig = getStepConfig("work-location-setup");
+      const prevStep = workLocationConfig.getPrevStep(onboardingPostTimeTrackingContext);
+      expect(prevStep).toBe("gantt-setup");
     });
 
     it("should close wizard when going back from schedule in change modes", () => {
