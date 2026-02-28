@@ -159,10 +159,10 @@ describe("GanttView", () => {
     });
   });
 
-  it("uses Week as initial library view mode and no duplicate top-level mode buttons", () => {
+  it("uses Day as initial library view mode and no duplicate top-level mode buttons", () => {
     renderWithSettings(<GanttView />);
 
-    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Week");
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Day");
     expect(screen.queryByRole("button", { name: "Day" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Year" })).not.toBeInTheDocument();

@@ -55,7 +55,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        initialViewMode="Week"
+        initialViewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -86,7 +86,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        initialViewMode="Week"
+        initialViewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -113,7 +113,7 @@ describe("GanttChart", () => {
   });
 
 
-  it("uses library-provided view controls with Week as initial mode", async () => {
+  it("uses library-provided view controls with Day as initial mode", async () => {
     const onTaskClick = vi.fn();
     const onDateChange = vi.fn();
     const onProgressChange = vi.fn();
@@ -121,7 +121,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        initialViewMode="Week"
+        initialViewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -133,7 +133,7 @@ describe("GanttChart", () => {
     });
 
     const [instance] = mockInstances;
-    expect(instance.options.view_mode).toBe("Week");
+    expect(instance.options.view_mode).toBe("Day");
     expect(instance.options.view_mode_select).toBe(true);
     expect(instance.options.today_button).toBe(true);
   });

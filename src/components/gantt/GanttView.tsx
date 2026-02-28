@@ -82,7 +82,7 @@ export function GanttView() {
 
       <GanttChart
         tasks={tasks}
-        initialViewMode="Week"
+        initialViewMode="Day"
         onTaskClick={handleTaskClick}
         onDateChange={handleDateChange}
         onProgressChange={handleProgressChange}

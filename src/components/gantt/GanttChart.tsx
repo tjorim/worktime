@@ -29,7 +29,7 @@ function getTaskId(task: unknown): string | null {
 
 export function GanttChart({
   tasks,
-  initialViewMode = "Week",
+  initialViewMode = "Day",
   onTaskClick,
   onDateChange,
   onProgressChange,
