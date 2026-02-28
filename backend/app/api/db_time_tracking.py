@@ -181,17 +181,21 @@ def get_running_task_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
-) -> JSONResponse:
+) -> Response:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         task = get_running_task(session, user_id)
 
-    response_payload = None if task is None else TaskRead.model_validate(task, from_attributes=True)
+    headers = {"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"}
+    if task is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT, headers=headers)
+
+    response_payload = TaskRead.model_validate(task, from_attributes=True)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content=None if response_payload is None else response_payload.model_dump(mode="json"),
-        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+        content=response_payload.model_dump(mode="json"),
+        headers=headers,
     )
 
 

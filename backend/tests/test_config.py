@@ -43,6 +43,7 @@ def test_custom_settings():
         os.environ["DATABASE_ENABLED"] = "false"
         os.environ["DATABASE_PATH"] = "/tmp/worktime.db"
         os.environ["DATABASE_ECHO"] = "true"
+        os.environ["JWT_SECRET_KEY"] = "production-secret-key-that-is-very-long"
         
         # Create new settings instance
         settings = Settings()
@@ -95,7 +96,7 @@ def test_cors_origins_wildcard_development():
 
 def test_cors_origins_wildcard_production():
     """Test wildcard CORS is rejected in production mode."""
-    settings = Settings(ENVIRONMENT="production", CORS_ORIGINS="*")
+    settings = Settings(ENVIRONMENT="production", CORS_ORIGINS="*", JWT_SECRET_KEY="production-secret-key-that-is-very-long")
     origins = settings.get_cors_origins_list()
     
     # Wildcard should be rejected in production
@@ -108,7 +109,7 @@ def test_environment_validation():
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
     
-    settings_prod = Settings(ENVIRONMENT="production")
+    settings_prod = Settings(ENVIRONMENT="production", JWT_SECRET_KEY="production-secret-key-that-is-very-long")
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -214,3 +215,30 @@ def test_database_path_validation_rejects_empty_value():
     """Test DATABASE_PATH validation rejects empty values."""
     with pytest.raises(ValueError, match="DATABASE_PATH cannot be empty"):
         Settings(DATABASE_PATH="   ")
+
+
+def test_jwt_algorithm_validation_normalizes_case() -> None:
+    """Test JWT algorithm normalization/whitelist."""
+    settings = Settings(JWT_ALGORITHM=" hs512 ")
+    assert settings.JWT_ALGORITHM == "HS512"
+
+
+
+def test_jwt_algorithm_validation_rejects_unknown_algorithm() -> None:
+    """Test JWT algorithm whitelist rejection."""
+    with pytest.raises(ValueError, match="JWT_ALGORITHM must be one of"):
+        Settings(JWT_ALGORITHM="none")
+
+
+
+def test_production_rejects_default_jwt_secret() -> None:
+    """Test production mode requires non-default JWT secret."""
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY must be overridden in production"):
+        Settings(ENVIRONMENT="production")
+
+
+
+def test_development_allows_default_jwt_secret() -> None:
+    """Test development mode allows default JWT secret."""
+    settings = Settings(ENVIRONMENT="development")
+    assert settings.JWT_SECRET_KEY == "dev-only-change-me-at-least-32-bytes"

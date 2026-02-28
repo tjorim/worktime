@@ -22,6 +22,7 @@ from app.services.db_service import (
     get_user_by_username,
     list_users,
     update_user,
+    MAX_USER_LIST_LIMIT,
 )
 
 router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
@@ -30,8 +31,12 @@ router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user_endpoint(
     payload: UserCreate,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserRead:
+    if not principal.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         user = create_user(session, payload)
     except ConflictError as error:
@@ -43,7 +48,7 @@ def create_user_endpoint(
 @router.get("/", response_model=UserListResponse)
 def list_users_endpoint(
     offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=MAX_USER_LIST_LIMIT),
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserListResponse:

@@ -111,13 +111,14 @@ these files, optionally parsing them server-side when `?format=parsed` is reques
 | `/v1/health`          | GET    | Health check and share accessibility status    |
 | `/v1/debug/benchmark` | GET    | Performance comparison of raw vs parsed modes  |
 
-Authentication status currently differs by endpoint group:
+Authentication requirements differ by endpoint group:
 
-- Legacy file/share endpoints (`/v1/hday/*`, `/v1/team/*`, `/v1/health`) are currently network-trusted and do not require authentication.
-- Database time-tracking endpoints under `/v1/db/time-tracking/*` require `Authorization: Bearer <JWT>` and validate the token subject against `user_id`.
+- Legacy file/share endpoints (`/v1/hday/*`, `/v1/team/*`, `/v1/health`) are network-trusted and do not require authentication.
+- Database endpoints under `/v1/db/time-tracking/*`, `/v1/db/users/*`, and `/v1/db/work-locations/*` require `Authorization: Bearer <JWT>`.
+- Protected DB endpoints validate the JWT and enforce `sub` → `user_id` matching. Requests where `user_id` does not match the token subject are rejected with `403 Forbidden`.
 
-> **Frontend integration note:** the backend does not currently provide a login/token issuance endpoint.
-> Frontends must obtain JWTs from an external issuer (or a future `/v1/auth/*` flow) and attach the bearer token to each protected request.
+> **Frontend integration note:** the backend does not currently provide first-party login/token issuance endpoints.
+> Frontends must obtain JWTs from an external issuer today; planned `/v1/auth/*` routes below describe a future built-in auth flow.
 
 ### Planned auth endpoints (proposal)
 
@@ -137,12 +138,13 @@ Until these endpoints exist, JWTs must be issued by an external identity/auth se
 Recommended frontend flow for DB endpoints:
 
 1. Resolve backend base URL from developer options.
-2. Obtain JWT from external issuer (or future `/v1/auth/login`).
-3. Call DB endpoints with `Authorization: Bearer <token>` and include `user_id` matching the token `sub`.
-4. Handle auth errors consistently:
-   - `401 Unauthorized`: token missing/invalid/expired → prompt re-authentication.
-   - `403 Forbidden`: user/token mismatch for requested `user_id` → reset selected user context.
-5. Use a small API wrapper so all protected calls set auth headers consistently.
+2. Obtain JWT from an external issuer (or future `/v1/auth/login`).
+3. Call protected DB endpoints with `Authorization: Bearer <token>`.
+4. Send `user_id` as a request field exactly where each endpoint expects it today (currently query parameter for DB endpoints), and ensure it matches the JWT `sub`.
+5. Handle auth errors consistently:
+   - `401 Unauthorized`: token missing/invalid/expired → prompt full re-authentication.
+   - `403 Forbidden`: provided `user_id` does not match token `sub` → clear the current selected user, show an error toast, and navigate back to the account-selection screen (or force re-authentication).
+6. Use a small API wrapper so all protected calls set auth headers and `user_id` consistently.
 
 ### Response format: `?format=raw|parsed`
 
