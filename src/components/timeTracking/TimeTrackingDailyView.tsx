@@ -198,21 +198,10 @@ export function TimeTrackingDailyView({
       })),
     [templates, labelNameById],
   );
-  const selectedTemplateOption = useMemo(() => {
-    if (!selectedTemplateId) {
-      return null;
-    }
-
-    const template = templates.find((item) => item.id === selectedTemplateId);
-    if (!template) {
-      return null;
-    }
-
-    return {
-      value: template.id,
-      label: `${template.text} (${template.start}-${template.stop}) [${labelNameById[template.label] ?? "Unknown label"}]`,
-    };
-  }, [selectedTemplateId, templates, labelNameById]);
+  const selectedTemplateOption = useMemo(
+    () => templateOptions.find((option) => option.value === selectedTemplateId) ?? null,
+    [selectedTemplateId, templateOptions],
+  );
   const defaultLabelColor = useDefaultLabelColor();
 
   useEffect(() => {
