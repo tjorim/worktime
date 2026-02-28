@@ -190,6 +190,29 @@ export function TimeTrackingDailyView({
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const templateOptions = useMemo(
+    () =>
+      templates.map((template) => ({
+        value: template.id,
+        label: `${template.text} (${template.start}-${template.stop}) [${labelNameById[template.label] ?? "Unknown label"}]`,
+      })),
+    [templates, labelNameById],
+  );
+  const selectedTemplateOption = useMemo(() => {
+    if (!selectedTemplateId) {
+      return null;
+    }
+
+    const template = templates.find((item) => item.id === selectedTemplateId);
+    if (!template) {
+      return null;
+    }
+
+    return {
+      value: template.id,
+      label: `${template.text} (${template.start}-${template.stop}) [${labelNameById[template.label] ?? "Unknown label"}]`,
+    };
+  }, [selectedTemplateId, templates, labelNameById]);
   const defaultLabelColor = useDefaultLabelColor();
 
   useEffect(() => {
@@ -498,20 +521,8 @@ export function TimeTrackingDailyView({
                 isSearchable
                 inputId="timeTrackerTemplate"
                 placeholder="Choose a template"
-                options={templates.map((t) => ({
-                  value: t.id,
-                  label: `${t.text} (${t.start}-${t.stop}) [${labelNameById[t.label] ?? "Unknown label"}]`,
-                }))}
-                value={
-                  selectedTemplateId
-                    ? (templates
-                        .filter((t) => t.id === selectedTemplateId)
-                        .map((t) => ({
-                          value: t.id,
-                          label: `${t.text} (${t.start}-${t.stop}) [${labelNameById[t.label] ?? "Unknown label"}]`,
-                        }))[0] ?? null)
-                    : null
-                }
+                options={templateOptions}
+                value={selectedTemplateOption}
                 onChange={(selected) => setSelectedTemplateId(selected?.value ?? "")}
                 classNames={bootstrapSelectClassNames}
                 className="flex-fill"
