@@ -35,18 +35,17 @@ def test_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     db_path = tmp_path / "worktime-test.db"
     monkeypatch.setattr(settings, "DATABASE_PATH", str(db_path))
 
-    existing_engine = database_engine._engine
+    original_engine = database_engine._engine
     database_engine._engine = None
-    if existing_engine is not None:
-        existing_engine.dispose()
 
     init_db()
+    test_engine = database_engine._engine
     try:
         yield db_path
     finally:
-        if database_engine._engine is not None:
-            database_engine._engine.dispose()
-        database_engine._engine = None
+        if test_engine is not None:
+            test_engine.dispose()
+        database_engine._engine = original_engine
         if db_path.exists():
             db_path.unlink()
 
