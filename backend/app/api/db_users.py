@@ -51,14 +51,18 @@ def list_users_endpoint(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
-        users = list_users(session, is_admin=principal.is_admin)
+        users, total = list_users(
+            session,
+            is_admin=principal.is_admin,
+            offset=offset,
+            limit=limit,
+        )
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
 
-    items = users[offset : offset + limit]
     return UserListResponse(
-        items=[UserRead.model_validate(item, from_attributes=True) for item in items],
-        total=len(users),
+        items=[UserRead.model_validate(item, from_attributes=True) for item in users],
+        total=total,
     )
 
 

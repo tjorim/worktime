@@ -79,8 +79,9 @@ def test_list_users_requires_admin_scope(session: Session) -> None:
     with pytest.raises(ServiceValidationError):
         list_users(session)
 
-    users = list_users(session, is_admin=True)
+    users, total = list_users(session, is_admin=True)
     assert len(users) == 2
+    assert total == 2
 
 
 def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:

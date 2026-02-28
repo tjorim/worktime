@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from sqlalchemy import func as sql_func
 from sqlmodel import Session, col, delete, select, update
 
 from app.database.models import (
@@ -72,10 +73,26 @@ def get_user_by_username(session: Session, username: str) -> User | None:
     return session.exec(select(User).where(User.username == username)).first()
 
 
-def list_users(session: Session, *, is_admin: bool = False) -> list[User]:
+def list_users(
+    session: Session,
+    *,
+    is_admin: bool = False,
+    offset: int = 0,
+    limit: int = 100,
+) -> tuple[list[User], int]:
     if not is_admin:
         raise ValidationError("listing all users requires admin scope")
-    return list(session.exec(select(User).order_by(User.id)).all())
+
+    total = int(session.exec(select(sql_func.count()).select_from(User)).one())
+    users = list(
+        session.exec(
+            select(User)
+            .order_by(User.id)
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+    return users, total
 
 
 def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
