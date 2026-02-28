@@ -81,7 +81,7 @@ class TimeTrackingLabel(SQLModel, table=True):
 
     __table_args__ = (
         Index(
-            "ix_unique_active_label_user_name",
+            "uq_active_label_user_name",
             "user_id",
             "name",
             unique=True,
