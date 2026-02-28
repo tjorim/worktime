@@ -10,7 +10,7 @@ import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
 export type NotificationSetting = "on" | "off";
-export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking";
+export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking" | "gantt";
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
 export type TimeTrackingViewKey = "daily" | "weekly" | "config";
@@ -31,6 +31,7 @@ interface UserSettings {
   vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
+  enableGantt: boolean;
   enableCrossBorderTracking: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
@@ -45,6 +46,7 @@ interface SettingsContextType {
   updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
+  updateGanttEnabled: (enabled: boolean) => void;
   updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
@@ -92,6 +94,7 @@ export const defaultSettings: UserSettings = {
   },
   enableTimeOff: false,
   enableTimeTracking: false,
+  enableGantt: false,
   enableCrossBorderTracking: false,
   homeCountry: null,
   officeCountry: null,
@@ -106,7 +109,7 @@ export const defaultLastUsed: LastUsed = {
   otherTeam: null,
 };
 
-const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking"]);
+const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking", "gantt"]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
@@ -122,7 +125,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
@@ -283,6 +286,21 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v4: Add enableGantt setting (no-op audit migration).
+  4: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawSettings;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        enableGantt: settings.enableGantt ?? defaultSettings.enableGantt,
+      },
+    };
+  },
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -372,6 +390,8 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.enableTimeTracking === "boolean"
       ? settings.enableTimeTracking
       : defaultSettings.enableTimeTracking;
+  const enableGantt =
+    typeof settings.enableGantt === "boolean" ? settings.enableGantt : defaultSettings.enableGantt;
   const enableCrossBorderTracking =
     typeof settings.enableCrossBorderTracking === "boolean"
       ? settings.enableCrossBorderTracking
@@ -396,6 +416,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     }
     if (tab === "timetracking") {
       return enableTimeTracking;
+    }
+    if (tab === "gantt") {
+      return enableGantt;
     }
     return true;
   };
@@ -478,6 +501,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
+      enableGantt,
       enableCrossBorderTracking,
       homeCountry,
       officeCountry,
@@ -576,6 +600,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, enableTimeTracking: enabled },
+      }));
+    },
+    [setUserState],
+  );
+
+  const updateGanttEnabled = useCallback(
+    (enabled: boolean) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, enableGantt: enabled },
       }));
     },
     [setUserState],
@@ -780,6 +814,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateGanttEnabled,
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
@@ -808,6 +843,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
+      updateGanttEnabled,
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,

@@ -27,6 +27,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.settings.homeCountry).toBe(null);
     expect(result.current.settings.officeCountry).toBe(null);
     expect(result.current.settings.enableCrossBorderTracking).toBe(false);
+    expect(result.current.settings.enableGantt).toBe(false);
     expect(result.current.myTeam).toBe(null);
     expect(result.current.scheduleType).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
@@ -62,6 +63,11 @@ describe("SettingsContext unified user state", () => {
       result.current.setHasCompletedOnboarding(true);
     });
     expect(result.current.hasCompletedOnboarding).toBe(true);
+
+    await act(async () => {
+      result.current.updateGanttEnabled(true);
+    });
+    expect(result.current.settings.enableGantt).toBe(true);
     await act(async () => {
       result.current.updateHomeCountry("NL");
     });
@@ -150,7 +156,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 3,
+      version: 4,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,
@@ -165,6 +171,7 @@ describe("SettingsContext unified user state", () => {
         },
         enableTimeOff: false,
         enableTimeTracking: false,
+        enableGantt: false,
         enableCrossBorderTracking: false,
         homeCountry: null,
         officeCountry: null,
