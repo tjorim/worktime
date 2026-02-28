@@ -119,6 +119,31 @@ Authentication status currently differs by endpoint group:
 > **Frontend integration note:** the backend does not currently provide a login/token issuance endpoint.
 > Frontends must obtain JWTs from an external issuer (or a future `/v1/auth/*` flow) and attach the bearer token to each protected request.
 
+### Planned auth endpoints (proposal)
+
+To support a complete first-party sign-in flow, add an auth router such as:
+
+| Endpoint | Method | Purpose |
+| -------- | ------ | ------- |
+| `/v1/auth/login` | POST | Validate user credentials and issue an access token (and optional refresh token). |
+| `/v1/auth/refresh` | POST | Exchange a refresh token for a new access token. |
+| `/v1/auth/logout` | POST | Revoke refresh token / invalidate server-side session state. |
+| `/v1/auth/me` | GET | Return authenticated user profile based on the presented token. |
+
+Until these endpoints exist, JWTs must be issued by an external identity/auth service.
+
+### Frontend integration suggestion
+
+Recommended frontend flow for DB endpoints:
+
+1. Resolve backend base URL from developer options.
+2. Obtain JWT from external issuer (or future `/v1/auth/login`).
+3. Call DB endpoints with `Authorization: Bearer <token>` and include `user_id` matching the token `sub`.
+4. Handle auth errors consistently:
+   - `401 Unauthorized`: token missing/invalid/expired → prompt re-authentication.
+   - `403 Forbidden`: user/token mismatch for requested `user_id` → reset selected user context.
+5. Use a small API wrapper so all protected calls set auth headers consistently.
+
 ### Response format: `?format=raw|parsed`
 
 All `.hday` read endpoints (`GET /v1/hday/:username` and `GET /v1/team/:id/hday`) support a
