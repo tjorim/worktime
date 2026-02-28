@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "../types/gantt";
+import { GANTT_STORAGE_KEY } from "../constants/storageKeys";
 
-export const GANTT_STORAGE_KEY = "worktime_gantt_tasks";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 

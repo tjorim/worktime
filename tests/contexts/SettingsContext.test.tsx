@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
+import { USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
 
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {
@@ -91,7 +92,7 @@ describe("SettingsContext unified user state", () => {
 
     expect(result.current.scheduleType).toBe("5-shift");
 
-    const stored = window.localStorage.getItem("worktime_user_state");
+    const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored || "{}");
     expect(parsed.scheduleType).toBe("5-shift");
@@ -112,7 +113,7 @@ describe("SettingsContext unified user state", () => {
 
   it("validates and falls back to default state if corrupted", () => {
     // Simulate corrupted state in localStorage
-    window.localStorage.setItem("worktime_user_state", JSON.stringify({ foo: "bar" }));
+    window.localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ foo: "bar" }));
     const { result } = renderHook(() => useSettings(), { wrapper });
     expect(result.current.myTeam).toBe(null);
     expect(result.current.hasCompletedOnboarding).toBe(false);
@@ -152,7 +153,7 @@ describe("SettingsContext unified user state", () => {
     });
 
     // Check the unified storage key
-    const userStateStored = window.localStorage.getItem("worktime_user_state");
+    const userStateStored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
@@ -239,7 +240,7 @@ describe("SettingsContext unified user state", () => {
       await act(async () => {
         result.current.updateCrossBorderTrackingEnabled(true);
       });
-      const stored = window.localStorage.getItem("worktime_user_state");
+      const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.enableCrossBorderTracking).toBe(true);
@@ -355,7 +356,7 @@ describe("SettingsContext unified user state", () => {
         });
       });
 
-      const stored = window.localStorage.getItem("worktime_user_state");
+      const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.vacationAllowance).toEqual({
@@ -383,7 +384,7 @@ describe("SettingsContext unified user state", () => {
     it("migrates last* fields from settings to lastUsed", () => {
       // Simulate old-format state with last* fields inside settings
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           hasCompletedOnboarding: true,
           myTeam: 2,
@@ -418,7 +419,7 @@ describe("SettingsContext unified user state", () => {
 
     it("prefers lastUsed over settings when both present", () => {
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           hasCompletedOnboarding: true,
           myTeam: 1,
@@ -505,7 +506,7 @@ describe("SettingsContext unified user state", () => {
 
     it("recovers with salvaged values when a migration is missing", () => {
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           version: -1,
           myTeam: 4,
@@ -560,7 +561,7 @@ describe("SettingsContext unified user state", () => {
       );
 
       vi.spyOn(JSON, "parse").mockImplementation(() => parsedState as any);
-      window.localStorage.setItem("worktime_user_state", "{}");
+      window.localStorage.setItem(USER_STATE_STORAGE_KEY, "{}");
 
       const { result } = renderHook(() => useSettings(), { wrapper });
 
@@ -575,7 +576,7 @@ describe("SettingsContext unified user state", () => {
     it("migrates vacationAllowance.amount to yearlyAmounts[currentYear]", () => {
       const currentYear = String(new Date().getFullYear());
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           version: 1,
           hasCompletedOnboarding: true,
@@ -612,7 +613,7 @@ describe("SettingsContext unified user state", () => {
     it("does not overwrite existing yearlyAmounts entry for current year", () => {
       const currentYear = String(new Date().getFullYear());
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           version: 1,
           hasCompletedOnboarding: true,
@@ -650,7 +651,7 @@ describe("SettingsContext unified user state", () => {
 
     it("handles zero amount gracefully (does not seed yearlyAmounts)", () => {
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           version: 1,
           hasCompletedOnboarding: true,
@@ -718,7 +719,7 @@ describe("SettingsContext unified user state", () => {
 
     it("rejects invalid homeCountry code and falls back to null", () => {
       window.localStorage.setItem(
-        "worktime_user_state",
+        USER_STATE_STORAGE_KEY,
         JSON.stringify({
           version: 2,
           hasCompletedOnboarding: false,
@@ -755,7 +756,7 @@ describe("SettingsContext unified user state", () => {
         result.current.updateHomeCountry("GB");
         result.current.updateOfficeCountry("NL");
       });
-      const stored = window.localStorage.getItem("worktime_user_state");
+      const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.homeCountry).toBe("GB");
@@ -765,7 +766,7 @@ describe("SettingsContext unified user state", () => {
 
   describe("v2 to v3 migration (country + cross-border tracking)", () => {
     const migrateFromV2 = (state: Record<string, unknown>) => {
-      window.localStorage.setItem("worktime_user_state", JSON.stringify(state));
+      window.localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(state));
       return renderHook(() => useSettings(), { wrapper });
     };
 
@@ -901,7 +902,7 @@ describe("SettingsContext unified user state", () => {
         });
       });
 
-      const stored = window.localStorage.getItem("worktime_user_state");
+      const stored = window.localStorage.getItem(USER_STATE_STORAGE_KEY);
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
 

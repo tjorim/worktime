@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "../../src/hooks/useGanttTasks";
+import { GANTT_STORAGE_KEY } from "../../src/constants/storageKeys";
 
 describe("useGanttTasks", () => {
   afterEach(() => {
@@ -35,7 +36,7 @@ describe("useGanttTasks", () => {
       name: "Plan sprint",
       progress: 0,
     });
-    expect(JSON.parse(window.localStorage.getItem("worktime_gantt_tasks") ?? "[]")).toEqual([
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STORAGE_KEY) ?? "[]")).toEqual([
       {
         id: "generated-id",
         name: "Plan sprint",
@@ -48,7 +49,7 @@ describe("useGanttTasks", () => {
 
   it("updateTask modifies an existing task", () => {
     window.localStorage.setItem(
-      "worktime_gantt_tasks",
+      GANTT_STORAGE_KEY,
       JSON.stringify([{ id: "t1", name: "Initial", start: "2026-03-01", end: "2026-03-05" }]),
     );
 
@@ -69,7 +70,7 @@ describe("useGanttTasks", () => {
 
   it("removeTask deletes the task from state and storage", () => {
     window.localStorage.setItem(
-      "worktime_gantt_tasks",
+      GANTT_STORAGE_KEY,
       JSON.stringify([
         { id: "t1", name: "A", start: "2026-03-01", end: "2026-03-05" },
         { id: "t2", name: "B", start: "2026-03-02", end: "2026-03-06" },
@@ -84,14 +85,14 @@ describe("useGanttTasks", () => {
 
     expect(result.current.tasks).toHaveLength(1);
     expect(result.current.tasks[0].id).toBe("t1");
-    expect(JSON.parse(window.localStorage.getItem("worktime_gantt_tasks") ?? "[]")).toEqual([
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STORAGE_KEY) ?? "[]")).toEqual([
       { id: "t1", name: "A", start: "2026-03-01", end: "2026-03-05" },
     ]);
   });
 
   it("removeTask strips deleted id from other tasks' dependencies", () => {
     window.localStorage.setItem(
-      "worktime_gantt_tasks",
+      GANTT_STORAGE_KEY,
       JSON.stringify([
         { id: "t1", name: "A", start: "2026-03-01", end: "2026-03-05" },
         { id: "t2", name: "B", start: "2026-03-02", end: "2026-03-06", dependencies: "t1" },
@@ -118,7 +119,7 @@ describe("useGanttTasks", () => {
 
   it("filters invalid tasks from corrupted storage data", () => {
     window.localStorage.setItem(
-      "worktime_gantt_tasks",
+      GANTT_STORAGE_KEY,
       JSON.stringify([
         { id: "ok", name: "Valid", start: "2026-02-01", end: "2026-02-03" },
         { id: "bad-format", name: "Broken", start: "2026/02/01", end: "2026-02-03" },

@@ -4,57 +4,6 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { GanttTaskModal } from "../../../src/components/gantt/GanttTaskModal";
 
-vi.mock("react-select", () => ({
-  default: ({
-    options,
-    value,
-    onChange,
-    inputId,
-    isMulti,
-    placeholder,
-  }: {
-    options: Array<{ value: string; label: string }>;
-    value: Array<{ value: string; label: string }> | { value: string; label: string } | null;
-    onChange: (
-      selected: Array<{ value: string; label: string }> | { value: string; label: string } | null,
-    ) => void;
-    inputId?: string;
-    isMulti?: boolean;
-    placeholder?: string;
-  }) => {
-    const selectedValues = Array.isArray(value)
-      ? value.map((v) => v.value)
-      : value
-        ? [value.value]
-        : [];
-    return (
-      <select
-        multiple={isMulti}
-        id={inputId}
-        aria-label={placeholder}
-        value={selectedValues}
-        onChange={(e) => {
-          if (isMulti) {
-            onChange(
-              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
-            );
-          } else {
-            const selected = e.target.value
-              ? { value: e.target.value, label: e.target.options[e.target.selectedIndex].text }
-              : null;
-            onChange(selected);
-          }
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    );
-  },
-}));
 
 describe("GanttTaskModal", () => {
   it("shows validation feedback for required fields", async () => {

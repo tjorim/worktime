@@ -1,13 +1,13 @@
-import { useEffect, useState, type SubmitEventHandler } from "react";
+import { useEffect, useMemo, useState, type SubmitEventHandler } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-
-type DepOption = { value: string; label: string };
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "../../types/gantt";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+
+type DepOption = { value: string; label: string };
 
 export type GanttTaskFormInput = Omit<RawGanttTask, "id">;
 
@@ -86,15 +86,20 @@ export function GanttTaskModal({
   const submitLabel = task ? "Save Changes" : "Add Task";
 
   // Options: all tasks except self
-  const depOptions = existingTasks
-    .filter((t) => t.id !== task?.id)
-    .map((t) => ({ value: t.id, label: t.name }));
+  const depOptions = useMemo(
+    () => existingTasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: t.name })),
+    [existingTasks, task?.id],
+  );
 
   // Current value: selected IDs mapped to option objects (orphaned IDs get a truncated label)
-  const depValue = selectedDeps.map((id) => ({
-    value: id,
-    label: depOptions.find((o) => o.value === id)?.label ?? `Unknown (${id.slice(0, 8)}…)`,
-  }));
+  const depValue = useMemo(
+    () =>
+      selectedDeps.map((id) => ({
+        value: id,
+        label: depOptions.find((o) => o.value === id)?.label ?? `Unknown (${id.slice(0, 8)}…)`,
+      })),
+    [selectedDeps, depOptions],
+  );
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();

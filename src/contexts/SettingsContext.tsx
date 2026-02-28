@@ -6,6 +6,7 @@ import type { CountryCode } from "../types/countries";
 import { isValidCountryCode } from "../types/countries";
 import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
 import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
+import { USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
@@ -541,7 +542,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
 export function SettingsProvider({ children }: SettingsProviderProps) {
   // Unified user state in a single localStorage key
   const [rawUserState, setUserState] = useLocalStorage<WorktimeUserState>(
-    "worktime_user_state",
+    USER_STATE_STORAGE_KEY,
     defaultUserState,
   );
 

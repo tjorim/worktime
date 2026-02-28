@@ -27,6 +27,86 @@ describe("isValidRawGanttTask", () => {
     ).toBe(true);
   });
 
+
+
+  it("accepts progress boundaries of 0 and 100", () => {
+    expect(
+      isValidRawGanttTask({
+        id: "abc",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: 0,
+      }),
+    ).toBe(true);
+
+    expect(
+      isValidRawGanttTask({
+        id: "def",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: 100,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects negative progress", () => {
+    expect(
+      isValidRawGanttTask({
+        id: "abc",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: -1,
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects progress above 100", () => {
+    expect(
+      isValidRawGanttTask({
+        id: "abc",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: 150,
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects non-numeric progress values", () => {
+    expect(
+      isValidRawGanttTask({
+        id: "abc",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: "50",
+      }),
+    ).toBe(false);
+
+    expect(
+      isValidRawGanttTask({
+        id: "def",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: Number.NaN,
+      }),
+    ).toBe(false);
+
+    expect(
+      isValidRawGanttTask({
+        id: "ghi",
+        name: "Task",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: null,
+      }),
+    ).toBe(false);
+  });
+
   it("rejects empty id", () => {
     expect(
       isValidRawGanttTask({ id: "", name: "My Task", start: "2026-03-01", end: "2026-03-05" }),

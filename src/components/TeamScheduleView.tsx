@@ -12,6 +12,7 @@ import type { HdayEvent } from "../lib/hday/types";
 import { getEventColorClass } from "../lib/hday/parser";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
+import { LAST_TEAM_ID_STORAGE_KEY } from "../constants/storageKeys";
 
 interface TeamMember {
   username: string;
@@ -73,7 +74,7 @@ export function TeamScheduleView() {
 
   const [teamId, setTeamId] = useState(() => {
     // Load saved team ID from localStorage
-    return localStorage.getItem("worktime_last_team_id") || "";
+    return localStorage.getItem(LAST_TEAM_ID_STORAGE_KEY) || "";
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +89,7 @@ export function TeamScheduleView() {
   // Save team ID to localStorage when it changes and reset attempt flag for new team
   useEffect(() => {
     if (teamId) {
-      localStorage.setItem("worktime_last_team_id", teamId);
+      localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, teamId);
     }
     // Reset attempt flag when team ID changes to allow auto-fetch for new team
     setHasAttemptedFetch(false);
