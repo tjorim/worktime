@@ -26,11 +26,9 @@ export function GanttChart({
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
-  useEffect(() => {
-    onTaskClickRef.current = onTaskClick;
-    onDateChangeRef.current = onDateChange;
-    onProgressChangeRef.current = onProgressChange;
-  }, [onTaskClick, onDateChange, onProgressChange]);
+  onTaskClickRef.current = onTaskClick;
+  onDateChangeRef.current = onDateChange;
+  onProgressChangeRef.current = onProgressChange;
 
   useEffect(() => {
     if (tasks.length === 0) {
