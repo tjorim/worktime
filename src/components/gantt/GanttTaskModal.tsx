@@ -94,11 +94,14 @@ export function GanttTaskModal({
       return;
     }
 
+    const dependencies = form.dependencies?.trim() || undefined;
+    const notes = form.notes?.trim() || undefined;
+
     onSave({
       ...form,
       name: form.name.trim(),
-      dependencies: form.dependencies?.trim() ? form.dependencies.trim() : undefined,
-      notes: form.notes?.trim() ? form.notes.trim() : undefined,
+      dependencies,
+      notes,
       progress: form.progress ?? 0,
     });
   };
