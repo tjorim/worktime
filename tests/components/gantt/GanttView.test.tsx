@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsProvider } from "../../../src/contexts/SettingsContext";
+import { SettingsProvider, USER_STATE_VERSION } from "../../../src/contexts/SettingsContext";
 
 vi.mock("frappe-gantt", () => ({
   default: class MockFrappeGantt {
@@ -43,7 +43,7 @@ function renderWithSettings(ui: ReactNode) {
   window.localStorage.setItem(
     "worktime_user_state",
     JSON.stringify({
-      version: 4,
+      version: USER_STATE_VERSION,
       hasCompletedOnboarding: true,
       myTeam: 1,
       scheduleType: "5-shift",

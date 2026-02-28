@@ -125,7 +125,8 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-const CURRENT_VERSION = 4;
+export const USER_STATE_VERSION = 4;
+const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
