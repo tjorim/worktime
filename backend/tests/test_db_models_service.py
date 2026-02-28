@@ -22,6 +22,7 @@ from app.models.db_schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
+    ADMIN_SCOPE_REQUIRED_MSG,
     ValidationError as ServiceValidationError,
     create_label,
     create_or_update_work_location,
@@ -76,11 +77,26 @@ def test_list_users_requires_admin_scope(session: Session) -> None:
     create_user(session, UserCreate(username="alice-admin-test", display_name="Alice"))
     create_user(session, UserCreate(username="bob-admin-test", display_name="Bob"))
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError, match=ADMIN_SCOPE_REQUIRED_MSG):
         list_users(session)
 
-    users = list_users(session, is_admin=True)
+    users, total = list_users(session, is_admin=True)
     assert len(users) == 2
+    assert total == 2
+
+
+
+def test_list_users_validates_offset_and_limit(session: Session) -> None:
+    create_user(session, UserCreate(username="limit-test", display_name="Limit Test"))
+
+    with pytest.raises(ServiceValidationError, match="offset must be >= 0"):
+        list_users(session, is_admin=True, offset=-1)
+
+    with pytest.raises(ServiceValidationError, match="limit must be >= 1"):
+        list_users(session, is_admin=True, limit=0)
+
+    with pytest.raises(ServiceValidationError, match="limit must be <= 1000"):
+        list_users(session, is_admin=True, limit=1001)
 
 
 def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:

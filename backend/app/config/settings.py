@@ -7,10 +7,23 @@ settings with sensible defaults for development and production environments.
 import logging
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
+ALLOWED_JWT_ALGORITHMS = {
+    "HS256",
+    "HS384",
+    "HS512",
+    "RS256",
+    "RS384",
+    "RS512",
+    "ES256",
+    "ES384",
+    "ES512",
+}
 
 
 class Settings(BaseSettings):
@@ -48,6 +61,10 @@ class Settings(BaseSettings):
     DATABASE_PATH: str = "./data/worktime.db"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
+
+    # API authentication configuration
+    JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
+    JWT_ALGORITHM: str = "HS256"
     
     @field_validator("CORS_ORIGINS")
     @classmethod
@@ -76,6 +93,20 @@ class Settings(BaseSettings):
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
 
+
+    @field_validator("JWT_ALGORITHM")
+    @classmethod
+    def validate_jwt_algorithm(cls, v: str) -> str:
+        """Validate JWT algorithm configuration."""
+        if not v or not v.strip():
+            raise ValueError("JWT_ALGORITHM cannot be empty")
+
+        normalized = v.strip().upper()
+        if normalized not in ALLOWED_JWT_ALGORITHMS:
+            allowed = ", ".join(sorted(ALLOWED_JWT_ALGORITHMS))
+            raise ValueError(f"JWT_ALGORITHM must be one of: {allowed}")
+        return normalized
+
     @field_validator("DATABASE_PATH")
     @classmethod
     def validate_database_path(cls, v: str) -> str:
@@ -95,6 +126,18 @@ class Settings(BaseSettings):
 
         return str(db_path)
     
+    @model_validator(mode="after")
+    def validate_production_jwt_secret(self) -> "Settings":
+        """Reject insecure default JWT secret in production."""
+        if (
+            self.ENVIRONMENT == "production"
+            and self.JWT_SECRET_KEY == DEFAULT_JWT_SECRET_KEY
+        ):
+            raise ValueError(
+                "JWT_SECRET_KEY must be overridden in production; refusing to use the development default"
+            )
+        return self
+
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
         

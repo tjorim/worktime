@@ -144,7 +144,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=False if "*" in cors_origins else True,
-    allow_methods=["GET", "PUT", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -156,6 +156,18 @@ app.add_middleware(TimingMiddleware)
 app.include_router(health_router)
 app.include_router(hday_router)
 app.include_router(team_router)
+
+if settings.DATABASE_ENABLED:
+    from .api.db_time_tracking import router as db_time_tracking_router
+    from .api.db_users import router as db_users_router
+    from .api.db_work_locations import router as db_work_locations_router
+
+    app.include_router(db_users_router)
+    app.include_router(db_time_tracking_router)
+    app.include_router(db_work_locations_router)
+    logger.info("✓ Database API endpoints enabled")
+else:
+    logger.info("Database API endpoint registration skipped (DATABASE_ENABLED=false)")
 
 # Register debug router only in non-production environments
 if settings.ENVIRONMENT != "production":

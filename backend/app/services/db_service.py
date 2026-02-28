@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from sqlalchemy import func as sql_func
 from sqlmodel import Session, col, delete, select, update
 
 from app.database.models import (
@@ -39,6 +40,10 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
+ADMIN_SCOPE_REQUIRED_MSG = "listing all users requires admin scope"
+MAX_USER_LIST_LIMIT = 1000
+
+
 def _get_non_nullable_model_fields(model: type) -> set[str]:
     return {
         column.name
@@ -72,10 +77,32 @@ def get_user_by_username(session: Session, username: str) -> User | None:
     return session.exec(select(User).where(User.username == username)).first()
 
 
-def list_users(session: Session, *, is_admin: bool = False) -> list[User]:
+def list_users(
+    session: Session,
+    *,
+    is_admin: bool = False,
+    offset: int = 0,
+    limit: int = 100,
+) -> tuple[list[User], int]:
     if not is_admin:
-        raise ValidationError("listing all users requires admin scope")
-    return list(session.exec(select(User).order_by(User.id)).all())
+        raise ValidationError(ADMIN_SCOPE_REQUIRED_MSG)
+    if offset < 0:
+        raise ValidationError(f"offset must be >= 0, got: {offset}")
+    if limit < 1:
+        raise ValidationError(f"limit must be >= 1, got: {limit}")
+    if limit > MAX_USER_LIST_LIMIT:
+        raise ValidationError(f"limit must be <= {MAX_USER_LIST_LIMIT}, got: {limit}")
+
+    total = int(session.exec(select(sql_func.count()).select_from(User)).one())
+    users = list(
+        session.exec(
+            select(User)
+            .order_by(User.id)
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+    return users, total
 
 
 def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
