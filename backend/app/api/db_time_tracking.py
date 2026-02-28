@@ -78,7 +78,7 @@ def list_labels_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
-) -> LabelListResponse:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
@@ -153,7 +153,7 @@ def list_tasks_endpoint(
     end_date: datetime | None = None,
     label_id: str | None = None,
     session: Session = Depends(get_session),
-) -> TaskListResponse:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
@@ -181,7 +181,7 @@ def get_running_task_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
-) -> TaskRead | None:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
@@ -250,7 +250,7 @@ def list_templates_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
-) -> TemplateListResponse:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
