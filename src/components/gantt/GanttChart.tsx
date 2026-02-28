@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { dayjs } from "../../utils/dateTimeUtils";
-import { EmptyState } from "../shared/EmptyState";
 import type { GanttTask } from "../../types/gantt";
+import { EmptyState } from "../shared/EmptyState";
 
 type GanttViewMode = "Day" | "Week" | "Month";
 
@@ -13,9 +13,24 @@ interface GanttChartProps {
   onProgressChange: (taskId: string, progress: number) => void;
 }
 
-export function GanttChart({ tasks, viewMode, onTaskClick, onDateChange, onProgressChange }: GanttChartProps) {
+export function GanttChart({
+  tasks,
+  viewMode,
+  onTaskClick,
+  onDateChange,
+  onProgressChange,
+}: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
+  const onTaskClickRef = useRef(onTaskClick);
+  const onDateChangeRef = useRef(onDateChange);
+  const onProgressChangeRef = useRef(onProgressChange);
+
+  useEffect(() => {
+    onTaskClickRef.current = onTaskClick;
+    onDateChangeRef.current = onDateChange;
+    onProgressChangeRef.current = onProgressChange;
+  }, [onTaskClick, onDateChange, onProgressChange]);
 
   useEffect(() => {
     if (tasks.length === 0) {
@@ -43,12 +58,16 @@ export function GanttChart({ tasks, viewMode, onTaskClick, onDateChange, onProgr
 
       ganttRef.current = new Gantt(container, tasks, {
         view_mode: viewMode,
-        on_click: (task) => onTaskClick(task.id),
+        on_click: (task) => onTaskClickRef.current(task.id),
         on_date_change: (task, start, end) => {
-          onDateChange(task.id, dayjs(start).format("YYYY-MM-DD"), dayjs(end).format("YYYY-MM-DD"));
+          onDateChangeRef.current(
+            task.id,
+            dayjs(start).format("YYYY-MM-DD"),
+            dayjs(end).format("YYYY-MM-DD"),
+          );
         },
         on_progress_change: (task, progress) => {
-          onProgressChange(task.id, progress);
+          onProgressChangeRef.current(task.id, progress);
         },
       });
     };
@@ -60,7 +79,7 @@ export function GanttChart({ tasks, viewMode, onTaskClick, onDateChange, onProgr
       container.innerHTML = "";
       ganttRef.current = null;
     };
-  }, [tasks, viewMode, onTaskClick, onDateChange, onProgressChange]);
+  }, [tasks, viewMode]);
 
   useEffect(() => {
     if (!ganttRef.current || tasks.length === 0) {
