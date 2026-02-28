@@ -243,6 +243,30 @@ describe("WelcomeWizard Configuration System", () => {
       const nextStep = workLocationConfig.getNextStep(context);
       expect(nextStep).toBeNull();
     });
+
+    it("should go back to time tracking setup from gantt setup in onboarding", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
+      };
+
+      const ganttConfig = getStepConfig("gantt-setup");
+      const prevStep = ganttConfig.getPrevStep(context);
+      expect(prevStep).toBe("time-tracking-setup");
+    });
+
+    it("should go back to gantt setup from work location setup in onboarding", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
+      };
+
+      const workLocationConfig = getStepConfig("work-location-setup");
+      const prevStep = workLocationConfig.getPrevStep(context);
+      expect(prevStep).toBe("gantt-setup");
+    });
   });
 
   describe("Step Configuration - Backward Navigation", () => {

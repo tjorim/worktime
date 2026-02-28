@@ -1,5 +1,6 @@
 import reactPlugin from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
 // Read version from package.json for injection in tests
 import * as packageJson from "./package.json";
@@ -11,7 +12,7 @@ export default defineConfig({
   plugins: [reactPlugin()] as any,
   resolve: {
     alias: {
-      "frappe-gantt": new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url).pathname,
+      "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
     },
   },
   test: {
