@@ -130,8 +130,6 @@ describe("useGanttTasks", () => {
         start: "2026-04-01",
         end: "2026-04-02",
         progress: 0,
-        dependencies: undefined,
-        notes: undefined,
       },
     ]);
   });
