@@ -5,9 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 
 from fastapi.testclient import TestClient
+import jwt
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.config import settings
 from app.database.engine import get_session
 from app.main import app
 
@@ -27,6 +29,15 @@ def _build_client() -> tuple[TestClient, Session]:
     app.dependency_overrides[get_session] = override_get_session
     client = TestClient(app)
     return client, session
+
+
+def _auth_headers(user_id: int) -> dict[str, str]:
+    token = jwt.encode(
+        {"sub": str(user_id)},
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_db_user_crud_endpoints() -> None:
@@ -74,22 +85,52 @@ def test_db_user_crud_endpoints() -> None:
         session.close()
 
 
+def test_db_time_tracking_endpoints_require_auth_and_user_match() -> None:
+    client, session = _build_client()
+    try:
+        owner_id = client.post(
+            "/v1/db/users/",
+            json={"username": "time-user", "display_name": "Time User", "settings": {}},
+        ).json()["id"]
+        other_id = client.post(
+            "/v1/db/users/",
+            json={"username": "other-user", "display_name": "Other User", "settings": {}},
+        ).json()["id"]
+
+        unauthenticated = client.get(f"/v1/db/time-tracking/labels?user_id={owner_id}")
+        assert unauthenticated.status_code == 401
+
+        forbidden = client.get(
+            f"/v1/db/time-tracking/labels?user_id={owner_id}",
+            headers=_auth_headers(other_id),
+        )
+        assert forbidden.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+        session.close()
+
+
 def test_db_time_tracking_endpoints() -> None:
     client, session = _build_client()
     try:
         user_id = client.post(
             "/v1/db/users/",
-            json={"username": "time-user", "display_name": "Time User", "settings": {}},
+            json={"username": "time-user-2", "display_name": "Time User", "settings": {}},
         ).json()["id"]
+        headers = _auth_headers(user_id)
 
         label_response = client.post(
             f"/v1/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Focus", "color": "#112233"},
+            headers=headers,
         )
         assert label_response.status_code == 201
         label_id = label_response.json()["id"]
 
-        labels_list_response = client.get(f"/v1/db/time-tracking/labels?user_id={user_id}")
+        labels_list_response = client.get(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            headers=headers,
+        )
         assert labels_list_response.status_code == 200
         assert "X-Db-Query-Ms" in labels_list_response.headers
 
@@ -102,6 +143,7 @@ def test_db_time_tracking_endpoints() -> None:
                 "stop_time": None,
                 "includes_break": False,
             },
+            headers=headers,
         )
         assert task_response.status_code == 201
         task_id = task_response.json()["id"]
@@ -115,10 +157,14 @@ def test_db_time_tracking_endpoints() -> None:
                 "stop_time": None,
                 "includes_break": False,
             },
+            headers=headers,
         )
         assert second_running_task_response.status_code == 409
 
-        running_response = client.get(f"/v1/db/time-tracking/tasks/running?user_id={user_id}")
+        running_response = client.get(
+            f"/v1/db/time-tracking/tasks/running?user_id={user_id}",
+            headers=headers,
+        )
         assert running_response.status_code == 200
         assert running_response.json()["id"] == task_id
         assert "X-Db-Query-Ms" in running_response.headers
@@ -126,6 +172,7 @@ def test_db_time_tracking_endpoints() -> None:
         update_task_response = client.put(
             f"/v1/db/time-tracking/tasks/{task_id}?user_id={user_id}",
             json={"stop_time": datetime(2026, 1, 1, 11, 0).isoformat()},
+            headers=headers,
         )
         assert update_task_response.status_code == 200
 
@@ -137,27 +184,42 @@ def test_db_time_tracking_endpoints() -> None:
                 "start_time": "09:00:00",
                 "stop_time": "11:00:00",
             },
+            headers=headers,
         )
         assert template_response.status_code == 201
         template_id = template_response.json()["id"]
 
-        list_tasks_response = client.get(f"/v1/db/time-tracking/tasks?user_id={user_id}")
+        list_tasks_response = client.get(
+            f"/v1/db/time-tracking/tasks?user_id={user_id}",
+            headers=headers,
+        )
         assert list_tasks_response.status_code == 200
         assert list_tasks_response.json()["total"] == 1
         assert "X-Db-Query-Ms" in list_tasks_response.headers
 
         delete_template_response = client.delete(
-            f"/v1/db/time-tracking/templates/{template_id}?user_id={user_id}"
+            f"/v1/db/time-tracking/templates/{template_id}?user_id={user_id}",
+            headers=headers,
         )
         assert delete_template_response.status_code == 204
 
-        delete_task_response = client.delete(f"/v1/db/time-tracking/tasks/{task_id}?user_id={user_id}")
+        delete_task_response = client.delete(
+            f"/v1/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+            headers=headers,
+        )
         assert delete_task_response.status_code == 204
 
         delete_label_response = client.delete(
-            f"/v1/db/time-tracking/labels/{label_id}?user_id={user_id}"
+            f"/v1/db/time-tracking/labels/{label_id}?user_id={user_id}",
+            headers=headers,
         )
         assert delete_label_response.status_code == 204
+
+        missing_body_response = client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            headers=headers,
+        )
+        assert missing_body_response.status_code == 422
     finally:
         app.dependency_overrides.clear()
         session.close()

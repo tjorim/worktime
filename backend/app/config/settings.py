@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     DATABASE_PATH: str = "./data/worktime.db"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
+
+    # API authentication configuration
+    JWT_SECRET_KEY: str = "dev-only-change-me-at-least-32-bytes"
+    JWT_ALGORITHM: str = "HS256"
     
     @field_validator("CORS_ORIGINS")
     @classmethod
@@ -74,6 +78,15 @@ class Settings(BaseSettings):
         """Validate cache TTL is positive."""
         if v < 0:
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
+        return v
+
+
+    @field_validator("JWT_ALGORITHM")
+    @classmethod
+    def validate_jwt_algorithm(cls, v: str) -> str:
+        """Validate JWT algorithm configuration."""
+        if not v or not v.strip():
+            raise ValueError("JWT_ALGORITHM cannot be empty")
         return v
 
     @field_validator("DATABASE_PATH")

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
+from app.api.auth import get_authenticated_user_id, require_user_match
 from app.database.engine import get_session
 from app.models.db_schemas import (
     LabelCreate,
@@ -58,12 +59,12 @@ def _handle_error(error: Exception) -> None:
 
 @router.post("/labels", response_model=LabelRead, status_code=status.HTTP_201_CREATED)
 def create_label_endpoint(
+    payload: LabelCreate,
     user_id: int = Query(..., ge=1),
-    payload: LabelCreate | None = None,
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> LabelRead:
-    if payload is None:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Request body is required")
+    require_user_match(user_id, authenticated_user_id)
     try:
         label = create_label(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -75,8 +76,10 @@ def create_label_endpoint(
 @router.get("/labels", response_model=LabelListResponse)
 def list_labels_endpoint(
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> LabelListResponse:
+    require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         labels = list_labels_for_user(session, user_id)
@@ -97,8 +100,10 @@ def update_label_endpoint(
     label_id: str,
     payload: LabelUpdate,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> LabelRead:
+    require_user_match(user_id, authenticated_user_id)
     try:
         label = update_label(session, user_id, label_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -111,8 +116,10 @@ def update_label_endpoint(
 def delete_label_endpoint(
     label_id: str,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> Response:
+    require_user_match(user_id, authenticated_user_id)
     try:
         delete_label(session, user_id, label_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -123,12 +130,12 @@ def delete_label_endpoint(
 
 @router.post("/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def create_task_endpoint(
+    payload: TaskCreate,
     user_id: int = Query(..., ge=1),
-    payload: TaskCreate | None = None,
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TaskRead:
-    if payload is None:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Request body is required")
+    require_user_match(user_id, authenticated_user_id)
 
     try:
         task = create_task(session, user_id, payload)
@@ -141,11 +148,13 @@ def create_task_endpoint(
 @router.get("/tasks", response_model=TaskListResponse)
 def list_tasks_endpoint(
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     label_id: str | None = None,
     session: Session = Depends(get_session),
 ) -> TaskListResponse:
+    require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         tasks = list_tasks(
@@ -170,8 +179,10 @@ def list_tasks_endpoint(
 @router.get("/tasks/running", response_model=TaskRead | None)
 def get_running_task_endpoint(
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TaskRead | None:
+    require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         task = get_running_task(session, user_id)
@@ -189,8 +200,10 @@ def update_task_endpoint(
     task_id: str,
     payload: TaskUpdate,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TaskRead:
+    require_user_match(user_id, authenticated_user_id)
     try:
         task = update_task(session, user_id, task_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -203,8 +216,10 @@ def update_task_endpoint(
 def delete_task_endpoint(
     task_id: str,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> Response:
+    require_user_match(user_id, authenticated_user_id)
     try:
         delete_task(session, user_id, task_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -215,12 +230,12 @@ def delete_task_endpoint(
 
 @router.post("/templates", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
 def create_template_endpoint(
+    payload: TemplateCreate,
     user_id: int = Query(..., ge=1),
-    payload: TemplateCreate | None = None,
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TemplateRead:
-    if payload is None:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Request body is required")
+    require_user_match(user_id, authenticated_user_id)
 
     try:
         template = create_template(session, user_id, payload)
@@ -233,8 +248,10 @@ def create_template_endpoint(
 @router.get("/templates", response_model=TemplateListResponse)
 def list_templates_endpoint(
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TemplateListResponse:
+    require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         templates = list_templates_for_user(session, user_id)
@@ -255,8 +272,10 @@ def update_template_endpoint(
     template_id: str,
     payload: TemplateUpdate,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> TemplateRead:
+    require_user_match(user_id, authenticated_user_id)
     try:
         template = update_template(session, user_id, template_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
@@ -269,8 +288,10 @@ def update_template_endpoint(
 def delete_template_endpoint(
     template_id: str,
     user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: Session = Depends(get_session),
 ) -> Response:
+    require_user_match(user_id, authenticated_user_id)
     try:
         delete_template(session, user_id, template_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
