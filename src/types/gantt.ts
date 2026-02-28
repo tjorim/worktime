@@ -1,13 +1,10 @@
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
 
 function isValidISODate(value: string): boolean {
-  if (!ISO_DATE_RE.test(value)) {
-    return false;
-  }
-
-  const parsedDate = new Date(value);
-
-  return !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === value;
+  return dayjs(value, "YYYY-MM-DD", true).isValid();
 }
 
 export interface GanttTask {
