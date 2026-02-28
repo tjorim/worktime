@@ -16,8 +16,6 @@ from app.services.db_service import NotFoundError, ValidationError, authenticate
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 
-_TOKEN_LIFETIME_SECONDS = 24 * 3600
-
 
 @router.post("/token", response_model=TokenResponse)
 def login(
@@ -33,14 +31,15 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         ) from error
 
-    exp = datetime.now(timezone.utc) + timedelta(seconds=_TOKEN_LIFETIME_SECONDS)
+    token_lifetime_seconds = settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS
+    exp = datetime.now(timezone.utc) + timedelta(seconds=token_lifetime_seconds)
     token_payload = {
         "sub": str(user.id),
         "is_admin": user.is_admin,
         "exp": exp,
     }
     token = jwt.encode(token_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-    return TokenResponse(access_token=token, token_type="bearer", expires_in=_TOKEN_LIFETIME_SECONDS)
+    return TokenResponse(access_token=token, token_type="bearer", expires_in=token_lifetime_seconds)
 
 
 @router.get("/me", response_model=UserRead)
