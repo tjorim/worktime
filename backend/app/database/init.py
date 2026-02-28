@@ -16,14 +16,14 @@ def init_db() -> None:
     This is useful for development environments, but not recommended for production.
     """
     auto_migrate_value = os.getenv("AUTO_MIGRATE", "false")
+    alembic_ini_path = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
     if auto_migrate_value.lower() == "true":
-        alembic_ini = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
-        alembic_cfg = Config(str(alembic_ini))
+        alembic_cfg = Config(str(alembic_ini_path))
         command.upgrade(alembic_cfg, "head")
         return
 
     logger.info(
         "Skipping automatic migrations because AUTO_MIGRATE=%r. Run `PYTHONPATH=. alembic -c %s upgrade head` manually to apply pending migrations.",
         auto_migrate_value,
-        Path(__file__).resolve().parent.parent.parent / "alembic.ini",
+        alembic_ini_path,
     )
