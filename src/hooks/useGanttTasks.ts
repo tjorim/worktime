@@ -4,9 +4,9 @@ import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "../types
 
 const GANTT_STORAGE_KEY = "worktime_gantt_tasks";
 
-type NewGanttTaskInput = Omit<RawGanttTask, "id">;
+export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
-type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;
+export type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;
 
 function toTask(raw: RawGanttTask): GanttTask {
   return {

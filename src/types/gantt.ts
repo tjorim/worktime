@@ -1,4 +1,11 @@
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+import { dayjs } from "../utils/dateTimeUtils";
+
+const GANTT_DATE_FORMAT = "YYYY-MM-DD";
+
+// Keep this helper to make the validation intent explicit and avoid duplicating strict parse args.
+function isValidISODate(value: string): boolean {
+  return dayjs(value, GANTT_DATE_FORMAT, true).isValid();
+}
 
 export interface GanttTask {
   id: string;
@@ -33,7 +40,7 @@ export function isValidRawGanttTask(value: unknown): value is RawGanttTask {
     return false;
   }
 
-  if (!ISO_DATE_RE.test(task.start) || !ISO_DATE_RE.test(task.end)) {
+  if (!isValidISODate(task.start) || !isValidISODate(task.end)) {
     return false;
   }
 
