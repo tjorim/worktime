@@ -45,6 +45,30 @@ describe("useGanttTasks", () => {
     expect(result.current.tasks[0].progress).toBe(0);
   });
 
+
+  it("keeps provided progress when adding a task", () => {
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn(() => "generated-id-2"),
+    });
+
+    const { result } = renderHook(() => useGanttTasks());
+
+    act(() => {
+      result.current.addTask({
+        name: "Implement chart",
+        start: "2026-03-10",
+        end: "2026-03-15",
+        progress: 65,
+      });
+    });
+
+    expect(result.current.tasks).toHaveLength(1);
+    expect(result.current.tasks[0]).toMatchObject({
+      id: "generated-id-2",
+      progress: 65,
+    });
+  });
+
   it("updates an existing task partially", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",
