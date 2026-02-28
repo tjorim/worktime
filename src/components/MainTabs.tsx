@@ -11,6 +11,7 @@ import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
 import { TimeOffView } from "./TimeOffView";
+import { GanttView } from "./gantt/GanttView";
 import { TimeTrackingView } from "./timeTracking/TimeTrackingView";
 
 interface MainTabsProps {
@@ -58,6 +59,7 @@ export function MainTabs({
   const { settings } = useSettings();
   const timeOffEnabled = settings.enableTimeOff;
   const timeTrackingEnabled = settings.enableTimeTracking;
+  const ganttEnabled = settings.enableGantt;
 
   const handleTeamClick = (teamNumber: number, scheduleType: ScheduleOption | null) => {
     setSelectedTeamForDetail(teamNumber);
@@ -87,8 +89,9 @@ export function MainTabs({
       ...baseShortcuts,
       ...(timeOffEnabled ? { onTabTimeOff: () => setActiveTab("timeoff") } : {}),
       ...(timeTrackingEnabled ? { onTabTimeTracking: () => setActiveTab("timetracking") } : {}),
+      ...(ganttEnabled ? { onTabGantt: () => setActiveTab("gantt") } : {}),
     };
-  }, [setActiveTab, timeOffEnabled, timeTrackingEnabled]);
+  }, [setActiveTab, timeOffEnabled, timeTrackingEnabled, ganttEnabled]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -98,8 +101,9 @@ export function MainTabs({
       "schedule",
       ...(timeOffEnabled ? (["timeoff"] as TabKey[]) : []),
       ...(timeTrackingEnabled ? (["timetracking"] as TabKey[]) : []),
+      ...(ganttEnabled ? (["gantt"] as TabKey[]) : []),
     ],
-    [timeOffEnabled, timeTrackingEnabled],
+    [timeOffEnabled, timeTrackingEnabled, ganttEnabled],
   );
 
   useEffect(() => {
@@ -184,6 +188,20 @@ export function MainTabs({
               }
             >
               <TimeTrackingView />
+            </Tab>
+          )}
+
+          {ganttEnabled && (
+            <Tab
+              eventKey="gantt"
+              title={
+                <>
+                  <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
+                  Gantt
+                </>
+              }
+            >
+              <GanttView />
             </Tab>
           )}
         </Tabs>
