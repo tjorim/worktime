@@ -26,5 +26,8 @@
 @use "calendar";
 @use "shifts";
 
+/* Frappe Gantt */
+@import "../../node_modules/frappe-gantt/dist/frappe-gantt.css";
+
 /* Bootstrap Icons */
 @import "bootstrap-icons/font/bootstrap-icons.css";
