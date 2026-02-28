@@ -37,12 +37,12 @@ export function TemplateModal({
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
-  const labelExists = labels.some((l) => l.id === value.label);
-  const isSubmitDisabled = isLabelSelectionDisabled || !value.label || !labelExists;
   const selectedLabelOption = useMemo(() => {
     const selected = labels.find((l) => l.id === value.label);
     return selected ? { value: selected.id, label: selected.name } : null;
   }, [labels, value.label]);
+  const isSubmitDisabled =
+    isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>
