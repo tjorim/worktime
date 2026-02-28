@@ -152,7 +152,6 @@ def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
 def delete_user(session: Session, user_id: int) -> None:
     user = get_user(session, user_id)
 
-    session.exec(delete(GanttTask).where(GanttTask.user_id == user_id))
     session.exec(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
     session.exec(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
     session.exec(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))

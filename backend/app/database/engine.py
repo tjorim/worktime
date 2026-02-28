@@ -29,6 +29,7 @@ def create_engine() -> Engine:
 
         @event.listens_for(_engine, "connect")
         def set_sqlite_pragmas(dbapi_conn, _):
+            dbapi_conn.execute("PRAGMA foreign_keys=ON")
             dbapi_conn.execute("PRAGMA journal_mode=WAL")
             dbapi_conn.execute("PRAGMA synchronous=NORMAL")
 
