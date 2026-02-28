@@ -51,7 +51,7 @@ def list_users_endpoint(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
-        users = list_users(session, is_admin=True)
+        users = list_users(session, is_admin=principal.is_admin)
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
 
