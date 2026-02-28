@@ -4,7 +4,7 @@ import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
 import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../../types/countries";
 
-interface Step7WorkLocationSetupProps {
+interface Step8WorkLocationSetupProps {
   isEnabled: boolean;
   onToggle: (enabled: boolean) => void;
   homeCountry: CountryCode | null;
