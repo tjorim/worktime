@@ -30,15 +30,12 @@ vi.mock("../../../src/components/gantt/GanttChart", () => ({
     onTaskClick,
     onDateChange,
     onProgressChange,
-    enableHorizontalScroll,
   }: {
     onTaskClick: (taskId: string) => void;
     onDateChange: (taskId: string, start: string, end: string) => void;
     onProgressChange: (taskId: string, progress: number) => void;
-    enableHorizontalScroll?: boolean;
   }) => (
     <div>
-      <div data-testid="horizontal-scroll-state">{enableHorizontalScroll ? "enabled" : "disabled"}</div>
       <button onClick={() => onTaskClick("task-1")}>Open task</button>
       <button onClick={() => onDateChange("task-1", "2026-03-02", "2026-03-06")}>Move task</button>
       <button onClick={() => onProgressChange("task-1", 75)}>Set progress</button>
@@ -78,14 +75,9 @@ describe("GanttView", () => {
     expect(mockRemoveTask).toHaveBeenCalledWith("task-1");
   });
 
-  it("toggles horizontal scrolling option", async () => {
-    const user = userEvent.setup();
+  it("does not render a horizontal scroll toggle", () => {
     render(<GanttView />);
 
-    expect(screen.getByTestId("horizontal-scroll-state")).toHaveTextContent("enabled");
-
-    await user.click(screen.getByLabelText("Horizontal scroll"));
-
-    expect(screen.getByTestId("horizontal-scroll-state")).toHaveTextContent("disabled");
+    expect(screen.queryByLabelText("Horizontal scroll")).not.toBeInTheDocument();
   });
 });

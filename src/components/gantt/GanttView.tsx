@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
 import type { GanttTask } from "../../types/gantt";
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -16,7 +15,6 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [enableHorizontalScroll, setEnableHorizontalScroll] = useState(true);
 
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
 
@@ -88,13 +86,6 @@ export function GanttView() {
             ))}
           </ButtonGroup>
 
-          <Form.Check
-            type="switch"
-            id="gantt-horizontal-scroll"
-            label="Horizontal scroll"
-            checked={enableHorizontalScroll}
-            onChange={(event) => setEnableHorizontalScroll(event.target.checked)}
-          />
         </div>
 
         <Button size="sm" onClick={handleAddTask}>
@@ -109,7 +100,6 @@ export function GanttView() {
         onTaskClick={handleTaskClick}
         onDateChange={handleDateChange}
         onProgressChange={handleProgressChange}
-        enableHorizontalScroll={enableHorizontalScroll}
       />
 
       <GanttTaskModal
