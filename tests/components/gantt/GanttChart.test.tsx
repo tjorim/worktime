@@ -69,7 +69,7 @@ describe("GanttChart", () => {
     const [instance] = mockInstances;
 
     instance.options.on_click?.(undefined);
-    instance.options.on_date_change?.(null, new Date("2026-03-02"), new Date("2026-03-04"));
+    instance.options.on_date_change?.(null, new Date(2026, 2, 2), new Date(2026, 2, 4));
     instance.options.on_progress_change?.({ id: "" }, 50);
 
     expect(onTaskClick).not.toHaveBeenCalled();
@@ -102,8 +102,8 @@ describe("GanttChart", () => {
     instance.options.on_click?.({ id: " task-1 " });
     instance.options.on_date_change?.(
       { id: " task-1 " },
-      new Date("2026-03-02"),
-      new Date("2026-03-04"),
+      new Date(2026, 2, 2),
+      new Date(2026, 2, 4),
     );
     instance.options.on_progress_change?.({ id: " task-1 " }, 75);
 
@@ -162,8 +162,8 @@ describe("GanttChart", () => {
     instance.options.on_click?.({ id: "task-1" });
     instance.options.on_date_change?.(
       { id: "task-1" },
-      new Date("2026-03-02"),
-      new Date("2026-03-04"),
+      new Date(2026, 2, 2),
+      new Date(2026, 2, 4),
     );
     instance.options.on_progress_change?.({ id: "task-1" }, 75);
 

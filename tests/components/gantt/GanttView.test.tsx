@@ -164,6 +164,7 @@ describe("GanttView", () => {
 
     expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Day");
     expect(screen.queryByRole("button", { name: "Day" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Week" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Year" })).not.toBeInTheDocument();
   });

@@ -17,10 +17,23 @@ declare module "frappe-gantt" {
     on_progress_change?: (task: GanttTaskLike, progress: number) => void;
   }
 
+  export type GanttViewModeName = NonNullable<GanttOptions["view_mode"]>;
+
+  export interface GanttViewMode {
+    name: string;
+    step?: string;
+    padding?: string;
+    lower_text?: string;
+    upper_text?: string;
+    upper_text_frequency?: number;
+    thick_line?: string;
+    date_format?: string;
+  }
+
   export class Gantt {
     constructor(wrapper: string | Element, tasks: GanttTaskLike[], options?: GanttOptions);
     refresh(tasks: GanttTaskLike[]): void;
-    change_view_mode(mode: GanttOptions["view_mode"], maintain_pos?: boolean): void;
+    change_view_mode(mode: GanttViewModeName | GanttViewMode, maintain_pos?: boolean): void;
     update_options(options: GanttOptions): void;
   }
 
