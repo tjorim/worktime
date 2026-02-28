@@ -4,7 +4,7 @@ from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, 
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, Date, DateTime, Index, UniqueConstraint, func, text
+from sqlalchemy import JSON, Column, Date, DateTime, ForeignKey, Index, Integer, UniqueConstraint, func, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -44,7 +44,10 @@ class User(SQLModel, table=True):
     tasks: list["TimeTrackingTask"] = Relationship(back_populates="user")
     templates: list["TimeTrackingTemplate"] = Relationship(back_populates="user")
     work_locations: list["WorkLocation"] = Relationship(back_populates="user")
-    gantt_tasks: list["GanttTask"] = Relationship(back_populates="user")
+    gantt_tasks: list["GanttTask"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
 
 
 class TimeTrackingLabel(SQLModel, table=True):
@@ -81,7 +84,7 @@ class TimeTrackingLabel(SQLModel, table=True):
 
     __table_args__ = (
         Index(
-            "ix_unique_active_label_user_name",
+            "uq_active_label_user_name",
             "user_id",
             "name",
             unique=True,
@@ -198,7 +201,7 @@ class WorkLocation(SQLModel, table=True):
 
     __table_args__ = (
         Index(
-            "ix_unique_active_work_location_user_date",
+            "uq_active_work_location_user_date",
             "user_id",
             "date",
             unique=True,
@@ -213,7 +216,9 @@ class GanttTask(SQLModel, table=True):
     __tablename__ = "gantt_tasks"
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
+    user_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    )
     name: str
     start_date: dt_date = Field(sa_column=Column(Date(), nullable=False))
     end_date: dt_date = Field(sa_column=Column(Date(), nullable=False))

@@ -6,11 +6,12 @@ from datetime import date, datetime, time
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 import app.services.db_service as db_service
-from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
+from app.database.models import GanttTask, TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
 from app.models.db_schemas import (
     LabelCreate,
     TaskCreate,
@@ -19,6 +20,7 @@ from app.models.db_schemas import (
     UserCreate,
     UserUpdate,
     WorkLocationCreate,
+    GanttTaskCreate,
 )
 from app.services.db_service import (
     ConflictError,
@@ -27,10 +29,12 @@ from app.services.db_service import (
     authenticate_user,
     create_label,
     create_or_update_work_location,
+    create_gantt_task,
     create_task,
     create_template,
     create_user,
     delete_label,
+    delete_user,
     get_label,
     get_running_task,
     get_task,
@@ -49,6 +53,10 @@ def session() -> Session:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_test_pragmas(dbapi_conn, _):
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as db_session:
         yield db_session
@@ -252,6 +260,27 @@ def test_work_location_upsert(session: Session) -> None:
     assert first.id == second.id
     assert second.country_code == "BE"
     assert second.label == "Client office"
+
+
+def test_delete_user_removes_gantt_tasks(session: Session) -> None:
+    user = create_user(session, UserCreate(username="gantt-owner", display_name="Gantt Owner", password="test-password-1"))
+
+    create_gantt_task(
+        session,
+        user.id,
+        GanttTaskCreate(
+            name="Delivery window",
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+            progress=40,
+        ),
+    )
+
+    assert session.exec(select(GanttTask).where(GanttTask.user_id == user.id)).first() is not None
+
+    delete_user(session, user.id)
+
+    assert session.exec(select(GanttTask).where(GanttTask.user_id == user.id)).first() is None
 
 
 def test_template_time_types_can_be_constructed() -> None:

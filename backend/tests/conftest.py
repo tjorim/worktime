@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator
 from fastapi.testclient import TestClient
 import jwt
 import pytest
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -36,6 +37,10 @@ def test_db() -> Generator:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_test_pragmas(dbapi_conn, _):
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
     SQLModel.metadata.create_all(engine)
     try:
         yield engine
