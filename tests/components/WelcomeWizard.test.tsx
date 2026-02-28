@@ -520,7 +520,9 @@ describe("WelcomeWizard", () => {
       await finishOnboardingSetup(user);
 
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Welcome to Worktime!/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Simulate reset
@@ -557,7 +559,9 @@ describe("WelcomeWizard", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Welcome to Worktime!/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Should be able to open settings and reset again
@@ -626,7 +630,9 @@ describe("WelcomeWizard", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Verify vacation allowance was saved to localStorage even without selecting a team
@@ -663,7 +669,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Verify initial vacation allowance was saved
@@ -872,7 +880,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Open Settings panel (match exact "Settings", not "Reset Settings")

@@ -5,6 +5,7 @@ import { dayjs } from "../utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
 import { toCountryCode } from "../types/workLocation";
+import { getWorkLocationsStorageKey } from "../constants/storageKeys";
 
 /**
  * Raw storage shape persisted to localStorage.
@@ -36,9 +37,9 @@ export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
   const { homeCountry, officeCountry } = settings;
 
-  const storageKey = `worktime_work_locations_${year}`;
-  const prevStorageKey = `worktime_work_locations_${year - 1}`;
-  const nextStorageKey = `worktime_work_locations_${year + 1}`;
+  const storageKey = getWorkLocationsStorageKey(year);
+  const prevStorageKey = getWorkLocationsStorageKey(year - 1);
+  const nextStorageKey = getWorkLocationsStorageKey(year + 1);
 
   const [storedLocations, setStoredLocations] = useLocalStorage<StoredWorkLocations>(
     storageKey,

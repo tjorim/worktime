@@ -12,10 +12,12 @@
 
 import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
+import {
+  GANTT_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+  WORK_LOCATIONS_STORAGE_PREFIX,
+} from "../constants/storageKeys";
 import { isValidScheduleType } from "./scheduleUtils";
-
-const USER_STATE_KEY = "worktime_user_state";
-const WORK_LOCATIONS_PREFIX = "worktime_work_locations_";
 
 export type AppBackupPayload = {
   exportedAt: string;
@@ -26,6 +28,7 @@ export type AppBackupPayload = {
   tasks?: unknown[];
   templates?: unknown[];
   labels?: unknown[];
+  ganttTasks?: unknown[];
 };
 
 /**
@@ -41,6 +44,7 @@ export type BackupOptions = {
   includeTasks?: boolean;
   includeTemplates?: boolean;
   includeLabels?: boolean;
+  includeGanttTasks?: boolean;
 };
 
 /**
@@ -54,6 +58,7 @@ export type BackupDataPresence = {
   hasTasks: boolean;
   hasTemplates: boolean;
   hasLabels: boolean;
+  hasGanttTasks: boolean;
   /** Years that have tasks or work location data, sorted newest-first. */
   availableYears: number[];
 };
@@ -71,8 +76,8 @@ function getWorkLocationEntries(): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith(WORK_LOCATIONS_PREFIX)) {
-      const year = key.slice(WORK_LOCATIONS_PREFIX.length);
+    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) {
+      const year = key.slice(WORK_LOCATIONS_STORAGE_PREFIX.length);
       const data = safeParseJson(key);
       if (data !== undefined) result[year] = data;
     }
@@ -82,7 +87,7 @@ function getWorkLocationEntries(): Record<string, unknown> {
 
 function getWorkLocationEntriesForYear(year: number): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  const key = `${WORK_LOCATIONS_PREFIX}${year}`;
+  const key = `${WORK_LOCATIONS_STORAGE_PREFIX}${year}`;
   const data = safeParseJson(key);
   if (data !== undefined) result[String(year)] = data;
   return result;
@@ -101,7 +106,7 @@ function getTaskYear(task: unknown): number | null {
  * and which years have year-scoped data (tasks, work locations).
  */
 export function checkBackupDataPresence(): BackupDataPresence {
-  const hasUserState = localStorage.getItem(USER_STATE_KEY) !== null;
+  const hasUserState = localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
   const hasTimeOff = !!localStorage.getItem(TIME_OFF_STORAGE_KEY);
 
   const taskYears = new Set<number>();
@@ -123,8 +128,8 @@ export function checkBackupDataPresence(): BackupDataPresence {
   const workLocationYears = new Set<number>();
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith(WORK_LOCATIONS_PREFIX)) {
-      const year = parseInt(key.slice(WORK_LOCATIONS_PREFIX.length), 10);
+    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) {
+      const year = parseInt(key.slice(WORK_LOCATIONS_STORAGE_PREFIX.length), 10);
       if (!isNaN(year)) workLocationYears.add(year);
     }
   }
@@ -134,6 +139,9 @@ export function checkBackupDataPresence(): BackupDataPresence {
     (a, b) => b - a,
   );
 
+  const ganttData = safeParseJson(GANTT_STORAGE_KEY);
+  const hasGanttTasks = Array.isArray(ganttData) && ganttData.length > 0;
+
   return {
     hasUserState,
     hasTimeOff,
@@ -141,6 +149,7 @@ export function checkBackupDataPresence(): BackupDataPresence {
     hasTasks,
     hasTemplates,
     hasLabels,
+    hasGanttTasks,
     availableYears,
   };
 }
@@ -157,6 +166,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
     tasks: options?.includeTasks ?? true,
     templates: options?.includeTemplates ?? true,
     labels: options?.includeLabels ?? true,
+    ganttTasks: options?.includeGanttTasks ?? true,
   };
 
   const payload: AppBackupPayload = {
@@ -165,7 +175,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   };
 
   if (include.userState) {
-    const userState = safeParseJson(USER_STATE_KEY);
+    const userState = safeParseJson(USER_STATE_STORAGE_KEY);
     if (userState !== undefined) payload.userState = userState;
   }
 
@@ -212,6 +222,11 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
     if (Array.isArray(labels)) payload.labels = labels;
   }
 
+  if (include.ganttTasks) {
+    const ganttTasks = safeParseJson(GANTT_STORAGE_KEY);
+    if (Array.isArray(ganttTasks)) payload.ganttTasks = ganttTasks;
+  }
+
   return payload;
 }
 
@@ -252,7 +267,8 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     "workLocations" in p ||
     "tasks" in p ||
     "templates" in p ||
-    "labels" in p;
+    "labels" in p ||
+    "ganttTasks" in p;
   if (!hasAnySection) return false;
 
   if ("userState" in p && p.userState !== undefined) {
@@ -287,6 +303,7 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
   if ("templates" in p && p.templates !== undefined && !Array.isArray(p.templates)) return false;
   if ("labels" in p && p.labels !== undefined && !Array.isArray(p.labels)) return false;
+  if ("ganttTasks" in p && p.ganttTasks !== undefined && !Array.isArray(p.ganttTasks)) return false;
 
   return true;
 }
@@ -300,7 +317,7 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
  */
 export function restoreAppBackup(payload: AppBackupPayload): void {
   if (payload.userState !== undefined) {
-    localStorage.setItem(USER_STATE_KEY, JSON.stringify(payload.userState));
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
   }
 
   if (typeof payload.timeOff === "string") {
@@ -309,7 +326,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
     for (const [year, data] of Object.entries(payload.workLocations)) {
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}${year}`, JSON.stringify(data));
+      localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(data));
     }
   }
 
@@ -342,6 +359,10 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.labels)) {
     localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(payload.labels));
+  }
+
+  if (Array.isArray(payload.ganttTasks)) {
+    localStorage.setItem(GANTT_STORAGE_KEY, JSON.stringify(payload.ganttTasks));
   }
 
   window.location.reload();

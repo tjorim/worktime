@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
+      "react-select": fileURLToPath(new URL("tests/__mocks__/react-select.tsx", import.meta.url)),
     },
   },
   test: {

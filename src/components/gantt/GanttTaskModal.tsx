@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState, type SubmitEventHandler } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ReactSelect from "react-select";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "../../types/gantt";
+import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+
+type DepOption = { value: string; label: string };
 
 export type GanttTaskFormInput = Omit<RawGanttTask, "id">;
 
@@ -12,20 +16,21 @@ interface GanttTaskModalProps {
   onHide: () => void;
   onSave: (task: GanttTaskFormInput) => void;
   task?: GanttTask;
-  existingTaskIds: string[];
+  existingTasks: Array<Pick<GanttTask, "id" | "name">>;
   onDelete?: () => void;
 }
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
-function createInitialValue(task?: GanttTask): GanttTaskFormInput {
+type FormState = Omit<GanttTaskFormInput, "dependencies">;
+
+function createInitialValue(task?: GanttTask): FormState {
   if (task) {
     return {
       name: task.name,
       start: task.start,
       end: task.end,
       progress: task.progress,
-      dependencies: task.dependencies,
       notes: task.notes,
     };
   }
@@ -36,9 +41,15 @@ function createInitialValue(task?: GanttTask): GanttTaskFormInput {
     start: today,
     end: today,
     progress: 0,
-    dependencies: "",
     notes: "",
   };
+}
+
+function parseDeps(dependencies?: string): string[] {
+  return (dependencies ?? "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
 }
 
 export function GanttTaskModal({
@@ -46,32 +57,20 @@ export function GanttTaskModal({
   onHide,
   onSave,
   task,
-  existingTaskIds,
+  existingTasks,
   onDelete,
 }: GanttTaskModalProps) {
-  const [form, setForm] = useState<GanttTaskFormInput>(() => createInitialValue(task));
+  const [form, setForm] = useState<FormState>(() => createInitialValue(task));
+  const [selectedDeps, setSelectedDeps] = useState<string[]>(() => parseDeps(task?.dependencies));
   const [wasValidated, setWasValidated] = useState(false);
 
   useEffect(() => {
     setForm(createInitialValue(task));
+    setSelectedDeps(parseDeps(task?.dependencies));
     if (!show) {
       setWasValidated(false);
     }
   }, [show, task]);
-
-  const unknownDependencies = useMemo(() => {
-    const enteredDependencies = (form.dependencies ?? "")
-      .split(",")
-      .map((dependencyId) => dependencyId.trim())
-      .filter(Boolean);
-
-    if (enteredDependencies.length === 0) {
-      return [];
-    }
-
-    const validIds = new Set(existingTaskIds.filter((id) => id !== task?.id));
-    return enteredDependencies.filter((dependencyId) => !validIds.has(dependencyId));
-  }, [existingTaskIds, form.dependencies, task?.id]);
 
   const isNameValid = form.name.trim().length > 0;
   const isStartDateValid = dayjs(form.start, DATE_FORMAT, true).isValid();
@@ -86,6 +85,23 @@ export function GanttTaskModal({
   const modalTitle = task ? "Edit Task" : "Add Task";
   const submitLabel = task ? "Save Changes" : "Add Task";
 
+  // Options: all tasks except self
+  const depOptions = useMemo(
+    () =>
+      existingTasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: t.name })),
+    [existingTasks, task?.id],
+  );
+
+  // Current value: selected IDs mapped to option objects (orphaned IDs get a truncated label)
+  const depValue = useMemo(
+    () =>
+      selectedDeps.map((id) => ({
+        value: id,
+        label: depOptions.find((o) => o.value === id)?.label ?? `Unknown (${id.slice(0, 8)}…)`,
+      })),
+    [selectedDeps, depOptions],
+  );
+
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
     setWasValidated(true);
@@ -97,7 +113,7 @@ export function GanttTaskModal({
     onSave({
       ...form,
       name: form.name.trim(),
-      dependencies: form.dependencies?.trim() || undefined,
+      dependencies: selectedDeps.length > 0 ? selectedDeps.join(", ") : undefined,
       notes: form.notes?.trim() || undefined,
       progress: form.progress ?? 0,
     });
@@ -168,22 +184,19 @@ export function GanttTaskModal({
 
           <Form.Group className="mb-3" controlId="ganttTaskDependencies">
             <Form.Label>Dependencies</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="task-1, task-2"
-              value={form.dependencies ?? ""}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, dependencies: event.target.value }))
-              }
+            <ReactSelect<DepOption, true>
+              isMulti
+              unstyled
+              inputId="ganttTaskDependencies"
+              placeholder="Search tasks…"
+              options={depOptions}
+              value={depValue}
+              onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
+              classNames={{
+                ...bootstrapSelectClassNames,
+                control: () => "form-control d-flex flex-wrap h-auto gap-1 py-1",
+              }}
             />
-            <Form.Text className="text-muted">
-              Existing task IDs: {existingTaskIds.length > 0 ? existingTaskIds.join(", ") : "none"}
-            </Form.Text>
-            {unknownDependencies.length > 0 && (
-              <Form.Text className="text-warning d-block" data-testid="unknown-dependencies">
-                Unknown dependency IDs: {unknownDependencies.join(", ")}
-              </Form.Text>
-            )}
           </Form.Group>
 
           <Form.Group className="mb-1" controlId="ganttTaskNotes">

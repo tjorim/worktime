@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../constants/storageKeys";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -32,8 +33,6 @@ const defaultOptions: DeveloperOptions = {
   isDevMode: false,
 };
 
-const STORAGE_KEY = "worktime_developer_options";
-
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
 
 export function useDeveloperOptions(): DeveloperOptionsContextType {
@@ -49,7 +48,10 @@ interface DeveloperOptionsProviderProps {
 }
 
 export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderProps) {
-  const [options, setOptions] = useLocalStorage<DeveloperOptions>(STORAGE_KEY, defaultOptions);
+  const [options, setOptions] = useLocalStorage<DeveloperOptions>(
+    DEVELOPER_OPTIONS_STORAGE_KEY,
+    defaultOptions,
+  );
 
   // Use persisted isDevMode from options
   const [isDevMode, setIsDevMode] = useState(options.isDevMode);

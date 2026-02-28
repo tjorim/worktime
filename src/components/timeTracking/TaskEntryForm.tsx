@@ -5,7 +5,10 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import type { ReactElement } from "react";
+import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
+import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 type TaskEntryFormProps = {
   labels: TimeTrackingLabel[];
@@ -42,6 +45,8 @@ export function TaskEntryForm({
   onSubmit,
   onStartNow,
 }: TaskEntryFormProps) {
+  const selectedLabelOption = useSelectedLabelOption(labels, label);
+
   const renderDisabledTooltipButton = (
     buttonKey: string,
     reason: string | undefined,
@@ -79,21 +84,18 @@ export function TaskEntryForm({
       <Col md={3}>
         <Form.Group controlId="timeTrackerLabel">
           <Form.Label>Label</Form.Label>
-          <Form.Select
-            value={label}
-            onChange={(e) => onLabelChange(e.target.value)}
-            aria-required="true"
-            disabled={labels.length === 0}
-          >
-            <option value="" disabled>
-              {labels.length === 0 ? "Add labels first" : "Choose a label"}
-            </option>
-            {labels.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Form.Select>
+          <ReactSelect<LabelOption>
+            unstyled
+            isClearable
+            isSearchable
+            inputId="timeTrackerLabel"
+            isDisabled={labels.length === 0}
+            placeholder={labels.length === 0 ? "Add labels first" : "Choose a label"}
+            options={labels.map((item) => ({ value: item.id, label: item.name }))}
+            value={selectedLabelOption}
+            onChange={(selected) => onLabelChange(selected?.value ?? "")}
+            classNames={bootstrapSelectClassNames}
+          />
         </Form.Group>
       </Col>
       <Col md={2}>

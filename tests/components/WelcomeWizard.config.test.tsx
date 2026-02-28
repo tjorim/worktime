@@ -243,7 +243,6 @@ describe("WelcomeWizard Configuration System", () => {
       const nextStep = workLocationConfig.getNextStep(context);
       expect(nextStep).toBeNull();
     });
-
   });
 
   describe("Step Configuration - Backward Navigation", () => {

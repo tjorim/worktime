@@ -8,9 +8,13 @@ import {
 } from "../../src/utils/appBackup";
 import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
 import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import {
+  USER_STATE_STORAGE_KEY,
+  WORK_LOCATIONS_STORAGE_PREFIX,
+} from "../../src/constants/storageKeys";
 
-const USER_STATE_KEY = "worktime_user_state";
-const WORK_LOCATIONS_PREFIX = "worktime_work_locations_";
+const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
+const WORK_LOCATIONS_PREFIX = WORK_LOCATIONS_STORAGE_PREFIX;
 
 describe("appBackup", () => {
   afterEach(() => {

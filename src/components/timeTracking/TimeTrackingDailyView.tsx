@@ -5,12 +5,16 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
+import ReactSelect from "react-select";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useToast } from "../../contexts/ToastContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useLiveTime } from "../../hooks/useLiveTime";
 import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+
+type TemplateOption = { value: string; label: string };
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { OtherLocationModal } from "../calendar/OtherLocationModal";
 import { DailyTaskList, type EditRequest } from "./DailyTaskList";
@@ -186,6 +190,18 @@ export function TimeTrackingDailyView({
   const isDailyCurrent = dailyDate.isSame(dayjs(), "day");
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
   const labelNameById = useMemo(() => buildLabelNameMap(labels), [labels]);
+  const templateOptions = useMemo(
+    () =>
+      templates.map((template) => ({
+        value: template.id,
+        label: `${template.text} (${template.start}-${template.stop}) [${labelNameById[template.label] ?? "Unknown label"}]`,
+      })),
+    [templates, labelNameById],
+  );
+  const selectedTemplateOption = useMemo(
+    () => templateOptions.find((option) => option.value === selectedTemplateId) ?? null,
+    [selectedTemplateId, templateOptions],
+  );
   const defaultLabelColor = useDefaultLabelColor();
 
   useEffect(() => {
@@ -387,8 +403,7 @@ export function TimeTrackingDailyView({
         return false;
       }
     }
-    const taskDate =
-      tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
+    const taskDate = tasks.find((item) => item.id === payload.id)?.startTime.slice(0, 10) ?? date;
     const newStartTime = `${taskDate}T${payload.start}`;
     const newStopTime = payload.stop ? `${taskDate}T${payload.stop}` : null;
 
@@ -489,19 +504,18 @@ export function TimeTrackingDailyView({
           <Form.Group className="mb-2" controlId="timeTrackerTemplate">
             <Form.Label className="visually-hidden">Template</Form.Label>
             <InputGroup>
-              <Form.Select
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                aria-label="Template selector"
-              >
-                <option value="">Choose a template</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.text} ({template.start}-{template.stop}) [
-                    {labelNameById[template.label] ?? "Unknown label"}]
-                  </option>
-                ))}
-              </Form.Select>
+              <ReactSelect<TemplateOption>
+                unstyled
+                isClearable
+                isSearchable
+                inputId="timeTrackerTemplate"
+                placeholder="Choose a template"
+                options={templateOptions}
+                value={selectedTemplateOption}
+                onChange={(selected) => setSelectedTemplateId(selected?.value ?? "")}
+                classNames={bootstrapSelectClassNames}
+                className="flex-fill"
+              />
               <Button variant="outline-secondary" onClick={handleApplyTemplate}>
                 Use Template
               </Button>

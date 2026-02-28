@@ -9,7 +9,8 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
-import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../types/countries";
+import { type CountryCode } from "../types/countries";
+import { CountrySelect } from "./shared/CountrySelect";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "../utils/appBackup";
 import { BackupDialog } from "./BackupDialog";
@@ -22,38 +23,10 @@ import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
 
-interface CountrySelectProps {
-  value: string;
-  onChange: (country: CountryCode | null) => void;
-  ariaLabel: string;
-}
-
-function CountrySelect({ value, onChange, ariaLabel }: CountrySelectProps) {
-  return (
-    <Form.Select
-      size="sm"
-      style={{ width: "auto" }}
-      value={value}
-      onChange={(event) => {
-        const val = event.target.value;
-        onChange(isValidCountryCode(val) ? val : null);
-      }}
-      aria-label={ariaLabel}
-    >
-      <option value="">None</option>
-      {SUPPORTED_COUNTRIES.map((country) => (
-        <option key={country.code} value={country.code}>
-          {country.name}
-        </option>
-      ))}
-    </Form.Select>
-  );
-}
-
 interface CountrySelectItemProps {
   label: string;
   description: string;
-  value: string;
+  value: CountryCode | null;
   onUpdate: (country: CountryCode | null) => void;
   ariaLabel?: string;
 }
@@ -67,12 +40,14 @@ function CountrySelectItem({
 }: CountrySelectItemProps) {
   return (
     <ListGroup.Item>
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="d-flex justify-content-between align-items-center gap-3">
         <div>
           <div className="fw-medium">{label}</div>
           <small className="text-muted">{description}</small>
         </div>
-        <CountrySelect value={value} onChange={onUpdate} ariaLabel={ariaLabel ?? label} />
+        <div style={{ minWidth: "12rem" }}>
+          <CountrySelect value={value} onChange={onUpdate} ariaLabel={ariaLabel ?? label} />
+        </div>
       </div>
     </ListGroup.Item>
   );
@@ -487,14 +462,14 @@ export function SettingsPanel({
                   <CountrySelectItem
                     label="Home Country"
                     description="Country where you are based"
-                    value={settings.homeCountry ?? ""}
+                    value={settings.homeCountry ?? null}
                     onUpdate={updateHomeCountry}
                     ariaLabel="Home country"
                   />
                   <CountrySelectItem
                     label="Office Country"
                     description="Country where your office is located"
-                    value={settings.officeCountry ?? ""}
+                    value={settings.officeCountry ?? null}
                     onUpdate={updateOfficeCountry}
                     ariaLabel="Office country"
                   />

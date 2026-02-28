@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
@@ -15,8 +15,6 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -113,7 +111,7 @@ export function GanttView() {
         onHide={handleHideModal}
         onSave={handleSaveTask}
         task={editingTask ?? undefined}
-        existingTaskIds={taskIds}
+        existingTasks={tasks}
         onDelete={editingTask ? () => setShowDeleteConfirm(true) : undefined}
       />
 

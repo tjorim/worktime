@@ -31,6 +31,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
   const [includeWorkLocations, setIncludeWorkLocations] = useState(false);
   const [includeTasks, setIncludeTasks] = useState(false);
   const [includeTemplatesAndLabels, setIncludeTemplatesAndLabels] = useState(false);
+  const [includeGanttTasks, setIncludeGanttTasks] = useState(false);
 
   // Refresh presence and reset selections each time the dialog opens
   useEffect(() => {
@@ -43,6 +44,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       setIncludeWorkLocations(p.hasWorkLocations);
       setIncludeTasks(p.hasTasks);
       setIncludeTemplatesAndLabels(p.hasTemplates || p.hasLabels);
+      setIncludeGanttTasks(p.hasGanttTasks);
     }
   }, [show]);
 
@@ -56,6 +58,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       includeTasks,
       includeTemplates: includeTemplatesAndLabels,
       includeLabels: includeTemplatesAndLabels,
+      includeGanttTasks,
     });
     onHide();
   };
@@ -65,7 +68,8 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
     !includeTimeOff &&
     !includeWorkLocations &&
     !includeTasks &&
-    !includeTemplatesAndLabels;
+    !includeTemplatesAndLabels &&
+    !includeGanttTasks;
 
   const showYearFilter = (presence?.availableYears.length ?? 0) > 0;
 
@@ -142,6 +146,15 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
               label="Time tracking templates & labels"
               checked={includeTemplatesAndLabels}
               onChange={(e) => setIncludeTemplatesAndLabels(e.target.checked)}
+            />
+          )}
+          {presence?.hasGanttTasks && (
+            <Form.Check
+              type="checkbox"
+              id="backup-gantt-tasks"
+              label="Personal Gantt tasks"
+              checked={includeGanttTasks}
+              onChange={(e) => setIncludeGanttTasks(e.target.checked)}
             />
           )}
         </div>

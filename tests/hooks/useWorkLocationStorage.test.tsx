@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ReactNode } from "react";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useWorkLocationStorage } from "../../src/hooks/useWorkLocationStorage";
+import {
+  USER_STATE_STORAGE_KEY,
+  getWorkLocationsStorageKey,
+} from "../../src/constants/storageKeys";
 
 /**
  * Writes a v3 user-state to localStorage so that SettingsProvider initialises
@@ -11,7 +15,7 @@ import { useWorkLocationStorage } from "../../src/hooks/useWorkLocationStorage";
  */
 function makeWrapper(homeCountry: string | null = "NL", officeCountry: string | null = "BE") {
   window.localStorage.setItem(
-    "worktime_user_state",
+    USER_STATE_STORAGE_KEY,
     JSON.stringify({
       version: 3,
       hasCompletedOnboarding: true,
@@ -281,7 +285,7 @@ describe("useWorkLocationStorage", () => {
         location: "home",
         countryCode: "NL",
       });
-      expect(window.localStorage.getItem("worktime_work_locations_2025")).not.toBeNull();
+      expect(window.localStorage.getItem(getWorkLocationsStorageKey(2025))).not.toBeNull();
     });
 
     it("stores a date from the next year in its own localStorage key", () => {
@@ -299,7 +303,7 @@ describe("useWorkLocationStorage", () => {
         location: "office",
         countryCode: "BE",
       });
-      expect(window.localStorage.getItem("worktime_work_locations_2027")).not.toBeNull();
+      expect(window.localStorage.getItem(getWorkLocationsStorageKey(2027))).not.toBeNull();
     });
 
     it("returns false for a date more than one year outside the current year", () => {

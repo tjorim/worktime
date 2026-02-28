@@ -190,7 +190,9 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Welcome to Worktime!/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Verify onboarding NOT completed

@@ -241,9 +241,5 @@ class GanttTask(SQLModel, table=True):
             index=True,
         ),
     )
-    deleted_at: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
-    )
 
     user: "User" = Relationship(back_populates="gantt_tasks")

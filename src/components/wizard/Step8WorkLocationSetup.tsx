@@ -2,7 +2,8 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
-import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../../types/countries";
+import { type CountryCode } from "../../types/countries";
+import { CountrySelect } from "../shared/CountrySelect";
 
 interface Step8WorkLocationSetupProps {
   isEnabled: boolean;
@@ -59,52 +60,32 @@ export function Step8WorkLocationSetup({
 
         {isEnabled && (
           <div className="mt-3 d-flex flex-column gap-3">
-            <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 gap-sm-3">
               <div>
                 <div className="fw-medium">Home Country</div>
                 <small className="text-muted">Country where you are based</small>
               </div>
-              <Form.Select
-                size="sm"
-                style={{ width: "auto" }}
-                value={homeCountry ?? ""}
-                onChange={(event) => {
-                  const val = event.target.value;
-                  onHomeCountryChange(isValidCountryCode(val) ? val : null);
-                }}
-                aria-label="Home country"
-              >
-                <option value="">None</option>
-                {SUPPORTED_COUNTRIES.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
-              </Form.Select>
+              <div className="flex-fill">
+                <CountrySelect
+                  value={homeCountry}
+                  onChange={onHomeCountryChange}
+                  ariaLabel="Home country"
+                />
+              </div>
             </div>
 
-            <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 gap-sm-3">
               <div>
                 <div className="fw-medium">Office Country</div>
                 <small className="text-muted">Country where your office is located</small>
               </div>
-              <Form.Select
-                size="sm"
-                style={{ width: "auto" }}
-                value={officeCountry ?? ""}
-                onChange={(event) => {
-                  const val = event.target.value;
-                  onOfficeCountryChange(isValidCountryCode(val) ? val : null);
-                }}
-                aria-label="Office country"
-              >
-                <option value="">None</option>
-                {SUPPORTED_COUNTRIES.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
-              </Form.Select>
+              <div className="flex-fill">
+                <CountrySelect
+                  value={officeCountry}
+                  onChange={onOfficeCountryChange}
+                  ariaLabel="Office country"
+                />
+              </div>
             </div>
           </div>
         )}

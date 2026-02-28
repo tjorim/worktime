@@ -124,9 +124,7 @@ export function WelcomeWizard({
   const [isTimeTrackingEnabled, setIsTimeTrackingEnabled] = useState<boolean>(
     settings.enableTimeTracking ?? false,
   );
-  const [isGanttEnabled, setIsGanttEnabled] = useState<boolean>(
-    settings.enableGantt ?? false,
-  );
+  const [isGanttEnabled, setIsGanttEnabled] = useState<boolean>(settings.enableGantt ?? false);
   const [isCrossBorderEnabled, setIsCrossBorderEnabled] = useState<boolean>(
     settings.enableCrossBorderTracking ?? false,
   );

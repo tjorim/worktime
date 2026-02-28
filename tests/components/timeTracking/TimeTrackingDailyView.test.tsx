@@ -268,7 +268,11 @@ describe("TimeTrackingDailyView", () => {
 
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
       const alerts = screen.getAllByRole("alert");
-      expect(alerts.some((alert) => /Time range overlaps an existing task/i.test(alert.textContent ?? ""))).toBe(true);
+      expect(
+        alerts.some((alert) =>
+          /Time range overlaps an existing task/i.test(alert.textContent ?? ""),
+        ),
+      ).toBe(true);
     });
   });
 
@@ -295,7 +299,7 @@ describe("TimeTrackingDailyView", () => {
       const user = userEvent.setup();
       renderView();
 
-      await user.selectOptions(screen.getByLabelText(/Template selector/i), "tpl-1");
+      await user.selectOptions(screen.getByLabelText(/^Template$/i), "tpl-1");
       await user.click(screen.getByRole("button", { name: /Use Template/i }));
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveValue("Morning Support");
