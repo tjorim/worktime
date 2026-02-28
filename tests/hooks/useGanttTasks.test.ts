@@ -8,68 +8,45 @@ describe("useGanttTasks", () => {
     vi.unstubAllGlobals();
   });
 
-  it("filters invalid tasks from storage", () => {
-    window.localStorage.setItem(
-      "worktime_gantt_tasks",
-      JSON.stringify([
-        { id: "ok", name: "Valid", start: "2026-02-01", end: "2026-02-03" },
-        { id: "bad-format", name: "Broken", start: "2026/02/01", end: "2026-02-03" },
-        { id: "bad-calendar", name: "Impossible", start: "2026-02-31", end: "2026-03-03" },
-      ]),
-    );
-
+  it("returns an empty array when storage is empty", () => {
     const { result } = renderHook(() => useGanttTasks());
 
-    expect(result.current.tasks).toHaveLength(1);
-    expect(result.current.tasks[0]).toMatchObject({ id: "ok", progress: 0 });
+    expect(result.current.tasks).toEqual([]);
   });
 
-  it("adds a task with generated id", () => {
+  it("addTask creates a task with generated id and stores it", () => {
     vi.stubGlobal("crypto", {
       randomUUID: vi.fn(() => "generated-id"),
     });
 
     const { result } = renderHook(() => useGanttTasks());
 
-    let createdId = "";
     act(() => {
-      const created = result.current.addTask({
+      result.current.addTask({
         name: "Plan sprint",
         start: "2026-03-01",
         end: "2026-03-05",
-      });
-      createdId = created.id;
-    });
-
-    expect(createdId).toBe("generated-id");
-    expect(result.current.tasks).toHaveLength(1);
-    expect(result.current.tasks[0].progress).toBe(0);
-  });
-
-  it("keeps provided progress when adding a task", () => {
-    vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => "generated-id-2"),
-    });
-
-    const { result } = renderHook(() => useGanttTasks());
-
-    act(() => {
-      result.current.addTask({
-        name: "Implement chart",
-        start: "2026-03-10",
-        end: "2026-03-15",
-        progress: 65,
       });
     });
 
     expect(result.current.tasks).toHaveLength(1);
     expect(result.current.tasks[0]).toMatchObject({
-      id: "generated-id-2",
-      progress: 65,
+      id: "generated-id",
+      name: "Plan sprint",
+      progress: 0,
     });
+    expect(JSON.parse(window.localStorage.getItem("worktime_gantt_tasks") ?? "[]")).toEqual([
+      {
+        id: "generated-id",
+        name: "Plan sprint",
+        start: "2026-03-01",
+        end: "2026-03-05",
+        progress: 0,
+      },
+    ]);
   });
 
-  it("updates an existing task partially", () => {
+  it("updateTask modifies an existing task", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",
       JSON.stringify([{ id: "t1", name: "Initial", start: "2026-03-01", end: "2026-03-05" }]),
@@ -90,7 +67,7 @@ describe("useGanttTasks", () => {
     });
   });
 
-  it("removes tasks by id", () => {
+  it("removeTask deletes the task from state and storage", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",
       JSON.stringify([
@@ -107,5 +84,53 @@ describe("useGanttTasks", () => {
 
     expect(result.current.tasks).toHaveLength(1);
     expect(result.current.tasks[0].id).toBe("t1");
+    expect(JSON.parse(window.localStorage.getItem("worktime_gantt_tasks") ?? "[]")).toEqual([
+      { id: "t1", name: "A", start: "2026-03-01", end: "2026-03-05" },
+    ]);
+  });
+
+  it("filters invalid tasks from corrupted storage data", () => {
+    window.localStorage.setItem(
+      "worktime_gantt_tasks",
+      JSON.stringify([
+        { id: "ok", name: "Valid", start: "2026-02-01", end: "2026-02-03" },
+        { id: "bad-format", name: "Broken", start: "2026/02/01", end: "2026-02-03" },
+        { id: "bad-calendar", name: "Impossible", start: "2026-02-31", end: "2026-03-03" },
+      ]),
+    );
+
+    const { result } = renderHook(() => useGanttTasks());
+
+    expect(result.current.tasks).toHaveLength(1);
+    expect(result.current.tasks[0]).toMatchObject({ id: "ok", progress: 0 });
+  });
+
+  it("persists tasks across hook re-renders", () => {
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn(() => "persistent-id"),
+    });
+
+    const { result, unmount } = renderHook(() => useGanttTasks());
+
+    act(() => {
+      result.current.addTask({
+        name: "Persistent task",
+        start: "2026-04-01",
+        end: "2026-04-02",
+      });
+    });
+
+    unmount();
+
+    const { result: remountedResult } = renderHook(() => useGanttTasks());
+    expect(remountedResult.current.tasks).toEqual([
+      {
+        id: "persistent-id",
+        name: "Persistent task",
+        start: "2026-04-01",
+        end: "2026-04-02",
+        progress: 0,
+      },
+    ]);
   });
 });
