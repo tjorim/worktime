@@ -22,10 +22,13 @@ export function GanttChart({
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
+  const initJustRanRef = useRef(false);
+  const viewModeRef = useRef(viewMode);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
+  viewModeRef.current = viewMode;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
@@ -36,6 +39,7 @@ export function GanttChart({
         containerRef.current.innerHTML = "";
       }
       ganttRef.current = null;
+      initJustRanRef.current = false;
       return;
     }
 
@@ -55,7 +59,7 @@ export function GanttChart({
       }
 
       ganttRef.current = new Gantt(container, tasks, {
-        view_mode: viewMode,
+        view_mode: viewModeRef.current,
         on_click: (task) => onTaskClickRef.current(task.id),
         on_date_change: (task, start, end) => {
           onDateChangeRef.current(
@@ -68,6 +72,7 @@ export function GanttChart({
           onProgressChangeRef.current(task.id, progress);
         },
       });
+      initJustRanRef.current = true;
     };
 
     void initGantt();
@@ -76,11 +81,17 @@ export function GanttChart({
       didCancel = true;
       container.innerHTML = "";
       ganttRef.current = null;
+      initJustRanRef.current = false;
     };
-  }, [tasks, viewMode]);
+  }, [tasks]);
 
   useEffect(() => {
     if (!ganttRef.current || tasks.length === 0) {
+      return;
+    }
+
+    if (initJustRanRef.current) {
+      initJustRanRef.current = false;
       return;
     }
 
