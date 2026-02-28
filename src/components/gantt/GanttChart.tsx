@@ -7,7 +7,7 @@ type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 
 interface GanttChartProps {
   tasks: GanttTask[];
-  viewMode: GanttViewMode;
+  initialViewMode?: GanttViewMode;
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
@@ -29,7 +29,7 @@ function getTaskId(task: unknown): string | null {
 
 export function GanttChart({
   tasks,
-  viewMode,
+  initialViewMode = "Week",
   onTaskClick,
   onDateChange,
   onProgressChange,
@@ -37,13 +37,13 @@ export function GanttChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
   const tasksRef = useRef(tasks);
-  const viewModeRef = useRef(viewMode);
+  const initialViewModeRef = useRef(initialViewMode);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
   tasksRef.current = tasks;
-  viewModeRef.current = viewMode;
+  initialViewModeRef.current = initialViewMode;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
@@ -74,7 +74,9 @@ export function GanttChart({
       }
 
       ganttRef.current = new Gantt(container, tasksRef.current, {
-        view_mode: viewModeRef.current,
+        view_mode: initialViewModeRef.current,
+        view_mode_select: true,
+        today_button: true,
         on_click: (task) => {
           const taskId = getTaskId(task);
           if (!taskId) {
@@ -124,14 +126,7 @@ export function GanttChart({
     ganttRef.current.refresh(tasks);
   }, [tasks]);
 
-  // Effect 3 — view mode changes
-  useEffect(() => {
-    if (!ganttRef.current) {
-      return;
-    }
 
-    ganttRef.current.change_view_mode(viewMode, true);
-  }, [viewMode]);
 
   if (tasks.length === 0) {
     return (

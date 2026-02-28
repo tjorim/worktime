@@ -11,6 +11,9 @@ class MockFrappeGantt {
   }
 
   options: {
+    view_mode?: "Day" | "Week" | "Month" | "Year";
+    view_mode_select?: boolean;
+    today_button?: boolean;
     on_click?: (task: unknown) => void;
     on_date_change?: (task: unknown, start: Date, end: Date) => void;
     on_progress_change?: (task: unknown, progress: number) => void;
@@ -20,6 +23,9 @@ class MockFrappeGantt {
     _wrapper: string | Element,
     _tasks: unknown[],
     options: {
+      view_mode?: "Day" | "Week" | "Month" | "Year";
+      view_mode_select?: boolean;
+      today_button?: boolean;
       on_click?: (task: unknown) => void;
       on_date_change?: (task: unknown, start: Date, end: Date) => void;
       on_progress_change?: (task: unknown, progress: number) => void;
@@ -49,7 +55,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        viewMode="Week"
+        initialViewMode="Week"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -80,7 +86,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        viewMode="Week"
+        initialViewMode="Week"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -107,15 +113,15 @@ describe("GanttChart", () => {
   });
 
 
-  it("keeps horizontal position when changing view mode", async () => {
+  it("uses library-provided view controls with Week as initial mode", async () => {
     const onTaskClick = vi.fn();
     const onDateChange = vi.fn();
     const onProgressChange = vi.fn();
 
-    const { rerender } = render(
+    render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        viewMode="Week"
+        initialViewMode="Week"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -127,21 +133,9 @@ describe("GanttChart", () => {
     });
 
     const [instance] = mockInstances;
-    instance.change_view_mode.mockClear();
-
-    rerender(
-      <GanttChart
-        tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        viewMode="Month"
-        onTaskClick={onTaskClick}
-        onDateChange={onDateChange}
-        onProgressChange={onProgressChange}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(instance.change_view_mode).toHaveBeenCalledWith("Month", true);
-    });
+    expect(instance.options.view_mode).toBe("Week");
+    expect(instance.options.view_mode_select).toBe(true);
+    expect(instance.options.today_button).toBe(true);
   });
 
   it("forwards valid task ids from frappe callbacks", async () => {
@@ -152,7 +146,7 @@ describe("GanttChart", () => {
     render(
       <GanttChart
         tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
-        viewMode="Week"
+        initialViewMode="Week"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
