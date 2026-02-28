@@ -799,30 +799,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
                 prev.settings.vacationAllowance,
               )
             : prev.settings.vacationAllowance,
-          enableTimeOff:
-            preferences?.enableTimeOff !== undefined
-              ? preferences.enableTimeOff
-              : prev.settings.enableTimeOff,
-          enableTimeTracking:
-            preferences?.enableTimeTracking !== undefined
-              ? preferences.enableTimeTracking
-              : prev.settings.enableTimeTracking,
-          enableGantt:
-            preferences?.enableGantt !== undefined
-              ? preferences.enableGantt
-              : prev.settings.enableGantt,
+          enableTimeOff: preferences?.enableTimeOff ?? prev.settings.enableTimeOff,
+          enableTimeTracking: preferences?.enableTimeTracking ?? prev.settings.enableTimeTracking,
+          enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
           enableCrossBorderTracking:
-            preferences?.enableCrossBorderTracking !== undefined
-              ? preferences.enableCrossBorderTracking
-              : prev.settings.enableCrossBorderTracking,
-          homeCountry:
-            preferences?.homeCountry !== undefined
-              ? preferences.homeCountry
-              : prev.settings.homeCountry,
-          officeCountry:
-            preferences?.officeCountry !== undefined
-              ? preferences.officeCountry
-              : prev.settings.officeCountry,
+            preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
+          homeCountry: preferences?.homeCountry ?? prev.settings.homeCountry,
+          officeCountry: preferences?.officeCountry ?? prev.settings.officeCountry,
         },
       }));
     },
