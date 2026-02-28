@@ -4,61 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TemplatesPanel } from "../../../src/components/timeTracking/TemplatesPanel";
 
-vi.mock("react-select", () => ({
-  default: ({
-    options = [],
-    value = null,
-    onChange = () => {},
-    inputId,
-    isMulti = false,
-    isDisabled = false,
-    "aria-label": ariaLabel,
-    "aria-describedby": ariaDescribedBy,
-  }: {
-    options?: Array<{ value: string; label: string }>;
-    value?: Array<{ value: string; label: string }> | { value: string; label: string } | null;
-    onChange?: (v: unknown) => void;
-    inputId?: string;
-    isMulti?: boolean;
-    isDisabled?: boolean;
-    "aria-label"?: string;
-    "aria-describedby"?: string;
-  }) => {
-    const selectedValues = Array.isArray(value)
-      ? value.map((v) => v.value)
-      : value
-        ? [value.value]
-        : [];
-    return (
-      <select
-        multiple={isMulti}
-        id={inputId}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        disabled={isDisabled}
-        value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
-        onChange={(e) => {
-          if (isMulti) {
-            onChange(
-              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
-            );
-          } else {
-            const val = e.target.value;
-            onChange(
-              val ? { value: val, label: e.target.options[e.target.selectedIndex].text } : null,
-            );
-          }
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    );
-  },
-}));
+vi.mock("react-select", () => ({ default: require("../../__mocks__/react-select").default }), { virtual: true });
 import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
 import type { TimeTrackingTemplate } from "../../../src/components/timeTracking/types";

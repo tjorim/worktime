@@ -122,7 +122,7 @@ Authentication requirements differ by endpoint group:
 
 | Endpoint         | Method | Auth required | Purpose                                                                               |
 | ---------------- | ------ | ------------- | ------------------------------------------------------------------------------------- |
-| `/v1/auth/token` | POST   | No            | Submit `{"username", "password"}`, receive a signed JWT access token (24 h lifetime). |
+| `/v1/auth/token` | POST   | No            | Submit `{"username":"<username>","password":"<password>"}`, receive a signed JWT access token (24 h lifetime). |
 | `/v1/auth/me`    | GET    | Yes           | Return the authenticated user's profile (`UserRead`).                                 |
 
 **Request body for `POST /v1/auth/token`:**

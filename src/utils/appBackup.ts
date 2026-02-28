@@ -12,7 +12,7 @@
 
 import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
-import { GANTT_STORAGE_KEY } from "../hooks/useGanttTasks";
+import { GANTT_STORAGE_KEY } from "../constants/storageKeys";
 import { isValidScheduleType } from "./scheduleUtils";
 
 const USER_STATE_KEY = "worktime_user_state";

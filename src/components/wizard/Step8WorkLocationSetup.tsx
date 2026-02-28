@@ -60,12 +60,12 @@ export function Step8WorkLocationSetup({
 
         {isEnabled && (
           <div className="mt-3 d-flex flex-column gap-3">
-            <div className="d-flex justify-content-between align-items-center gap-3">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 gap-sm-3">
               <div>
                 <div className="fw-medium">Home Country</div>
                 <small className="text-muted">Country where you are based</small>
               </div>
-              <div style={{ minWidth: "12rem" }}>
+              <div className="w-100">
                 <CountrySelect
                   value={homeCountry}
                   onChange={onHomeCountryChange}
@@ -74,12 +74,12 @@ export function Step8WorkLocationSetup({
               </div>
             </div>
 
-            <div className="d-flex justify-content-between align-items-center gap-3">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 gap-sm-3">
               <div>
                 <div className="fw-medium">Office Country</div>
                 <small className="text-muted">Country where your office is located</small>
               </div>
-              <div style={{ minWidth: "12rem" }}>
+              <div className="w-100">
                 <CountrySelect
                   value={officeCountry}
                   onChange={onOfficeCountryChange}
