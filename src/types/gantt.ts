@@ -5,17 +5,9 @@ function isValidISODate(value: string): boolean {
     return false;
   }
 
-  const [yearString, monthString, dayString] = value.split("-");
-  const year = Number(yearString);
-  const month = Number(monthString);
-  const day = Number(dayString);
-  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  const parsedDate = new Date(value);
 
-  return (
-    parsedDate.getUTCFullYear() === year &&
-    parsedDate.getUTCMonth() === month - 1 &&
-    parsedDate.getUTCDate() === day
-  );
+  return !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === value;
 }
 
 export interface GanttTask {
