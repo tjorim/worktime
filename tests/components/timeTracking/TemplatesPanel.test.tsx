@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TemplatesPanel } from "../../../src/components/timeTracking/TemplatesPanel";
 
-vi.mock("react-select", () => ({ default: require("../../__mocks__/react-select").default }), { virtual: true });
 import { ToastProvider } from "../../../src/contexts/ToastContext";
 import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
 import type { TimeTrackingTemplate } from "../../../src/components/timeTracking/types";

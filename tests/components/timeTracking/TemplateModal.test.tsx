@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TemplateModal } from "../../../src/components/timeTracking/TemplateModal";
 
-vi.mock("react-select", () => ({ default: require("../../__mocks__/react-select").default }), { virtual: true });
 
 describe("TemplateModal", () => {
   const baseProps = {

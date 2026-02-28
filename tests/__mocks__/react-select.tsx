@@ -57,8 +57,8 @@ export default function MockReactSelect({
       value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
       onChange={handleChange}
     >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
+      {options.map((option, index) => (
+        <option key={`${option.value ?? option.label ?? "option"}-${index}`} value={option.value}>
           {option.label}
         </option>
       ))}

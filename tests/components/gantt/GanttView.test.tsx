@@ -16,7 +16,6 @@ vi.mock(
   { virtual: true },
 );
 
-vi.mock("react-select", () => ({ default: require("../../__mocks__/react-select").default }), { virtual: true });
 
 vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({

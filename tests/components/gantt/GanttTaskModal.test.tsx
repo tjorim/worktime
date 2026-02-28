@@ -4,7 +4,6 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { GanttTaskModal } from "../../../src/components/gantt/GanttTaskModal";
 
-vi.mock("react-select", () => ({ default: require("../../__mocks__/react-select").default }), { virtual: true });
 
 describe("GanttTaskModal", () => {
   it("shows validation feedback for required fields", async () => {
