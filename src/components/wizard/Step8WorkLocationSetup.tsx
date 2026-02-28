@@ -26,7 +26,7 @@ export function Step8WorkLocationSetup({
   onPrev,
   onComplete,
   firstButtonRef,
-}: Step7WorkLocationSetupProps) {
+}: Step8WorkLocationSetupProps) {
   return (
     <>
       <div className="text-center mb-4">
