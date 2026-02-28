@@ -9,6 +9,7 @@ from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+import app.services.db_service as db_service
 from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
 from app.models.db_schemas import (
     LabelCreate,
@@ -23,6 +24,7 @@ from app.services.db_service import (
     ConflictError,
     NotFoundError,
     ValidationError as ServiceValidationError,
+    authenticate_user,
     create_label,
     create_or_update_work_location,
     create_task,
@@ -92,6 +94,24 @@ def test_list_users_validates_offset_and_limit(session: Session) -> None:
 
     with pytest.raises(ServiceValidationError, match="limit must be <= 1000"):
         list_users(session, limit=1001)
+
+
+def test_authenticate_user_performs_dummy_verify_for_unknown_username(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str]] = []
+
+    def fake_verify_password(plain: str, hashed: str) -> bool:
+        calls.append((plain, hashed))
+        return False
+
+    monkeypatch.setattr(db_service, "get_user_by_username", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(db_service, "verify_password", fake_verify_password)
+
+    with pytest.raises(ServiceValidationError, match="invalid credentials"):
+        authenticate_user(None, "missing-user", "test-password-1")  # type: ignore[arg-type]
+
+    assert calls == [("test-password-1", db_service._DUMMY_PASSWORD_HASH)]
 
 
 def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:

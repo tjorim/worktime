@@ -4,7 +4,7 @@ from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, 
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, DateTime, UniqueConstraint, func
+from sqlalchemy import JSON, Column, DateTime, Index, UniqueConstraint, func
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -78,7 +78,15 @@ class TimeTrackingLabel(SQLModel, table=True):
     tasks: list["TimeTrackingTask"] = Relationship(back_populates="label")
     templates: list["TimeTrackingTemplate"] = Relationship(back_populates="label")
 
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_label_user_name"),)
+    __table_args__ = (
+        Index(
+            "ix_unique_active_label_user_name",
+            "user_id",
+            "name",
+            unique=True,
+            sqlite_where="deleted_at IS NULL",
+        ),
+    )
 
 
 class TimeTrackingTask(SQLModel, table=True):
@@ -187,4 +195,12 @@ class WorkLocation(SQLModel, table=True):
 
     user: User = Relationship(back_populates="work_locations")
 
-    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_work_location_user_date"),)
+    __table_args__ = (
+        Index(
+            "ix_unique_active_work_location_user_date",
+            "user_id",
+            "date",
+            unique=True,
+            sqlite_where="deleted_at IS NULL",
+        ),
+    )

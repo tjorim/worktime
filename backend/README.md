@@ -139,6 +139,8 @@ Authentication requirements differ by endpoint group:
 
 Errors: `401 Unauthorized` on bad credentials.
 
+**Security:** This endpoint transmits credentials in the request body and **must** be served over HTTPS/TLS, even on internal networks. Never expose this endpoint over plaintext HTTP.
+
 ### Frontend integration suggestion
 
 Recommended frontend flow for DB endpoints:
@@ -870,7 +872,39 @@ as middleware:
 ## Schema migrations
 
 The backend uses [Alembic](https://alembic.sqlalchemy.org/) for schema migrations. On startup,
-`init_db()` automatically runs `alembic upgrade head`, applying any pending migrations.
+`init_db()` can automatically run `alembic upgrade head`, applying any pending migrations. This
+behavior is controlled by the `AUTO_MIGRATE` environment variable and is recommended for development
+only.
+
+### Production Environment
+
+Running database migrations automatically on application startup is risky in production. A failed
+migration could prevent the application from starting, leading to downtime. For this reason, automatic
+migrations are disabled by default.
+
+To enable them in a development environment, set the following environment variable:
+
+```
+AUTO_MIGRATE=true
+```
+
+**For production deployments, it is strongly recommended to run migrations as a separate, manual step before starting the application server.**
+
+The recommended deployment workflow is:
+
+1.  **Deploy the new code.**
+2.  **Run database migrations:**
+    ```bash
+    cd backend
+    PYTHONPATH=. alembic upgrade head
+    ```
+3.  **Start the application:**
+    ```bash
+    # (e.g., using uvicorn)
+    uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ```
+
+This ensures that any migration issues are caught and resolved before the application itself is started, preventing outages.
 
 ### Creating a migration after model changes
 
@@ -1024,8 +1058,8 @@ Two implementation options are under consideration:
 
 Regardless of language choice:
 
-- **No database**: All data lives on the file share. No migration tooling or database management
-  needed.
+- **Hybrid storage**: .hday files and team configuration live on the file share (no migrations needed).
+  Database used for time-tracking and user management (managed via Alembic migrations).
 - **Transport**: HTTP/JSON. No TLS required on a trusted internal network, though it can be added
   behind a reverse proxy if needed.
 

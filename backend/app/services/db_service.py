@@ -45,6 +45,7 @@ MAX_USER_LIST_LIMIT = 1000
 
 
 _ph = PasswordHash.recommended()
+_DUMMY_PASSWORD_HASH = _ph.hash("dummy-password-for-timing-mitigation")
 
 
 def hash_password(plain: str) -> str:
@@ -58,7 +59,11 @@ def verify_password(plain: str, hashed: str) -> bool:
 def authenticate_user(session: Session, username: str, password: str) -> User:
     """Return User if credentials are valid, otherwise raise ValidationError."""
     user = get_user_by_username(session, username)
-    if user is None or not verify_password(password, user.hashed_password):
+    if user is None:
+        verify_password(password, _DUMMY_PASSWORD_HASH)
+        raise ValidationError("invalid credentials")
+
+    if not verify_password(password, user.hashed_password):
         raise ValidationError("invalid credentials")
     return user
 
