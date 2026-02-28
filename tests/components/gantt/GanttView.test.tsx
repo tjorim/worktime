@@ -19,15 +19,15 @@ vi.mock(
 vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
     tasks,
-    viewMode,
+    initialViewMode,
     onTaskClick,
   }: {
     tasks: Array<{ id: string; name: string }>;
-    viewMode: "Day" | "Week" | "Month";
+    initialViewMode?: "Day" | "Week" | "Month" | "Year";
     onTaskClick: (taskId: string) => void;
   }) => (
     <div>
-      <div data-testid="mock-view-mode">{viewMode}</div>
+      <div data-testid="mock-view-mode">{initialViewMode}</div>
       <ul aria-label="Task list">
         {tasks.map((task) => (
           <li key={task.id}>
@@ -159,16 +159,13 @@ describe("GanttView", () => {
     });
   });
 
-  it("applies view mode selector changes", async () => {
-    const user = userEvent.setup();
+  it("uses Day as initial library view mode and no duplicate top-level mode buttons", () => {
     renderWithSettings(<GanttView />);
 
-    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Week");
-
-    await user.click(screen.getByRole("button", { name: "Day" }));
     expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Day");
-
-    await user.click(screen.getByRole("button", { name: "Month" }));
-    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Month");
+    expect(screen.queryByRole("button", { name: "Day" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Week" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Month" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Year" })).not.toBeInTheDocument();
   });
 });

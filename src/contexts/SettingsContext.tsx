@@ -65,12 +65,23 @@ interface SettingsContextType {
   setScheduleType: (schedule: ScheduleOption | null) => void;
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
+  lastOnboardedVersion: number;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
   // Atomic update for onboarding completion with optional vacation allowance
   completeOnboardingWithVacation: (
     team: number | null,
     vacationAllowance?: Partial<VacationAllowanceSettings>,
+  ) => void;
+  // Mark feature-intro steps as seen and apply any changed feature settings
+  completeFeatureIntro: (
+    targetVersion: number,
+    preferences?: {
+      enableGantt?: boolean;
+      enableCrossBorderTracking?: boolean;
+      homeCountry?: CountryCode | null;
+      officeCountry?: CountryCode | null;
+    },
   ) => void;
   // Atomic update for onboarding completion with schedule selection
   completeOnboardingWithSchedule: (
@@ -122,6 +133,7 @@ const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly
 interface WorktimeUserState {
   version: number;
   hasCompletedOnboarding: boolean;
+  lastOnboardedVersion: number;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
@@ -136,6 +148,7 @@ const CURRENT_VERSION = USER_STATE_VERSION;
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
   hasCompletedOnboarding: false,
+  lastOnboardedVersion: 0,
   myTeam: null,
   scheduleType: null,
   settings: defaultSettings,
@@ -487,12 +500,20 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState.scheduleType;
   })();
 
+  const lastOnboardedVersion =
+    typeof s.lastOnboardedVersion === "number" &&
+    Number.isInteger(s.lastOnboardedVersion) &&
+    s.lastOnboardedVersion >= 0
+      ? s.lastOnboardedVersion
+      : 0;
+
   return {
     version: CURRENT_VERSION,
     hasCompletedOnboarding:
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
+    lastOnboardedVersion,
     myTeam:
       s.myTeam === undefined
         ? defaultUserState.myTeam
@@ -750,6 +771,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
+        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
       }));
     },
@@ -761,6 +783,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
+        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
         settings: {
           ...prev.settings,
@@ -790,6 +813,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
+        lastOnboardedVersion: CURRENT_VERSION,
         scheduleType,
         myTeam: team,
         settings: {
@@ -807,6 +831,38 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
           homeCountry: preferences?.homeCountry ?? prev.settings.homeCountry,
           officeCountry: preferences?.officeCountry ?? prev.settings.officeCountry,
+        },
+      }));
+    },
+    [setUserState],
+  );
+
+  const completeFeatureIntro = useCallback(
+    (
+      targetVersion: number,
+      preferences?: {
+        enableGantt?: boolean;
+        enableCrossBorderTracking?: boolean;
+        homeCountry?: CountryCode | null;
+        officeCountry?: CountryCode | null;
+      },
+    ) => {
+      setUserState((prev) => ({
+        ...prev,
+        lastOnboardedVersion: targetVersion,
+        settings: {
+          ...prev.settings,
+          enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
+          enableCrossBorderTracking:
+            preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
+          homeCountry:
+            preferences?.homeCountry !== undefined
+              ? preferences.homeCountry
+              : prev.settings.homeCountry,
+          officeCountry:
+            preferences?.officeCountry !== undefined
+              ? preferences.officeCountry
+              : prev.settings.officeCountry,
         },
       }));
     },
@@ -840,6 +896,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setScheduleType,
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
+      lastOnboardedVersion: userState.lastOnboardedVersion,
+      completeFeatureIntro,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
@@ -866,6 +924,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setMyTeam,
       setScheduleType,
       setHasCompletedOnboarding,
+      completeFeatureIntro,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,

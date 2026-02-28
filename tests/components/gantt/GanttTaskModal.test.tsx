@@ -110,4 +110,35 @@ describe("GanttTaskModal", () => {
       }),
     );
   });
+
+  it("handles non-string dependency payloads without crashing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(
+      <GanttTaskModal
+        show
+        onHide={vi.fn()}
+        onSave={onSave}
+        existingTasks={[{ id: "task-1", name: "Task One" }]}
+        task={{
+          id: "editing-task",
+          name: "Editing",
+          start: "2026-03-01",
+          end: "2026-03-03",
+          progress: 0,
+          dependencies: [" task-1 ", 123] as unknown as string,
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dependencies: "task-1",
+      }),
+    );
+  });
+
 });

@@ -1,17 +1,13 @@
 import { useCallback, useState } from "react";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
 import type { GanttTask } from "../../types/gantt";
 import { ConfirmationDialog } from "../ConfirmationDialog";
-import { GanttChart, type GanttViewMode } from "./GanttChart";
+import { GanttChart } from "./GanttChart";
 import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
-
-const GANTT_VIEW_MODES: GanttViewMode[] = ["Day", "Week", "Month"];
 
 export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();
-  const [viewMode, setViewMode] = useState<GanttViewMode>("Week");
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -77,21 +73,7 @@ export function GanttView() {
 
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
-      <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <ButtonGroup aria-label="Select Gantt chart scale">
-          {GANTT_VIEW_MODES.map((mode) => (
-            <Button
-              key={mode}
-              variant={viewMode === mode ? "primary" : "outline-primary"}
-              size="sm"
-              aria-pressed={viewMode === mode}
-              onClick={() => setViewMode(mode)}
-            >
-              {mode}
-            </Button>
-          ))}
-        </ButtonGroup>
-
+      <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
         <Button size="sm" onClick={handleAddTask}>
           <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
           Add Task
@@ -100,7 +82,7 @@ export function GanttView() {
 
       <GanttChart
         tasks={tasks}
-        viewMode={viewMode}
+        initialViewMode="Day"
         onTaskClick={handleTaskClick}
         onDateChange={handleDateChange}
         onProgressChange={handleProgressChange}

@@ -109,6 +109,11 @@ body {
   border-top-right-radius: 0;
 }
 
+/* Gantt chart: keep horizontal scrolling from frappe-gantt but suppress vertical scrollbar */
+.gantt-scroll-container .gantt-container {
+  overflow-y: hidden;
+}
+
 /* ============================================================================
    MODALS AND DIALOGS
    ========================================================================= */
