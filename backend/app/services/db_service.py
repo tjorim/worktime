@@ -84,7 +84,7 @@ def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
     non_nullable_fields = _get_non_nullable_model_fields(User)
     for field, value in data.items():
         if field in non_nullable_fields and value is None:
-            raise ValidationError(f"{field} cannot be null")
+            raise ValidationError(f"{field} cannot be None")
 
     for field, value in data.items():
         setattr(user, field, value)
@@ -392,7 +392,7 @@ def update_work_location(
     location = get_work_location(session, user_id, value_date)
     data = payload.model_dump(exclude_unset=True)
     if "country_code" in data and data["country_code"] is None:
-        raise ValidationError("country_code cannot be null")
+        raise ValidationError("country_code cannot be None")
 
     for field, value in data.items():
         setattr(location, field, value)
