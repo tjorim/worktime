@@ -5,6 +5,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlmodel import Session
 
+from app.api.auth import (
+    AuthenticatedPrincipal,
+    get_authenticated_principal,
+    require_user_or_admin_match,
+)
 from app.database.engine import get_session
 from app.models.db_schemas import UserCreate, UserListResponse, UserRead, UserUpdate
 from app.services.db_service import (
@@ -39,8 +44,12 @@ def create_user_endpoint(
 def list_users_endpoint(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserListResponse:
+    if not principal.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         users = list_users(session, is_admin=True)
     except ValidationError as error:
@@ -54,7 +63,12 @@ def list_users_endpoint(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-def get_user_endpoint(user_id: int, session: Session = Depends(get_session)) -> UserRead:
+def get_user_endpoint(
+    user_id: int,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    session: Session = Depends(get_session),
+) -> UserRead:
+    require_user_or_admin_match(user_id, principal)
     try:
         user = get_user(session, user_id)
     except NotFoundError as error:
@@ -66,12 +80,14 @@ def get_user_endpoint(user_id: int, session: Session = Depends(get_session)) -> 
 @router.get("/by-username/{username}", response_model=UserRead)
 def get_user_by_username_endpoint(
     username: str,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserRead:
     user = get_user_by_username(session, username)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
+    require_user_or_admin_match(user.id, principal)
     return UserRead.model_validate(user, from_attributes=True)
 
 
@@ -79,8 +95,10 @@ def get_user_by_username_endpoint(
 def update_user_endpoint(
     user_id: int,
     payload: UserUpdate,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: Session = Depends(get_session),
 ) -> UserRead:
+    require_user_or_admin_match(user_id, principal)
     try:
         user = update_user(session, user_id, payload)
     except NotFoundError as error:
@@ -92,7 +110,12 @@ def update_user_endpoint(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_endpoint(user_id: int, session: Session = Depends(get_session)) -> Response:
+def delete_user_endpoint(
+    user_id: int,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    session: Session = Depends(get_session),
+) -> Response:
+    require_user_or_admin_match(user_id, principal)
     try:
         delete_user(session, user_id)
     except NotFoundError as error:

@@ -31,9 +31,13 @@ def _build_client() -> tuple[TestClient, Session]:
     return client, session
 
 
-def _auth_headers(user_id: int) -> dict[str, str]:
+def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
+    token_payload = {"sub": str(user_id)}
+    if is_admin:
+        token_payload["is_admin"] = True
+
     token = jwt.encode(
-        {"sub": str(user_id)},
+        token_payload,
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )
@@ -43,12 +47,12 @@ def _auth_headers(user_id: int) -> dict[str, str]:
 def test_db_user_crud_endpoints() -> None:
     client, session = _build_client()
     try:
-        create_response = client.post(
+        user_response = client.post(
             "/v1/db/users/",
             json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         )
-        assert create_response.status_code == 201
-        user_id = create_response.json()["id"]
+        assert user_response.status_code == 201
+        user_id = user_response.json()["id"]
 
         duplicate_response = client.post(
             "/v1/db/users/",
@@ -56,34 +60,81 @@ def test_db_user_crud_endpoints() -> None:
         )
         assert duplicate_response.status_code == 409
 
-        by_id_response = client.get(f"/v1/db/users/{user_id}")
+        other_user_response = client.post(
+            "/v1/db/users/",
+            json={"username": "api-user-other", "display_name": "Other", "settings": {}},
+        )
+        assert other_user_response.status_code == 201
+        other_user_id = other_user_response.json()["id"]
+
+        unauthenticated_by_id = client.get(f"/v1/db/users/{user_id}")
+        assert unauthenticated_by_id.status_code == 401
+
+        forbidden_by_id = client.get(
+            f"/v1/db/users/{other_user_id}",
+            headers=_auth_headers(user_id),
+        )
+        assert forbidden_by_id.status_code == 403
+
+        by_id_response = client.get(f"/v1/db/users/{user_id}", headers=_auth_headers(user_id))
         assert by_id_response.status_code == 200
         assert by_id_response.json()["settings"]["theme"] == "dark"
 
-        by_username_response = client.get("/v1/db/users/by-username/api-user")
+        by_username_response = client.get(
+            "/v1/db/users/by-username/api-user",
+            headers=_auth_headers(user_id),
+        )
         assert by_username_response.status_code == 200
         assert by_username_response.json()["id"] == user_id
+
+        forbidden_by_username = client.get(
+            "/v1/db/users/by-username/api-user-other",
+            headers=_auth_headers(user_id),
+        )
+        assert forbidden_by_username.status_code == 403
 
         update_response = client.put(
             f"/v1/db/users/{user_id}",
             json={"display_name": "Renamed", "settings": {"theme": "light"}},
+            headers=_auth_headers(user_id),
         )
         assert update_response.status_code == 200
         assert update_response.json()["display_name"] == "Renamed"
 
-        list_response = client.get("/v1/db/users/?offset=0&limit=10")
-        assert list_response.status_code == 200
-        assert list_response.json()["total"] == 1
+        forbidden_update = client.put(
+            f"/v1/db/users/{other_user_id}",
+            json={"display_name": "Hack"},
+            headers=_auth_headers(user_id),
+        )
+        assert forbidden_update.status_code == 403
 
-        delete_response = client.delete(f"/v1/db/users/{user_id}")
+        forbidden_list = client.get("/v1/db/users/?offset=0&limit=10", headers=_auth_headers(user_id))
+        assert forbidden_list.status_code == 403
+
+        admin_list_response = client.get(
+            "/v1/db/users/?offset=0&limit=10",
+            headers=_auth_headers(user_id, is_admin=True),
+        )
+        assert admin_list_response.status_code == 200
+        assert admin_list_response.json()["total"] == 2
+
+        forbidden_delete = client.delete(
+            f"/v1/db/users/{other_user_id}",
+            headers=_auth_headers(user_id),
+        )
+        assert forbidden_delete.status_code == 403
+
+        delete_response = client.delete(f"/v1/db/users/{user_id}", headers=_auth_headers(user_id))
         assert delete_response.status_code == 204
 
-        missing_response = client.get(f"/v1/db/users/{user_id}")
+        missing_response = client.get(
+            f"/v1/db/users/{user_id}",
+            headers=_auth_headers(other_user_id, is_admin=True),
+        )
         assert missing_response.status_code == 404
     finally:
         app.dependency_overrides.clear()
         session.close()
-
 
 def test_db_time_tracking_endpoints_require_auth_and_user_match() -> None:
     client, session = _build_client()
