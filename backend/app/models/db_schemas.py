@@ -134,8 +134,6 @@ class WorkLocationCreate(BaseModel):
     @classmethod
     def validate_country_code(cls, value: str) -> str:
         normalized = value.upper()
-        if len(normalized) != 2 or not normalized.isalpha():
-            raise ValueError("country_code must be ISO alpha-2")
         if normalized not in ISO_ALPHA2_CODES:
             raise ValueError("country_code must be ISO alpha-2")
         return normalized
