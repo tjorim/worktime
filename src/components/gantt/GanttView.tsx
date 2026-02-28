@@ -7,7 +7,7 @@ import { ConfirmationDialog } from "../ConfirmationDialog";
 import { GanttChart, type GanttViewMode } from "./GanttChart";
 import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
 
-const GANTT_VIEW_MODES: GanttViewMode[] = ["Day", "Week", "Month"];
+const GANTT_VIEW_MODES: GanttViewMode[] = ["Day", "Week", "Month", "Year"];
 
 export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();

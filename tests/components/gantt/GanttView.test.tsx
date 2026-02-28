@@ -23,7 +23,7 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
     onTaskClick,
   }: {
     tasks: Array<{ id: string; name: string }>;
-    viewMode: "Day" | "Week" | "Month";
+    viewMode: "Day" | "Week" | "Month" | "Year";
     onTaskClick: (taskId: string) => void;
   }) => (
     <div>
@@ -170,5 +170,8 @@ describe("GanttView", () => {
 
     await user.click(screen.getByRole("button", { name: "Month" }));
     expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Month");
+
+    await user.click(screen.getByRole("button", { name: "Year" }));
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Year");
   });
 });

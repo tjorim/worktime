@@ -18,7 +18,8 @@ declare module "frappe-gantt" {
   export class Gantt {
     constructor(wrapper: string | Element, tasks: GanttTaskLike[], options?: GanttOptions);
     refresh(tasks: GanttTaskLike[]): void;
-    change_view_mode(mode: GanttOptions["view_mode"]): void;
+    change_view_mode(mode: GanttOptions["view_mode"], maintain_pos?: boolean): void;
+    update_options(options: GanttOptions): void;
   }
 
   export default Gantt;

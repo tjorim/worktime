@@ -29,9 +29,9 @@ class MockFrappeGantt {
     mockInstances.push(this);
   }
 
-  refresh() {}
+  refresh = vi.fn();
 
-  change_view_mode() {}
+  change_view_mode = vi.fn();
 }
 
 vi.mock("frappe-gantt", () => ({ default: MockFrappeGantt }), { virtual: true });
@@ -104,6 +104,44 @@ describe("GanttChart", () => {
     expect(onTaskClick).toHaveBeenCalledWith("task-1");
     expect(onDateChange).toHaveBeenCalledWith("task-1", "2026-03-02", "2026-03-04");
     expect(onProgressChange).toHaveBeenCalledWith("task-1", 75);
+  });
+
+
+  it("keeps horizontal position when changing view mode", async () => {
+    const onTaskClick = vi.fn();
+    const onDateChange = vi.fn();
+    const onProgressChange = vi.fn();
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
+        viewMode="Week"
+        onTaskClick={onTaskClick}
+        onDateChange={onDateChange}
+        onProgressChange={onProgressChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    instance.change_view_mode.mockClear();
+
+    rerender(
+      <GanttChart
+        tasks={[{ id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 }]}
+        viewMode="Month"
+        onTaskClick={onTaskClick}
+        onDateChange={onDateChange}
+        onProgressChange={onProgressChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.change_view_mode).toHaveBeenCalledWith("Month", true);
+    });
   });
 
   it("forwards valid task ids from frappe callbacks", async () => {

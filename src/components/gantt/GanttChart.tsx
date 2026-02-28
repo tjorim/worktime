@@ -3,7 +3,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask } from "../../types/gantt";
 import { EmptyState } from "../shared/EmptyState";
 
-type GanttViewMode = "Day" | "Week" | "Month";
+type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 
 interface GanttChartProps {
   tasks: GanttTask[];
@@ -130,7 +130,7 @@ export function GanttChart({
       return;
     }
 
-    ganttRef.current.change_view_mode(viewMode);
+    ganttRef.current.change_view_mode(viewMode, true);
   }, [viewMode]);
 
   if (tasks.length === 0) {
