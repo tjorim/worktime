@@ -22,7 +22,6 @@ from app.models.db_schemas import (
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
-    ADMIN_SCOPE_REQUIRED_MSG,
     ValidationError as ServiceValidationError,
     create_label,
     create_or_update_work_location,
@@ -73,34 +72,30 @@ def test_schema_validates_color_and_country_code() -> None:
         )
 
 
-def test_list_users_requires_admin_scope(session: Session) -> None:
-    create_user(session, UserCreate(username="alice-admin-test", display_name="Alice"))
-    create_user(session, UserCreate(username="bob-admin-test", display_name="Bob"))
+def test_list_users(session: Session) -> None:
+    create_user(session, UserCreate(username="alice-list-test", display_name="Alice", password="test-password-1"))
+    create_user(session, UserCreate(username="bob-list-test", display_name="Bob", password="test-password-1"))
 
-    with pytest.raises(ServiceValidationError, match=ADMIN_SCOPE_REQUIRED_MSG):
-        list_users(session)
-
-    users, total = list_users(session, is_admin=True)
+    users, total = list_users(session)
     assert len(users) == 2
     assert total == 2
 
 
-
 def test_list_users_validates_offset_and_limit(session: Session) -> None:
-    create_user(session, UserCreate(username="limit-test", display_name="Limit Test"))
+    create_user(session, UserCreate(username="limit-test", display_name="Limit Test", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError, match="offset must be >= 0"):
-        list_users(session, is_admin=True, offset=-1)
+        list_users(session, offset=-1)
 
     with pytest.raises(ServiceValidationError, match="limit must be >= 1"):
-        list_users(session, is_admin=True, limit=0)
+        list_users(session, limit=0)
 
     with pytest.raises(ServiceValidationError, match="limit must be <= 1000"):
-        list_users(session, is_admin=True, limit=1001)
+        list_users(session, limit=1001)
 
 
 def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
-    user = create_user(session, UserCreate(username="alice", display_name="Alice"))
+    user = create_user(session, UserCreate(username="alice", display_name="Alice", password="test-password-1"))
     label = create_label(session, user.id, LabelCreate(name="Deep work", color="#112233"))
 
     create_task(
@@ -131,7 +126,7 @@ def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
 
 
 def test_create_task_rejects_negative_duration(session: Session) -> None:
-    user = create_user(session, UserCreate(username="neg-duration", display_name="Neg Duration"))
+    user = create_user(session, UserCreate(username="neg-duration", display_name="Neg Duration", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError):
         create_task(
@@ -147,7 +142,7 @@ def test_create_task_rejects_negative_duration(session: Session) -> None:
 
 
 def test_update_task_rejects_negative_duration_with_partial_data(session: Session) -> None:
-    user = create_user(session, UserCreate(username="update-neg-duration", display_name="Update Neg"))
+    user = create_user(session, UserCreate(username="update-neg-duration", display_name="Update Neg", password="test-password-1"))
     task = create_task(
         session,
         user.id,
@@ -169,13 +164,13 @@ def test_update_task_rejects_negative_duration_with_partial_data(session: Sessio
 
 
 def test_update_user_rejects_null_for_non_nullable_fields(session: Session) -> None:
-    user = create_user(session, UserCreate(username="nullable-check", display_name="Nullable Check"))
+    user = create_user(session, UserCreate(username="nullable-check", display_name="Nullable Check", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError):
         update_user(session, user.id, UserUpdate.model_construct(display_name=None))
 
 def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
-    user = create_user(session, UserCreate(username="bob", display_name="Bob"))
+    user = create_user(session, UserCreate(username="bob", display_name="Bob", password="test-password-1"))
     label = create_label(session, user.id, LabelCreate(name="Ops", color="#445566"))
 
     task = create_task(
@@ -213,7 +208,7 @@ def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
 
 
 def test_work_location_upsert(session: Session) -> None:
-    user = create_user(session, UserCreate(username="carol", display_name="Carol"))
+    user = create_user(session, UserCreate(username="carol", display_name="Carol", password="test-password-1"))
 
     first = create_or_update_work_location(
         session,
@@ -255,8 +250,8 @@ def test_template_label_relationship_back_populates_pairing() -> None:
 
 
 def test_get_label_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="owner", display_name="Owner"))
-    other = create_user(session, UserCreate(username="other", display_name="Other"))
+    owner = create_user(session, UserCreate(username="owner", display_name="Owner", password="test-password-1"))
+    other = create_user(session, UserCreate(username="other", display_name="Other", password="test-password-1"))
     label = create_label(session, owner.id, LabelCreate(name="Private", color="#123456"))
 
     fetched = get_label(session, owner.id, label.id)
@@ -267,8 +262,8 @@ def test_get_label_is_scoped_to_user(session: Session) -> None:
 
 
 def test_get_task_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="task_owner", display_name="Task Owner"))
-    other = create_user(session, UserCreate(username="task_other", display_name="Task Other"))
+    owner = create_user(session, UserCreate(username="task_owner", display_name="Task Owner", password="test-password-1"))
+    other = create_user(session, UserCreate(username="task_other", display_name="Task Other", password="test-password-1"))
 
     task = create_task(
         session,
@@ -289,8 +284,8 @@ def test_get_task_is_scoped_to_user(session: Session) -> None:
 
 
 def test_get_template_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="tpl_owner", display_name="Tpl Owner"))
-    other = create_user(session, UserCreate(username="tpl_other", display_name="Tpl Other"))
+    owner = create_user(session, UserCreate(username="tpl_owner", display_name="Tpl Owner", password="test-password-1"))
+    other = create_user(session, UserCreate(username="tpl_other", display_name="Tpl Other", password="test-password-1"))
 
     template = create_template(
         session,

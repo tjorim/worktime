@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from pwdlib import PasswordHash
 from sqlalchemy import func as sql_func
 from sqlmodel import Session, col, delete, select, update
 
@@ -40,8 +41,26 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
-ADMIN_SCOPE_REQUIRED_MSG = "listing all users requires admin scope"
 MAX_USER_LIST_LIMIT = 1000
+
+
+_ph = PasswordHash.recommended()
+
+
+def hash_password(plain: str) -> str:
+    return _ph.hash(plain)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return _ph.verify(plain, hashed)
+
+
+def authenticate_user(session: Session, username: str, password: str) -> User:
+    """Return User if credentials are valid, otherwise raise ValidationError."""
+    user = get_user_by_username(session, username)
+    if user is None or not verify_password(password, user.hashed_password):
+        raise ValidationError("invalid credentials")
+    return user
 
 
 def _get_non_nullable_model_fields(model: type) -> set[str]:
@@ -59,7 +78,10 @@ def create_user(session: Session, payload: UserCreate) -> User:
     if existing is not None:
         raise ConflictError("username already exists")
 
-    user = User(**payload.model_dump())
+    data = payload.model_dump()
+    plain_password = data.pop("password")
+    data["hashed_password"] = hash_password(plain_password)
+    user = User(**data)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -80,12 +102,9 @@ def get_user_by_username(session: Session, username: str) -> User | None:
 def list_users(
     session: Session,
     *,
-    is_admin: bool = False,
     offset: int = 0,
     limit: int = 100,
 ) -> tuple[list[User], int]:
-    if not is_admin:
-        raise ValidationError(ADMIN_SCOPE_REQUIRED_MSG)
     if offset < 0:
         raise ValidationError(f"offset must be >= 0, got: {offset}")
     if limit < 1:

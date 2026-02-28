@@ -27,6 +27,7 @@ class UserCreate(BaseModel):
     username: str
     display_name: str
     settings: dict[str, Any] = Field(default_factory=dict)
+    password: str = Field(min_length=8)
 
 
 class UserRead(BaseModel):
@@ -155,6 +156,17 @@ class WorkLocationUpdate(BaseModel):
     _validate_country_code = field_validator("country_code")(
         WorkLocationCreate.validate_country_code
     )
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
 
 
 class TaskListResponse(ListResponse[TaskRead]):

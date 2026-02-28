@@ -19,6 +19,8 @@ class User(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
+    is_admin: bool = Field(default=False)
+    hashed_password: str
     display_name: str
     settings: dict[str, Any] = Field(
         default_factory=dict,
@@ -57,6 +59,20 @@ class TimeTrackingLabel(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="labels")
     tasks: list["TimeTrackingTask"] = Relationship(back_populates="label")
@@ -87,6 +103,20 @@ class TimeTrackingTask(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="tasks")
     label: TimeTrackingLabel | None = Relationship(back_populates="tasks")
@@ -107,6 +137,20 @@ class TimeTrackingTemplate(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="templates")
     label: TimeTrackingLabel | None = Relationship(back_populates="templates")
@@ -125,6 +169,20 @@ class WorkLocation(SQLModel, table=True):
     created_at: dt_datetime = Field(
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
     )
 
     user: User = Relationship(back_populates="work_locations")

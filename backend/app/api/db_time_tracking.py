@@ -34,7 +34,10 @@ from app.services.db_service import (
     delete_label,
     delete_task,
     delete_template,
+    get_label,
     get_running_task,
+    get_task,
+    get_template,
     list_labels_for_user,
     list_tasks,
     list_templates_for_user,
@@ -69,6 +72,7 @@ def create_label_endpoint(
         label = create_label(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return LabelRead.model_validate(label, from_attributes=True)
 
@@ -95,6 +99,23 @@ def list_labels_endpoint(
     )
 
 
+@router.get("/labels/{label_id}", response_model=LabelRead)
+def get_label_endpoint(
+    label_id: str,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: Session = Depends(get_session),
+) -> LabelRead:
+    require_user_match(user_id, authenticated_user_id)
+    try:
+        label = get_label(session, user_id, label_id)
+    except (NotFoundError, ConflictError, ValidationError) as error:
+        _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
+
+    return LabelRead.model_validate(label, from_attributes=True)
+
+
 @router.put("/labels/{label_id}", response_model=LabelRead)
 def update_label_endpoint(
     label_id: str,
@@ -108,6 +129,7 @@ def update_label_endpoint(
         label = update_label(session, user_id, label_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return LabelRead.model_validate(label, from_attributes=True)
 
@@ -141,6 +163,7 @@ def create_task_endpoint(
         task = create_task(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return TaskRead.model_validate(task, from_attributes=True)
 
@@ -199,6 +222,23 @@ def get_running_task_endpoint(
     )
 
 
+@router.get("/tasks/{task_id}", response_model=TaskRead)
+def get_task_endpoint(
+    task_id: str,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: Session = Depends(get_session),
+) -> TaskRead:
+    require_user_match(user_id, authenticated_user_id)
+    try:
+        task = get_task(session, user_id, task_id)
+    except (NotFoundError, ConflictError, ValidationError) as error:
+        _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
+
+    return TaskRead.model_validate(task, from_attributes=True)
+
+
 @router.put("/tasks/{task_id}", response_model=TaskRead)
 def update_task_endpoint(
     task_id: str,
@@ -212,6 +252,7 @@ def update_task_endpoint(
         task = update_task(session, user_id, task_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return TaskRead.model_validate(task, from_attributes=True)
 
@@ -245,6 +286,7 @@ def create_template_endpoint(
         template = create_template(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return TemplateRead.model_validate(template, from_attributes=True)
 
@@ -271,6 +313,23 @@ def list_templates_endpoint(
     )
 
 
+@router.get("/templates/{template_id}", response_model=TemplateRead)
+def get_template_endpoint(
+    template_id: str,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: Session = Depends(get_session),
+) -> TemplateRead:
+    require_user_match(user_id, authenticated_user_id)
+    try:
+        template = get_template(session, user_id, template_id)
+    except (NotFoundError, ConflictError, ValidationError) as error:
+        _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
+
+    return TemplateRead.model_validate(template, from_attributes=True)
+
+
 @router.put("/templates/{template_id}", response_model=TemplateRead)
 def update_template_endpoint(
     template_id: str,
@@ -284,6 +343,7 @@ def update_template_endpoint(
         template = update_template(session, user_id, template_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
+        raise  # _handle_error always raises; this satisfies type checkers
 
     return TemplateRead.model_validate(template, from_attributes=True)
 

@@ -1,11 +1,13 @@
 """Database initialization utilities."""
 
-from sqlmodel import SQLModel
+from pathlib import Path
 
-from app.database.engine import create_engine
-from app.database import models  # noqa: F401
+from alembic import command
+from alembic.config import Config
 
 
 def init_db() -> None:
-    """Initialize database schema (idempotent)."""
-    SQLModel.metadata.create_all(create_engine())
+    """Apply all pending Alembic migrations (idempotent)."""
+    alembic_ini = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
+    command.upgrade(alembic_cfg, "head")

@@ -102,6 +102,7 @@ def create_user_factory() -> Callable[..., int]:
                 "username": username,
                 "display_name": display_name or username.title(),
                 "settings": settings_payload or {},
+                "password": "test-password-1",
             },
             headers=headers,
         )

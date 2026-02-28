@@ -55,20 +55,20 @@ def test_db_user_crud_endpoints(db_client: tuple[TestClient, Session]) -> None:
 
     unauthenticated_create = client.post(
         "/v1/db/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
     )
     assert unauthenticated_create.status_code == 401
 
     forbidden_create = client.post(
         "/v1/db/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=_auth_headers(2),
     )
     assert forbidden_create.status_code == 403
 
     user_response = client.post(
         "/v1/db/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert user_response.status_code == 201
@@ -76,14 +76,14 @@ def test_db_user_crud_endpoints(db_client: tuple[TestClient, Session]) -> None:
 
     duplicate_response = client.post(
         "/v1/db/users/",
-        json={"username": "api-user", "display_name": "API User 2", "settings": {}},
+        json={"username": "api-user", "display_name": "API User 2", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert duplicate_response.status_code == 409
 
     other_user_response = client.post(
         "/v1/db/users/",
-        json={"username": "api-user-other", "display_name": "Other", "settings": {}},
+        json={"username": "api-user-other", "display_name": "Other", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert other_user_response.status_code == 201
@@ -175,12 +175,12 @@ def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: tuple
 
     owner_id = client.post(
         "/v1/db/users/",
-        json={"username": "time-user", "display_name": "Time User", "settings": {}},
+        json={"username": "time-user", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
         "/v1/db/users/",
-        json={"username": "other-user", "display_name": "Other User", "settings": {}},
+        json={"username": "other-user", "display_name": "Other User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
 
@@ -200,7 +200,7 @@ def test_db_time_tracking_endpoints(db_client: tuple[TestClient, Session]) -> No
 
     user_id = client.post(
         "/v1/db/users/",
-        json={"username": "time-user-2", "display_name": "Time User", "settings": {}},
+        json={"username": "time-user-2", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)
@@ -321,12 +321,12 @@ def test_work_location_endpoints_require_auth_and_user_match(db_client: tuple[Te
 
     owner_id = client.post(
         "/v1/db/users/",
-        json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}},
+        json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
         "/v1/db/users/",
-        json={"username": "loc-other", "display_name": "Location Other", "settings": {}},
+        json={"username": "loc-other", "display_name": "Location Other", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
 
@@ -346,7 +346,7 @@ def test_work_location_endpoints(db_client: tuple[TestClient, Session]) -> None:
 
     user_id = client.post(
         "/v1/db/users/",
-        json={"username": "loc-user", "display_name": "Location User", "settings": {}},
+        json={"username": "loc-user", "display_name": "Location User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)

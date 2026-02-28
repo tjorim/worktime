@@ -145,7 +145,7 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=False if "*" in cors_origins else True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Add timing middleware after CORS
@@ -158,10 +158,12 @@ app.include_router(hday_router)
 app.include_router(team_router)
 
 if settings.DATABASE_ENABLED:
+    from .api.auth_router import router as auth_router
     from .api.db_time_tracking import router as db_time_tracking_router
     from .api.db_users import router as db_users_router
     from .api.db_work_locations import router as db_work_locations_router
 
+    app.include_router(auth_router)
     app.include_router(db_users_router)
     app.include_router(db_time_tracking_router)
     app.include_router(db_work_locations_router)

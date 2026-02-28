@@ -2,6 +2,8 @@
 
 ## Commands
 
+### Frontend (project root)
+
 ```bash
 npm run dev                # Vite dev server (localhost:8000)
 npm run lint               # oxlint
@@ -14,6 +16,21 @@ npm run generate-icons     # regenerate icons in public/assets/icons/
 ```
 
 Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.
+
+### Backend (`cd backend` first)
+
+```bash
+uvicorn app.main:app --reload          # dev server
+PYTHONPATH=. pytest -q                 # full test suite
+PYTHONPATH=. pytest tests/test_X.py   # targeted tests
+
+# Alembic (schema migrations)
+PYTHONPATH=. alembic revision --autogenerate -m "describe change"  # generate migration
+PYTHONPATH=. alembic upgrade head      # apply pending migrations
+PYTHONPATH=. alembic stamp head        # mark existing DB as current (no-op migration)
+PYTHONPATH=. alembic current           # show current revision
+PYTHONPATH=. alembic downgrade -1      # roll back one revision
+```
 
 ## Source-of-truth files
 

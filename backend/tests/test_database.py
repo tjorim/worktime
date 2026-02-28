@@ -3,7 +3,6 @@
 from unittest.mock import Mock
 
 import pytest
-from sqlmodel import SQLModel
 
 from app.database import engine as database_engine
 from app.database.engine import create_engine, get_session
@@ -59,17 +58,16 @@ class TestDatabaseSession:
 class TestDatabaseInit:
     """Database initialization tests."""
 
-    def test_init_db_calls_create_all(self, monkeypatch):
-        """init_db should call SQLModel metadata create_all with engine."""
-        fake_engine = Mock()
-        create_all_mock = Mock()
-
-        monkeypatch.setattr("app.database.init.create_engine", lambda: fake_engine)
-        monkeypatch.setattr(SQLModel.metadata, "create_all", create_all_mock)
+    def test_init_db_runs_alembic_upgrade(self, monkeypatch):
+        """init_db should run alembic upgrade to head."""
+        upgrade_mock = Mock()
+        monkeypatch.setattr("app.database.init.command.upgrade", upgrade_mock)
 
         init_db()
 
-        create_all_mock.assert_called_once_with(fake_engine)
+        upgrade_mock.assert_called_once()
+        args = upgrade_mock.call_args
+        assert args[0][1] == "head"
 
 
 class TestLifespanInitialization:
