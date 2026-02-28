@@ -9,6 +9,7 @@ describe("useKeyboardShortcuts", () => {
     onNext: vi.fn(),
     onTeamSelect: vi.fn(),
     onTabTimeTracking: vi.fn(),
+    onTabGantt: vi.fn(),
   };
 
   beforeEach(() => {
@@ -115,4 +116,14 @@ describe("useKeyboardShortcuts", () => {
 
     expect(mockShortcuts.onTabTimeTracking).not.toHaveBeenCalled();
   });
+
+  it("triggers onTabGantt when G is pressed", () => {
+    renderHook(() => useKeyboardShortcuts(mockShortcuts));
+
+    const event = new KeyboardEvent("keydown", { key: "g" });
+    document.dispatchEvent(event);
+
+    expect(mockShortcuts.onTabGantt).toHaveBeenCalledTimes(1);
+  });
+
 });

@@ -7,6 +7,7 @@ interface KeyboardShortcutsModalProps {
   onHide: () => void;
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
+  enableGantt?: boolean;
 }
 
 /**
@@ -17,6 +18,7 @@ export function KeyboardShortcutsModal({
   onHide,
   enableTimeOff = false,
   enableTimeTracking = false,
+  enableGantt = false,
 }: KeyboardShortcutsModalProps) {
   const shortcuts = useMemo(() => {
     const navigationItems = [
@@ -24,6 +26,7 @@ export function KeyboardShortcutsModal({
       { keys: ["S"], description: "Schedule tab" },
       ...(enableTimeOff ? [{ keys: ["O"], description: "Time Off tab" }] : []),
       ...(enableTimeTracking ? [{ keys: ["T"], description: "Time Tracking tab" }] : []),
+      ...(enableGantt ? [{ keys: ["G"], description: "Gantt tab" }] : []),
       { keys: ["←", "→"], description: "Previous / next date" },
       { keys: ["Ctrl", ","], description: "Open settings" },
     ];
@@ -45,7 +48,7 @@ export function KeyboardShortcutsModal({
     }
 
     return categories;
-  }, [enableTimeOff, enableTimeTracking]);
+  }, [enableTimeOff, enableTimeTracking, enableGantt]);
 
   return (
     <Modal show={show} onHide={onHide} centered>
