@@ -40,7 +40,15 @@ export function isValidRawGanttTask(value: unknown): value is RawGanttTask {
     return false;
   }
 
+  if (!task.id.trim() || !task.name.trim()) return false;
+
   if (!isValidISODate(task.start) || !isValidISODate(task.end)) {
+    return false;
+  }
+
+  if (
+    dayjs(task.end, GANTT_DATE_FORMAT, true).isBefore(dayjs(task.start, GANTT_DATE_FORMAT, true))
+  ) {
     return false;
   }
 

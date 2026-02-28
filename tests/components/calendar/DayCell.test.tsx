@@ -354,8 +354,6 @@ describe("DayCell", () => {
     });
   });
 
-
-
   describe("Work Location Indicators", () => {
     it("shows work location indicator even when the shift is off", () => {
       render(
@@ -376,10 +374,7 @@ describe("DayCell", () => {
 
     it("shows work location indicator when no shift badge is provided", () => {
       render(
-        <DayCell
-          {...defaultProps}
-          workLocation={{ location: "office", countryCode: "BE" }}
-        />,
+        <DayCell {...defaultProps} workLocation={{ location: "office", countryCode: "BE" }} />,
       );
 
       const indicator = screen.getByTitle("Working from office");

@@ -1,7 +1,11 @@
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
+import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+
+type LabelOption = { value: string; label: string };
 
 type TemplateForm = {
   text: string;
@@ -63,29 +67,23 @@ export function TemplateModal({
           </Form.Group>
           <Form.Group controlId="templateLabel" className="mb-3">
             <Form.Label>Label</Form.Label>
-            <Form.Select
-              value={value.label}
-              onChange={(event) => onChange({ ...value, label: event.target.value })}
-              disabled={isLabelSelectionDisabled}
+            <ReactSelect<LabelOption>
+              unstyled
+              isClearable
+              isSearchable
+              inputId="templateLabel"
+              isDisabled={isLabelSelectionDisabled}
+              placeholder={isLabelSelectionDisabled ? "Add labels first" : "Select a label"}
               aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
-              aria-required="true"
-              required
-            >
-              {isLabelSelectionDisabled ? (
-                <option value="">Add labels first</option>
-              ) : (
-                <>
-                  <option value="" disabled>
-                    Select a label
-                  </option>
-                  {labels.map((label) => (
-                    <option key={label.id} value={label.id}>
-                      {label.name}
-                    </option>
-                  ))}
-                </>
-              )}
-            </Form.Select>
+              options={labels.map((l) => ({ value: l.id, label: l.name }))}
+              value={
+                labels.find((l) => l.id === value.label)
+                  ? { value: value.label, label: labels.find((l) => l.id === value.label)!.name }
+                  : null
+              }
+              onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
+              classNames={bootstrapSelectClassNames}
+            />
             {isLabelSelectionDisabled ? (
               <Form.Text id="templateLabelHelp" muted>
                 Add at least one label in Time Tracking Settings before creating templates.

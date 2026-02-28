@@ -3,9 +3,13 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ReactSelect from "react-select";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { TimeTrackingLabel } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
+import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+
+type LabelOption = { value: string; label: string };
 
 export type TaskEditForm = {
   text: string;
@@ -80,16 +84,21 @@ export function TaskEditModal({
           </Form.Group>
           <Form.Group controlId="editTaskLabel" className="mb-3">
             <Form.Label>Label</Form.Label>
-            <Form.Select
-              value={value.label}
-              onChange={(event) => onChange({ ...value, label: event.target.value })}
-            >
-              {labels.map((label) => (
-                <option key={label.id} value={label.id}>
-                  {label.name}
-                </option>
-              ))}
-            </Form.Select>
+            <ReactSelect<LabelOption>
+              unstyled
+              isClearable
+              isSearchable
+              inputId="editTaskLabel"
+              placeholder="Select a label"
+              options={labels.map((l) => ({ value: l.id, label: l.name }))}
+              value={
+                labels.find((l) => l.id === value.label)
+                  ? { value: value.label, label: labels.find((l) => l.id === value.label)!.name }
+                  : null
+              }
+              onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
+              classNames={bootstrapSelectClassNames}
+            />
           </Form.Group>
           <div className="d-flex gap-3 mb-3">
             <Form.Group controlId="editTaskStart" className="flex-fill">

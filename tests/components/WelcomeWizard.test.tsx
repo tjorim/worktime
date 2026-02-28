@@ -3,6 +3,62 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("react-select", () => ({
+  default: ({
+    options = [],
+    value = null,
+    onChange = () => {},
+    inputId,
+    isMulti = false,
+    isDisabled = false,
+    "aria-label": ariaLabel,
+    "aria-describedby": ariaDescribedBy,
+  }: {
+    options?: Array<{ value: string; label: string }>;
+    value?: Array<{ value: string; label: string }> | { value: string; label: string } | null;
+    onChange?: (v: unknown) => void;
+    inputId?: string;
+    isMulti?: boolean;
+    isDisabled?: boolean;
+    "aria-label"?: string;
+    "aria-describedby"?: string;
+  }) => {
+    const selectedValues = Array.isArray(value)
+      ? value.map((v) => v.value)
+      : value
+        ? [value.value]
+        : [];
+    return (
+      <select
+        multiple={isMulti}
+        id={inputId}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        disabled={isDisabled}
+        value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
+        onChange={(e) => {
+          if (isMulti) {
+            onChange(
+              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
+            );
+          } else {
+            const val = e.target.value;
+            onChange(
+              val ? { value: val, label: e.target.options[e.target.selectedIndex].text } : null,
+            );
+          }
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+}));
 import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
@@ -520,7 +576,9 @@ describe("WelcomeWizard", () => {
       await finishOnboardingSetup(user);
 
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Welcome to Worktime!/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Simulate reset
@@ -557,7 +615,9 @@ describe("WelcomeWizard", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Welcome to Worktime!/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Should be able to open settings and reset again
@@ -626,7 +686,9 @@ describe("WelcomeWizard", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Verify vacation allowance was saved to localStorage even without selecting a team
@@ -663,7 +725,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Verify initial vacation allowance was saved
@@ -872,7 +936,9 @@ describe("WelcomeWizard", () => {
 
       // Wait for wizard to close
       await waitFor(() =>
-        expect(screen.queryByRole("heading", { name: /Track Where You Work/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("heading", { name: /Track Where You Work/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Open Settings panel (match exact "Settings", not "Reset Settings")

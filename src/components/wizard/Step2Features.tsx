@@ -88,9 +88,7 @@ export function Step2Features({
               <i className="bi bi-globe text-primary me-3 mt-1 icon-feature"></i>
               <div>
                 <h6 className="mb-1">Cross-Border Tracking</h6>
-                <small className="text-muted">
-                  Log where you work each day for tax reporting
-                </small>
+                <small className="text-muted">Log where you work each day for tax reporting</small>
               </div>
             </div>
           </Col>

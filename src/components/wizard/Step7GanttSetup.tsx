@@ -30,7 +30,8 @@ export function Step7GanttSetup({
       </div>
 
       <Alert variant="info" className="mt-3">
-        Gantt tasks are stored locally in your browser. You can export them anytime for backups.
+        Gantt tasks are stored locally in your browser. You can back them up anytime via{" "}
+        <strong>Settings → Backup App Data</strong>.
       </Alert>
 
       <Form className="mt-3">
@@ -44,8 +45,7 @@ export function Step7GanttSetup({
 
         {!isEnabled && (
           <Form.Text className="text-muted d-block mt-2">
-            You can enable the Gantt chart later in Settings if you want to start planning
-            projects.
+            You can enable the Gantt chart later in Settings if you want to start planning projects.
           </Form.Text>
         )}
       </Form>

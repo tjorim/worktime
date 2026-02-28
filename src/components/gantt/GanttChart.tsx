@@ -22,28 +22,31 @@ export function GanttChart({
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
-  const initJustRanRef = useRef(false);
+  const tasksRef = useRef(tasks);
   const viewModeRef = useRef(viewMode);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
+  tasksRef.current = tasks;
   viewModeRef.current = viewMode;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
 
+  const hasAnyTasks = tasks.length > 0;
+
+  // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks]
   useEffect(() => {
-    if (tasks.length === 0) {
+    if (!hasAnyTasks) {
       if (containerRef.current) {
         containerRef.current.innerHTML = "";
       }
       ganttRef.current = null;
-      initJustRanRef.current = false;
       return;
     }
 
-    if (ganttRef.current || !containerRef.current) {
+    if (!containerRef.current) {
       return;
     }
 
@@ -51,14 +54,12 @@ export function GanttChart({
     let didCancel = false;
 
     const initGantt = async () => {
-      // In the Vite build we load the Gantt JS via ESM import, so no standalone
-      // <script src="frappe-gantt.umd.js"> tag is needed.
       const { default: Gantt } = await import("frappe-gantt");
       if (didCancel) {
         return;
       }
 
-      ganttRef.current = new Gantt(container, tasks, {
+      ganttRef.current = new Gantt(container, tasksRef.current, {
         view_mode: viewModeRef.current,
         on_click: (task) => onTaskClickRef.current(task.id),
         on_date_change: (task, start, end) => {
@@ -72,7 +73,6 @@ export function GanttChart({
           onProgressChangeRef.current(task.id, progress);
         },
       });
-      initJustRanRef.current = true;
     };
 
     void initGantt();
@@ -81,23 +81,19 @@ export function GanttChart({
       didCancel = true;
       container.innerHTML = "";
       ganttRef.current = null;
-      initJustRanRef.current = false;
     };
-  }, [tasks]);
+  }, [hasAnyTasks]);
 
+  // Effect 2 — refresh on task changes, deps: [tasks]
   useEffect(() => {
     if (!ganttRef.current || tasks.length === 0) {
-      return;
-    }
-
-    if (initJustRanRef.current) {
-      initJustRanRef.current = false;
       return;
     }
 
     ganttRef.current.refresh(tasks);
   }, [tasks]);
 
+  // Effect 3 — view mode changes
   useEffect(() => {
     if (!ganttRef.current) {
       return;

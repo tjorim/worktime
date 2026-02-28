@@ -3,6 +3,62 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
+
+vi.mock("react-select", () => ({
+  default: ({
+    options = [],
+    value = null,
+    onChange = () => {},
+    inputId,
+    isMulti = false,
+    isDisabled = false,
+    "aria-label": ariaLabel,
+    "aria-describedby": ariaDescribedBy,
+  }: {
+    options?: Array<{ value: string; label: string }>;
+    value?: Array<{ value: string; label: string }> | { value: string; label: string } | null;
+    onChange?: (v: unknown) => void;
+    inputId?: string;
+    isMulti?: boolean;
+    isDisabled?: boolean;
+    "aria-label"?: string;
+    "aria-describedby"?: string;
+  }) => {
+    const selectedValues = Array.isArray(value)
+      ? value.map((v) => v.value)
+      : value
+        ? [value.value]
+        : [];
+    return (
+      <select
+        multiple={isMulti}
+        id={inputId}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        disabled={isDisabled}
+        value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
+        onChange={(e) => {
+          if (isMulti) {
+            onChange(
+              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
+            );
+          } else {
+            const val = e.target.value;
+            onChange(
+              val ? { value: val, label: e.target.options[e.target.selectedIndex].text } : null,
+            );
+          }
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+}));
 import { ToastProvider } from "../../../src/contexts/ToastContext";
 import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 import type {
@@ -268,7 +324,11 @@ describe("TimeTrackingDailyView", () => {
 
       expect(onUpdateTaskTimes).not.toHaveBeenCalled();
       const alerts = screen.getAllByRole("alert");
-      expect(alerts.some((alert) => /Time range overlaps an existing task/i.test(alert.textContent ?? ""))).toBe(true);
+      expect(
+        alerts.some((alert) =>
+          /Time range overlaps an existing task/i.test(alert.textContent ?? ""),
+        ),
+      ).toBe(true);
     });
   });
 
@@ -295,7 +355,7 @@ describe("TimeTrackingDailyView", () => {
       const user = userEvent.setup();
       renderView();
 
-      await user.selectOptions(screen.getByLabelText(/Template selector/i), "tpl-1");
+      await user.selectOptions(screen.getByLabelText(/^Template$/i), "tpl-1");
       await user.click(screen.getByRole("button", { name: /Use Template/i }));
 
       expect(screen.getByLabelText(/^Task$/i)).toHaveValue("Morning Support");

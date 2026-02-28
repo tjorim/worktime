@@ -125,5 +125,4 @@ describe("useKeyboardShortcuts", () => {
 
     expect(mockShortcuts.onTabGantt).toHaveBeenCalledTimes(1);
   });
-
 });

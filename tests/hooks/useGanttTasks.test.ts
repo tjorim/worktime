@@ -89,6 +89,33 @@ describe("useGanttTasks", () => {
     ]);
   });
 
+  it("removeTask strips deleted id from other tasks' dependencies", () => {
+    window.localStorage.setItem(
+      "worktime_gantt_tasks",
+      JSON.stringify([
+        { id: "t1", name: "A", start: "2026-03-01", end: "2026-03-05" },
+        { id: "t2", name: "B", start: "2026-03-02", end: "2026-03-06", dependencies: "t1" },
+        {
+          id: "t3",
+          name: "C",
+          start: "2026-03-03",
+          end: "2026-03-07",
+          dependencies: "t1, t2",
+        },
+      ]),
+    );
+
+    const { result } = renderHook(() => useGanttTasks());
+
+    act(() => {
+      result.current.removeTask("t1");
+    });
+
+    expect(result.current.tasks).toHaveLength(2);
+    expect(result.current.tasks.find((t) => t.id === "t2")?.dependencies).toBeUndefined();
+    expect(result.current.tasks.find((t) => t.id === "t3")?.dependencies).toBe("t2");
+  });
+
   it("filters invalid tasks from corrupted storage data", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",

@@ -5,12 +5,68 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsProvider, USER_STATE_VERSION } from "../../../src/contexts/SettingsContext";
 
-vi.mock("frappe-gantt", () => ({
-  default: class MockFrappeGantt {
-    refresh() {}
-    change_view_mode() {}
+vi.mock(
+  "frappe-gantt",
+  () => ({
+    default: class MockFrappeGantt {
+      refresh() {}
+      change_view_mode() {}
+    },
+  }),
+  { virtual: true },
+);
+
+vi.mock("react-select", () => ({
+  default: ({
+    options,
+    value,
+    onChange,
+    inputId,
+    isMulti,
+    placeholder,
+  }: {
+    options: Array<{ value: string; label: string }>;
+    value: Array<{ value: string; label: string }> | { value: string; label: string } | null;
+    onChange: (
+      selected: Array<{ value: string; label: string }> | { value: string; label: string } | null,
+    ) => void;
+    inputId?: string;
+    isMulti?: boolean;
+    placeholder?: string;
+  }) => {
+    const selectedValues = Array.isArray(value)
+      ? value.map((v) => v.value)
+      : value
+        ? [value.value]
+        : [];
+    return (
+      <select
+        multiple={isMulti}
+        id={inputId}
+        aria-label={placeholder}
+        value={selectedValues}
+        onChange={(e) => {
+          if (isMulti) {
+            onChange(
+              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
+            );
+          } else {
+            const selected = e.target.value
+              ? { value: e.target.value, label: e.target.options[e.target.selectedIndex].text }
+              : null;
+            onChange(selected);
+          }
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
   },
-}), { virtual: true });
+}));
 
 vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
@@ -98,7 +154,9 @@ describe("GanttView", () => {
     await user.click(within(dialog).getByRole("button", { name: "Add Task" }));
 
     await waitFor(() => {
-      expect(within(screen.getByRole("list", { name: "Task list" })).getByText("Write tests")).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("list", { name: "Task list" })).getByText("Write tests"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -107,7 +165,13 @@ describe("GanttView", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",
       JSON.stringify([
-        { id: "task-1", name: "Plan release", start: "2026-03-01", end: "2026-03-05", progress: 40 },
+        {
+          id: "task-1",
+          name: "Plan release",
+          start: "2026-03-01",
+          end: "2026-03-05",
+          progress: 40,
+        },
       ]),
     );
 
@@ -126,7 +190,13 @@ describe("GanttView", () => {
     window.localStorage.setItem(
       "worktime_gantt_tasks",
       JSON.stringify([
-        { id: "task-1", name: "Plan release", start: "2026-03-01", end: "2026-03-05", progress: 40 },
+        {
+          id: "task-1",
+          name: "Plan release",
+          start: "2026-03-01",
+          end: "2026-03-05",
+          progress: 40,
+        },
       ]),
     );
 

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "../types/gantt";
 
-const GANTT_STORAGE_KEY = "worktime_gantt_tasks";
+export const GANTT_STORAGE_KEY = "worktime_gantt_tasks";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
@@ -60,7 +60,19 @@ export function useGanttTasks() {
 
   const removeTask = useCallback(
     (id: string) => {
-      setRawTasks((prev) => prev.filter((raw) => raw.id !== id));
+      setRawTasks((prev) =>
+        prev
+          .filter((raw) => raw.id !== id)
+          .map((raw) => {
+            if (!raw.dependencies) return raw;
+            const cleaned = raw.dependencies
+              .split(",")
+              .map((d) => d.trim())
+              .filter((d) => d && d !== id)
+              .join(", ");
+            return { ...raw, dependencies: cleaned || undefined };
+          }),
+      );
     },
     [setRawTasks],
   );
@@ -70,6 +82,5 @@ export function useGanttTasks() {
     addTask,
     updateTask,
     removeTask,
-    isValidRawTask: isValidRawGanttTask,
   };
 }

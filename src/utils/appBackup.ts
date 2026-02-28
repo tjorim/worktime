@@ -12,6 +12,7 @@
 
 import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
+import { GANTT_STORAGE_KEY } from "../hooks/useGanttTasks";
 import { isValidScheduleType } from "./scheduleUtils";
 
 const USER_STATE_KEY = "worktime_user_state";
@@ -26,6 +27,7 @@ export type AppBackupPayload = {
   tasks?: unknown[];
   templates?: unknown[];
   labels?: unknown[];
+  ganttTasks?: unknown[];
 };
 
 /**
@@ -41,6 +43,7 @@ export type BackupOptions = {
   includeTasks?: boolean;
   includeTemplates?: boolean;
   includeLabels?: boolean;
+  includeGanttTasks?: boolean;
 };
 
 /**
@@ -54,6 +57,7 @@ export type BackupDataPresence = {
   hasTasks: boolean;
   hasTemplates: boolean;
   hasLabels: boolean;
+  hasGanttTasks: boolean;
   /** Years that have tasks or work location data, sorted newest-first. */
   availableYears: number[];
 };
@@ -134,6 +138,9 @@ export function checkBackupDataPresence(): BackupDataPresence {
     (a, b) => b - a,
   );
 
+  const ganttData = safeParseJson(GANTT_STORAGE_KEY);
+  const hasGanttTasks = Array.isArray(ganttData) && ganttData.length > 0;
+
   return {
     hasUserState,
     hasTimeOff,
@@ -141,6 +148,7 @@ export function checkBackupDataPresence(): BackupDataPresence {
     hasTasks,
     hasTemplates,
     hasLabels,
+    hasGanttTasks,
     availableYears,
   };
 }
@@ -157,6 +165,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
     tasks: options?.includeTasks ?? true,
     templates: options?.includeTemplates ?? true,
     labels: options?.includeLabels ?? true,
+    ganttTasks: options?.includeGanttTasks ?? true,
   };
 
   const payload: AppBackupPayload = {
@@ -212,6 +221,11 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
     if (Array.isArray(labels)) payload.labels = labels;
   }
 
+  if (include.ganttTasks) {
+    const ganttTasks = safeParseJson(GANTT_STORAGE_KEY);
+    if (Array.isArray(ganttTasks)) payload.ganttTasks = ganttTasks;
+  }
+
   return payload;
 }
 
@@ -252,7 +266,8 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     "workLocations" in p ||
     "tasks" in p ||
     "templates" in p ||
-    "labels" in p;
+    "labels" in p ||
+    "ganttTasks" in p;
   if (!hasAnySection) return false;
 
   if ("userState" in p && p.userState !== undefined) {
@@ -287,6 +302,7 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
   if ("templates" in p && p.templates !== undefined && !Array.isArray(p.templates)) return false;
   if ("labels" in p && p.labels !== undefined && !Array.isArray(p.labels)) return false;
+  if ("ganttTasks" in p && p.ganttTasks !== undefined && !Array.isArray(p.ganttTasks)) return false;
 
   return true;
 }
@@ -342,6 +358,10 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
 
   if (Array.isArray(payload.labels)) {
     localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(payload.labels));
+  }
+
+  if (Array.isArray(payload.ganttTasks)) {
+    localStorage.setItem(GANTT_STORAGE_KEY, JSON.stringify(payload.ganttTasks));
   }
 
   window.location.reload();
