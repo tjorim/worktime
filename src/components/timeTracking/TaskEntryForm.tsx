@@ -8,8 +8,7 @@ import type { ReactElement } from "react";
 import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-
-type LabelOption = { value: string; label: string };
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 type TaskEntryFormProps = {
   labels: TimeTrackingLabel[];
@@ -46,6 +45,8 @@ export function TaskEntryForm({
   onSubmit,
   onStartNow,
 }: TaskEntryFormProps) {
+  const selectedLabelOption = useSelectedLabelOption(labels, label);
+
   const renderDisabledTooltipButton = (
     buttonKey: string,
     reason: string | undefined,
@@ -91,11 +92,7 @@ export function TaskEntryForm({
             isDisabled={labels.length === 0}
             placeholder={labels.length === 0 ? "Add labels first" : "Choose a label"}
             options={labels.map((item) => ({ value: item.id, label: item.name }))}
-            value={
-              labels.find((l) => l.id === label)
-                ? { value: label, label: labels.find((l) => l.id === label)!.name }
-                : null
-            }
+            value={selectedLabelOption}
             onChange={(selected) => onLabelChange(selected?.value ?? "")}
             classNames={bootstrapSelectClassNames}
           />

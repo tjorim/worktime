@@ -4,8 +4,7 @@ import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-
-type LabelOption = { value: string; label: string };
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 type TemplateForm = {
   text: string;
@@ -36,8 +35,9 @@ export function TemplateModal({
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
-  const labelExists = labels.some((l) => l.id === value.label);
-  const isSubmitDisabled = isLabelSelectionDisabled || !value.label || !labelExists;
+  const selectedLabelOption = useSelectedLabelOption(labels, value.label);
+  const isSubmitDisabled =
+    isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>
@@ -76,11 +76,7 @@ export function TemplateModal({
               placeholder={isLabelSelectionDisabled ? "Add labels first" : "Select a label"}
               aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
               options={labels.map((l) => ({ value: l.id, label: l.name }))}
-              value={
-                labels.find((l) => l.id === value.label)
-                  ? { value: value.label, label: labels.find((l) => l.id === value.label)!.name }
-                  : null
-              }
+              value={selectedLabelOption}
               onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
               classNames={bootstrapSelectClassNames}
             />
