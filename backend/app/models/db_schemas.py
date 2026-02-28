@@ -6,8 +6,14 @@ from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field, field_validator
+import pycountry
 
 T = TypeVar("T")
+
+
+ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
+
+
 
 
 class ListResponse(BaseModel, Generic[T]):
@@ -127,9 +133,10 @@ class WorkLocationCreate(BaseModel):
     @field_validator("country_code")
     @classmethod
     def validate_country_code(cls, value: str) -> str:
-        if len(value) != 2 or not value.isalpha():
+        normalized = value.upper()
+        if normalized not in ISO_ALPHA2_CODES:
             raise ValueError("country_code must be ISO alpha-2")
-        return value.upper()
+        return normalized
 
 
 class WorkLocationRead(BaseModel):

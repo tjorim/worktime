@@ -13,8 +13,10 @@ from app.database.models import TimeTrackingLabel, TimeTrackingTask, TimeTrackin
 from app.models.db_schemas import (
     LabelCreate,
     TaskCreate,
+    TaskUpdate,
     TemplateCreate,
     UserCreate,
+    UserUpdate,
     WorkLocationCreate,
 )
 from app.services.db_service import (
@@ -33,6 +35,8 @@ from app.services.db_service import (
     get_template,
     list_users,
     list_tasks,
+    update_task,
+    update_user,
 )
 
 
@@ -59,6 +63,12 @@ def test_schema_validates_color_and_country_code() -> None:
         WorkLocationCreate(
             date=date(2026, 2, 26),
             country_code="NET",
+        )
+
+    with pytest.raises(PydanticValidationError):
+        WorkLocationCreate(
+            date=date(2026, 2, 26),
+            country_code="ZZ",
         )
 
 
@@ -102,6 +112,51 @@ def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
             ),
         )
 
+
+
+def test_create_task_rejects_negative_duration(session: Session) -> None:
+    user = create_user(session, UserCreate(username="neg-duration", display_name="Neg Duration"))
+
+    with pytest.raises(ServiceValidationError):
+        create_task(
+            session,
+            user.id,
+            TaskCreate(
+                text="Bad interval",
+                start_time=datetime(2026, 2, 26, 12, 0),
+                stop_time=datetime(2026, 2, 26, 11, 0),
+                includes_break=False,
+            ),
+        )
+
+
+def test_update_task_rejects_negative_duration_with_partial_data(session: Session) -> None:
+    user = create_user(session, UserCreate(username="update-neg-duration", display_name="Update Neg"))
+    task = create_task(
+        session,
+        user.id,
+        TaskCreate(
+            text="Task",
+            start_time=datetime(2026, 2, 26, 9, 0),
+            stop_time=datetime(2026, 2, 26, 10, 0),
+            includes_break=False,
+        ),
+    )
+
+    with pytest.raises(ServiceValidationError):
+        update_task(
+            session,
+            user.id,
+            task.id,
+            TaskUpdate.model_construct(stop_time=datetime(2026, 2, 26, 8, 30)),
+        )
+
+
+def test_update_user_rejects_null_for_non_nullable_fields(session: Session) -> None:
+    user = create_user(session, UserCreate(username="nullable-check", display_name="Nullable Check"))
+
+    with pytest.raises(ServiceValidationError):
+        update_user(session, user.id, UserUpdate.model_construct(display_name=None))
 
 def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
     user = create_user(session, UserCreate(username="bob", display_name="Bob"))

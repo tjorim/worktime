@@ -8,6 +8,10 @@ from sqlalchemy import JSON, Column, DateTime, UniqueConstraint, func
 from sqlmodel import Field, Relationship, SQLModel
 
 
+def _utc_now() -> dt_datetime:
+    return dt_datetime.now(timezone.utc)
+
+
 class User(SQLModel, table=True):
     """User account and preferences."""
 
@@ -21,11 +25,11 @@ class User(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False),
     )
     created_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
     updated_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
@@ -50,7 +54,7 @@ class TimeTrackingLabel(SQLModel, table=True):
     name: str
     color: str
     created_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -70,11 +74,17 @@ class TimeTrackingTask(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
     label_id: str | None = Field(default=None, foreign_key="time_tracking_labels.id", index=True)
     text: str
-    start_time: dt_datetime
-    stop_time: dt_datetime | None = None
+    start_time: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    )
+    stop_time: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
     includes_break: bool = Field(default=False)
     created_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -94,7 +104,7 @@ class TimeTrackingTemplate(SQLModel, table=True):
     start_time: dt_time
     stop_time: dt_time
     created_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 
@@ -113,7 +123,7 @@ class WorkLocation(SQLModel, table=True):
     country_code: str = Field(max_length=2)
     label: str | None = None
     created_at: dt_datetime = Field(
-        default_factory=lambda: dt_datetime.now(timezone.utc),
+        default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
 

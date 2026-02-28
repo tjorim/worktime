@@ -39,6 +39,14 @@ class ValidationError(Exception):
     """Raised when foreign key or business validation fails."""
 
 
+def _get_non_nullable_model_fields(model: type) -> set[str]:
+    return {
+        column.name
+        for column in model.__table__.columns
+        if not column.nullable and not column.primary_key
+    }
+
+
 # User operations
 
 def create_user(session: Session, payload: UserCreate) -> User:
@@ -72,7 +80,13 @@ def list_users(session: Session, *, is_admin: bool = False) -> list[User]:
 
 def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
     user = get_user(session, user_id)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    non_nullable_fields = _get_non_nullable_model_fields(User)
+    for field, value in data.items():
+        if field in non_nullable_fields and value is None:
+            raise ValidationError(f"{field} cannot be None")
+
+    for field, value in data.items():
         setattr(user, field, value)
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
@@ -193,6 +207,8 @@ def create_task(session: Session, user_id: int, payload: TaskCreate) -> TimeTrac
 
     if payload.stop_time is None and get_running_task(session, user_id) is not None:
         raise ConflictError("only one running task is allowed per user")
+    if payload.stop_time is not None and payload.stop_time < payload.start_time:
+        raise ValidationError("stop_time cannot be earlier than start_time")
 
     task = TimeTrackingTask(user_id=user_id, **payload.model_dump())
     session.add(task)
@@ -244,7 +260,10 @@ def update_task(session: Session, user_id: int, task_id: str, payload: TaskUpdat
     if "label_id" in data:
         _validate_task_label_reference(session, user_id, data["label_id"])
 
+    candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
+    if candidate_stop_time is not None and candidate_stop_time < candidate_start_time:
+        raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None:
         running = get_running_task(session, user_id)
         if running is not None and running.id != task_id:
@@ -371,7 +390,11 @@ def update_work_location(
     session: Session, user_id: int, value_date: date, payload: WorkLocationUpdate
 ) -> WorkLocation:
     location = get_work_location(session, user_id, value_date)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    if "country_code" in data and data["country_code"] is None:
+        raise ValidationError("country_code cannot be None")
+
+    for field, value in data.items():
         setattr(location, field, value)
     session.add(location)
     session.commit()
