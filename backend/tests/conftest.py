@@ -105,7 +105,7 @@ def create_user_factory() -> Callable[..., int]:
             },
             headers=headers,
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, response.text
         return response.json()["id"]
 
     return _create_user

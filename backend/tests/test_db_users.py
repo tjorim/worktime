@@ -53,6 +53,9 @@ def test_user_crud_and_settings_roundtrip(
     delete_response = db_client.delete(f"/v1/db/users/{user_id}", headers=auth_headers(user_id))
     assert delete_response.status_code == 204
 
+    deleted_get_response = db_client.get(f"/v1/db/users/{user_id}", headers=auth_headers(user_id))
+    assert deleted_get_response.status_code == 404
+
 
 def test_user_duplicate_and_not_found(
     db_client: TestClient,

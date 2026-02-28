@@ -76,6 +76,7 @@ def test_task_constraints_and_filtering(
         json={"name": "Client", "color": "#778899"},
         headers=headers,
     )
+    assert label_response.status_code == 201
     label_id = label_response.json()["id"]
 
     invalid_label_task = db_client.post(
@@ -186,6 +187,7 @@ def test_template_crud(
         json={"name": "Template Label", "color": "#445566"},
         headers=headers,
     )
+    assert label_response.status_code == 201
     label_id = label_response.json()["id"]
 
     create_template_response = db_client.post(

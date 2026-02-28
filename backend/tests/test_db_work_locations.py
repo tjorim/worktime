@@ -39,7 +39,7 @@ def test_work_location_upsert_and_filtering(
 
     other_user_location = db_client.post(
         f"/v1/db/work-locations/?user_id={other_id}",
-        json={"date": "2026-02-02", "country_code": "DE", "label": "HQ"},
+        json={"date": "2026-02-01", "country_code": "DE", "label": "HQ"},
         headers=other_headers,
     )
     assert other_user_location.status_code == 201
