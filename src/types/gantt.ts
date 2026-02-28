@@ -1,7 +1,4 @@
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-
-dayjs.extend(customParseFormat);
+import { dayjs } from "../utils/dateTimeUtils";
 
 function isValidISODate(value: string): boolean {
   return dayjs(value, "YYYY-MM-DD", true).isValid();
