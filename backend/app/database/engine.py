@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from pathlib import Path
 
+from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, create_engine as sqlmodel_create_engine
 
@@ -25,6 +26,12 @@ def create_engine() -> Engine:
             echo=settings.DATABASE_ECHO,
             connect_args={"check_same_thread": False},
         )
+
+        @event.listens_for(_engine, "connect")
+        def set_sqlite_pragmas(dbapi_conn, _):
+            dbapi_conn.execute("PRAGMA foreign_keys=ON")
+            dbapi_conn.execute("PRAGMA journal_mode=WAL")
+            dbapi_conn.execute("PRAGMA synchronous=NORMAL")
 
     return _engine
 

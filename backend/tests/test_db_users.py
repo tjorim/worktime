@@ -15,7 +15,7 @@ def test_user_crud_and_settings_roundtrip(
 
     create_response = db_client.post(
         "/v1/db/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert create_response.status_code == 201
@@ -65,14 +65,14 @@ def test_user_duplicate_and_not_found(
 
     first_create = db_client.post(
         "/v1/db/users/",
-        json={"username": "duplicate", "display_name": "First", "settings": {}},
+        json={"username": "duplicate", "display_name": "First", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert first_create.status_code == 201
 
     duplicate_create = db_client.post(
         "/v1/db/users/",
-        json={"username": "duplicate", "display_name": "Second", "settings": {}},
+        json={"username": "duplicate", "display_name": "Second", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert duplicate_create.status_code == 409

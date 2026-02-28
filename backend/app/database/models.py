@@ -4,7 +4,7 @@ from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, 
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, DateTime, UniqueConstraint, func
+from sqlalchemy import JSON, Column, Date, DateTime, ForeignKey, Index, Integer, UniqueConstraint, func, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -19,6 +19,8 @@ class User(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
+    is_admin: bool = Field(default=False)
+    hashed_password: str
     display_name: str
     settings: dict[str, Any] = Field(
         default_factory=dict,
@@ -42,6 +44,10 @@ class User(SQLModel, table=True):
     tasks: list["TimeTrackingTask"] = Relationship(back_populates="user")
     templates: list["TimeTrackingTemplate"] = Relationship(back_populates="user")
     work_locations: list["WorkLocation"] = Relationship(back_populates="user")
+    gantt_tasks: list["GanttTask"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
 
 
 class TimeTrackingLabel(SQLModel, table=True):
@@ -57,12 +63,35 @@ class TimeTrackingLabel(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="labels")
     tasks: list["TimeTrackingTask"] = Relationship(back_populates="label")
     templates: list["TimeTrackingTemplate"] = Relationship(back_populates="label")
 
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_label_user_name"),)
+    __table_args__ = (
+        Index(
+            "uq_active_label_user_name",
+            "user_id",
+            "name",
+            unique=True,
+            sqlite_where=text("deleted_at IS NULL"),
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
 
 
 class TimeTrackingTask(SQLModel, table=True):
@@ -87,6 +116,20 @@ class TimeTrackingTask(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="tasks")
     label: TimeTrackingLabel | None = Relationship(back_populates="tasks")
@@ -107,6 +150,20 @@ class TimeTrackingTemplate(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="templates")
     label: TimeTrackingLabel | None = Relationship(back_populates="templates")
@@ -126,7 +183,67 @@ class WorkLocation(SQLModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
 
     user: User = Relationship(back_populates="work_locations")
 
-    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_work_location_user_date"),)
+    __table_args__ = (
+        Index(
+            "uq_active_work_location_user_date",
+            "user_id",
+            "date",
+            unique=True,
+            sqlite_where=text("deleted_at IS NULL"),
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+
+class GanttTask(SQLModel, table=True):
+    """Personal Gantt chart task."""
+
+    __tablename__ = "gantt_tasks"
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    )
+    name: str
+    start_date: dt_date = Field(sa_column=Column(Date(), nullable=False))
+    end_date: dt_date = Field(sa_column=Column(Date(), nullable=False))
+    progress: int = Field(default=0)
+    dependencies: str | None = Field(default=None)
+    notes: str | None = Field(default=None)
+    created_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    )
+    updated_at: dt_datetime = Field(
+        default_factory=_utc_now,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=False,
+            index=True,
+        ),
+    )
+    deleted_at: dt_datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
+
+    user: "User" = Relationship(back_populates="gantt_tasks")

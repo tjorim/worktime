@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 import pycountry
 
 T = TypeVar("T")
@@ -27,6 +27,7 @@ class UserCreate(BaseModel):
     username: str
     display_name: str
     settings: dict[str, Any] = Field(default_factory=dict)
+    password: str = Field(min_length=8)
 
 
 class UserRead(BaseModel):
@@ -157,6 +158,17 @@ class WorkLocationUpdate(BaseModel):
     )
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 class TaskListResponse(ListResponse[TaskRead]):
     pass
 
@@ -174,4 +186,50 @@ class UserListResponse(ListResponse[UserRead]):
 
 
 class WorkLocationListResponse(ListResponse[WorkLocationRead]):
+    pass
+
+
+class GanttTaskCreate(BaseModel):
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int = Field(default=0, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "GanttTaskCreate":
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
+
+
+class GanttTaskRead(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int
+    dependencies: str | None
+    notes: str | None
+    created_at: dt_datetime
+
+
+class GanttTaskUpdate(BaseModel):
+    name: str | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "GanttTaskUpdate":
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
+
+
+class GanttTaskListResponse(ListResponse[GanttTaskRead]):
     pass

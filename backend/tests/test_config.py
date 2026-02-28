@@ -24,6 +24,7 @@ def test_default_settings():
     assert Path(settings.DATABASE_PATH).is_absolute()
     assert settings.DATABASE_PATH.endswith("data/worktime.db")
     assert settings.DATABASE_ECHO is False
+    assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 24 * 3600
 
 
 def test_custom_settings():
@@ -44,6 +45,7 @@ def test_custom_settings():
         os.environ["DATABASE_PATH"] = "/tmp/worktime.db"
         os.environ["DATABASE_ECHO"] = "true"
         os.environ["JWT_SECRET_KEY"] = "production-secret-key-that-is-very-long"
+        os.environ["JWT_ACCESS_TOKEN_EXPIRE_SECONDS"] = "7200"
         
         # Create new settings instance
         settings = Settings()
@@ -58,6 +60,7 @@ def test_custom_settings():
         assert settings.DATABASE_ENABLED is False
         assert settings.DATABASE_PATH == "/tmp/worktime.db"
         assert settings.DATABASE_ECHO is True
+        assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 7200
     finally:
         # Restore original environment
         os.environ.clear()
@@ -242,3 +245,13 @@ def test_development_allows_default_jwt_secret() -> None:
     """Test development mode allows default JWT secret."""
     settings = Settings(ENVIRONMENT="development")
     assert settings.JWT_SECRET_KEY == "dev-only-change-me-at-least-32-bytes"
+
+
+def test_jwt_access_token_expire_seconds_validation() -> None:
+    """Test JWT access token lifetime validation."""
+    settings = Settings(JWT_ACCESS_TOKEN_EXPIRE_SECONDS=3600)
+    assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 3600
+
+    with pytest.raises(ValueError, match="must be positive"):
+        Settings(JWT_ACCESS_TOKEN_EXPIRE_SECONDS=0)
+

@@ -13,17 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
-ALLOWED_JWT_ALGORITHMS = {
-    "HS256",
-    "HS384",
-    "HS512",
-    "RS256",
-    "RS384",
-    "RS512",
-    "ES256",
-    "ES384",
-    "ES512",
-}
+ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
 
 
 class Settings(BaseSettings):
@@ -65,6 +55,7 @@ class Settings(BaseSettings):
     # API authentication configuration
     JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 24 * 3600
     
     @field_validator("CORS_ORIGINS")
     @classmethod
@@ -106,6 +97,15 @@ class Settings(BaseSettings):
             allowed = ", ".join(sorted(ALLOWED_JWT_ALGORITHMS))
             raise ValueError(f"JWT_ALGORITHM must be one of: {allowed}")
         return normalized
+
+
+    @field_validator("JWT_ACCESS_TOKEN_EXPIRE_SECONDS")
+    @classmethod
+    def validate_jwt_access_token_expire_seconds(cls, v: int) -> int:
+        """Validate JWT access token lifetime is positive."""
+        if v <= 0:
+            raise ValueError("JWT_ACCESS_TOKEN_EXPIRE_SECONDS must be positive")
+        return v
 
     @field_validator("DATABASE_PATH")
     @classmethod

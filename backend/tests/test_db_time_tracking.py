@@ -173,6 +173,132 @@ def test_task_constraints_and_filtering(
     assert items[0]["text"] == "Filtered task"
 
 
+def test_get_single_resources(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    user_id = create_user_factory(db_client, admin_headers, "get-single-owner")
+    other_user_id = create_user_factory(db_client, admin_headers, "get-single-other")
+    headers = auth_headers(user_id)
+    other_headers = auth_headers(other_user_id)
+
+    # Create a label
+    label_response = db_client.post(
+        f"/v1/db/time-tracking/labels?user_id={user_id}",
+        json={"name": "Single Label", "color": "#aabbcc"},
+        headers=headers,
+    )
+    assert label_response.status_code == 201
+    label_id = label_response.json()["id"]
+
+    # GET label by id — owner gets 200
+    get_label_response = db_client.get(
+        f"/v1/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_label_response.status_code == 200
+    assert get_label_response.json()["id"] == label_id
+    assert get_label_response.json()["name"] == "Single Label"
+
+    # GET label by id — user_id/token mismatch (impersonation) gets 403
+    get_label_forbidden = db_client.get(
+        f"/v1/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        headers=other_headers,
+    )
+    assert get_label_forbidden.status_code == 403
+
+    # GET label by id — other user's own id but label belongs to owner → 404
+    get_label_wrong_owner = db_client.get(
+        f"/v1/db/time-tracking/labels/{label_id}?user_id={other_user_id}",
+        headers=other_headers,
+    )
+    assert get_label_wrong_owner.status_code == 404
+
+    # GET label by id — missing id gets 404
+    get_label_missing = db_client.get(
+        f"/v1/db/time-tracking/labels/not-a-real-id?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_label_missing.status_code == 404
+
+    # Create a task
+    task_response = db_client.post(
+        f"/v1/db/time-tracking/tasks?user_id={user_id}",
+        json={
+            "text": "Single task",
+            "label_id": label_id,
+            "start_time": datetime(2026, 3, 1, 9, 0).isoformat(),
+            "stop_time": datetime(2026, 3, 1, 10, 0).isoformat(),
+            "includes_break": False,
+        },
+        headers=headers,
+    )
+    assert task_response.status_code == 201
+    task_id = task_response.json()["id"]
+
+    # GET task by id — owner gets 200
+    get_task_response = db_client.get(
+        f"/v1/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_task_response.status_code == 200
+    assert get_task_response.json()["id"] == task_id
+    assert get_task_response.json()["text"] == "Single task"
+
+    # GET task by id — user_id/token mismatch (impersonation) gets 403
+    get_task_forbidden = db_client.get(
+        f"/v1/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        headers=other_headers,
+    )
+    assert get_task_forbidden.status_code == 403
+
+    # GET task by id — missing id gets 404
+    get_task_missing = db_client.get(
+        f"/v1/db/time-tracking/tasks/not-a-real-id?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_task_missing.status_code == 404
+
+    # Create a template
+    template_response = db_client.post(
+        f"/v1/db/time-tracking/templates?user_id={user_id}",
+        json={
+            "text": "Single template",
+            "label_id": label_id,
+            "start_time": "08:00:00",
+            "stop_time": "09:00:00",
+        },
+        headers=headers,
+    )
+    assert template_response.status_code == 201
+    template_id = template_response.json()["id"]
+
+    # GET template by id — owner gets 200
+    get_template_response = db_client.get(
+        f"/v1/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_template_response.status_code == 200
+    assert get_template_response.json()["id"] == template_id
+    assert get_template_response.json()["text"] == "Single template"
+
+    # GET template by id — user_id/token mismatch (impersonation) gets 403
+    get_template_forbidden = db_client.get(
+        f"/v1/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        headers=other_headers,
+    )
+    assert get_template_forbidden.status_code == 403
+
+    # GET template by id — missing id gets 404
+    get_template_missing = db_client.get(
+        f"/v1/db/time-tracking/templates/not-a-real-id?user_id={user_id}",
+        headers=headers,
+    )
+    assert get_template_missing.status_code == 404
+
+
 def test_template_crud(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],

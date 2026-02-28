@@ -114,31 +114,39 @@ these files, optionally parsing them server-side when `?format=parsed` is reques
 Authentication requirements differ by endpoint group:
 
 - Legacy file/share endpoints (`/v1/hday/*`, `/v1/team/*`, `/v1/health`) are network-trusted and do not require authentication.
+- Auth endpoints (`/v1/auth/*`) issue JWTs; `POST /v1/auth/token` is unauthenticated, `GET /v1/auth/me` requires a valid token.
 - Database endpoints under `/v1/db/time-tracking/*`, `/v1/db/users/*`, and `/v1/db/work-locations/*` require `Authorization: Bearer <JWT>`.
 - Protected DB endpoints validate the JWT and enforce `sub` → `user_id` matching. Requests where `user_id` does not match the token subject are rejected with `403 Forbidden`.
 
-> **Frontend integration note:** the backend does not currently provide first-party login/token issuance endpoints.
-> Frontends must obtain JWTs from an external issuer today; planned `/v1/auth/*` routes below describe a future built-in auth flow.
+### Auth endpoints
 
-### Planned auth endpoints (proposal)
+| Endpoint | Method | Auth required | Purpose |
+| -------- | ------ | ------------- | ------- |
+| `/v1/auth/token` | POST | No | Submit `{"username", "password"}`, receive a signed JWT access token (24 h lifetime). |
+| `/v1/auth/me` | GET | Yes | Return the authenticated user's profile (`UserRead`). |
 
-To support a complete first-party sign-in flow, add an auth router such as:
+**Request body for `POST /v1/auth/token`:**
 
-| Endpoint | Method | Purpose |
-| -------- | ------ | ------- |
-| `/v1/auth/login` | POST | Validate user credentials and issue an access token (and optional refresh token). |
-| `/v1/auth/refresh` | POST | Exchange a refresh token for a new access token. |
-| `/v1/auth/logout` | POST | Revoke refresh token / invalidate server-side session state. |
-| `/v1/auth/me` | GET | Return authenticated user profile based on the presented token. |
+```json
+{ "username": "alice", "password": "secret" }
+```
 
-Until these endpoints exist, JWTs must be issued by an external identity/auth service.
+**Response for `POST /v1/auth/token` (200 OK):**
+
+```json
+{ "access_token": "<JWT>", "token_type": "bearer", "expires_in": 86400 }
+```
+
+Errors: `401 Unauthorized` on bad credentials.
+
+**Security:** This endpoint transmits credentials in the request body and **must** be served over HTTPS/TLS, even on internal networks. Never expose this endpoint over plaintext HTTP.
 
 ### Frontend integration suggestion
 
 Recommended frontend flow for DB endpoints:
 
 1. Resolve backend base URL from developer options.
-2. Obtain JWT from an external issuer (or future `/v1/auth/login`).
+2. Obtain JWT via `POST /v1/auth/token` with the user's credentials.
 3. Call protected DB endpoints with `Authorization: Bearer <token>`.
 4. Send `user_id` as a request field exactly where each endpoint expects it today (currently query parameter for DB endpoints), and ensure it matches the JWT `sub`.
 5. Handle auth errors consistently:
@@ -861,6 +869,74 @@ as middleware:
 - iCal feed (if added): 60 requests per token per hour.
 - General API: 100 requests per IP per minute.
 
+## Schema migrations
+
+The backend uses [Alembic](https://alembic.sqlalchemy.org/) for schema migrations. On startup,
+`init_db()` can automatically run `alembic upgrade head`, applying any pending migrations. This
+behavior is controlled by the `AUTO_MIGRATE` environment variable and is recommended for development
+only.
+
+### Production Environment
+
+Running database migrations automatically on application startup is risky in production. A failed
+migration could prevent the application from starting, leading to downtime. For this reason, automatic
+migrations are disabled by default.
+
+To enable them in a development environment, set the following environment variable:
+
+```bash
+AUTO_MIGRATE=true
+```
+
+**For production deployments, it is strongly recommended to run migrations as a separate, manual step before starting the application server.**
+
+The recommended deployment workflow is:
+
+1.  **Deploy the new code.**
+2.  **Run database migrations:**
+    ```bash
+    cd backend
+    PYTHONPATH=. alembic upgrade head
+    ```
+3.  **Start the application:**
+    ```bash
+    # (e.g., using uvicorn)
+    uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ```
+
+This ensures that any migration issues are caught and resolved before the application itself is started, preventing outages.
+
+### Creating a migration after model changes
+
+```bash
+cd backend
+# Generate a migration script from the model diff:
+PYTHONPATH=. alembic revision --autogenerate -m "describe your change"
+# Review the generated file in migrations/versions/, then apply:
+PYTHONPATH=. alembic upgrade head
+```
+
+### Upgrading an existing database
+
+Existing databases that predate Alembic should be stamped at the current revision so Alembic
+knows they are already up to date:
+
+```bash
+cd backend
+PYTHONPATH=. alembic stamp head
+```
+
+After stamping, future `alembic upgrade head` calls (including the automatic one at startup)
+will only apply genuinely new migrations.
+
+### Other useful commands
+
+```bash
+PYTHONPATH=. alembic current          # show current revision of the database
+PYTHONPATH=. alembic history          # list all revisions
+PYTHONPATH=. alembic downgrade -1     # roll back one revision
+```
+
 ## CORS
 
 Required when the frontend and backend are served from different origins (e.g., frontend on
@@ -982,8 +1058,8 @@ Two implementation options are under consideration:
 
 Regardless of language choice:
 
-- **No database**: All data lives on the file share. No migration tooling or database management
-  needed.
+- **Hybrid storage**: .hday files and team configuration live on the file share (no migrations needed).
+  Database used for time-tracking and user management (managed via Alembic migrations).
 - **Transport**: HTTP/JSON. No TLS required on a trusted internal network, though it can be added
   behind a reverse proxy if needed.
 
