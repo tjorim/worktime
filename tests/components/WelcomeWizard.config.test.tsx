@@ -27,7 +27,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const visibleSteps = getVisibleSteps(context);
-      expect(visibleSteps).toHaveLength(6);
+      expect(visibleSteps).toHaveLength(8);
       expect(visibleSteps.map((s) => s.id)).toEqual([
         "welcome",
         "features",
@@ -35,6 +35,8 @@ describe("WelcomeWizard Configuration System", () => {
         "team-selection",
         "timeoff-setup",
         "time-tracking-setup",
+        "gantt-setup",
+        "work-location-setup",
       ]);
     });
 
@@ -46,13 +48,15 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const visibleSteps = getVisibleSteps(context);
-      expect(visibleSteps).toHaveLength(5);
+      expect(visibleSteps).toHaveLength(7);
       expect(visibleSteps.map((s) => s.id)).toEqual([
         "welcome",
         "features",
         "schedule-selection",
         "timeoff-setup",
         "time-tracking-setup",
+        "gantt-setup",
+        "work-location-setup",
       ]);
     });
 
@@ -203,9 +207,52 @@ describe("WelcomeWizard Configuration System", () => {
       const nextStep = timeOffConfig.getNextStep(context);
       expect(nextStep).toBe("time-tracking-setup");
     });
+
+    it("should continue to gantt setup after time tracking setup in onboarding", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
+      };
+
+      const timeTrackingConfig = getStepConfig("time-tracking-setup");
+      const nextStep = timeTrackingConfig.getNextStep(context);
+      expect(nextStep).toBe("gantt-setup");
+    });
+
+    it("should continue to work location setup after gantt setup in onboarding", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
+      };
+
+      const ganttConfig = getStepConfig("gantt-setup");
+      const nextStep = ganttConfig.getNextStep(context);
+      expect(nextStep).toBe("work-location-setup");
+    });
+
+    it("should close wizard after work location setup in onboarding", () => {
+      const context: WizardContext = {
+        mode: "onboarding",
+        shouldShowTeamSelection: false,
+        enableTimeOff: true,
+      };
+
+      const workLocationConfig = getStepConfig("work-location-setup");
+      const nextStep = workLocationConfig.getNextStep(context);
+      expect(nextStep).toBeNull();
+    });
+
   });
 
   describe("Step Configuration - Backward Navigation", () => {
+    const onboardingPostTimeTrackingContext: WizardContext = {
+      mode: "onboarding",
+      shouldShowTeamSelection: false,
+      enableTimeOff: true,
+    };
+
     it("should go back from features to welcome", () => {
       const context: WizardContext = {
         mode: "onboarding",
@@ -228,6 +275,18 @@ describe("WelcomeWizard Configuration System", () => {
       const scheduleConfig = getStepConfig("schedule-selection");
       const prevStep = scheduleConfig.getPrevStep(context);
       expect(prevStep).toBe("features");
+    });
+
+    it("should go back to time tracking setup from gantt setup in onboarding", () => {
+      const ganttConfig = getStepConfig("gantt-setup");
+      const prevStep = ganttConfig.getPrevStep(onboardingPostTimeTrackingContext);
+      expect(prevStep).toBe("time-tracking-setup");
+    });
+
+    it("should go back to gantt setup from work location setup in onboarding", () => {
+      const workLocationConfig = getStepConfig("work-location-setup");
+      const prevStep = workLocationConfig.getPrevStep(onboardingPostTimeTrackingContext);
+      expect(prevStep).toBe("gantt-setup");
     });
 
     it("should close wizard when going back from schedule in change modes", () => {
@@ -304,7 +363,7 @@ describe("WelcomeWizard Configuration System", () => {
   });
 
   describe("Step Configuration - Step Counting", () => {
-    it("should count 6 total steps in onboarding with team selection", () => {
+    it("should count 8 total steps in onboarding with team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: true,
@@ -312,10 +371,10 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(6);
+      expect(totalSteps).toBe(8);
     });
 
-    it("should count 5 total steps in onboarding without team selection", () => {
+    it("should count 7 total steps in onboarding without team selection", () => {
       const context: WizardContext = {
         mode: "onboarding",
         shouldShowTeamSelection: false,
@@ -323,7 +382,7 @@ describe("WelcomeWizard Configuration System", () => {
       };
 
       const totalSteps = getTotalSteps(context);
-      expect(totalSteps).toBe(5);
+      expect(totalSteps).toBe(7);
     });
 
     it("should count 1 step in change-team mode", () => {
@@ -374,6 +433,8 @@ describe("WelcomeWizard Configuration System", () => {
       expect(getStepIndex("team-selection", context)).toBe(4);
       expect(getStepIndex("timeoff-setup", context)).toBe(5);
       expect(getStepIndex("time-tracking-setup", context)).toBe(6);
+      expect(getStepIndex("gantt-setup", context)).toBe(7);
+      expect(getStepIndex("work-location-setup", context)).toBe(8);
     });
 
     it("should correctly index steps in onboarding without team selection", () => {
@@ -388,6 +449,8 @@ describe("WelcomeWizard Configuration System", () => {
       expect(getStepIndex("schedule-selection", context)).toBe(3);
       expect(getStepIndex("timeoff-setup", context)).toBe(4);
       expect(getStepIndex("time-tracking-setup", context)).toBe(5);
+      expect(getStepIndex("gantt-setup", context)).toBe(6);
+      expect(getStepIndex("work-location-setup", context)).toBe(7);
     });
 
     it("should correctly index team-selection in change-team mode", () => {

@@ -79,6 +79,10 @@ interface SettingsContextType {
       vacationAllowance?: Partial<VacationAllowanceSettings>;
       enableTimeOff?: boolean;
       enableTimeTracking?: boolean;
+      enableGantt?: boolean;
+      enableCrossBorderTracking?: boolean;
+      homeCountry?: CountryCode | null;
+      officeCountry?: CountryCode | null;
     },
   ) => void;
 }
@@ -776,6 +780,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         vacationAllowance?: Partial<VacationAllowanceSettings>;
         enableTimeOff?: boolean;
         enableTimeTracking?: boolean;
+        enableGantt?: boolean;
+        enableCrossBorderTracking?: boolean;
+        homeCountry?: CountryCode | null;
+        officeCountry?: CountryCode | null;
       },
     ) => {
       setUserState((prev) => ({
@@ -791,14 +799,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
                 prev.settings.vacationAllowance,
               )
             : prev.settings.vacationAllowance,
-          enableTimeOff:
-            preferences?.enableTimeOff !== undefined
-              ? preferences.enableTimeOff
-              : prev.settings.enableTimeOff,
-          enableTimeTracking:
-            preferences?.enableTimeTracking !== undefined
-              ? preferences.enableTimeTracking
-              : prev.settings.enableTimeTracking,
+          enableTimeOff: preferences?.enableTimeOff ?? prev.settings.enableTimeOff,
+          enableTimeTracking: preferences?.enableTimeTracking ?? prev.settings.enableTimeTracking,
+          enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
+          enableCrossBorderTracking:
+            preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
+          homeCountry: preferences?.homeCountry ?? prev.settings.homeCountry,
+          officeCountry: preferences?.officeCountry ?? prev.settings.officeCountry,
         },
       }));
     },

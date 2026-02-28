@@ -190,7 +190,7 @@ describe("WelcomeWizard Integration Tests", () => {
 
       // Modal should close
       await waitFor(() =>
-        expect(screen.queryByText(/Welcome to Worktime/i)).not.toBeInTheDocument(),
+        expect(screen.queryByRole("heading", { name: /Welcome to Worktime!/i })).not.toBeInTheDocument(),
       );
 
       // Verify onboarding NOT completed
@@ -440,7 +440,7 @@ describe("WelcomeWizard Integration Tests", () => {
       const onTeamSelect = vi.fn();
       const onHide = vi.fn();
 
-      // Onboarding mode - 6 steps (with team selection and time off)
+      // Onboarding mode - 8 steps (with team selection and all onboarding setup)
       const { unmount } = renderWithProviders(
         <WelcomeWizard
           {...defaultProps}
@@ -452,7 +452,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await findModalTitle(/Welcome to Worktime/i);
-      await waitFor(() => expect(screen.getByText(/Step 1 of 6/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/Step 1 of 8/i)).toBeInTheDocument());
       unmount();
 
       // Change-schedule mode with team selection - 2 steps
