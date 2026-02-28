@@ -1,85 +1,156 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GanttView } from "../../../src/components/gantt/GanttView";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { SettingsProvider } from "../../../src/contexts/SettingsContext";
 
-const mockAddTask = vi.fn();
-const mockUpdateTask = vi.fn();
-const mockRemoveTask = vi.fn();
+vi.mock("frappe-gantt", () => ({
+  default: class MockFrappeGantt {
+    refresh() {}
+    change_view_mode() {}
+  },
+}), { virtual: true });
 
-vi.mock("../../../src/hooks/useGanttTasks", () => ({
-  useGanttTasks: () => ({
-    tasks: [
-      {
-        id: "task-1",
-        name: "Plan release",
-        start: "2026-03-01",
-        end: "2026-03-05",
-        progress: 40,
-      },
-    ],
-    addTask: mockAddTask,
-    updateTask: mockUpdateTask,
-    removeTask: mockRemoveTask,
-  }),
-}));
-
-vi.mock("../../../src/components/gantt/GanttChart", () => ({
+vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
+    tasks,
+    viewMode,
     onTaskClick,
-    onDateChange,
-    onProgressChange,
   }: {
+    tasks: Array<{ id: string; name: string }>;
+    viewMode: "Day" | "Week" | "Month";
     onTaskClick: (taskId: string) => void;
-    onDateChange: (taskId: string, start: string, end: string) => void;
-    onProgressChange: (taskId: string, progress: number) => void;
   }) => (
     <div>
-      <button onClick={() => onTaskClick("task-1")}>Open task</button>
-      <button onClick={() => onDateChange("task-1", "2026-03-02", "2026-03-06")}>Move task</button>
-      <button onClick={() => onProgressChange("task-1", 75)}>Set progress</button>
+      <div data-testid="mock-view-mode">{viewMode}</div>
+      <ul aria-label="Task list">
+        {tasks.map((task) => (
+          <li key={task.id}>
+            <button type="button" onClick={() => onTaskClick(task.id)}>
+              {task.name}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   ),
 }));
 
+import { GanttView } from "../../../src/components/gantt/GanttView";
+
+function renderWithSettings(ui: ReactNode) {
+  window.localStorage.setItem(
+    "worktime_user_state",
+    JSON.stringify({
+      version: 4,
+      hasCompletedOnboarding: true,
+      myTeam: 1,
+      scheduleType: "5-shift",
+      settings: {
+        timeFormat: "24h",
+        theme: "auto",
+        notifications: "off",
+        vacationAllowance: {
+          yearlyAmounts: {},
+          unit: "days",
+          hoursPerDay: 8,
+        },
+        enableTimeOff: false,
+        enableTimeTracking: false,
+        enableGantt: true,
+        enableCrossBorderTracking: false,
+        homeCountry: null,
+        officeCountry: null,
+      },
+      lastUsed: {
+        activeTab: "gantt",
+        scheduleView: "today",
+        otherSchedule: null,
+        timeOffView: "table",
+        timeTrackingView: "daily",
+        otherTeam: null,
+      },
+    }),
+  );
+
+  return render(<SettingsProvider>{ui}</SettingsProvider>);
+}
+
 describe("GanttView", () => {
-  beforeEach(() => {
-    mockAddTask.mockReset();
-    mockUpdateTask.mockReset();
-    mockRemoveTask.mockReset();
+  afterEach(() => {
+    window.localStorage.clear();
   });
 
-  it("updates task dates and progress from chart callbacks", async () => {
+  it('renders the "Add Task" button', () => {
+    renderWithSettings(<GanttView />);
+
+    expect(screen.getByRole("button", { name: "Add Task" })).toBeInTheDocument();
+  });
+
+  it("opens modal and creates a task", async () => {
     const user = userEvent.setup();
-    render(<GanttView />);
+    renderWithSettings(<GanttView />);
 
-    await user.click(screen.getByRole("button", { name: "Move task" }));
-    await user.click(screen.getByRole("button", { name: "Set progress" }));
+    await user.click(screen.getByRole("button", { name: "Add Task" }));
+    await user.type(screen.getByLabelText("Name"), "Write tests");
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Add Task" }));
 
-    expect(mockUpdateTask).toHaveBeenCalledWith("task-1", {
-      start: "2026-03-02",
-      end: "2026-03-06",
+    await waitFor(() => {
+      expect(within(screen.getByRole("list", { name: "Task list" })).getByText("Write tests")).toBeInTheDocument();
     });
-    expect(mockUpdateTask).toHaveBeenCalledWith("task-1", { progress: 75 });
   });
 
-  it("deletes a task through the edit modal", async () => {
+  it("clicking a task opens edit modal with pre-filled data", async () => {
     const user = userEvent.setup();
-    render(<GanttView />);
+    window.localStorage.setItem(
+      "worktime_gantt_tasks",
+      JSON.stringify([
+        { id: "task-1", name: "Plan release", start: "2026-03-01", end: "2026-03-05", progress: 40 },
+      ]),
+    );
 
-    await user.click(screen.getByRole("button", { name: "Open task" }));
+    renderWithSettings(<GanttView />);
+
+    await user.click(screen.getByRole("button", { name: "Plan release" }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Plan release")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+    });
+  });
+
+  it("deletes a task from the list", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      "worktime_gantt_tasks",
+      JSON.stringify([
+        { id: "task-1", name: "Plan release", start: "2026-03-01", end: "2026-03-05", progress: 40 },
+      ]),
+    );
+
+    renderWithSettings(<GanttView />);
+
+    await user.click(screen.getByRole("button", { name: "Plan release" }));
     await user.click(screen.getByRole("button", { name: "Delete Task" }));
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(mockRemoveTask).toHaveBeenCalledWith("task-1");
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Plan release" })).not.toBeInTheDocument();
+    });
   });
 
-  it("renders view mode buttons", () => {
-    render(<GanttView />);
+  it("applies view mode selector changes", async () => {
+    const user = userEvent.setup();
+    renderWithSettings(<GanttView />);
 
-    expect(screen.getByRole("button", { name: "Day" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Week" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Month" })).toBeInTheDocument();
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Week");
+
+    await user.click(screen.getByRole("button", { name: "Day" }));
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Day");
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Month");
   });
 });
