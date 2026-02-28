@@ -71,22 +71,19 @@ export function GanttView() {
   return (
     <div className="gantt-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <div className="d-flex align-items-center gap-3 flex-wrap">
-          <ButtonGroup aria-label="Select Gantt chart scale">
-            {GANTT_VIEW_MODES.map((mode) => (
-              <Button
-                key={mode}
-                variant={viewMode === mode ? "primary" : "outline-primary"}
-                size="sm"
-                aria-pressed={viewMode === mode}
-                onClick={() => setViewMode(mode)}
-              >
-                {mode}
-              </Button>
-            ))}
-          </ButtonGroup>
-
-        </div>
+        <ButtonGroup aria-label="Select Gantt chart scale">
+          {GANTT_VIEW_MODES.map((mode) => (
+            <Button
+              key={mode}
+              variant={viewMode === mode ? "primary" : "outline-primary"}
+              size="sm"
+              aria-pressed={viewMode === mode}
+              onClick={() => setViewMode(mode)}
+            >
+              {mode}
+            </Button>
+          ))}
+        </ButtonGroup>
 
         <Button size="sm" onClick={handleAddTask}>
           <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>

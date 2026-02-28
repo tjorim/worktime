@@ -75,9 +75,11 @@ describe("GanttView", () => {
     expect(mockRemoveTask).toHaveBeenCalledWith("task-1");
   });
 
-  it("does not render a horizontal scroll toggle", () => {
+  it("renders view mode buttons", () => {
     render(<GanttView />);
 
-    expect(screen.queryByLabelText("Horizontal scroll")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Day" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Week" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Month" })).toBeInTheDocument();
   });
 });
