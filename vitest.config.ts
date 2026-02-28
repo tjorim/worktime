@@ -9,6 +9,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   plugins: [reactPlugin()] as any,
+  resolve: {
+    alias: {
+      "frappe-gantt": new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url).pathname,
+    },
+  },
   test: {
     environment: "happy-dom",
     globals: true,
