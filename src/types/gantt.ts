@@ -1,7 +1,10 @@
 import { dayjs } from "../utils/dateTimeUtils";
 
+const GANTT_DATE_FORMAT = "YYYY-MM-DD";
+
+// Keep this helper to make the validation intent explicit and avoid duplicating strict parse args.
 function isValidISODate(value: string): boolean {
-  return dayjs(value, "YYYY-MM-DD", true).isValid();
+  return dayjs(value, GANTT_DATE_FORMAT, true).isValid();
 }
 
 export interface GanttTask {
