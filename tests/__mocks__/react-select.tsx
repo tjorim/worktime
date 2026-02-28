@@ -25,7 +25,11 @@ export default function MockReactSelect({
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
 }: MockReactSelectProps) {
-  const selectedValues = Array.isArray(value) ? value.map((item) => item.value) : value ? [value.value] : [];
+  const selectedValues = Array.isArray(value)
+    ? value.map((item) => item.value)
+    : value
+      ? [value.value]
+      : [];
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     if (isMulti) {

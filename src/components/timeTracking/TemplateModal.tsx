@@ -36,8 +36,7 @@ export function TemplateModal({
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
   const selectedLabelOption = useSelectedLabelOption(labels, value.label);
-  const isSubmitDisabled =
-    isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
+  const isSubmitDisabled = isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
 
   return (
     <Modal show={show} onHide={onClose} centered>

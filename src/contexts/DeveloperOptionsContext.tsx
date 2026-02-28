@@ -33,7 +33,6 @@ const defaultOptions: DeveloperOptions = {
   isDevMode: false,
 };
 
-
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
 
 export function useDeveloperOptions(): DeveloperOptionsContextType {
@@ -49,7 +48,10 @@ interface DeveloperOptionsProviderProps {
 }
 
 export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderProps) {
-  const [options, setOptions] = useLocalStorage<DeveloperOptions>(DEVELOPER_OPTIONS_STORAGE_KEY, defaultOptions);
+  const [options, setOptions] = useLocalStorage<DeveloperOptions>(
+    DEVELOPER_OPTIONS_STORAGE_KEY,
+    defaultOptions,
+  );
 
   // Use persisted isDevMode from options
   const [isDevMode, setIsDevMode] = useState(options.isDevMode);

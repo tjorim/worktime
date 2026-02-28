@@ -3,7 +3,6 @@ import { useLocalStorage } from "./useLocalStorage";
 import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "../types/gantt";
 import { GANTT_STORAGE_KEY } from "../constants/storageKeys";
 
-
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
 export type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;

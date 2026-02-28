@@ -19,7 +19,6 @@ import {
 } from "../constants/storageKeys";
 import { isValidScheduleType } from "./scheduleUtils";
 
-
 export type AppBackupPayload = {
   exportedAt: string;
   version: 1;

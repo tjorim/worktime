@@ -87,7 +87,8 @@ export function GanttTaskModal({
 
   // Options: all tasks except self
   const depOptions = useMemo(
-    () => existingTasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: t.name })),
+    () =>
+      existingTasks.filter((t) => t.id !== task?.id).map((t) => ({ value: t.id, label: t.name })),
     [existingTasks, task?.id],
   );
 

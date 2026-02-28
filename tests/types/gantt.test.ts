@@ -27,8 +27,6 @@ describe("isValidRawGanttTask", () => {
     ).toBe(true);
   });
 
-
-
   it("accepts progress boundaries of 0 and 100", () => {
     expect(
       isValidRawGanttTask({

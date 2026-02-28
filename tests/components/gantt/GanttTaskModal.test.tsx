@@ -4,7 +4,6 @@ import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { GanttTaskModal } from "../../../src/components/gantt/GanttTaskModal";
 
-
 describe("GanttTaskModal", () => {
   it("shows validation feedback for required fields", async () => {
     const user = userEvent.setup();
