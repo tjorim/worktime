@@ -65,7 +65,7 @@ export function Step8WorkLocationSetup({
                 <div className="fw-medium">Home Country</div>
                 <small className="text-muted">Country where you are based</small>
               </div>
-              <div className="w-100">
+              <div className="flex-fill">
                 <CountrySelect
                   value={homeCountry}
                   onChange={onHomeCountryChange}
@@ -79,7 +79,7 @@ export function Step8WorkLocationSetup({
                 <div className="fw-medium">Office Country</div>
                 <small className="text-muted">Country where your office is located</small>
               </div>
-              <div className="w-100">
+              <div className="flex-fill">
                 <CountrySelect
                   value={officeCountry}
                   onChange={onOfficeCountryChange}
