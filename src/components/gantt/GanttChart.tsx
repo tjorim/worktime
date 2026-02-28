@@ -19,7 +19,12 @@ function getTaskId(task: unknown): string | null {
   }
 
   const id = (task as { id?: unknown }).id;
-  return typeof id === "string" && id.trim() ? id : null;
+  if (typeof id !== "string") {
+    return null;
+  }
+
+  const trimmedId = id.trim();
+  return trimmedId ? trimmedId : null;
 }
 
 export function GanttChart({
