@@ -1,12 +1,10 @@
-import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-
-type LabelOption = { value: string; label: string };
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 type TemplateForm = {
   text: string;
@@ -37,10 +35,7 @@ export function TemplateModal({
   onSubmit,
 }: TemplateModalProps) {
   const isLabelSelectionDisabled = labels.length === 0;
-  const selectedLabelOption = useMemo(() => {
-    const selected = labels.find((l) => l.id === value.label);
-    return selected ? { value: selected.id, label: selected.name } : null;
-  }, [labels, value.label]);
+  const selectedLabelOption = useSelectedLabelOption(labels, value.label);
   const isSubmitDisabled =
     isLabelSelectionDisabled || !value.label || selectedLabelOption === null;
 

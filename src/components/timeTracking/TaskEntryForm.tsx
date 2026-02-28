@@ -4,12 +4,11 @@ import Form from "react-bootstrap/Form";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useMemo, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-
-type LabelOption = { value: string; label: string };
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 type TaskEntryFormProps = {
   labels: TimeTrackingLabel[];
@@ -46,10 +45,7 @@ export function TaskEntryForm({
   onSubmit,
   onStartNow,
 }: TaskEntryFormProps) {
-  const selectedLabelOption = useMemo(() => {
-    const selected = labels.find((l) => l.id === label);
-    return selected ? { value: selected.id, label: selected.name } : null;
-  }, [labels, label]);
+  const selectedLabelOption = useSelectedLabelOption(labels, label);
 
   const renderDisabledTooltipButton = (
     buttonKey: string,

@@ -8,8 +8,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import type { TimeTrackingLabel } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-
-type LabelOption = { value: string; label: string };
+import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 
 export type TaskEditForm = {
   text: string;
@@ -51,10 +50,7 @@ export function TaskEditModal({
     return stop.diff(start, "minute") < BREAK_DURATION_MINUTES;
   }, [value.start, value.stop]);
 
-  const selectedLabelOption = useMemo(() => {
-    const selected = labels.find((l) => l.id === value.label);
-    return selected ? { value: selected.id, label: selected.name } : null;
-  }, [labels, value.label]);
+  const selectedLabelOption = useSelectedLabelOption(labels, value.label);
 
   return (
     <Modal show={show} onHide={onClose} centered>
