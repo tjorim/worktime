@@ -111,7 +111,13 @@ these files, optionally parsing them server-side when `?format=parsed` is reques
 | `/v1/health`          | GET    | Health check and share accessibility status    |
 | `/v1/debug/benchmark` | GET    | Performance comparison of raw vs parsed modes  |
 
-No authentication required on any endpoint (trusted network).
+Authentication status currently differs by endpoint group:
+
+- Legacy file/share endpoints (`/v1/hday/*`, `/v1/team/*`, `/v1/health`) are currently network-trusted and do not require authentication.
+- Database time-tracking endpoints under `/v1/db/time-tracking/*` require `Authorization: Bearer <JWT>` and validate the token subject against `user_id`.
+
+> **Frontend integration note:** the backend does not currently provide a login/token issuance endpoint.
+> Frontends must obtain JWTs from an external issuer (or a future `/v1/auth/*` flow) and attach the bearer token to each protected request.
 
 ### Response format: `?format=raw|parsed`
 
