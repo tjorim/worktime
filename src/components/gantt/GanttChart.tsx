@@ -13,6 +13,15 @@ interface GanttChartProps {
   onProgressChange: (taskId: string, progress: number) => void;
 }
 
+function getTaskId(task: unknown): string | null {
+  if (typeof task !== "object" || task === null) {
+    return null;
+  }
+
+  const id = (task as { id?: unknown }).id;
+  return typeof id === "string" && id.trim() ? id : null;
+}
+
 export function GanttChart({
   tasks,
   viewMode,
@@ -61,16 +70,33 @@ export function GanttChart({
 
       ganttRef.current = new Gantt(container, tasksRef.current, {
         view_mode: viewModeRef.current,
-        on_click: (task) => onTaskClickRef.current(task.id),
+        on_click: (task) => {
+          const taskId = getTaskId(task);
+          if (!taskId) {
+            return;
+          }
+
+          onTaskClickRef.current(taskId);
+        },
         on_date_change: (task, start, end) => {
+          const taskId = getTaskId(task);
+          if (!taskId) {
+            return;
+          }
+
           onDateChangeRef.current(
-            task.id,
+            taskId,
             dayjs(start).format("YYYY-MM-DD"),
             dayjs(end).format("YYYY-MM-DD"),
           );
         },
         on_progress_change: (task, progress) => {
-          onProgressChangeRef.current(task.id, progress);
+          const taskId = getTaskId(task);
+          if (!taskId) {
+            return;
+          }
+
+          onProgressChangeRef.current(taskId, progress);
         },
       });
     };
