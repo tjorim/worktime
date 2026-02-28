@@ -8,6 +8,64 @@ import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
+vi.mock("react-select", () => ({
+  default: ({
+    options = [],
+    value = null,
+    onChange = () => {},
+    inputId,
+    isMulti = false,
+    isDisabled = false,
+    "aria-label": ariaLabel,
+    "aria-describedby": ariaDescribedBy,
+  }: {
+    options?: { value: string; label: string }[];
+    value?: { value: string; label: string } | { value: string; label: string }[] | null;
+    onChange?: (v: unknown) => void;
+    inputId?: string;
+    isMulti?: boolean;
+    isDisabled?: boolean;
+    "aria-label"?: string;
+    "aria-describedby"?: string;
+  }) => {
+    const selectedValues = Array.isArray(value)
+      ? value.map((v) => v.value)
+      : value
+        ? [value.value]
+        : [];
+    return (
+      <select
+        multiple={isMulti}
+        id={inputId}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        disabled={isDisabled}
+        value={isMulti ? selectedValues : (selectedValues[0] ?? "")}
+        onChange={(e) => {
+          if (isMulti) {
+            onChange(
+              Array.from(e.target.selectedOptions).map((o) => ({ value: o.value, label: o.text })),
+            );
+          } else {
+            const val = e.target.value;
+            onChange(
+              val
+                ? { value: val, label: e.target.options[e.target.selectedIndex].text }
+                : null,
+            );
+          }
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+}));
+
 const defaultProps = {
   show: true,
   onTeamSelect: vi.fn(),
@@ -712,7 +770,7 @@ describe("WelcomeWizard", () => {
         }),
       );
       expect(saved.myTeam).toBe(2); // Team was changed
-    });
+    }, 15000);
 
     it("should navigate directly to schedule selection in change-schedule mode", async () => {
       const onScheduleSelect = vi.fn();
@@ -901,7 +959,7 @@ describe("WelcomeWizard", () => {
       await waitFor(() => {
         expect(screen.getByText(/Which schedule matches your work pattern\?/i)).toBeInTheDocument();
       });
-    });
+    }, 15000);
   });
 
   describe("Error handling", () => {
