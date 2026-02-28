@@ -139,7 +139,10 @@ export function GanttChart({
   }
 
   return (
-    <div className="border rounded bg-body overflow-auto" data-testid="gantt-scroll-container">
+    <div
+      className="gantt-scroll-container border rounded bg-body overflow-x-auto overflow-y-hidden"
+      data-testid="gantt-scroll-container"
+    >
       <div ref={containerRef} />
     </div>
   );
