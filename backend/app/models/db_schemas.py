@@ -187,3 +187,37 @@ class UserListResponse(ListResponse[UserRead]):
 
 class WorkLocationListResponse(ListResponse[WorkLocationRead]):
     pass
+
+
+class GanttTaskCreate(BaseModel):
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int = Field(default=0, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+
+class GanttTaskRead(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int
+    dependencies: str | None
+    notes: str | None
+    created_at: dt_datetime
+
+
+class GanttTaskUpdate(BaseModel):
+    name: str | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+
+class GanttTaskListResponse(ListResponse[GanttTaskRead]):
+    pass

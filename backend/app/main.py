@@ -159,6 +159,7 @@ app.include_router(team_router)
 
 if settings.DATABASE_ENABLED:
     from .api.auth_router import router as auth_router
+    from .api.db_gantt import router as db_gantt_router
     from .api.db_time_tracking import router as db_time_tracking_router
     from .api.db_users import router as db_users_router
     from .api.db_work_locations import router as db_work_locations_router
@@ -167,6 +168,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(db_users_router)
     app.include_router(db_time_tracking_router)
     app.include_router(db_work_locations_router)
+    app.include_router(db_gantt_router)
     logger.info("✓ Database API endpoints enabled")
 else:
     logger.info("Database API endpoint registration skipped (DATABASE_ENABLED=false)")

@@ -9,6 +9,7 @@ from sqlalchemy import func as sql_func
 from sqlmodel import Session, col, delete, select, update
 
 from app.database.models import (
+    GanttTask,
     TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
@@ -16,6 +17,8 @@ from app.database.models import (
     WorkLocation,
 )
 from app.models.db_schemas import (
+    GanttTaskCreate,
+    GanttTaskUpdate,
     LabelCreate,
     LabelUpdate,
     TaskCreate,
@@ -456,4 +459,61 @@ def update_work_location(
 def delete_work_location(session: Session, user_id: int, value_date: date) -> None:
     location = get_work_location(session, user_id, value_date)
     session.delete(location)
+    session.commit()
+
+
+# Gantt task operations
+
+
+def create_gantt_task(session: Session, user_id: int, payload: GanttTaskCreate) -> GanttTask:
+    _ensure_user_exists(session, user_id)
+    if payload.end_date < payload.start_date:
+        raise ValidationError("end_date cannot be earlier than start_date")
+
+    task = GanttTask(user_id=user_id, **payload.model_dump())
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+
+def get_gantt_task(session: Session, user_id: int, task_id: str) -> GanttTask:
+    task = session.get(GanttTask, task_id)
+    if task is None or task.user_id != user_id:
+        raise NotFoundError("gantt task not found")
+    return task
+
+
+def list_gantt_tasks(session: Session, *, user_id: int) -> list[GanttTask]:
+    return list(
+        session.exec(
+            select(GanttTask)
+            .where(GanttTask.user_id == user_id)
+            .order_by(GanttTask.start_date)
+        ).all()
+    )
+
+
+def update_gantt_task(
+    session: Session, user_id: int, task_id: str, payload: GanttTaskUpdate
+) -> GanttTask:
+    task = get_gantt_task(session, user_id, task_id)
+
+    data = payload.model_dump(exclude_unset=True)
+    candidate_start = data.get("start_date", task.start_date)
+    candidate_end = data.get("end_date", task.end_date)
+    if candidate_end < candidate_start:
+        raise ValidationError("end_date cannot be earlier than start_date")
+
+    for field, value in data.items():
+        setattr(task, field, value)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+
+def delete_gantt_task(session: Session, user_id: int, task_id: str) -> None:
+    task = get_gantt_task(session, user_id, task_id)
+    session.delete(task)
     session.commit()
