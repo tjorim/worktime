@@ -53,7 +53,9 @@ export function GanttChart({
   onProgressChangeRef.current = onProgressChange;
 
   const hasAnyTasks = tasks.length > 0;
-  const holidaysKey = holidays.join(",");
+  const holidaysKey = [...new Set(holidays.map((holiday) => holiday.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b))
+    .join(",");
 
   // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
