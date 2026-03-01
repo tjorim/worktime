@@ -40,20 +40,19 @@ export function GanttChart({
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
   const tasksRef = useRef(tasks);
   const initialViewModeRef = useRef(initialViewMode);
-  const holidaysRef = useRef(holidays);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
   tasksRef.current = tasks;
   initialViewModeRef.current = initialViewMode;
-  holidaysRef.current = holidays;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
 
   const hasAnyTasks = tasks.length > 0;
-  const holidaysKey = [...holidays].sort().join(",");
+  const canonicalHolidays = [...holidays].sort();
+  const holidaysKey = canonicalHolidays.join(",");
 
   // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
@@ -78,7 +77,7 @@ export function GanttChart({
         return;
       }
 
-      const currentHolidays = holidaysRef.current;
+      const currentHolidays = holidaysKey ? holidaysKey.split(",") : [];
       const holidaysObj: Record<string, string | string[]> = {
         "var(--bs-secondary-bg)": "weekend",
       };
