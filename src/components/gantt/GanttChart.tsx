@@ -51,8 +51,12 @@ export function GanttChart({
   onProgressChangeRef.current = onProgressChange;
 
   const hasAnyTasks = tasks.length > 0;
-  const canonicalHolidays = [...holidays].sort();
-  const holidaysKey = canonicalHolidays.join(",");
+  const canonicalHolidaysRef = useRef<string[]>([]);
+  const holidaysKey = [...holidays].sort().join(",");
+
+  if (canonicalHolidaysRef.current.join(",") !== holidaysKey) {
+    canonicalHolidaysRef.current = [...holidays].sort();
+  }
 
   // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
@@ -77,7 +81,7 @@ export function GanttChart({
         return;
       }
 
-      const currentHolidays = holidaysKey ? holidaysKey.split(",") : [];
+      const currentHolidays = canonicalHolidaysRef.current;
       const holidaysObj: Record<string, string | string[]> = {
         "var(--bs-secondary-bg)": "weekend",
       };
