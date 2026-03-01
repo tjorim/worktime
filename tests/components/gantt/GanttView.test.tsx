@@ -16,18 +16,32 @@ vi.mock(
   { virtual: true },
 );
 
+vi.mock("../../../src/hooks/usePublicHolidays", () => ({
+  usePublicHolidays: () => ({
+    publicHolidayMap: new Map([
+      ["2026-01-01", { name: "New Year's Day", localName: "Nieuwjaarsdag" }],
+      ["2026-04-17", { name: "Good Friday", localName: "Goede Vrijdag" }],
+    ]),
+    loading: false,
+    error: null,
+  }),
+}));
+
 vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
     tasks,
     initialViewMode,
+    holidays,
     onTaskClick,
   }: {
     tasks: Array<{ id: string; name: string }>;
     initialViewMode?: "Day" | "Week" | "Month" | "Year";
+    holidays?: string[];
     onTaskClick: (taskId: string) => void;
   }) => (
     <div>
       <div data-testid="mock-view-mode">{initialViewMode}</div>
+      <div data-testid="mock-holidays">{(holidays ?? []).join(",")}</div>
       <ul aria-label="Task list">
         {tasks.map((task) => (
           <li key={task.id}>
@@ -167,5 +181,11 @@ describe("GanttView", () => {
     expect(screen.queryByRole("button", { name: "Week" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Year" })).not.toBeInTheDocument();
+  });
+
+  it("passes public holiday dates to GanttChart", () => {
+    renderWithSettings(<GanttView />);
+
+    expect(screen.getByTestId("mock-holidays")).toHaveTextContent("2026-01-01,2026-04-17");
   });
 });

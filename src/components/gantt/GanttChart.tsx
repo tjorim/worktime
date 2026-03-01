@@ -8,6 +8,7 @@ type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 interface GanttChartProps {
   tasks: GanttTask[];
   initialViewMode?: GanttViewMode;
+  holidays?: string[];
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
@@ -30,6 +31,7 @@ function getTaskId(task: unknown): string | null {
 export function GanttChart({
   tasks,
   initialViewMode = "Day",
+  holidays = [],
   onTaskClick,
   onDateChange,
   onProgressChange,
@@ -38,19 +40,22 @@ export function GanttChart({
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
   const tasksRef = useRef(tasks);
   const initialViewModeRef = useRef(initialViewMode);
+  const holidaysRef = useRef(holidays);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
 
   tasksRef.current = tasks;
   initialViewModeRef.current = initialViewMode;
+  holidaysRef.current = holidays;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
 
   const hasAnyTasks = tasks.length > 0;
+  const holidaysKey = holidays.join(",");
 
-  // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks]
+  // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
     if (!hasAnyTasks) {
       if (containerRef.current) {
@@ -73,10 +78,20 @@ export function GanttChart({
         return;
       }
 
+      const currentHolidays = holidaysRef.current;
+      const holidaysObj: Record<string, string | string[]> = {
+        "var(--bs-secondary-bg)": "weekend",
+      };
+      if (currentHolidays.length > 0) {
+        holidaysObj["var(--bs-warning-bg-subtle)"] = currentHolidays;
+      }
+
       ganttRef.current = new Gantt(container, tasksRef.current, {
         view_mode: initialViewModeRef.current,
         view_mode_select: true,
         today_button: true,
+        ignore: "weekend",
+        holidays: holidaysObj,
         on_click: (task) => {
           const taskId = getTaskId(task);
           if (!taskId) {
@@ -115,7 +130,7 @@ export function GanttChart({
       container.innerHTML = "";
       ganttRef.current = null;
     };
-  }, [hasAnyTasks]);
+  }, [hasAnyTasks, holidaysKey]);
 
   // Effect 2 — refresh on task changes, deps: [tasks]
   useEffect(() => {
