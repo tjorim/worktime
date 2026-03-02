@@ -15,6 +15,7 @@ export type TabKey = "calendar" | "schedule" | "timeoff" | "timetracking" | "gan
 export type ScheduleViewKey = "today" | "week" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
 export type TimeTrackingViewKey = "daily" | "weekly" | "config";
+export type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 
 export interface LastUsed {
   activeTab: TabKey;
@@ -23,6 +24,7 @@ export interface LastUsed {
   timeOffView: TimeOffViewKey;
   timeTrackingView: TimeTrackingViewKey;
   otherTeam: number | null;
+  ganttViewMode: GanttViewMode;
 }
 
 interface UserSettings {
@@ -57,6 +59,7 @@ interface SettingsContextType {
   updateLastTimeTrackingView: (view: TimeTrackingViewKey) => void;
   updateLastOtherSchedule: (schedule: ScheduleOption | null) => void;
   updateLastOtherTeam: (team: number | null) => void;
+  updateLastGanttViewMode: (mode: GanttViewMode) => void;
   resetSettings: () => void;
   // Unified user state additions:
   myTeam: number | null; // The user's team from onboarding
@@ -123,12 +126,14 @@ export const defaultLastUsed: LastUsed = {
   timeOffView: "table",
   timeTrackingView: "daily",
   otherTeam: null,
+  ganttViewMode: "Day",
 };
 
 const validTabKeys = new Set<TabKey>(["calendar", "schedule", "timeoff", "timetracking", "gantt"]);
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["today", "week", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly", "config"]);
+const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);
 
 interface WorktimeUserState {
   version: number;
@@ -482,6 +487,12 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? lastUsed.otherTeam
         : defaultLastUsed.otherTeam;
 
+  const ganttViewMode =
+    typeof lastUsed.ganttViewMode === "string" &&
+    validGanttViewModes.has(lastUsed.ganttViewMode as GanttViewMode)
+      ? (lastUsed.ganttViewMode as GanttViewMode)
+      : defaultLastUsed.ganttViewMode;
+
   // --- Validate scheduleType ---
   const scheduleType = (() => {
     const rawValue = s.scheduleType;
@@ -540,6 +551,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       timeOffView,
       timeTrackingView,
       otherTeam,
+      ganttViewMode,
     },
     rawStateBackup:
       typeof s.rawStateBackup === "object" && s.rawStateBackup !== null
@@ -732,6 +744,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
+  const updateLastGanttViewMode = useCallback(
+    (mode: GanttViewMode) => {
+      setUserState((prev) => ({
+        ...prev,
+        lastUsed: { ...prev.lastUsed, ganttViewMode: mode },
+      }));
+    },
+    [setUserState],
+  );
+
   const resetSettings = useCallback(() => {
     setUserState(defaultUserState);
   }, [setUserState]);
@@ -889,6 +911,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastTimeTrackingView,
       updateLastOtherSchedule,
       updateLastOtherTeam,
+      updateLastGanttViewMode,
       resetSettings,
       myTeam: userState.myTeam,
       setMyTeam,
@@ -920,6 +943,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastTimeTrackingView,
       updateLastOtherSchedule,
       updateLastOtherTeam,
+      updateLastGanttViewMode,
       resetSettings,
       setMyTeam,
       setScheduleType,

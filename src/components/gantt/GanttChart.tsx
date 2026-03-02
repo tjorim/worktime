@@ -2,10 +2,21 @@ import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask } from "../../types/gantt";
 import { EmptyState } from "../shared/EmptyState";
-
-type GanttViewMode = "Day" | "Week" | "Month" | "Year";
+import type { GanttViewMode } from "../../contexts/SettingsContext";
 
 const POPUP_DATE_FORMAT = "MMM D";
+
+const htmlEscapeMap: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char as keyof typeof htmlEscapeMap]);
+}
 
 interface GanttChartProps {
   tasks: GanttTask[];
@@ -14,6 +25,7 @@ interface GanttChartProps {
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
+  onViewModeChange?: (mode: GanttViewMode) => void;
 }
 
 function getTaskId(task: unknown): string | null {
@@ -37,6 +49,7 @@ export function GanttChart({
   onTaskClick,
   onDateChange,
   onProgressChange,
+  onViewModeChange,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
@@ -45,12 +58,14 @@ export function GanttChart({
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
+  const onViewModeChangeRef = useRef(onViewModeChange);
 
   tasksRef.current = tasks;
   initialViewModeRef.current = initialViewMode;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
+  onViewModeChangeRef.current = onViewModeChange;
 
   const hasAnyTasks = tasks.length > 0;
   const holidaysKey = useMemo(() => [...holidays].sort().join(","), [holidays]);
@@ -94,8 +109,8 @@ export function GanttChart({
         holidays: holidaysObj,
         popup_on: "hover",
         popup: (ctx) => {
-          ctx.set_title(ctx.task.name);
-          ctx.set_subtitle(ctx.task.notes ?? "");
+          ctx.set_title(escapeHtml(ctx.task.name));
+          ctx.set_subtitle(escapeHtml(ctx.task.notes ?? ""));
           const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
           const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
           const dateRange = start && end ? `${start} – ${end}` : start || end;
@@ -137,6 +152,9 @@ export function GanttChart({
 
           onProgressChangeRef.current(taskId, progress);
         },
+        on_view_change: (mode) => {
+          onViewModeChangeRef.current?.(mode as GanttViewMode);
+        },
       });
     };
 
@@ -177,5 +195,3 @@ export function GanttChart({
     </div>
   );
 }
-
-export type { GanttViewMode };

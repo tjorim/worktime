@@ -193,8 +193,7 @@ describe("GanttChart", () => {
 
     expect(setTitle).toHaveBeenCalledWith("My Task");
     expect(setSubtitle).toHaveBeenCalledWith("Some notes");
-    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("4 days"));
-    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("50%"));
+    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
   });
 
 
@@ -232,8 +231,7 @@ describe("GanttChart", () => {
       set_details: setDetails,
     });
 
-    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("1 day"));
-    expect(setDetails).not.toHaveBeenCalledWith(expect.stringContaining("1 days"));
+    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 2 · 1 day · 50%");
   });
 
   it("popup function uses empty string when notes is absent", async () => {
@@ -264,6 +262,52 @@ describe("GanttChart", () => {
     });
 
     expect(setSubtitle).toHaveBeenCalledWith("");
+  });
+
+  it("escapes HTML in popup title and subtitle", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          {
+            id: "task-3",
+            name: '<img src=x onerror=alert("xss")>',
+            start: "2026-03-01",
+            end: "2026-03-03",
+            progress: 0,
+            notes: '<script>alert("xss")</script>',
+          },
+        ]}
+        initialViewMode="Day"
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setTitle = vi.fn();
+    const setSubtitle = vi.fn();
+
+    instance.options.popup?.({
+      task: {
+        id: "task-3",
+        name: '<img src=x onerror=alert("xss")>',
+        progress: 0,
+        notes: '<script>alert("xss")</script>',
+      },
+      set_title: setTitle,
+      set_subtitle: setSubtitle,
+      set_details: vi.fn(),
+    });
+
+    expect(setTitle).toHaveBeenCalledWith("&lt;img src=x onerror=alert(&quot;xss&quot;)&gt;");
+    expect(setSubtitle).toHaveBeenCalledWith(
+      "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
+    );
   });
 
   it("forwards valid task ids from frappe callbacks", async () => {

@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsProvider, USER_STATE_VERSION } from "../../../src/contexts/SettingsContext";
+import {
+  SettingsProvider,
+  USER_STATE_VERSION,
+  defaultLastUsed,
+  defaultSettings,
+} from "../../../src/contexts/SettingsContext";
 
 vi.mock(
   "frappe-gantt",
@@ -33,15 +38,24 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
     initialViewMode,
     holidays,
     onTaskClick,
+    onViewModeChange,
   }: {
     tasks: Array<{ id: string; name: string }>;
     initialViewMode?: "Day" | "Week" | "Month" | "Year";
     holidays?: string[];
     onTaskClick: (taskId: string) => void;
+    onViewModeChange?: (mode: "Day" | "Week" | "Month" | "Year") => void;
   }) => (
     <div>
       <div data-testid="mock-view-mode">{initialViewMode}</div>
       <div data-testid="mock-holidays">{(holidays ?? []).join(",")}</div>
+      <button
+        type="button"
+        data-testid="mock-change-view"
+        onClick={() => onViewModeChange?.("Week")}
+      >
+        Switch to Week
+      </button>
       <ul aria-label="Task list">
         {tasks.map((task) => (
           <li key={task.id}>
@@ -57,39 +71,63 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
 
 import { GanttView } from "../../../src/components/gantt/GanttView";
 
-function renderWithSettings(ui: ReactNode) {
+
+type MockUserState = {
+  version: number;
+  hasCompletedOnboarding: boolean;
+  lastOnboardedVersion: number;
+  myTeam: number | null;
+  scheduleType: string | null;
+  settings: typeof defaultSettings;
+  lastUsed: typeof defaultLastUsed;
+};
+
+function createMockUserState(
+  overrides: Partial<MockUserState> & {
+    settings?: Partial<typeof defaultSettings> & {
+      vacationAllowance?: Partial<typeof defaultSettings.vacationAllowance>;
+    };
+    lastUsed?: Partial<typeof defaultLastUsed>;
+  } = {},
+): MockUserState {
+  const baseState: MockUserState = {
+    version: USER_STATE_VERSION,
+    hasCompletedOnboarding: true,
+    lastOnboardedVersion: USER_STATE_VERSION,
+    myTeam: 1,
+    scheduleType: "5-shift",
+    settings: {
+      ...defaultSettings,
+      enableGantt: true,
+    },
+    lastUsed: {
+      ...defaultLastUsed,
+      activeTab: "gantt",
+    },
+  };
+
+  return {
+    ...baseState,
+    ...overrides,
+    settings: {
+      ...baseState.settings,
+      ...overrides.settings,
+      vacationAllowance: {
+        ...baseState.settings.vacationAllowance,
+        ...overrides.settings?.vacationAllowance,
+      },
+    },
+    lastUsed: {
+      ...baseState.lastUsed,
+      ...overrides.lastUsed,
+    },
+  };
+}
+
+function renderWithSettings(ui: ReactNode, userStateOverrides: Parameters<typeof createMockUserState>[0] = {}) {
   window.localStorage.setItem(
     "worktime_user_state",
-    JSON.stringify({
-      version: USER_STATE_VERSION,
-      hasCompletedOnboarding: true,
-      myTeam: 1,
-      scheduleType: "5-shift",
-      settings: {
-        timeFormat: "24h",
-        theme: "auto",
-        notifications: "off",
-        vacationAllowance: {
-          yearlyAmounts: {},
-          unit: "days",
-          hoursPerDay: 8,
-        },
-        enableTimeOff: false,
-        enableTimeTracking: false,
-        enableGantt: true,
-        enableCrossBorderTracking: false,
-        homeCountry: null,
-        officeCountry: null,
-      },
-      lastUsed: {
-        activeTab: "gantt",
-        scheduleView: "today",
-        otherSchedule: null,
-        timeOffView: "table",
-        timeTrackingView: "daily",
-        otherTeam: null,
-      },
-    }),
+    JSON.stringify(createMockUserState(userStateOverrides)),
   );
 
   return render(<SettingsProvider>{ui}</SettingsProvider>);
@@ -188,5 +226,29 @@ describe("GanttView", () => {
     renderWithSettings(<GanttView />);
 
     expect(screen.getByTestId("mock-holidays")).toHaveTextContent("2026-01-01,2026-04-17");
+  });
+
+  it("restores a saved view mode from settings", () => {
+    renderWithSettings(<GanttView />, {
+      lastUsed: { ganttViewMode: "Month" },
+    });
+
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Month");
+  });
+
+  it("persists the view mode when it changes", async () => {
+    const user = userEvent.setup();
+    renderWithSettings(<GanttView />);
+
+    expect(screen.getByTestId("mock-view-mode")).toHaveTextContent("Day");
+
+    await user.click(screen.getByTestId("mock-change-view"));
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem("worktime_user_state") ?? "{}") as {
+        lastUsed?: { ganttViewMode?: string };
+      };
+      expect(stored.lastUsed?.ganttViewMode).toBe("Week");
+    });
   });
 });
