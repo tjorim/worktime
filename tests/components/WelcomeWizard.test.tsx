@@ -49,9 +49,7 @@ vi.mock("react-select", () => ({
           } else {
             const val = e.target.value;
             onChange(
-              val
-                ? { value: val, label: e.target.options[e.target.selectedIndex].text }
-                : null,
+              val ? { value: val, label: e.target.options[e.target.selectedIndex].text } : null,
             );
           }
         }}

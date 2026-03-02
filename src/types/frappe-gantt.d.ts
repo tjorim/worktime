@@ -12,6 +12,8 @@ declare module "frappe-gantt" {
     view_mode?: "Day" | "Week" | "Month" | "Year";
     view_mode_select?: boolean;
     today_button?: boolean;
+    ignore?: string | string[];
+    holidays?: Record<string, string | string[]>;
     on_click?: (task: GanttTaskLike) => void;
     on_date_change?: (task: GanttTaskLike, start: Date, end: Date) => void;
     on_progress_change?: (task: GanttTaskLike, progress: number) => void;
