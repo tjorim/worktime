@@ -15,7 +15,7 @@ const htmlEscapeMap: Record<string, string> = {
 };
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char as keyof typeof htmlEscapeMap]);
+  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] ?? char);
 }
 
 interface GanttChartProps {
