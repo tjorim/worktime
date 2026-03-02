@@ -100,7 +100,9 @@ export function GanttChart({
           const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
           const dateRange = start && end ? `${start} – ${end}` : start || end;
           const duration =
-            ctx.task.actual_duration != null ? `${ctx.task.actual_duration} day(s)` : "";
+            ctx.task.actual_duration != null
+              ? `${ctx.task.actual_duration} day${ctx.task.actual_duration === 1 ? "" : "s"}`
+              : "";
           const progress =
             typeof ctx.task.progress === "number" ? `${Math.floor(ctx.task.progress)}%` : "";
           const details = [dateRange, duration, progress].filter(Boolean).join(" · ");
