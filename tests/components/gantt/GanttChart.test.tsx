@@ -193,8 +193,47 @@ describe("GanttChart", () => {
 
     expect(setTitle).toHaveBeenCalledWith("My Task");
     expect(setSubtitle).toHaveBeenCalledWith("Some notes");
-    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("4 day(s)"));
+    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("4 days"));
     expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("50%"));
+  });
+
+
+  it("popup function pluralizes duration details", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          { id: "task-1", name: "My Task", start: "2026-03-01", end: "2026-03-02", progress: 50 },
+        ]}
+        initialViewMode="Day"
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setDetails = vi.fn();
+
+    instance.options.popup?.({
+      task: {
+        id: "task-1",
+        name: "My Task",
+        progress: 50,
+        _start: new Date(2026, 2, 1),
+        _end: new Date(2026, 2, 2),
+        actual_duration: 1,
+      },
+      set_title: vi.fn(),
+      set_subtitle: vi.fn(),
+      set_details: setDetails,
+    });
+
+    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("1 day"));
+    expect(setDetails).not.toHaveBeenCalledWith(expect.stringContaining("1 days"));
   });
 
   it("popup function uses empty string when notes is absent", async () => {
