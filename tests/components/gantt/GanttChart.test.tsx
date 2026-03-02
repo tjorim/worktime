@@ -41,6 +41,8 @@ class MockFrappeGantt {
 
   refresh = vi.fn();
 
+  update_task = vi.fn();
+
   change_view_mode = vi.fn();
 }
 
@@ -340,5 +342,153 @@ describe("GanttChart", () => {
     expect(onTaskClick).toHaveBeenCalledWith("task-1");
     expect(onDateChange).toHaveBeenCalledWith("task-1", "2026-03-02", "2026-03-04");
     expect(onProgressChange).toHaveBeenCalledWith("task-1", 75);
+  });
+
+  it("calls update_task when only one task's dates change", async () => {
+    const task = { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[task]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[{ ...task, start: "2026-03-02", end: "2026-03-05" }]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.update_task).toHaveBeenCalledTimes(1);
+      expect(instance.update_task).toHaveBeenCalledWith("task-1", {
+        start: "2026-03-02",
+        end: "2026-03-05",
+        progress: 0,
+      });
+    });
+
+    expect(instance.refresh).not.toHaveBeenCalled();
+  });
+
+  it("calls update_task when only one task's progress changes", async () => {
+    const task = { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[task]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[{ ...task, progress: 50 }]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.update_task).toHaveBeenCalledTimes(1);
+      expect(instance.update_task).toHaveBeenCalledWith("task-1", {
+        start: "2026-03-01",
+        end: "2026-03-03",
+        progress: 50,
+      });
+    });
+
+    expect(instance.refresh).not.toHaveBeenCalled();
+  });
+
+  it("calls refresh when a task is added", async () => {
+    const task1 = { id: "task-1", name: "Task 1", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const task2 = { id: "task-2", name: "Task 2", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[task1]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[task1, task2]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.refresh).toHaveBeenCalledWith([task1, task2]);
+    });
+
+    expect(instance.update_task).not.toHaveBeenCalled();
+  });
+
+  it("calls refresh when multiple tasks change simultaneously", async () => {
+    const task1 = { id: "task-1", name: "Task 1", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const task2 = { id: "task-2", name: "Task 2", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[task1, task2]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[{ ...task1, progress: 25 }, { ...task2, progress: 75 }]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.refresh).toHaveBeenCalled();
+    });
+
+    expect(instance.update_task).not.toHaveBeenCalled();
   });
 });
