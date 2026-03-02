@@ -185,7 +185,6 @@ export function GanttChart({
 
     // Build a lookup of previous tasks by id
     const prevById = new Map(prev.map((t) => [t.id, t]));
-    const allIdsKnown = tasks.every((t) => prevById.has(t.id));
     const idsReordered = tasks.some((task, index) => {
       const previousTask = prev[index];
       return !previousTask || previousTask.id !== task.id;
@@ -203,7 +202,7 @@ export function GanttChart({
     });
 
     // Single-task mutation — use update_task for a lightweight in-place update
-    if (allIdsKnown && changed.length === 1) {
+    if (changed.length === 1) {
       const task = changed[0]!;
       ganttRef.current.update_task(task.id, {
         start: task.start,
