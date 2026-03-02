@@ -98,9 +98,14 @@ export function GanttChart({
           ctx.set_subtitle(ctx.task.notes ?? "");
           const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
           const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
-          const duration = ctx.task.actual_duration ?? 0;
-          const progress = Math.floor(ctx.task.progress);
-          ctx.set_details(`${start} – ${end} · ${duration} day(s) · ${progress}%`);
+          const dateRange = start && end ? `${start} – ${end}` : start || end;
+          const duration =
+            ctx.task.actual_duration != null ? `${ctx.task.actual_duration} day(s)` : "";
+          const progress =
+            typeof ctx.task.progress === "number" ? `${Math.floor(ctx.task.progress)}%` : "";
+          const details = [dateRange, duration, progress].filter(Boolean).join(" · ");
+
+          ctx.set_details(details);
         },
         on_click: (task) => {
           const taskId = getTaskId(task);
