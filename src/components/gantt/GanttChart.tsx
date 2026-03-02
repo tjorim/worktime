@@ -5,6 +5,8 @@ import { EmptyState } from "../shared/EmptyState";
 
 type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 
+const POPUP_DATE_FORMAT = "MMM D";
+
 interface GanttChartProps {
   tasks: GanttTask[];
   initialViewMode?: GanttViewMode;
@@ -90,6 +92,16 @@ export function GanttChart({
         today_button: true,
         ignore: "weekend",
         holidays: holidaysObj,
+        popup_on: "hover",
+        popup: (ctx) => {
+          ctx.set_title(ctx.task.name);
+          ctx.set_subtitle(ctx.task.notes ?? "");
+          const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
+          const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
+          const duration = ctx.task.actual_duration ?? 0;
+          const progress = Math.floor(ctx.task.progress);
+          ctx.set_details(`${start} – ${end} · ${duration} day(s) · ${progress}%`);
+        },
         on_click: (task) => {
           const taskId = getTaskId(task);
           if (!taskId) {

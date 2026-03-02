@@ -14,6 +14,8 @@ class MockFrappeGantt {
     view_mode?: "Day" | "Week" | "Month" | "Year";
     view_mode_select?: boolean;
     today_button?: boolean;
+    popup?: (ctx: unknown) => void;
+    popup_on?: string;
     on_click?: (task: unknown) => void;
     on_date_change?: (task: unknown, start: Date, end: Date) => void;
     on_progress_change?: (task: unknown, progress: number) => void;
@@ -26,6 +28,8 @@ class MockFrappeGantt {
       view_mode?: "Day" | "Week" | "Month" | "Year";
       view_mode_select?: boolean;
       today_button?: boolean;
+      popup?: (ctx: unknown) => void;
+      popup_on?: string;
       on_click?: (task: unknown) => void;
       on_date_change?: (task: unknown, start: Date, end: Date) => void;
       on_progress_change?: (task: unknown, progress: number) => void;
@@ -140,6 +144,87 @@ describe("GanttChart", () => {
     expect(instance.options.view_mode).toBe("Day");
     expect(instance.options.view_mode_select).toBe(true);
     expect(instance.options.today_button).toBe(true);
+    expect(instance.options.popup_on).toBe("hover");
+  });
+
+  it("popup function sets title, subtitle from notes, and formatted details", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          {
+            id: "task-1",
+            name: "My Task",
+            start: "2026-03-01",
+            end: "2026-03-05",
+            progress: 50,
+            notes: "Some notes",
+          },
+        ]}
+        initialViewMode="Day"
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setTitle = vi.fn();
+    const setSubtitle = vi.fn();
+    const setDetails = vi.fn();
+
+    instance.options.popup?.({
+      task: {
+        id: "task-1",
+        name: "My Task",
+        progress: 50,
+        notes: "Some notes",
+        _start: new Date(2026, 2, 1),
+        _end: new Date(2026, 2, 5),
+        actual_duration: 4,
+      },
+      set_title: setTitle,
+      set_subtitle: setSubtitle,
+      set_details: setDetails,
+    });
+
+    expect(setTitle).toHaveBeenCalledWith("My Task");
+    expect(setSubtitle).toHaveBeenCalledWith("Some notes");
+    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("4 day(s)"));
+    expect(setDetails).toHaveBeenCalledWith(expect.stringContaining("50%"));
+  });
+
+  it("popup function uses empty string when notes is absent", async () => {
+    render(
+      <GanttChart
+        tasks={[
+          { id: "task-2", name: "No Notes", start: "2026-03-01", end: "2026-03-03", progress: 0 },
+        ]}
+        initialViewMode="Day"
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+    const setSubtitle = vi.fn();
+
+    instance.options.popup?.({
+      task: { id: "task-2", name: "No Notes", progress: 0 },
+      set_title: vi.fn(),
+      set_subtitle: setSubtitle,
+      set_details: vi.fn(),
+    });
+
+    expect(setSubtitle).toHaveBeenCalledWith("");
   });
 
   it("forwards valid task ids from frappe callbacks", async () => {

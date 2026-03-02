@@ -6,6 +6,21 @@ declare module "frappe-gantt" {
     end: string;
     progress: number;
     dependencies?: string;
+    /** frappe-gantt computed start Date */
+    _start?: Date;
+    /** frappe-gantt computed end Date */
+    _end?: Date;
+    /** frappe-gantt computed duration in days */
+    actual_duration?: number;
+    /** custom field passed through from our GanttTask */
+    notes?: string;
+  }
+
+  export interface GanttPopupContext {
+    task: GanttTaskLike;
+    set_title(title: string): void;
+    set_subtitle(subtitle: string): void;
+    set_details(details: string): void;
   }
 
   export interface GanttOptions {
@@ -14,6 +29,8 @@ declare module "frappe-gantt" {
     today_button?: boolean;
     ignore?: string | string[];
     holidays?: Record<string, string | string[]>;
+    popup?: (ctx: GanttPopupContext) => void;
+    popup_on?: "click" | "hover";
     on_click?: (task: GanttTaskLike) => void;
     on_date_change?: (task: GanttTaskLike, start: Date, end: Date) => void;
     on_progress_change?: (task: GanttTaskLike, progress: number) => void;
