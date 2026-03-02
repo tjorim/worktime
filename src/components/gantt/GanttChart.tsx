@@ -196,6 +196,11 @@ export function GanttChart({
     // Single-task mutation — use update_task for a lightweight in-place update
     if (allIdsKnown && changed.length === 1) {
       const task = changed[0];
+      if (!task) {
+        ganttRef.current.refresh(tasks);
+        return;
+      }
+
       ganttRef.current.update_task(task.id, {
         start: task.start,
         end: task.end,
