@@ -34,6 +34,7 @@ declare module "frappe-gantt" {
     on_click?: (task: GanttTaskLike) => void;
     on_date_change?: (task: GanttTaskLike, start: Date, end: Date) => void;
     on_progress_change?: (task: GanttTaskLike, progress: number) => void;
+    on_view_change?: (mode: GanttViewModeName) => void;
   }
 
   export type GanttViewModeName = NonNullable<GanttOptions["view_mode"]>;

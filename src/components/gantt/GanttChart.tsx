@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask } from "../../types/gantt";
 import { EmptyState } from "../shared/EmptyState";
-
-type GanttViewMode = "Day" | "Week" | "Month" | "Year";
+import type { GanttViewMode } from "../../contexts/SettingsContext";
 
 const POPUP_DATE_FORMAT = "MMM D";
 
@@ -14,6 +13,7 @@ interface GanttChartProps {
   onTaskClick: (taskId: string) => void;
   onDateChange: (taskId: string, start: string, end: string) => void;
   onProgressChange: (taskId: string, progress: number) => void;
+  onViewModeChange?: (mode: GanttViewMode) => void;
 }
 
 function getTaskId(task: unknown): string | null {
@@ -37,6 +37,7 @@ export function GanttChart({
   onTaskClick,
   onDateChange,
   onProgressChange,
+  onViewModeChange,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
@@ -45,12 +46,14 @@ export function GanttChart({
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
   const onProgressChangeRef = useRef(onProgressChange);
+  const onViewModeChangeRef = useRef(onViewModeChange);
 
   tasksRef.current = tasks;
   initialViewModeRef.current = initialViewMode;
   onTaskClickRef.current = onTaskClick;
   onDateChangeRef.current = onDateChange;
   onProgressChangeRef.current = onProgressChange;
+  onViewModeChangeRef.current = onViewModeChange;
 
   const hasAnyTasks = tasks.length > 0;
   const holidaysKey = useMemo(() => [...holidays].sort().join(","), [holidays]);
@@ -137,6 +140,9 @@ export function GanttChart({
 
           onProgressChangeRef.current(taskId, progress);
         },
+        on_view_change: (mode) => {
+          onViewModeChangeRef.current?.(mode as GanttViewMode);
+        },
       });
     };
 
@@ -177,5 +183,3 @@ export function GanttChart({
     </div>
   );
 }
-
-export type { GanttViewMode };

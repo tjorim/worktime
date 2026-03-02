@@ -185,6 +185,7 @@ describe("SettingsContext unified user state", () => {
         timeOffView: "table",
         timeTrackingView: "daily",
         otherTeam: null,
+        ganttViewMode: "Day",
       },
     });
 
@@ -493,6 +494,19 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.lastUsed.otherTeam).toBe(null);
     });
 
+    it("updates lastUsed.ganttViewMode via updateLastGanttViewMode", async () => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        result.current.updateLastGanttViewMode("Week");
+      });
+      expect(result.current.lastUsed.ganttViewMode).toBe("Week");
+
+      await act(async () => {
+        result.current.updateLastGanttViewMode("Month");
+      });
+      expect(result.current.lastUsed.ganttViewMode).toBe("Month");
+    });
+
     it("provides default lastUsed on fresh state", () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       expect(result.current.lastUsed).toEqual({
@@ -502,6 +516,7 @@ describe("SettingsContext unified user state", () => {
         timeOffView: "table",
         timeTrackingView: "daily",
         otherTeam: null,
+        ganttViewMode: "Day",
       });
     });
 

@@ -4,6 +4,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
 import { usePublicHolidays } from "../../hooks/usePublicHolidays";
 import type { GanttTask } from "../../types/gantt";
+import { useSettings } from "../../contexts/SettingsContext";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { GanttChart } from "./GanttChart";
 import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
@@ -16,6 +17,7 @@ export function GanttView() {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { lastUsed, updateLastGanttViewMode } = useSettings();
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -87,11 +89,12 @@ export function GanttView() {
 
       <GanttChart
         tasks={tasks}
-        initialViewMode="Day"
+        initialViewMode={lastUsed.ganttViewMode}
         holidays={holidayDates}
         onTaskClick={handleTaskClick}
         onDateChange={handleDateChange}
         onProgressChange={handleProgressChange}
+        onViewModeChange={updateLastGanttViewMode}
       />
 
       <GanttTaskModal
