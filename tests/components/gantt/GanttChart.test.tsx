@@ -491,4 +491,74 @@ describe("GanttChart", () => {
 
     expect(instance.update_task).not.toHaveBeenCalled();
   });
+
+
+  it("does not refresh when tasks are unchanged on rerender", async () => {
+    const taskA = { id: "task-a", name: "Task A", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const taskB = { id: "task-b", name: "Task B", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[taskA, taskB]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[{ ...taskA }, { ...taskB }]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.refresh).not.toHaveBeenCalled();
+      expect(instance.update_task).not.toHaveBeenCalled();
+    });
+  });
+
+  it("calls refresh when same-length IDs are swapped", async () => {
+    const taskA = { id: "task-a", name: "Task A", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const taskB = { id: "task-b", name: "Task B", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+
+    const { rerender } = render(
+      <GanttChart
+        tasks={[taskA, taskB]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mockInstances).toHaveLength(1);
+    });
+
+    const [instance] = mockInstances;
+
+    rerender(
+      <GanttChart
+        tasks={[{ ...taskB }, { ...taskA }]}
+        onTaskClick={vi.fn()}
+        onDateChange={vi.fn()}
+        onProgressChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(instance.refresh).toHaveBeenCalledWith([{ ...taskB }, { ...taskA }]);
+    });
+
+    expect(instance.update_task).not.toHaveBeenCalled();
+  });
 });

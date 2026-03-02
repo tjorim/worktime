@@ -15,7 +15,7 @@ const htmlEscapeMap: Record<string, string> = {
 };
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char as keyof typeof htmlEscapeMap]);
+  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] ?? char);
 }
 
 interface GanttChartProps {
@@ -185,7 +185,15 @@ export function GanttChart({
 
     // Build a lookup of previous tasks by id
     const prevById = new Map(prev.map((t) => [t.id, t]));
-    const allIdsKnown = tasks.every((t) => prevById.has(t.id));
+    const idsReordered = tasks.some((task, index) => {
+      const previousTask = prev[index];
+      return !previousTask || previousTask.id !== task.id;
+    });
+
+    if (idsReordered) {
+      ganttRef.current.refresh(tasks);
+      return;
+    }
 
     // Find tasks whose start, end, or progress changed
     const changed = tasks.filter((task) => {
@@ -194,8 +202,8 @@ export function GanttChart({
     });
 
     // Single-task mutation — use update_task for a lightweight in-place update
-    if (allIdsKnown && changed.length === 1) {
-      const task = changed[0];
+    if (changed.length === 1) {
+      const task = changed[0]!;
       ganttRef.current.update_task(task.id, {
         start: task.start,
         end: task.end,
@@ -204,7 +212,9 @@ export function GanttChart({
       return;
     }
 
-    ganttRef.current.refresh(tasks);
+    if (changed.length > 0) {
+      ganttRef.current.refresh(tasks);
+    }
   }, [tasks]);
 
   if (tasks.length === 0) {
