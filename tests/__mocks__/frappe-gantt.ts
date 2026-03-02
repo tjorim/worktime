@@ -7,6 +7,7 @@
 export default class Gantt {
   constructor() {}
   refresh() {}
+  update_task() {}
   change_view_mode() {}
   destroy() {}
 }

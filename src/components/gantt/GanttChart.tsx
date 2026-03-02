@@ -15,7 +15,7 @@ const htmlEscapeMap: Record<string, string> = {
 };
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char as keyof typeof htmlEscapeMap]);
+  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] ?? char);
 }
 
 interface GanttChartProps {
@@ -54,6 +54,7 @@ export function GanttChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<import("frappe-gantt").Gantt | null>(null);
   const tasksRef = useRef(tasks);
+  const prevTasksRef = useRef<GanttTask[]>([]);
   const initialViewModeRef = useRef(initialViewMode);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
@@ -169,11 +170,51 @@ export function GanttChart({
 
   // Effect 2 — refresh on task changes, deps: [tasks]
   useEffect(() => {
+    const prev = prevTasksRef.current;
+    prevTasksRef.current = tasks;
+
     if (!ganttRef.current || tasks.length === 0) {
       return;
     }
 
-    ganttRef.current.refresh(tasks);
+    // Full refresh if task count changed (add/remove)
+    if (tasks.length !== prev.length) {
+      ganttRef.current.refresh(tasks);
+      return;
+    }
+
+    // Build a lookup of previous tasks by id
+    const prevById = new Map(prev.map((t) => [t.id, t]));
+    const idsReordered = tasks.some((task, index) => {
+      const previousTask = prev[index];
+      return !previousTask || previousTask.id !== task.id;
+    });
+
+    if (idsReordered) {
+      ganttRef.current.refresh(tasks);
+      return;
+    }
+
+    // Find tasks whose start, end, or progress changed
+    const changed = tasks.filter((task) => {
+      const p = prevById.get(task.id);
+      return !p || task.start !== p.start || task.end !== p.end || task.progress !== p.progress;
+    });
+
+    // Single-task mutation — use update_task for a lightweight in-place update
+    if (changed.length === 1) {
+      const task = changed[0]!;
+      ganttRef.current.update_task(task.id, {
+        start: task.start,
+        end: task.end,
+        progress: task.progress,
+      });
+      return;
+    }
+
+    if (changed.length > 0) {
+      ganttRef.current.refresh(tasks);
+    }
   }, [tasks]);
 
   if (tasks.length === 0) {
