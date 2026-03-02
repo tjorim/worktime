@@ -8,7 +8,12 @@ import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
-import { SettingsProvider, type TabKey, USER_STATE_VERSION, useSettings } from "./contexts/SettingsContext";
+import {
+  SettingsProvider,
+  type TabKey,
+  USER_STATE_VERSION,
+  useSettings,
+} from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
@@ -18,8 +23,16 @@ import { validateVacationAllowance } from "./utils/vacationCalculations";
 
 // Features added in each schema version. Shown as an inline alert to users who haven't seen them.
 const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[] = [
-  { version: 4, name: "Personal Gantt Chart", detail: "Visualize and track project tasks on a timeline" },
-  { version: 3, name: "Cross-Border Tracking", detail: "Log your daily work location for tax reporting" },
+  {
+    version: 4,
+    name: "Personal Gantt Chart",
+    detail: "Visualize and track project tasks on a timeline",
+  },
+  {
+    version: 3,
+    name: "Cross-Border Tracking",
+    detail: "Log your daily work location for tax reporting",
+  },
 ];
 
 /**

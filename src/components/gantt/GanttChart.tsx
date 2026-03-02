@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask } from "../../types/gantt";
 import { EmptyState } from "../shared/EmptyState";
@@ -51,12 +51,7 @@ export function GanttChart({
   onProgressChangeRef.current = onProgressChange;
 
   const hasAnyTasks = tasks.length > 0;
-  const canonicalHolidaysRef = useRef<string[]>([]);
-  const holidaysKey = [...holidays].sort().join(",");
-
-  if (canonicalHolidaysRef.current.join(",") !== holidaysKey) {
-    canonicalHolidaysRef.current = [...holidays].sort();
-  }
+  const holidaysKey = useMemo(() => [...holidays].sort().join(","), [holidays]);
 
   // Effect 1 — lifecycle only (init/teardown), deps: [hasAnyTasks, holidaysKey]
   useEffect(() => {
@@ -81,7 +76,7 @@ export function GanttChart({
         return;
       }
 
-      const currentHolidays = canonicalHolidaysRef.current;
+      const currentHolidays = holidays;
       const holidaysObj: Record<string, string | string[]> = {
         "var(--bs-secondary-bg)": "weekend",
       };
@@ -133,7 +128,7 @@ export function GanttChart({
       container.innerHTML = "";
       ganttRef.current = null;
     };
-  }, [hasAnyTasks, holidaysKey]);
+  }, [hasAnyTasks, holidaysKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- holidays is intentionally omitted; holidaysKey is its stable, content-derived key and is sufficient to trigger re-initialization
 
   // Effect 2 — refresh on task changes, deps: [tasks]
   useEffect(() => {
@@ -143,8 +138,6 @@ export function GanttChart({
 
     ganttRef.current.refresh(tasks);
   }, [tasks]);
-
-
 
   if (tasks.length === 0) {
     return (

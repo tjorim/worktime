@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useGanttTasks } from "../../hooks/useGanttTasks";
@@ -12,7 +12,7 @@ export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();
   const currentYear = dayjs().year();
   const { publicHolidayMap } = usePublicHolidays(currentYear);
-  const holidayDates = [...publicHolidayMap.keys()];
+  const holidayDates = useMemo(() => [...publicHolidayMap.keys()], [publicHolidayMap]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<GanttTask | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

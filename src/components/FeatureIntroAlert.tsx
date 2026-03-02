@@ -16,7 +16,12 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
   }
 
   return (
-    <Alert variant="info" dismissible onClose={onDismiss} className="rounded-0 mb-0 border-start-0 border-end-0">
+    <Alert
+      variant="info"
+      dismissible
+      onClose={onDismiss}
+      className="rounded-0 mb-0 border-start-0 border-end-0"
+    >
       <strong>New since your last visit:</strong>{" "}
       {features.map((f, i) => (
         <span key={`${f.name}-${i}`}>
@@ -25,8 +30,7 @@ export function FeatureIntroAlert({ features, onDismiss }: FeatureIntroAlertProp
         </span>
       ))}
       {". "}
-      Enable in <strong>Settings</strong>{" "}
-      <span aria-hidden="true">⚙</span>.
+      Enable in <strong>Settings</strong> <span aria-hidden="true">⚙</span>.
     </Alert>
   );
 }
