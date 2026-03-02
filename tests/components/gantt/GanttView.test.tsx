@@ -184,6 +184,7 @@ describe("GanttView", () => {
   });
 
   it("passes public holiday dates to GanttChart", () => {
+    // Map preserves insertion order, so the joined string is deterministic given the mock above.
     renderWithSettings(<GanttView />);
 
     expect(screen.getByTestId("mock-holidays")).toHaveTextContent("2026-01-01,2026-04-17");
