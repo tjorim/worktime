@@ -6,6 +6,18 @@ import type { GanttViewMode } from "../../contexts/SettingsContext";
 
 const POPUP_DATE_FORMAT = "MMM D";
 
+const htmlEscapeMap: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char as keyof typeof htmlEscapeMap]);
+}
+
 interface GanttChartProps {
   tasks: GanttTask[];
   initialViewMode?: GanttViewMode;
@@ -97,8 +109,8 @@ export function GanttChart({
         holidays: holidaysObj,
         popup_on: "hover",
         popup: (ctx) => {
-          ctx.set_title(ctx.task.name);
-          ctx.set_subtitle(ctx.task.notes ?? "");
+          ctx.set_title(escapeHtml(ctx.task.name));
+          ctx.set_subtitle(escapeHtml(ctx.task.notes ?? ""));
           const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
           const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
           const dateRange = start && end ? `${start} – ${end}` : start || end;
