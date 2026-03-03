@@ -7,6 +7,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import type { TabKey } from "../contexts/SettingsContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
+import { m } from "../paraglide/messages.js";
 import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";
@@ -131,7 +132,7 @@ export function MainTabs({
             title={
               <>
                 <i className="bi bi-calendar3 me-1" aria-hidden="true"></i>
-                Calendar
+                {m.tab_calendar()}
               </>
             }
           >
@@ -148,7 +149,7 @@ export function MainTabs({
             title={
               <>
                 <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-                Schedule
+                {m.tab_schedule()}
               </>
             }
           >
@@ -169,7 +170,7 @@ export function MainTabs({
               title={
                 <>
                   <i className="bi bi-calendar-check me-1" aria-hidden="true"></i>
-                  Time Off
+                  {m.tab_time_off()}
                 </>
               }
             >
@@ -183,7 +184,7 @@ export function MainTabs({
               title={
                 <>
                   <i className="bi bi-stopwatch me-1" aria-hidden="true"></i>
-                  Time Tracking
+                  {m.tab_time_tracking()}
                 </>
               }
             >
@@ -197,7 +198,7 @@ export function MainTabs({
               title={
                 <>
                   <i className="bi bi-bar-chart-steps me-1" aria-hidden="true"></i>
-                  Gantt
+                  {m.tab_gantt()}
                 </>
               }
             >

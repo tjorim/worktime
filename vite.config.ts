@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -9,7 +10,14 @@ export default defineConfig(() => ({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
-  plugins: [reactPlugin()],
+  plugins: [
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+    }),
+    reactPlugin(),
+  ],
   css: {
     transformer: "lightningcss",
     preprocessorOptions: {

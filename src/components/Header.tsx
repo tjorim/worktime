@@ -3,6 +3,7 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { m } from "../paraglide/messages.js";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
@@ -39,7 +40,7 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
   return (
     <>
       <a href="#main-content" className="visually-hidden-focusable">
-        Skip to content
+        {m.skip_to_content()}
       </a>
       <Navbar fixed="top" bg="primary" data-bs-theme="dark" className="shadow-sm">
         <Container fluid>
@@ -51,12 +52,12 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
             variant="outline-light"
             size="sm"
             onClick={() => setShowSettings(true)}
-            aria-label="Settings"
-            title={`Settings (${isMac ? "Cmd" : "Ctrl"}+,)`}
+            aria-label={m.settings_title()}
+            title={isMac ? m.settings_cmd() : m.settings_ctrl()}
             aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
           >
             <i className="bi bi-gear"></i>
-            <span className="d-none d-lg-inline ms-1">Settings</span>
+            <span className="d-none d-lg-inline ms-1">{m.settings_title()}</span>
           </Button>
         </Container>
       </Navbar>
