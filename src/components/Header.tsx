@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { m } from "../paraglide/messages.js";
+import * as m from "../paraglide/messages.js";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {

@@ -7,7 +7,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import type { TabKey } from "../contexts/SettingsContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useSyncedState } from "../hooks/useSyncedState";
-import { m } from "../paraglide/messages.js";
+import * as m from "../paraglide/messages.js";
 import { CalendarView } from "./CalendarView";
 import { ScheduleDetailModal } from "./schedule/ScheduleDetailModal";
 import { ScheduleTabView } from "./ScheduleTabView";

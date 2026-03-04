@@ -22,7 +22,7 @@ import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
-import { m } from "../paraglide/messages.js";
+import * as m from "../paraglide/messages.js";
 import { getLocale, setLocale } from "../paraglide/runtime.js";
 
 interface CountrySelectItemProps {
@@ -177,7 +177,9 @@ export function SettingsPanel({
     setClearTimeOffData(false);
   };
 
+
   const handleConfirmReset = () => {
+    const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
     let settingsCleared = false;
     let timeTrackingCleared = false;
     let timeOffCleared = false;
@@ -189,7 +191,7 @@ export function SettingsPanel({
       settingsCleared = true;
     } catch (error) {
       console.error("Failed to reset settings:", error);
-      errors.push("settings");
+      errors.push(m.reset_item_settings());
     }
 
     // Attempt time tracking data clearing if requested
@@ -201,7 +203,7 @@ export function SettingsPanel({
         timeTrackingCleared = true;
       } catch (error) {
         console.error("Failed to clear time tracking data:", error);
-        errors.push("time tracking data");
+        errors.push(m.reset_item_time_tracking_data());
       }
     }
 
@@ -213,7 +215,7 @@ export function SettingsPanel({
         timeOffCleared = true;
       } catch (error) {
         console.error("Failed to clear time off data:", error);
-        errors.push("time off data");
+        errors.push(m.reset_item_time_off_data());
       }
     }
 
@@ -228,21 +230,24 @@ export function SettingsPanel({
     if (anythingSucceeded && !somethingFailed) {
       // All attempted operations succeeded
       const parts: string[] = [];
-      if (settingsCleared) parts.push("Settings");
-      if (timeTrackingCleared) parts.push("time tracking data");
-      if (timeOffCleared) parts.push("time off data");
-      toast.showSuccess(`${parts.join(" and ")} cleared`, "bi-trash");
+      if (settingsCleared) parts.push(m.reset_item_settings());
+      if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
+      if (timeOffCleared) parts.push(m.reset_item_time_off_data());
+      toast.showSuccess(m.data_cleared({ items: listFormat.format(parts) }), "bi-trash");
     } else if (!anythingSucceeded && somethingFailed) {
       // All attempted operations failed
-      toast.showWarning(`Failed to clear ${errors.join(", ")}. Please try again.`);
+      toast.showWarning(m.failed_to_clear({ items: listFormat.format(errors) }));
     } else if (anythingSucceeded && somethingFailed) {
       // Mixed results: some succeeded, some failed
       const successParts: string[] = [];
-      if (settingsCleared) successParts.push("settings");
-      if (timeTrackingCleared) successParts.push("time tracking data");
-      if (timeOffCleared) successParts.push("time off data");
+      if (settingsCleared) successParts.push(m.reset_item_settings());
+      if (timeTrackingCleared) successParts.push(m.reset_item_time_tracking_data());
+      if (timeOffCleared) successParts.push(m.reset_item_time_off_data());
       toast.showWarning(
-        `Cleared ${successParts.join(", ")} but failed to clear ${errors.join(", ")}`,
+        m.cleared_but_failed_to_clear({
+          clearedItems: listFormat.format(successParts),
+          failedItems: listFormat.format(errors),
+        }),
       );
     }
   };
@@ -662,11 +667,11 @@ export function SettingsPanel({
               onClick={handleVersionClick}
               onKeyDown={handleVersionKeyDown}
               style={{ cursor: "pointer", userSelect: "none" }}
-              aria-label={`Worktime version ${CONFIG.VERSION}`}
+              aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
             >
-              Worktime v{CONFIG.VERSION}
+              {m.footer_version({ version: CONFIG.VERSION })}
             </button>
-            <small className="text-muted">Built with ❤️ by Jorim Tielemans</small>
+            <small className="text-muted">{m.footer_built_by()}</small>
           </div>
         </Offcanvas.Body>
       </Offcanvas>
