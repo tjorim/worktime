@@ -11,11 +11,12 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   plugins: [
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any -- paraglide plugin types don't match vitest's plugin type
     paraglideVitePlugin({
       project: "./project.inlang",
       outdir: "./src/paraglide",
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
-    }),
+    }) as any,
     reactPlugin() as ReturnType<typeof reactPlugin>,
   ],
   resolve: {
