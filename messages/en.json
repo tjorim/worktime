@@ -77,5 +77,14 @@
   "next": "Next",
   "done": "Done",
   "skip": "Skip",
-  "continue": "Continue"
+  "continue": "Continue",
+  "reset_item_settings": "Settings",
+  "reset_item_time_tracking_data": "time tracking data",
+  "reset_item_time_off_data": "time off data",
+  "data_cleared": "{items} cleared",
+  "failed_to_clear": "Failed to clear {items}. Please try again.",
+  "cleared_but_failed_to_clear": "Cleared {clearedItems} but failed to clear {failedItems}",
+  "footer_version": "Worktime v{version}",
+  "footer_version_aria": "Worktime version {version}",
+  "footer_built_by": "Built with ❤️ by Jorim Tielemans"
 }
