@@ -29,6 +29,7 @@ import {
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
+import * as m from "../paraglide/messages.js";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
@@ -215,7 +216,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleSubmitEvent = () => {
     if (!validateForm()) {
-      toast.showError("Please fix validation errors before saving");
+      toast.showError(m.timeoff_fix_validation());
       return;
     }
 
@@ -242,10 +243,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     if (editIndex >= 0) {
       updateEvent(editIndex, newEvent);
-      toast.showSuccess(`Event updated successfully`, "bi-pencil-fill");
+      toast.showSuccess(m.timeoff_event_updated(), "bi-pencil-fill");
     } else {
       addEvent(newEvent);
-      toast.showSuccess(`Event added successfully`);
+      toast.showSuccess(m.timeoff_event_added());
     }
 
     setShowEventModal(false);
@@ -262,7 +263,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
       setSelectedIndices(new Set());
-      toast.showSuccess("Event deleted successfully", "bi-trash");
+      toast.showSuccess(m.timeoff_event_deleted(), "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
@@ -291,7 +292,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleBulkDeleteConfirm = () => {
     if (selectedIndices.size > 0) {
       deleteEvents(Array.from(selectedIndices));
-      toast.showSuccess(`Deleted ${selectedIndices.size} events`, "bi-trash");
+      toast.showSuccess(m.timeoff_events_deleted({ count: selectedIndices.size }), "bi-trash");
     }
     setSelectedIndices(new Set());
     setShowBulkDeleteConfirm(false);
@@ -332,10 +333,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       importHday(rawEditorTextRef.current);
       setIsRawEditorDirty(false);
       setSelectedIndices(new Set());
-      toast.showSuccess("Raw .hday content applied successfully", "bi-check-circle");
+      toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
     } catch (error) {
       console.error("Failed to parse raw .hday content:", error);
-      toast.showError("Failed to parse content. Please check the format.");
+      toast.showError(m.timeoff_parse_failed());
     }
   }, [importHday, toast]);
 
@@ -357,10 +358,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       importHday(text);
       setSelectedIndices(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
-      toast.showSuccess(`Imported ${file.name}`, "bi-download");
+      toast.showSuccess(m.timeoff_imported({ name: file.name }), "bi-download");
     } catch (error) {
       console.error("Failed to import .hday file:", error);
-      toast.showError("Failed to import file. Please check the format.");
+      toast.showError(m.timeoff_import_failed());
     }
 
     // Reset file input
@@ -371,7 +372,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleExport = useCallback(() => {
     if (events.length === 0) {
-      toast.showError("No events to export");
+      toast.showError(m.timeoff_no_events_export());
       return;
     }
 
@@ -383,7 +384,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           .join("\n") + "\n";
     } catch (error) {
       console.error("Failed to serialize events:", error);
-      toast.showError("Failed to export events");
+      toast.showError(m.timeoff_export_failed());
       return;
     }
 
@@ -397,19 +398,19 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.showSuccess("Exported timeoff.hday", "bi-upload");
+    toast.showSuccess(m.timeoff_exported(), "bi-upload");
   }, [events, toast]);
 
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
-    toast.showSuccess("Undo successful", "bi-arrow-counterclockwise");
+    toast.showSuccess(m.timeoff_undo_success(), "bi-arrow-counterclockwise");
   }, [canUndo, undo, toast]);
 
   const handleRedo = useCallback(() => {
     if (!canRedo) return;
     redo();
-    toast.showSuccess("Redo successful", "bi-arrow-clockwise");
+    toast.showSuccess(m.timeoff_redo_success(), "bi-arrow-clockwise");
   }, [canRedo, redo, toast]);
 
   // Use custom hook for keyboard shortcuts
@@ -457,7 +458,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             onClick={() => setViewMode("table")}
           >
             <i className="bi bi-table me-1" aria-hidden="true"></i>
-            Table
+            {m.timeoff_view_table()}
           </Button>
           <Button
             variant={viewMode === "stats" ? "primary" : "outline-primary"}
@@ -466,7 +467,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             onClick={() => setViewMode("stats")}
           >
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
-            Statistics
+            {m.timeoff_view_statistics()}
           </Button>
           {options.connectionStatus === "connected" && (
             <Button
@@ -476,7 +477,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
               onClick={() => setViewMode("team")}
             >
               <i className="bi bi-people me-1" aria-hidden="true"></i>
-              Team
+              {m.timeoff_view_team()}
             </Button>
           )}
         </ButtonGroup>
@@ -575,10 +576,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       <ConfirmationDialog
         isOpen={showResetConfirm}
-        title="Reset Event Form"
-        message="You have unsaved changes. Resetting the form will clear your edits."
-        confirmLabel="Reset"
-        cancelLabel="Keep Editing"
+        title={m.timeoff_reset_form_title()}
+        message={m.timeoff_reset_form_message()}
+        confirmLabel={m.timeoff_reset_btn()}
+        cancelLabel={m.timeoff_keep_editing()}
         variant="warning"
         onConfirm={handleConfirmResetForm}
         onCancel={() => setShowResetConfirm(false)}
@@ -587,10 +588,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
-        title="Delete Event"
-        message="Are you sure you want to delete this event? You can undo this with the Undo button or Ctrl+Z."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={m.timeoff_delete_event_title()}
+        message={m.timeoff_delete_event_message()}
+        confirmLabel={m.delete()}
+        cancelLabel={m.cancel()}
         variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
@@ -598,10 +599,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       <ConfirmationDialog
         isOpen={showBulkDeleteConfirm}
-        title="Delete Selected Events"
-        message={`Are you sure you want to delete ${selectedIndices.size} selected events? You can undo this with the Undo button or Ctrl+Z.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={m.timeoff_delete_selected_title()}
+        message={m.timeoff_delete_selected_message({ count: selectedIndices.size })}
+        confirmLabel={m.delete()}
+        cancelLabel={m.cancel()}
         variant="danger"
         onConfirm={handleBulkDeleteConfirm}
         onCancel={() => setShowBulkDeleteConfirm(false)}

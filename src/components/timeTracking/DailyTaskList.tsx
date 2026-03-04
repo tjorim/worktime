@@ -15,6 +15,7 @@ import {
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
+import * as m from "../../paraglide/messages.js";
 
 export type EditRequest = {
   task: StoredTimeTrackingTask;
@@ -205,7 +206,7 @@ export function DailyTaskList({
     try {
       const didUpdate = await onUpdateTask(payload);
       if (!didUpdate) {
-        setEditError("Unable to update task. Please review the changes and try again.");
+        setEditError(m.tt_unable_to_update_task());
         return;
       }
       // Handle break toggle if changed — use edited form values directly
@@ -233,7 +234,7 @@ export function DailyTaskList({
       closeEditModal();
     } catch (error) {
       console.error("Failed to update task:", error);
-      setEditError("Failed to update task. Please try again.");
+      setEditError(m.tt_failed_to_update_task());
     }
   };
 
@@ -315,33 +316,33 @@ export function DailyTaskList({
 
     if (isCurrentBreakTask) {
       items.push({
-        label: "Remove break deduction",
+        label: m.tt_remove_break(),
         icon: "bi-x-circle",
         onClick: () => handleToggleBreak(task.id),
       });
     } else if (isTooShort && !isRunning) {
       items.push({
-        label: `Too short for ${BREAK_DURATION_MINUTES}min break`,
+        label: m.tt_too_short_for_break({ minutes: BREAK_DURATION_MINUTES }),
         icon: "bi-cup-hot",
         onClick: () => {},
         disabled: true,
       });
     } else {
       items.push({
-        label: `Includes ${BREAK_DURATION_MINUTES}min break`,
+        label: m.tt_context_includes_break({ minutes: BREAK_DURATION_MINUTES }),
         icon: "bi-cup-hot",
         onClick: () => handleToggleBreak(task.id),
       });
     }
 
     items.push({
-      label: "Edit",
+      label: m.edit(),
       icon: "bi-pencil",
       onClick: () => openEditModal(task),
     });
 
     items.push({
-      label: "Remove",
+      label: m.remove(),
       icon: "bi-trash",
       onClick: () => onRemoveTask(task.id),
       variant: "danger",
@@ -354,8 +355,8 @@ export function DailyTaskList({
     return (
       <EmptyState
         icon="bi-clock-history"
-        title="No Time Entries Yet"
-        description="Use the form above to start tracking time or add a completed task."
+        title={m.tt_no_entries_title()}
+        description={m.tt_no_entries_desc()}
       />
     );
   }
@@ -391,7 +392,7 @@ export function DailyTaskList({
                             color: labelTextColor,
                           }}
                         >
-                          {labelNameById[task.label] ?? "Unknown label"}
+                        {labelNameById[task.label] ?? m.tt_unknown_label()}
                         </span>
                         {isCurrentTask && (
                           <Badge bg="danger" className="ms-2" aria-label="Currently active task">
@@ -465,9 +466,9 @@ export function DailyTaskList({
 
       <ConfirmationDialog
         isOpen={moveBreakConfirm.isOpen}
-        title="Move Break Deduction"
-        message={`The break deduction is currently on "${moveBreakConfirm.fromTaskName}". Move it to this task instead?`}
-        confirmLabel="Move Break"
+        title={m.tt_move_break_title()}
+        message={m.tt_move_break_message({ name: moveBreakConfirm.fromTaskName })}
+        confirmLabel={m.tt_move_break_btn()}
         variant="primary"
         onConfirm={confirmMoveBreak}
         onCancel={cancelMoveBreak}

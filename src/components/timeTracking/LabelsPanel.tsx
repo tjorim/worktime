@@ -17,6 +17,7 @@ import {
 } from "./constants";
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
+import * as m from "../../paraglide/messages.js";
 
 type LabelFormState = {
   name: string;
@@ -92,9 +93,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     setError("");
     try {
       await navigator.clipboard.writeText(JSON.stringify({ labels }, null, 2));
-      toast.showSuccess("Copied labels JSON to clipboard.");
+      toast.showSuccess(m.tt_copied_labels());
     } catch {
-      setError("Copy failed. Please copy the JSON manually from the text area.");
+      setError(m.tt_copy_labels_failed_msg());
     }
   };
 
@@ -104,14 +105,14 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     try {
       const parsed = JSON.parse(labelsJson);
       if (!validateLabelsImportPayload(parsed)) {
-        setError("Invalid labels JSON. Expected an object with a labels array.");
+        setError(m.tt_invalid_labels_structure());
         return;
       }
 
       onUpdateLabels(sanitizeLabels(parsed.labels ?? []));
-      toast.showSuccess("Labels updated.");
+      toast.showSuccess(m.tt_labels_updated());
     } catch {
-      setError("Invalid labels JSON. Please check the format and try again.");
+      setError(m.tt_invalid_labels_format());
     }
   };
 
@@ -130,11 +131,11 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
 
     const name = normalizeLabelName(labelForm.name);
     if (!name) {
-      setError("Label name is required.");
+      setError(m.tt_label_name_required());
       return;
     }
     if (!isHexColor(labelForm.color)) {
-      setError("Label color must be a valid hex value like #3B82F6.");
+      setError(m.tt_label_color_invalid());
       return;
     }
 
@@ -144,7 +145,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         label.name.toLowerCase() === key && (editLabelId === null || label.id !== editLabelId),
     );
     if (hasDuplicate) {
-      setError("Label name must be unique.");
+      setError(m.tt_label_name_unique());
       return;
     }
 
@@ -156,10 +157,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       const nextLabels = [...labels];
       nextLabels[index] = { id: editLabelId, name, color: labelForm.color };
       onUpdateLabels(nextLabels);
-      toast.showSuccess("Label updated.");
+      toast.showSuccess(m.tt_label_updated());
     } else {
       onUpdateLabels([...labels, { id: crypto.randomUUID(), name, color: labelForm.color }]);
-      toast.showSuccess("Label added.");
+      toast.showSuccess(m.tt_label_added());
     }
 
     resetForm();
@@ -172,7 +173,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       return;
     }
     onUpdateLabels(labels.filter((item) => item.id !== pendingDeleteLabel.id));
-    toast.showSuccess("Label deleted.");
+    toast.showSuccess(m.tt_label_deleted());
     if (editLabelId === pendingDeleteLabel.id) {
       setEditLabelId(null);
       resetForm();
@@ -191,7 +192,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 className="mb-0">
           <i className="bi bi-tags me-2" aria-hidden="true"></i>
-          Labels
+          {m.tt_labels_heading()}
         </h5>
         <Button
           size="sm"
@@ -202,7 +203,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
             setModalMode("create");
           }}
         >
-          Add Label
+          {m.tt_add_label_btn()}
         </Button>
       </div>
       <div className="d-flex flex-column gap-3">
@@ -216,10 +217,10 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           <div className="border rounded bg-body-tertiary">
             <EmptyState
               icon="bi-tags"
-              title="No Labels Yet"
-              description="Labels help categorize your time entries. Add your first label to get started."
+              title={m.tt_no_labels_title()}
+              description={m.tt_no_labels_desc()}
               ctaButton={{
-                label: "Add Your First Label",
+                label: m.tt_add_first_label(),
                 onClick: () => {
                   setError("");
                   resetForm();
@@ -265,14 +266,14 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       aria-label={`Edit ${label.name}`}
                       onClick={() => handleEdit(label)}
                     >
-                      Edit
+                      {m.edit()}
                     </Button>
                     {isInUse ? (
                       <OverlayTrigger
                         trigger={["hover", "focus"]}
                         overlay={
                           <Tooltip id={`delete-label-${label.id}`}>
-                            Used by {usageParts.join(" and ")}. Remove them first.
+                            {m.tt_label_in_use_tooltip({ usage: usageParts.join(" and ") })}
                           </Tooltip>
                         }
                       >
@@ -284,7 +285,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                             disabled
                             style={{ pointerEvents: "none" }}
                           >
-                            Delete
+                            {m.delete()}
                           </Button>
                         </span>
                       </OverlayTrigger>
@@ -295,7 +296,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         aria-label={`Delete ${label.name}`}
                         onClick={() => setPendingDeleteLabel(label)}
                       >
-                        Delete
+                        {m.delete()}
                       </Button>
                     )}
                   </div>
@@ -306,7 +307,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         <RawJsonEditor
-          label="Labels"
+          label={m.tt_labels_heading()}
           value={labelsJson}
           formatHint={`{"labels":[{"id":"label-1","name":"Support","color":"#3B82F6"}]}`}
           onChange={setLabelsJson}
@@ -314,7 +315,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
           onApply={handleApplyJson}
         >
           <details className="mt-3">
-            <summary className="small text-muted">Example labels JSON</summary>
+            <summary className="small text-muted">{m.tt_example_labels_json()}</summary>
             <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
               <code>{EXAMPLE_LABELS_JSON}</code>
             </pre>
@@ -324,8 +325,8 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
 
       <LabelModal
         show={modalMode !== null}
-        title={modalMode === "edit" ? "Edit Label" : "Add New Label"}
-        submitLabel={modalMode === "edit" ? "Save Changes" : "Save Label"}
+        title={modalMode === "edit" ? m.tt_edit_label_title() : m.tt_add_label_title()}
+        submitLabel={modalMode === "edit" ? m.tt_save_changes() : m.tt_save_label()}
         value={labelForm}
         onChange={setLabelForm}
         onClose={() => {
@@ -338,9 +339,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
 
       <ConfirmationDialog
         isOpen={pendingDeleteLabel !== null}
-        title="Delete Label"
-        message={pendingDeleteLabel ? `Delete "${pendingDeleteLabel.name}"?` : ""}
-        confirmLabel="Delete"
+        title={m.tt_delete_label_title()}
+        message={pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""}
+        confirmLabel={m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDeleteLabel(null)}

@@ -13,6 +13,7 @@ import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from 
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";
+import * as m from "../../paraglide/messages.js";
 
 type OverviewRow = {
   label: string;
@@ -183,7 +184,7 @@ export function TimeTrackingWeeklyView({
         <div className="d-flex justify-content-between align-items-center mb-2">
           <span className="fw-semibold">
             <i className="bi bi-bar-chart me-2" aria-hidden="true"></i>
-            Weekly Overview
+            {m.tt_weekly_heading()}
           </span>
           <WeekNavigationButtonGroup
             isCurrent={isWeeklyCurrent}
@@ -199,10 +200,10 @@ export function TimeTrackingWeeklyView({
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="text-muted small">
-            Week {weekStart.isoWeek()} ({weekStart.isoWeekYear()})
+            {m.week_label({ week: weekStart.isoWeek(), year: weekStart.isoWeekYear() })}
             {isWeeklyCurrent && (
               <Badge bg="success" className="ms-2" aria-label="Current week">
-                This Week
+                {m.this_week()}
               </Badge>
             )}
           </div>
@@ -213,12 +214,12 @@ export function TimeTrackingWeeklyView({
         {rows.length === 0 && (
           <EmptyState
             icon="bi-bar-chart"
-            title="No Time Tracking Data Yet"
-            description="Start tracking your time in the Daily Log to see your weekly breakdown here."
+            title={m.tt_no_weekly_data_title()}
+            description={m.tt_no_weekly_data_desc()}
             ctaButton={
               onSwitchToDaily
                 ? {
-                    label: "Go to Daily Log",
+                    label: m.tt_go_to_daily_log(),
                     onClick: () => onSwitchToDaily(todayIso),
                     icon: "bi-plus-circle",
                   }
@@ -236,7 +237,7 @@ export function TimeTrackingWeeklyView({
                 {weeklyTargetHours > 0 ? (
                   <>
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="fw-semibold">Weekly Progress</span>
+                      <span className="fw-semibold">{m.tt_weekly_progress()}</span>
                       <span className="text-muted">
                         {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
                         <Badge
@@ -245,7 +246,7 @@ export function TimeTrackingWeeklyView({
                         >
                           {weekTotal >= weeklyTargetHours
                             ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
-                            : `${(weeklyTargetHours - weekTotal).toFixed(1)}h remaining`}
+                            : m.tt_hours_remaining({ hours: (weeklyTargetHours - weekTotal).toFixed(1) })}
                         </Badge>
                       </span>
                     </div>
@@ -258,11 +259,11 @@ export function TimeTrackingWeeklyView({
                   </>
                 ) : (
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">Weekly Progress</span>
+                    <span className="fw-semibold">{m.tt_weekly_progress()}</span>
                     <span className="text-muted">
                       {weekTotal.toFixed(1)}h / 0.0h
                       <Badge bg="secondary" className="ms-2">
-                        Target unavailable
+                        {m.tt_target_unavailable()}
                       </Badge>
                     </span>
                   </div>
@@ -275,7 +276,7 @@ export function TimeTrackingWeeklyView({
               <div className="col-sm-6 col-lg-3">
                 <Card className="text-center h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">Total Hours</div>
+                    <div className="text-muted small text-uppercase mb-1">{m.tt_total_hours()}</div>
                     <div className="h4 mb-0">{weekTotal.toFixed(1)}h</div>
                   </Card.Body>
                 </Card>
@@ -283,7 +284,7 @@ export function TimeTrackingWeeklyView({
               <div className="col-sm-6 col-lg-3">
                 <Card className="text-center h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">Avg. Daily Hours</div>
+                    <div className="text-muted small text-uppercase mb-1">{m.tt_avg_daily_hours()}</div>
                     <div className="h4 mb-0">{avgDailyHours.toFixed(1)}h</div>
                   </Card.Body>
                 </Card>
@@ -291,7 +292,7 @@ export function TimeTrackingWeeklyView({
               <div className="col-sm-6 col-lg-3">
                 <Card className="text-center h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">Days Tracked</div>
+                    <div className="text-muted small text-uppercase mb-1">{m.tt_days_tracked()}</div>
                     <div className="h4 mb-0">{dailyHourTotals.filter((h) => h > 0).length}</div>
                   </Card.Body>
                 </Card>
@@ -299,7 +300,7 @@ export function TimeTrackingWeeklyView({
               <div className="col-sm-6 col-lg-3">
                 <Card className="text-center h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">Top Category</div>
+                    <div className="text-muted small text-uppercase mb-1">{m.tt_top_category()}</div>
                     <div className="h4 mb-0 text-truncate">{labelPercentages[0]?.label ?? "-"}</div>
                   </Card.Body>
                 </Card>
@@ -310,7 +311,7 @@ export function TimeTrackingWeeklyView({
             <div className="mb-4">
               <h6 className="text-uppercase text-muted mb-3">
                 <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
-                Daily Breakdown
+                {m.tt_daily_breakdown()}
               </h6>
               <div className="row g-2">
                 {weekDays.map((day, index) => {
@@ -341,7 +342,7 @@ export function TimeTrackingWeeklyView({
                           {day.label.substring(0, 3)}
                           {isToday && (
                             <Badge bg="primary" className="ms-1">
-                              Today
+                              {m.today()}
                             </Badge>
                           )}
                         </div>
@@ -395,18 +396,18 @@ export function TimeTrackingWeeklyView({
             <div className="mb-4">
               <h6 className="text-uppercase text-muted mb-3">
                 <i className="bi bi-table me-2" aria-hidden="true"></i>
-                Detailed Breakdown
+                {m.tt_detailed_breakdown()}
               </h6>
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
-                    <th scope="col">Day</th>
+                    <th scope="col">{m.tt_col_day()}</th>
                     {labelNames.map((label) => (
                       <th key={label} scope="col">
                         {label}
                       </th>
                     ))}
-                    <th scope="col">Total Hours</th>
+                    <th scope="col">{m.tt_col_total_hours()}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -443,7 +444,7 @@ export function TimeTrackingWeeklyView({
                           )}
                           {isToday && (
                             <Badge bg="primary" className="ms-2" pill>
-                              Today
+                              {m.today()}
                             </Badge>
                           )}
                           {location && (
@@ -480,7 +481,7 @@ export function TimeTrackingWeeklyView({
               <div className="mb-4">
                 <h6 className="text-uppercase text-muted mb-3">
                   <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
-                  Category Breakdown
+                  {m.tt_category_breakdown()}
                 </h6>
                 <div className="row g-3">
                   {labelPercentages.map((item) => (
@@ -502,7 +503,7 @@ export function TimeTrackingWeeklyView({
                             </div>
                             <Badge bg="secondary">{item.percentage.toFixed(0)}%</Badge>
                           </div>
-                          <div className="h5 mb-2">{item.hours.toFixed(1)} hours</div>
+                          <div className="h5 mb-2">{item.hours.toFixed(1)} {m.tt_hours_unit()}</div>
                           <ProgressBar
                             now={item.percentage}
                             style={{ height: "8px", backgroundColor: item.color, opacity: 0.3 }}
@@ -520,7 +521,7 @@ export function TimeTrackingWeeklyView({
               <Card.Body>
                 <h6 className="text-uppercase text-muted mb-3">
                   <i className="bi bi-list-check me-2" aria-hidden="true"></i>
-                  Weekly Summary
+                  {m.tt_weekly_summary_heading()}
                 </h6>
                 <div className="row">
                   <div className="col-md-6">
@@ -528,17 +529,17 @@ export function TimeTrackingWeeklyView({
                       {Object.entries(summary).map(([label, hours]) => (
                         <li key={label} className="mb-2">
                           <span className="text-muted">{label}:</span>{" "}
-                          <span className="fw-semibold">{hours.toFixed(2)} hours</span>
+                          <span className="fw-semibold">{hours.toFixed(2)} {m.tt_hours_unit()}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="col-md-6">
                     <div className="h5 mb-0">
-                      Total: <span className="text-primary">{weekTotal.toFixed(2)} hours</span>
+                      Total: <span className="text-primary">{weekTotal.toFixed(2)} {m.tt_hours_unit()}</span>
                     </div>
                     {weeklyTargetHours !== undefined && (
-                      <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} hours</div>
+                      <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} {m.tt_hours_unit()}</div>
                     )}
                   </div>
                 </div>

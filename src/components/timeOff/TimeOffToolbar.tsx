@@ -2,6 +2,7 @@ import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
+import * as m from "../../paraglide/messages.js";
 
 type TimeOffToolbarProps = {
   // Undo/Redo
@@ -53,16 +54,16 @@ function TimeOffToolbarComponent({
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <span className="fw-semibold">
           <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
-          Time Off Management
+          {m.timeoff_management_heading()}
         </span>
         <div className="d-flex flex-wrap gap-2">
           <Button variant="outline-primary" size="sm" onClick={onImport} aria-label="Import events">
             <i className="bi bi-download me-1" aria-hidden="true"></i>
-            Import
+            {m.timeoff_import_btn()}
           </Button>
           <Button variant="outline-primary" size="sm" onClick={onExport} aria-label="Export events">
             <i className="bi bi-upload me-1" aria-hidden="true"></i>
-            Export
+            {m.timeoff_export_btn()}
           </Button>
           <Button
             variant="outline-secondary"
@@ -72,7 +73,7 @@ function TimeOffToolbarComponent({
             aria-label="Undo last change"
           >
             <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-            Undo
+            {m.timeoff_undo_btn()}
           </Button>
           <Button
             variant="outline-secondary"
@@ -82,7 +83,7 @@ function TimeOffToolbarComponent({
             aria-label="Redo last change"
           >
             <i className="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
-            Redo
+            {m.timeoff_redo_btn()}
           </Button>
         </div>
       </div>
@@ -91,7 +92,7 @@ function TimeOffToolbarComponent({
           <>
             <Button variant="primary" size="sm" onClick={onAddEvent} aria-label="Add event">
               <i className="bi bi-plus-lg me-1" aria-hidden="true"></i>
-              Add Event
+              {m.timeoff_add_event_btn()}
             </Button>
             <Button
               variant="outline-danger"
@@ -101,7 +102,7 @@ function TimeOffToolbarComponent({
               aria-label="Delete selected events"
             >
               <i className="bi bi-trash me-1" aria-hidden="true"></i>
-              Delete Selected
+              {m.timeoff_delete_selected_btn()}
             </Button>
             <Button
               variant="outline-secondary"
@@ -110,7 +111,7 @@ function TimeOffToolbarComponent({
               disabled={eventCount === 0 || selectedCount === eventCount}
               aria-label="Select all events"
             >
-              Select All
+              {m.timeoff_select_all_btn()}
             </Button>
             <Button
               variant="outline-secondary"
@@ -119,7 +120,7 @@ function TimeOffToolbarComponent({
               disabled={selectedCount === 0}
               aria-label="Clear selection"
             >
-              Clear Selection
+              {m.timeoff_clear_selection_btn()}
             </Button>
           </>
         )}

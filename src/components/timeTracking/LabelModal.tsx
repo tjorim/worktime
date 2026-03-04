@@ -1,6 +1,7 @@
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import * as m from "../../paraglide/messages.js";
 
 type LabelForm = {
   name: string;
@@ -40,17 +41,17 @@ export function LabelModal({
           }}
         >
           <Form.Group controlId="labelName" className="mb-3">
-            <Form.Label>Label name</Form.Label>
+            <Form.Label>{m.form_label_name()}</Form.Label>
             <Form.Control
               value={value.name}
               onChange={(event) => onChange({ ...value, name: event.target.value })}
-              placeholder="e.g., Support"
+              placeholder={m.form_label_name_placeholder()}
               aria-required="true"
               required
             />
           </Form.Group>
           <Form.Group controlId="labelColor">
-            <Form.Label>Label color</Form.Label>
+            <Form.Label>{m.form_label_color()}</Form.Label>
             <div className="d-flex gap-2 align-items-center">
               <Form.Control
                 type="color"
@@ -65,7 +66,7 @@ export function LabelModal({
                 value={value.color}
                 onChange={(event) => onChange({ ...value, color: event.target.value })}
                 placeholder="#3B82F6"
-                aria-label="Label color (hex)"
+                aria-label={m.form_label_color_hex_aria()}
                 aria-required="true"
                 required
               />
@@ -75,7 +76,7 @@ export function LabelModal({
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" onClick={onClose}>
-          Cancel
+          {m.cancel()}
         </Button>
         <Button type="submit" form="labelForm" variant="primary">
           {submitLabel}

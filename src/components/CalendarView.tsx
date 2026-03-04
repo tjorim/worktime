@@ -28,6 +28,7 @@ import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { LocationYearSummary } from "./calendar/LocationYearSummary";
 import { OtherLocationModal } from "./calendar/OtherLocationModal";
+import * as m from "../paraglide/messages.js";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
@@ -313,9 +314,9 @@ export function CalendarView({
       let displayLabel = shift.name;
       if (!actuallyWorking && shift.code !== "O") {
         if (hasTimeOffEvent(date, calendarEvents)) {
-          displayLabel = "Time Off";
+          displayLabel = m.calendar_time_off();
         } else if (isPublicHolidayForShift(date, effectiveTeam, scheduleType, publicHolidayMap)) {
-          displayLabel = "Public Holiday";
+          displayLabel = m.calendar_public_holiday();
         }
       }
 
@@ -341,7 +342,7 @@ export function CalendarView({
       } else {
         const success = setLocationForDate(date, location);
         if (!success) {
-          toast.showError("Configure your country settings to track work locations");
+          toast.showError(m.calendar_configure_country());
         }
       }
     },
@@ -357,7 +358,7 @@ export function CalendarView({
     (countryCode: string, label?: string) => {
       const success = setLocationForDate(otherLocationDate, "other", { countryCode, label });
       if (!success) {
-        toast.showError("Could not save location — check the country code");
+        toast.showError(m.calendar_could_not_save_location());
         return;
       }
       setShowOtherLocationModal(false);
@@ -385,12 +386,12 @@ export function CalendarView({
         <Card.Header className="d-flex flex-wrap align-items-center justify-content-between gap-2">
           <span className="fw-semibold">
             <i className="bi bi-calendar3 me-2" aria-hidden="true"></i>
-            My Working Calendar
+            {m.calendar_heading()}
           </span>
           {!getShiftForDate ? (
             <small className="text-muted">
               <i className="bi bi-info-circle me-1" aria-hidden="true"></i>
-              Select your schedule to see your working calendar
+              {m.calendar_select_schedule_hint()}
             </small>
           ) : (
             <div className="d-flex align-items-center gap-2">
@@ -403,7 +404,7 @@ export function CalendarView({
                   title="Toggle annual location summary"
                 >
                   <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
-                  Annual summary
+                  {m.calendar_annual_summary()}
                 </Button>
               )}
               <CalendarLegend showEventTypes={timeOffEnabled} />
@@ -415,7 +416,7 @@ export function CalendarView({
             <div className="text-center">
               <EmptyState
                 icon="bi-calendar3"
-                title="Welcome to Your Working Calendar!"
+                title={m.calendar_welcome_title()}
                 iconSize="2.5rem"
                 description={
                   <>
@@ -438,7 +439,7 @@ export function CalendarView({
                 <div>
                   <Button size="sm" variant="outline-secondary" onClick={onOpenScheduleTab}>
                     <i className="bi bi-calendar-week me-2" aria-hidden="true"></i>
-                    View Schedule
+                    {m.calendar_view_schedule_btn()}
                   </Button>
                 </div>
               )}

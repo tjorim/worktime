@@ -9,6 +9,7 @@ import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
+import * as m from "../../paraglide/messages.js";
 
 type TaskEntryFormProps = {
   labels: TimeTrackingLabel[];
@@ -73,7 +74,7 @@ export function TaskEntryForm({
     <Row className="g-3 align-items-end">
       <Col md={3}>
         <Form.Group controlId="timeTrackerTask">
-          <Form.Label>Task</Form.Label>
+          <Form.Label>{m.form_task()}</Form.Label>
           <Form.Control
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
@@ -83,14 +84,14 @@ export function TaskEntryForm({
       </Col>
       <Col md={3}>
         <Form.Group controlId="timeTrackerLabel">
-          <Form.Label>Label</Form.Label>
+          <Form.Label>{m.form_label()}</Form.Label>
           <ReactSelect<LabelOption>
             unstyled
             isClearable
             isSearchable
             inputId="timeTrackerLabel"
             isDisabled={labels.length === 0}
-            placeholder={labels.length === 0 ? "Add labels first" : "Choose a label"}
+            placeholder={labels.length === 0 ? m.tt_add_labels_first() : m.tt_choose_label()}
             options={labels.map((item) => ({ value: item.id, label: item.name }))}
             value={selectedLabelOption}
             onChange={(selected) => onLabelChange(selected?.value ?? "")}
@@ -100,7 +101,7 @@ export function TaskEntryForm({
       </Col>
       <Col md={2}>
         <Form.Group controlId="timeTrackerStart">
-          <Form.Label>Start</Form.Label>
+          <Form.Label>{m.form_start()}</Form.Label>
           <Form.Control
             type="time"
             value={start}
@@ -111,7 +112,7 @@ export function TaskEntryForm({
       </Col>
       <Col md={2}>
         <Form.Group controlId="timeTrackerStop">
-          <Form.Label>Stop</Form.Label>
+          <Form.Label>{m.form_stop()}</Form.Label>
           <Form.Control
             type="time"
             value={stop}
@@ -131,14 +132,14 @@ export function TaskEntryForm({
               onClick={onStartNow}
               disabled={!canStartNow}
             >
-              Start Now
+              {m.tt_start_now()}
             </Button>,
           )}
           {renderDisabledTooltipButton(
             "add-task",
             !canSubmit ? addDisabledReason : undefined,
             <Button className="w-100" onClick={onSubmit} disabled={!canSubmit}>
-              Add Task
+              {m.tt_add_task()}
             </Button>,
           )}
         </div>

@@ -14,6 +14,7 @@ import { TimeOffToolbar } from "./TimeOffToolbar";
 import { TimeOffRawView } from "./TimeOffRawView";
 import { Weekday } from "../../data/timeoffConstants";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
+import * as m from "../../paraglide/messages.js";
 
 /**
  * Weekday names for display (Monday through Sunday, ISO weekday 1-7).
@@ -53,7 +54,7 @@ function formatEventDate(event: HdayEvent): React.ReactNode {
       event.weekday <= Weekday.Sunday
         ? WEEKDAY_NAMES[event.weekday - 1]
         : "Unknown";
-    return `Every ${weekdayName}`;
+    return m.timeoff_every_weekday({ day: weekdayName ?? "Unknown" });
   }
   return null;
 }
@@ -143,10 +144,8 @@ export function TimeOffTableView({
           {events.length === 0 ? (
             <EmptyState
               icon="bi-calendar-x"
-              title="No time-off events yet"
-              description={
-                'Click "Add Event" to create your first event, or "Import" to load an existing .hday file.'
-              }
+              title={m.timeoff_no_events_title()}
+              description={m.timeoff_no_events_desc()}
             />
           ) : (
             <Table responsive hover>
@@ -168,11 +167,11 @@ export function TimeOffTableView({
                       }}
                     />
                   </th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Date / Pattern</th>
-                  <th scope="col">Title</th>
-                  <th scope="col">Flags</th>
-                  <th scope="col">Actions</th>
+                  <th scope="col">{m.timeoff_col_type()}</th>
+                  <th scope="col">{m.timeoff_col_date_pattern()}</th>
+                  <th scope="col">{m.timeoff_col_title()}</th>
+                  <th scope="col">{m.timeoff_col_flags()}</th>
+                  <th scope="col">{m.timeoff_col_actions()}</th>
                 </tr>
               </thead>
               <tbody>
@@ -209,7 +208,7 @@ export function TimeOffTableView({
                         {formatEventDate(event)}
                         {event.type === "unknown" && (
                           <>
-                            <span className="text-muted">Unknown format</span>
+                            <span className="text-muted">{m.timeoff_unknown_format()}</span>
                             <span id={unknownDescriptionId} className="visually-hidden">
                               Unknown event format. Remove or re-import this entry to resolve the
                               issue.

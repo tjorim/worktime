@@ -2,6 +2,7 @@ import { useId } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import * as m from "../../paraglide/messages.js";
 
 type TimeOffRawViewProps = {
   rawText: string;
@@ -27,7 +28,7 @@ export function TimeOffRawView({
       <Accordion.Item eventKey="raw-editor">
         <Accordion.Header>
           <i className="bi bi-code-square me-2" aria-hidden="true"></i>
-          Raw .hday Editor
+          {m.timeoff_raw_editor_heading()}
           {isDirty && (
             <span className="badge bg-warning text-dark ms-2" title="Unsaved changes">
               •
@@ -67,11 +68,11 @@ export function TimeOffRawView({
           <div className="d-flex flex-wrap gap-2">
             <Button variant="primary" onClick={onApply}>
               <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
-              Apply raw content
+              {m.timeoff_apply_raw()}
             </Button>
             <Button variant="outline-secondary" onClick={onReset} disabled={!isDirty}>
               <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-              Reset
+              {m.timeoff_reset_btn()}
             </Button>
           </div>
         </Accordion.Body>

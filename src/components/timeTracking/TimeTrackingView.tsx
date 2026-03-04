@@ -2,6 +2,7 @@ import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import { useEffect, useMemo, useState } from "react";
+import * as m from "../../paraglide/messages.js";
 import { useSettings } from "../../contexts/SettingsContext";
 import { dayjs } from "../../utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "../../hooks/useTimeTrackingStorage";
@@ -68,7 +69,7 @@ export function TimeTrackingView() {
             onClick={() => setViewMode("daily")}
           >
             <i className="bi bi-list-check me-1" aria-hidden="true"></i>
-            Daily Log
+            {m.tt_daily_log()}
           </Button>
           <Button
             variant={viewMode === "weekly" ? "primary" : "outline-primary"}
@@ -77,7 +78,7 @@ export function TimeTrackingView() {
             onClick={() => setViewMode("weekly")}
           >
             <i className="bi bi-bar-chart-line me-1" aria-hidden="true"></i>
-            Weekly Summary
+            {m.tt_weekly_summary()}
           </Button>
           <Button
             variant={viewMode === "config" ? "primary" : "outline-primary"}
@@ -86,7 +87,7 @@ export function TimeTrackingView() {
             onClick={() => setViewMode("config")}
           >
             <i className="bi bi-gear me-1" aria-hidden="true"></i>
-            Config
+            {m.tt_config()}
           </Button>
         </ButtonGroup>
       </div>
@@ -124,7 +125,7 @@ export function TimeTrackingView() {
         <Card className="shadow-sm">
           <Card.Header className="fw-semibold">
             <i className="bi bi-gear me-2" aria-hidden="true"></i>
-            Time Tracking Configuration
+            {m.tt_config_heading()}
           </Card.Header>
           <Card.Body>
             <TimeTrackingConfigView
