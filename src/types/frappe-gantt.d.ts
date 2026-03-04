@@ -29,6 +29,7 @@ declare module "frappe-gantt" {
     today_button?: boolean;
     ignore?: string | string[];
     holidays?: Record<string, string | string[]>;
+    language?: string;
     popup?: (ctx: GanttPopupContext) => void;
     popup_on?: "click" | "hover";
     on_click?: (task: GanttTaskLike) => void;

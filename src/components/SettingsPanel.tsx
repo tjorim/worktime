@@ -22,6 +22,8 @@ import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
+import * as m from "../paraglide/messages.js";
+import { getLocale, setLocale } from "../paraglide/runtime.js";
 
 interface CountrySelectItemProps {
   label: string;
@@ -143,8 +145,8 @@ export function SettingsPanel({
     if (versionClickCountRef.current === 3) {
       toggleDevMode();
       const message = isDevMode
-        ? "Developer mode disabled"
-        : "Developer mode enabled - check Information section";
+        ? m.developer_mode_disabled()
+        : m.developer_mode_enabled();
       toast.showInfo(message);
       versionClickCountRef.current = 0;
       versionClickTimeoutRef.current = null;
@@ -175,7 +177,9 @@ export function SettingsPanel({
     setClearTimeOffData(false);
   };
 
+
   const handleConfirmReset = () => {
+    const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
     let settingsCleared = false;
     let timeTrackingCleared = false;
     let timeOffCleared = false;
@@ -187,7 +191,7 @@ export function SettingsPanel({
       settingsCleared = true;
     } catch (error) {
       console.error("Failed to reset settings:", error);
-      errors.push("settings");
+      errors.push(m.reset_item_settings());
     }
 
     // Attempt time tracking data clearing if requested
@@ -199,7 +203,7 @@ export function SettingsPanel({
         timeTrackingCleared = true;
       } catch (error) {
         console.error("Failed to clear time tracking data:", error);
-        errors.push("time tracking data");
+        errors.push(m.reset_item_time_tracking_data());
       }
     }
 
@@ -211,7 +215,7 @@ export function SettingsPanel({
         timeOffCleared = true;
       } catch (error) {
         console.error("Failed to clear time off data:", error);
-        errors.push("time off data");
+        errors.push(m.reset_item_time_off_data());
       }
     }
 
@@ -226,21 +230,24 @@ export function SettingsPanel({
     if (anythingSucceeded && !somethingFailed) {
       // All attempted operations succeeded
       const parts: string[] = [];
-      if (settingsCleared) parts.push("Settings");
-      if (timeTrackingCleared) parts.push("time tracking data");
-      if (timeOffCleared) parts.push("time off data");
-      toast.showSuccess(`${parts.join(" and ")} cleared`, "bi-trash");
+      if (settingsCleared) parts.push(m.reset_item_settings());
+      if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
+      if (timeOffCleared) parts.push(m.reset_item_time_off_data());
+      toast.showSuccess(m.data_cleared({ items: listFormat.format(parts) }), "bi-trash");
     } else if (!anythingSucceeded && somethingFailed) {
       // All attempted operations failed
-      toast.showWarning(`Failed to clear ${errors.join(", ")}. Please try again.`);
+      toast.showWarning(m.failed_to_clear({ items: listFormat.format(errors) }));
     } else if (anythingSucceeded && somethingFailed) {
       // Mixed results: some succeeded, some failed
       const successParts: string[] = [];
-      if (settingsCleared) successParts.push("settings");
-      if (timeTrackingCleared) successParts.push("time tracking data");
-      if (timeOffCleared) successParts.push("time off data");
+      if (settingsCleared) successParts.push(m.reset_item_settings());
+      if (timeTrackingCleared) successParts.push(m.reset_item_time_tracking_data());
+      if (timeOffCleared) successParts.push(m.reset_item_time_off_data());
       toast.showWarning(
-        `Cleared ${successParts.join(", ")} but failed to clear ${errors.join(", ")}`,
+        m.cleared_but_failed_to_clear({
+          clearedItems: listFormat.format(successParts),
+          failedItems: listFormat.format(errors),
+        }),
       );
     }
   };
@@ -252,12 +259,12 @@ export function SettingsPanel({
       const text = await file.text();
       const parsed = JSON.parse(text);
       if (!validateAppBackupPayload(parsed)) {
-        toast.showError("Restore failed. Please select a valid backup file.");
+        toast.showError(m.restore_failed());
         return;
       }
       restoreAppBackup(parsed);
     } catch {
-      toast.showError("Restore failed. Please select a valid backup file.");
+      toast.showError(m.restore_failed());
     } finally {
       event.target.value = "";
     }
@@ -282,8 +289,8 @@ export function SettingsPanel({
   // Share handler
   const handleShareApp = () => {
     shareApp(
-      () => toast?.showSuccess("Share dialog opened or link copied!"),
-      () => toast?.showError("Could not share. Try copying the link manually."),
+      () => toast?.showSuccess(m.share_success()),
+      () => toast?.showError(m.share_failed()),
     );
   };
 
@@ -293,7 +300,7 @@ export function SettingsPanel({
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>
             <i className="bi bi-gear me-2"></i>
-            Settings
+            {m.settings_title()}
           </Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body className="p-0 d-flex flex-column">
@@ -302,16 +309,16 @@ export function SettingsPanel({
             <div className="p-3">
               <h6 className="text-muted mb-3">
                 <i className="bi bi-sliders me-2"></i>
-                Preferences
+                {m.preferences_title()}
               </h6>
               <ListGroup variant="flush">
                 <ListGroup.Item className="">
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Time Format</div>
-                      <small className="text-muted">24-hour or 12-hour display</small>
+                      <div className="fw-medium">{m.time_format_label()}</div>
+                      <small className="text-muted">{m.time_format_description()}</small>
                     </div>
-                    <ButtonGroup size="sm" aria-label="Time format">
+                    <ButtonGroup size="sm" aria-label={m.time_format_label()}>
                       <Button
                         variant={settings.timeFormat === "24h" ? "primary" : "outline-secondary"}
                         aria-pressed={settings.timeFormat === "24h"}
@@ -332,17 +339,17 @@ export function SettingsPanel({
                 <ListGroup.Item className="">
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Theme</div>
-                      <small className="text-muted">App appearance</small>
+                      <div className="fw-medium">{m.theme_label()}</div>
+                      <small className="text-muted">{m.theme_description()}</small>
                     </div>
-                    <ButtonGroup size="sm" aria-label="Theme">
+                    <ButtonGroup size="sm" aria-label={m.theme_label()}>
                       <Button
                         variant={settings.theme === "auto" ? "primary" : "outline-secondary"}
                         aria-pressed={settings.theme === "auto"}
                         onClick={() => updateTheme("auto")}
                       >
                         <i className="bi bi-circle-half me-1"></i>
-                        Auto
+                        {m.theme_auto()}
                       </Button>
                       <Button
                         variant={settings.theme === "light" ? "primary" : "outline-secondary"}
@@ -350,7 +357,7 @@ export function SettingsPanel({
                         onClick={() => updateTheme("light")}
                       >
                         <i className="bi bi-sun me-1"></i>
-                        Light
+                        {m.theme_light()}
                       </Button>
                       <Button
                         variant={settings.theme === "dark" ? "primary" : "outline-secondary"}
@@ -358,7 +365,31 @@ export function SettingsPanel({
                         onClick={() => updateTheme("dark")}
                       >
                         <i className="bi bi-moon me-1"></i>
-                        Dark
+                        {m.theme_dark()}
+                      </Button>
+                    </ButtonGroup>
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item className="">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">{m.language_label()}</div>
+                      <small className="text-muted">{m.language_description()}</small>
+                    </div>
+                    <ButtonGroup size="sm" aria-label={m.language_label()}>
+                      <Button
+                        variant={getLocale() === "en" ? "primary" : "outline-secondary"}
+                        aria-pressed={getLocale() === "en"}
+                        onClick={() => setLocale("en")}
+                      >
+                        EN
+                      </Button>
+                      <Button
+                        variant={getLocale() === "nl" ? "primary" : "outline-secondary"}
+                        aria-pressed={getLocale() === "nl"}
+                        onClick={() => setLocale("nl")}
+                      >
+                        NL
                       </Button>
                     </ButtonGroup>
                   </div>
@@ -372,14 +403,14 @@ export function SettingsPanel({
             <div className="p-3">
               <h6 className="text-muted mb-3">
                 <i className="bi bi-grid me-2"></i>
-                Features
+                {m.features_title()}
               </h6>
               <ListGroup variant="flush">
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Time Off</div>
-                      <small className="text-muted">Manage time off events and vacation days</small>
+                      <div className="fw-medium">{m.time_off_label()}</div>
+                      <small className="text-muted">{m.time_off_description()}</small>
                     </div>
                     <Form.Check
                       type="switch"
@@ -394,9 +425,9 @@ export function SettingsPanel({
                   <div className="d-flex flex-column gap-2">
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
-                        <div className="fw-medium">Time Tracking</div>
+                        <div className="fw-medium">{m.time_tracking_label()}</div>
                         <small className="text-muted">
-                          Enable daily logging and weekly summaries
+                          {m.time_tracking_description()}
                         </small>
                       </div>
                       <Form.Check
@@ -412,9 +443,9 @@ export function SettingsPanel({
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Personal Gantt</div>
+                      <div className="fw-medium">{m.personal_gantt_label()}</div>
                       <small className="text-muted">
-                        Timeline view for tracking personal tasks and projects
+                        {m.personal_gantt_description()}
                       </small>
                     </div>
                     <Form.Check
@@ -429,9 +460,9 @@ export function SettingsPanel({
                 <ListGroup.Item>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">Cross-Border Tracking</div>
+                      <div className="fw-medium">{m.cross_border_tracking_label()}</div>
                       <small className="text-muted">
-                        Track work location per day for tax reporting
+                        {m.cross_border_tracking_description()}
                       </small>
                     </div>
                     <Form.Check
@@ -453,25 +484,25 @@ export function SettingsPanel({
               <div className="p-3">
                 <h6 className="text-muted mb-3">
                   <i className="bi bi-globe me-2"></i>
-                  Cross-Border Setup
+                  {m.cross_border_setup_label()}
                 </h6>
                 <small className="text-muted d-block mb-3">
-                  Configure countries for work location tracking
+                  {m.cross_border_setup_description()}
                 </small>
                 <ListGroup variant="flush">
                   <CountrySelectItem
-                    label="Home Country"
-                    description="Country where you are based"
+                    label={m.home_country_label()}
+                    description={m.home_country_description()}
                     value={settings.homeCountry ?? null}
                     onUpdate={updateHomeCountry}
-                    ariaLabel="Home country"
+                    ariaLabel={m.home_country_label()}
                   />
                   <CountrySelectItem
-                    label="Office Country"
-                    description="Country where your office is located"
+                    label={m.office_country_label()}
+                    description={m.office_country_description()}
                     value={settings.officeCountry ?? null}
                     onUpdate={updateOfficeCountry}
-                    ariaLabel="Office country"
+                    ariaLabel={m.office_country_label()}
                   />
                 </ListGroup>
               </div>
@@ -483,7 +514,7 @@ export function SettingsPanel({
             <div className="p-3">
               <h6 className="text-muted mb-3">
                 <i className="bi bi-info-circle me-2"></i>
-                Information
+                {m.information_title()}
               </h6>
               <ListGroup variant="flush">
                 <ListGroup.Item action onClick={handleChangelogClick}>
@@ -491,9 +522,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-stars me-2"></i>
-                        What's New
+                        {m.whats_new_label()}
                       </div>
-                      <small className="text-muted">Recent updates and changes</small>
+                      <small className="text-muted">{m.whats_new_description()}</small>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
@@ -503,9 +534,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-question-circle me-2"></i>
-                        About & Help
+                        {m.about_help_label()}
                       </div>
-                      <small className="text-muted">Version info, user guide, and support</small>
+                      <small className="text-muted">{m.about_help_description()}</small>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
@@ -515,9 +546,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-keyboard me-2"></i>
-                        Keyboard Shortcuts
+                        {m.keyboard_shortcuts_label()}
                       </div>
-                      <small className="text-muted">Navigation and action shortcuts</small>
+                      <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
@@ -528,9 +559,9 @@ export function SettingsPanel({
                       <div>
                         <div className="fw-medium">
                           <i className="bi bi-code-slash me-2"></i>
-                          Developer Options
+                          {m.developer_options_label()}
                         </div>
-                        <small className="text-muted">Backend API configuration</small>
+                        <small className="text-muted">{m.developer_options_description()}</small>
                       </div>
                       <i className="bi bi-chevron-right text-muted"></i>
                     </div>
@@ -545,7 +576,7 @@ export function SettingsPanel({
             <div className="p-3">
               <h6 className="text-muted mb-3">
                 <i className="bi bi-lightning me-2"></i>
-                Quick Actions
+                {m.quick_actions_title()}
               </h6>
               <ListGroup variant="flush">
                 {onChangeSchedule && (
@@ -554,9 +585,9 @@ export function SettingsPanel({
                       <div>
                         <div className="fw-medium">
                           <i className="bi bi-calendar-week me-2"></i>
-                          Select Schedule
+                          {m.select_schedule_label()}
                         </div>
-                        <small className="text-muted">Pick a different roster</small>
+                        <small className="text-muted">{m.select_schedule_description()}</small>
                       </div>
                       <i className="bi bi-chevron-right text-muted"></i>
                     </div>
@@ -568,9 +599,9 @@ export function SettingsPanel({
                       <div>
                         <div className="fw-medium">
                           <i className="bi bi-person-gear me-2"></i>
-                          Select Team
+                          {m.select_team_label()}
                         </div>
-                        <small className="text-muted">Switch to a different team</small>
+                        <small className="text-muted">{m.select_team_description()}</small>
                       </div>
                       <i className="bi bi-chevron-right text-muted"></i>
                     </div>
@@ -581,9 +612,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-share me-2"></i>
-                        Share App
+                        {m.share_app_label()}
                       </div>
-                      <small className="text-muted">Send Worktime to colleagues</small>
+                      <small className="text-muted">{m.share_app_description()}</small>
                     </div>
                     <i className="bi bi-share text-muted"></i>
                   </div>
@@ -593,9 +624,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-download me-2"></i>
-                        Backup App Data
+                        {m.backup_app_data_label()}
                       </div>
-                      <small className="text-muted">Export a backup of your data</small>
+                      <small className="text-muted">{m.backup_app_data_description()}</small>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
@@ -605,9 +636,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-upload me-2"></i>
-                        Restore Backup
+                        {m.restore_backup_label()}
                       </div>
-                      <small className="text-muted">Restore from a backup file</small>
+                      <small className="text-muted">{m.restore_backup_description()}</small>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
@@ -617,9 +648,9 @@ export function SettingsPanel({
                     <div>
                       <div className="fw-medium">
                         <i className="bi bi-trash me-2"></i>
-                        Reset Settings
+                        {m.reset_settings_label()}
                       </div>
-                      <small className="text-muted">Clear all preferences and data</small>
+                      <small className="text-muted">{m.reset_settings_description()}</small>
                     </div>
                     <i className="bi bi-arrow-clockwise text-danger"></i>
                   </div>
@@ -636,11 +667,11 @@ export function SettingsPanel({
               onClick={handleVersionClick}
               onKeyDown={handleVersionKeyDown}
               style={{ cursor: "pointer", userSelect: "none" }}
-              aria-label={`Worktime version ${CONFIG.VERSION}`}
+              aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
             >
-              Worktime v{CONFIG.VERSION}
+              {m.footer_version({ version: CONFIG.VERSION })}
             </button>
-            <small className="text-muted">Built with ❤️ by Jorim Tielemans</small>
+            <small className="text-muted">{m.footer_built_by()}</small>
           </div>
         </Offcanvas.Body>
       </Offcanvas>
@@ -676,15 +707,15 @@ export function SettingsPanel({
       {/* Reset Confirmation Modal */}
       <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Reset Settings</Modal.Title>
+          <Modal.Title>{m.reset_settings_modal_title()}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p className="mb-3">This will reset your app preferences and onboarding state.</p>
+          <p className="mb-3">{m.reset_settings_modal_body()}</p>
           <Form>
             <Form.Check
               id="reset-clear-time-tracking"
               type="checkbox"
-              label="Also clear time tracking data (tasks, templates, labels)"
+              label={m.reset_also_clear_time_tracking()}
               checked={clearTimeTrackingData}
               onChange={(event) => setClearTimeTrackingData(event.target.checked)}
             />
@@ -692,7 +723,7 @@ export function SettingsPanel({
               id="reset-clear-time-off"
               type="checkbox"
               className="mt-2"
-              label="Also clear time off events (.hday data)"
+              label={m.reset_also_clear_time_off()}
               checked={clearTimeOffData}
               onChange={(event) => setClearTimeOffData(event.target.checked)}
             />
@@ -700,23 +731,23 @@ export function SettingsPanel({
           {(clearTimeTrackingData || clearTimeOffData) && (
             <Alert variant="warning" className="mt-3 mb-0">
               <div className="fw-semibold mb-1">
-                Warning: this data will be permanently removed.
+                {m.reset_warning()}
               </div>
               {clearTimeTrackingData && (
-                <div>Time tracking tasks, templates, and labels will be deleted.</div>
+                <div>{m.reset_warning_time_tracking()}</div>
               )}
               {clearTimeOffData && (
-                <div>All imported and created time off events (.hday content) will be deleted.</div>
+                <div>{m.reset_warning_time_off()}</div>
               )}
             </Alert>
           )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="outline-secondary" onClick={handleCloseResetModal}>
-            Cancel
+            {m.cancel()}
           </Button>
           <Button variant="danger" onClick={handleConfirmReset}>
-            Reset Now
+            {m.reset_now()}
           </Button>
         </Modal.Footer>
       </Modal>

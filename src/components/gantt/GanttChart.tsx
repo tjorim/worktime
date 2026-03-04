@@ -3,6 +3,7 @@ import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask } from "../../types/gantt";
 import { EmptyState } from "../shared/EmptyState";
 import type { GanttViewMode } from "../../contexts/SettingsContext";
+import { getLocale } from "../../paraglide/runtime.js";
 
 const POPUP_DATE_FORMAT = "MMM D";
 
@@ -108,6 +109,7 @@ export function GanttChart({
         today_button: true,
         ignore: "weekend",
         holidays: holidaysObj,
+        language: getLocale(),
         popup_on: "hover",
         popup: (ctx) => {
           ctx.set_title(escapeHtml(ctx.task.name));
