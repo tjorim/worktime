@@ -51,6 +51,9 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+      i18n:
+        patterns:
+          - "@inlang/*"
 
   # Monitor Python dependencies for backend API
   - package-ecosystem: "pip"
