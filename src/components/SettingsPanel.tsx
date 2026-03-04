@@ -178,11 +178,8 @@ export function SettingsPanel({
   };
 
 
-  const formatLocalizedList = (items: string[]) => {
-    return new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" }).format(items);
-  };
-
   const handleConfirmReset = () => {
+    const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
     let settingsCleared = false;
     let timeTrackingCleared = false;
     let timeOffCleared = false;
@@ -236,10 +233,10 @@ export function SettingsPanel({
       if (settingsCleared) parts.push(m.reset_item_settings());
       if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
       if (timeOffCleared) parts.push(m.reset_item_time_off_data());
-      toast.showSuccess(m.data_cleared({ items: formatLocalizedList(parts) }), "bi-trash");
+      toast.showSuccess(m.data_cleared({ items: listFormat.format(parts) }), "bi-trash");
     } else if (!anythingSucceeded && somethingFailed) {
       // All attempted operations failed
-      toast.showWarning(m.failed_to_clear({ items: formatLocalizedList(errors) }));
+      toast.showWarning(m.failed_to_clear({ items: listFormat.format(errors) }));
     } else if (anythingSucceeded && somethingFailed) {
       // Mixed results: some succeeded, some failed
       const successParts: string[] = [];
@@ -248,8 +245,8 @@ export function SettingsPanel({
       if (timeOffCleared) successParts.push(m.reset_item_time_off_data());
       toast.showWarning(
         m.cleared_but_failed_to_clear({
-          clearedItems: formatLocalizedList(successParts),
-          failedItems: formatLocalizedList(errors),
+          clearedItems: listFormat.format(successParts),
+          failedItems: listFormat.format(errors),
         }),
       );
     }
