@@ -1,6 +1,7 @@
+import { fileURLToPath } from "node:url";
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
-import { fileURLToPath } from "node:url";
 
 // Read version from package.json for injection in tests
 import * as packageJson from "./package.json";
@@ -9,7 +10,14 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
-  plugins: [reactPlugin()] as any,
+  plugins: [
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+    }),
+    reactPlugin() as ReturnType<typeof reactPlugin>,
+  ],
   resolve: {
     alias: {
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
