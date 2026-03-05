@@ -31,6 +31,16 @@ interface TimeOffStatsViewProps {
 }
 
 export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
+  const getUnitLabel = (unit: VacationAllowanceUnit) => {
+    switch (unit) {
+      case "days":
+        return m.timeoff_vacation_unit_days();
+      case "hours":
+        return m.timeoff_vacation_unit_hours();
+      default:
+        return m.timeoff_unit();
+    }
+  };
   const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
@@ -126,7 +136,7 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
             <small className="text-muted">{m.timeoff_year_label()}</small>
             <Form.Select
               size="sm"
-              aria-label="Select year for vacation statistics"
+              aria-label={m.timeoff_select_year_aria()}
               value={selectedYear}
               onChange={(event) => setSelectedYear(Number(event.target.value))}
               className="w-auto"
@@ -157,7 +167,7 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                     step={0.5}
                     value={amountInput}
                     onChange={handleAmountChange}
-                    placeholder="e.g., 25"
+                    placeholder={m.timeoff_allowance_placeholder()}
                     isInvalid={isAmountInvalid}
                     required
                     aria-required="true"
@@ -203,10 +213,10 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                         }
                       />
                       <Form.Control.Feedback type="invalid" id="vacationHoursPerDay-feedback">
-                        Please enter a value of at least 1
+                        {m.timeoff_hours_per_day_invalid()}
                       </Form.Control.Feedback>
                       <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
-                        Used for converting between days and hours
+                        {m.timeoff_hours_per_day_help()}
                       </Form.Text>
                     </Form.Group>
                   </Col>
@@ -228,8 +238,7 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   <div className="d-flex justify-content-between small text-muted mb-1">
                     <span>{m.timeoff_used()}</span>
                     <span>
-                      {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)}{" "}
-                      {allowance.unit}
+                      {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)} {getUnitLabel(allowance.unit)}
                     </span>
                   </div>
                   <ProgressBar now={usagePercent} label={`${Math.round(usagePercent)}%`} />
@@ -239,7 +248,7 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   <Col xs={6}>
                     <div className="fw-semibold">{m.timeoff_remaining()}</div>
                     <div className="fs-4">{formatVacationValue(remainingValue)}</div>
-                    <div className="text-muted small">{allowance.unit}</div>
+                    <div className="text-muted small">{getUnitLabel(allowance.unit)}</div>
                   </Col>
                   <Col xs={6}>
                     <div className="fw-semibold">{m.timeoff_total_time_off()}</div>

@@ -20,8 +20,6 @@ import * as m from "../../paraglide/messages.js";
  * Weekday names for display (Monday through Sunday, ISO weekday 1-7).
  * Hoisted to module scope to avoid repeated allocations on each render.
  */
-const WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
 /**
  * Generate a unique key for an event table row from its index and properties.
  */
@@ -38,7 +36,7 @@ function getEventRowKey(event: HdayEvent, index: number): string {
 /**
  * Format the date/pattern column for an event.
  */
-function formatEventDate(event: HdayEvent): React.ReactNode {
+function formatEventDate(event: HdayEvent, weekdayNames: string[]): React.ReactNode {
   if (event.type === "range") {
     return (
       <>
@@ -52,9 +50,9 @@ function formatEventDate(event: HdayEvent): React.ReactNode {
       event.weekday !== undefined &&
       event.weekday >= Weekday.Monday &&
       event.weekday <= Weekday.Sunday
-        ? WEEKDAY_NAMES[event.weekday - 1]
-        : "Unknown";
-    return m.timeoff_every_weekday({ day: weekdayName ?? "Unknown" });
+        ? weekdayNames[event.weekday - 1]
+        : m.timeoff_unknown_format();
+    return m.timeoff_every_weekday({ day: weekdayName ?? m.timeoff_unknown_format() });
   }
   return null;
 }
@@ -122,6 +120,11 @@ export function TimeOffTableView({
     }
   }, [selectedIndices, events.length]);
 
+  const weekdayNames = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(Date.UTC(2024, 0, index + 1));
+    return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date);
+  });
+
   return (
     <>
       <Card>
@@ -156,7 +159,7 @@ export function TimeOffTableView({
                       ref={selectAllRef}
                       type="checkbox"
                       className="form-check-input"
-                      aria-label="Select all events"
+                      aria-label={m.timeoff_select_all_events_aria()}
                       checked={events.length > 0 && selectedIndices.size === events.length}
                       onChange={(event) => {
                         if (event.target.checked) {
@@ -193,7 +196,7 @@ export function TimeOffTableView({
                         <input
                           type="checkbox"
                           className="form-check-input"
-                          aria-label={`Select ${event.title || eventLabel}`}
+                          aria-label={m.timeoff_select_event_aria({ name: event.title || eventLabel })}
                           checked={selectedIndices.has(index)}
                           onChange={() => onToggleSelection(index)}
                         />
@@ -205,13 +208,12 @@ export function TimeOffTableView({
                         </span>
                       </td>
                       <td>
-                        {formatEventDate(event)}
+                        {formatEventDate(event, weekdayNames)}
                         {event.type === "unknown" && (
                           <>
                             <span className="text-muted">{m.timeoff_unknown_format()}</span>
                             <span id={unknownDescriptionId} className="visually-hidden">
-                              Unknown event format. Remove or re-import this entry to resolve the
-                              issue.
+                              {m.timeoff_unknown_format_help()}
                             </span>
                           </>
                         )}
@@ -232,7 +234,7 @@ export function TimeOffTableView({
                               size="sm"
                               onClick={() => onEditEvent(index)}
                               className="me-2"
-                              aria-label={`Edit ${event.title || eventLabel}`}
+                              aria-label={m.edit_with_name({ name: event.title || eventLabel })}
                             >
                               <i className="bi bi-pencil" aria-hidden="true"></i>
                             </Button>
@@ -240,7 +242,7 @@ export function TimeOffTableView({
                               variant="outline-danger"
                               size="sm"
                               onClick={() => onDeleteEvent(index)}
-                              aria-label={`Delete ${event.title || eventLabel}`}
+                              aria-label={m.delete_with_name({ name: event.title || eventLabel })}
                             >
                               <i className="bi bi-trash" aria-hidden="true"></i>
                             </Button>

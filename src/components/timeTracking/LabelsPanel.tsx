@@ -209,7 +209,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <div className="d-flex flex-column gap-3">
         {labels.length > 0 && (
           <div className="small text-muted">
-            {labels.length} label{labels.length === 1 ? "" : "s"} configured.
+            {m.tt_labels_configured({ count: labels.length })}
           </div>
         )}
 
@@ -257,13 +257,15 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                     {label.name}
                   </span>
                   {isInUse && (
-                    <span className="small text-muted">Used by {usageParts.join(" and ")}</span>
+                    <span className="small text-muted">
+                      {m.tt_label_used_by({ context: usageParts.join(", ") })}
+                    </span>
                   )}
                   <div className="ms-auto d-flex gap-2">
                     <Button
                       size="sm"
                       variant="outline-secondary"
-                      aria-label={`Edit ${label.name}`}
+                      aria-label={m.tt_edit_label_aria({ name: label.name })}
                       onClick={() => handleEdit(label)}
                     >
                       {m.edit()}
@@ -281,7 +283,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                           <Button
                             size="sm"
                             variant="outline-danger"
-                            aria-label={`Delete ${label.name}`}
+                            aria-label={m.tt_delete_label_aria({ name: label.name })}
                             disabled
                             style={{ pointerEvents: "none" }}
                           >
@@ -293,7 +295,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       <Button
                         size="sm"
                         variant="outline-danger"
-                        aria-label={`Delete ${label.name}`}
+                        aria-label={m.tt_delete_label_aria({ name: label.name })}
                         onClick={() => setPendingDeleteLabel(label)}
                       >
                         {m.delete()}
@@ -307,7 +309,12 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         <RawJsonEditor
-          label={m.tt_labels_heading()}
+          summaryLabel={m.tt_raw_json_summary({ label: m.tt_labels_heading().toLowerCase() })}
+          headingLabel={m.tt_json_heading({ label: m.tt_labels_heading() })}
+          copyButtonLabel={m.tt_copy_json({ label: m.tt_labels_heading() })}
+          applyButtonLabel={m.tt_apply_json({ label: m.tt_labels_heading() })}
+          ariaLabel={m.tt_json_aria({ label: m.tt_labels_heading() })}
+          formatLabel={m.tt_format()}
           value={labelsJson}
           formatHint={`{"labels":[{"id":"label-1","name":"Support","color":"#3B82F6"}]}`}
           onChange={setLabelsJson}

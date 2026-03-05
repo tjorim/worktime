@@ -219,7 +219,7 @@ export function CalendarView({
   const handleSubmitEvent = () => {
     if (!timeOffEnabled) return;
     if (!validateForm()) {
-      toast.showError("Please fix validation errors before saving");
+      toast.showError(m.calendar_fix_validation_errors());
       return;
     }
 
@@ -259,10 +259,10 @@ export function CalendarView({
 
     if (modalMode === "edit" && editIndex >= 0) {
       updateEvent(editIndex, newEvent);
-      toast.showSuccess("Event updated successfully", "bi-pencil-fill");
+      toast.showSuccess(m.calendar_event_updated(), "bi-pencil-fill");
     } else {
       addEvent(newEvent);
-      toast.showSuccess("Event added successfully");
+      toast.showSuccess(m.calendar_event_added());
     }
 
     setShowEventModal(false);
@@ -280,7 +280,7 @@ export function CalendarView({
     if (!timeOffEnabled) return;
     if (deleteIndex >= 0) {
       deleteEvent(deleteIndex);
-      toast.showSuccess("Event deleted successfully", "bi-trash");
+      toast.showSuccess(m.calendar_event_deleted(), "bi-trash");
     }
     setShowDeleteConfirm(false);
     setDeleteIndex(-1);
@@ -401,7 +401,7 @@ export function CalendarView({
                   variant={showAnnualSummary ? "secondary" : "outline-secondary"}
                   onClick={() => setShowAnnualSummary((prev) => !prev)}
                   aria-pressed={showAnnualSummary}
-                  title="Toggle annual location summary"
+                  title={m.calendar_annual_summary_toggle_title()}
                 >
                   <i className="bi bi-list-columns me-1" aria-hidden="true"></i>
                   {m.calendar_annual_summary()}
@@ -420,20 +420,20 @@ export function CalendarView({
                 iconSize="2.5rem"
                 description={
                   <>
-                    This calendar shows your working schedule with shift patterns
-                    {timeOffEnabled ? ", time-off events," : ""} and public holidays all in one
-                    place.
+                    {m.calendar_empty_state_description({
+                      timeOff: timeOffEnabled ? m.calendar_empty_state_with_timeoff() : "",
+                    })}
                     <span className="d-block mt-2">
                       {!scheduleType
-                        ? "To get started, please select your work schedule (5-shift, 9-5, etc.) in Settings."
-                        : "To see your personalized calendar, please select your team in Settings."}
+                        ? m.calendar_empty_state_pick_schedule()
+                        : m.calendar_empty_state_pick_team()}
                     </span>
                   </>
                 }
               />
               <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
               <p className="text-muted mt-4 mb-3 small">
-                You can still explore the Today and Week schedule views before making a selection.
+                {m.calendar_empty_state_footer()}
               </p>
               {onOpenScheduleTab && (
                 <div>
@@ -522,10 +522,10 @@ export function CalendarView({
 
           <ConfirmationDialog
             isOpen={showResetConfirm}
-            title="Reset Event Form"
-            message="You have unsaved changes. Resetting the form will clear your edits."
-            confirmLabel="Reset"
-            cancelLabel="Keep Editing"
+            title={m.timeoff_reset_form_title()}
+            message={m.timeoff_reset_form_message()}
+            confirmLabel={m.timeoff_reset_btn()}
+            cancelLabel={m.timeoff_keep_editing()}
             variant="warning"
             onConfirm={handleConfirmResetForm}
             onCancel={() => setShowResetConfirm(false)}
@@ -533,10 +533,10 @@ export function CalendarView({
 
           <ConfirmationDialog
             isOpen={showDeleteConfirm}
-            title="Delete Event"
-            message="Are you sure you want to delete this event? You can undo this from the Time Off tab."
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
+            title={m.timeoff_delete_event_title()}
+            message={m.calendar_delete_event_message()}
+            confirmLabel={m.delete()}
+            cancelLabel={m.cancel()}
             variant="danger"
             onConfirm={handleConfirmDelete}
             onCancel={() => setShowDeleteConfirm(false)}

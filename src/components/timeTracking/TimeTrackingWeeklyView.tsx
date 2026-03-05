@@ -193,7 +193,7 @@ export function TimeTrackingWeeklyView({
             }
             onCurrent={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
             onNext={() => onSelectedDateChange(weekStart.add(1, "week").format("YYYY-MM-DD"))}
-            selectorLabel="Jump to date:"
+            selectorLabel={m.tt_jump_to_date()}
             selectorValue={selectedDate}
             onSelectorChange={onSelectedDateChange}
           />
@@ -202,7 +202,7 @@ export function TimeTrackingWeeklyView({
           <div className="text-muted small">
             {m.week_label({ week: weekStart.isoWeek(), year: weekStart.isoWeekYear() })}
             {isWeeklyCurrent && (
-              <Badge bg="success" className="ms-2" aria-label="Current week">
+              <Badge bg="success" className="ms-2" aria-label={m.tt_current_week_aria()}>
                 {m.this_week()}
               </Badge>
             )}
@@ -239,13 +239,13 @@ export function TimeTrackingWeeklyView({
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <span className="fw-semibold">{m.tt_weekly_progress()}</span>
                       <span className="text-muted">
-                        {weekTotal.toFixed(1)}h / {weeklyTargetHours.toFixed(1)}h
+                        {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} / {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}
                         <Badge
                           bg={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
                           className="ms-2"
                         >
                           {weekTotal >= weeklyTargetHours
-                            ? `+${(weekTotal - weeklyTargetHours).toFixed(1)}h`
+                            ? m.tt_hours_delta({ hours: (weekTotal - weeklyTargetHours).toFixed(1) })
                             : m.tt_hours_remaining({ hours: (weeklyTargetHours - weekTotal).toFixed(1) })}
                         </Badge>
                       </span>
@@ -261,7 +261,7 @@ export function TimeTrackingWeeklyView({
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <span className="fw-semibold">{m.tt_weekly_progress()}</span>
                     <span className="text-muted">
-                      {weekTotal.toFixed(1)}h / 0.0h
+                      {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} / {m.tt_hours_value({ hours: "0.0" })}
                       <Badge bg="secondary" className="ms-2">
                         {m.tt_target_unavailable()}
                       </Badge>
@@ -277,7 +277,7 @@ export function TimeTrackingWeeklyView({
                 <Card className="text-center h-100">
                   <Card.Body>
                     <div className="text-muted small text-uppercase mb-1">{m.tt_total_hours()}</div>
-                    <div className="h4 mb-0">{weekTotal.toFixed(1)}h</div>
+                    <div className="h4 mb-0">{m.tt_hours_value({ hours: weekTotal.toFixed(1) })}</div>
                   </Card.Body>
                 </Card>
               </div>
@@ -285,7 +285,7 @@ export function TimeTrackingWeeklyView({
                 <Card className="text-center h-100">
                   <Card.Body>
                     <div className="text-muted small text-uppercase mb-1">{m.tt_avg_daily_hours()}</div>
-                    <div className="h4 mb-0">{avgDailyHours.toFixed(1)}h</div>
+                    <div className="h4 mb-0">{m.tt_hours_value({ hours: avgDailyHours.toFixed(1) })}</div>
                   </Card.Body>
                 </Card>
               </div>
@@ -333,7 +333,7 @@ export function TimeTrackingWeeklyView({
                         onKeyDown={
                           onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined
                         }
-                        title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
+                        title={onSwitchToDaily ? m.tt_open_daily_log_title({ day: day.label }) : undefined}
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                       >
                         <div
@@ -350,7 +350,11 @@ export function TimeTrackingWeeklyView({
                           <div
                             className="mx-auto"
                             role="img"
-                            aria-label={`${day.label}: ${dayTotal.toFixed(1)} hours, ${percentage.toFixed(0)}% of daily target`}
+                            aria-label={m.tt_weekly_chart_aria({
+                              day: day.label,
+                              hours: dayTotal.toFixed(1),
+                              percent: percentage.toFixed(0),
+                            })}
                             style={{
                               width: "40px",
                               height: "40px",
@@ -424,7 +428,7 @@ export function TimeTrackingWeeklyView({
                         className={isToday ? "table-primary" : ""}
                         onClick={() => onSwitchToDaily?.(day.iso)}
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
-                        title={onSwitchToDaily ? `Open ${day.label} daily log` : undefined}
+                        title={onSwitchToDaily ? m.tt_open_daily_log_title({ day: day.label }) : undefined}
                       >
                         <th scope="row">
                           {onSwitchToDaily ? (
@@ -435,7 +439,7 @@ export function TimeTrackingWeeklyView({
                                 e.stopPropagation();
                                 onSwitchToDaily(day.iso);
                               }}
-                              aria-label={`Open ${day.label} daily log`}
+                              aria-label={m.tt_open_daily_log_title({ day: day.label })}
                             >
                               {day.label}
                             </button>
@@ -536,10 +540,10 @@ export function TimeTrackingWeeklyView({
                   </div>
                   <div className="col-md-6">
                     <div className="h5 mb-0">
-                      Total: <span className="text-primary">{weekTotal.toFixed(2)} {m.tt_hours_unit()}</span>
+                      {m.tt_total_label()}: <span className="text-primary">{m.tt_hours_value({ hours: weekTotal.toFixed(2) })}</span>
                     </div>
                     {weeklyTargetHours !== undefined && (
-                      <div className="text-muted">Target: {weeklyTargetHours.toFixed(1)} {m.tt_hours_unit()}</div>
+                      <div className="text-muted">{m.tt_target_label()}: {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}</div>
                     )}
                   </div>
                 </div>

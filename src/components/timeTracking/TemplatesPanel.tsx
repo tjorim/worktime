@@ -248,7 +248,7 @@ export function TemplatesPanel({
                 <Button
                   size="sm"
                   variant="outline-secondary"
-                  aria-label={`Edit ${template.text}`}
+                  aria-label={m.edit_with_name({ name: template.text })}
                   onClick={() => handleEdit(template)}
                 >
                   {m.edit()}
@@ -256,7 +256,7 @@ export function TemplatesPanel({
                 <Button
                   size="sm"
                   variant="outline-danger"
-                  aria-label={`Delete ${template.text}`}
+                  aria-label={m.delete_with_name({ name: template.text })}
                   onClick={() => setPendingDeleteTemplate(template)}
                 >
                   {m.delete()}
@@ -267,7 +267,12 @@ export function TemplatesPanel({
         )}
 
         <RawJsonEditor
-          label={m.tt_templates_heading()}
+          summaryLabel={m.tt_raw_json_summary({ label: m.tt_templates_heading().toLowerCase() })}
+          headingLabel={m.tt_json_heading({ label: m.tt_templates_heading() })}
+          copyButtonLabel={m.tt_copy_json({ label: m.tt_templates_heading() })}
+          applyButtonLabel={m.tt_apply_json({ label: m.tt_templates_heading() })}
+          ariaLabel={m.tt_json_aria({ label: m.tt_templates_heading() })}
+          formatLabel={m.tt_format()}
           value={templatesJson}
           formatHint={`{"templates":[{"id":"template-1","text":"Support","label":"label-1","start":"09:00","stop":"11:00"}]}`}
           onChange={setTemplatesJson}

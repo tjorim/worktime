@@ -76,7 +76,9 @@ export function OtherLocationModal({
     <Modal show={show} onHide={handleHide} onShow={handleShow} centered>
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
-          <Modal.Title>Other Location — {date.format("dddd, D MMM YYYY")}</Modal.Title>
+          <Modal.Title>
+            {m.calendar_other_location_title({ date: date.format("dddd, D MMM YYYY") })}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3" controlId="other-location-country">
@@ -102,7 +104,7 @@ export function OtherLocationModal({
           </Form.Group>
           <Form.Group>
             <Form.Label htmlFor="other-location-label-input">
-              Label <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
+              {m.form_label()} <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
             </Form.Label>
             <Form.Control
               id="other-location-label-input"

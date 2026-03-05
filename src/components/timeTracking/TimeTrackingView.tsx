@@ -61,7 +61,7 @@ export function TimeTrackingView() {
   return (
     <div className="time-tracking-view py-3 d-flex flex-column gap-3">
       <div className="d-flex align-items-center gap-2 flex-wrap">
-        <ButtonGroup aria-label="Toggle time tracking view">
+        <ButtonGroup aria-label={m.tt_toggle_view_aria()}>
           <Button
             variant={viewMode === "daily" ? "primary" : "outline-primary"}
             size="sm"

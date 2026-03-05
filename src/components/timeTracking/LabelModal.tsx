@@ -57,7 +57,7 @@ export function LabelModal({
                 type="color"
                 value={value.color}
                 onChange={(event) => onChange({ ...value, color: event.target.value })}
-                title="Select label color"
+                title={m.tt_select_label_color()}
                 className="form-control-color"
                 aria-required="true"
                 required

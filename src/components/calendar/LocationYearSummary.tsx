@@ -42,7 +42,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       return;
     }
 
-    const header = `Work Location Summary — ${year}`;
+    const header = m.location_summary_title({ year });
     const divider = "-".repeat(header.length);
     const lines = [
       header,
@@ -50,7 +50,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
         const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
-        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""} (${pct}%)`;
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${m.location_days_count({ count: row.days })} (${pct}%)`;
       }),
     ];
 
@@ -77,10 +77,10 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           size="sm"
           variant="outline-secondary"
           onClick={handleCopy}
-          aria-label="Copy location summary to clipboard"
+          aria-label={m.location_copy_aria()}
         >
           <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
-          Copy
+          {m.location_copy_btn()}
         </Button>
       </div>
       <Table size="sm" bordered hover className="mb-0">
