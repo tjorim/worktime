@@ -540,10 +540,10 @@ export function TimeTrackingWeeklyView({
                   </div>
                   <div className="col-md-6">
                     <div className="h5 mb-0">
-                      {m.tt_total_label()}: <span className="text-primary">{m.tt_hours_value({ hours: weekTotal.toFixed(2) })}</span>
+                      {m.tt_total_label()}: <span className="text-primary">{weekTotal.toFixed(2)} {m.tt_hours_unit()}</span>
                     </div>
                     {weeklyTargetHours !== undefined && (
-                      <div className="text-muted">{m.tt_target_label()}: {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}</div>
+                      <div className="text-muted">{m.tt_target_label()}: {weeklyTargetHours.toFixed(1)} {m.tt_hours_unit()}</div>
                     )}
                   </div>
                 </div>

@@ -258,7 +258,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                   </span>
                   {isInUse && (
                     <span className="small text-muted">
-                      {m.tt_label_used_by({ context: usageParts.join(", ") })}
+                      {m.tt_label_used_by({ context: usageParts.join(` ${m.tt_and()} `) })}
                     </span>
                   )}
                   <div className="ms-auto d-flex gap-2">

@@ -34,9 +34,9 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
   const getUnitLabel = (unit: VacationAllowanceUnit) => {
     switch (unit) {
       case "days":
-        return m.timeoff_vacation_unit_days();
+        return m.timeoff_days_unit();
       case "hours":
-        return m.timeoff_vacation_unit_hours();
+        return m.tt_hours_unit();
       default:
         return m.timeoff_unit();
     }

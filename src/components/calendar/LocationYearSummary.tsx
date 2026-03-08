@@ -42,7 +42,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       return;
     }
 
-    const header = m.location_summary_title({ year });
+    const header = m.location_clipboard_header({ year });
     const divider = "-".repeat(header.length);
     const lines = [
       header,
@@ -50,7 +50,11 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
         const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
-        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${m.location_days_count({ count: row.days })} (${pct}%)`;
+        const dayLabel =
+          row.days === 1
+            ? m.location_days_count({ count: row.days })
+            : m.location_days_count_plural({ count: row.days });
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${dayLabel} (${pct}%)`;
       }),
     ];
 

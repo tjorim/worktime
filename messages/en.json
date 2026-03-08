@@ -378,5 +378,15 @@
   "tt_weekly_chart_aria": "{day}: {hours} hours, {percent}% of daily target",
   "tt_open_daily_log_title": "Open {day} daily log",
   "tt_total_label": "Total",
-  "tt_target_label": "Target"
+  "tt_target_label": "Target",
+  "timeoff_import_events_aria": "Import events",
+  "timeoff_export_events_aria": "Export events",
+  "timeoff_undo_last_change_aria": "Undo last change",
+  "timeoff_redo_last_change_aria": "Redo last change",
+  "timeoff_add_event_aria": "Add event",
+  "timeoff_delete_selected_events_aria": "Delete selected events",
+  "timeoff_clear_selection_aria": "Clear selection",
+  "tt_and": "and",
+  "location_days_count_plural": "{count} days",
+  "location_clipboard_header": "Work Location Summary — {year}"
 }

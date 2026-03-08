@@ -340,7 +340,7 @@
   "tt_apply_json": "Pas {label}-JSON toe",
   "tt_json_aria": "{label}-JSON",
   "tt_format": "Formaat",
-  "location_days_count": "{count} dagen",
+  "location_days_count": "{count} dag",
   "location_copy_aria": "Kopieer locatieoverzicht naar klembord",
   "location_copy_btn": "Kopieer",
   "timeoff_select_year_aria": "Selecteer jaar voor verlofstatistieken",
@@ -378,5 +378,15 @@
   "tt_weekly_chart_aria": "{day}: {hours} uur, {percent}% van dagelijks doel",
   "tt_open_daily_log_title": "Open daglogboek van {day}",
   "tt_total_label": "Totaal",
-  "tt_target_label": "Doel"
+  "tt_target_label": "Doel",
+  "timeoff_import_events_aria": "Gebeurtenissen importeren",
+  "timeoff_export_events_aria": "Gebeurtenissen exporteren",
+  "timeoff_undo_last_change_aria": "Laatste wijziging ongedaan maken",
+  "timeoff_redo_last_change_aria": "Laatste wijziging opnieuw uitvoeren",
+  "timeoff_add_event_aria": "Gebeurtenis toevoegen",
+  "timeoff_delete_selected_events_aria": "Geselecteerde gebeurtenissen verwijderen",
+  "timeoff_clear_selection_aria": "Selectie wissen",
+  "tt_and": "en",
+  "location_days_count_plural": "{count} dagen",
+  "location_clipboard_header": "Werklocatieoverzicht — {year}"
 }
