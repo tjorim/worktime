@@ -846,5 +846,7 @@
   "setup_btn_select_schedule": "Select Schedule",
   "setup_btn_select_team": "Select Team",
   "generic_status_shift_progress_remaining_minutes_only": "Shift progress: {minutes}m remaining",
-  "generic_status_shift_progress_remaining_minutes_only_aria": "Shift progress with {minutes} minutes remaining"
+  "generic_status_shift_progress_remaining_minutes_only_aria": "Shift progress with {minutes} minutes remaining",
+  "transfer_showing_count_one": "Showing {count} transfer",
+  "transfer_showing_count_other": "Showing {count} transfers"
 }

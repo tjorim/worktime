@@ -846,5 +846,7 @@
   "setup_btn_select_schedule": "Rooster selecteren",
   "setup_btn_select_team": "Team selecteren",
   "generic_status_shift_progress_remaining_minutes_only": "Dienstvoortgang: {minutes}m resterend",
-  "generic_status_shift_progress_remaining_minutes_only_aria": "Dienstvoortgang met {minutes} minuten resterend"
+  "generic_status_shift_progress_remaining_minutes_only_aria": "Dienstvoortgang met {minutes} minuten resterend",
+  "transfer_showing_count_one": "Toont {count} overdracht",
+  "transfer_showing_count_other": "Toont {count} overdrachten"
 }

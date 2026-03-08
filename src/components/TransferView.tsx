@@ -18,6 +18,7 @@ import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
 import { ErrorBoundary } from "./ErrorBoundary";
 import * as m from "../paraglide/messages.js";
+import { getLocale } from "../paraglide/runtime.js";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -318,6 +319,10 @@ export function TransferView({
     () => groupedTransfers.filter((group) => group.items.length > 0),
     [groupedTransfers],
   );
+  const transferCountCategory = useMemo(
+    () => new Intl.PluralRules(getLocale()).select(transfers.length),
+    [transfers.length],
+  );
 
   return (
     <Card>
@@ -526,7 +531,9 @@ export function TransferView({
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">
-                    {m.transfer_showing_count({ count: String(transfers.length), noun: transfers.length === 1 ? m.transfer_singular() : m.transfer_plural() })}
+                    {transferCountCategory === "one"
+                      ? m.transfer_showing_count_one({ count: String(transfers.length) })
+                      : m.transfer_showing_count_other({ count: String(transfers.length) })}
                     {hasMoreTransfers && ` ${m.transfer_more_available()}`}
                   </small>
                   {hasMoreTransfers && (
