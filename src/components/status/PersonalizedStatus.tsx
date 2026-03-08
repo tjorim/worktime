@@ -237,7 +237,9 @@ export function PersonalizedStatusContent({
                       ? m.today()
                       : nextShift.date.isSame(today.add(1, "day"), "day")
                         ? m.personalized_status_tomorrow()
-                                                : weekdayDateFormatter.format(nextShift.date.toDate())}{" "}
+                                                : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
+                          ? weekdayDateFormatter.format((nextShift.date as { toDate: () => Date }).toDate())
+                          : nextShift.date.format("ddd, MMM D")}{" "}
                     - {nextShift.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />

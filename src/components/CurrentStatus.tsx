@@ -45,6 +45,18 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
     return getCurrentShiftDay(liveTime, scheduleType);
   }, [liveTime, scheduleType]);
 
+  const localizedDateLabel = useMemo(() => {
+    const liveTimeWithDate = liveTime as { toDate?: () => Date; format: (pattern: string) => string };
+    if (typeof liveTimeWithDate.toDate === "function") {
+      return new Intl.DateTimeFormat(getLocale(), {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }).format(liveTimeWithDate.toDate());
+    }
+    return liveTime.format("dddd, MMM D");
+  }, [liveTime]);
+
   // Find which team is currently working (for timeline)
   const currentWorkingTeam = useMemo(() => {
     if (!scheduleType) return null;
@@ -99,7 +111,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                 >
                   <small className="help-underline">
                     <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
-                    {formatYYWWD(currentShiftDay)} • {new Intl.DateTimeFormat(getLocale(), { weekday: "long", month: "short", day: "numeric" }).format(liveTime.toDate())} • {" "}
+                    {formatYYWWD(currentShiftDay)} • {localizedDateLabel} • {" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </OverlayTrigger>

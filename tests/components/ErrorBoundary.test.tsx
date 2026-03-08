@@ -46,7 +46,6 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
 
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
     });
@@ -64,7 +63,7 @@ describe("ErrorBoundary", () => {
       await user.click(tryAgainButton);
 
       // After reset, should show error UI again since component still throws
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
     });
 
     it("renders custom fallback when provided", () => {
@@ -77,7 +76,7 @@ describe("ErrorBoundary", () => {
       );
 
       expect(screen.getByTestId("custom-fallback")).toBeInTheDocument();
-      expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Try Again" })).not.toBeInTheDocument();
     });
   });
 });

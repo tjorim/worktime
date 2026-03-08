@@ -253,7 +253,16 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                 <div>
                   <div className="fw-semibold">
                     {hasTeams ? m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) }) : ""}
-                    {new Intl.DateTimeFormat(getLocale(), { weekday: "short", month: "short", day: "numeric" }).format(nextShiftAnyTeam.date.toDate())} - {nextShiftAnyTeam.shift.name}
+                    {(
+                      typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate ===
+                      "function"
+                        ? new Intl.DateTimeFormat(getLocale(), {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          }).format((nextShiftAnyTeam.date as { toDate: () => Date }).toDate())
+                        : nextShiftAnyTeam.date.format("ddd, MMM D")
+                    )} - {nextShiftAnyTeam.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShiftAnyTeam.shift} className="small text-muted" />
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />

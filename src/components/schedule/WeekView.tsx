@@ -131,9 +131,9 @@ export function WeekView({
     [locale],
   );
 
-  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(value.toDate());
-  const formatLongDate = (value: Dayjs) => longDateFormatter.format(value.toDate());
-  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(value.toDate());
+  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(dayjs(value).toDate());
+  const formatLongDate = (value: Dayjs) => longDateFormatter.format(dayjs(value).toDate());
+  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(dayjs(value).toDate());
 
   return (
     <Card>
