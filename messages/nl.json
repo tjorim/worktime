@@ -844,5 +844,7 @@
   "dev_endpoint_read_team": "Lees teamconfiguratie en leden",
   "dev_endpoint_read_team_hdays": "Lees .hday-bestanden van alle teamleden",
   "setup_btn_select_schedule": "Rooster selecteren",
-  "setup_btn_select_team": "Team selecteren"
+  "setup_btn_select_team": "Team selecteren",
+  "generic_status_shift_progress_remaining_minutes_only": "Dienstvoortgang: {minutes}m resterend",
+  "generic_status_shift_progress_remaining_minutes_only_aria": "Dienstvoortgang met {minutes} minuten resterend"
 }

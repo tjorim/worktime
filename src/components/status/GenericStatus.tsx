@@ -178,19 +178,29 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                       {shiftProgress && (
                         <div className="mt-2">
                           <div className="small text-muted mb-1">
-                            {m.generic_status_shift_progress_remaining({
-                              hours: String(shiftProgress.remainingHours),
-                              minutes: String(shiftProgress.remainingMinutes),
-                            })}
+                            {shiftProgress.remainingHours > 0
+                              ? m.generic_status_shift_progress_remaining({
+                                  hours: String(shiftProgress.remainingHours),
+                                  minutes: String(shiftProgress.remainingMinutes),
+                                })
+                              : m.generic_status_shift_progress_remaining_minutes_only({
+                                  minutes: String(shiftProgress.remainingMinutes),
+                                })}
                           </div>
                           <ProgressBar
                             now={shiftProgress.percentage}
                             variant="warning"
                             className="progress-thin"
-                            aria-label={m.generic_status_shift_progress_remaining_aria({
-                              hours: String(shiftProgress.remainingHours),
-                              minutes: String(shiftProgress.remainingMinutes),
-                            })}
+                            aria-label={
+                              shiftProgress.remainingHours > 0
+                                ? m.generic_status_shift_progress_remaining_aria({
+                                    hours: String(shiftProgress.remainingHours),
+                                    minutes: String(shiftProgress.remainingMinutes),
+                                  })
+                                : m.generic_status_shift_progress_remaining_minutes_only_aria({
+                                    minutes: String(shiftProgress.remainingMinutes),
+                                  })
+                            }
                           />
                         </div>
                       )}
