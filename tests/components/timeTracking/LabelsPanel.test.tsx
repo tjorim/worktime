@@ -49,6 +49,12 @@ describe("LabelsPanel", () => {
       expect(screen.getByText("2 labels configured.")).toBeInTheDocument();
     });
 
+    it("shows singular label count", () => {
+      renderPanel({ labels: [TEST_LABELS[0]!] });
+
+      expect(screen.getByText("1 label configured.")).toBeInTheDocument();
+    });
+
     it("shows empty state when no labels exist", () => {
       renderPanel({ labels: [] });
 
