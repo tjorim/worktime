@@ -6,6 +6,7 @@ import Row from "react-bootstrap/Row";
 import { useSettings } from "../contexts/SettingsContext";
 import { CONFIG } from "../utils/config";
 import { getScheduleConfig } from "../utils/scheduleUtils";
+import * as m from "../paraglide/messages.js";
 
 interface AboutModalProps {
   show: boolean;
@@ -29,7 +30,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
       <Modal.Header closeButton>
         <Modal.Title>
           <i className="bi bi-info-circle me-2"></i>
-          About Worktime
+          {m.about_modal_title()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -38,10 +39,10 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <div className="mb-2">
             <i className="bi bi-clock-history text-primary icon-lg"></i>
           </div>
-          <h5 className="mb-2">Worktime - Schedule & Time Off</h5>
+          <h5 className="mb-2">{m.about_app_subtitle()}</h5>
           <div className="mb-2">
             <Badge bg="primary">
-              <i className="bi bi-tag me-1"></i>Version {CONFIG.VERSION}
+              <i className="bi bi-tag me-1"></i>{m.about_version_badge({ version: CONFIG.VERSION })}
             </Badge>
           </div>
         </div>
@@ -50,7 +51,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         <div className="text-center mb-4">
           <div className="d-flex justify-content-center align-items-center gap-2 mb-2">
             <i className="bi bi-person-circle text-muted"></i>
-            <span className="fw-semibold">Created by Jorim Tielemans</span>
+            <span className="fw-semibold">{m.about_created_by()}</span>
           </div>
           <a
             href="https://github.com/tjorim"
@@ -58,7 +59,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
             rel="noopener noreferrer"
             className="btn btn-outline-primary btn-sm"
           >
-            <i className="bi bi-github me-1"></i>GitHub Profile
+            <i className="bi bi-github me-1"></i>{m.about_github_profile_btn()}
           </a>
         </div>
 
@@ -67,7 +68,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         {/* Features List with Icons */}
         <div className="mb-4">
           <h6 className="mb-3">
-            <i className="bi bi-star me-2 text-warning"></i>Key Features
+            <i className="bi bi-star me-2 text-warning"></i>{m.about_key_features_heading()}
           </h6>
           <Row className="g-2">
             <Col xs={6}>
@@ -75,12 +76,12 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                 {isFiveShift ? (
                   <>
                     <i className="bi bi-people text-primary me-2"></i>
-                    <span>5-team shift tracking</span>
+                    <span>{m.about_feature_5shift()}</span>
                   </>
                 ) : (
                   <>
                     <i className="bi bi-calendar2-week text-primary me-2"></i>
-                    <span>Schedule type: {scheduleConfig.title}</span>
+                    <span>{m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}</span>
                   </>
                 )}
               </div>
@@ -88,21 +89,21 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
             <Col xs={6}>
               <div className="d-flex align-items-center small">
                 <i className="bi bi-file-earmark-text text-success me-2"></i>
-                <span>.hday time-off files</span>
+                <span>{m.about_feature_hday()}</span>
               </div>
             </Col>
             {isFiveShift && (
               <Col xs={6}>
                 <div className="d-flex align-items-center small">
                   <i className="bi bi-arrow-left-right text-info me-2"></i>
-                  <span>Transfer detection</span>
+                  <span>{m.about_feature_transfers()}</span>
                 </div>
               </Col>
             )}
             <Col xs={6}>
               <div className="d-flex align-items-center small">
                 <i className="bi bi-calendar-date text-secondary me-2"></i>
-                <span>YYWW.D date format</span>
+                <span>{m.about_feature_date_format()}</span>
               </div>
             </Col>
           </Row>
@@ -114,7 +115,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         <div className="mb-4">
           <h6 className="mb-3">
             <i className="bi bi-link-45deg me-2 text-info"></i>
-            Quick Links
+            {m.about_quick_links_heading()}
           </h6>
           <div className="d-grid gap-2">
             <Row className="g-2">
@@ -126,7 +127,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   className="btn btn-outline-secondary btn-sm w-100"
                 >
                   <i className="bi bi-book me-1"></i>
-                  Documentation
+                  {m.about_documentation_btn()}
                 </a>
               </Col>
               <Col xs={6}>
@@ -137,7 +138,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   className="btn btn-outline-secondary btn-sm w-100"
                 >
                   <i className="bi bi-code-slash me-1"></i>
-                  Source Code
+                  {m.about_source_code_btn()}
                 </a>
               </Col>
             </Row>
@@ -148,7 +149,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         <div className="mb-4">
           <h6 className="mb-3">
             <i className="bi bi-headset me-2 text-success"></i>
-            Support & Feedback
+            {m.about_support_heading()}
           </h6>
           <div className="d-grid gap-2">
             <Row className="g-2">
@@ -159,7 +160,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   rel="noopener noreferrer"
                   className="btn btn-outline-danger btn-sm w-100"
                 >
-                  <i className="bi bi-bug me-1"></i>Report Bug
+                  <i className="bi bi-bug me-1"></i>{m.about_report_bug_btn()}
                 </a>
               </Col>
               <Col xs={6}>
@@ -170,7 +171,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   className="btn btn-outline-success btn-sm w-100"
                 >
                   <i className="bi bi-lightbulb me-1"></i>
-                  Request Feature
+                  {m.about_request_feature_btn()}
                 </a>
               </Col>
             </Row>
@@ -192,7 +193,7 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
-          Close
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>
