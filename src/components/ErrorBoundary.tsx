@@ -3,6 +3,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Container from "react-bootstrap/Container";
+import * as m from "../paraglide/messages.js";
 
 interface Props {
   children: ReactNode;
@@ -61,23 +62,23 @@ export class ErrorBoundary extends Component<Props, State> {
           <Card>
             <Card.Header className="text-bg-danger fw-semibold">
               <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
-              Something went wrong
+              {m.error_boundary_heading()}
             </Card.Header>
             <Card.Body>
               <Alert variant="danger">
-                <Alert.Heading>Application Error</Alert.Heading>
+                <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
                 <p>
-                  We're sorry, but something unexpected happened. Click <strong>Try Again</strong>{" "}
-                  first; if the error persists, use <strong>Reload Page</strong>. Contact support if
-                  the problem persists.
+                  {m.error_boundary_message()} <strong>{m.error_boundary_try_again()}</strong>{" "}
+                  {m.error_boundary_middle()} <strong>{m.error_boundary_reload()}</strong>.{" "}
+                  {m.error_boundary_suffix()}
                 </p>
                 <hr />
                 <div className="d-flex gap-2">
                   <Button variant="outline-danger" onClick={this.handleReset}>
-                    Try Again
+                    {m.error_boundary_try_again()}
                   </Button>
                   <Button variant="outline-secondary" onClick={() => window.location.reload()}>
-                    Reload Page
+                    {m.error_boundary_reload()}
                   </Button>
                 </div>
               </Alert>
@@ -97,7 +98,7 @@ export class ErrorBoundary extends Component<Props, State> {
                       </pre>
                       {this.state.errorInfo && (
                         <div className="mt-2">
-                          <strong>Component Stack:</strong>
+                          <strong>{m.error_boundary_component_stack()}</strong>
                           <pre className="small text-muted error-stack-trace">
                             {this.state.errorInfo.componentStack}
                           </pre>

@@ -14,6 +14,7 @@ import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { EmptyState } from "../shared/EmptyState";
+import * as m from "../../paraglide/messages.js";
 
 interface GenericStatusContentProps {
   scheduleType: ScheduleOption;
@@ -168,7 +169,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                       <CountdownBadge
                         countdown={shiftEndCountdown}
                         startTime={currentShiftEndTime}
-                        label="Ends in"
+                        label={m.generic_status_ends_in()}
                         variant="warning"
                       />
                       {shiftProgress && (
@@ -198,8 +199,8 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               ) : (
                 <EmptyState
                   icon="bi-moon-stars"
-                  title="No Teams Working"
-                  description="All teams are currently off duty"
+                  title={m.generic_status_no_teams_title()}
+                  description={m.generic_status_no_teams_desc()}
                 />
               )}
               {teamsSummary && (
@@ -233,8 +234,8 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               ) : (
                 <EmptyState
                   icon="bi-calendar-x"
-                  title="No Upcoming Shifts"
-                  description="View the schedule in other tabs for detailed timing"
+                  title={m.generic_status_no_upcoming_title()}
+                  description={m.generic_status_no_upcoming_desc()}
                 />
               )}
             </div>

@@ -15,6 +15,7 @@ import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { EmptyState } from "../shared/EmptyState";
+import * as m from "../../paraglide/messages.js";
 
 interface PersonalizedStatusContentProps {
   myTeam: number;
@@ -38,8 +39,8 @@ export function PersonalizedStatusContent({
     return (
       <EmptyState
         icon="bi-exclamation-triangle"
-        title="Invalid Schedule"
-        description="Your saved schedule is invalid. Please reconfigure your schedule settings."
+        title={m.personalized_status_invalid_title()}
+        description={m.personalized_status_invalid_desc()}
       />
     );
   }
@@ -115,13 +116,13 @@ export function PersonalizedStatusContent({
                 placement="bottom"
                 overlay={
                   <Tooltip id={teamTooltipId}>
-                    <strong>Your Team Today</strong>
+                    <strong>{m.personalized_status_your_team_today()}</strong>
                     <br />
                     Code: <strong>{currentShift.shift.displayCode}</strong>
                     <br />
                     {shiftTooltipDetails}
                     <br />
-                    <em>Full code: {currentShift.code}</em>
+                    <em>{m.personalized_status_full_code({ code: currentShift.code })}</em>
                   </Tooltip>
                 }
               >
@@ -151,7 +152,7 @@ export function PersonalizedStatusContent({
                     <CountdownBadge
                       countdown={shiftEndCountdown}
                       startTime={currentShiftEndTime}
-                      label="Ends in"
+                      label={m.personalized_status_ends_in()}
                       variant="warning"
                     />
                     {shiftProgress && (
@@ -199,9 +200,9 @@ export function PersonalizedStatusContent({
                 <div>
                   <div className="fw-semibold">
                     {nextShift.date.isSame(today, "day")
-                      ? "Today"
+                      ? m.today()
                       : nextShift.date.isSame(today.add(1, "day"), "day")
-                        ? "Tomorrow"
+                        ? m.personalized_status_tomorrow()
                         : nextShift.date.format("ddd, MMM D")}{" "}
                     - {nextShift.shift.name}
                   </div>
@@ -213,8 +214,8 @@ export function PersonalizedStatusContent({
               ) : (
                 <EmptyState
                   icon="bi-calendar-x"
-                  title="No Next Shift"
-                  description="No upcoming shifts found for your team."
+                  title={m.personalized_status_no_next_title()}
+                  description={m.personalized_status_no_next_desc()}
                 />
               )}
             </div>
