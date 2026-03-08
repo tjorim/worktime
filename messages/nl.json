@@ -390,5 +390,6 @@
   "location_clipboard_header": "Werklocatieoverzicht — {year}",
   "location_days_count_plural": "{count} dagen",
   "tt_labels_configured_one": "{count} label geconfigureerd.",
-  "tt_labels_configured_other": "{count} labels geconfigureerd."
+  "tt_labels_configured_other": "{count} labels geconfigureerd.",
+  "tt_weekly_chart_aria_one": "{day}: {hours} uur, {percent}% van dagelijks doel"
 }

@@ -390,5 +390,6 @@
   "location_clipboard_header": "Work Location Summary — {year}",
   "location_days_count_plural": "{count} days",
   "tt_labels_configured_one": "{count} label configured.",
-  "tt_labels_configured_other": "{count} labels configured."
+  "tt_labels_configured_other": "{count} labels configured.",
+  "tt_weekly_chart_aria_one": "{day}: {hours} hour, {percent}% of daily target"
 }

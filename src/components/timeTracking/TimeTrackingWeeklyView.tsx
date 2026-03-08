@@ -14,6 +14,7 @@ import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
 import { EmptyState } from "../shared/EmptyState";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 type OverviewRow = {
   label: string;
@@ -59,6 +60,7 @@ export function TimeTrackingWeeklyView({
   weeklyWorkingDays,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
+  const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
   const { settings } = useSettings();
   const crossBorderEnabled = settings.enableCrossBorderTracking;
   const liveTime = useLiveTime({ precision: "minute" });
@@ -350,11 +352,19 @@ export function TimeTrackingWeeklyView({
                           <div
                             className="mx-auto"
                             role="img"
-                            aria-label={m.tt_weekly_chart_aria({
-                              day: day.label,
-                              hours: dayTotal.toFixed(1),
-                              percent: percentage.toFixed(0),
-                            })}
+                            aria-label={
+                              pluralRules.select(dayTotal) === "one"
+                                ? m.tt_weekly_chart_aria_one({
+                                    day: day.label,
+                                    hours: dayTotal.toFixed(1),
+                                    percent: percentage.toFixed(0),
+                                  })
+                                : m.tt_weekly_chart_aria({
+                                    day: day.label,
+                                    hours: dayTotal.toFixed(1),
+                                    percent: percentage.toFixed(0),
+                                  })
+                            }
                             style={{
                               width: "40px",
                               height: "40px",
