@@ -6,6 +6,7 @@ import Modal from "react-bootstrap/Modal";
 import type { Dayjs } from "dayjs";
 import { hasIsoAlpha2Format } from "../../types/countries";
 import type { WorkLocationInfo } from "../../types/workLocation";
+import { getLocale } from "../../paraglide/runtime.js";
 import * as m from "../../paraglide/messages.js";
 
 // Helper to get initial values for countryCode and label
@@ -76,7 +77,16 @@ export function OtherLocationModal({
     <Modal show={show} onHide={handleHide} onShow={handleShow} centered>
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
-          <Modal.Title>Other Location — {date.format("dddd, D MMM YYYY")}</Modal.Title>
+          <Modal.Title>
+            {m.calendar_other_location_title({
+              date: new Intl.DateTimeFormat(getLocale(), {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }).format(date.toDate()),
+            })}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3" controlId="other-location-country">
@@ -96,13 +106,12 @@ export function OtherLocationModal({
             <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
               {m.other_location_country_feedback()}
             </Form.Control.Feedback>
-            <Form.Text className="text-muted">
-              {m.other_location_country_help()}
-            </Form.Text>
+            <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
           </Form.Group>
           <Form.Group>
             <Form.Label htmlFor="other-location-label-input">
-              Label <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
+              {m.form_label()}{" "}
+              <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
             </Form.Label>
             <Form.Control
               id="other-location-label-input"

@@ -198,7 +198,6 @@ describe("GanttChart", () => {
     expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
   });
 
-
   it("popup function pluralizes duration details", async () => {
     render(
       <GanttChart
@@ -307,9 +306,7 @@ describe("GanttChart", () => {
     });
 
     expect(setTitle).toHaveBeenCalledWith("&lt;img src=x onerror=alert(&quot;xss&quot;)&gt;");
-    expect(setSubtitle).toHaveBeenCalledWith(
-      "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
-    );
+    expect(setSubtitle).toHaveBeenCalledWith("&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;");
   });
 
   it("forwards valid task ids from frappe callbacks", async () => {
@@ -345,7 +342,13 @@ describe("GanttChart", () => {
   });
 
   it("calls update_task when only one task's dates change", async () => {
-    const task = { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const task = {
+      id: "task-1",
+      name: "Task",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart
@@ -384,7 +387,13 @@ describe("GanttChart", () => {
   });
 
   it("calls update_task when only one task's progress changes", async () => {
-    const task = { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 };
+    const task = {
+      id: "task-1",
+      name: "Task",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart
@@ -423,8 +432,20 @@ describe("GanttChart", () => {
   });
 
   it("calls refresh when a task is added", async () => {
-    const task1 = { id: "task-1", name: "Task 1", start: "2026-03-01", end: "2026-03-03", progress: 0 };
-    const task2 = { id: "task-2", name: "Task 2", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+    const task1 = {
+      id: "task-1",
+      name: "Task 1",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
+    const task2 = {
+      id: "task-2",
+      name: "Task 2",
+      start: "2026-03-04",
+      end: "2026-03-06",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart
@@ -458,8 +479,20 @@ describe("GanttChart", () => {
   });
 
   it("calls refresh when multiple tasks change simultaneously", async () => {
-    const task1 = { id: "task-1", name: "Task 1", start: "2026-03-01", end: "2026-03-03", progress: 0 };
-    const task2 = { id: "task-2", name: "Task 2", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+    const task1 = {
+      id: "task-1",
+      name: "Task 1",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
+    const task2 = {
+      id: "task-2",
+      name: "Task 2",
+      start: "2026-03-04",
+      end: "2026-03-06",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart
@@ -478,7 +511,10 @@ describe("GanttChart", () => {
 
     rerender(
       <GanttChart
-        tasks={[{ ...task1, progress: 25 }, { ...task2, progress: 75 }]}
+        tasks={[
+          { ...task1, progress: 25 },
+          { ...task2, progress: 75 },
+        ]}
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -492,10 +528,21 @@ describe("GanttChart", () => {
     expect(instance.update_task).not.toHaveBeenCalled();
   });
 
-
   it("does not refresh when tasks are unchanged on rerender", async () => {
-    const taskA = { id: "task-a", name: "Task A", start: "2026-03-01", end: "2026-03-03", progress: 0 };
-    const taskB = { id: "task-b", name: "Task B", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+    const taskA = {
+      id: "task-a",
+      name: "Task A",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
+    const taskB = {
+      id: "task-b",
+      name: "Task B",
+      start: "2026-03-04",
+      end: "2026-03-06",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart
@@ -528,8 +575,20 @@ describe("GanttChart", () => {
   });
 
   it("calls refresh when same-length IDs are swapped", async () => {
-    const taskA = { id: "task-a", name: "Task A", start: "2026-03-01", end: "2026-03-03", progress: 0 };
-    const taskB = { id: "task-b", name: "Task B", start: "2026-03-04", end: "2026-03-06", progress: 0 };
+    const taskA = {
+      id: "task-a",
+      name: "Task A",
+      start: "2026-03-01",
+      end: "2026-03-03",
+      progress: 0,
+    };
+    const taskB = {
+      id: "task-b",
+      name: "Task B",
+      start: "2026-03-04",
+      end: "2026-03-06",
+      progress: 0,
+    };
 
     const { rerender } = render(
       <GanttChart

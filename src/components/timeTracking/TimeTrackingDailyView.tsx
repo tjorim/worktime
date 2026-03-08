@@ -95,10 +95,10 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "home" ? "primary" : "outline-secondary"}
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
-            title="Work from home"
+            title={m.tt_work_from_home()}
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
-            Home
+            {m.work_location_home()}
           </Button>
         )}
         {showOffice && (
@@ -107,10 +107,10 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "office" ? "primary" : "outline-secondary"}
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
-            title="Work from office"
+            title={m.tt_work_from_office()}
           >
             <i className="bi bi-building me-1" aria-hidden="true"></i>
-            Office
+            {m.work_location_office()}
           </Button>
         )}
         <Button
@@ -118,18 +118,18 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           variant={stored?.location === "other" ? "primary" : "outline-secondary"}
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
-          title="Other location"
+          title={m.tt_work_from_other()}
         >
           <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
-          Other…
+          {m.tt_other_location()}
         </Button>
         {stored && (
           <Button
             size="sm"
             variant="outline-danger"
             onClick={handleClear}
-            aria-label="Clear work location"
-            title="Clear work location"
+            aria-label={m.tt_clear_work_location()}
+            title={m.tt_clear_work_location()}
           >
             <i className="bi bi-x" aria-hidden="true"></i>
           </Button>
@@ -478,7 +478,7 @@ export function TimeTrackingDailyView({
             }
             onCurrent={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
             onNext={() => onSelectedDateChange(dailyDate.add(1, "day").format("YYYY-MM-DD"))}
-            selectorLabel="Jump to date:"
+            selectorLabel={m.tt_jump_to_date()}
             selectorValue={date}
             onSelectorChange={onSelectedDateChange}
           />
@@ -487,7 +487,7 @@ export function TimeTrackingDailyView({
           <div className="text-muted small">
             {dailyDate.format("dddd, MMMM D, YYYY")}
             {isDailyCurrent && (
-              <Badge bg="success" className="ms-2" aria-label="Current day">
+              <Badge bg="success" className="ms-2" aria-label={m.today()}>
                 {m.today()}
               </Badge>
             )}
@@ -503,7 +503,7 @@ export function TimeTrackingDailyView({
         )}
         {templates.length > 0 && (
           <Form.Group className="mb-2" controlId="timeTrackerTemplate">
-            <Form.Label className="visually-hidden">Template</Form.Label>
+            <Form.Label className="visually-hidden">{m.tt_template()}</Form.Label>
             <InputGroup>
               <ReactSelect<TemplateOption>
                 unstyled
@@ -553,15 +553,15 @@ export function TimeTrackingDailyView({
                     </span>
                   </div>
                   <div className="small text-muted">
-                    Started {dayjs(runningTask.startTime).format("HH:mm")} · Elapsed{" "}
-                    {runningElapsed}
+                    {m.tt_started()} {dayjs(runningTask.startTime).format("HH:mm")} ·{" "}
+                    {m.tt_elapsed()} {runningElapsed}
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="danger"
                   onClick={handleStopNow}
-                  aria-label={`Stop Timer for ${runningTask.text}`}
+                  aria-label={m.tt_stop_timer_for({ task: runningTask.text })}
                 >
                   {m.tt_stop_timer()}
                 </Button>
@@ -569,9 +569,7 @@ export function TimeTrackingDailyView({
             </div>
           ) : (
             <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">
-                {m.tt_enter_task_hint()}
-              </span>
+              <span className="text-muted small">{m.tt_enter_task_hint()}</span>
             </div>
           )}
         </div>

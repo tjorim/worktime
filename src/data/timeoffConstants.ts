@@ -1,18 +1,18 @@
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 
 /**
- * Weekday enum for ISO week numbering (Monday=1 through Sunday=7).
+ * Weekday constants for ISO week numbering (Monday=1 through Sunday=7).
  * Used for weekly recurring events and consistent weekday handling throughout the app.
  */
-export enum Weekday {
-  Monday = 1,
-  Tuesday = 2,
-  Wednesday = 3,
-  Thursday = 4,
-  Friday = 5,
-  Saturday = 6,
-  Sunday = 7,
-}
+export const Weekday = {
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+  Sunday: 7,
+} as const;
 
 /**
  * Type flag options available for time-off events.
@@ -70,7 +70,7 @@ export type TimeOffViewMode = (typeof TIMEOFF_VIEWS)[number];
 /**
  * Default weekday value for weekly events (Weekday.Monday).
  */
-export const DEFAULT_WEEKDAY = Weekday.Monday;
+export const DEFAULT_WEEKDAY: number = Weekday.Monday;
 
 /**
  * Help text for each view mode in the Time Off tab.

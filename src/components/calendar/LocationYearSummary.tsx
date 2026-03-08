@@ -6,6 +6,7 @@ import { aggregateLocationCounts } from "../../utils/workLocationUtils";
 import type { WorkLocationMap } from "../../types/workLocation";
 import { WORK_LOCATION_ICON_CLASS, WORK_LOCATION_LABEL } from "./workLocationConstants";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 interface LocationYearSummaryProps {
   year: number;
@@ -42,7 +43,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       return;
     }
 
-    const header = `Work Location Summary — ${year}`;
+    const header = m.location_clipboard_header({ year });
     const divider = "-".repeat(header.length);
     const lines = [
       header,
@@ -50,7 +51,12 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
         const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
-        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${row.days} day${row.days !== 1 ? "s" : ""} (${pct}%)`;
+        const pluralCategory = new Intl.PluralRules(getLocale()).select(row.days);
+        const dayLabel =
+          pluralCategory === "one"
+            ? m.location_days_count({ count: row.days })
+            : m.location_days_count_plural({ count: row.days });
+        return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${dayLabel} (${pct}%)`;
       }),
     ];
 
@@ -61,9 +67,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   };
 
   if (rows.length === 0) {
-    return (
-      <div className="text-muted small fst-italic py-2">{m.location_no_data({ year })}</div>
-    );
+    return <div className="text-muted small fst-italic py-2">{m.location_no_data({ year })}</div>;
   }
 
   return (
@@ -77,10 +81,10 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
           size="sm"
           variant="outline-secondary"
           onClick={handleCopy}
-          aria-label="Copy location summary to clipboard"
+          aria-label={m.location_copy_aria()}
         >
           <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
-          Copy
+          {m.location_copy_btn()}
         </Button>
       </div>
       <Table size="sm" bordered hover className="mb-0">

@@ -191,6 +191,14 @@ describe("TimeTrackingWeeklyView Component", () => {
       expect(screen.getByLabelText(/Monday: 4\.0 hours, 0% of daily target/i)).toBeInTheDocument();
     });
 
+    it("uses singular hour in weekly chart aria text for exactly one hour", () => {
+      const weekTasks = [createTaskForDate(mondayDate, "Support", "08:00", "09:00")];
+
+      renderPanel({ tasks: weekTasks, weeklyTargetHours: 40 });
+
+      expect(screen.getByLabelText(/Monday: 1\.0 hour, 13% of daily target/i)).toBeInTheDocument();
+    });
+
     it("includes all labels in work hour totals", () => {
       const weekTasks = [
         createTaskForDate(mondayDate, "Support", "09:00", "12:00"),

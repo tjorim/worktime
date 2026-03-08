@@ -18,6 +18,7 @@ import {
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 type LabelFormState = {
   name: string;
@@ -58,6 +59,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     name: "",
     color: labels[0]?.color ?? "#3B82F6",
   });
+  const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
 
   const resetForm = () =>
     setLabelForm({
@@ -209,7 +211,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <div className="d-flex flex-column gap-3">
         {labels.length > 0 && (
           <div className="small text-muted">
-            {labels.length} label{labels.length === 1 ? "" : "s"} configured.
+            {pluralRules.select(labels.length) === "one"
+              ? m.tt_labels_configured_one({ count: labels.length })
+              : m.tt_labels_configured_other({ count: labels.length })}
           </div>
         )}
 
@@ -236,10 +240,18 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               const usage = usageByLabelId[label.id];
               const usageParts: string[] = [];
               if (usage?.templates) {
-                usageParts.push(`${usage.templates} template${usage.templates === 1 ? "" : "s"}`);
+                usageParts.push(
+                  pluralRules.select(usage.templates) === "one"
+                    ? m.tt_template_count_one({ count: usage.templates })
+                    : m.tt_template_count_other({ count: usage.templates }),
+                );
               }
               if (usage?.tasks) {
-                usageParts.push(`${usage.tasks} task${usage.tasks === 1 ? "" : "s"}`);
+                usageParts.push(
+                  pluralRules.select(usage.tasks) === "one"
+                    ? m.tt_task_count_one({ count: usage.tasks })
+                    : m.tt_task_count_other({ count: usage.tasks }),
+                );
               }
               const isInUse = usageParts.length > 0;
               return (
@@ -257,13 +269,15 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                     {label.name}
                   </span>
                   {isInUse && (
-                    <span className="small text-muted">Used by {usageParts.join(" and ")}</span>
+                    <span className="small text-muted">
+                      {m.tt_label_used_by({ context: usageParts.join(` ${m.tt_and()} `) })}
+                    </span>
                   )}
                   <div className="ms-auto d-flex gap-2">
                     <Button
                       size="sm"
                       variant="outline-secondary"
-                      aria-label={`Edit ${label.name}`}
+                      aria-label={m.tt_edit_label_aria({ name: label.name })}
                       onClick={() => handleEdit(label)}
                     >
                       {m.edit()}
@@ -273,7 +287,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         trigger={["hover", "focus"]}
                         overlay={
                           <Tooltip id={`delete-label-${label.id}`}>
-                            {m.tt_label_in_use_tooltip({ usage: usageParts.join(" and ") })}
+                            {m.tt_label_in_use_tooltip({
+                              usage: usageParts.join(` ${m.tt_and()} `),
+                            })}
                           </Tooltip>
                         }
                       >
@@ -281,7 +297,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                           <Button
                             size="sm"
                             variant="outline-danger"
-                            aria-label={`Delete ${label.name}`}
+                            aria-label={m.tt_delete_label_aria({ name: label.name })}
                             disabled
                             style={{ pointerEvents: "none" }}
                           >
@@ -293,7 +309,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                       <Button
                         size="sm"
                         variant="outline-danger"
-                        aria-label={`Delete ${label.name}`}
+                        aria-label={m.tt_delete_label_aria({ name: label.name })}
                         onClick={() => setPendingDeleteLabel(label)}
                       >
                         {m.delete()}
@@ -307,7 +323,12 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
         )}
 
         <RawJsonEditor
-          label={m.tt_labels_heading()}
+          summaryLabel={m.tt_raw_json_summary({ label: m.tt_labels_heading().toLowerCase() })}
+          headingLabel={m.tt_json_heading({ label: m.tt_labels_heading() })}
+          copyButtonLabel={m.tt_copy_json({ label: m.tt_labels_heading() })}
+          applyButtonLabel={m.tt_apply_json({ label: m.tt_labels_heading() })}
+          ariaLabel={m.tt_json_aria({ label: m.tt_labels_heading() })}
+          formatLabel={m.tt_format()}
           value={labelsJson}
           formatHint={`{"labels":[{"id":"label-1","name":"Support","color":"#3B82F6"}]}`}
           onChange={setLabelsJson}
@@ -340,7 +361,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <ConfirmationDialog
         isOpen={pendingDeleteLabel !== null}
         title={m.tt_delete_label_title()}
-        message={pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""}
+        message={
+          pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""
+        }
         confirmLabel={m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}

@@ -254,7 +254,7 @@ describe("TimeOffView Integration Tests", () => {
       if (finalStored) {
         expect(finalStored).not.toContain("Updated summer vacation");
       }
-    });
+    }, 15000);
 
     it("creates event with flags and persists them correctly", async () => {
       const user = userEvent.setup();

@@ -450,7 +450,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   return (
     <div className="time-off-view py-3 d-flex flex-column gap-3">
       <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
-        <ButtonGroup aria-label="Toggle time off view">
+        <ButtonGroup aria-label={m.timeoff_toggle_view_aria()}>
           <Button
             variant={viewMode === "table" ? "primary" : "outline-primary"}
             size="sm"
@@ -516,7 +516,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       )}
 
       {viewMode === "stats" && (
-        <div role="region" aria-label="Vacation statistics">
+        <div role="region" aria-label={m.timeoff_vacation_stats()}>
           <TimeOffStatsView
             events={events}
             allowance={settings.vacationAllowance}
@@ -526,7 +526,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       )}
 
       {viewMode === "team" && (
-        <div role="region" aria-label="Team schedule viewer">
+        <div role="region" aria-label={m.timeoff_team_schedule_viewer_aria()}>
           <TeamScheduleView />
         </div>
       )}
@@ -537,7 +537,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         type="file"
         accept=".hday,text/plain"
         className="d-none"
-        aria-label="Import .hday file"
+        aria-label={m.timeoff_import_file_aria()}
         onChange={handleFileChange}
       />
 

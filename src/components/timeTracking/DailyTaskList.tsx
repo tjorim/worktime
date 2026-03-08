@@ -371,7 +371,9 @@ export function DailyTaskList({
           {tasks.map((task, index) => {
             const startDisplay = dayjs(task.startTime).format("HH:mm");
             const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
-            const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : "Running";
+            const stopDisplay = task.stopTime
+              ? effectiveStopTime.format("HH:mm")
+              : m.tt_running_status();
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
@@ -392,20 +394,20 @@ export function DailyTaskList({
                             color: labelTextColor,
                           }}
                         >
-                        {labelNameById[task.label] ?? m.tt_unknown_label()}
+                          {labelNameById[task.label] ?? m.tt_unknown_label()}
                         </span>
                         {isCurrentTask && (
-                          <Badge bg="danger" className="ms-2" aria-label="Currently active task">
+                          <Badge bg="danger" className="ms-2" aria-label={m.tt_now_aria()}>
                             <i className="bi bi-clock me-1" aria-hidden="true" />
-                            Now
+                            {m.tt_now()}
                           </Badge>
                         )}
                         {task.includesBreak && (
                           <Badge
                             bg="secondary"
                             className="ms-2"
-                            title={`${BREAK_DURATION_MINUTES}min break deducted`}
-                            aria-label={`${BREAK_DURATION_MINUTES} minute break deducted`}
+                            title={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                            aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
                           >
                             <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
                             {BREAK_DURATION_MINUTES}min
@@ -413,14 +415,14 @@ export function DailyTaskList({
                         )}
                       </div>
                       <div className="small text-muted">
-                        Start: {startDisplay} · Stop: {stopDisplay}
+                        {m.form_start()}: {startDisplay} · {m.form_stop()}: {stopDisplay}
                       </div>
                     </div>
                     <div className="d-none d-md-flex gap-1 flex-shrink-0">
                       <Button
                         variant="outline-secondary"
                         size="sm"
-                        aria-label={`Edit ${task.text}`}
+                        aria-label={m.edit_with_name({ name: task.text })}
                         onClick={() => openEditModal(task)}
                       >
                         <i className="bi bi-pencil" aria-hidden="true"></i>
@@ -428,7 +430,7 @@ export function DailyTaskList({
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        aria-label={`Delete ${task.text}`}
+                        aria-label={m.delete_with_name({ name: task.text })}
                         onClick={() => onRemoveTask(task.id)}
                       >
                         <i className="bi bi-trash" aria-hidden="true"></i>

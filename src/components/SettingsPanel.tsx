@@ -144,9 +144,7 @@ export function SettingsPanel({
     // If third click, toggle dev mode
     if (versionClickCountRef.current === 3) {
       toggleDevMode();
-      const message = isDevMode
-        ? m.developer_mode_disabled()
-        : m.developer_mode_enabled();
+      const message = isDevMode ? m.developer_mode_disabled() : m.developer_mode_enabled();
       toast.showInfo(message);
       versionClickCountRef.current = 0;
       versionClickTimeoutRef.current = null;
@@ -176,7 +174,6 @@ export function SettingsPanel({
     setClearTimeTrackingData(false);
     setClearTimeOffData(false);
   };
-
 
   const handleConfirmReset = () => {
     const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
@@ -426,9 +423,7 @@ export function SettingsPanel({
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <div className="fw-medium">{m.time_tracking_label()}</div>
-                        <small className="text-muted">
-                          {m.time_tracking_description()}
-                        </small>
+                        <small className="text-muted">{m.time_tracking_description()}</small>
                       </div>
                       <Form.Check
                         type="switch"
@@ -444,9 +439,7 @@ export function SettingsPanel({
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
                       <div className="fw-medium">{m.personal_gantt_label()}</div>
-                      <small className="text-muted">
-                        {m.personal_gantt_description()}
-                      </small>
+                      <small className="text-muted">{m.personal_gantt_description()}</small>
                     </div>
                     <Form.Check
                       type="switch"
@@ -461,9 +454,7 @@ export function SettingsPanel({
                   <div className="d-flex justify-content-between align-items-center">
                     <div>
                       <div className="fw-medium">{m.cross_border_tracking_label()}</div>
-                      <small className="text-muted">
-                        {m.cross_border_tracking_description()}
-                      </small>
+                      <small className="text-muted">{m.cross_border_tracking_description()}</small>
                     </div>
                     <Form.Check
                       type="switch"
@@ -730,15 +721,9 @@ export function SettingsPanel({
           </Form>
           {(clearTimeTrackingData || clearTimeOffData) && (
             <Alert variant="warning" className="mt-3 mb-0">
-              <div className="fw-semibold mb-1">
-                {m.reset_warning()}
-              </div>
-              {clearTimeTrackingData && (
-                <div>{m.reset_warning_time_tracking()}</div>
-              )}
-              {clearTimeOffData && (
-                <div>{m.reset_warning_time_off()}</div>
-              )}
+              <div className="fw-semibold mb-1">{m.reset_warning()}</div>
+              {clearTimeTrackingData && <div>{m.reset_warning_time_tracking()}</div>}
+              {clearTimeOffData && <div>{m.reset_warning_time_off()}</div>}
             </Alert>
           )}
         </Modal.Body>
