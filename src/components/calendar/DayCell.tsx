@@ -190,9 +190,14 @@ export function DayCell({
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenEvents = events.slice(MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
+  const locale = getLocale();
   const overflowPluralCategory = useMemo(
-    () => new Intl.PluralRules(getLocale()).select(hiddenCount),
-    [hiddenCount],
+    () => new Intl.PluralRules(locale).select(hiddenCount),
+    [hiddenCount, locale],
+  );
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "long" }),
+    [locale],
   );
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
@@ -425,7 +430,7 @@ export function DayCell({
             type="button"
             className="month-calendar-add-btn"
             tabIndex={-1}
-            aria-label={m.daycell_add_event_on({ date: date.format("MMMM D, YYYY") })}
+            aria-label={m.daycell_add_event_on({ date: longDateFormatter.format(date.toDate()) })}
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
