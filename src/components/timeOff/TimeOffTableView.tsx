@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
@@ -120,10 +120,14 @@ export function TimeOffTableView({
     }
   }, [selectedIndices, events.length]);
 
-  const weekdayNames = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(Date.UTC(2024, 0, index + 1));
-    return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date);
-  });
+  const weekdayNames = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(Date.UTC(2024, 0, index + 1));
+        return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date);
+      }),
+    [],
+  );
 
   return (
     <>

@@ -240,10 +240,18 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
               const usage = usageByLabelId[label.id];
               const usageParts: string[] = [];
               if (usage?.templates) {
-                usageParts.push(`${usage.templates} template${usage.templates === 1 ? "" : "s"}`);
+                usageParts.push(
+                  pluralRules.select(usage.templates) === "one"
+                    ? m.tt_template_count_one({ count: usage.templates })
+                    : m.tt_template_count_other({ count: usage.templates }),
+                );
               }
               if (usage?.tasks) {
-                usageParts.push(`${usage.tasks} task${usage.tasks === 1 ? "" : "s"}`);
+                usageParts.push(
+                  pluralRules.select(usage.tasks) === "one"
+                    ? m.tt_task_count_one({ count: usage.tasks })
+                    : m.tt_task_count_other({ count: usage.tasks }),
+                );
               }
               const isInUse = usageParts.length > 0;
               return (
@@ -279,7 +287,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         trigger={["hover", "focus"]}
                         overlay={
                           <Tooltip id={`delete-label-${label.id}`}>
-                            {m.tt_label_in_use_tooltip({ usage: usageParts.join(" and ") })}
+                            {m.tt_label_in_use_tooltip({ usage: usageParts.join(` ${m.tt_and()} `) })}
                           </Tooltip>
                         }
                       >

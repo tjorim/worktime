@@ -6,6 +6,7 @@ import Modal from "react-bootstrap/Modal";
 import type { Dayjs } from "dayjs";
 import { hasIsoAlpha2Format } from "../../types/countries";
 import type { WorkLocationInfo } from "../../types/workLocation";
+import { getLocale } from "../../paraglide/runtime.js";
 import * as m from "../../paraglide/messages.js";
 
 // Helper to get initial values for countryCode and label
@@ -77,7 +78,14 @@ export function OtherLocationModal({
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
           <Modal.Title>
-            {m.calendar_other_location_title({ date: date.format("dddd, D MMM YYYY") })}
+            {m.calendar_other_location_title({
+              date: new Intl.DateTimeFormat(getLocale(), {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }).format(date.toDate()),
+            })}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
