@@ -2,6 +2,7 @@ import { useId } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import * as m from "../../paraglide/messages.js";
 
 type TimeOffRawViewProps = {
   rawText: string;
@@ -27,33 +28,23 @@ export function TimeOffRawView({
       <Accordion.Item eventKey="raw-editor">
         <Accordion.Header>
           <i className="bi bi-code-square me-2" aria-hidden="true"></i>
-          Raw .hday Editor
+          {m.timeoff_raw_editor_heading()}
           {isDirty && (
-            <span className="badge bg-warning text-dark ms-2" title="Unsaved changes">
+            <span className="badge bg-warning text-dark ms-2" title={m.timeoff_unsaved_changes()}>
               •
             </span>
           )}
         </Accordion.Header>
         <Accordion.Body>
-          <p className="text-muted">
-            Paste your <code>.hday</code> content below (or load a file), click{" "}
-            <strong>Apply</strong>, then export if needed. Flags: <code>a</code>=half AM,{" "}
-            <code>p</code>=half PM, <code>b</code>=business, <code>e</code>=weekend, <code>h</code>
-            =birthday, <code>i</code>=ill, <code>k</code>=in, <code>s</code>=course, <code>u</code>
-            =other, <code>w</code>=onsite, <code>n</code>=no fly, <code>f</code>=can fly; weekly:{" "}
-            <code>d1-d7</code> (Mon-Sun) with flags after (e.g., <code>d3ab</code> for Wed AM
-            business).
-          </p>
+          <p className="text-muted">{m.timeoff_raw_help()}</p>
           <Form.Group controlId="hdayText" className="mb-3">
-            <Form.Label className="visually-hidden">Raw .hday content</Form.Label>
+            <Form.Label className="visually-hidden">{m.timeoff_raw_content_label()}</Form.Label>
             <Form.Control
               as="textarea"
               rows={20}
               value={rawText}
               onChange={(event) => onChangeRawText(event.target.value)}
-              placeholder={
-                "Example:\n2024/12/23-2025/01/05 # Winter break\np2024/07/17-2024/07/17\nd3ab # Wednesday AM business"
-              }
+              placeholder={m.timeoff_raw_placeholder()}
               className="textarea-mono"
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}
@@ -67,11 +58,11 @@ export function TimeOffRawView({
           <div className="d-flex flex-wrap gap-2">
             <Button variant="primary" onClick={onApply}>
               <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
-              Apply raw content
+              {m.timeoff_apply_raw()}
             </Button>
             <Button variant="outline-secondary" onClick={onReset} disabled={!isDirty}>
               <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-              Reset
+              {m.timeoff_reset_btn()}
             </Button>
           </div>
         </Accordion.Body>

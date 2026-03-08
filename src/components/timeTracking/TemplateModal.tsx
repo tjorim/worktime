@@ -5,6 +5,7 @@ import ReactSelect from "react-select";
 import type { TimeTrackingLabel } from "./constants";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
+import * as m from "../../paraglide/messages.js";
 
 type TemplateForm = {
   text: string;
@@ -55,24 +56,24 @@ export function TemplateModal({
           }}
         >
           <Form.Group controlId="templateName" className="mb-3">
-            <Form.Label>Task name</Form.Label>
+            <Form.Label>{m.form_task_name()}</Form.Label>
             <Form.Control
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
-              placeholder="e.g., Daily Standup"
+              placeholder={m.form_task_name_placeholder()}
               aria-required="true"
               required
             />
           </Form.Group>
           <Form.Group controlId="templateLabel" className="mb-3">
-            <Form.Label>Label</Form.Label>
+            <Form.Label>{m.form_label()}</Form.Label>
             <ReactSelect<LabelOption>
               unstyled
               isClearable
               isSearchable
               inputId="templateLabel"
               isDisabled={isLabelSelectionDisabled}
-              placeholder={isLabelSelectionDisabled ? "Add labels first" : "Select a label"}
+              placeholder={isLabelSelectionDisabled ? m.tt_add_labels_first() : m.tt_select_label()}
               aria-describedby={isLabelSelectionDisabled ? "templateLabelHelp" : undefined}
               options={labels.map((l) => ({ value: l.id, label: l.name }))}
               value={selectedLabelOption}
@@ -81,13 +82,13 @@ export function TemplateModal({
             />
             {isLabelSelectionDisabled ? (
               <Form.Text id="templateLabelHelp" muted>
-                Add at least one label in Time Tracking Settings before creating templates.
+                {m.tt_add_labels_first_help()}
               </Form.Text>
             ) : null}
           </Form.Group>
           <div className="d-flex gap-3">
             <Form.Group controlId="templateStart" className="flex-fill">
-              <Form.Label>Start</Form.Label>
+              <Form.Label>{m.form_start()}</Form.Label>
               <Form.Control
                 type="time"
                 value={value.start}
@@ -97,7 +98,7 @@ export function TemplateModal({
               />
             </Form.Group>
             <Form.Group controlId="templateStop" className="flex-fill">
-              <Form.Label>Stop</Form.Label>
+              <Form.Label>{m.form_stop()}</Form.Label>
               <Form.Control
                 type="time"
                 value={value.stop}
@@ -111,7 +112,7 @@ export function TemplateModal({
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" onClick={onClose}>
-          Cancel
+          {m.cancel()}
         </Button>
         <Button type="submit" form="templateForm" variant="primary" disabled={isSubmitDisabled}>
           {submitLabel}

@@ -41,6 +41,9 @@ export default defineConfig({
       tsconfig: "./tsconfig.test.json",
     },
     coverage: {
+      provider: "v8",
+      include: ["src/**"],
+      exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**"],
       reporter: ["text", "lcov"],
     },
   },

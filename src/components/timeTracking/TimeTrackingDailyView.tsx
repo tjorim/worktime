@@ -13,6 +13,7 @@ import { useLiveTime } from "../../hooks/useLiveTime";
 import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
 import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+import * as m from "../../paraglide/messages.js";
 
 type TemplateOption = { value: string; label: string };
 import { ConfirmationDialog } from "../ConfirmationDialog";
@@ -70,12 +71,12 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
 
   const handleHome = () => {
     const ok = setLocationForDate(dayjsDate, "home");
-    if (!ok) toast.showError("Configure your home country in Settings to track this location");
+    if (!ok) toast.showError(m.tt_configure_home_country());
   };
 
   const handleOffice = () => {
     const ok = setLocationForDate(dayjsDate, "office");
-    if (!ok) toast.showError("Configure your office country in Settings to track this location");
+    if (!ok) toast.showError(m.tt_configure_office_country());
   };
 
   const handleClear = () => {
@@ -94,10 +95,10 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "home" ? "primary" : "outline-secondary"}
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
-            title="Work from home"
+            title={m.tt_work_from_home()}
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
-            Home
+            {m.work_location_home()}
           </Button>
         )}
         {showOffice && (
@@ -106,10 +107,10 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "office" ? "primary" : "outline-secondary"}
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
-            title="Work from office"
+            title={m.tt_work_from_office()}
           >
             <i className="bi bi-building me-1" aria-hidden="true"></i>
-            Office
+            {m.work_location_office()}
           </Button>
         )}
         <Button
@@ -117,18 +118,18 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           variant={stored?.location === "other" ? "primary" : "outline-secondary"}
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
-          title="Other location"
+          title={m.tt_work_from_other()}
         >
           <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
-          Other…
+          {m.tt_other_location()}
         </Button>
         {stored && (
           <Button
             size="sm"
             variant="outline-danger"
             onClick={handleClear}
-            aria-label="Clear work location"
-            title="Clear work location"
+            aria-label={m.tt_clear_work_location()}
+            title={m.tt_clear_work_location()}
           >
             <i className="bi bi-x" aria-hidden="true"></i>
           </Button>
@@ -144,7 +145,7 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           if (ok) {
             setShowOtherModal(false);
           } else {
-            toast.showError("Could not save location — check the country code");
+            toast.showError(m.tt_could_not_save_location());
           }
         }}
       />
@@ -255,32 +256,32 @@ export function TimeTrackingDailyView({
   const canAddCompletedTask = hasCompletedRange && isValidRange(start, stop);
   const canStartNow = !runningTask && hasTaskDetails;
   const startDisabledReason = runningTask
-    ? "A stopwatch is already running. Stop it before starting another."
+    ? m.tt_reason_stopwatch_running()
     : !text.trim()
-      ? "Enter a task name first."
+      ? m.tt_reason_enter_task_name()
       : !selectedLabel
-        ? "Select a label first."
+        ? m.tt_reason_select_label()
         : undefined;
   const addDisabledReason = !text.trim()
-    ? "Enter a task name first."
+    ? m.tt_reason_enter_task_name()
     : !start.trim() || !stop.trim()
-      ? "Enter both start and stop times."
+      ? m.tt_reason_enter_start_stop()
       : !isValidRange(start, stop)
-        ? "Stop time must be after start time."
+        ? m.tt_reason_stop_after_start()
         : undefined;
 
   const handleAddTask = async () => {
     setError("");
     if (!text || !date || !start || !stop) {
-      setError("Please fill in all fields.");
+      setError(m.tt_error_fill_all_fields());
       return;
     }
     if (!selectedLabel) {
-      setError("Please configure at least one label.");
+      setError(m.tt_error_configure_label());
       return;
     }
     if (!isValidRange(start, stop)) {
-      setError("Stop time must be after start time.");
+      setError(m.tt_error_stop_after_start());
       return;
     }
     const dailyForOverlap = dailyTasks.map((t) => ({
@@ -289,7 +290,7 @@ export function TimeTrackingDailyView({
       stop: (t.stopTime ? dayjs(t.stopTime) : dayjs()).format("HH:mm"),
     }));
     if (overlaps(start, stop, dailyForOverlap)) {
-      setError("Time range overlaps an existing task.");
+      setError(m.tt_error_time_overlap());
       return;
     }
 
@@ -301,7 +302,7 @@ export function TimeTrackingDailyView({
       stopTime: `${date}T${stop}`,
     });
     if (!added) {
-      setError("A task is already running. Stop it before adding another task.");
+      setError(m.tt_error_task_already_running());
       return;
     }
     setText("");
@@ -312,15 +313,15 @@ export function TimeTrackingDailyView({
   const handleStartNow = async () => {
     setError("");
     if (runningTask) {
-      setError("A task is already running. Stop it before starting another.");
+      setError(m.tt_error_task_already_running_start());
       return;
     }
     if (!text.trim()) {
-      setError("Please enter a task name to start.");
+      setError(m.tt_error_enter_task_name());
       return;
     }
     if (!selectedLabel) {
-      setError("Please configure at least one label.");
+      setError(m.tt_error_configure_label());
       return;
     }
     const now = dayjs();
@@ -333,7 +334,7 @@ export function TimeTrackingDailyView({
       startTime,
     });
     if (!added) {
-      setError("A task is already running. Stop it before starting another.");
+      setError(m.tt_error_task_already_running_start());
       return;
     }
     onSelectedDateChange(startDate);
@@ -356,7 +357,7 @@ export function TimeTrackingDailyView({
       return;
     }
     if (now.isBefore(startDayjs)) {
-      setError("Stop time must be after start time.");
+      setError(m.tt_error_stop_after_start());
       return;
     }
     if (now.diff(startDayjs, "minute") < 1) {
@@ -380,18 +381,18 @@ export function TimeTrackingDailyView({
   }): Promise<boolean> => {
     setError("");
     if (!payload.text.trim() || !payload.label || !payload.start) {
-      setError("Please fill in all fields.");
+      setError(m.tt_error_fill_all_fields());
       return false;
     }
     // Validate stop time if provided (for stopped tasks)
     if (payload.stop) {
       if (!isValidRange(payload.start, payload.stop)) {
-        setError("Stop time must be after start time.");
+        setError(m.tt_error_stop_after_start());
         return false;
       }
     }
     if (!labels.some((item) => item.id === payload.label)) {
-      setError("Please select a valid label.");
+      setError(m.tt_error_select_valid_label());
       return false;
     }
     if (payload.stop == null) {
@@ -399,7 +400,7 @@ export function TimeTrackingDailyView({
         (task) => (task.stopTime === undefined || task.stopTime === null) && task.id !== payload.id,
       );
       if (otherRunning) {
-        setError("A task is already running. Stop it before leaving another task running.");
+        setError(m.tt_error_task_running_leave());
         return false;
       }
     }
@@ -420,7 +421,7 @@ export function TimeTrackingDailyView({
         stop: (task.stopTime ? dayjs(task.stopTime) : dayjs()).format("HH:mm"),
       }));
       if (overlaps(payload.start, payload.stop, dailyForOverlap, payload.id)) {
-        setError("Time range overlaps an existing task.");
+        setError(m.tt_error_time_overlap());
         return false;
       }
     }
@@ -432,26 +433,26 @@ export function TimeTrackingDailyView({
       newStartTime,
       newStopTime,
     });
-    toast.showSuccess("Task updated successfully.");
+    toast.showSuccess(m.tt_task_updated());
     return true;
   };
 
   const handleApplyTemplate = () => {
     setError("");
     if (!selectedTemplateId) {
-      setError("Please select a template first.");
+      setError(m.tt_error_select_template());
       return;
     }
     const template = templates.find((item) => item.id === selectedTemplateId);
     if (!template) {
-      setError("Selected template was not found.");
+      setError(m.tt_error_template_not_found());
       return;
     }
 
     const templateLabelExists = labels.some((label) => label.id === template.label);
     if (!templateLabelExists) {
       setSelectedLabel("");
-      setError("Template label is no longer available. Please choose another label.");
+      setError(m.tt_error_template_label_unavailable());
       return;
     }
 
@@ -459,7 +460,7 @@ export function TimeTrackingDailyView({
     setSelectedLabel(template.label);
     setStart(template.start);
     setStop(template.stop);
-    toast.showSuccess(`Template "${template.text}" applied.`);
+    toast.showSuccess(m.tt_template_applied({ name: template.text }));
   };
 
   return (
@@ -468,7 +469,7 @@ export function TimeTrackingDailyView({
         <div className="d-flex justify-content-between align-items-center mb-2">
           <span className="fw-semibold">
             <i className="bi bi-clock me-2" aria-hidden="true"></i>
-            Daily Time Tracking
+            {m.tt_daily_heading()}
           </span>
           <DayNavigationButtonGroup
             isCurrent={isDailyCurrent}
@@ -477,7 +478,7 @@ export function TimeTrackingDailyView({
             }
             onCurrent={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
             onNext={() => onSelectedDateChange(dailyDate.add(1, "day").format("YYYY-MM-DD"))}
-            selectorLabel="Jump to date:"
+            selectorLabel={m.tt_jump_to_date()}
             selectorValue={date}
             onSelectorChange={onSelectedDateChange}
           />
@@ -486,8 +487,8 @@ export function TimeTrackingDailyView({
           <div className="text-muted small">
             {dailyDate.format("dddd, MMMM D, YYYY")}
             {isDailyCurrent && (
-              <Badge bg="success" className="ms-2" aria-label="Current day">
-                Today
+              <Badge bg="success" className="ms-2" aria-label={m.today()}>
+                {m.today()}
               </Badge>
             )}
           </div>
@@ -502,14 +503,14 @@ export function TimeTrackingDailyView({
         )}
         {templates.length > 0 && (
           <Form.Group className="mb-2" controlId="timeTrackerTemplate">
-            <Form.Label className="visually-hidden">Template</Form.Label>
+            <Form.Label className="visually-hidden">{m.tt_template()}</Form.Label>
             <InputGroup>
               <ReactSelect<TemplateOption>
                 unstyled
                 isClearable
                 isSearchable
                 inputId="timeTrackerTemplate"
-                placeholder="Choose a template"
+                placeholder={m.tt_choose_template()}
                 options={templateOptions}
                 value={selectedTemplateOption}
                 onChange={(selected) => setSelectedTemplateId(selected?.value ?? "")}
@@ -517,7 +518,7 @@ export function TimeTrackingDailyView({
                 className="flex-fill"
               />
               <Button variant="outline-secondary" onClick={handleApplyTemplate}>
-                Use Template
+                {m.tt_use_template()}
               </Button>
             </InputGroup>
           </Form.Group>
@@ -526,13 +527,13 @@ export function TimeTrackingDailyView({
         <div className="border rounded p-3 mb-3">
           <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
-              <div className="fw-semibold">Quick Timer</div>
-              <div className="small text-muted">Start a task now and stop it when you're done.</div>
+              <div className="fw-semibold">{m.tt_quick_timer()}</div>
+              <div className="small text-muted">{m.tt_quick_timer_desc()}</div>
             </div>
             {runningTask ? (
-              <span className="badge text-bg-success">Running</span>
+              <span className="badge text-bg-success">{m.tt_running_status()}</span>
             ) : (
-              <span className="badge text-bg-secondary">Idle</span>
+              <span className="badge text-bg-secondary">{m.tt_idle_status()}</span>
             )}
           </div>
           {runningTask ? (
@@ -548,29 +549,27 @@ export function TimeTrackingDailyView({
                         color: runningLabelTextColor,
                       }}
                     >
-                      {labelNameById[runningTask.label] ?? "Unknown label"}
+                      {labelNameById[runningTask.label] ?? m.tt_unknown_label()}
                     </span>
                   </div>
                   <div className="small text-muted">
-                    Started {dayjs(runningTask.startTime).format("HH:mm")} · Elapsed{" "}
-                    {runningElapsed}
+                    {m.tt_started()} {dayjs(runningTask.startTime).format("HH:mm")} ·{" "}
+                    {m.tt_elapsed()} {runningElapsed}
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="danger"
                   onClick={handleStopNow}
-                  aria-label={`Stop Timer for ${runningTask.text}`}
+                  aria-label={m.tt_stop_timer_for({ task: runningTask.text })}
                 >
-                  Stop Timer
+                  {m.tt_stop_timer()}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">
-                Enter task details below, then start live tracking or add a completed time range.
-              </span>
+              <span className="text-muted small">{m.tt_enter_task_hint()}</span>
             </div>
           )}
         </div>
@@ -615,14 +614,14 @@ export function TimeTrackingDailyView({
 
       <ConfirmationDialog
         isOpen={showDiscardConfirm}
-        title="Discard Task"
-        message="This task ran for less than 1 minute. Discard it instead of saving?"
-        confirmLabel="Discard"
+        title={m.tt_discard_task_title()}
+        message={m.tt_discard_task_message()}
+        confirmLabel={m.discard()}
         variant="danger"
         onConfirm={() => {
           if (runningTask) {
             onRemoveTask(runningTask.id);
-            toast.showSuccess("Task discarded.");
+            toast.showSuccess(m.tt_task_discarded());
           }
           setShowDiscardConfirm(false);
         }}

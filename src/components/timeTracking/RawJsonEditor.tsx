@@ -3,9 +3,14 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 
 type RawJsonEditorProps = {
-  label: string;
   value: string;
   formatHint: string;
+  summaryLabel: string;
+  headingLabel: string;
+  copyButtonLabel: string;
+  applyButtonLabel: string;
+  ariaLabel: string;
+  formatLabel: string;
   onChange: (value: string) => void;
   onCopy: () => void;
   onApply: () => void;
@@ -14,9 +19,14 @@ type RawJsonEditorProps = {
 };
 
 export function RawJsonEditor({
-  label,
   value,
   formatHint,
+  summaryLabel,
+  headingLabel,
+  copyButtonLabel,
+  applyButtonLabel,
+  ariaLabel,
+  formatLabel,
   onChange,
   onCopy,
   onApply,
@@ -25,15 +35,15 @@ export function RawJsonEditor({
 }: RawJsonEditorProps) {
   return (
     <details className={className}>
-      <summary className="small text-muted">Raw {label.toLowerCase()} JSON (import/export)</summary>
+      <summary className="small text-muted">{summaryLabel}</summary>
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 my-2">
-        <div className="fw-semibold">{label} JSON</div>
+        <div className="fw-semibold">{headingLabel}</div>
         <div className="d-flex flex-wrap gap-2">
           <Button size="sm" variant="outline-secondary" onClick={onCopy}>
-            Copy {label} JSON
+            {copyButtonLabel}
           </Button>
           <Button size="sm" variant="outline-primary" onClick={onApply}>
-            Apply {label} JSON
+            {applyButtonLabel}
           </Button>
         </div>
       </div>
@@ -43,10 +53,10 @@ export function RawJsonEditor({
         className="textarea-mono"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        aria-label={`${label} JSON`}
+        aria-label={ariaLabel}
       />
       <div className="small text-muted mt-2">
-        Format: <code>{formatHint}</code>
+        {formatLabel}: <code>{formatHint}</code>
       </div>
       {children}
     </details>

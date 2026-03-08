@@ -6,6 +6,8 @@ import Modal from "react-bootstrap/Modal";
 import type { Dayjs } from "dayjs";
 import { hasIsoAlpha2Format } from "../../types/countries";
 import type { WorkLocationInfo } from "../../types/workLocation";
+import { getLocale } from "../../paraglide/runtime.js";
+import * as m from "../../paraglide/messages.js";
 
 // Helper to get initial values for countryCode and label
 const getInitialOtherLocation = (existing?: WorkLocationInfo) => {
@@ -75,14 +77,23 @@ export function OtherLocationModal({
     <Modal show={show} onHide={handleHide} onShow={handleShow} centered>
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
-          <Modal.Title>Other Location — {date.format("dddd, D MMM YYYY")}</Modal.Title>
+          <Modal.Title>
+            {m.calendar_other_location_title({
+              date: new Intl.DateTimeFormat(getLocale(), {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }).format(date.toDate()),
+            })}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3" controlId="other-location-country">
-            <Form.Label>Country Code</Form.Label>
+            <Form.Label>{m.other_location_country_code()}</Form.Label>
             <Form.Control
               type="text"
-              placeholder="e.g. DE"
+              placeholder={m.other_location_country_placeholder()}
               value={countryCode}
               onChange={handleCodeChange}
               onBlur={() => setTouched(true)}
@@ -93,20 +104,19 @@ export function OtherLocationModal({
               aria-describedby="other-location-country-feedback"
             />
             <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
-              Enter a valid 2-letter ISO country code (e.g. DE, US, FR).
+              {m.other_location_country_feedback()}
             </Form.Control.Feedback>
-            <Form.Text className="text-muted">
-              ISO 3166-1 alpha-2 code (2 uppercase letters)
-            </Form.Text>
+            <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
           </Form.Group>
           <Form.Group>
             <Form.Label htmlFor="other-location-label-input">
-              Label <span className="text-muted fw-normal">(optional)</span>
+              {m.form_label()}{" "}
+              <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
             </Form.Label>
             <Form.Control
               id="other-location-label-input"
               type="text"
-              placeholder="e.g. Berlin office, Client visit"
+              placeholder={m.other_location_label_placeholder()}
               value={label}
               maxLength={100}
               onChange={(e) => setLabel(e.target.value.slice(0, 100))}
@@ -115,10 +125,10 @@ export function OtherLocationModal({
         </Modal.Body>
         <Modal.Footer>
           <Button variant="outline-secondary" onClick={handleHide}>
-            Cancel
+            {m.cancel()}
           </Button>
           <Button type="submit" variant="primary" disabled={!isCodeValid}>
-            Save
+            {m.save()}
           </Button>
         </Modal.Footer>
       </Form>

@@ -2,6 +2,7 @@ import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
+import * as m from "../../paraglide/messages.js";
 
 type TimeOffToolbarProps = {
   // Undo/Redo
@@ -53,73 +54,88 @@ function TimeOffToolbarComponent({
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <span className="fw-semibold">
           <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
-          Time Off Management
+          {m.timeoff_management_heading()}
         </span>
         <div className="d-flex flex-wrap gap-2">
-          <Button variant="outline-primary" size="sm" onClick={onImport} aria-label="Import events">
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={onImport}
+            aria-label={m.timeoff_import_events_aria()}
+          >
             <i className="bi bi-download me-1" aria-hidden="true"></i>
-            Import
+            {m.timeoff_import_btn()}
           </Button>
-          <Button variant="outline-primary" size="sm" onClick={onExport} aria-label="Export events">
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={onExport}
+            aria-label={m.timeoff_export_events_aria()}
+          >
             <i className="bi bi-upload me-1" aria-hidden="true"></i>
-            Export
+            {m.timeoff_export_btn()}
           </Button>
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={onUndo}
             disabled={!canUndo}
-            aria-label="Undo last change"
+            aria-label={m.timeoff_undo_last_change_aria()}
           >
             <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-            Undo
+            {m.timeoff_undo_btn()}
           </Button>
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={onRedo}
             disabled={!canRedo}
-            aria-label="Redo last change"
+            aria-label={m.timeoff_redo_last_change_aria()}
           >
             <i className="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
-            Redo
+            {m.timeoff_redo_btn()}
           </Button>
         </div>
       </div>
       <div className="d-flex flex-wrap gap-2">
         {viewMode === "table" && (
           <>
-            <Button variant="primary" size="sm" onClick={onAddEvent} aria-label="Add event">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onAddEvent}
+              aria-label={m.timeoff_add_event_aria()}
+            >
               <i className="bi bi-plus-lg me-1" aria-hidden="true"></i>
-              Add Event
+              {m.timeoff_add_event_btn()}
             </Button>
             <Button
               variant="outline-danger"
               size="sm"
               onClick={onBulkDelete}
               disabled={selectedCount === 0}
-              aria-label="Delete selected events"
+              aria-label={m.timeoff_delete_selected_events_aria()}
             >
               <i className="bi bi-trash me-1" aria-hidden="true"></i>
-              Delete Selected
+              {m.timeoff_delete_selected_btn()}
             </Button>
             <Button
               variant="outline-secondary"
               size="sm"
               onClick={onSelectAll}
               disabled={eventCount === 0 || selectedCount === eventCount}
-              aria-label="Select all events"
+              aria-label={m.timeoff_select_all_events_aria()}
             >
-              Select All
+              {m.timeoff_select_all_btn()}
             </Button>
             <Button
               variant="outline-secondary"
               size="sm"
               onClick={onClearSelection}
               disabled={selectedCount === 0}
-              aria-label="Clear selection"
+              aria-label={m.timeoff_clear_selection_aria()}
             >
-              Clear Selection
+              {m.timeoff_clear_selection_btn()}
             </Button>
           </>
         )}

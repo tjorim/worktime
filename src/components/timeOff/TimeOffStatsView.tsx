@@ -19,6 +19,7 @@ import {
   getAvailableYears,
   getEffectiveAmount,
 } from "../../utils/vacationCalculations";
+import * as m from "../../paraglide/messages.js";
 
 /** Default hours per day for vacation allowance calculations */
 export const DEFAULT_HOURS_PER_DAY = 8;
@@ -30,6 +31,18 @@ interface TimeOffStatsViewProps {
 }
 
 export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
+  const getUnitLabel = (unit: VacationAllowanceUnit) => {
+    switch (unit) {
+      case "days":
+        return m.timeoff_days_unit();
+      case "hours":
+        return m.tt_hours_unit();
+      default: {
+        const exhaustiveCheck: never = unit;
+        return exhaustiveCheck;
+      }
+    }
+  };
   const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
@@ -119,13 +132,13 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
           <span className="fw-semibold">
             <i className="bi bi-graph-up-arrow me-2" aria-hidden="true"></i>
-            Vacation Statistics
+            {m.timeoff_vacation_stats()}
           </span>
           <div className="d-flex align-items-center gap-2">
-            <small className="text-muted">Year:</small>
+            <small className="text-muted">{m.timeoff_year_label()}</small>
             <Form.Select
               size="sm"
-              aria-label="Select year for vacation statistics"
+              aria-label={m.timeoff_select_year_aria()}
               value={selectedYear}
               onChange={(event) => setSelectedYear(Number(event.target.value))}
               className="w-auto"
@@ -146,17 +159,17 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
               <Card.Body>
                 <h6 className="text-uppercase text-muted mb-3">
                   <i className="bi bi-sliders me-2" aria-hidden="true"></i>
-                  Allowance Settings
+                  {m.timeoff_allowance_settings()}
                 </h6>
                 <Form.Group className="mb-3" controlId="vacationAllowanceAmount">
-                  <Form.Label>Allowance for {selectedYear}</Form.Label>
+                  <Form.Label>{m.timeoff_allowance_for_year({ year: selectedYear })}</Form.Label>
                   <Form.Control
                     type="number"
                     min={0}
                     step={0.5}
                     value={amountInput}
                     onChange={handleAmountChange}
-                    placeholder="e.g., 25"
+                    placeholder={m.timeoff_allowance_placeholder()}
                     isInvalid={isAmountInvalid}
                     required
                     aria-required="true"
@@ -167,25 +180,25 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                     }
                   />
                   <Form.Control.Feedback type="invalid" id="vacationAllowanceAmount-feedback">
-                    Please enter a valid number (0 or greater)
+                    {m.timeoff_allowance_invalid()}
                   </Form.Control.Feedback>
                   <Form.Text className="text-muted" id="vacationAllowanceAmountHelp">
-                    Vacation allowance for {selectedYear} (0 to disable tracking)
+                    {m.timeoff_allowance_help({ year: selectedYear })}
                   </Form.Text>
                 </Form.Group>
                 <Row className="g-2">
                   <Col xs={12} md={6}>
                     <Form.Group controlId="vacationAllowanceUnit">
-                      <Form.Label>Unit</Form.Label>
+                      <Form.Label>{m.timeoff_unit()}</Form.Label>
                       <Form.Select value={allowance.unit} onChange={handleUnitChange}>
-                        <option value="days">Days</option>
-                        <option value="hours">Hours</option>
+                        <option value="days">{m.timeoff_vacation_unit_days()}</option>
+                        <option value="hours">{m.timeoff_vacation_unit_hours()}</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
                   <Col xs={12} md={6}>
                     <Form.Group controlId="vacationHoursPerDay">
-                      <Form.Label>Hours per day</Form.Label>
+                      <Form.Label>{m.timeoff_hours_per_day()}</Form.Label>
                       <Form.Control
                         type="number"
                         min={1}
@@ -202,10 +215,10 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                         }
                       />
                       <Form.Control.Feedback type="invalid" id="vacationHoursPerDay-feedback">
-                        Please enter a value of at least 1
+                        {m.timeoff_hours_per_day_invalid()}
                       </Form.Control.Feedback>
                       <Form.Text className="text-muted" id="vacationHoursPerDayHelp">
-                        Used for converting between days and hours
+                        {m.timeoff_hours_per_day_help()}
                       </Form.Text>
                     </Form.Group>
                   </Col>
@@ -219,16 +232,18 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
               <Card.Body>
                 <h6 className="text-uppercase text-muted mb-2">
                   <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
-                  Vacation Usage
+                  {m.timeoff_vacation_usage()}
                 </h6>
-                <p className="text-muted small mb-3">Based on Holiday events in {selectedYear}</p>
+                <p className="text-muted small mb-3">
+                  {m.timeoff_based_on_holiday_year({ year: selectedYear })}
+                </p>
 
                 <div className="mb-3">
                   <div className="d-flex justify-content-between small text-muted mb-1">
-                    <span>Used</span>
+                    <span>{m.timeoff_used()}</span>
                     <span>
                       {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)}{" "}
-                      {allowance.unit}
+                      {getUnitLabel(allowance.unit)}
                     </span>
                   </div>
                   <ProgressBar now={usagePercent} label={`${Math.round(usagePercent)}%`} />
@@ -236,15 +251,15 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
 
                 <Row className="text-center">
                   <Col xs={6}>
-                    <div className="fw-semibold">Remaining</div>
+                    <div className="fw-semibold">{m.timeoff_remaining()}</div>
                     <div className="fs-4">{formatVacationValue(remainingValue)}</div>
-                    <div className="text-muted small">{allowance.unit}</div>
+                    <div className="text-muted small">{getUnitLabel(allowance.unit)}</div>
                   </Col>
                   <Col xs={6}>
-                    <div className="fw-semibold">Total time off</div>
+                    <div className="fw-semibold">{m.timeoff_total_time_off()}</div>
                     <div className="fs-4">{formatVacationValue(stats.totalDays)}</div>
                     <div className="text-muted small">
-                      days ({formatVacationValue(stats.totalHours)} h)
+                      {m.timeoff_days_unit()} ({formatVacationValue(stats.totalHours)} h)
                     </div>
                   </Col>
                 </Row>
@@ -256,21 +271,21 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
         <div className="mt-4">
           <h6 className="text-uppercase text-muted mb-3">
             <i className="bi bi-pie-chart me-2" aria-hidden="true"></i>
-            Breakdown by Type
+            {m.timeoff_breakdown_by_type()}
           </h6>
           <Table responsive size="sm" className="mb-0">
             <thead>
               <tr>
-                <th>Type</th>
-                <th className="text-end">Days</th>
-                <th className="text-end">Hours</th>
+                <th>{m.timeoff_col_type()}</th>
+                <th className="text-end">{m.timeoff_days_unit()}</th>
+                <th className="text-end">{m.tt_hours_unit()}</th>
               </tr>
             </thead>
             <tbody>
               {filteredTypes.length === 0 && (
                 <tr>
                   <td colSpan={3} className="text-muted text-center">
-                    No time off recorded for {selectedYear}
+                    {m.timeoff_no_time_off_year({ year: selectedYear })}
                   </td>
                 </tr>
               )}

@@ -21,7 +21,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof OtherLocationMod
 describe("OtherLocationModal", () => {
   it("renders the modal title with the formatted date", () => {
     renderModal();
-    expect(screen.getByText(/Other Location — Wednesday, 18 Feb 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Other Location — Wednesday, Feb 18, 2026/)).toBeInTheDocument();
   });
 
   it("renders the country code and label form fields", () => {

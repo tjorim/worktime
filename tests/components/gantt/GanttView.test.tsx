@@ -71,7 +71,6 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
 
 import { GanttView } from "../../../src/components/gantt/GanttView";
 
-
 type MockUserState = {
   version: number;
   hasCompletedOnboarding: boolean;
@@ -124,7 +123,10 @@ function createMockUserState(
   };
 }
 
-function renderWithSettings(ui: ReactNode, userStateOverrides: Parameters<typeof createMockUserState>[0] = {}) {
+function renderWithSettings(
+  ui: ReactNode,
+  userStateOverrides: Parameters<typeof createMockUserState>[0] = {},
+) {
   window.localStorage.setItem(
     "worktime_user_state",
     JSON.stringify(createMockUserState(userStateOverrides)),

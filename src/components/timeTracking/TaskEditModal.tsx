@@ -9,6 +9,7 @@ import type { TimeTrackingLabel } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
+import * as m from "../../paraglide/messages.js";
 
 export type TaskEditForm = {
   text: string;
@@ -55,7 +56,7 @@ export function TaskEditModal({
   return (
     <Modal show={show} onHide={onClose} centered>
       <Modal.Header closeButton>
-        <Modal.Title>Edit Task</Modal.Title>
+        <Modal.Title>{m.tt_edit_task_title()}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {error && (
@@ -77,20 +78,20 @@ export function TaskEditModal({
           }}
         >
           <Form.Group controlId="editTaskName" className="mb-3">
-            <Form.Label>Task</Form.Label>
+            <Form.Label>{m.form_task()}</Form.Label>
             <Form.Control
               value={value.text}
               onChange={(event) => onChange({ ...value, text: event.target.value })}
             />
           </Form.Group>
           <Form.Group controlId="editTaskLabel" className="mb-3">
-            <Form.Label>Label</Form.Label>
+            <Form.Label>{m.form_label()}</Form.Label>
             <ReactSelect<LabelOption>
               unstyled
               isClearable
               isSearchable
               inputId="editTaskLabel"
-              placeholder="Select a label"
+              placeholder={m.tt_select_label()}
               options={labels.map((l) => ({ value: l.id, label: l.name }))}
               value={selectedLabelOption}
               onChange={(selected) => onChange({ ...value, label: selected?.value ?? "" })}
@@ -99,7 +100,7 @@ export function TaskEditModal({
           </Form.Group>
           <div className="d-flex gap-3 mb-3">
             <Form.Group controlId="editTaskStart" className="flex-fill">
-              <Form.Label>Start</Form.Label>
+              <Form.Label>{m.form_start()}</Form.Label>
               <Form.Control
                 type="time"
                 value={value.start}
@@ -107,36 +108,36 @@ export function TaskEditModal({
               />
             </Form.Group>
             <Form.Group controlId="editTaskStop" className="flex-fill">
-              <Form.Label>Stop</Form.Label>
+              <Form.Label>{m.form_stop()}</Form.Label>
               <Form.Control
                 type="time"
                 value={value.stop}
                 onChange={(event) => onChange({ ...value, stop: event.target.value })}
               />
-              <Form.Text className="text-muted">Leave empty to keep task running</Form.Text>
+              <Form.Text className="text-muted">{m.tt_stop_empty_hint()}</Form.Text>
             </Form.Group>
           </div>
           <Form.Check
             id="editTaskBreak"
             type="checkbox"
-            label={`Includes ${BREAK_DURATION_MINUTES}min break`}
+            label={m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
             checked={value.includesBreak}
             onChange={(event) => onChange({ ...value, includesBreak: event.target.checked })}
             disabled={!value.includesBreak && isTooShortForBreak}
           />
           {isTooShortForBreak && !value.includesBreak && (
             <Form.Text className="text-danger" data-testid="break-too-short-help">
-              Task too short for a break
+              {m.tt_task_too_short_break()}
             </Form.Text>
           )}
         </Form>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" onClick={onClose}>
-          Cancel
+          {m.cancel()}
         </Button>
         <Button variant="primary" type="submit" form="taskEditForm">
-          Save Changes
+          {m.tt_save_changes()}
         </Button>
       </Modal.Footer>
     </Modal>

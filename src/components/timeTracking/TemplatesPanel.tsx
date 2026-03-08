@@ -10,6 +10,7 @@ import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import { isValidRange, isValidTimeString } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
+import * as m from "../../paraglide/messages.js";
 
 type TemplateFormState = {
   text: string;
@@ -114,9 +115,9 @@ export function TemplatesPanel({
     setError("");
     try {
       await navigator.clipboard.writeText(JSON.stringify({ templates }, null, 2));
-      toast.showSuccess("Copied templates JSON to clipboard.");
+      toast.showSuccess(m.tt_copied_templates());
     } catch {
-      setError("Copy failed. Please copy the JSON manually from the text area.");
+      setError(m.tt_copy_failed_msg());
     }
   };
 
@@ -126,14 +127,14 @@ export function TemplatesPanel({
     try {
       const parsed = JSON.parse(templatesJson);
       if (!validateTemplatesImportPayload(parsed)) {
-        setError("Invalid templates JSON. Expected an object with a templates array.");
+        setError(m.tt_invalid_templates_structure());
         return;
       }
 
       onUpdateTemplates(sanitizeTemplates(parsed.templates ?? []));
-      toast.showSuccess("Templates updated.");
+      toast.showSuccess(m.tt_templates_updated());
     } catch {
-      setError("Invalid templates JSON. Please check the format and try again.");
+      setError(m.tt_invalid_templates_format());
     }
   };
 
@@ -152,19 +153,19 @@ export function TemplatesPanel({
   const handleSave = () => {
     setError("");
     if (!templateForm.text || !templateForm.start || !templateForm.stop) {
-      setError("Fill all template fields.");
+      setError(m.tt_fill_template_fields());
       return;
     }
     if (!templateForm.label) {
-      setError("Please configure at least one label.");
+      setError(m.tt_error_configure_label());
       return;
     }
     if (!labels.some((l) => l.id === templateForm.label)) {
-      setError("Selected label no longer exists. Please choose another label.");
+      setError(m.tt_label_not_found());
       return;
     }
     if (!isValidRange(templateForm.start, templateForm.stop)) {
-      setError("Template stop time must be after start time.");
+      setError(m.tt_template_stop_after_start());
       return;
     }
     const templatePayload: Omit<TimeTrackingTemplate, "id"> = {
@@ -175,10 +176,10 @@ export function TemplatesPanel({
         return;
       }
       onUpdateTemplate({ id: editTemplateId, template: templatePayload });
-      toast.showSuccess("Template updated.");
+      toast.showSuccess(m.tt_template_updated());
     } else {
       onAddTemplate(templatePayload);
-      toast.showSuccess("Template added.");
+      toast.showSuccess(m.tt_template_added());
     }
     resetForm();
     setEditTemplateId(null);
@@ -190,7 +191,7 @@ export function TemplatesPanel({
       return;
     }
     onDeleteTemplate(pendingDeleteTemplate.id);
-    toast.showSuccess("Template deleted.");
+    toast.showSuccess(m.tt_template_deleted());
     setPendingDeleteTemplate(null);
   };
 
@@ -204,7 +205,7 @@ export function TemplatesPanel({
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 className="mb-0">
           <i className="bi bi-clipboard-check me-2" aria-hidden="true"></i>
-          Templates
+          {m.tt_templates_heading()}
         </h5>
         <Button
           size="sm"
@@ -215,7 +216,7 @@ export function TemplatesPanel({
             setModalMode("create");
           }}
         >
-          Add Template
+          {m.tt_add_template_btn()}
         </Button>
       </div>
       <div className="d-flex flex-column gap-3">
@@ -223,10 +224,10 @@ export function TemplatesPanel({
           <div className="border rounded bg-body-tertiary">
             <EmptyState
               icon="bi-file-earmark-text"
-              title="No Templates Yet"
-              description="Templates let you quickly add recurring tasks. Create a template for tasks you log regularly."
+              title={m.tt_no_templates_title()}
+              description={m.tt_no_templates_desc()}
               ctaButton={{
-                label: "Add Your First Template",
+                label: m.tt_add_first_template(),
                 onClick: () => {
                   setError("");
                   resetForm();
@@ -242,23 +243,23 @@ export function TemplatesPanel({
               <ListGroup.Item key={template.id} className="d-flex flex-wrap gap-2">
                 <span className="me-auto">
                   {template.text} ({template.start}-{template.stop}) [
-                  {labelNameById[template.label] ?? "Unknown label"}]
+                  {labelNameById[template.label] ?? m.tt_unknown_label()}]
                 </span>
                 <Button
                   size="sm"
                   variant="outline-secondary"
-                  aria-label={`Edit ${template.text}`}
+                  aria-label={m.edit_with_name({ name: template.text })}
                   onClick={() => handleEdit(template)}
                 >
-                  Edit
+                  {m.edit()}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline-danger"
-                  aria-label={`Delete ${template.text}`}
+                  aria-label={m.delete_with_name({ name: template.text })}
                   onClick={() => setPendingDeleteTemplate(template)}
                 >
-                  Delete
+                  {m.delete()}
                 </Button>
               </ListGroup.Item>
             ))}
@@ -266,7 +267,12 @@ export function TemplatesPanel({
         )}
 
         <RawJsonEditor
-          label="Templates"
+          summaryLabel={m.tt_raw_json_summary({ label: m.tt_templates_heading().toLowerCase() })}
+          headingLabel={m.tt_json_heading({ label: m.tt_templates_heading() })}
+          copyButtonLabel={m.tt_copy_json({ label: m.tt_templates_heading() })}
+          applyButtonLabel={m.tt_apply_json({ label: m.tt_templates_heading() })}
+          ariaLabel={m.tt_json_aria({ label: m.tt_templates_heading() })}
+          formatLabel={m.tt_format()}
           value={templatesJson}
           formatHint={`{"templates":[{"id":"template-1","text":"Support","label":"label-1","start":"09:00","stop":"11:00"}]}`}
           onChange={setTemplatesJson}
@@ -274,7 +280,7 @@ export function TemplatesPanel({
           onApply={handleApplyJson}
         >
           <details className="mt-3">
-            <summary className="small text-muted">Example templates JSON</summary>
+            <summary className="small text-muted">{m.tt_example_templates_json()}</summary>
             <pre className="textarea-mono time-tracking-codeblock small mt-2 mb-0 p-2 border rounded">
               <code>{EXAMPLE_TEMPLATES_JSON}</code>
             </pre>
@@ -284,8 +290,8 @@ export function TemplatesPanel({
 
       <TemplateModal
         show={modalMode !== null}
-        title={modalMode === "edit" ? "Edit Template" : "Add New Template"}
-        submitLabel={modalMode === "edit" ? "Save Changes" : "Save Template"}
+        title={modalMode === "edit" ? m.tt_edit_template_title() : m.tt_add_template_title()}
+        submitLabel={modalMode === "edit" ? m.tt_save_changes() : m.tt_save_template()}
         labels={labels}
         value={templateForm}
         onChange={setTemplateForm}
@@ -299,9 +305,13 @@ export function TemplatesPanel({
 
       <ConfirmationDialog
         isOpen={pendingDeleteTemplate !== null}
-        title="Delete Template"
-        message={pendingDeleteTemplate ? `Delete "${pendingDeleteTemplate.text}"?` : ""}
-        confirmLabel="Delete"
+        title={m.tt_delete_template_title()}
+        message={
+          pendingDeleteTemplate
+            ? m.tt_delete_item_message({ name: pendingDeleteTemplate.text })
+            : ""
+        }
+        confirmLabel={m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDeleteTemplate(null)}
