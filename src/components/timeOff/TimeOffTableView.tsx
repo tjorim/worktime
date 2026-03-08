@@ -52,7 +52,7 @@ function formatEventDate(event: HdayEvent, weekdayNames: string[]): React.ReactN
       event.weekday <= Weekday.Sunday
         ? weekdayNames[event.weekday - 1]
         : m.timeoff_unknown_format();
-    return m.timeoff_every_weekday({ day: weekdayName ?? m.timeoff_unknown_format() });
+    return m.timeoff_every_weekday({ day: weekdayName });
   }
   return null;
 }

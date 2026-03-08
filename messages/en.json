@@ -357,7 +357,6 @@
   "tt_now_aria": "Currently active task",
   "tt_break_deducted": "{minutes} minute break deducted",
   "tt_select_label_color": "Select label color",
-  "tt_labels_configured": "{count} labels configured.",
   "tt_label_used_by": "Used by {context}",
   "tt_edit_label_aria": "Edit {name}",
   "tt_delete_label_aria": "Delete {name}",
