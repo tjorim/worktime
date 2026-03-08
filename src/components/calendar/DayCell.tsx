@@ -202,7 +202,7 @@ export function DayCell({
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
-  const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
+  const ariaLabelParts = [longDateFormatter.format(date.toDate())];
   if (isToday) {
     ariaLabelParts.push(m.daycell_today_label());
   }

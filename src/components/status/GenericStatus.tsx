@@ -33,6 +33,7 @@ interface GenericStatusContentProps {
 export function GenericStatusContent({ scheduleType }: GenericStatusContentProps) {
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
+  const locale = getLocale();
 
   const today = dayjs();
   const todayMinuteKey = today.startOf("minute").toISOString();
@@ -90,7 +91,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
     const allTeamsToday = getAllTeamsShifts(today, scheduleType);
     const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking).length;
     const offTeams = allTeamsToday.length - workingTeams;
-    const pluralRules = new Intl.PluralRules(getLocale());
+    const pluralRules = new Intl.PluralRules(locale);
     const workingLabel =
       pluralRules.select(workingTeams) === "one"
         ? m.generic_status_working_count_one({ count: String(workingTeams) })
@@ -106,7 +107,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
       workingLabel,
       offLabel,
     };
-  }, [hasTeams, scheduleType, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+  }, [hasTeams, scheduleType, todayMinuteKey, locale]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   const currentShiftStartTime = useMemo(() => {
     if (!currentWorkingTeam || currentWorkingTeam.shift.start == null) return null;
@@ -252,11 +253,11 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               {nextShiftAnyTeam ? (
                 <div>
                   <div className="fw-semibold">
-                    {hasTeams ? m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) }) : ""}
+                    {hasTeams ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} ` : ""}
                     {(
                       typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate ===
                       "function"
-                        ? new Intl.DateTimeFormat(getLocale(), {
+                        ? new Intl.DateTimeFormat(locale, {
                             weekday: "short",
                             month: "short",
                             day: "numeric",

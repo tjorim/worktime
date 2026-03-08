@@ -90,6 +90,26 @@ export function WeekView({
   );
   useKeyboardShortcuts(shortcuts);
 
+  // Memoize today's date for consistent "today" highlighting throughout rendering
+  const today = dayjs();
+  const locale = getLocale();
+  const shortDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
+    [locale],
+  );
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }),
+    [locale],
+  );
+  const shortWeekdayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
+    [locale],
+  );
+
+  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(dayjs(value).toDate());
+  const formatLongDate = (value: Dayjs) => longDateFormatter.format(dayjs(value).toDate());
+  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(dayjs(value).toDate());
+
   // No schedule selected - show setup prompt
   if (!scheduleType) {
     return (
@@ -114,26 +134,6 @@ export function WeekView({
   const isMyTeam = (teamNumber: number) => {
     return myTeam === teamNumber ? "my-team" : "";
   };
-
-  // Memoize today's date for consistent "today" highlighting throughout rendering
-  const today = dayjs();
-  const locale = getLocale();
-  const shortDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
-    [locale],
-  );
-  const longDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }),
-    [locale],
-  );
-  const shortWeekdayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
-    [locale],
-  );
-
-  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(dayjs(value).toDate());
-  const formatLongDate = (value: Dayjs) => longDateFormatter.format(dayjs(value).toDate());
-  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(dayjs(value).toDate());
 
   return (
     <Card>

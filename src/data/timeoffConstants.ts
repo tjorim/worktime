@@ -109,8 +109,10 @@ export const DEFAULT_WEEKDAY: number = Weekday.Monday;
  * Help text for each view mode in the Time Off tab.
  * Type-checked to ensure all TIMEOFF_VIEWS modes have corresponding help text.
  */
-export const VIEW_MODE_HELP_TEXT: Record<(typeof TIMEOFF_VIEWS)[number], string> = {
-  table: m.timeoff_view_help_table(),
-  stats: m.timeoff_view_help_stats(),
-  team: m.timeoff_view_help_team(),
-};
+export function getViewModeHelpText(): Record<(typeof TIMEOFF_VIEWS)[number], string> {
+  return {
+    table: m.timeoff_view_help_table(),
+    stats: m.timeoff_view_help_stats(),
+    team: m.timeoff_view_help_team(),
+  };
+}

@@ -10,7 +10,7 @@ interface Step2FeaturesProps {
   onNext: () => void;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
   /**
-   * Text or element describing where to find settings. Caller is responsible for any desired styling (e.g., <b> or <strong> if bold is needed).
+   * String describing where to find settings; caller is responsible for any desired styling.
    */
   settingsLocationText: string;
 }

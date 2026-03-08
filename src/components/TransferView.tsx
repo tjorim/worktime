@@ -165,6 +165,7 @@ export function TransferView({
   const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
 
   const { scheduleType } = useSettings();
+  const locale = getLocale();
   const isDateRangeInvalid = useMemo(
     () =>
       useCustomRange &&
@@ -320,8 +321,8 @@ export function TransferView({
     [groupedTransfers],
   );
   const transferCountCategory = useMemo(
-    () => new Intl.PluralRules(getLocale()).select(transfers.length),
-    [transfers.length],
+    () => new Intl.PluralRules(locale).select(transfers.length),
+    [transfers.length, locale],
   );
 
   return (

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary } from "../../src/components/ErrorBoundary";
+import * as m from "../../src/paraglide/messages.js";
 
 // Mock console.error to avoid noise in test output
 const originalError = console.error;
@@ -46,8 +47,8 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
 
-      expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: m.error_boundary_try_again() })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: m.error_boundary_reload() })).toBeInTheDocument();
     });
 
     it("handles try again button click", async () => {
@@ -59,11 +60,11 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
 
-      const tryAgainButton = screen.getByRole("button", { name: "Try Again" });
+      const tryAgainButton = screen.getByRole("button", { name: m.error_boundary_try_again() });
       await user.click(tryAgainButton);
 
       // After reset, should show error UI again since component still throws
-      expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: m.error_boundary_try_again() })).toBeInTheDocument();
     });
 
     it("renders custom fallback when provided", () => {
@@ -76,7 +77,7 @@ describe("ErrorBoundary", () => {
       );
 
       expect(screen.getByTestId("custom-fallback")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Try Again" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: m.error_boundary_try_again() })).not.toBeInTheDocument();
     });
   });
 });

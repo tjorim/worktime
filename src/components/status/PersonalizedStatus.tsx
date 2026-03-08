@@ -36,6 +36,13 @@ export function PersonalizedStatusContent({
   myTeam,
   scheduleType,
 }: PersonalizedStatusContentProps) {
+  const teamTooltipId = useId();
+  const locale = getLocale();
+  const weekdayDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
+    [locale],
+  );
+
   if (!isValidScheduleType(scheduleType)) {
     return (
       <EmptyState
@@ -45,14 +52,6 @@ export function PersonalizedStatusContent({
       />
     );
   }
-
-  const teamTooltipId = useId();
-
-  const locale = getLocale();
-  const weekdayDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
-    [locale],
-  );
 
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;

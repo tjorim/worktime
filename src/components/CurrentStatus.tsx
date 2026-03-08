@@ -35,6 +35,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
   const { settings, scheduleType } = useSettings();
   const liveTime = useLiveTime({ precision: "minute" });
   const today = liveTime;
+  const locale = getLocale();
 
   // Get effective team - for single-user schedules, this returns 1 when myTeam is null
   const effectiveTeam = getEffectiveTeam(myTeam, scheduleType);
@@ -48,14 +49,14 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
   const localizedDateLabel = useMemo(() => {
     const liveTimeWithDate = liveTime as { toDate?: () => Date; format: (pattern: string) => string };
     if (typeof liveTimeWithDate.toDate === "function") {
-      return new Intl.DateTimeFormat(getLocale(), {
+      return new Intl.DateTimeFormat(locale, {
         weekday: "long",
         month: "short",
         day: "numeric",
       }).format(liveTimeWithDate.toDate());
     }
     return liveTime.format("dddd, MMM D");
-  }, [liveTime]);
+  }, [liveTime, locale]);
 
   // Find which team is currently working (for timeline)
   const currentWorkingTeam = useMemo(() => {
