@@ -70,7 +70,7 @@ export type TimeOffViewMode = (typeof TIMEOFF_VIEWS)[number];
 /**
  * Default weekday value for weekly events (Weekday.Monday).
  */
-export const DEFAULT_WEEKDAY = Weekday.Monday;
+export const DEFAULT_WEEKDAY: number = Weekday.Monday;
 
 /**
  * Help text for each view mode in the Time Off tab.
