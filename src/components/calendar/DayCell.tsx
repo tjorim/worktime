@@ -12,6 +12,7 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "../../lib/hday/parser";
+import * as m from "../../paraglide/messages.js";
 
 export type DayEvent = {
   event: HdayEvent;
@@ -45,16 +46,19 @@ interface DayCellProps {
 const MAX_EVENTS = 3;
 
 /**
- * Accessible labels for time/location symbols displayed in events.
+ * Returns accessible labels for time/location symbols displayed in events.
  * Maps each symbol to a human-readable description for screen readers.
  */
-const SYMBOL_LABELS: Record<string, string> = {
-  "◐": "Morning half-day event",
-  "◑": "Afternoon half-day event",
-  W: "Onsite support",
-  N: "Not able to fly",
-  F: "In principle able to fly",
-};
+function getSymbolLabel(symbol: string): string {
+  const labels: Record<string, () => string> = {
+    "◐": m.daycell_morning_half,
+    "◑": m.daycell_afternoon_half,
+    W: m.daycell_onsite_support,
+    N: m.daycell_no_fly,
+    F: m.daycell_can_fly,
+  };
+  return labels[symbol]?.() ?? symbol;
+}
 
 /**
  * Determines which visual indicator icons to display for a day based on event flags.
@@ -114,9 +118,9 @@ const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefin
 
   switch (workLocation.location) {
     case "home":
-      return "Working from home";
+      return m.daycell_working_home();
     case "office":
-      return "Working from office";
+      return m.daycell_working_office();
     case "other": {
       if (workLocation.label) {
         return `Other location: ${workLocation.label} (${workLocation.countryCode})`;
@@ -187,7 +191,7 @@ export function DayCell({
   const workLocationLabel = getWorkLocationLabel(workLocation);
   const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
   if (isToday) {
-    ariaLabelParts.push("Today");
+    ariaLabelParts.push(m.daycell_today_label());
   }
   if (shiftBadge) {
     ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
@@ -327,7 +331,7 @@ export function DayCell({
               <span
                 className="month-calendar-event-symbol"
                 role="img"
-                aria-label={SYMBOL_LABELS[symbol] || symbol}
+                aria-label={getSymbolLabel(symbol)}
               >
                 {symbol}
               </span>

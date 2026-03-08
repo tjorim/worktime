@@ -17,6 +17,7 @@ import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
 import { ErrorBoundary } from "./ErrorBoundary";
+import * as m from "../paraglide/messages.js";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -93,7 +94,7 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                 <div className="d-flex flex-column align-items-start align-items-md-center">
                   <small className="text-muted text-uppercase mb-1 d-none d-md-block">Type</small>
                   <Badge bg={transfer.type === "handover" ? "success" : "info"} pill>
-                    {transfer.type === "handover" ? "Handover" : "Takeover"}
+                    {transfer.type === "handover" ? m.transfer_handover() : m.transfer_takeover()}
                   </Badge>
                 </div>
               </Col>
@@ -270,7 +271,7 @@ export function TransferView({
       return transferDateRange;
     }
     if (!customStartDate && !customEndDate) {
-      return "All dates";
+      return m.transfer_all_dates();
     }
     if (customStartDate && customEndDate) {
       return (
@@ -306,10 +307,10 @@ export function TransferView({
     });
 
     return [
-      { key: "next-7", title: "Next 7 Days", items: nextWeek },
-      { key: "next-30", title: "Next 30 Days", items: nextMonth },
-      { key: "further", title: "Further Ahead", items: future },
-      { key: "past", title: "Past Transfers", items: past },
+      { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
+      { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
+      { key: "further", title: m.transfer_further_ahead(), items: future },
+      { key: "past", title: m.transfer_past(), items: past },
     ];
   }, [currentDay, transfers]);
 
@@ -354,8 +355,8 @@ export function TransferView({
         ) : availableOtherTeams.length === 0 ? (
           <EmptyState
             icon="bi-people"
-            title="No Other Teams Available"
-            description="No other teams available for transfer analysis."
+            title={m.transfer_no_teams_title()}
+            description={m.transfer_no_teams_desc()}
           />
         ) : (
           <>
@@ -413,7 +414,7 @@ export function TransferView({
                     <Form.Check
                       type="checkbox"
                       id={showPastCheckboxId}
-                      label="Filter by custom date range"
+                      label={m.transfer_filter_label()}
                       checked={useCustomRange}
                       onChange={(e) => setUseCustomRange(e.target.checked)}
                     />
@@ -483,8 +484,18 @@ export function TransferView({
             ) : transfers.length === 0 ? (
               <EmptyState
                 icon="bi-calendar-x"
-                title="No Transfers Found"
-                description={`No transfers found between Team ${myTeam} and Team ${otherTeam}${useCustomRange && (customStartDate || customEndDate) ? " in the selected date range" : ""}.`}
+                title={m.transfer_no_results_title()}
+                description={
+                  useCustomRange && (customStartDate || customEndDate)
+                    ? m.transfer_no_results_range({
+                        myTeam: String(myTeam),
+                        otherTeam: String(otherTeam),
+                      })
+                    : m.transfer_no_results_between({
+                        myTeam: String(myTeam),
+                        otherTeam: String(otherTeam),
+                      })
+                }
               />
             ) : (
               <>

@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import { useSetupAction } from "../../hooks/useSetupAction";
+import * as m from "../../paraglide/messages.js";
 
 interface SetupActionButtonProps {
   /**
@@ -52,7 +53,7 @@ export function SetupActionButton({
         variant="primary"
         size={size}
         onClick={onChangeSchedule}
-        title="Select your work schedule"
+        title={m.setup_btn_select_schedule_title()}
       >
         <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
         {buttonText}
@@ -63,7 +64,7 @@ export function SetupActionButton({
   // Primary action: Select Team (for multi-team schedules when no team selected)
   if (needsTeam && onChangeTeam) {
     return (
-      <Button variant="primary" size={size} onClick={onChangeTeam} title="Select your team">
+      <Button variant="primary" size={size} onClick={onChangeTeam} title={m.setup_btn_select_team_title()}>
         <i className={clsx("bi", buttonIcon, "me-1")} aria-hidden="true"></i>
         {buttonText}
       </Button>

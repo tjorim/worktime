@@ -12,6 +12,7 @@ import { PersonalizedStatusContent } from "./status/PersonalizedStatus";
 import { GenericStatusContent } from "./status/GenericStatus";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftTimeline } from "./ShiftTimeline";
+import * as m from "../paraglide/messages.js";
 
 interface CurrentStatusProps {
   myTeam: number | null;
@@ -79,7 +80,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                   placement="bottom"
                   overlay={
                     <Tooltip id={dateTooltipId}>
-                      <strong>Date Format: YYWW.D</strong>
+                      <strong>{m.current_status_date_format()}</strong>
                       <br />
                       YY = Year (2-digit)
                       <br />

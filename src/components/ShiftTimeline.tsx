@@ -9,6 +9,7 @@ import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
 import { getAllTeamsShifts } from "../utils/shiftCalculations";
 import { getTeamCountForOption } from "../utils/scheduleUtils";
+import * as m from "../paraglide/messages.js";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -188,7 +189,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             placement="bottom"
             overlay={
               <Tooltip id={timelineTooltipId}>
-                <strong>Currently Active</strong>
+                <strong>{m.timeline_currently_active()}</strong>
                 <br />
                 {currentWorkingTeam.shift.name}
                 <br />
