@@ -28,6 +28,7 @@ import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
+import * as m from "../paraglide/messages.js";
 
 /**
  * Validates vacation amount input.
@@ -145,11 +146,11 @@ export function WelcomeWizard({
     }
   }, [startStep]);
 
-  const SETTINGS_LOCATION_TEXT = (
-    <b>
-      Settings panel (<span aria-hidden="true">⚙️</span> in the top right)
-    </b>
-  );
+  const SETTINGS_LOCATION_TEXT = m.wizard_settings_title_with_location({
+    settings: m.settings_title(),
+    icon: "⚙️",
+    location: m.wizard_settings_panel_location(),
+  });
 
   const isChangeFlow = mode === "change-schedule" || mode === "change-team";
   const resolvedSchedule = isValidScheduleType(selectedSchedule) ? selectedSchedule : null;
@@ -283,22 +284,28 @@ export function WelcomeWizard({
         <div className="mb-4">
           <ProgressBar
             now={getProgressPercentage()}
-            aria-label={`Onboarding progress: step ${getStepIndex(effectiveStep, wizardContext)} of ${getTotalSteps(wizardContext)}`}
+            aria-label={m.wizard_onboarding_progress({
+              step: String(getStepIndex(effectiveStep, wizardContext)),
+              total: String(getTotalSteps(wizardContext)),
+            })}
             variant="primary"
             style={{ height: "4px" }}
             className="mb-2"
           />
           <div className="d-flex justify-content-between small text-muted">
             <span>
-              Step {getStepIndex(effectiveStep, wizardContext)} of {getTotalSteps(wizardContext)}
+              {m.wizard_step_of({
+                step: String(getStepIndex(effectiveStep, wizardContext)),
+                total: String(getTotalSteps(wizardContext)),
+              })}
             </span>
-            <span>{getProgressPercentage()}% Complete</span>
+            <span>{m.wizard_percent_complete({ percent: String(getProgressPercentage()) })}</span>
           </div>
         </div>
         {isLoading ? (
           <div className="text-center py-5" role="status">
             <Spinner animation="border" aria-hidden="true" />
-            <div className="mt-3 text-muted">Setting up your experience...</div>
+            <div className="mt-3 text-muted">{m.wizard_setting_up()}</div>
           </div>
         ) : (
           <>

@@ -3,6 +3,7 @@ import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import { getEventTypeLabel } from "../lib/hday/parser";
 import { getWeekdayName } from "../utils/dateTimeUtils";
+import * as m from "../paraglide/messages.js";
 
 type FlagCheckboxProps = {
   id: string;
@@ -52,21 +53,22 @@ function FlagCheckbox({
  * @returns Human-readable label for the flag
  */
 function getFlagLabel(flag: EventFlag): string {
-  const labels: Record<string, string> = {
-    business: "Business",
-    course: "Course",
-    in: "In Office",
-    weekend: "Weekend",
-    birthday: "Birthday",
-    ill: "Sick Leave",
-    other: "Other",
-    half_am: "AM Half Day",
-    half_pm: "PM Half Day",
-    onsite: "Onsite",
-    no_fly: "No Fly",
-    can_fly: "Can Fly",
+  const labels: Record<string, () => string> = {
+    business: m.timeoff_flag_business,
+    course: m.timeoff_flag_course,
+    in: m.timeoff_flag_in,
+    weekend: m.timeoff_flag_weekend,
+    birthday: m.timeoff_flag_birthday,
+    holiday: m.timeoff_flag_holiday,
+    ill: m.timeoff_flag_ill,
+    other: m.timeoff_flag_other,
+    half_am: m.timeoff_flag_half_am,
+    half_pm: m.timeoff_flag_half_pm,
+    onsite: m.timeoff_flag_onsite,
+    no_fly: m.timeoff_flag_no_fly,
+    can_fly: m.timeoff_flag_can_fly,
   };
-  return labels[flag] || flag;
+  return labels[flag]?.() ?? flag;
 }
 
 /**
@@ -147,7 +149,7 @@ function FlagSection<Flag extends EventFlag | "none">({
               </Badge>
             ))}
           {!eventFlags.some((f) => flagGroup.includes(f)) && (
-            <span className="text-muted">None</span>
+            <span className="text-muted">{m.event_modal_none_label()}</span>
           )}
         </div>
       </Form.Group>
@@ -271,7 +273,11 @@ export function EventModal({
     <Modal show={show} onHide={onHide} onEntered={onEntered} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          {mode === "view" ? "View Event" : mode === "edit" ? "Edit Event" : "New Event"}
+          {mode === "view"
+            ? m.event_modal_view_event()
+            : mode === "edit"
+              ? m.event_modal_edit_event()
+              : m.event_modal_new_event()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body ref={formRef} tabIndex={-1}>
@@ -281,7 +287,7 @@ export function EventModal({
               <Col xs={12}>
                 <Card className="preview-card border-0 bg-body-secondary">
                   <Card.Body className="py-2">
-                    <div className="small text-uppercase text-muted">Preview</div>
+                    <div className="small text-uppercase text-muted">{m.event_modal_preview_label()}</div>
                     <div className="fw-semibold">
                       {getEventTypeLabel(eventFlags)}{" "}
                       {eventType === "weekly"
@@ -292,16 +298,18 @@ export function EventModal({
                           ? eventEnd && eventEnd !== eventStart
                             ? `· ${eventStart} → ${eventEnd}`
                             : `· ${eventStart}`
-                          : "· Select a date"}
+                          : m.event_modal_select_date()}
                     </div>
                     {eventTitle && <div className="text-muted">{eventTitle}</div>}
                     {eventFlags.length > 0 && (
-                      <div className="text-muted small">Flags: {eventFlags.join(", ")}</div>
+                      <div className="text-muted small">
+                        {m.event_modal_flags_label({ flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", ") })}
+                      </div>
                     )}
                     <div className="mt-2">
-                      <div className="small text-uppercase text-muted">Raw line</div>
+                      <div className="small text-uppercase text-muted">{m.event_modal_raw_line_label()}</div>
                       <div className="font-monospace">
-                        {previewLine || "Fill in the required fields to preview the .hday line."}
+                        {previewLine || m.event_modal_fill_required()}
                       </div>
                     </div>
                   </Card.Body>
@@ -310,26 +318,26 @@ export function EventModal({
             )}
             <Col md={6}>
               <Form.Group controlId="eventType">
-                <Form.Label>Event type</Form.Label>
+                <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
                 <Form.Select
                   value={eventType}
                   onChange={(event) => onEventTypeChange(event.target.value as "range" | "weekly")}
                   disabled={mode === "view"}
                 >
-                  <option value="range">Range (start-end)</option>
-                  <option value="weekly">Weekly (weekday)</option>
+                  <option value="range">{m.event_modal_type_range()}</option>
+                  <option value="weekly">{m.event_modal_type_weekly()}</option>
                 </Form.Select>
               </Form.Group>
             </Col>
 
             <Col md={6}>
               <Form.Group controlId="eventTitle">
-                <Form.Label>Comment (optional)</Form.Label>
+                <Form.Label>{m.event_modal_comment_label()}</Form.Label>
                 <Form.Control
-                  aria-label="Comment"
+                  aria-label={m.event_modal_comment_label()}
                   value={eventTitle}
                   onChange={(event) => onEventTitleChange(event.target.value)}
-                  placeholder="Optional comment"
+                  placeholder={m.event_modal_comment_placeholder()}
                   disabled={mode === "view"}
                 />
               </Form.Group>
@@ -340,7 +348,7 @@ export function EventModal({
                 <Col md={6}>
                   <Form.Group controlId="eventStart">
                     <Form.Label>
-                      Start (YYYY/MM/DD) <span className="text-danger">*</span>
+                      {m.event_modal_start_label()} <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
                       type="date"
@@ -364,7 +372,7 @@ export function EventModal({
                 </Col>
                 <Col md={6}>
                   <Form.Group controlId="eventEnd">
-                    <Form.Label>End (YYYY/MM/DD)</Form.Label>
+                    <Form.Label>{m.event_modal_end_label()}</Form.Label>
                     <Form.Control
                       type="date"
                       value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
@@ -388,19 +396,19 @@ export function EventModal({
             ) : (
               <Col md={6}>
                 <Form.Group controlId="eventWeekday">
-                  <Form.Label>Weekday</Form.Label>
+                  <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
                   <Form.Select
                     value={eventWeekday}
                     onChange={(event) => onEventWeekdayChange(parseInt(event.target.value, 10))}
                     disabled={mode === "view"}
                   >
-                    <option value="1">Mon</option>
-                    <option value="2">Tue</option>
-                    <option value="3">Wed</option>
-                    <option value="4">Thu</option>
-                    <option value="5">Fri</option>
-                    <option value="6">Sat</option>
-                    <option value="7">Sun</option>
+                    <option value="1">{m.weekday_mon()}</option>
+                    <option value="2">{m.weekday_tue()}</option>
+                    <option value="3">{m.weekday_wed()}</option>
+                    <option value="4">{m.weekday_thu()}</option>
+                    <option value="5">{m.weekday_fri()}</option>
+                    <option value="6">{m.weekday_sat()}</option>
+                    <option value="7">{m.weekday_sun()}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -408,8 +416,8 @@ export function EventModal({
 
             <FlagSection
               mode={mode}
-              title="Type"
-              fieldsetTitle="Type Flags"
+              title={m.event_modal_type_section_title()}
+              fieldsetTitle={m.event_modal_type_fieldset_title()}
               flagOptions={typeFlagOptions}
               eventFlags={eventFlags}
               flagGroup={typeFlagsAsEventFlags}
@@ -418,8 +426,8 @@ export function EventModal({
 
             <FlagSection
               mode={mode}
-              title="Time / Location"
-              fieldsetTitle="Time / Location Flags"
+              title={m.event_modal_location_section_title()}
+              fieldsetTitle={m.event_modal_location_fieldset_title()}
               flagOptions={timeLocationFlagOptions}
               eventFlags={eventFlags}
               flagGroup={timeLocationFlagsAsEventFlags}
@@ -432,11 +440,11 @@ export function EventModal({
         {mode === "view" ? (
           <>
             <Button variant="secondary" onClick={onHide}>
-              Close
+              {m.close()}
             </Button>
             {onSwitchToEdit && (
               <Button variant="primary" onClick={onSwitchToEdit}>
-                Edit
+                {m.edit()}
               </Button>
             )}
           </>
@@ -444,14 +452,14 @@ export function EventModal({
           <>
             {mode === "edit" && onCancelEditMode && (
               <Button variant="secondary" onClick={onCancelEditMode}>
-                Cancel
+                {m.cancel()}
               </Button>
             )}
             <Button variant="outline-secondary" onClick={onResetForm}>
-              Reset form
+              {m.event_modal_reset_form()}
             </Button>
             <Button variant="primary" onClick={onSubmit}>
-              {mode === "edit" ? "Update" : "Add"}
+              {mode === "edit" ? m.event_modal_update_btn() : m.event_modal_add_btn()}
             </Button>
           </>
         )}

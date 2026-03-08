@@ -12,8 +12,10 @@ import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import { calculateShift } from "../../utils/shiftCalculations";
+import { getLocale } from "../../paraglide/runtime.js";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import * as m from "../../paraglide/messages.js";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -88,15 +90,33 @@ export function WeekView({
   );
   useKeyboardShortcuts(shortcuts);
 
+  // Memoize today's date for consistent "today" highlighting throughout rendering
+  const today = dayjs();
+  const locale = getLocale();
+  const shortDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
+    [locale],
+  );
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }),
+    [locale],
+  );
+  const shortWeekdayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
+    [locale],
+  );
+
+  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(dayjs(value).toDate());
+  const formatLongDate = (value: Dayjs) => longDateFormatter.format(dayjs(value).toDate());
+  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(dayjs(value).toDate());
+
   // No schedule selected - show setup prompt
   if (!scheduleType) {
     return (
       <Card>
         <Card.Body className="text-center py-4">
           <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-          <p className="text-muted mb-3">
-            Please select your schedule to view the weekly overview.
-          </p>
+          <p className="text-muted mb-3">{m.week_view_no_schedule()}</p>
         </Card.Body>
       </Card>
     );
@@ -115,9 +135,6 @@ export function WeekView({
     return myTeam === teamNumber ? "my-team" : "";
   };
 
-  // Memoize today's date for consistent "today" highlighting throughout rendering
-  const today = dayjs();
-
   return (
     <Card>
       <Card.Header>
@@ -127,30 +144,30 @@ export function WeekView({
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
               aria-hidden="true"
             ></i>
-            {hasTeams ? "All Teams" : "Schedule"}
+            {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <WeekNavigationButtonGroup
             isCurrent={isCurrentWeek}
             onPrevious={handlePrevious}
             onCurrent={handleCurrent}
             onNext={handleNext}
-            selectorLabel="Jump to date:"
+            selectorLabel={m.tt_jump_to_date()}
             selectorValue={currentDate.format("YYYY-MM-DD")}
             onSelectorChange={handleDateChange}
           />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="text-muted small">
-            Week {selectedWeekNumber} ({selectedWeekYear})
+            {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
             {isCurrentWeek && (
-              <Badge bg="success" className="ms-2" aria-label="Current week">
-                This Week
+              <Badge bg="success" className="ms-2" aria-label={m.this_week()}>
+                {m.this_week()}
               </Badge>
             )}
           </div>
           <div className="small text-muted d-none d-lg-block">
             <i className="bi bi-keyboard me-1" aria-hidden="true"></i>
-            Keyboard: ← → arrows, Ctrl+H (this week)
+            {m.week_view_keyboard_hint()}
           </div>
         </div>
       </Card.Header>
@@ -159,9 +176,9 @@ export function WeekView({
           <div className="mb-3">
             <strong>
               <i className="bi bi-people me-1" aria-hidden="true"></i>
-              Team {myTeam} Schedule:
+              {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
-            <div className="text-muted small">Week {selectedWeekNumber}</div>
+            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
           </div>
         )}
 
@@ -169,42 +186,54 @@ export function WeekView({
           <div className="mb-3">
             <strong>
               <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
-              Your Schedule:
+              {m.week_view_your_schedule_heading()}
             </strong>
-            <div className="text-muted small">Week {selectedWeekNumber}</div>
+            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
           </div>
         )}
 
         <div className="table-responsive">
           <Table
             className="schedule-table table-sm"
-            aria-label={`Schedule for week of ${startOfWeek.format("MMM D")} - ${startOfWeek.add(6, "day").format("MMM D, YYYY")}`}
+            aria-label={m.week_view_table_aria({
+              startDate: formatShortDate(startOfWeek),
+              endDate: formatShortDate(startOfWeek.add(6, "day")),
+            })}
           >
             <thead>
               <tr>
-                <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
+                <th className="team-header">
+                  {hasTeams ? m.week_view_team_header() : m.week_view_schedule_label()}
+                </th>
                 {weekDays.map((day, dayIndex) => {
                   const isToday = day.isSame(today, "day");
                   return (
                     <th
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
                       className={clsx("text-center", isToday && "today-column")}
-                      aria-label={`${day.format("dddd, MMM D")}${isToday ? " (today)" : ""}`}
+                      aria-label={m.week_view_day_header_aria({
+                        date: formatLongDate(day),
+                        today: isToday ? m.daycell_today_label() : "",
+                      })}
                     >
-                      <div className="fw-semibold">{day.format("ddd")}</div>
+                      <div className="fw-semibold">{formatShortWeekday(day)}</div>
                       <div className="small text-muted">
                         <OverlayTrigger
                           placement="bottom"
                           overlay={
                             <Tooltip id={`date-tooltip-${day.format("YYYY-MM-DD")}`}>
-                              <strong>Date Code: {formatYYWWD(day)}</strong>
+                              <strong>{m.week_view_date_code({ code: formatYYWWD(day) })}</strong>
                               <br />
-                              Format: YYWW.D
+                              {m.week_view_date_code_format()}
                               <br />
-                              YY = ISO Year {getISOWeekYear2Digit(day)}
+                              {m.week_view_iso_year({ year: getISOWeekYear2Digit(day) })}
                               <br />
-                              WW = ISO Week {day.isoWeek()}
-                              <br />D = ISO Day {day.isoWeekday()} ({day.format("ddd")})
+                              {m.week_view_iso_week({ week: String(day.isoWeek()) })}
+                              <br />
+                              {m.week_view_iso_day({
+                                day: String(day.isoWeekday()),
+                                weekday: formatShortWeekday(day),
+                              })}
                             </Tooltip>
                           }
                         >
@@ -223,12 +252,17 @@ export function WeekView({
                   className={isMyTeam(teamNumber)}
                   aria-label={
                     hasTeams
-                      ? `Team ${teamNumber}${myTeam === teamNumber ? " (your team)" : ""}`
-                      : "Schedule"
+                      ? m.week_view_team_row_aria({
+                          team: String(teamNumber),
+                          yourTeam: myTeam === teamNumber ? m.week_view_your_team_suffix() : "",
+                        })
+                      : m.week_view_schedule_label()
                   }
                 >
                   <td className="team-header">
-                    <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
+                    <strong>
+                      {hasTeams ? m.team_label({ team: String(teamNumber) }) : m.week_view_schedule_label()}
+                    </strong>
                   </td>
                   {weekDays.map((day, dayIndex) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);
@@ -240,8 +274,15 @@ export function WeekView({
                         className={clsx("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                            ? m.week_view_team_day_shift_aria({
+                                team: String(teamNumber),
+                                day: formatLongDate(day),
+                                shift: shift.isWorking ? shift.name : m.schedule_off(),
+                              })
+                            : m.week_view_schedule_day_shift_aria({
+                                day: formatLongDate(day),
+                                shift: shift.isWorking ? shift.name : m.schedule_off(),
+                              })
                         }
                       >
                         {shift.isWorking && <ShiftBadge shift={shift} />}

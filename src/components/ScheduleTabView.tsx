@@ -11,6 +11,7 @@ import { isValidScheduleType } from "../utils/scheduleUtils";
 import { TransferView } from "./TransferView";
 import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
+import * as m from "../paraglide/messages.js";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);
@@ -100,7 +101,7 @@ export function ScheduleTabView({
   return (
     <div className="schedule-tab-view py-3 d-flex flex-column gap-3">
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-        <ButtonGroup aria-label="Toggle schedule view">
+        <ButtonGroup aria-label={m.schedule_toggle_view_aria()}>
           <Button
             variant={viewMode === "today" ? "primary" : "outline-primary"}
             size="sm"
@@ -108,7 +109,7 @@ export function ScheduleTabView({
             onClick={() => setViewMode("today")}
           >
             <i className="bi bi-calendar-day me-1" aria-hidden="true"></i>
-            Today
+            {m.today()}
           </Button>
           <Button
             variant={viewMode === "week" ? "primary" : "outline-primary"}
@@ -117,7 +118,7 @@ export function ScheduleTabView({
             onClick={() => setViewMode("week")}
           >
             <i className="bi bi-calendar-week me-1" aria-hidden="true"></i>
-            Week
+            {m.this_week()}
           </Button>
           <Button
             variant={viewMode === "transfer" ? "primary" : "outline-primary"}
@@ -126,14 +127,14 @@ export function ScheduleTabView({
             onClick={() => setViewMode("transfer")}
           >
             <i className="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
-            Transfers
+            {m.schedule_transfers_tab()}
           </Button>
         </ButtonGroup>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <Form.Label htmlFor={scheduleSelectId} className="mb-0 small text-muted">
             <i className="bi bi-clipboard-list me-1" aria-hidden="true"></i>
-            View schedule:
+            {m.schedule_view_label()}
           </Form.Label>
           <Form.Select
             id={scheduleSelectId}
@@ -148,12 +149,12 @@ export function ScheduleTabView({
             style={{ width: "auto" }}
           >
             <option value="" disabled>
-              Select schedule...
+              {m.schedule_select_placeholder()}
             </option>
             {availableSchedules.map((schedule) => (
               <option key={schedule.value} value={schedule.value}>
                 {schedule.title}
-                {schedule.value === userScheduleType ? " (Your schedule)" : ""}
+                {schedule.value === userScheduleType ? ` ${m.schedule_your_schedule_suffix()}` : ""}
               </option>
             ))}
           </Form.Select>
@@ -162,7 +163,7 @@ export function ScheduleTabView({
 
       {!viewingScheduleType && viewMode !== "transfer" && (
         <div className="alert alert-info mb-0" role="status">
-          Select a schedule to view the team lineup and shift details.
+          {m.schedule_select_hint()}
         </div>
       )}
 

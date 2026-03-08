@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
+import * as m from "../paraglide/messages.js";
 
 interface KeyboardShortcutsModalProps {
   show: boolean;
@@ -20,46 +20,42 @@ export function KeyboardShortcutsModal({
   enableTimeTracking = false,
   enableGantt = false,
 }: KeyboardShortcutsModalProps) {
-  const shortcuts = useMemo(() => {
-    const navigationItems = [
-      { keys: ["C"], description: "Calendar tab" },
-      { keys: ["S"], description: "Schedule tab" },
-      ...(enableTimeOff ? [{ keys: ["O"], description: "Time Off tab" }] : []),
-      ...(enableTimeTracking ? [{ keys: ["T"], description: "Time Tracking tab" }] : []),
-      ...(enableGantt ? [{ keys: ["G"], description: "Gantt tab" }] : []),
-      { keys: ["←", "→"], description: "Previous / next date" },
-      { keys: ["Ctrl", ","], description: "Open settings" },
-    ];
+  const navigationItems = [
+    { keys: ["C"], description: m.shortcuts_calendar_tab() },
+    { keys: ["S"], description: m.shortcuts_schedule_tab() },
+    ...(enableTimeOff ? [{ keys: ["O"], description: m.shortcuts_timeoff_tab() }] : []),
+    ...(enableTimeTracking ? [{ keys: ["T"], description: m.shortcuts_timetracking_tab() }] : []),
+    ...(enableGantt ? [{ keys: ["G"], description: m.shortcuts_gantt_tab() }] : []),
+    { keys: ["←", "→"], description: m.shortcuts_prev_next_date() },
+    { keys: ["Ctrl", ","], description: m.shortcuts_open_settings() },
+  ];
 
-    const categories = [{ category: "Navigation", items: navigationItems }];
+  const categories = [{ category: m.shortcuts_nav_category(), items: navigationItems }];
 
-    if (enableTimeOff) {
-      categories.push({
-        category: "Time Off",
-        items: [
-          { keys: ["Ctrl", "I"], description: "Import .hday file" },
-          { keys: ["Ctrl", "S"], description: "Export .hday file" },
-          { keys: ["Delete"], description: "Delete selected events" },
-          { keys: ["Escape"], description: "Cancel edit" },
-          { keys: ["Ctrl", "Z"], description: "Undo" },
-          { keys: ["Ctrl", "Y"], description: "Redo" },
-        ],
-      });
-    }
-
-    return categories;
-  }, [enableTimeOff, enableTimeTracking, enableGantt]);
+  if (enableTimeOff) {
+    categories.push({
+      category: m.shortcuts_timeoff_category(),
+      items: [
+        { keys: ["Ctrl", "I"], description: m.shortcuts_import_hday() },
+        { keys: ["Ctrl", "S"], description: m.shortcuts_export_hday() },
+        { keys: ["Delete"], description: m.shortcuts_delete_events() },
+        { keys: ["Escape"], description: m.shortcuts_cancel_edit() },
+        { keys: ["Ctrl", "Z"], description: m.shortcuts_undo() },
+        { keys: ["Ctrl", "Y"], description: m.shortcuts_redo() },
+      ],
+    });
+  }
 
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
         <Modal.Title>
           <i className="bi bi-keyboard me-2"></i>
-          Keyboard Shortcuts
+          {m.keyboard_shortcuts_label()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {shortcuts.map(({ category, items }) => (
+        {categories.map(({ category, items }) => (
           <div key={category} className="mb-3">
             <h6 className="text-muted mb-2">{category}</h6>
             <div className="row g-2">
@@ -85,7 +81,7 @@ export function KeyboardShortcutsModal({
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
-          Close
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>

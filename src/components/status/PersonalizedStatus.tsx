@@ -11,10 +11,12 @@ import { useCountdown } from "../../hooks/useCountdown";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
 import { useLiveShiftStatus } from "../../hooks/useLiveShiftStatus";
 import { setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
+import { getLocale } from "../../paraglide/runtime.js";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
 import { CountdownBadge } from "../shared/CountdownBadge";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { EmptyState } from "../shared/EmptyState";
+import * as m from "../../paraglide/messages.js";
 
 interface PersonalizedStatusContentProps {
   myTeam: number;
@@ -34,17 +36,22 @@ export function PersonalizedStatusContent({
   myTeam,
   scheduleType,
 }: PersonalizedStatusContentProps) {
+  const teamTooltipId = useId();
+  const locale = getLocale();
+  const weekdayDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
+    [locale],
+  );
+
   if (!isValidScheduleType(scheduleType)) {
     return (
       <EmptyState
         icon="bi-exclamation-triangle"
-        title="Invalid Schedule"
-        description="Your saved schedule is invalid. Please reconfigure your schedule settings."
+        title={m.personalized_status_invalid_title()}
+        description={m.personalized_status_invalid_desc()}
       />
     );
   }
-
-  const teamTooltipId = useId();
 
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
@@ -107,21 +114,23 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-primary">
               <i className="bi bi-tag me-1" aria-hidden="true"></i>
-              Today
+              {m.personalized_status_today()}
             </Card.Title>
             <div className="flex-grow-1">
-              {hasTeams && <span className="fw-semibold me-1">Team {myTeam}:</span>}
+              {hasTeams && (
+                <span className="fw-semibold me-1">{m.personalized_status_team({ team: String(myTeam) })}</span>
+              )}
               <OverlayTrigger
                 placement="bottom"
                 overlay={
                   <Tooltip id={teamTooltipId}>
-                    <strong>Your Team Today</strong>
+                    <strong>{m.personalized_status_your_team_today()}</strong>
                     <br />
-                    Code: <strong>{currentShift.shift.displayCode}</strong>
+                    {m.personalized_status_code_label()} <strong>{currentShift.shift.displayCode}</strong>
                     <br />
                     {shiftTooltipDetails}
                     <br />
-                    <em>Full code: {currentShift.code}</em>
+                    <em>{m.personalized_status_full_code({ code: currentShift.code })}</em>
                   </Tooltip>
                 }
               >
@@ -151,20 +160,32 @@ export function PersonalizedStatusContent({
                     <CountdownBadge
                       countdown={shiftEndCountdown}
                       startTime={currentShiftEndTime}
-                      label="Ends in"
+                      label={m.personalized_status_ends_in()}
                       variant="warning"
                     />
                     {shiftProgress && (
                       <div className="mt-2">
                         <div className="small text-muted mb-1">
-                          Shift Progress: {shiftProgress.elapsedHours}h / {shiftProgress.totalHours}
-                          h
+                          {m.personalized_status_shift_progress({
+                            elapsedHours: String(shiftProgress.elapsedHours),
+                            totalHours: String(shiftProgress.totalHours),
+                          })}
                         </div>
                         <ProgressBar
                           now={shiftProgress.percentage}
                           variant="warning"
                           className="progress-thin"
-                          aria-label={`Shift progress: ${shiftProgress.elapsedHours} of ${shiftProgress.totalHours} hours`}
+                          aria-label={
+                            shiftProgress.totalHours === 1
+                              ? m.personalized_status_shift_progress_aria_one({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                              : m.personalized_status_shift_progress_aria_other({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                          }
                         />
                       </div>
                     )}
@@ -173,13 +194,26 @@ export function PersonalizedStatusContent({
               {!currentShift.shift.isWorking && offDayProgress && (
                 <div className="mt-2">
                   <div className="small text-muted mb-1">
-                    Off Day Progress: Day {offDayProgress.current} of {offDayProgress.total}
+                    {m.personalized_status_off_day_progress({
+                      current: String(offDayProgress.current),
+                      total: String(offDayProgress.total),
+                    })}
                   </div>
                   <ProgressBar
                     now={(offDayProgress.current / offDayProgress.total) * 100}
                     variant="info"
                     className="progress-thin"
-                    aria-label={`Off day progress: ${offDayProgress.current} of ${offDayProgress.total} days`}
+                    aria-label={
+                      offDayProgress.total === 1
+                        ? m.personalized_status_off_day_progress_aria_one({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                        : m.personalized_status_off_day_progress_aria_other({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                    }
                   />
                 </div>
               )}
@@ -192,17 +226,19 @@ export function PersonalizedStatusContent({
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
               <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
-              Up Next
+              {m.personalized_status_up_next()}
             </Card.Title>
             <div className="text-muted flex-grow-1">
               {nextShift ? (
                 <div>
                   <div className="fw-semibold">
                     {nextShift.date.isSame(today, "day")
-                      ? "Today"
+                      ? m.today()
                       : nextShift.date.isSame(today.add(1, "day"), "day")
-                        ? "Tomorrow"
-                        : nextShift.date.format("ddd, MMM D")}{" "}
+                        ? m.personalized_status_tomorrow()
+                                                : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
+                          ? weekdayDateFormatter.format((nextShift.date as { toDate: () => Date }).toDate())
+                          : nextShift.date.format("ddd, MMM D")}{" "}
                     - {nextShift.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShift.shift} className="small text-muted" />
@@ -213,8 +249,8 @@ export function PersonalizedStatusContent({
               ) : (
                 <EmptyState
                   icon="bi-calendar-x"
-                  title="No Next Shift"
-                  description="No upcoming shifts found for your team."
+                  title={m.personalized_status_no_next_title()}
+                  description={m.personalized_status_no_next_desc()}
                 />
               )}
             </div>

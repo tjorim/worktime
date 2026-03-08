@@ -21,11 +21,11 @@ import {
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
-  TYPE_FLAG_OPTIONS,
-  TIME_LOCATION_FLAG_OPTIONS,
+  getTypeFlagOptions,
+  getTimeLocationFlagOptions,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
-  VIEW_MODE_HELP_TEXT,
+  getViewModeHelpText,
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
@@ -65,6 +65,7 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 };
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
+  const helpText = getViewModeHelpText();
   const {
     rawText,
     events,
@@ -482,7 +483,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           )}
         </ButtonGroup>
         <span className="text-muted small">
-          {VIEW_MODE_HELP_TEXT[viewMode] ?? VIEW_MODE_HELP_TEXT[DEFAULT_TIME_OFF_VIEW]}
+          {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
         </span>
       </div>
 
@@ -555,8 +556,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         startDateError={startDateError}
         endDateError={endDateError}
         previewLine={previewLine}
-        typeFlagOptions={TYPE_FLAG_OPTIONS}
-        timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
+        typeFlagOptions={getTypeFlagOptions()}
+        timeLocationFlagOptions={getTimeLocationFlagOptions()}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
         onHide={handleHideEventModal}

@@ -9,6 +9,7 @@ import type { ShiftResult } from "../utils/shiftCalculations";
 import type { ScheduleOption } from "../data/rosters";
 import { getAllTeamsShifts } from "../utils/shiftCalculations";
 import { getTeamCountForOption } from "../utils/scheduleUtils";
+import * as m from "../paraglide/messages.js";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -171,7 +172,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
     >
       <div className="timeline-header text-center" id={timelineHeaderId}>
         <i className="bi bi-clock me-2" aria-hidden="true"></i>
-        Today's Shift Timeline
+{m.shift_timeline_title()}
       </div>
       <div className="d-flex timeline-flow flex-wrap">
         {prevShift && (
@@ -188,7 +189,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
             placement="bottom"
             overlay={
               <Tooltip id={timelineTooltipId}>
-                <strong>Currently Active</strong>
+                <strong>{m.timeline_currently_active()}</strong>
                 <br />
                 {currentWorkingTeam.shift.name}
                 <br />
@@ -212,9 +213,9 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
               placement="bottom"
               overlay={
                 <Tooltip id={`${timelineTooltipId}-live`}>
-                  <strong>📡 Live Updates</strong>
+                  <strong>{m.shift_timeline_live_updates_title()}</strong>
                   <br />
-                  Data refreshes every minute
+                  {m.shift_timeline_live_updates_desc()}
                 </Tooltip>
               }
             >
@@ -234,7 +235,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
       </div>
       {hasParallelShifts && (
         <div className="text-center mt-2">
-          <small className="text-muted">Multiple teams share this shift start time.</small>
+          <small className="text-muted">{m.shift_timeline_parallel_note()}</small>
         </div>
       )}
     </div>

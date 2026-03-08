@@ -17,6 +17,8 @@ import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
 import { ErrorBoundary } from "./ErrorBoundary";
+import * as m from "../paraglide/messages.js";
+import { getLocale } from "../paraglide/runtime.js";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -56,7 +58,7 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                 <small className="text-muted">{formatDisplayDate(transfer.date.toDate())}</small>
               </Col>
               <Col xs={8} md={4}>
-                <small className="text-muted text-uppercase mb-1 d-none d-md-block">Teams</small>
+                <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_teams_column()}</small>
                 <div className="d-flex align-items-center gap-1 flex-nowrap">
                   <Badge
                     bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
@@ -65,11 +67,11 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                   >
                     {transfer.fromTeam === myTeam ? (
                       <>
-                        <span className="d-none d-md-inline">Your </span>
-                        {`Team ${transfer.fromTeam}`}
+                        <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
+                        {m.team_label({ team: String(transfer.fromTeam) })}
                       </>
                     ) : (
-                      `Team ${transfer.fromTeam}`
+                      m.team_label({ team: String(transfer.fromTeam) })
                     )}
                   </Badge>
                   <i className="bi bi-arrow-right text-muted" aria-hidden="true"></i>
@@ -80,26 +82,26 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                   >
                     {transfer.toTeam === myTeam ? (
                       <>
-                        <span className="d-none d-md-inline">Your </span>
-                        {`Team ${transfer.toTeam}`}
+                        <span className="d-none d-md-inline">{m.transfer_your_prefix()}</span>
+                        {m.team_label({ team: String(transfer.toTeam) })}
                       </>
                     ) : (
-                      `Team ${transfer.toTeam}`
+                      m.team_label({ team: String(transfer.toTeam) })
                     )}
                   </Badge>
                 </div>
               </Col>
               <Col xs={4} md={2}>
                 <div className="d-flex flex-column align-items-start align-items-md-center">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">Type</small>
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_type_column()}</small>
                   <Badge bg={transfer.type === "handover" ? "success" : "info"} pill>
-                    {transfer.type === "handover" ? "Handover" : "Takeover"}
+                    {transfer.type === "handover" ? m.transfer_handover() : m.transfer_takeover()}
                   </Badge>
                 </div>
               </Col>
               <Col xs={8} md={3}>
                 <div className="d-flex flex-column align-items-start align-items-md-end">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">Shift</small>
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_shift_column()}</small>
                   <div className="d-flex align-items-center gap-2 flex-nowrap justify-content-md-end">
                     <ShiftBadge
                       shift={fromShift}
@@ -163,6 +165,7 @@ export function TransferView({
   const [currentDay, setCurrentDay] = useState(() => dayjs().startOf("day"));
 
   const { scheduleType } = useSettings();
+  const locale = getLocale();
   const isDateRangeInvalid = useMemo(
     () =>
       useCustomRange &&
@@ -232,7 +235,7 @@ export function TransferView({
     };
   }, [transfers]);
 
-  // Clear dates when custom range is disabled
+  // {m.timeoff_clear_selection_btn()} dates when custom range is disabled
   useEffect(() => {
     if (!useCustomRange) {
       setCustomStartDate("");
@@ -260,7 +263,7 @@ export function TransferView({
     }
     return (
       formatDisplayDate(transferStats.earliest.toDate()) +
-      " to " +
+      m.transfer_range_to() +
       formatDisplayDate(transferStats.latest.toDate())
     );
   }, [transferStats]);
@@ -270,19 +273,19 @@ export function TransferView({
       return transferDateRange;
     }
     if (!customStartDate && !customEndDate) {
-      return "All dates";
+      return m.transfer_all_dates();
     }
     if (customStartDate && customEndDate) {
       return (
         formatDisplayDate(dayjs(customStartDate).toDate()) +
-        " to " +
+        m.transfer_range_to() +
         formatDisplayDate(dayjs(customEndDate).toDate())
       );
     }
     if (customStartDate) {
-      return `From ${formatDisplayDate(dayjs(customStartDate).toDate())}`;
+      return m.transfer_from_date({ date: formatDisplayDate(dayjs(customStartDate).toDate()) });
     }
-    return `Until ${formatDisplayDate(dayjs(customEndDate).toDate())}`;
+    return m.transfer_until_date({ date: formatDisplayDate(dayjs(customEndDate).toDate()) });
   }, [customEndDate, customStartDate, transferDateRange, useCustomRange]);
 
   const groupedTransfers = useMemo(() => {
@@ -306,10 +309,10 @@ export function TransferView({
     });
 
     return [
-      { key: "next-7", title: "Next 7 Days", items: nextWeek },
-      { key: "next-30", title: "Next 30 Days", items: nextMonth },
-      { key: "further", title: "Further Ahead", items: future },
-      { key: "past", title: "Past Transfers", items: past },
+      { key: "next-7", title: m.transfer_next_7_days(), items: nextWeek },
+      { key: "next-30", title: m.transfer_next_30_days(), items: nextMonth },
+      { key: "further", title: m.transfer_further_ahead(), items: future },
+      { key: "past", title: m.transfer_past(), items: past },
     ];
   }, [currentDay, transfers]);
 
@@ -317,18 +320,22 @@ export function TransferView({
     () => groupedTransfers.filter((group) => group.items.length > 0),
     [groupedTransfers],
   );
+  const transferCountCategory = useMemo(
+    () => new Intl.PluralRules(locale).select(transfers.length),
+    [transfers.length, locale],
+  );
 
   return (
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center">
         <span className="fw-semibold">
           <i className="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
-          Team Transfers
+          {m.transfer_team_transfers()}
         </span>
         {myTeam && (
           <Badge bg="primary" pill>
             <i className="bi bi-person-check me-1" aria-hidden="true"></i>
-            Your Team: {myTeam}
+            {m.transfer_your_team({ team: String(myTeam) })}
           </Badge>
         )}
       </Card.Header>
@@ -337,14 +344,14 @@ export function TransferView({
           <div className="text-center py-4">
             <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
             <p className="text-muted mb-3">
-              Please select your schedule to see transfer information.
+              {m.transfer_select_schedule_prompt()}
             </p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
         ) : !myTeam ? (
           <div className="text-center py-4">
             <i className="bi bi-person-plus-fill text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <p className="text-muted mb-3">Please select your team to see transfer information.</p>
+            <p className="text-muted mb-3">{m.transfer_select_team_prompt()}</p>
             <SetupActionButton
               onChangeSchedule={onChangeSchedule}
               onChangeTeam={onChangeTeam}
@@ -354,8 +361,8 @@ export function TransferView({
         ) : availableOtherTeams.length === 0 ? (
           <EmptyState
             icon="bi-people"
-            title="No Other Teams Available"
-            description="No other teams available for transfer analysis."
+            title={m.transfer_no_teams_title()}
+            description={m.transfer_no_teams_desc()}
           />
         ) : (
           <>
@@ -364,30 +371,30 @@ export function TransferView({
               <Col md={4}>
                 <Form.Label htmlFor={otherTeamSelectId} className="fw-semibold">
                   <i className="bi bi-people me-1" aria-hidden="true"></i>
-                  View transfers with Team:
+                  {m.transfer_view_with_team_label()}
                 </Form.Label>
                 <Form.Select
                   id={otherTeamSelectId}
                   value={otherTeam}
                   onChange={(e) => setOtherTeam(parseInt(e.target.value, 10))}
-                  aria-label="Select team to view transfers with"
+                  aria-label={m.transfer_select_team_aria()}
                 >
                   {availableOtherTeams.map((teamNumber) => (
                     <option key={teamNumber} value={teamNumber}>
-                      Team {teamNumber}
+                      {m.team_label({ team: String(teamNumber) })}
                     </option>
                   ))}
                 </Form.Select>
                 {transferStats && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span className="text-muted small text-uppercase">Transfer Flow</span>
+                    <span className="text-muted small text-uppercase">{m.transfer_flow_label()}</span>
                     <Badge bg="success" pill className="d-inline-flex align-items-center gap-1">
                       <i className="bi bi-arrow-right-circle" aria-hidden="true"></i>
-                      Handovers: {transferStats.handovers}
+                      {m.transfer_handovers_count({ count: String(transferStats.handovers) })}
                     </Badge>
                     <Badge bg="info" pill className="d-inline-flex align-items-center gap-1">
                       <i className="bi bi-arrow-left-circle" aria-hidden="true"></i>
-                      Takeovers: {transferStats.takeovers}
+                      {m.transfer_takeovers_count({ count: String(transferStats.takeovers) })}
                     </Badge>
                   </div>
                 )}
@@ -395,25 +402,25 @@ export function TransferView({
               <Col md={8}>
                 <Card className="h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">Displayed Date Range</div>
+                    <div className="text-muted small text-uppercase mb-1">{m.transfer_displayed_date_range()}</div>
                     <div className="fw-semibold">{displayedDateRangeValue}</div>
                     <div className="text-muted" style={{ fontSize: "0.75em" }}>
-                      Transfers between your team and the selected team.
+                      {m.transfer_displayed_range_help()}
                     </div>
                     {useCustomRange ? (
                       <div className="text-muted" style={{ fontSize: "0.75em" }}>
-                        selected filter range
+                        {m.transfer_selected_filter_range()}
                       </div>
                     ) : hasMoreTransfers ? (
                       <div className="text-muted" style={{ fontSize: "0.75em" }}>
-                        of visible transfers only
+                        {m.transfer_visible_only()}
                       </div>
                     ) : null}
                     <hr className="my-3" />
                     <Form.Check
                       type="checkbox"
                       id={showPastCheckboxId}
-                      label="Filter by custom date range"
+                      label={m.transfer_filter_label()}
                       checked={useCustomRange}
                       onChange={(e) => setUseCustomRange(e.target.checked)}
                     />
@@ -423,7 +430,7 @@ export function TransferView({
                           <Col md={5}>
                             <Form.Label htmlFor={startDateId} className="fw-semibold">
                               <i className="bi bi-calendar-range me-1" aria-hidden="true"></i>
-                              Start Date:
+                              {m.transfer_start_date_label()}
                             </Form.Label>
                             <Form.Control
                               type="date"
@@ -433,12 +440,12 @@ export function TransferView({
                               isInvalid={isDateRangeInvalid}
                             />
                             <Form.Control.Feedback type="invalid">
-                              Start date must be on or before end date.
+                              {m.transfer_start_date_invalid()}
                             </Form.Control.Feedback>
                           </Col>
                           <Col md={5}>
                             <Form.Label htmlFor={endDateId} className="fw-semibold">
-                              End Date:
+                              {m.transfer_end_date_label()}
                             </Form.Label>
                             <Form.Control
                               type="date"
@@ -448,7 +455,7 @@ export function TransferView({
                               isInvalid={isDateRangeInvalid}
                             />
                             <Form.Control.Feedback type="invalid">
-                              End date must be on or after start date.
+                              {m.transfer_end_date_invalid()}
                             </Form.Control.Feedback>
                           </Col>
                           <Col md={2} className="d-flex align-items-end">
@@ -464,7 +471,7 @@ export function TransferView({
                               disabled={!customStartDate && !customEndDate}
                             >
                               <i className="bi bi-x-circle me-1" aria-hidden="true"></i>
-                              Clear
+                              {m.timeoff_clear_selection_btn()}
                             </Button>
                           </Col>
                         </Row>
@@ -478,13 +485,23 @@ export function TransferView({
             {/* Transfer Results */}
             {isDateRangeInvalid ? (
               <Alert variant="warning" className="mb-0">
-                Please select a valid date range. Start date must be on or before end date.
+                {m.transfer_date_range_invalid()}
               </Alert>
             ) : transfers.length === 0 ? (
               <EmptyState
                 icon="bi-calendar-x"
-                title="No Transfers Found"
-                description={`No transfers found between Team ${myTeam} and Team ${otherTeam}${useCustomRange && (customStartDate || customEndDate) ? " in the selected date range" : ""}.`}
+                title={m.transfer_no_results_title()}
+                description={
+                  useCustomRange && (customStartDate || customEndDate)
+                    ? m.transfer_no_results_range({
+                        myTeam: String(myTeam),
+                        otherTeam: String(otherTeam),
+                      })
+                    : m.transfer_no_results_between({
+                        myTeam: String(myTeam),
+                        otherTeam: String(otherTeam),
+                      })
+                }
               />
             ) : (
               <>
@@ -515,8 +532,10 @@ export function TransferView({
 
                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mt-3">
                   <small className="text-muted">
-                    Showing {transfers.length} {transfers.length === 1 ? "transfer" : "transfers"}
-                    {hasMoreTransfers && " (more available)"}
+                    {transferCountCategory === "one"
+                      ? m.transfer_showing_count_one({ count: String(transfers.length) })
+                      : m.transfer_showing_count_other({ count: String(transfers.length) })}
+                    {hasMoreTransfers && ` ${m.transfer_more_available()}`}
                   </small>
                   {hasMoreTransfers && (
                     <Button
@@ -525,7 +544,7 @@ export function TransferView({
                       onClick={() => setTransfersToShow((prev) => prev + 10)}
                     >
                       <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
-                      Load More Transfers
+                      {m.transfer_load_more()}
                     </Button>
                   )}
                 </div>

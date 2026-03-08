@@ -6,6 +6,7 @@ import Card from "react-bootstrap/Card";
 import Modal from "react-bootstrap/Modal";
 import clsx from "clsx";
 import { type ChangelogVersion, changelogData, futurePlans } from "../data/changelog";
+import * as m from "../paraglide/messages.js";
 
 interface ChangelogModalProps {
   show: boolean;
@@ -25,11 +26,11 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
   const getStatusBadge = (status: ChangelogVersion["status"]) => {
     switch (status) {
       case "current":
-        return <Badge bg="primary">Current</Badge>;
+        return <Badge bg="primary">{m.changelog_status_current()}</Badge>;
       case "planned":
-        return <Badge bg="secondary">Planned</Badge>;
+        return <Badge bg="secondary">{m.changelog_status_planned()}</Badge>;
       case "released":
-        return <Badge bg="success">Released</Badge>;
+        return <Badge bg="success">{m.changelog_status_released()}</Badge>;
       default:
         return null;
     }
@@ -37,35 +38,40 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
 
   const getIconForSection = (title: string): string => {
     switch (title) {
-      case "Added":
+      case "added":
         return "bi-plus-circle";
-      case "Changed":
+      case "changed":
         return "bi-arrow-repeat";
-      case "Fixed":
+      case "fixed":
         return "bi-bug";
-      case "Planned":
+      case "planned":
         return "bi-calendar-event";
       default:
         return "bi-info-circle";
     }
   };
 
-  const renderChangeSection = (title: string, items: string[], textClass: string) => {
+  const renderChangeSection = (
+    key: "added" | "changed" | "fixed" | "planned",
+    label: string,
+    items: string[],
+    textClass: string,
+  ) => {
     if (items.length === 0) return null;
     const seen = new Map<string, number>();
 
     return (
       <div className="mb-3">
         <h6 className={clsx(textClass, "mb-2")}>
-          <i className={clsx("bi", getIconForSection(title), "me-2")}></i>
-          {title}
+          <i className={clsx("bi", getIconForSection(key), "me-2")}></i>
+          {label}
         </h6>
         <ul className="list-unstyled">
           {items.map((item) => {
             const occurrence = (seen.get(item) ?? 0) + 1;
             seen.set(item, occurrence);
             return (
-              <li key={`${title}-${item}-${occurrence}`} className="mb-1">
+              <li key={`${key}-${item}-${occurrence}`} className="mb-1">
                 <small className="text-muted">•</small> {item}
               </li>
             );
@@ -80,15 +86,12 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       <Modal.Header closeButton>
         <Modal.Title>
           <i className={clsx("bi", "bi-journal-text", "me-2")}></i>
-          What's New in Worktime
+          {m.changelog_modal_title()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <div className="mb-3">
-          <p className="text-muted">
-            Track the evolution of Worktime with our comprehensive changelog. See what's new, what's
-            changed, and what's coming next.
-          </p>
+          <p className="text-muted">{m.changelog_modal_description()}</p>
         </div>
 
         <Accordion
@@ -106,18 +109,18 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
               <Accordion.Header>
                 <div className="d-flex justify-content-between align-items-center w-100 me-2">
                   <div>
-                    <strong>Version {version.version}</strong>
+                    <strong>{m.changelog_version_label({ version: version.version })}</strong>
                     <small className="text-muted ms-2">{version.date}</small>
                   </div>
                   {getStatusBadge(version.status)}
                 </div>
               </Accordion.Header>
               <Accordion.Body>
-                {renderChangeSection("Added", version.added, "text-success")}
-                {renderChangeSection("Changed", version.changed, "text-info")}
-                {renderChangeSection("Fixed", version.fixed, "text-warning")}
+                {renderChangeSection("added", m.changelog_section_added(), version.added, "text-success")}
+                {renderChangeSection("changed", m.changelog_section_changed(), version.changed, "text-info")}
+                {renderChangeSection("fixed", m.changelog_section_fixed(), version.fixed, "text-warning")}
                 {version.planned &&
-                  renderChangeSection("Planned", version.planned, "text-secondary")}
+                  renderChangeSection("planned", m.changelog_section_planned(), version.planned, "text-secondary")}
 
                 {version.technicalDetails && (
                   <Card className="mt-3 border-0 bg-body-secondary">
@@ -138,7 +141,7 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
         <div className="mt-4 p-3 bg-body-secondary rounded">
           <h6 className="text-primary mb-2">
             <i className={clsx("bi", "bi-rocket", "me-2")}></i>
-            Coming Soon
+            {m.changelog_coming_soon_heading()}
           </h6>
           {Object.entries(futurePlans).map(([version, plan], index, array) => (
             <p
@@ -154,13 +157,13 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
       </Modal.Body>
       <Modal.Footer>
         <small className="text-muted me-auto">
-          Worktime follows{" "}
+          {m.changelog_semver_text()}{" "}
           <a href="https://semver.org/" target="_blank" rel="noopener noreferrer">
-            Semantic Versioning
+            {m.changelog_semver_link()}
           </a>
         </small>
         <Button variant="secondary" onClick={onHide}>
-          Close
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>

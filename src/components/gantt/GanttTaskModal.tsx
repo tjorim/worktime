@@ -6,6 +6,7 @@ import ReactSelect from "react-select";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "../../types/gantt";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+import * as m from "../../paraglide/messages.js";
 
 type DepOption = { value: string; label: string };
 
@@ -93,8 +94,8 @@ export function GanttTaskModal({
   const hasStartDateError = wasValidated && !isStartDateValid;
   const hasEndDateError = wasValidated && !isEndDateValid;
 
-  const modalTitle = task ? "Edit Task" : "Add Task";
-  const submitLabel = task ? "Save Changes" : "Add Task";
+  const modalTitle = task ? m.gantt_task_modal_edit() : m.gantt_task_modal_add();
+  const submitLabel = task ? m.tt_save_changes() : m.gantt_task_modal_add();
 
   // Options: all tasks except self
   const depOptions = useMemo(
@@ -108,7 +109,9 @@ export function GanttTaskModal({
     () =>
       selectedDeps.map((id) => ({
         value: id,
-        label: depOptions.find((o) => o.value === id)?.label ?? `Unknown (${id.slice(0, 8)}…)`,
+        label:
+          depOptions.find((o) => o.value === id)?.label ??
+          m.gantt_task_unknown_dependency({ id: id.slice(0, 8) }),
       })),
     [selectedDeps, depOptions],
   );
@@ -138,7 +141,7 @@ export function GanttTaskModal({
       <Modal.Body>
         <Form as="form" id="ganttTaskForm" onSubmit={handleSubmit} noValidate>
           <Form.Group className="mb-3" controlId="ganttTaskName">
-            <Form.Label>Name</Form.Label>
+            <Form.Label>{m.gantt_task_name_label()}</Form.Label>
             <Form.Control
               type="text"
               required
@@ -146,12 +149,12 @@ export function GanttTaskModal({
               isInvalid={hasNameError}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             />
-            <Form.Control.Feedback type="invalid">Task name is required.</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">{m.gantt_task_name_required()}</Form.Control.Feedback>
           </Form.Group>
 
           <div className="d-flex gap-3 mb-3">
             <Form.Group className="flex-fill" controlId="ganttTaskStart">
-              <Form.Label>Start date</Form.Label>
+              <Form.Label>{m.gantt_task_start_label()}</Form.Label>
               <Form.Control
                 type="date"
                 required
@@ -160,11 +163,11 @@ export function GanttTaskModal({
                 onChange={(event) => setForm((prev) => ({ ...prev, start: event.target.value }))}
               />
               <Form.Control.Feedback type="invalid">
-                Enter a valid start date.
+                {m.gantt_task_start_invalid()}
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="flex-fill" controlId="ganttTaskEnd">
-              <Form.Label>End date</Form.Label>
+              <Form.Label>{m.gantt_task_end_label()}</Form.Label>
               <Form.Control
                 type="date"
                 required
@@ -173,14 +176,14 @@ export function GanttTaskModal({
                 onChange={(event) => setForm((prev) => ({ ...prev, end: event.target.value }))}
               />
               <Form.Control.Feedback type="invalid">
-                End date must be on or after the start date.
+                {m.gantt_task_end_invalid()}
               </Form.Control.Feedback>
             </Form.Group>
           </div>
 
           <Form.Group className="mb-3" controlId="ganttTaskProgress">
             <Form.Label className="d-flex justify-content-between align-items-center">
-              <span>Progress</span>
+              <span>{m.gantt_task_progress_label()}</span>
               <span className="text-muted small">{form.progress ?? 0}%</span>
             </Form.Label>
             <Form.Range
@@ -194,12 +197,12 @@ export function GanttTaskModal({
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="ganttTaskDependencies">
-            <Form.Label>Dependencies</Form.Label>
+            <Form.Label>{m.gantt_task_deps_label()}</Form.Label>
             <ReactSelect<DepOption, true>
               isMulti
               unstyled
               inputId="ganttTaskDependencies"
-              placeholder="Search tasks…"
+              placeholder={m.gantt_task_deps_placeholder()}
               options={depOptions}
               value={depValue}
               onChange={(selected) => setSelectedDeps(selected.map((s) => s.value))}
@@ -211,7 +214,7 @@ export function GanttTaskModal({
           </Form.Group>
 
           <Form.Group className="mb-1" controlId="ganttTaskNotes">
-            <Form.Label>Notes</Form.Label>
+            <Form.Label>{m.gantt_task_notes_label()}</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
@@ -224,11 +227,11 @@ export function GanttTaskModal({
       <Modal.Footer>
         {task && onDelete && (
           <Button variant="outline-danger" onClick={onDelete} className="me-auto">
-            Delete Task
+            {m.gantt_task_delete_btn()}
           </Button>
         )}
         <Button variant="outline-secondary" onClick={onHide}>
-          Cancel
+          {m.cancel()}
         </Button>
         <Button variant="primary" type="submit" form="ganttTaskForm">
           {submitLabel}

@@ -13,9 +13,11 @@ import type { ScheduleOption } from "../../data/rosters";
 import { hasMultipleTeams } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
+import { getLocale } from "../../paraglide/runtime.js";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "../../utils/shiftCalculations";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
+import * as m from "../../paraglide/messages.js";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -71,17 +73,17 @@ function TeamCard({
             className="live-badge"
             aria-label={
               hasTeams
-                ? `Team ${shiftResult.teamNumber} is currently working`
-                : "Schedule is currently working"
+                ? m.schedule_team_working_aria({ team: String(shiftResult.teamNumber) })
+                : m.schedule_working_aria()
             }
           >
-            LIVE
+            {m.today_view_live_badge()}
           </Badge>
         </>
       )}
       <div className="team-card-header d-flex justify-content-between align-items-center mb-2">
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}</h6>
+          <h6 className="mb-0">{hasTeams ? m.team_label({ team: String(shiftResult.teamNumber) }) : m.week_view_schedule_label()}</h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -91,19 +93,26 @@ function TeamCard({
       <div className="text-muted small">
         {shift.name}
         <br />
-        {shift.isWorking ? shiftTimeLabel : "Not working today"}
+        {shift.isWorking ? shiftTimeLabel : m.schedule_not_working_today()}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger
           placement="bottom"
           overlay={
             <Tooltip id={`code-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Full Shift Code</strong>
+              <strong>{m.shift_full_code_title()}</strong>
               <br />
-              Format: YYWW.D + Shift
+              {m.shift_code_format()}
               <br />
-              <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
-              Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")}, {shift.name}
+              {m.today_view_shift_full_code_tooltip({
+                code: shiftResult.code,
+                isoYear: getISOWeekYear2Digit(shiftResult.date),
+                isoWeek: String(shiftResult.date.isoWeek()),
+                weekday: new Intl.DateTimeFormat(getLocale(), { weekday: "long" }).format(
+                  shiftResult.date.toDate(),
+                ),
+                shift: shift.name,
+              })}
             </Tooltip>
           }
         >
@@ -120,10 +129,14 @@ function TeamCard({
         onClick={() => onTeamClick(shiftResult.teamNumber, scheduleType)}
         role="button"
         aria-label={
-          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
+          hasTeams
+            ? m.today_view_team_details_aria({ team: String(shiftResult.teamNumber) })
+            : m.week_view_schedule_label()
         }
         title={
-          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
+          hasTeams
+            ? m.today_view_team_details_aria({ team: String(shiftResult.teamNumber) })
+            : m.week_view_schedule_label()
         }
         style={{ cursor: "pointer" }}
         tabIndex={0}
@@ -219,14 +232,14 @@ export function TodayView({
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
               aria-hidden="true"
             ></i>
-            {hasTeams ? "All Teams" : "Schedule"}
+            {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <DayNavigationButtonGroup
             isCurrent={isToday}
             onPrevious={onPreviousDay}
             onCurrent={onTodayClick}
             onNext={onNextDay}
-            selectorLabel={canSelectDate ? "Jump to date:" : undefined}
+            selectorLabel={canSelectDate ? m.tt_jump_to_date() : undefined}
             selectorId={canSelectDate ? datePickerId : undefined}
             selectorValue={canSelectDate ? displayDate.format("YYYY-MM-DD") : undefined}
             onSelectorChange={canSelectDate ? handleDateChange : undefined}
@@ -235,17 +248,17 @@ export function TodayView({
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="text-muted small">
-              {displayDate.format("dddd, MMMM D, YYYY")}
+              {new Intl.DateTimeFormat(getLocale(), { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(displayDate.toDate())}
               {isToday && (
-                <Badge bg="success" className="ms-2" aria-label="Current day">
-                  Today
+                <Badge bg="success" className="ms-2" aria-label={m.today_view_current_day_aria()}>
+                  {m.today()}
                 </Badge>
               )}
             </div>
           </div>
           <div className="small text-muted d-none d-lg-block">
             <i className="bi bi-keyboard me-1" aria-hidden="true"></i>
-            Keyboard: ← → arrows, Ctrl+H (today)
+            {m.week_view_keyboard_hint()}
           </div>
         </div>
       </Card.Header>
