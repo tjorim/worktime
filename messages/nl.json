@@ -387,6 +387,6 @@
   "timeoff_delete_selected_events_aria": "Geselecteerde gebeurtenissen verwijderen",
   "timeoff_clear_selection_aria": "Selectie wissen",
   "tt_and": "en",
-  "location_days_count_plural": "{count} dagen",
-  "location_clipboard_header": "Werklocatieoverzicht — {year}"
+  "location_clipboard_header": "Werklocatieoverzicht — {year}",
+  "location_days_count_plural": "{count} dagen"
 }

@@ -387,6 +387,6 @@
   "timeoff_delete_selected_events_aria": "Delete selected events",
   "timeoff_clear_selection_aria": "Clear selection",
   "tt_and": "and",
-  "location_days_count_plural": "{count} days",
-  "location_clipboard_header": "Work Location Summary — {year}"
+  "location_clipboard_header": "Work Location Summary — {year}",
+  "location_days_count_plural": "{count} days"
 }

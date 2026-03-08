@@ -6,6 +6,7 @@ import { aggregateLocationCounts } from "../../utils/workLocationUtils";
 import type { WorkLocationMap } from "../../types/workLocation";
 import { WORK_LOCATION_ICON_CLASS, WORK_LOCATION_LABEL } from "./workLocationConstants";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 interface LocationYearSummaryProps {
   year: number;
@@ -50,8 +51,9 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
       ...rows.map((row) => {
         const locationLabel = WORK_LOCATION_LABEL[row.location];
         const pct = totalDays > 0 ? Math.round((row.days / totalDays) * 100) : 0;
+        const pluralCategory = new Intl.PluralRules(getLocale()).select(row.days);
         const dayLabel =
-          row.days === 1
+          pluralCategory === "one"
             ? m.location_days_count({ count: row.days })
             : m.location_days_count_plural({ count: row.days });
         return `${locationLabel.padEnd(8)} ${row.countryCode.padEnd(20)} ${dayLabel} (${pct}%)`;
