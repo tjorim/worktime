@@ -196,13 +196,7 @@ export function DayCell({
     [hiddenCount, locale],
   );
   const longDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
     [locale],
   );
   const indicators = getIndicatorIcons(events);
