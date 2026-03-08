@@ -388,5 +388,7 @@
   "timeoff_clear_selection_aria": "Selectie wissen",
   "tt_and": "en",
   "location_clipboard_header": "Werklocatieoverzicht — {year}",
-  "location_days_count_plural": "{count} dagen"
+  "location_days_count_plural": "{count} dagen",
+  "tt_labels_configured_one": "{count} label geconfigureerd.",
+  "tt_labels_configured_other": "{count} labels geconfigureerd."
 }

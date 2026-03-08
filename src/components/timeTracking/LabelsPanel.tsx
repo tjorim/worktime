@@ -18,6 +18,7 @@ import {
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 type LabelFormState = {
   name: string;
@@ -58,6 +59,7 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
     name: "",
     color: labels[0]?.color ?? "#3B82F6",
   });
+  const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
 
   const resetForm = () =>
     setLabelForm({
@@ -209,7 +211,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <div className="d-flex flex-column gap-3">
         {labels.length > 0 && (
           <div className="small text-muted">
-            {m.tt_labels_configured({ count: labels.length })}
+            {pluralRules.select(labels.length) === "one"
+              ? m.tt_labels_configured_one({ count: labels.length })
+              : m.tt_labels_configured_other({ count: labels.length })}
           </div>
         )}
 

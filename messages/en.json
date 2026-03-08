@@ -388,5 +388,7 @@
   "timeoff_clear_selection_aria": "Clear selection",
   "tt_and": "and",
   "location_clipboard_header": "Work Location Summary — {year}",
-  "location_days_count_plural": "{count} days"
+  "location_days_count_plural": "{count} days",
+  "tt_labels_configured_one": "{count} label configured.",
+  "tt_labels_configured_other": "{count} labels configured."
 }
