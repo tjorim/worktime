@@ -12,6 +12,7 @@ import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import { calculateShift } from "../../utils/shiftCalculations";
+import { getLocale } from "../../paraglide/runtime.js";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
 import * as m from "../../paraglide/messages.js";
@@ -116,6 +117,23 @@ export function WeekView({
 
   // Memoize today's date for consistent "today" highlighting throughout rendering
   const today = dayjs();
+  const locale = getLocale();
+  const shortDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
+    [locale],
+  );
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }),
+    [locale],
+  );
+  const shortWeekdayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
+    [locale],
+  );
+
+  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(value.toDate());
+  const formatLongDate = (value: Dayjs) => longDateFormatter.format(value.toDate());
+  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(value.toDate());
 
   return (
     <Card>
@@ -177,7 +195,10 @@ export function WeekView({
         <div className="table-responsive">
           <Table
             className="schedule-table table-sm"
-            aria-label={`Schedule for week of ${startOfWeek.format("MMM D")} - ${startOfWeek.add(6, "day").format("MMM D, YYYY")}`}
+            aria-label={m.week_view_table_aria({
+              startDate: formatShortDate(startOfWeek),
+              endDate: formatShortDate(startOfWeek.add(6, "day")),
+            })}
           >
             <thead>
               <tr>
@@ -190,22 +211,29 @@ export function WeekView({
                     <th
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
                       className={clsx("text-center", isToday && "today-column")}
-                      aria-label={`${day.format("dddd, MMM D")}${isToday ? " (today)" : ""}`}
+                      aria-label={m.week_view_day_header_aria({
+                        date: formatLongDate(day),
+                        today: isToday ? m.daycell_today_label() : "",
+                      })}
                     >
-                      <div className="fw-semibold">{day.format("ddd")}</div>
+                      <div className="fw-semibold">{formatShortWeekday(day)}</div>
                       <div className="small text-muted">
                         <OverlayTrigger
                           placement="bottom"
                           overlay={
                             <Tooltip id={`date-tooltip-${day.format("YYYY-MM-DD")}`}>
-                              <strong>Date Code: {formatYYWWD(day)}</strong>
+                              <strong>{m.week_view_date_code({ code: formatYYWWD(day) })}</strong>
                               <br />
-                              Format: YYWW.D
+                              {m.week_view_date_code_format()}
                               <br />
-                              YY = ISO Year {getISOWeekYear2Digit(day)}
+                              {m.week_view_iso_year({ year: getISOWeekYear2Digit(day) })}
                               <br />
-                              WW = ISO Week {day.isoWeek()}
-                              <br />D = ISO Day {day.isoWeekday()} ({day.format("ddd")})
+                              {m.week_view_iso_week({ week: String(day.isoWeek()) })}
+                              <br />
+                              {m.week_view_iso_day({
+                                day: String(day.isoWeekday()),
+                                weekday: formatShortWeekday(day),
+                              })}
                             </Tooltip>
                           }
                         >
@@ -224,13 +252,16 @@ export function WeekView({
                   className={isMyTeam(teamNumber)}
                   aria-label={
                     hasTeams
-                      ? `Team ${teamNumber}${myTeam === teamNumber ? " (your team)" : ""}`
+                      ? m.week_view_team_row_aria({
+                          team: String(teamNumber),
+                          yourTeam: myTeam === teamNumber ? m.week_view_your_team_suffix() : "",
+                        })
                       : m.week_view_schedule_label()
                   }
                 >
                   <td className="team-header">
                     <strong>
-                      {hasTeams ? `Team ${teamNumber}` : m.week_view_schedule_label()}
+                      {hasTeams ? m.team_label({ team: String(teamNumber) }) : m.week_view_schedule_label()}
                     </strong>
                   </td>
                   {weekDays.map((day, dayIndex) => {
@@ -243,8 +274,15 @@ export function WeekView({
                         className={clsx("text-center", isToday && "today-column")}
                         aria-label={
                           hasTeams
-                            ? `Team ${teamNumber} on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
-                            : `Schedule on ${day.format("dddd")}: ${shift.isWorking ? shift.name : "Off"}`
+                            ? m.week_view_team_day_shift_aria({
+                                team: String(teamNumber),
+                                day: formatLongDate(day),
+                                shift: shift.isWorking ? shift.name : m.schedule_off(),
+                              })
+                            : m.week_view_schedule_day_shift_aria({
+                                day: formatLongDate(day),
+                                shift: shift.isWorking ? shift.name : m.schedule_off(),
+                              })
                         }
                       >
                         {shift.isWorking && <ShiftBadge shift={shift} />}

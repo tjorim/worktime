@@ -110,7 +110,7 @@ export const DEFAULT_WEEKDAY: number = Weekday.Monday;
  * Type-checked to ensure all TIMEOFF_VIEWS modes have corresponding help text.
  */
 export const VIEW_MODE_HELP_TEXT: Record<(typeof TIMEOFF_VIEWS)[number], string> = {
-  table: "Select events from the table to edit or delete.",
-  stats: "Review allowance usage and vacation breakdowns by year.",
-  team: "View team roster and .hday schedules for all team members.",
+  table: m.timeoff_view_help_table(),
+  stats: m.timeoff_view_help_stats(),
+  team: m.timeoff_view_help_team(),
 };

@@ -123,9 +123,12 @@ const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefin
       return m.daycell_working_office();
     case "other": {
       if (workLocation.label) {
-        return `Other location: ${workLocation.label} (${workLocation.countryCode})`;
+        return m.daycell_working_other_with_label({
+          label: workLocation.label,
+          countryCode: workLocation.countryCode,
+        });
       }
-      return `Other location (${workLocation.countryCode})`;
+      return m.daycell_working_other({ countryCode: workLocation.countryCode });
     }
     default:
       return undefined;
@@ -194,7 +197,7 @@ export function DayCell({
     ariaLabelParts.push(m.daycell_today_label());
   }
   if (shiftBadge) {
-    ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
+    ariaLabelParts.push(m.daycell_shift_label({ shift: shiftBadge.label }));
   }
   if (workLocationLabel) {
     ariaLabelParts.push(workLocationLabel);
@@ -203,7 +206,7 @@ export function DayCell({
     ariaLabelParts.push(publicHoliday.name);
   }
   if (schoolHoliday) {
-    ariaLabelParts.push(`School Holiday: ${schoolHoliday.name}`);
+    ariaLabelParts.push(m.daycell_school_holiday_label({ holiday: schoolHoliday.name }));
   }
   if (paydayInfo) {
     ariaLabelParts.push(paydayInfo.name);
@@ -323,7 +326,7 @@ export function DayCell({
           }}
           onTouchEnd={clearLongPress}
           onTouchMove={handleTouchMove}
-          aria-label={`View ${label}`}
+          aria-label={m.daycell_view_event_aria({ label })}
         >
           <span className={clsx("month-calendar-event-color", colorClass)} />
           <span className="month-calendar-event-label">
@@ -417,7 +420,7 @@ export function DayCell({
             type="button"
             className="month-calendar-add-btn"
             tabIndex={-1}
-            aria-label={`Add event on ${date.format("MMMM D, YYYY")}`}
+            aria-label={m.daycell_add_event_on({ date: date.format("MMMM D, YYYY") })}
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
@@ -457,9 +460,15 @@ export function DayCell({
                 setIsOverflowExpanded((current) => !current);
               }}
               aria-expanded={isOverflowExpanded}
-              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more ${hiddenCount === 1 ? "event" : "events"}`}
+              aria-label={m.daycell_overflow_toggle_aria({
+                action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
+                count: String(hiddenCount),
+                noun: hiddenCount === 1 ? m.daycell_event_singular() : m.daycell_event_plural(),
+              })}
             >
-              {isOverflowExpanded ? `-${hiddenCount} less` : `+${hiddenCount} more`}
+              {isOverflowExpanded
+                ? m.daycell_overflow_less({ count: String(hiddenCount) })
+                : m.daycell_overflow_more({ count: String(hiddenCount) })}
             </button>
             {isOverflowExpanded && (
               <div className="month-calendar-overflow-list">

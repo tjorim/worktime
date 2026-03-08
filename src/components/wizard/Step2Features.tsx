@@ -2,7 +2,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
 import * as m from "../../paraglide/messages.js";
 
 interface Step2FeaturesProps {
@@ -12,7 +12,7 @@ interface Step2FeaturesProps {
   /**
    * Text or element describing where to find settings. Caller is responsible for any desired styling (e.g., <b> or <strong> if bold is needed).
    */
-  settingsLocationText: ReactNode;
+  settingsLocationText: string;
 }
 
 export function Step2Features({
@@ -92,8 +92,7 @@ export function Step2Features({
         </Row>
         <Alert variant="info" className="mt-4">
           <i className="bi bi-gear me-2"></i>
-          <strong>{m.wizard_features_tip_label()}</strong> {m.wizard_features_customize_prefix()}{" "}
-          {settingsLocationText}.
+          {m.wizard_features_tip_full({ settingsLocation: settingsLocationText })}
         </Alert>
       </div>
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">

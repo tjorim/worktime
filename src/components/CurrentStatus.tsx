@@ -6,6 +6,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "../contexts/SettingsContext";
 import { useLiveTime } from "../hooks/useLiveTime";
 import { formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
+import { getLocale } from "../paraglide/runtime.js";
 import { getEffectiveTeam } from "../utils/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "../utils/shiftCalculations";
 import { PersonalizedStatusContent } from "./status/PersonalizedStatus";
@@ -58,7 +59,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
           <Card.Body className="text-center py-4">
             <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
             <p className="text-muted mb-3">
-              Please select your schedule to view the current status.
+              {m.current_status_select_schedule_prompt()}
             </p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </Card.Body>
@@ -74,7 +75,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
           {/* Common Header Row */}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <div className="d-flex align-items-center gap-3">
-              <Card.Title className="mb-0">Current Status</Card.Title>
+              <Card.Title className="mb-0">{m.schedule_current_status()}</Card.Title>
               <div className="text-muted">
                 <OverlayTrigger
                   placement="bottom"
@@ -82,22 +83,23 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                     <Tooltip id={dateTooltipId}>
                       <strong>{m.current_status_date_format()}</strong>
                       <br />
-                      YY = Year (2-digit)
+                      {m.current_status_yy_help()}
                       <br />
-                      WW = Week number
-                      <br />D = Weekday (1=Mon, 7=Sun)
+                      {m.current_status_ww_help()}
+                      <br />
+                      {m.current_status_d_help()}
                       <br />
                       <em>
-                        Today: {formatYYWWD(today)}
+                        {m.current_status_today_code({ code: formatYYWWD(today) })}
                         <br />
-                        Shift Day: {formatYYWWD(currentShiftDay)}
+                        {m.current_status_shift_day_code({ code: formatYYWWD(currentShiftDay) })}
                       </em>
                     </Tooltip>
                   }
                 >
                   <small className="help-underline">
                     <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
-                    {formatYYWWD(currentShiftDay)} • {liveTime.format("dddd, MMM D")} •{" "}
+                    {formatYYWWD(currentShiftDay)} • {new Intl.DateTimeFormat(getLocale(), { weekday: "long", month: "short", day: "numeric" }).format(liveTime.toDate())} • {" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </OverlayTrigger>

@@ -44,7 +44,9 @@ export function SetupActionButton({
   mode = "auto",
   size,
 }: SetupActionButtonProps) {
-  const { needsSchedule, needsTeam, buttonText, buttonIcon } = useSetupAction({ mode });
+  const { needsSchedule, needsTeam, buttonTextKey, buttonIcon } = useSetupAction({ mode });
+  const buttonText =
+    buttonTextKey === "select_schedule" ? m.setup_btn_select_schedule() : m.setup_btn_select_team();
 
   // Primary action: Select Schedule
   if (needsSchedule && onChangeSchedule) {

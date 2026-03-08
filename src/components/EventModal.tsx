@@ -59,6 +59,7 @@ function getFlagLabel(flag: EventFlag): string {
     in: m.timeoff_flag_in,
     weekend: m.timeoff_flag_weekend,
     birthday: m.timeoff_flag_birthday,
+    holiday: m.timeoff_flag_holiday,
     ill: m.timeoff_flag_ill,
     other: m.timeoff_flag_other,
     half_am: m.timeoff_flag_half_am,
@@ -302,7 +303,7 @@ export function EventModal({
                     {eventTitle && <div className="text-muted">{eventTitle}</div>}
                     {eventFlags.length > 0 && (
                       <div className="text-muted small">
-                        {m.event_modal_flags_label({ flags: eventFlags.join(", ") })}
+                        {m.event_modal_flags_label({ flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", ") })}
                       </div>
                     )}
                     <div className="mt-2">

@@ -146,11 +146,11 @@ export function WelcomeWizard({
     }
   }, [startStep]);
 
-  const SETTINGS_LOCATION_TEXT = (
-    <b>
-      {m.settings_title()} (<span aria-hidden="true">⚙️</span> {m.wizard_settings_panel_location()})
-    </b>
-  );
+  const SETTINGS_LOCATION_TEXT = m.wizard_settings_title_with_location({
+    settings: m.settings_title(),
+    icon: "⚙️",
+    location: m.wizard_settings_panel_location(),
+  });
 
   const isChangeFlow = mode === "change-schedule" || mode === "change-team";
   const resolvedSchedule = isValidScheduleType(selectedSchedule) ? selectedSchedule : null;
