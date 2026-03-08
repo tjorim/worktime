@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 // Read version from package.json for injection
 import * as packageJson from "./package.json";
 
-export default defineConfig(() => ({
+export default defineConfig({
   base: "/worktime/",
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
@@ -44,7 +44,6 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       output: {
-        // Better file organization
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
@@ -72,4 +71,4 @@ export default defineConfig(() => ({
     open: true,
     cors: true,
   },
-}));
+});
