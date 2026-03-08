@@ -37,8 +37,10 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
         return m.timeoff_days_unit();
       case "hours":
         return m.tt_hours_unit();
-      default:
-        return m.timeoff_unit();
+      default: {
+        const exhaustiveCheck: never = unit;
+        return exhaustiveCheck;
+      }
     }
   };
   const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
