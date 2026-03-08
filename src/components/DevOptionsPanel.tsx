@@ -6,6 +6,7 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
+import * as m from "../paraglide/messages.js";
 
 interface DevOptionsPanelProps {
   show: boolean;
@@ -45,7 +46,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
   const handleSaveUrl = () => {
     updateApiUrl(localApiUrl);
-    setTestResult({ success: true, message: "API URL updated" });
+    setTestResult({ success: true, message: m.dev_url_updated() });
   };
 
   const handleTestConnection = async () => {
@@ -57,14 +58,14 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
       const success = await testConnection(localApiUrl);
       setTestResult({
         success,
-        message: success
-          ? "✓ Successfully connected to backend API"
-          : "✗ Connection failed - check URL and ensure backend is running",
+        message: success ? m.dev_connection_success() : m.dev_connection_failed(),
       });
     } catch (error) {
       setTestResult({
         success: false,
-        message: `✗ Connection error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: m.dev_connection_error({
+          error: error instanceof Error ? error.message : String(error),
+        }),
       });
     } finally {
       setIsTesting(false);
@@ -73,25 +74,25 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
   const handleDisconnect = () => {
     disconnect();
-    setTestResult({ success: true, message: "Disconnected from backend API" });
+    setTestResult({ success: true, message: m.dev_disconnected_msg() });
   };
 
   const getStatusBadge = () => {
     switch (options.connectionStatus) {
       case "connected":
-        return <Badge bg="success">Connected</Badge>;
+        return <Badge bg="success">{m.dev_connected()}</Badge>;
       case "connecting":
-        return <Badge bg="info">Connecting...</Badge>;
+        return <Badge bg="info">{m.dev_connecting()}</Badge>;
       case "error":
-        return <Badge bg="danger">Error</Badge>;
+        return <Badge bg="danger">{m.error()}</Badge>;
       case "disconnected":
       default:
-        return <Badge bg="secondary">Disconnected</Badge>;
+        return <Badge bg="secondary">{m.dev_disconnected()}</Badge>;
     }
   };
 
   const formatLastTest = () => {
-    if (!options.lastConnectionTest) return "Never";
+    if (!options.lastConnectionTest) return m.dev_never();
     const date = new Date(options.lastConnectionTest);
     return date.toLocaleString();
   };
@@ -101,7 +102,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
       <Modal.Header closeButton>
         <Modal.Title>
           <i className="bi bi-code-slash me-2"></i>
-          Developer Options
+          {m.developer_options_label()}
         </Modal.Title>
       </Modal.Header>
 
@@ -109,38 +110,41 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
         <Alert variant="info" className="mb-4">
           <Alert.Heading className="h6">
             <i className="bi bi-info-circle me-2"></i>
-            Backend API Integration
+            {m.dev_api_integration_title()}
           </Alert.Heading>
           <p className="mb-0 small">
-            Configure connection to a locally-running backend API server. The backend provides team
-            configuration and .hday file management from a shared network drive. See{" "}
-            <code>backend/README.md</code> for setup instructions.
+            {m.dev_api_integration_desc()} {/* */}
+            {/* See backend/README.md for setup instructions */}
           </p>
         </Alert>
 
         {/* Connection Status */}
         <div className="mb-4">
-          <h6 className="mb-3">Connection Status</h6>
+          <h6 className="mb-3">{m.dev_connection_status_heading()}</h6>
           <div className="d-flex align-items-center gap-3">
-            <div>Status: {getStatusBadge()}</div>
+            <div>
+              {m.dev_status_label()} {getStatusBadge()}
+            </div>
             {options.enabled && (
               <div className="text-muted small">
                 <i className="bi bi-check-circle me-1"></i>
-                Backend enabled
+                {m.dev_backend_enabled()}
               </div>
             )}
           </div>
           {options.lastConnectionTest && (
-            <div className="text-muted small mt-2">Last tested: {formatLastTest()}</div>
+            <div className="text-muted small mt-2">
+              {m.dev_last_tested()} {formatLastTest()}
+            </div>
           )}
         </div>
 
         {/* API Configuration */}
         <div className="mb-4">
-          <h6 className="mb-3">API Configuration</h6>
+          <h6 className="mb-3">{m.dev_api_config_heading()}</h6>
 
           <Form.Group className="mb-3">
-            <Form.Label>Backend API URL</Form.Label>
+            <Form.Label>{m.dev_api_url_label()}</Form.Label>
             <Form.Control
               type="text"
               placeholder="http://localhost:8000"
@@ -148,22 +152,20 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
               onChange={handleApiUrlChange}
               disabled={options.connectionStatus === "connecting"}
             />
-            <Form.Text className="text-muted">
-              The base URL of your local backend API server (default: http://localhost:8000)
-            </Form.Text>
+            <Form.Text className="text-muted">{m.dev_api_url_help()}</Form.Text>
           </Form.Group>
 
           {localApiUrl !== options.apiUrl && (
             <Button variant="primary" size="sm" onClick={handleSaveUrl} className="mb-3">
               <i className="bi bi-save me-1"></i>
-              Save URL
+              {m.dev_save_url()}
             </Button>
           )}
 
           <Form.Check
             type="checkbox"
             id="auto-connect-check"
-            label="Auto-connect on app start"
+            label={m.dev_auto_connect()}
             checked={options.autoConnect}
             onChange={(e) => updateAutoConnect(e.target.checked)}
             disabled={options.connectionStatus === "connecting"}
@@ -187,19 +189,19 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>
-              Test Connection
+              {m.dev_test_connection()}
             </Button>
           ) : (
             <Button variant="outline-danger" onClick={handleDisconnect}>
               <i className="bi bi-plug-fill me-1"></i>
-              Disconnect
+              {m.dev_disconnect_btn()}
             </Button>
           )}
         </div>
 
         {/* Backend Information */}
         <div className="mt-4 p-3 bg-light rounded">
-          <h6 className="mb-2">Available Backend Endpoints</h6>
+          <h6 className="mb-2">{m.dev_endpoints_heading()}</h6>
           <ul className="small mb-0">
             <li>
               <code>GET /v1/health</code> - Health check and share status
@@ -222,7 +224,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
-          Close
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>

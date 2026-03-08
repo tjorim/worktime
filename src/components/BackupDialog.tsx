@@ -8,6 +8,7 @@ import {
   downloadAppBackup,
   type BackupDataPresence,
 } from "../utils/appBackup";
+import * as m from "../paraglide/messages.js";
 
 interface BackupDialogProps {
   show: boolean;
@@ -78,20 +79,20 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       <Modal.Header closeButton>
         <Modal.Title id={titleId}>
           <i className="bi bi-download me-2" aria-hidden="true"></i>
-          Backup App Data
+          {m.backup_app_data_label()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {showYearFilter && presence && (
           <Form.Group className="mb-3" controlId="yearSelect">
-            <Form.Label className="fw-medium">Year</Form.Label>
+            <Form.Label className="fw-medium">{m.backup_year_label()}</Form.Label>
             <Form.Select
               size="sm"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               aria-describedby="yearHelp"
             >
-              <option value="all">All years</option>
+              <option value="all">{m.backup_all_years()}</option>
               {presence.availableYears.map((year) => (
                 <option key={year} value={String(year)}>
                   {year}
@@ -99,16 +100,16 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
               ))}
             </Form.Select>
             <Form.Text id="yearHelp" className="text-muted">
-              Year filter applies to tasks and work location data.
+              {m.backup_year_filter_help()}
             </Form.Text>
           </Form.Group>
         )}
-        <p className="fw-medium mb-2">Include in backup:</p>
+        <p className="fw-medium mb-2">{m.backup_include_label()}</p>
         <div className="d-flex flex-column gap-2">
           <Form.Check
             type="checkbox"
             id="backup-user-state"
-            label="Settings & preferences"
+            label={m.backup_include_settings()}
             checked={includeUserState}
             onChange={(e) => setIncludeUserState(e.target.checked)}
           />
@@ -116,7 +117,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             <Form.Check
               type="checkbox"
               id="backup-time-off"
-              label="Time off events (.hday)"
+              label={m.backup_include_time_off()}
               checked={includeTimeOff}
               onChange={(e) => setIncludeTimeOff(e.target.checked)}
             />
@@ -125,7 +126,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             <Form.Check
               type="checkbox"
               id="backup-work-locations"
-              label="Work location data"
+              label={m.backup_include_work_locations()}
               checked={includeWorkLocations}
               onChange={(e) => setIncludeWorkLocations(e.target.checked)}
             />
@@ -134,7 +135,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             <Form.Check
               type="checkbox"
               id="backup-tasks"
-              label="Time tracking tasks"
+              label={m.backup_include_tasks()}
               checked={includeTasks}
               onChange={(e) => setIncludeTasks(e.target.checked)}
             />
@@ -143,7 +144,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             <Form.Check
               type="checkbox"
               id="backup-templates-labels"
-              label="Time tracking templates & labels"
+              label={m.backup_include_templates()}
               checked={includeTemplatesAndLabels}
               onChange={(e) => setIncludeTemplatesAndLabels(e.target.checked)}
             />
@@ -152,7 +153,7 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
             <Form.Check
               type="checkbox"
               id="backup-gantt-tasks"
-              label="Personal Gantt tasks"
+              label={m.backup_include_gantt()}
               checked={includeGanttTasks}
               onChange={(e) => setIncludeGanttTasks(e.target.checked)}
             />
@@ -161,11 +162,11 @@ export function BackupDialog({ show, onHide }: BackupDialogProps) {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="outline-secondary" onClick={onHide}>
-          Cancel
+          {m.cancel()}
         </Button>
         <Button variant="primary" onClick={handleExport} disabled={nothingSelected}>
           <i className="bi bi-download me-1" aria-hidden="true"></i>
-          Export Backup
+          {m.backup_export_btn()}
         </Button>
       </Modal.Footer>
     </Modal>

@@ -8,6 +8,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { GanttChart } from "./GanttChart";
 import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
+import * as m from "../../paraglide/messages.js";
 
 export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();
@@ -83,7 +84,7 @@ export function GanttView() {
       <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
         <Button size="sm" onClick={handleAddTask}>
           <i className="bi bi-plus-circle me-1" aria-hidden="true"></i>
-          Add Task
+          {m.gantt_task_modal_add()}
         </Button>
       </div>
 
@@ -108,13 +109,13 @@ export function GanttView() {
 
       <ConfirmationDialog
         isOpen={showDeleteConfirm}
-        title="Delete task"
+        title={m.gantt_delete_task_title()}
         message={
           editingTask
-            ? `Are you sure you want to delete “${editingTask.name}”? This cannot be undone.`
-            : "Are you sure you want to delete this task?"
+            ? m.gantt_delete_task_message({ name: editingTask.name })
+            : m.gantt_delete_task_unnamed_message()
         }
-        confirmLabel="Delete"
+        confirmLabel={m.gantt_delete_label()}
         variant="danger"
         icon="bi-trash"
         onConfirm={handleDeleteTask}

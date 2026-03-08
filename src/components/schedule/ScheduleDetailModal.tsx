@@ -14,42 +14,54 @@ import type { ScheduleOption, ShiftCode } from "../../data/rosters";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
+import * as m from "../../paraglide/messages.js";
 
 import { calculateShift } from "../../utils/shiftCalculations";
 
 // Icon size for small decorative icons (e.g., live indicator dot)
 const SMALL_ICON_SIZE = "0.5rem";
 
-// Display metadata for each working shift code — used to render icons, colors, and labels.
+// Display metadata for each working shift code — icons, colors, and variants only (labels are translated at render time).
 // Any shift code present in a schedule's shiftTimes but absent here will receive a generic fallback.
 const SHIFT_DISPLAY_META: Partial<
-  Record<ShiftCode, { label: string; icon: string; iconClassName: string; variant: string }>
+  Record<ShiftCode, { icon: string; iconClassName: string; variant: string }>
 > = {
   M: {
-    label: "Morning Shifts",
     icon: "bi bi-sun",
     iconClassName: "text-warning",
     variant: "warning",
   },
   L: {
-    label: "Evening Shifts",
     icon: "bi bi-sunset",
     iconClassName: "text-info",
     variant: "info",
   },
   D: {
-    label: "Day Shifts",
     icon: "bi bi-brightness-high",
     iconClassName: "text-primary",
     variant: "primary",
   },
   N: {
-    label: "Night Shifts",
     icon: "bi bi-moon",
     iconClassName: "text-secondary",
     variant: "dark",
   },
 };
+
+function getShiftLabel(code: ShiftCode): string {
+  switch (code) {
+    case "M":
+      return m.shift_morning_shifts();
+    case "L":
+      return m.shift_evening_shifts();
+    case "D":
+      return m.shift_day_shifts();
+    case "N":
+      return m.shift_night_shifts();
+    default:
+      return m.shift_generic_shifts({ code });
+  }
+}
 
 interface ScheduleDetailModalProps {
   show: boolean;
@@ -135,7 +147,6 @@ export function ScheduleDetailModal({
       .map((code) => {
         const count = weekSchedule.filter((day) => day.shift.code === code).length;
         const meta = SHIFT_DISPLAY_META[code] ?? {
-          label: `${code} Shifts`,
           icon: "bi bi-circle",
           iconClassName: "text-muted",
           variant: "secondary",
@@ -167,7 +178,9 @@ export function ScheduleDetailModal({
               "text-primary",
             )}
           ></i>
-          {hasTeams ? `Team ${teamNumber} Details` : "Schedule Details"}
+          {hasTeams
+            ? m.schedule_detail_title_team({ team: String(teamNumber) })
+            : m.schedule_detail_title_schedule()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -178,13 +191,13 @@ export function ScheduleDetailModal({
               <div>
                 <h6 className="mb-1">
                   <i className="bi bi-clock me-2"></i>
-                  Current Status
+                  {m.schedule_current_status()}
                 </h6>
                 <div className="d-flex align-items-center gap-2">
                   {currentStatus.shift.code === "O" ? (
                     <Badge bg="secondary" pill>
                       <i className="bi bi-house me-1"></i>
-                      Off Duty
+                      {m.schedule_off_duty()}
                     </Badge>
                   ) : (
                     <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
@@ -194,7 +207,7 @@ export function ScheduleDetailModal({
               </div>
               {nextShift && (
                 <div className="text-end">
-                  <small className="text-muted d-block">Next Shift</small>
+                  <small className="text-muted d-block">{m.schedule_next_shift()}</small>
                   <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
                   <small className="text-muted d-block">{nextShift.date.format("MMM D")}</small>
                 </div>
@@ -207,7 +220,7 @@ export function ScheduleDetailModal({
         <div className="mb-4">
           <h6 className="mb-3">
             <i className="bi bi-calendar-week me-2"></i>
-            7-Day Schedule
+            {m.schedule_7day_heading()}
           </h6>
 
           {/* Desktop table view */}
@@ -215,15 +228,19 @@ export function ScheduleDetailModal({
             <div className="table-responsive">
               <Table
                 className="mb-0 schedule-detail-table"
-                aria-label={`${hasTeams ? `Team ${teamNumber}` : "Personal"} 7-day schedule table`}
+                aria-label={
+                  hasTeams
+                    ? m.schedule_7day_aria_team({ team: String(teamNumber) })
+                    : m.schedule_7day_aria_personal()
+                }
               >
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Day</th>
-                    <th>Shift</th>
-                    <th>Hours</th>
-                    <th>Status</th>
+                    <th>{m.schedule_col_date()}</th>
+                    <th>{m.schedule_col_day()}</th>
+                    <th>{m.schedule_col_shift()}</th>
+                    <th>{m.schedule_col_hours()}</th>
+                    <th>{m.schedule_col_status()}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,12 +258,12 @@ export function ScheduleDetailModal({
                               style={{ fontSize: SMALL_ICON_SIZE }}
                               aria-hidden="true"
                             ></i>
-                            Today
+                            {m.today()}
                           </Badge>
                         )}
                         {day.isTomorrow && (
                           <Badge bg="info" className="ms-2">
-                            Tomorrow
+                            {m.schedule_tomorrow()}
                           </Badge>
                         )}
                       </td>
@@ -254,7 +271,7 @@ export function ScheduleDetailModal({
                       <td>
                         {day.shift.code === "O" ? (
                           <Badge bg="secondary" pill>
-                            Off
+                            {m.schedule_off()}
                           </Badge>
                         ) : (
                           <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
@@ -275,12 +292,12 @@ export function ScheduleDetailModal({
                         {day.shift.code === "O" ? (
                           <small className="text-muted">
                             <i className="bi bi-house me-1" aria-hidden="true"></i>
-                            Rest Day
+                            {m.schedule_rest_day()}
                           </small>
                         ) : (
                           <small className="text-success">
                             <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
-                            Working
+                            {m.schedule_working()}
                           </small>
                         )}
                       </td>
@@ -310,12 +327,12 @@ export function ScheduleDetailModal({
                               style={{ fontSize: SMALL_ICON_SIZE }}
                               aria-hidden="true"
                             ></i>
-                            Today
+                            {m.today()}
                           </Badge>
                         )}
                         {day.isTomorrow && (
                           <Badge bg="info" className="ms-2">
-                            Tomorrow
+                            {m.schedule_tomorrow()}
                           </Badge>
                         )}
                       </h6>
@@ -324,7 +341,7 @@ export function ScheduleDetailModal({
                     <div>
                       {day.shift.code === "O" ? (
                         <Badge bg="secondary" pill>
-                          Off
+                          {m.schedule_off()}
                         </Badge>
                       ) : (
                         <ShiftBadge shift={day.shift} showName pill showTooltip={false} />
@@ -335,7 +352,7 @@ export function ScheduleDetailModal({
                     <div>
                       <small className="text-muted d-block">
                         <i className="bi bi-clock me-1" aria-hidden="true"></i>
-                        Hours
+                        {m.schedule_col_hours()}
                       </small>
                       <span className="text-body">
                         {day.shift.code === "O"
@@ -348,16 +365,16 @@ export function ScheduleDetailModal({
                       </span>
                     </div>
                     <div className="text-end">
-                      <small className="text-muted d-block">Status</small>
+                      <small className="text-muted d-block">{m.schedule_col_status()}</small>
                       {day.shift.code === "O" ? (
                         <span className="text-muted">
                           <i className="bi bi-house me-1" aria-hidden="true"></i>
-                          Rest Day
+                          {m.schedule_rest_day()}
                         </span>
                       ) : (
                         <span className="text-success">
                           <i className="bi bi-briefcase me-1" aria-hidden="true"></i>
-                          Working
+                          {m.schedule_working()}
                         </span>
                       )}
                     </div>
@@ -375,27 +392,30 @@ export function ScheduleDetailModal({
               <Card.Body>
                 <h6 className="mb-3">
                   <i className="bi bi-bar-chart me-2"></i>
-                  Weekly Statistics
+                  {m.schedule_weekly_stats()}
                 </h6>
                 <div className="mb-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">Working vs Rest Days</span>
+                    <span className="fw-semibold">{m.schedule_working_vs_rest()}</span>
                     <small className="text-muted">
-                      {stats.workingDays}/7 working • {stats.offDays}/7 rest
+                      {m.schedule_stats_summary({
+                        working: String(stats.workingDays),
+                        rest: String(stats.offDays),
+                      })}
                     </small>
                   </div>
-                  <ProgressBar aria-label="Working vs rest days over the next 7 days">
+                  <ProgressBar aria-label={m.schedule_working_vs_rest()}>
                     <ProgressBar
                       now={(stats.workingDays / 7) * 100}
                       variant="success"
                       key="working"
-                      label={`${stats.workingDays} working`}
+                      label={m.schedule_working_label({ count: String(stats.workingDays) })}
                     />
                     <ProgressBar
                       now={(stats.offDays / 7) * 100}
                       variant="secondary"
                       key="rest"
-                      label={`${stats.offDays} rest`}
+                      label={m.schedule_rest_label({ count: String(stats.offDays) })}
                     />
                   </ProgressBar>
                 </div>
@@ -403,7 +423,7 @@ export function ScheduleDetailModal({
                   <ListGroup.Item className="px-0 py-2 d-flex justify-content-between">
                     <span>
                       <i className="bi bi-clock me-1" aria-hidden="true"></i>
-                      Total Weekly Hours
+                      {m.schedule_total_weekly_hours()}
                     </span>
                     <Badge bg="primary">
                       {Number.isInteger(stats.totalWeeklyHours)
@@ -420,9 +440,9 @@ export function ScheduleDetailModal({
               <Card.Body>
                 <h6 className="mb-3">
                   <i className="bi bi-pie-chart me-2"></i>
-                  Shift Distribution
+                  {m.schedule_shift_distribution()}
                 </h6>
-                <ProgressBar className="mb-3" aria-label="Shift distribution over the next 7 days">
+                <ProgressBar className="mb-3" aria-label={m.schedule_shift_distribution()}>
                   {stats.shiftDistribution
                     .filter((item) => item.count > 0)
                     .map((item) => (
@@ -447,7 +467,7 @@ export function ScheduleDetailModal({
                           className={clsx(item.icon, "me-1", item.iconClassName)}
                           aria-hidden="true"
                         ></i>
-                        {item.label}
+                        {getShiftLabel(item.key)}
                       </span>
                       <Badge bg={item.variant}>
                         {item.count}/7 ({Math.round((item.count / 7) * 100)}%)
@@ -462,7 +482,7 @@ export function ScheduleDetailModal({
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
-          Close
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>

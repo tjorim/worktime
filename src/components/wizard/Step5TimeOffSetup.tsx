@@ -9,6 +9,7 @@ import {
   isValidVacationAllowanceUnit,
   type VacationAllowanceUnit,
 } from "../../utils/vacationCalculations";
+import * as m from "../../paraglide/messages.js";
 
 interface Step5TimeOffSetupProps {
   isEnabled: boolean;
@@ -41,17 +42,15 @@ export function Step5TimeOffSetup({
     <>
       <div className="text-center mb-4">
         <i className="bi bi-calendar-check display-4 text-primary"></i>
-        <h4 className="mt-3">Set Up Time Off</h4>
-        <p className="text-muted">
-          Keep vacations and leave alongside your schedule so you can plan with confidence.
-        </p>
+        <h4 className="mt-3">{m.wizard_timeoff_heading()}</h4>
+        <p className="text-muted">{m.wizard_timeoff_subtitle()}</p>
       </div>
 
       <Alert variant="info" className="mt-3">
         <ul className="mb-0">
-          <li>See time off events directly on your calendar and Today view.</li>
-          <li>Import or export .hday files to share with teammates.</li>
-          <li>Track vacation allowance to see your remaining balance by year.</li>
+          <li>{m.wizard_timeoff_benefit1()}</li>
+          <li>{m.wizard_timeoff_benefit2()}</li>
+          <li>{m.wizard_timeoff_benefit3()}</li>
         </ul>
       </Alert>
 
@@ -59,7 +58,7 @@ export function Step5TimeOffSetup({
         <Form.Check
           type="switch"
           id="enable-timeoff"
-          label="Enable time off"
+          label={m.wizard_timeoff_enable()}
           checked={isEnabled}
           onChange={(event) => onToggle(event.target.checked)}
         />
@@ -69,12 +68,14 @@ export function Step5TimeOffSetup({
             <Row className="g-3 mt-1">
               <Col md={8}>
                 <Form.Group className="mb-0" controlId="vacationAmount">
-                  <Form.Label>{`Vacation allowance for ${currentYear} (optional)`}</Form.Label>
+                  <Form.Label>
+                    {m.wizard_timeoff_vacation_label({ year: String(currentYear) })}
+                  </Form.Label>
                   <Form.Control
                     type="number"
                     min={0}
                     step={0.5}
-                    placeholder="e.g., 25"
+                    placeholder={m.wizard_timeoff_vacation_placeholder()}
                     value={vacationAmount}
                     onChange={(e) => onVacationAmountChange(e.target.value)}
                     isInvalid={isInvalid}
@@ -82,17 +83,16 @@ export function Step5TimeOffSetup({
                     aria-describedby="vacation-amount-help vacation-amount-error"
                   />
                   <Form.Control.Feedback type="invalid" id="vacation-amount-error">
-                    Please enter a valid number (0 or greater)
+                    {m.wizard_timeoff_vacation_invalid()}
                   </Form.Control.Feedback>
                   <Form.Text className="text-muted" id="vacation-amount-help">
-                    This amount is saved for {currentYear}. Leave empty to skip vacation allowance
-                    tracking.
+                    {m.wizard_timeoff_vacation_help({ year: String(currentYear) })}
                   </Form.Text>
                 </Form.Group>
               </Col>
               <Col md={4}>
                 <Form.Group controlId="vacationUnit">
-                  <Form.Label>Unit</Form.Label>
+                  <Form.Label>{m.wizard_timeoff_unit_label()}</Form.Label>
                   <Form.Select
                     value={vacationUnit}
                     onChange={(event) => {
@@ -102,8 +102,8 @@ export function Step5TimeOffSetup({
                       }
                     }}
                   >
-                    <option value="days">Days</option>
-                    <option value="hours">Hours</option>
+                    <option value="days">{m.timeoff_vacation_unit_days()}</option>
+                    <option value="hours">{m.timeoff_vacation_unit_hours()}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -111,7 +111,7 @@ export function Step5TimeOffSetup({
           </>
         ) : (
           <Form.Text className="text-muted d-block mt-2">
-            You can enable time off later in Settings if you change your mind.
+            {m.wizard_timeoff_disable_hint()}
           </Form.Text>
         )}
       </Form>
@@ -123,7 +123,7 @@ export function Step5TimeOffSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> Back
+          <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         <Button
           variant="primary"
@@ -131,10 +131,11 @@ export function Step5TimeOffSetup({
           className="order-1 order-sm-2"
           disabled={isEnabled && isInvalid}
         >
-          Continue
+          {m.continue()}
           <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
     </>
   );
 }
+

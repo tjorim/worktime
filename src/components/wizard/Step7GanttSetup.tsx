@@ -2,6 +2,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
+import * as m from "../../paraglide/messages.js";
 
 interface Step7GanttSetupProps {
   isEnabled: boolean;
@@ -22,30 +23,26 @@ export function Step7GanttSetup({
     <>
       <div className="text-center mb-4">
         <i className="bi bi-bar-chart-steps display-4 text-warning"></i>
-        <h4 className="mt-3">Personal Gantt Chart</h4>
-        <p className="text-muted">
-          Plan your personal projects and tasks on a visual timeline with progress tracking and
-          dependencies.
-        </p>
+        <h4 className="mt-3">{m.wizard_gantt_heading()}</h4>
+        <p className="text-muted">{m.wizard_gantt_subtitle()}</p>
       </div>
 
       <Alert variant="info" className="mt-3">
-        Gantt tasks are stored locally in your browser. You can back them up anytime via{" "}
-        <strong>Settings → Backup App Data</strong>.
+        {m.wizard_gantt_info()}
       </Alert>
 
       <Form className="mt-3">
         <Form.Check
           type="switch"
           id="enable-gantt"
-          label="Enable personal Gantt chart"
+          label={m.wizard_gantt_enable()}
           checked={isEnabled}
           onChange={(event) => onToggle(event.target.checked)}
         />
 
         {!isEnabled && (
           <Form.Text className="text-muted d-block mt-2">
-            You can enable the Gantt chart later in Settings if you want to start planning projects.
+            {m.wizard_gantt_disable_hint()}
           </Form.Text>
         )}
       </Form>
@@ -57,10 +54,10 @@ export function Step7GanttSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> Back
+          <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          Continue <i className="bi bi-arrow-right ms-1"></i>
+          {m.continue()} <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
     </>

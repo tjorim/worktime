@@ -3,6 +3,7 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import type { ReactNode, RefObject } from "react";
+import * as m from "../../paraglide/messages.js";
 
 interface Step2FeaturesProps {
   onPrev: () => void;
@@ -23,14 +24,14 @@ export function Step2Features({
   return (
     <>
       <div className="mb-4">
-        <h5 className="text-center mb-4">Here's what Worktime can do for you:</h5>
+        <h5 className="text-center mb-4">{m.wizard_features_heading()}</h5>
         <Row className="g-3">
           <Col xs={12} md={6}>
             <div className="d-flex align-items-start">
               <i className="bi bi-stopwatch text-success me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Live Countdown Timers</h6>
-                <small className="text-muted">Know exactly when your next shift starts</small>
+                <h6 className="mb-1">{m.wizard_feature_countdown_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_countdown_desc()}</small>
               </div>
             </div>
           </Col>
@@ -38,10 +39,8 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-wifi-off text-info me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Local-First Data</h6>
-                <small className="text-muted">
-                  Your settings and events are saved in your browser for quick access
-                </small>
+                <h6 className="mb-1">{m.wizard_feature_local_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_local_desc()}</small>
               </div>
             </div>
           </Col>
@@ -49,8 +48,8 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-people text-warning me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Team Overview</h6>
-                <small className="text-muted">See who is working across your schedule</small>
+                <h6 className="mb-1">{m.wizard_feature_team_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_team_desc()}</small>
               </div>
             </div>
           </Col>
@@ -58,8 +57,8 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-calendar-check text-primary me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Time-Off Planning</h6>
-                <small className="text-muted">Track vacation and time-off with .hday files</small>
+                <h6 className="mb-1">{m.wizard_feature_timeoff_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_timeoff_desc()}</small>
               </div>
             </div>
           </Col>
@@ -67,8 +66,8 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-clock-history text-success me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Time Tracking</h6>
-                <small className="text-muted">Log tasks and review weekly summaries</small>
+                <h6 className="mb-1">{m.wizard_feature_tracking_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_tracking_desc()}</small>
               </div>
             </div>
           </Col>
@@ -76,10 +75,8 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-bar-chart-steps text-warning me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Personal Gantt Chart</h6>
-                <small className="text-muted">
-                  Plan projects on a visual timeline with dependencies
-                </small>
+                <h6 className="mb-1">{m.wizard_feature_gantt_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_gantt_desc()}</small>
               </div>
             </div>
           </Col>
@@ -87,15 +84,15 @@ export function Step2Features({
             <div className="d-flex align-items-start">
               <i className="bi bi-globe text-primary me-3 mt-1 icon-feature"></i>
               <div>
-                <h6 className="mb-1">Cross-Border Tracking</h6>
-                <small className="text-muted">Log where you work each day for tax reporting</small>
+                <h6 className="mb-1">{m.wizard_feature_crossborder_title()}</h6>
+                <small className="text-muted">{m.wizard_feature_crossborder_desc()}</small>
               </div>
             </div>
           </Col>
         </Row>
         <Alert variant="info" className="mt-4">
           <i className="bi bi-gear me-2"></i>
-          <strong>Tip:</strong> You can customize your experience anytime in the{" "}
+          <strong>{m.wizard_features_tip_label()}</strong> {m.wizard_features_customize_prefix()}{" "}
           {settingsLocationText}.
         </Alert>
       </div>
@@ -106,10 +103,10 @@ export function Step2Features({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> Back
+          <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          Choose a Schedule <i className="bi bi-arrow-right ms-1"></i>
+          {m.wizard_choose_schedule_btn()} <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
     </>

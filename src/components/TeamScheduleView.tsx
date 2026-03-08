@@ -13,6 +13,7 @@ import { getEventColorClass } from "../lib/hday/parser";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "../constants/storageKeys";
+import * as m from "../paraglide/messages.js";
 
 interface TeamMember {
   username: string;
@@ -115,7 +116,7 @@ export function TeamScheduleView() {
 
   const fetchTeamData = useCallback(async () => {
     if (!teamId.trim()) {
-      setError("Please enter a team ID");
+      setError(m.team_enter_id_error());
       setHasAttemptedFetch(true);
       return;
     }
@@ -149,7 +150,7 @@ export function TeamScheduleView() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch team data: ${errorText}`);
+        throw new Error(m.team_fetch_failed({ error: errorText }));
       }
 
       const data: TeamHdayResponse = await response.json();
@@ -165,7 +166,7 @@ export function TeamScheduleView() {
       }
 
       console.error("Error fetching team data:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      setError(err instanceof Error ? err.message : m.team_unknown_error());
       setTeamData(null);
     } finally {
       // Only update loading state if this request wasn't aborted
@@ -234,13 +235,9 @@ export function TeamScheduleView() {
   if (connectionStatus !== "connected") {
     return (
       <Alert variant="info" className="mt-3">
-        <Alert.Heading>Backend Connection Required</Alert.Heading>
-        <p>
-          To view team schedules, please enable developer options and connect to the backend API.
-        </p>
-        <p className="mb-0 small">
-          Open Settings → Developer Options and configure your backend API URL.
-        </p>
+        <Alert.Heading>{m.team_backend_required_heading()}</Alert.Heading>
+        <p>{m.team_backend_required_body()}</p>
+        <p className="mb-0 small">{m.team_backend_required_help()}</p>
       </Alert>
     );
   }
@@ -251,22 +248,22 @@ export function TeamScheduleView() {
         <Card.Body>
           <Card.Title>
             <i className="bi bi-people me-2" aria-hidden="true"></i>
-            Team Schedule Viewer
+            {m.team_viewer_title()}
           </Card.Title>
           <Card.Text className="text-muted small mb-3">
-            Enter a team ID to view the team roster and .hday schedules for all members.
+            {m.team_viewer_desc()}
           </Card.Text>
 
           <Form onSubmit={handleSubmit}>
             <div className="d-flex gap-2 align-items-start">
               <Form.Group className="flex-grow-1">
                 <Form.Label htmlFor="team-id-input" className="visually-hidden">
-                  Team ID
+                  {m.team_id_label()}
                 </Form.Label>
                 <Form.Control
                   id="team-id-input"
                   type="text"
-                  placeholder="Enter team ID (e.g., team1, dev-team)"
+                  placeholder={m.team_id_placeholder()}
                   value={teamId}
                   onChange={(e) => setTeamId(e.target.value)}
                   disabled={isLoading}
@@ -277,12 +274,12 @@ export function TeamScheduleView() {
                 {isLoading ? (
                   <>
                     <Spinner animation="border" size="sm" className="me-2" />
-                    Loading...
+                    {m.loading()}
                   </>
                 ) : (
                   <>
                     <i className="bi bi-search me-1" aria-hidden="true"></i>
-                    Load Team
+                    {m.team_load_btn()}
                   </>
                 )}
               </Button>
@@ -293,7 +290,7 @@ export function TeamScheduleView() {
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
-          <Alert.Heading>Error</Alert.Heading>
+          <Alert.Heading>{m.error()}</Alert.Heading>
           <p className="mb-0">{error}</p>
         </Alert>
       )}
@@ -330,8 +327,10 @@ export function TeamScheduleView() {
             </Card.Header>
             <Card.Body>
               <h6 className="mb-3">
-                Team Members ({teamData.members.length})
-                <span className="text-muted small ms-2">ID: {teamData.team_id}</span>
+                {m.team_members_heading({ count: String(teamData.members.length) })}
+                <span className="text-muted small ms-2">
+                  {m.team_id_display({ id: teamData.team_id })}
+                </span>
               </h6>
 
               <div className="table-responsive">
@@ -340,7 +339,7 @@ export function TeamScheduleView() {
                     {/* Month header row */}
                     <tr className="calendar-header">
                       <th className="calendar-name-cell" rowSpan={2}>
-                        Name
+                        {m.team_calendar_name_header()}
                       </th>
                       {monthGroups.map((group, idx) => (
                         <th key={idx} className="calendar-month-header" colSpan={group.colspan}>
@@ -401,7 +400,11 @@ export function TeamScheduleView() {
                                 <br />
                                 <code className="text-white">{member.username}</code>
                                 <br />
-                                {member.events.length} event{member.events.length !== 1 ? "s" : ""}
+                                {member.events.length === 1
+                                  ? m.team_events_count_one({ count: String(member.events.length) })
+                                  : m.team_events_count_other({
+                                      count: String(member.events.length),
+                                    })}
                                 <br />
                                 {member.etag ? (
                                   <span className="text-success">
@@ -409,12 +412,12 @@ export function TeamScheduleView() {
                                       className="bi bi-file-earmark-text me-1"
                                       aria-hidden="true"
                                     ></i>
-                                    .hday file
+                                    {m.team_hday_file()}
                                   </span>
                                 ) : (
                                   <span className="text-muted">
                                     <i className="bi bi-file-earmark-x me-1" aria-hidden="true"></i>
-                                    No .hday file
+                                    {m.team_no_hday_file()}
                                   </span>
                                 )}
                               </div>
@@ -492,68 +495,68 @@ export function TeamScheduleView() {
           {/* Legend */}
           <Card className="mb-3">
             <Card.Header>
-              <h6 className="mb-0">Legend</h6>
+              <h6 className="mb-0">{m.team_legend_heading()}</h6>
             </Card.Header>
             <Card.Body>
               <div className="row g-2">
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box calendar-available"></div>
-                    <span>Available / In office</span>
+                    <span>{m.team_legend_available()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-holiday-full"></div>
-                    <span>Vacation</span>
+                    <span>{m.team_legend_vacation()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-ill-full"></div>
-                    <span>Sick leave</span>
+                    <span>{m.team_legend_sick()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-business-full"></div>
-                    <span>Business trip</span>
+                    <span>{m.team_legend_business()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-course-full"></div>
-                    <span>Training / Course</span>
+                    <span>{m.team_legend_training()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-recurring-full"></div>
-                    <span>Weekly off</span>
+                    <span>{m.team_legend_weekly_off()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-birthday-full"></div>
-                    <span>Birthday</span>
+                    <span>{m.team_legend_birthday()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box calendar-weekend"></div>
-                    <span>Weekend</span>
+                    <span>{m.team_legend_weekend()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <div className="legend-color-box event-in-full"></div>
-                    <span>In office (explicit)</span>
+                    <span>{m.team_legend_in_office()}</span>
                   </div>
                 </div>
                 <div className="col-md-6 col-lg-4">
                   <div className="d-flex align-items-center gap-2">
                     <span className="fw-bold fs-5">½</span>
-                    <span>Half-day event</span>
+                    <span>{m.team_legend_half_day()}</span>
                   </div>
                 </div>
               </div>
@@ -566,7 +569,7 @@ export function TeamScheduleView() {
         <Card className="text-center py-5">
           <Card.Body>
             <i className="bi bi-inbox display-1 text-muted mb-3 d-block" aria-hidden="true"></i>
-            <p className="text-muted">Enter a team ID above to load team schedule data.</p>
+            <p className="text-muted">{m.team_empty_state()}</p>
           </Card.Body>
         </Card>
       )}

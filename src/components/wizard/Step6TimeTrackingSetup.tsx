@@ -2,6 +2,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
+import * as m from "../../paraglide/messages.js";
 
 interface Step6TimeTrackingSetupProps {
   isEnabled: boolean;
@@ -22,29 +23,26 @@ export function Step6TimeTrackingSetup({
     <>
       <div className="text-center mb-4">
         <i className="bi bi-stopwatch display-4 text-success"></i>
-        <h4 className="mt-3">Set Up Time Tracking</h4>
-        <p className="text-muted">
-          Time tracking helps you log tasks and review weekly summaries for better workload
-          planning.
-        </p>
+        <h4 className="mt-3">{m.wizard_tracking_heading()}</h4>
+        <p className="text-muted">{m.wizard_tracking_subtitle()}</p>
       </div>
 
       <Alert variant="info" className="mt-3">
-        Time tracking data stays on this device. Export anytime for backups.
+        {m.wizard_tracking_info()}
       </Alert>
 
       <Form className="mt-3">
         <Form.Check
           type="switch"
           id="enable-timetracking"
-          label="Enable time tracking"
+          label={m.wizard_tracking_enable()}
           checked={isEnabled}
           onChange={(event) => onToggle(event.target.checked)}
         />
 
         {!isEnabled && (
           <Form.Text className="text-muted d-block mt-2">
-            You can enable time tracking later in Settings if you want to start logging hours.
+            {m.wizard_tracking_disable_hint()}
           </Form.Text>
         )}
       </Form>
@@ -56,10 +54,10 @@ export function Step6TimeTrackingSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> Back
+          <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
-          Finish Setup <i className="bi bi-check-lg ms-1"></i>
+          {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1"></i>
         </Button>
       </div>
     </>

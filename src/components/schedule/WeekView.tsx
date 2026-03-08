@@ -14,6 +14,7 @@ import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUt
 import { calculateShift } from "../../utils/shiftCalculations";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
+import * as m from "../../paraglide/messages.js";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -94,9 +95,7 @@ export function WeekView({
       <Card>
         <Card.Body className="text-center py-4">
           <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-          <p className="text-muted mb-3">
-            Please select your schedule to view the weekly overview.
-          </p>
+          <p className="text-muted mb-3">{m.week_view_no_schedule()}</p>
         </Card.Body>
       </Card>
     );
@@ -127,30 +126,30 @@ export function WeekView({
               className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-2`}
               aria-hidden="true"
             ></i>
-            {hasTeams ? "All Teams" : "Schedule"}
+            {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
           </span>
           <WeekNavigationButtonGroup
             isCurrent={isCurrentWeek}
             onPrevious={handlePrevious}
             onCurrent={handleCurrent}
             onNext={handleNext}
-            selectorLabel="Jump to date:"
+            selectorLabel={m.tt_jump_to_date()}
             selectorValue={currentDate.format("YYYY-MM-DD")}
             onSelectorChange={handleDateChange}
           />
         </div>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="text-muted small">
-            Week {selectedWeekNumber} ({selectedWeekYear})
+            {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
             {isCurrentWeek && (
-              <Badge bg="success" className="ms-2" aria-label="Current week">
-                This Week
+              <Badge bg="success" className="ms-2" aria-label={m.this_week()}>
+                {m.this_week()}
               </Badge>
             )}
           </div>
           <div className="small text-muted d-none d-lg-block">
             <i className="bi bi-keyboard me-1" aria-hidden="true"></i>
-            Keyboard: ← → arrows, Ctrl+H (this week)
+            {m.week_view_keyboard_hint()}
           </div>
         </div>
       </Card.Header>
@@ -159,9 +158,9 @@ export function WeekView({
           <div className="mb-3">
             <strong>
               <i className="bi bi-people me-1" aria-hidden="true"></i>
-              Team {myTeam} Schedule:
+              {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
-            <div className="text-muted small">Week {selectedWeekNumber}</div>
+            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
           </div>
         )}
 
@@ -169,9 +168,9 @@ export function WeekView({
           <div className="mb-3">
             <strong>
               <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
-              Your Schedule:
+              {m.week_view_your_schedule_heading()}
             </strong>
-            <div className="text-muted small">Week {selectedWeekNumber}</div>
+            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
           </div>
         )}
 
@@ -182,7 +181,9 @@ export function WeekView({
           >
             <thead>
               <tr>
-                <th className="team-header">{hasTeams ? "Team" : "Schedule"}</th>
+                <th className="team-header">
+                  {hasTeams ? m.week_view_team_header() : m.week_view_schedule_label()}
+                </th>
                 {weekDays.map((day, dayIndex) => {
                   const isToday = day.isSame(today, "day");
                   return (
@@ -224,11 +225,13 @@ export function WeekView({
                   aria-label={
                     hasTeams
                       ? `Team ${teamNumber}${myTeam === teamNumber ? " (your team)" : ""}`
-                      : "Schedule"
+                      : m.week_view_schedule_label()
                   }
                 >
                   <td className="team-header">
-                    <strong>{hasTeams ? `Team ${teamNumber}` : "Schedule"}</strong>
+                    <strong>
+                      {hasTeams ? `Team ${teamNumber}` : m.week_view_schedule_label()}
+                    </strong>
                   </td>
                   {weekDays.map((day, dayIndex) => {
                     const shift = calculateShift(day, teamNumber, scheduleType);

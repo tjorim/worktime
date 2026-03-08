@@ -16,6 +16,7 @@ import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "../../utils/shiftCalculations";
 import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
+import * as m from "../../paraglide/messages.js";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -71,8 +72,8 @@ function TeamCard({
             className="live-badge"
             aria-label={
               hasTeams
-                ? `Team ${shiftResult.teamNumber} is currently working`
-                : "Schedule is currently working"
+                ? m.schedule_team_working_aria({ team: String(shiftResult.teamNumber) })
+                : m.schedule_working_aria()
             }
           >
             LIVE
@@ -81,7 +82,7 @@ function TeamCard({
       )}
       <div className="team-card-header d-flex justify-content-between align-items-center mb-2">
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : "Schedule"}</h6>
+          <h6 className="mb-0">{hasTeams ? `Team ${shiftResult.teamNumber}` : m.week_view_schedule_label()}</h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -91,16 +92,16 @@ function TeamCard({
       <div className="text-muted small">
         {shift.name}
         <br />
-        {shift.isWorking ? shiftTimeLabel : "Not working today"}
+        {shift.isWorking ? shiftTimeLabel : m.schedule_not_working_today()}
       </div>
       <div className="text-muted small mt-1">
         <OverlayTrigger
           placement="bottom"
           overlay={
             <Tooltip id={`code-tooltip-${shiftResult.teamNumber}`}>
-              <strong>Full Shift Code</strong>
+              <strong>{m.shift_full_code_title()}</strong>
               <br />
-              Format: YYWW.D + Shift
+              {m.shift_code_format()}
               <br />
               <em>{shiftResult.code}</em> = ISO Year {getISOWeekYear2Digit(shiftResult.date)}, ISO
               Week {shiftResult.date.isoWeek()}, {shiftResult.date.format("dddd")}, {shift.name}
@@ -120,10 +121,14 @@ function TeamCard({
         onClick={() => onTeamClick(shiftResult.teamNumber, scheduleType)}
         role="button"
         aria-label={
-          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
+          hasTeams
+            ? `View details for Team ${shiftResult.teamNumber}`
+            : m.week_view_schedule_label()
         }
         title={
-          hasTeams ? `View details for Team ${shiftResult.teamNumber}` : "View schedule details"
+          hasTeams
+            ? `View details for Team ${shiftResult.teamNumber}`
+            : m.week_view_schedule_label()
         }
         style={{ cursor: "pointer" }}
         tabIndex={0}
