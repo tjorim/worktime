@@ -848,5 +848,16 @@
   "generic_status_shift_progress_remaining_minutes_only": "Dienstvoortgang: {minutes}m resterend",
   "generic_status_shift_progress_remaining_minutes_only_aria": "Dienstvoortgang met {minutes} minuten resterend",
   "transfer_showing_count_one": "Toont {count} overdracht",
-  "transfer_showing_count_other": "Toont {count} overdrachten"
+  "transfer_showing_count_other": "Toont {count} overdrachten",
+  "daycell_overflow_toggle_aria_one": "{action} {count} extra gebeurtenis",
+  "daycell_overflow_toggle_aria_other": "{action} {count} extra gebeurtenissen",
+  "generic_status_working_count_one": "{count} aan het werk",
+  "generic_status_working_count_other": "{count} aan het werk",
+  "generic_status_off_count_one": "{count} vrij",
+  "generic_status_off_count_other": "{count} vrij",
+  "generic_status_working_off_summary": "{working}, {off}",
+  "personalized_status_shift_progress_aria_one": "Dienstvoortgang: {elapsedHours} van {totalHours} uur",
+  "personalized_status_shift_progress_aria_other": "Dienstvoortgang: {elapsedHours} van {totalHours} uur",
+  "personalized_status_off_day_progress_aria_one": "Rustdagvoortgang: {current} van {total} dag",
+  "personalized_status_off_day_progress_aria_other": "Rustdagvoortgang: {current} van {total} dagen"
 }

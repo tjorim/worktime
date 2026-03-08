@@ -848,5 +848,16 @@
   "generic_status_shift_progress_remaining_minutes_only": "Shift progress: {minutes}m remaining",
   "generic_status_shift_progress_remaining_minutes_only_aria": "Shift progress with {minutes} minutes remaining",
   "transfer_showing_count_one": "Showing {count} transfer",
-  "transfer_showing_count_other": "Showing {count} transfers"
+  "transfer_showing_count_other": "Showing {count} transfers",
+  "daycell_overflow_toggle_aria_one": "{action} {count} more event",
+  "daycell_overflow_toggle_aria_other": "{action} {count} more events",
+  "generic_status_working_count_one": "{count} working",
+  "generic_status_working_count_other": "{count} working",
+  "generic_status_off_count_one": "{count} off",
+  "generic_status_off_count_other": "{count} off",
+  "generic_status_working_off_summary": "{working}, {off}",
+  "personalized_status_shift_progress_aria_one": "Shift progress: {elapsedHours} of {totalHours} hour",
+  "personalized_status_shift_progress_aria_other": "Shift progress: {elapsedHours} of {totalHours} hours",
+  "personalized_status_off_day_progress_aria_one": "Off day progress: {current} of {total} day",
+  "personalized_status_off_day_progress_aria_other": "Off day progress: {current} of {total} days"
 }

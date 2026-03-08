@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -13,6 +13,7 @@ import {
   getTimeLocationSymbol,
 } from "../../lib/hday/parser";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 export type DayEvent = {
   event: HdayEvent;
@@ -189,6 +190,10 @@ export function DayCell({
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenEvents = events.slice(MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
+  const overflowPluralCategory = useMemo(
+    () => new Intl.PluralRules(getLocale()).select(hiddenCount),
+    [hiddenCount],
+  );
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
@@ -460,11 +465,17 @@ export function DayCell({
                 setIsOverflowExpanded((current) => !current);
               }}
               aria-expanded={isOverflowExpanded}
-              aria-label={m.daycell_overflow_toggle_aria({
-                action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
-                count: String(hiddenCount),
-                noun: hiddenCount === 1 ? m.daycell_event_singular() : m.daycell_event_plural(),
-              })}
+              aria-label={
+                overflowPluralCategory === "one"
+                  ? m.daycell_overflow_toggle_aria_one({
+                      action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
+                      count: String(hiddenCount),
+                    })
+                  : m.daycell_overflow_toggle_aria_other({
+                      action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
+                      count: String(hiddenCount),
+                    })
+              }
             >
               {isOverflowExpanded
                 ? m.daycell_overflow_less({ count: String(hiddenCount) })

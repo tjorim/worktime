@@ -176,10 +176,17 @@ export function PersonalizedStatusContent({
                           now={shiftProgress.percentage}
                           variant="warning"
                           className="progress-thin"
-                          aria-label={m.personalized_status_shift_progress_aria({
-                            elapsedHours: String(shiftProgress.elapsedHours),
-                            totalHours: String(shiftProgress.totalHours),
-                          })}
+                          aria-label={
+                            shiftProgress.totalHours === 1
+                              ? m.personalized_status_shift_progress_aria_one({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                              : m.personalized_status_shift_progress_aria_other({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                          }
                         />
                       </div>
                     )}
@@ -197,10 +204,17 @@ export function PersonalizedStatusContent({
                     now={(offDayProgress.current / offDayProgress.total) * 100}
                     variant="info"
                     className="progress-thin"
-                    aria-label={m.personalized_status_off_day_progress_aria({
-                      current: String(offDayProgress.current),
-                      total: String(offDayProgress.total),
-                    })}
+                    aria-label={
+                      offDayProgress.total === 1
+                        ? m.personalized_status_off_day_progress_aria_one({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                        : m.personalized_status_off_day_progress_aria_other({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                    }
                   />
                 </div>
               )}

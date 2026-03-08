@@ -89,9 +89,22 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
 
     const allTeamsToday = getAllTeamsShifts(today, scheduleType);
     const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking).length;
+    const offTeams = allTeamsToday.length - workingTeams;
+    const pluralRules = new Intl.PluralRules(getLocale());
+    const workingLabel =
+      pluralRules.select(workingTeams) === "one"
+        ? m.generic_status_working_count_one({ count: String(workingTeams) })
+        : m.generic_status_working_count_other({ count: String(workingTeams) });
+    const offLabel =
+      pluralRules.select(offTeams) === "one"
+        ? m.generic_status_off_count_one({ count: String(offTeams) })
+        : m.generic_status_off_count_other({ count: String(offTeams) });
+
     return {
       workingTeams,
-      offTeams: allTeamsToday.length - workingTeams,
+      offTeams,
+      workingLabel,
+      offLabel,
     };
   }, [hasTeams, scheduleType, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
@@ -217,9 +230,9 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               {teamsSummary && (
                 <div className="mt-3">
                   <Badge bg="info" text="dark">
-                    {m.generic_status_working_off({
-                      working: String(teamsSummary.workingTeams),
-                      off: String(teamsSummary.offTeams),
+                    {m.generic_status_working_off_summary({
+                      working: teamsSummary.workingLabel,
+                      off: teamsSummary.offLabel,
                     })}
                   </Badge>
                 </div>
