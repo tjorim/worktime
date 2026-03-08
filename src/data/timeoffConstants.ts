@@ -1,4 +1,5 @@
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import * as m from "../paraglide/messages.js";
 
 /**
  * Weekday constants for ISO week numbering (Monday=1 through Sunday=7).
@@ -15,8 +16,40 @@ export const Weekday = {
 } as const;
 
 /**
- * Type flag options available for time-off events.
+ * Returns type flag options for time-off events, with labels translated to the current locale.
  * Each tuple contains the flag value and its human-readable label.
+ */
+export function getTypeFlagOptions(): Array<[TypeFlag | "none", string]> {
+  return [
+    ["none", m.timeoff_flag_holiday()],
+    ["business", m.timeoff_flag_business()],
+    ["course", m.timeoff_flag_course()],
+    ["in", m.timeoff_flag_in()],
+    ["weekend", m.timeoff_flag_weekend()],
+    ["birthday", m.timeoff_flag_birthday()],
+    ["ill", m.timeoff_flag_ill()],
+    ["other", m.timeoff_flag_other()],
+  ];
+}
+
+/**
+ * Returns time/location flag options for time-off events, with labels translated to the current locale.
+ * Each tuple contains the flag value and its human-readable label.
+ */
+export function getTimeLocationFlagOptions(): Array<[TimeLocationFlag | "none", string]> {
+  return [
+    ["none", m.timeoff_flag_full_day()],
+    ["half_am", m.timeoff_flag_half_am()],
+    ["half_pm", m.timeoff_flag_half_pm()],
+    ["onsite", m.timeoff_flag_onsite()],
+    ["no_fly", m.timeoff_flag_no_fly()],
+    ["can_fly", m.timeoff_flag_can_fly()],
+  ];
+}
+
+/**
+ * @deprecated Use getTypeFlagOptions() instead for locale-aware labels.
+ * Static type flag options kept for backward compatibility.
  */
 export const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
   ["none", "Holiday (default)"],
@@ -30,8 +63,8 @@ export const TYPE_FLAG_OPTIONS: Array<[TypeFlag | "none", string]> = [
 ];
 
 /**
- * Time/Location flag options available for time-off events.
- * Each tuple contains the flag value and its human-readable label.
+ * @deprecated Use getTimeLocationFlagOptions() instead for locale-aware labels.
+ * Static time/location flag options kept for backward compatibility.
  */
 export const TIME_LOCATION_FLAG_OPTIONS: Array<[TimeLocationFlag | "none", string]> = [
   ["none", "Full day"],

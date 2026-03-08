@@ -21,8 +21,8 @@ import {
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
-  TYPE_FLAG_OPTIONS,
-  TIME_LOCATION_FLAG_OPTIONS,
+  getTypeFlagOptions,
+  getTimeLocationFlagOptions,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   VIEW_MODE_HELP_TEXT,
@@ -555,8 +555,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         startDateError={startDateError}
         endDateError={endDateError}
         previewLine={previewLine}
-        typeFlagOptions={TYPE_FLAG_OPTIONS}
-        timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
+        typeFlagOptions={getTypeFlagOptions()}
+        timeLocationFlagOptions={getTimeLocationFlagOptions()}
         typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
         timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
         onHide={handleHideEventModal}

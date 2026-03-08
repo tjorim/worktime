@@ -34,8 +34,8 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import {
-  TYPE_FLAG_OPTIONS,
-  TIME_LOCATION_FLAG_OPTIONS,
+  getTypeFlagOptions,
+  getTimeLocationFlagOptions,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
@@ -499,8 +499,8 @@ export function CalendarView({
             startDateError={startDateError}
             endDateError={endDateError}
             previewLine={previewLine}
-            typeFlagOptions={TYPE_FLAG_OPTIONS}
-            timeLocationFlagOptions={TIME_LOCATION_FLAG_OPTIONS}
+            typeFlagOptions={getTypeFlagOptions()}
+            timeLocationFlagOptions={getTimeLocationFlagOptions()}
             typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
             timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
             onHide={handleHideEventModal}
