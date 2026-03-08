@@ -6,6 +6,7 @@ import { LocationYearSummary } from "../../src/components/calendar/LocationYearS
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
+import { getLocale, setLocale } from "../../src/paraglide/runtime.js";
 
 function renderSummary(year: number, workLocationMap: WorkLocationMap) {
   return render(
@@ -20,6 +21,12 @@ const HOME_NL: WorkLocationInfo = { location: "home", countryCode: cc("NL") };
 const OFFICE_BE: WorkLocationInfo = { location: "office", countryCode: cc("BE") };
 
 describe("LocationYearSummary", () => {
+  const originalLocale = getLocale();
+
+  afterEach(async () => {
+    await setLocale(originalLocale, { reload: false });
+  });
+
   it("shows an empty-state message when the map has no entries for the year", () => {
     renderSummary(2026, new Map());
     expect(screen.getByText(/No work locations recorded for 2026/)).toBeInTheDocument();
@@ -117,6 +124,24 @@ describe("LocationYearSummary", () => {
       );
       expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("Home"));
       expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining("NL"));
+    });
+
+    it("uses correct Dutch singular/plural day labels in clipboard text", async () => {
+      await setLocale("nl", { reload: false });
+      const map: WorkLocationMap = new Map([
+        ["2026-01-05", HOME_NL],
+        ["2026-01-06", OFFICE_BE],
+        ["2026-01-07", OFFICE_BE],
+      ]);
+
+      renderSummary(2026, map);
+      await userEvent.click(screen.getByRole("button", { name: /Kopieer/i }));
+
+      const writeTextMock = vi.mocked(navigator.clipboard.writeText);
+      expect(writeTextMock).toHaveBeenCalledOnce();
+      const copiedText = writeTextMock.mock.calls[0]?.[0] ?? "";
+      expect(copiedText).toContain("1 dag");
+      expect(copiedText).toContain("2 dagen");
     });
   });
 });
