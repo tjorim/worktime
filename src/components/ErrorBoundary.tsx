@@ -65,13 +65,9 @@ export class ErrorBoundary extends Component<Props, State> {
               {m.error_boundary_heading()}
             </Card.Header>
             <Card.Body>
-              <Alert variant="danger">
-                <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
-                <p>
-                  {m.error_boundary_message()} <strong>{m.error_boundary_try_again()}</strong>{" "}
-                  {m.error_boundary_middle()} <strong>{m.error_boundary_reload()}</strong>.{" "}
-                  {m.error_boundary_suffix()}
-                </p>
+                <Alert variant="danger">
+                  <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
+                <p>{m.error_boundary_fallback_message()}</p>
                 <hr />
                 <div className="d-flex gap-2">
                   <Button variant="outline-danger" onClick={this.handleReset}>
@@ -86,7 +82,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {import.meta.env.DEV && this.state.error && (
                 <Card className="mt-3">
                   <Card.Header>
-                    <small className="text-muted">Debug Information</small>
+                    <small className="text-muted">{m.error_boundary_debug_information()}</small>
                   </Card.Header>
                   <Card.Body>
                     <details>

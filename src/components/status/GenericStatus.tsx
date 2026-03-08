@@ -8,6 +8,7 @@ import type { ScheduleOption } from "../../data/rosters";
 import { getScheduleConfig } from "../../utils/scheduleUtils";
 import { useCountdown } from "../../hooks/useCountdown";
 import { dayjs, setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
+import { getLocale } from "../../paraglide/runtime.js";
 import type { UpcomingShiftResult, ShiftResult } from "../../utils/shiftCalculations";
 import { getAllTeamsShifts, getCurrentWorkingTeam } from "../../utils/shiftCalculations";
 import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
@@ -32,6 +33,7 @@ interface GenericStatusContentProps {
 export function GenericStatusContent({ scheduleType }: GenericStatusContentProps) {
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
+  const locale = getLocale();
 
   const today = dayjs();
   const todayMinuteKey = today.startOf("minute").toISOString();
@@ -88,11 +90,24 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
 
     const allTeamsToday = getAllTeamsShifts(today, scheduleType);
     const workingTeams = allTeamsToday.filter((team) => team.shift.isWorking).length;
+    const offTeams = allTeamsToday.length - workingTeams;
+    const pluralRules = new Intl.PluralRules(locale);
+    const workingLabel =
+      pluralRules.select(workingTeams) === "one"
+        ? m.generic_status_working_count_one({ count: String(workingTeams) })
+        : m.generic_status_working_count_other({ count: String(workingTeams) });
+    const offLabel =
+      pluralRules.select(offTeams) === "one"
+        ? m.generic_status_off_count_one({ count: String(offTeams) })
+        : m.generic_status_off_count_other({ count: String(offTeams) });
+
     return {
       workingTeams,
-      offTeams: allTeamsToday.length - workingTeams,
+      offTeams,
+      workingLabel,
+      offLabel,
     };
-  }, [hasTeams, scheduleType, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
+  }, [hasTeams, scheduleType, todayMinuteKey, locale]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
   const currentShiftStartTime = useMemo(() => {
     if (!currentWorkingTeam || currentWorkingTeam.shift.start == null) return null;
@@ -142,13 +157,15 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                 className={`bi ${hasTeams ? "bi-people" : "bi-calendar2"} me-1`}
                 aria-hidden="true"
               ></i>
-              Current Status
+              {m.schedule_current_status()}
             </Card.Title>
             <div className="flex-grow-1">
               {currentWorkingTeam ? (
                 <div>
                   {hasTeams && (
-                    <span className="fw-semibold me-1">Team {currentWorkingTeam.teamNumber}:</span>
+                    <span className="fw-semibold me-1">
+                      {m.generic_status_team_label({ team: String(currentWorkingTeam.teamNumber) })}
+                    </span>
                   )}
                   <ShiftBadge
                     shift={currentWorkingTeam.shift}
@@ -162,7 +179,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                   />
                   <div className="small text-success mt-2">
                     <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
-                    Currently working
+                    {m.generic_status_currently_working()}
                   </div>
                   {shiftEndCountdown && !shiftEndCountdown.isExpired && (
                     <>
@@ -175,21 +192,29 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
                       {shiftProgress && (
                         <div className="mt-2">
                           <div className="small text-muted mb-1">
-                            Shift progress:{" "}
                             {shiftProgress.remainingHours > 0
-                              ? `${shiftProgress.remainingHours}h `
-                              : ""}
-                            {shiftProgress.remainingMinutes}m remaining
+                              ? m.generic_status_shift_progress_remaining({
+                                  hours: String(shiftProgress.remainingHours),
+                                  minutes: String(shiftProgress.remainingMinutes),
+                                })
+                              : m.generic_status_shift_progress_remaining_minutes_only({
+                                  minutes: String(shiftProgress.remainingMinutes),
+                                })}
                           </div>
                           <ProgressBar
                             now={shiftProgress.percentage}
                             variant="warning"
                             className="progress-thin"
-                            aria-label={`Shift progress with ${
+                            aria-label={
                               shiftProgress.remainingHours > 0
-                                ? `${shiftProgress.remainingHours} hours and `
-                                : ""
-                            }${shiftProgress.remainingMinutes} minutes remaining`}
+                                ? m.generic_status_shift_progress_remaining_aria({
+                                    hours: String(shiftProgress.remainingHours),
+                                    minutes: String(shiftProgress.remainingMinutes),
+                                  })
+                                : m.generic_status_shift_progress_remaining_minutes_only_aria({
+                                    minutes: String(shiftProgress.remainingMinutes),
+                                  })
+                            }
                           />
                         </div>
                       )}
@@ -206,7 +231,10 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               {teamsSummary && (
                 <div className="mt-3">
                   <Badge bg="info" text="dark">
-                    {teamsSummary.workingTeams} working, {teamsSummary.offTeams} off
+                    {m.generic_status_working_off_summary({
+                      working: teamsSummary.workingLabel,
+                      off: teamsSummary.offLabel,
+                    })}
                   </Badge>
                 </div>
               )}
@@ -219,14 +247,23 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
           <Card.Body className="d-flex flex-column">
             <Card.Title as="h6" className="mb-2 text-success">
               <i className="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>
-              Next Activity
+              {m.generic_status_next_activity()}
             </Card.Title>
             <div className="text-muted flex-grow-1">
               {nextShiftAnyTeam ? (
                 <div>
                   <div className="fw-semibold">
-                    {hasTeams ? `Team ${nextShiftAnyTeam.teamNumber}: ` : ""}
-                    {nextShiftAnyTeam.date.format("ddd, MMM D")} - {nextShiftAnyTeam.shift.name}
+                    {hasTeams ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} ` : ""}
+                    {(
+                      typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate ===
+                      "function"
+                        ? new Intl.DateTimeFormat(locale, {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          }).format((nextShiftAnyTeam.date as { toDate: () => Date }).toDate())
+                        : nextShiftAnyTeam.date.format("ddd, MMM D")
+                    )} - {nextShiftAnyTeam.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShiftAnyTeam.shift} className="small text-muted" />
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />
@@ -246,7 +283,7 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
         <Col xs={12} className="mt-3">
           <div className="small text-muted text-center">
             <i className="bi bi-lightbulb me-1" aria-hidden="true"></i>
-            Select your team above for personalized shift tracking and countdown timers
+            {m.generic_status_select_team_hint()}
           </div>
         </Col>
       )}

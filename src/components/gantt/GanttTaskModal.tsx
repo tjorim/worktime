@@ -109,7 +109,9 @@ export function GanttTaskModal({
     () =>
       selectedDeps.map((id) => ({
         value: id,
-        label: depOptions.find((o) => o.value === id)?.label ?? `Unknown (${id.slice(0, 8)}…)`,
+        label:
+          depOptions.find((o) => o.value === id)?.label ??
+          m.gantt_task_unknown_dependency({ id: id.slice(0, 8) }),
       })),
     [selectedDeps, depOptions],
   );

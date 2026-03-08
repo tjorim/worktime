@@ -19,8 +19,8 @@ interface SetupActionResult {
   hasTeams: boolean;
   /** Number of teams in the current schedule */
   teamCount: number;
-  /** Appropriate button text based on what's needed */
-  buttonText: string;
+  /** Semantic button key based on what's needed */
+  buttonTextKey: "select_schedule" | "select_team";
   /** Appropriate Bootstrap icon class (without "bi " prefix) */
   buttonIcon: string;
 }
@@ -46,7 +46,7 @@ export function useSetupAction(options?: UseSetupActionOptions): SetupActionResu
   const needsTeam = mode === "team" || (!!scheduleType && hasTeams && myTeam === null);
 
   // Button text and icon based on context
-  const buttonText = needsSchedule ? "Select Schedule" : "Select Team";
+  const buttonTextKey = needsSchedule ? "select_schedule" : "select_team";
   const buttonIcon = needsSchedule ? "bi-calendar-week" : "bi-person-plus";
 
   return {
@@ -54,7 +54,7 @@ export function useSetupAction(options?: UseSetupActionOptions): SetupActionResu
     needsTeam,
     hasTeams,
     teamCount,
-    buttonText,
+    buttonTextKey,
     buttonIcon,
   };
 }

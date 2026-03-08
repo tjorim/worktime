@@ -204,19 +204,19 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           <h6 className="mb-2">{m.dev_endpoints_heading()}</h6>
           <ul className="small mb-0">
             <li>
-              <code>GET /v1/health</code> - Health check and share status
+              <code>GET /v1/health</code> - {m.dev_endpoint_health()}
             </li>
             <li>
-              <code>GET /v1/hday/:username</code> - Read user's .hday file
+              <code>GET /v1/hday/:username</code> - {m.dev_endpoint_read_hday()}
             </li>
             <li>
-              <code>PUT /v1/hday/:username</code> - Write user's .hday file
+              <code>PUT /v1/hday/:username</code> - {m.dev_endpoint_write_hday()}
             </li>
             <li>
-              <code>GET /v1/team/:id</code> - Read team config and members
+              <code>GET /v1/team/:id</code> - {m.dev_endpoint_read_team()}
             </li>
             <li>
-              <code>GET /v1/team/:id/hday</code> - Read all team members' .hday files
+              <code>GET /v1/team/:id/hday</code> - {m.dev_endpoint_read_team_hdays()}
             </li>
           </ul>
         </div>

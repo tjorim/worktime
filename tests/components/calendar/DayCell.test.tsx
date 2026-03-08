@@ -28,7 +28,7 @@ describe("DayCell", () => {
 
     it("should have accessible aria-label with full date", () => {
       render(<DayCell {...defaultProps} />);
-      const header = screen.getByLabelText(/Wednesday, January 15, 2025/i);
+      const header = screen.getByLabelText(/January 15, 2025/i);
       expect(header).toBeInTheDocument();
     });
 

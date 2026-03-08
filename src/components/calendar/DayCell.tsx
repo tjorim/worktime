@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
@@ -13,6 +13,7 @@ import {
   getTimeLocationSymbol,
 } from "../../lib/hday/parser";
 import * as m from "../../paraglide/messages.js";
+import { getLocale } from "../../paraglide/runtime.js";
 
 export type DayEvent = {
   event: HdayEvent;
@@ -123,9 +124,12 @@ const getWorkLocationLabel = (workLocation?: WorkLocationInfo): string | undefin
       return m.daycell_working_office();
     case "other": {
       if (workLocation.label) {
-        return `Other location: ${workLocation.label} (${workLocation.countryCode})`;
+        return m.daycell_working_other_with_label({
+          label: workLocation.label,
+          countryCode: workLocation.countryCode,
+        });
       }
-      return `Other location (${workLocation.countryCode})`;
+      return m.daycell_working_other({ countryCode: workLocation.countryCode });
     }
     default:
       return undefined;
@@ -186,15 +190,24 @@ export function DayCell({
   const visibleEvents = events.slice(0, MAX_EVENTS);
   const hiddenEvents = events.slice(MAX_EVENTS);
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
+  const locale = getLocale();
+  const overflowPluralCategory = useMemo(
+    () => new Intl.PluralRules(locale).select(hiddenCount),
+    [hiddenCount, locale],
+  );
+  const longDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "long" }),
+    [locale],
+  );
   const indicators = getIndicatorIcons(events);
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
-  const ariaLabelParts = [date.format("dddd, MMMM D, YYYY")];
+  const ariaLabelParts = [longDateFormatter.format(date.toDate())];
   if (isToday) {
     ariaLabelParts.push(m.daycell_today_label());
   }
   if (shiftBadge) {
-    ariaLabelParts.push(`Shift: ${shiftBadge.label}`);
+    ariaLabelParts.push(m.daycell_shift_label({ shift: shiftBadge.label }));
   }
   if (workLocationLabel) {
     ariaLabelParts.push(workLocationLabel);
@@ -203,7 +216,7 @@ export function DayCell({
     ariaLabelParts.push(publicHoliday.name);
   }
   if (schoolHoliday) {
-    ariaLabelParts.push(`School Holiday: ${schoolHoliday.name}`);
+    ariaLabelParts.push(m.daycell_school_holiday_label({ holiday: schoolHoliday.name }));
   }
   if (paydayInfo) {
     ariaLabelParts.push(paydayInfo.name);
@@ -323,7 +336,7 @@ export function DayCell({
           }}
           onTouchEnd={clearLongPress}
           onTouchMove={handleTouchMove}
-          aria-label={`View ${label}`}
+          aria-label={m.daycell_view_event_aria({ label })}
         >
           <span className={clsx("month-calendar-event-color", colorClass)} />
           <span className="month-calendar-event-label">
@@ -417,7 +430,7 @@ export function DayCell({
             type="button"
             className="month-calendar-add-btn"
             tabIndex={-1}
-            aria-label={`Add event on ${date.format("MMMM D, YYYY")}`}
+            aria-label={m.daycell_add_event_on({ date: longDateFormatter.format(date.toDate()) })}
             onClick={(e) => {
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
@@ -457,9 +470,21 @@ export function DayCell({
                 setIsOverflowExpanded((current) => !current);
               }}
               aria-expanded={isOverflowExpanded}
-              aria-label={`${isOverflowExpanded ? "Hide" : "Show"} ${hiddenCount} more ${hiddenCount === 1 ? "event" : "events"}`}
+              aria-label={
+                overflowPluralCategory === "one"
+                  ? m.daycell_overflow_toggle_aria_one({
+                      action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
+                      count: String(hiddenCount),
+                    })
+                  : m.daycell_overflow_toggle_aria_other({
+                      action: isOverflowExpanded ? m.daycell_hide() : m.daycell_show(),
+                      count: String(hiddenCount),
+                    })
+              }
             >
-              {isOverflowExpanded ? `-${hiddenCount} less` : `+${hiddenCount} more`}
+              {isOverflowExpanded
+                ? m.daycell_overflow_less({ count: String(hiddenCount) })
+                : m.daycell_overflow_more({ count: String(hiddenCount) })}
             </button>
             {isOverflowExpanded && (
               <div className="month-calendar-overflow-list">
