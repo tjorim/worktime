@@ -432,9 +432,7 @@ export function CalendarView({
                 }
               />
               <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
-              <p className="text-muted mt-4 mb-3 small">
-                {m.calendar_empty_state_footer()}
-              </p>
+              <p className="text-muted mt-4 mb-3 small">{m.calendar_empty_state_footer()}</p>
               {onOpenScheduleTab && (
                 <div>
                   <Button size="sm" variant="outline-secondary" onClick={onOpenScheduleTab}>

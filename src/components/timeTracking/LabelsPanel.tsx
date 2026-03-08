@@ -287,7 +287,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
                         trigger={["hover", "focus"]}
                         overlay={
                           <Tooltip id={`delete-label-${label.id}`}>
-                            {m.tt_label_in_use_tooltip({ usage: usageParts.join(` ${m.tt_and()} `) })}
+                            {m.tt_label_in_use_tooltip({
+                              usage: usageParts.join(` ${m.tt_and()} `),
+                            })}
                           </Tooltip>
                         }
                       >
@@ -359,7 +361,9 @@ export function LabelsPanel({ labels, templates, tasks, onUpdateLabels }: Labels
       <ConfirmationDialog
         isOpen={pendingDeleteLabel !== null}
         title={m.tt_delete_label_title()}
-        message={pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""}
+        message={
+          pendingDeleteLabel ? m.tt_delete_item_message({ name: pendingDeleteLabel.name }) : ""
+        }
         confirmLabel={m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}

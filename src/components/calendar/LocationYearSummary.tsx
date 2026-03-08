@@ -67,9 +67,7 @@ export function LocationYearSummary({ year, workLocationMap }: LocationYearSumma
   };
 
   if (rows.length === 0) {
-    return (
-      <div className="text-muted small fst-italic py-2">{m.location_no_data({ year })}</div>
-    );
+    return <div className="text-muted small fst-italic py-2">{m.location_no_data({ year })}</div>;
   }
 
   return (

@@ -371,7 +371,9 @@ export function DailyTaskList({
           {tasks.map((task, index) => {
             const startDisplay = dayjs(task.startTime).format("HH:mm");
             const effectiveStopTime = task.stopTime ? dayjs(task.stopTime) : dayjs();
-            const stopDisplay = task.stopTime ? effectiveStopTime.format("HH:mm") : m.tt_running_status();
+            const stopDisplay = task.stopTime
+              ? effectiveStopTime.format("HH:mm")
+              : m.tt_running_status();
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
@@ -392,7 +394,7 @@ export function DailyTaskList({
                             color: labelTextColor,
                           }}
                         >
-                        {labelNameById[task.label] ?? m.tt_unknown_label()}
+                          {labelNameById[task.label] ?? m.tt_unknown_label()}
                         </span>
                         {isCurrentTask && (
                           <Badge bg="danger" className="ms-2" aria-label={m.tt_now_aria()}>

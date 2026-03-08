@@ -553,7 +553,8 @@ export function TimeTrackingDailyView({
                     </span>
                   </div>
                   <div className="small text-muted">
-                    {m.tt_started()} {dayjs(runningTask.startTime).format("HH:mm")} · {m.tt_elapsed()} {runningElapsed}
+                    {m.tt_started()} {dayjs(runningTask.startTime).format("HH:mm")} ·{" "}
+                    {m.tt_elapsed()} {runningElapsed}
                   </div>
                 </div>
                 <Button
@@ -568,9 +569,7 @@ export function TimeTrackingDailyView({
             </div>
           ) : (
             <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">
-                {m.tt_enter_task_hint()}
-              </span>
+              <span className="text-muted small">{m.tt_enter_task_hint()}</span>
             </div>
           )}
         </div>

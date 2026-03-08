@@ -200,7 +200,9 @@ export function TimeOffTableView({
                         <input
                           type="checkbox"
                           className="form-check-input"
-                          aria-label={m.timeoff_select_event_aria({ name: event.title || eventLabel })}
+                          aria-label={m.timeoff_select_event_aria({
+                            name: event.title || eventLabel,
+                          })}
                           checked={selectedIndices.has(index)}
                           onChange={() => onToggleSelection(index)}
                         />

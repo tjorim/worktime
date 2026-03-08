@@ -234,13 +234,16 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
                   <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
                   {m.timeoff_vacation_usage()}
                 </h6>
-                <p className="text-muted small mb-3">{m.timeoff_based_on_holiday_year({ year: selectedYear })}</p>
+                <p className="text-muted small mb-3">
+                  {m.timeoff_based_on_holiday_year({ year: selectedYear })}
+                </p>
 
                 <div className="mb-3">
                   <div className="d-flex justify-content-between small text-muted mb-1">
                     <span>{m.timeoff_used()}</span>
                     <span>
-                      {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)} {getUnitLabel(allowance.unit)}
+                      {formatVacationValue(usedValue)} / {formatVacationValue(allowanceValue)}{" "}
+                      {getUnitLabel(allowance.unit)}
                     </span>
                   </div>
                   <ProgressBar now={usagePercent} label={`${Math.round(usagePercent)}%`} />

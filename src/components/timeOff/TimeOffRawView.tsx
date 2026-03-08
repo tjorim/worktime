@@ -36,9 +36,7 @@ export function TimeOffRawView({
           )}
         </Accordion.Header>
         <Accordion.Body>
-          <p className="text-muted">
-            {m.timeoff_raw_help()}
-          </p>
+          <p className="text-muted">{m.timeoff_raw_help()}</p>
           <Form.Group controlId="hdayText" className="mb-3">
             <Form.Label className="visually-hidden">{m.timeoff_raw_content_label()}</Form.Label>
             <Form.Control
@@ -46,9 +44,7 @@ export function TimeOffRawView({
               rows={20}
               value={rawText}
               onChange={(event) => onChangeRawText(event.target.value)}
-              placeholder={
-                m.timeoff_raw_placeholder()
-              }
+              placeholder={m.timeoff_raw_placeholder()}
               className="textarea-mono"
               aria-describedby={error ? errorId : undefined}
               isInvalid={!!error}

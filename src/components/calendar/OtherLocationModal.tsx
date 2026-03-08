@@ -106,13 +106,12 @@ export function OtherLocationModal({
             <Form.Control.Feedback type="invalid" id="other-location-country-feedback">
               {m.other_location_country_feedback()}
             </Form.Control.Feedback>
-            <Form.Text className="text-muted">
-              {m.other_location_country_help()}
-            </Form.Text>
+            <Form.Text className="text-muted">{m.other_location_country_help()}</Form.Text>
           </Form.Group>
           <Form.Group>
             <Form.Label htmlFor="other-location-label-input">
-              {m.form_label()} <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
+              {m.form_label()}{" "}
+              <span className="text-muted fw-normal">{m.other_location_label_optional()}</span>
             </Form.Label>
             <Form.Control
               id="other-location-label-input"

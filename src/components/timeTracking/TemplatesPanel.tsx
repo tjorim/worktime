@@ -306,7 +306,11 @@ export function TemplatesPanel({
       <ConfirmationDialog
         isOpen={pendingDeleteTemplate !== null}
         title={m.tt_delete_template_title()}
-        message={pendingDeleteTemplate ? m.tt_delete_item_message({ name: pendingDeleteTemplate.text }) : ""}
+        message={
+          pendingDeleteTemplate
+            ? m.tt_delete_item_message({ name: pendingDeleteTemplate.text })
+            : ""
+        }
         confirmLabel={m.delete()}
         variant="danger"
         onConfirm={handleConfirmDelete}
