@@ -111,20 +111,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
   const [isValidating, setIsValidating] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => token !== null && expiresAt !== null && Date.now() < expiresAt - 60_000,
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const stored = loadStoredAuth();
+    return stored !== null && Date.now() < stored.expiresAt - 60_000;
+  });
   const currentTokenRef = useRef<string | null>(token);
+  currentTokenRef.current = token;
 
   useEffect(() => {
-    currentTokenRef.current = token;
-  }, [token]);
-
-  useEffect(() => {
-    const hasValidToken = token !== null && expiresAt !== null && Date.now() < expiresAt - 60_000;
-    setIsAuthenticated(hasValidToken);
-
     if (!token || expiresAt === null) {
+      setIsAuthenticated(false);
       return;
     }
 
@@ -134,6 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
 
+    setIsAuthenticated(true);
     const timeoutId = window.setTimeout(() => {
       setIsAuthenticated(false);
     }, timeoutMs);
