@@ -878,5 +878,8 @@
   "dev_auth_heading": "Verificatie",
   "dev_auth_not_authenticated": "Niet geverifieerd",
   "dev_auth_login_btn": "Aanmelden",
-  "dev_auth_logout_btn": "Afmelden"
+  "dev_auth_logout_btn": "Afmelden",
+  "dev_api_url_warning_insecure": "Waarschuwing: Deze API-URL gebruikt onveilig HTTP op een niet-lokale host. Gebruik HTTPS tenzij u verbinding maakt met localhost.",
+  "dev_api_url_warning_invalid_scheme": "Waarschuwing: API-URL moet HTTPS gebruiken (of HTTP voor localhost).",
+  "dev_api_url_warning_invalid": "Waarschuwing: Voer een geldige API-URL in (bijvoorbeeld https://api.example.com of http://localhost:8000)."
 }

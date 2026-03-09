@@ -878,5 +878,8 @@
   "dev_auth_heading": "Authentication",
   "dev_auth_not_authenticated": "Not authenticated",
   "dev_auth_login_btn": "Sign In",
-  "dev_auth_logout_btn": "Sign Out"
+  "dev_auth_logout_btn": "Sign Out",
+  "dev_api_url_warning_insecure": "Warning: This API URL uses insecure HTTP on a non-local host. Use HTTPS unless you are connecting to localhost.",
+  "dev_api_url_warning_invalid_scheme": "Warning: API URL must use HTTPS (or HTTP for localhost).",
+  "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000)."
 }

@@ -14,6 +14,35 @@ interface DevOptionsPanelProps {
   onHide: () => void;
 }
 
+function getApiUrlSecurityWarning(url: string): string | null {
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return null;
+
+  try {
+    const parsed = new URL(trimmedUrl);
+    const isLocalhost =
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "::1";
+
+    if (parsed.protocol === "https:") {
+      return null;
+    }
+
+    if (parsed.protocol === "http:" && isLocalhost) {
+      return null;
+    }
+
+    if (parsed.protocol === "http:") {
+      return m.dev_api_url_warning_insecure();
+    }
+
+    return m.dev_api_url_warning_invalid_scheme();
+  } catch {
+    return m.dev_api_url_warning_invalid();
+  }
+}
+
 /**
  * Developer options panel for managing backend API connectivity.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
@@ -33,6 +62,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const apiUrlSecurityWarning = getApiUrlSecurityWarning(localApiUrl);
 
   // Sync localApiUrl with options.apiUrl when panel opens or options change
   useEffect(() => {
@@ -157,8 +187,21 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Form.Text className="text-muted">{m.dev_api_url_help()}</Form.Text>
           </Form.Group>
 
+          {apiUrlSecurityWarning && (
+            <Alert variant="warning" className="mb-3">
+              <i className="bi bi-shield-exclamation me-2"></i>
+              {apiUrlSecurityWarning}
+            </Alert>
+          )}
+
           {localApiUrl !== options.apiUrl && (
-            <Button variant="primary" size="sm" onClick={handleSaveUrl} className="mb-3">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveUrl}
+              className="mb-3"
+              disabled={Boolean(apiUrlSecurityWarning)}
+            >
               <i className="bi bi-save me-1"></i>
               {m.dev_save_url()}
             </Button>
@@ -187,7 +230,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting || !localApiUrl}
+              disabled={isTesting || !localApiUrl || Boolean(apiUrlSecurityWarning)}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>
