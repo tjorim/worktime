@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import time
 from uuid import uuid4
 
 import pytest
@@ -123,6 +124,7 @@ class TestSyncPull:
             headers=headers,
         )
         since = datetime.now(timezone.utc).isoformat()
+        time.sleep(0.01)
         db_client.post(
             f"/v1/db/time-tracking/labels?user_id={user_id}",
             json={"name": "After", "color": "#223344"},
