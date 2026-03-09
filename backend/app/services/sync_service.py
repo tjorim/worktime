@@ -28,9 +28,11 @@ removing the row, so pull queries can propagate the deletion to other clients.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import TypeAlias, TypeVar
 
-from sqlalchemy import func as sql_func, or_, and_
-from sqlmodel import Session, col, select
+from pydantic import BaseModel
+from sqlalchemy import func as sql_func
+from sqlmodel import Session, select
 
 from app.database.models import (
     TimeTrackingLabel,
@@ -75,6 +77,16 @@ def _utc(dt: datetime) -> datetime:
 # ---------------------------------------------------------------------------
 # Push helpers
 # ---------------------------------------------------------------------------
+
+
+
+
+def _get_provided_fields(item: BaseModel) -> set[str]:
+    """Get the set of fields explicitly provided by the client."""
+    provided = item.model_fields_set
+    if not provided and hasattr(item, "__fields_set__"):
+        return item.__fields_set__
+    return provided
 
 
 def _validate_task_label_reference(session: Session, user_id: int, label_id: str | None) -> None:
@@ -196,9 +208,7 @@ def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = item.model_fields_set
-    if not provided_fields and hasattr(item, "__fields_set__"):
-        provided_fields = item.__fields_set__
+    provided_fields = _get_provided_fields(item)
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
@@ -242,6 +252,7 @@ def _push_template(
         if item.text is None or item.start_time is None or item.stop_time is None:
             from app.services.db_service import ValidationError
             raise ValidationError("text, start_time and stop_time are required for template create")
+        _validate_task_label_reference(session, user_id, item.label_id)
         template = TimeTrackingTemplate(
             id=item.id,
             user_id=user_id,
@@ -264,13 +275,15 @@ def _push_template(
             server_updated_at=template.updated_at,
             conflict_reason="server version is newer",
         )
-    if item.text is not None:
+    provided_fields = _get_provided_fields(item)
+    if "text" in provided_fields and item.text is not None:
         template.text = item.text
-    if item.label_id is not None:
+    if "label_id" in provided_fields:
+        _validate_task_label_reference(session, user_id, item.label_id)
         template.label_id = item.label_id
-    if item.start_time is not None:
+    if "start_time" in provided_fields and item.start_time is not None:
         template.start_time = item.start_time
-    if item.stop_time is not None:
+    if "stop_time" in provided_fields and item.stop_time is not None:
         template.stop_time = item.stop_time
     if template.deleted_at is not None:
         template.deleted_at = None
@@ -331,14 +344,38 @@ def _push_work_location(
             server_updated_at=location.updated_at,
             conflict_reason="server version is newer",
         )
-    if item.country_code is not None:
+    provided_fields = _get_provided_fields(item)
+    if "country_code" in provided_fields and item.country_code is not None:
         location.country_code = item.country_code
-    location.label = item.label
+    if "label" in provided_fields:
+        location.label = item.label
     if location.deleted_at is not None:
         location.deleted_at = None
     location.updated_at = now
     session.add(location)
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+
+
+SyncEntityModel: TypeAlias = (
+    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation
+)
+SyncEntityModelT = TypeVar("SyncEntityModelT", bound=SyncEntityModel)
+
+
+def _get_synced_entities(
+    session: Session, model: type[SyncEntityModelT], user_id: int, since_naive: datetime
+) -> list[SyncEntityModelT]:
+    statement = (
+        select(model)
+        .where(
+            model.user_id == user_id,
+            model.updated_at > since_naive,
+        )
+        .order_by(model.updated_at)
+    )
+    return list(session.exec(statement).all())
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -384,65 +421,10 @@ def pull_changes(
     # Normalise to naive UTC so SQLite comparisons work correctly.
     since_naive = _utc(since).replace(tzinfo=None)
 
-    labels = list(
-        session.exec(
-            select(TimeTrackingLabel).where(
-                TimeTrackingLabel.user_id == user_id,
-                or_(
-                    TimeTrackingLabel.updated_at > since_naive,
-                    and_(
-                        col(TimeTrackingLabel.deleted_at).isnot(None),
-                        TimeTrackingLabel.deleted_at > since_naive,
-                    ),
-                ),
-            )
-        ).all()
-    )
-
-    tasks = list(
-        session.exec(
-            select(TimeTrackingTask).where(
-                TimeTrackingTask.user_id == user_id,
-                or_(
-                    TimeTrackingTask.updated_at > since_naive,
-                    and_(
-                        col(TimeTrackingTask.deleted_at).isnot(None),
-                        TimeTrackingTask.deleted_at > since_naive,
-                    ),
-                ),
-            )
-        ).all()
-    )
-
-    templates = list(
-        session.exec(
-            select(TimeTrackingTemplate).where(
-                TimeTrackingTemplate.user_id == user_id,
-                or_(
-                    TimeTrackingTemplate.updated_at > since_naive,
-                    and_(
-                        col(TimeTrackingTemplate.deleted_at).isnot(None),
-                        TimeTrackingTemplate.deleted_at > since_naive,
-                    ),
-                ),
-            )
-        ).all()
-    )
-
-    work_locations = list(
-        session.exec(
-            select(WorkLocation).where(
-                WorkLocation.user_id == user_id,
-                or_(
-                    WorkLocation.updated_at > since_naive,
-                    and_(
-                        col(WorkLocation.deleted_at).isnot(None),
-                        WorkLocation.deleted_at > since_naive,
-                    ),
-                ),
-            )
-        ).all()
-    )
+    labels = _get_synced_entities(session, TimeTrackingLabel, user_id, since_naive)
+    tasks = _get_synced_entities(session, TimeTrackingTask, user_id, since_naive)
+    templates = _get_synced_entities(session, TimeTrackingTemplate, user_id, since_naive)
+    work_locations = _get_synced_entities(session, WorkLocation, user_id, since_naive)
 
     return SyncPullResponse(
         labels=[LabelSyncRead.model_validate(r, from_attributes=True) for r in labels],

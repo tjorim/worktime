@@ -524,6 +524,156 @@ class TestSyncPush:
         assert len(wls) == 1
         assert wls[0]["country_code"] == "BE"
 
+    def test_work_location_partial_update_preserves_fields(self, db_client: TestClient, auth_headers) -> None:
+        """A partial update should not clear un-provided fields."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "wl-partial-update-user")
+        headers = auth_headers(user_id)
+
+        db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "work_locations": [
+                    {
+                        "date": "2026-03-02",
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "country_code": "BE",
+                        "label": "Office",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        update_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "work_locations": [
+                    {
+                        "date": "2026-03-02",
+                        "action": "update",
+                        "client_updated_at": _ts(10),
+                        "country_code": "DE",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["work_locations"][0]["status"] == "ok"
+
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        wls = pull.json()["work_locations"]
+        assert len(wls) == 1
+        assert wls[0]["country_code"] == "DE"
+        assert wls[0]["label"] == "Office"
+
+    def test_push_template_rejects_foreign_label_on_update(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        owner_id = _create_user(db_client, admin_h, "template-owner-user")
+        other_id = _create_user(db_client, admin_h, "template-other-user")
+        owner_headers = auth_headers(owner_id)
+        other_headers = auth_headers(other_id)
+
+        other_label_resp = db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={other_id}",
+            json={"name": "Other Label", "color": "#FEDCBA"},
+            headers=other_headers,
+        )
+        assert other_label_resp.status_code == 201
+        other_label_id = other_label_resp.json()["id"]
+
+        template_id = str(uuid4())
+        create_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Owner template",
+                        "start_time": "09:00:00",
+                        "stop_time": "17:00:00",
+                    }
+                ]
+            },
+            headers=owner_headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "label_id": other_label_id,
+                    }
+                ]
+            },
+            headers=owner_headers,
+        )
+        assert update_resp.status_code == 400
+        assert "label not found" in update_resp.json()["detail"]
+
+    def test_push_template_allows_explicit_nullable_clears(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "template-clear-user")
+        headers = auth_headers(user_id)
+
+        label_resp = db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "Own Label", "color": "#123456"},
+            headers=headers,
+        )
+        assert label_resp.status_code == 201
+        label_id = label_resp.json()["id"]
+
+        template_id = str(uuid4())
+        create_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "label_id": label_id,
+                        "text": "Template with nullable label",
+                        "start_time": "08:00:00",
+                        "stop_time": "12:00:00",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "label_id": None,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 200
+
+        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        template = next(item for item in pull_resp.json()["templates"] if item["id"] == template_id)
+        assert template["label_id"] is None
+
     def test_transaction_atomicity_rolls_back_on_failure(self, db_client: TestClient, auth_headers) -> None:
         """A validation error in one item aborts the whole batch."""
         admin_h = auth_headers(1, is_admin=True)
@@ -588,4 +738,3 @@ class TestSyncPush:
         resp = db_client.post("/v1/db/sync/push", json={}, headers=headers)
         assert resp.status_code == 200
         assert "X-Sync-Ms" in resp.headers
-
