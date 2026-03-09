@@ -1,0 +1,483 @@
+"""Tests for the bidirectional sync endpoints (/v1/db/sync)."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
+    resp = client.post(
+        "/v1/db/users/",
+        json={"username": username, "display_name": username, "settings": {}, "password": "test-password-1"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def _ts(offset_seconds: float = 0.0) -> str:
+    """Return an ISO timestamp offset from now."""
+    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+class TestSyncAuth:
+    """Sync endpoints require authentication."""
+
+    def test_push_requires_auth(self, db_client: TestClient) -> None:
+        resp = db_client.post("/v1/db/sync/push", json={"labels": [], "tasks": [], "templates": [], "work_locations": []})
+        assert resp.status_code == 401
+
+    def test_pull_requires_auth(self, db_client: TestClient) -> None:
+        resp = db_client.get("/v1/db/sync/pull")
+        assert resp.status_code == 401
+
+    def test_status_requires_auth(self, db_client: TestClient) -> None:
+        resp = db_client.get("/v1/db/sync/status")
+        assert resp.status_code == 401
+
+
+class TestSyncStatus:
+    """GET /v1/db/sync/status"""
+
+    def test_status_returns_nulls_for_empty_user(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "status-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.get("/v1/db/sync/status", headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["labels_updated_at"] is None
+        assert body["tasks_updated_at"] is None
+        assert body["templates_updated_at"] is None
+        assert body["work_locations_updated_at"] is None
+        assert "server_timestamp" in body
+        assert "X-Sync-Ms" in resp.headers
+
+    def test_status_reflects_existing_records(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "status-user-2")
+        headers = auth_headers(user_id)
+
+        # Create a label via the CRUD endpoint.
+        db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "Work", "color": "#AABBCC"},
+            headers=headers,
+        )
+
+        resp = db_client.get("/v1/db/sync/status", headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["labels_updated_at"] is not None
+        assert body["tasks_updated_at"] is None
+
+
+class TestSyncPull:
+    """GET /v1/db/sync/pull"""
+
+    def test_pull_returns_all_records_without_since(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "pull-user-1")
+        headers = auth_headers(user_id)
+
+        db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "Deep Work", "color": "#112233"},
+            headers=headers,
+        )
+
+        resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["labels"]) == 1
+        assert body["labels"][0]["name"] == "Deep Work"
+        assert "updated_at" in body["labels"][0]
+        assert "deleted_at" in body["labels"][0]
+        assert "server_timestamp" in body
+        assert "X-Sync-Ms" in resp.headers
+
+    def test_pull_respects_since_parameter(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "pull-user-2")
+        headers = auth_headers(user_id)
+
+        # Create a label, then record a timestamp, then create another.
+        db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "Before", "color": "#001122"},
+            headers=headers,
+        )
+        since = datetime.now(timezone.utc).isoformat()
+        db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "After", "color": "#223344"},
+            headers=headers,
+        )
+
+        resp = db_client.get("/v1/db/sync/pull", params={"since": since}, headers=headers)
+        assert resp.status_code == 200
+        names = [item["name"] for item in resp.json()["labels"]]
+        assert "After" in names
+        assert "Before" not in names
+
+    def test_pull_includes_soft_deleted_records(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "pull-user-3")
+        headers = auth_headers(user_id)
+
+        # Push a label, then soft-delete it via the sync endpoint.
+        label_id = str(uuid4())
+        db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "ToDelete",
+                        "color": "#AABBCC",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+        since = datetime.now(timezone.utc).isoformat()
+
+        db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "delete",
+                        "client_updated_at": _ts(1),
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+        resp = db_client.get("/v1/db/sync/pull", params={"since": since}, headers=headers)
+        assert resp.status_code == 200
+        labels = resp.json()["labels"]
+        deleted = [lbl for lbl in labels if lbl["id"] == label_id]
+        assert len(deleted) == 1
+        assert deleted[0]["deleted_at"] is not None
+
+
+class TestSyncPush:
+    """POST /v1/db/sync/push"""
+
+    def test_push_mixed_creates_updates_deletes(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "push-user-1")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        template_id = str(uuid4())
+
+        payload = {
+            "labels": [
+                {
+                    "id": label_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "name": "Focus",
+                    "color": "#AABBCC",
+                }
+            ],
+            "templates": [
+                {
+                    "id": template_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "text": "Morning block",
+                    "start_time": "09:00:00",
+                    "stop_time": "11:00:00",
+                }
+            ],
+        }
+        resp = db_client.post("/v1/db/sync/push", json=payload, headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["results"]["labels"][0]["status"] == "ok"
+        assert body["results"]["templates"][0]["status"] == "ok"
+
+        # Update the label.
+        resp2 = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "name": "Deep Focus",
+                        "color": "#AABBCC",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["results"]["labels"][0]["status"] == "ok"
+
+        # Verify via pull.
+        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        names = [lbl["name"] for lbl in pull_resp.json()["labels"]]
+        assert "Deep Focus" in names
+
+        # Delete the template via sync.
+        resp3 = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "delete",
+                        "client_updated_at": _ts(10),
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert resp3.status_code == 200
+        assert resp3.json()["results"]["templates"][0]["status"] == "ok"
+
+    def test_last_write_wins_newer_client_wins(self, db_client: TestClient, auth_headers) -> None:
+        """A newer client timestamp should overwrite the server value."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "lww-user-1")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        # Initial create.
+        db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Original",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Client with a *newer* timestamp pushes an update — should win.
+        resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(30),
+                        "name": "NewerName",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["labels"][0]["status"] == "ok"
+
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert pull.json()["labels"][0]["name"] == "NewerName"
+
+    def test_last_write_wins_older_client_rejected(self, db_client: TestClient, auth_headers) -> None:
+        """An older (or equal) client timestamp should result in a conflict."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "lww-user-2")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+        # Initial create (server records current time as updated_at).
+        db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(0),
+                        "name": "ServerName",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Stale client tries to overwrite with an older timestamp — conflict.
+        resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-30),
+                        "name": "StaleName",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["labels"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] is not None
+
+        # Server name should be unchanged.
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert pull.json()["labels"][0]["name"] == "ServerName"
+
+    def test_idempotent_create_reprocessed_as_update(self, db_client: TestClient, auth_headers) -> None:
+        """Sending action='create' for an existing ID is treated as an update."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "idempotent-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+
+        def _push_create(name: str, ts_offset: float) -> dict:
+            return {
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(ts_offset),
+                        "name": name,
+                        "color": "#AABBCC",
+                    }
+                ]
+            }
+
+        # First create.
+        r1 = db_client.post("/v1/db/sync/push", json=_push_create("First", -10), headers=headers)
+        assert r1.json()["results"]["labels"][0]["status"] == "ok"
+
+        # Re-send 'create' with a newer timestamp — treated as update.
+        r2 = db_client.post("/v1/db/sync/push", json=_push_create("Second", 10), headers=headers)
+        assert r2.json()["results"]["labels"][0]["status"] == "ok"
+
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert pull.json()["labels"][0]["name"] == "Second"
+
+    def test_work_location_sync(self, db_client: TestClient, auth_headers) -> None:
+        """Work locations are synced using date as the natural key."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "wl-sync-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "work_locations": [
+                    {
+                        "date": "2026-03-01",
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "country_code": "BE",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["work_locations"][0]["status"] == "ok"
+
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        wls = pull.json()["work_locations"]
+        assert len(wls) == 1
+        assert wls[0]["country_code"] == "BE"
+
+    def test_transaction_atomicity_rolls_back_on_failure(self, db_client: TestClient, auth_headers) -> None:
+        """A validation error in one item aborts the whole batch."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "atomic-user")
+        headers = auth_headers(user_id)
+
+        valid_id = str(uuid4())
+
+        # The second item lacks required fields for 'create' → ValidationError.
+        payload = {
+            "labels": [
+                {
+                    "id": valid_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    "name": "ShouldNotExist",
+                    "color": "#AABBCC",
+                },
+                {
+                    "id": str(uuid4()),
+                    "action": "create",
+                    "client_updated_at": _ts(-5),
+                    # name and color intentionally omitted → ValidationError
+                },
+            ]
+        }
+        resp = db_client.post("/v1/db/sync/push", json=payload, headers=headers)
+        assert resp.status_code == 400
+
+        # Nothing should have been committed.
+        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        ids = [lbl["id"] for lbl in pull.json()["labels"]]
+        assert valid_id not in ids
+
+    def test_delete_non_existent_is_idempotent(self, db_client: TestClient, auth_headers) -> None:
+        """Deleting an unknown record succeeds silently."""
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "del-idempotent-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": str(uuid4()),
+                        "action": "delete",
+                        "client_updated_at": _ts(-5),
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["labels"][0]["status"] == "ok"
+
+    def test_push_response_includes_x_sync_ms_header(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "header-user")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post("/v1/db/sync/push", json={}, headers=headers)
+        assert resp.status_code == 200
+        assert "X-Sync-Ms" in resp.headers
+

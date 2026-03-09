@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 import pycountry
@@ -233,3 +233,145 @@ class GanttTaskUpdate(BaseModel):
 
 class GanttTaskListResponse(ListResponse[GanttTaskRead]):
     pass
+
+
+# ---------------------------------------------------------------------------
+# Sync schemas
+# ---------------------------------------------------------------------------
+
+
+class SyncRecordResult(BaseModel):
+    """Result for a single record in a sync push batch."""
+
+    id: str
+    status: Literal["ok", "conflict"]
+    server_updated_at: dt_datetime | None = None
+    conflict_reason: str | None = None
+
+
+# Sync read schemas — include updated_at and deleted_at for pull responses.
+
+
+class LabelSyncRead(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    color: str
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
+class TaskSyncRead(BaseModel):
+    id: str
+    user_id: int
+    label_id: str | None
+    text: str
+    start_time: dt_datetime
+    stop_time: dt_datetime | None
+    includes_break: bool
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
+class TemplateSyncRead(BaseModel):
+    id: str
+    user_id: int
+    label_id: str | None
+    text: str
+    start_time: dt_time
+    stop_time: dt_time
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
+class WorkLocationSyncRead(BaseModel):
+    id: int
+    user_id: int
+    date: dt_date
+    country_code: str
+    label: str | None
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
+# Sync push request item schemas — one per entity type.
+# For 'create'/'update' actions the entity fields are required in practice;
+# for 'delete' only the identity field is strictly needed.
+
+
+class LabelSyncItem(BaseModel):
+    id: str
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    name: str | None = None
+    color: str | None = None
+
+
+class TaskSyncItem(BaseModel):
+    id: str
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    label_id: str | None = None
+    text: str | None = None
+    start_time: dt_datetime | None = None
+    stop_time: dt_datetime | None = None
+    includes_break: bool | None = None
+
+
+class TemplateSyncItem(BaseModel):
+    id: str
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    label_id: str | None = None
+    text: str | None = None
+    start_time: dt_time | None = None
+    stop_time: dt_time | None = None
+
+
+class WorkLocationSyncItem(BaseModel):
+    """Work locations are identified by date (natural key) rather than an integer PK."""
+
+    date: dt_date
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    country_code: str | None = None
+    label: str | None = None
+
+
+class SyncPushRequest(BaseModel):
+    """Batched push of local changes from client to server."""
+
+    labels: list[LabelSyncItem] = []
+    tasks: list[TaskSyncItem] = []
+    templates: list[TemplateSyncItem] = []
+    work_locations: list[WorkLocationSyncItem] = []
+
+
+class SyncPushResponse(BaseModel):
+    """Per-record results for a sync push batch."""
+
+    results: dict[str, list[SyncRecordResult]]
+
+
+class SyncPullResponse(BaseModel):
+    """All records (including soft-deleted) modified since a given timestamp."""
+
+    labels: list[LabelSyncRead]
+    tasks: list[TaskSyncRead]
+    templates: list[TemplateSyncRead]
+    work_locations: list[WorkLocationSyncRead]
+    server_timestamp: dt_datetime
+
+
+class SyncStatusResponse(BaseModel):
+    """Latest modification timestamps per entity type for the authenticated user."""
+
+    labels_updated_at: dt_datetime | None
+    tasks_updated_at: dt_datetime | None
+    templates_updated_at: dt_datetime | None
+    work_locations_updated_at: dt_datetime | None
+    server_timestamp: dt_datetime
