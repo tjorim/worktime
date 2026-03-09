@@ -164,11 +164,14 @@ if settings.DATABASE_ENABLED:
     from .api.db_users import router as db_users_router
     from .api.db_work_locations import router as db_work_locations_router
 
+    from .api.db_sync import router as db_sync_router
+
     app.include_router(auth_router)
     app.include_router(db_users_router)
     app.include_router(db_time_tracking_router)
     app.include_router(db_work_locations_router)
     app.include_router(db_gantt_router)
+    app.include_router(db_sync_router)
     logger.info("✓ Database API endpoints enabled")
 else:
     logger.info("Database API endpoint registration skipped (DATABASE_ENABLED=false)")
