@@ -440,6 +440,62 @@ class TestSyncPush:
         assert update_resp.status_code == 400
         assert "label not found" in update_resp.json()["detail"]
 
+    def test_push_task_allows_explicit_nullable_clears(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-clear-user")
+        headers = auth_headers(user_id)
+
+        label_resp = db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            json={"name": "Own Label", "color": "#123ABC"},
+            headers=headers,
+        )
+        assert label_resp.status_code == 201
+        label_id = label_resp.json()["id"]
+
+        task_id = str(uuid4())
+        create_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "label_id": label_id,
+                        "text": "Task with nullable fields",
+                        "start_time": _ts(-5),
+                        "stop_time": _ts(-4),
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "label_id": None,
+                        "stop_time": None,
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 200
+
+        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        task = next(item for item in pull_resp.json()["tasks"] if item["id"] == task_id)
+        assert task["label_id"] is None
+        assert task["stop_time"] is None
+
     def test_work_location_sync(self, db_client: TestClient, auth_headers) -> None:
         """Work locations are synced using date as the natural key."""
         admin_h = auth_headers(1, is_admin=True)

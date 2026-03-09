@@ -82,7 +82,7 @@ def _validate_task_label_reference(session: Session, user_id: int, label_id: str
         return
 
     label = session.get(TimeTrackingLabel, label_id)
-    if label is None or label.user_id != user_id:
+    if label is None or label.user_id != user_id or label.deleted_at is not None:
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
 
@@ -199,16 +199,16 @@ def _push_task(
     provided_fields = item.model_fields_set
     if not provided_fields and hasattr(item, "__fields_set__"):
         provided_fields = item.__fields_set__
-    if "text" in provided_fields:
+    if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
         _validate_task_label_reference(session, user_id, item.label_id)
         task.label_id = item.label_id
-    if "start_time" in provided_fields:
+    if "start_time" in provided_fields and item.start_time is not None:
         task.start_time = item.start_time
     if "stop_time" in provided_fields:
         task.stop_time = item.stop_time
-    if "includes_break" in provided_fields:
+    if "includes_break" in provided_fields and item.includes_break is not None:
         task.includes_break = item.includes_break
     if task.deleted_at is not None:
         task.deleted_at = None
