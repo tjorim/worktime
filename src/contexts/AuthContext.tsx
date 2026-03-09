@@ -116,7 +116,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return stored !== null && Date.now() < stored.expiresAt - 60_000;
   });
   const currentTokenRef = useRef<string | null>(token);
-  currentTokenRef.current = token;
+
+  const clearAuthState = useCallback(() => {
+    currentTokenRef.current = null;
+    clearStoredAuth();
+    setToken(null);
+    setUserId(null);
+    setDisplayName(null);
+    setExpiresAt(null);
+  }, []);
 
   useEffect(() => {
     if (!token || expiresAt === null) {
@@ -126,25 +134,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const timeoutMs = expiresAt - 60_000 - Date.now();
     if (timeoutMs <= 0) {
+      clearAuthState();
       setIsAuthenticated(false);
       return;
     }
 
     setIsAuthenticated(true);
     const timeoutId = window.setTimeout(() => {
+      clearAuthState();
       setIsAuthenticated(false);
     }, timeoutMs);
 
     return () => window.clearTimeout(timeoutId);
-  }, [token, expiresAt]);
-
-  const clearAuthState = useCallback(() => {
-    clearStoredAuth();
-    setToken(null);
-    setUserId(null);
-    setDisplayName(null);
-    setExpiresAt(null);
-  }, []);
+  }, [token, expiresAt, clearAuthState]);
 
   /**
    * When the backend connects, validate any stored token via GET /v1/auth/me.
@@ -182,14 +184,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       .then((user) => {
         if (!user || isStaleRequest()) return;
+        currentTokenRef.current = stored.token;
         setToken(stored.token);
         setUserId(user.id);
         setDisplayName(user.display_name);
         setExpiresAt(stored.expiresAt);
       })
       .catch((error: unknown) => {
-        if (isStaleRequest()) return;
-        if (error instanceof Error && error.name === "AbortError") return;
+        if (isStaleRequest()) {
+          setIsValidating(false);
+          return;
+        }
+        if (error instanceof Error && error.name === "AbortError") {
+          setIsValidating(false);
+          return;
+        }
         clearAuthState();
         setShowLoginModal(true);
       })
@@ -247,6 +256,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         expiresAt: newExpiresAt,
       });
 
+      currentTokenRef.current = tokenData.access_token;
       setToken(tokenData.access_token);
       setUserId(user.id);
       setDisplayName(user.display_name);
