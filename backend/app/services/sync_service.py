@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from pydantic import BaseModel
 from sqlalchemy import func as sql_func
 from sqlmodel import Session, select
 
@@ -75,6 +76,16 @@ def _utc(dt: datetime) -> datetime:
 # ---------------------------------------------------------------------------
 # Push helpers
 # ---------------------------------------------------------------------------
+
+
+
+
+def _get_provided_fields(item: BaseModel) -> set[str]:
+    """Get the set of fields explicitly provided by the client."""
+    provided = item.model_fields_set
+    if not provided and hasattr(item, "__fields_set__"):
+        return item.__fields_set__
+    return provided
 
 
 def _validate_task_label_reference(session: Session, user_id: int, label_id: str | None) -> None:
@@ -196,9 +207,7 @@ def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = item.model_fields_set
-    if not provided_fields and hasattr(item, "__fields_set__"):
-        provided_fields = item.__fields_set__
+    provided_fields = _get_provided_fields(item)
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
@@ -265,9 +274,7 @@ def _push_template(
             server_updated_at=template.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = item.model_fields_set
-    if not provided_fields and hasattr(item, "__fields_set__"):
-        provided_fields = item.__fields_set__
+    provided_fields = _get_provided_fields(item)
     if "text" in provided_fields and item.text is not None:
         template.text = item.text
     if "label_id" in provided_fields:
@@ -336,9 +343,7 @@ def _push_work_location(
             server_updated_at=location.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = item.model_fields_set
-    if not provided_fields and hasattr(item, "__fields_set__"):
-        provided_fields = item.__fields_set__
+    provided_fields = _get_provided_fields(item)
     if "country_code" in provided_fields and item.country_code is not None:
         location.country_code = item.country_code
     if "label" in provided_fields:
