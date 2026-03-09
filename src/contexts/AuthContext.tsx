@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useDeveloperOptions } from "./DeveloperOptionsContext";
 
 const AUTH_SESSION_KEY = "worktime_auth";
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { options } = useDeveloperOptions();
   const { apiUrl, connectionStatus, enabled } = options;
 
-  // Initialise from sessionStorage on first render
+  // Initialize from sessionStorage on first render
   const [token, setToken] = useState<string | null>(() => loadStoredAuth()?.token ?? null);
   const [userId, setUserId] = useState<number | null>(() => loadStoredAuth()?.userId ?? null);
   const [displayName, setDisplayName] = useState<string | null>(
@@ -111,11 +111,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
   const [isValidating, setIsValidating] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  const isAuthenticated = useMemo(
+  const [isAuthenticated, setIsAuthenticated] = useState(
     () => token !== null && expiresAt !== null && Date.now() < expiresAt - 60_000,
-    [token, expiresAt],
   );
+  const currentTokenRef = useRef<string | null>(token);
+
+  useEffect(() => {
+    currentTokenRef.current = token;
+  }, [token]);
+
+  useEffect(() => {
+    const hasValidToken = token !== null && expiresAt !== null && Date.now() < expiresAt - 60_000;
+    setIsAuthenticated(hasValidToken);
+
+    if (!token || expiresAt === null) {
+      return;
+    }
+
+    const timeoutMs = expiresAt - 60_000 - Date.now();
+    if (timeoutMs <= 0) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsAuthenticated(false);
+    }, timeoutMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [token, expiresAt]);
 
   const clearAuthState = useCallback(() => {
     clearStoredAuth();
@@ -143,6 +167,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setIsValidating(true);
     const controller = new AbortController();
+    const requestToken = stored.token;
+    const isStaleRequest = () =>
+      controller.signal.aborted || requestToken !== currentTokenRef.current;
 
     fetch(`${apiUrl}/v1/auth/me`, {
       headers: {
@@ -152,20 +179,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signal: controller.signal,
     })
       .then((response) => {
+        if (isStaleRequest()) return null;
         if (!response.ok) throw new Error("Token validation failed");
         return response.json() as Promise<MeResponse>;
       })
       .then((user) => {
+        if (!user || isStaleRequest()) return;
         setToken(stored.token);
         setUserId(user.id);
         setDisplayName(user.display_name);
         setExpiresAt(stored.expiresAt);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (isStaleRequest()) return;
+        if (error instanceof Error && error.name === "AbortError") return;
         clearAuthState();
         setShowLoginModal(true);
       })
-      .finally(() => setIsValidating(false));
+      .finally(() => {
+        if (!isStaleRequest()) {
+          setIsValidating(false);
+        }
+      });
 
     return () => controller.abort();
   }, [apiUrl, enabled, connectionStatus, clearAuthState]);

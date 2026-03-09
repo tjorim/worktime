@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../../src/constants/storageKeys";
 import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
@@ -32,7 +33,28 @@ function AuthActions() {
   );
 }
 
-function renderWithProviders(ui: React.ReactElement) {
+interface RenderOptions {
+  enabled?: boolean;
+  connectionStatus?: "disconnected" | "connecting" | "connected" | "error";
+}
+
+function renderWithProviders(ui: React.ReactElement, options: RenderOptions = {}) {
+  const { enabled, connectionStatus } = options;
+
+  if (enabled !== undefined || connectionStatus !== undefined) {
+    sessionStorage.setItem(
+      DEVELOPER_OPTIONS_STORAGE_KEY,
+      JSON.stringify({
+        enabled: enabled ?? false,
+        apiUrl: "http://localhost:8000",
+        connectionStatus: connectionStatus ?? "disconnected",
+        lastConnectionTest: null,
+        autoConnect: false,
+        isDevMode: false,
+      }),
+    );
+  }
+
   return render(
     <DeveloperOptionsProvider>
       <ToastProvider>
@@ -50,6 +72,8 @@ describe("AuthContext", () => {
 
   afterEach(() => {
     sessionStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe("initial state", () => {
@@ -76,7 +100,7 @@ describe("AuthContext", () => {
           expiresAt,
         }),
       );
-      renderWithProviders(<AuthStatusDisplay />);
+      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected" });
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
       expect(screen.getByTestId("user-id")).toHaveTextContent("7");
       expect(screen.getByTestId("display-name")).toHaveTextContent("Bob");
@@ -88,7 +112,7 @@ describe("AuthContext", () => {
         "worktime_auth",
         JSON.stringify({ token: "old", userId: 1, displayName: "X", expiresAt }),
       );
-      renderWithProviders(<AuthStatusDisplay />);
+      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected" });
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
     });
   });
