@@ -275,7 +275,7 @@ def _push_template(
         template.label_id = item.label_id
     if "start_time" in provided_fields and item.start_time is not None:
         template.start_time = item.start_time
-    if "stop_time" in provided_fields:
+    if "stop_time" in provided_fields and item.stop_time is not None:
         template.stop_time = item.stop_time
     if template.deleted_at is not None:
         template.deleted_at = None
