@@ -5,6 +5,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
+import { useAuth } from "../contexts/AuthContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import * as m from "../paraglide/messages.js";
 
@@ -24,6 +25,7 @@ interface DevOptionsPanelProps {
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   const { options, updateApiUrl, updateAutoConnect, testConnection, disconnect } =
     useDeveloperOptions();
+  const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [localApiUrl, setLocalApiUrl] = useState(options.apiUrl);
   const [isTesting, setIsTesting] = useState(false);
@@ -198,6 +200,38 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             </Button>
           )}
         </div>
+
+        {/* Authentication — only visible when connected */}
+        {options.connectionStatus === "connected" && (
+          <div className="mb-4 mt-4">
+            <h6 className="mb-3">{m.dev_auth_heading()}</h6>
+            <div className="d-flex align-items-center gap-3">
+              {isAuthenticated && displayName ? (
+                <>
+                  <span className="small text-success">
+                    <i className="bi bi-person-check me-1"></i>
+                    {m.auth_logged_in_as({ displayName })}
+                  </span>
+                  <Button variant="outline-secondary" size="sm" onClick={logout}>
+                    <i className="bi bi-box-arrow-right me-1"></i>
+                    {m.dev_auth_logout_btn()}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="small text-muted">
+                    <i className="bi bi-person-x me-1"></i>
+                    {m.dev_auth_not_authenticated()}
+                  </span>
+                  <Button variant="primary" size="sm" onClick={triggerLogin}>
+                    <i className="bi bi-box-arrow-in-right me-1"></i>
+                    {m.dev_auth_login_btn()}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Backend Information */}
         <div className="mt-4 p-3 bg-light rounded">
