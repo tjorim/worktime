@@ -390,6 +390,56 @@ class TestSyncPush:
         pull = db_client.get("/v1/db/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "Second"
 
+    def test_push_task_rejects_foreign_label_on_update(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        owner_id = _create_user(db_client, admin_h, "sync-owner-user")
+        other_id = _create_user(db_client, admin_h, "sync-other-user")
+        owner_headers = auth_headers(owner_id)
+        other_headers = auth_headers(other_id)
+
+        other_label_resp = db_client.post(
+            f"/v1/db/time-tracking/labels?user_id={other_id}",
+            json={"name": "Other Label", "color": "#ABCDEF"},
+            headers=other_headers,
+        )
+        assert other_label_resp.status_code == 201
+        other_label_id = other_label_resp.json()["id"]
+
+        task_id = str(uuid4())
+        create_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Owner task",
+                        "start_time": _ts(-5),
+                    }
+                ]
+            },
+            headers=owner_headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/v1/db/sync/push",
+            json={
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "label_id": other_label_id,
+                    }
+                ]
+            },
+            headers=owner_headers,
+        )
+        assert update_resp.status_code == 400
+        assert "label not found" in update_resp.json()["detail"]
+
     def test_work_location_sync(self, db_client: TestClient, auth_headers) -> None:
         """Work locations are synced using date as the natural key."""
         admin_h = auth_headers(1, is_admin=True)

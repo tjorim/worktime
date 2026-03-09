@@ -77,6 +77,16 @@ def _utc(dt: datetime) -> datetime:
 # ---------------------------------------------------------------------------
 
 
+def _validate_task_label_reference(session: Session, user_id: int, label_id: str | None) -> None:
+    if label_id is None:
+        return
+
+    label = session.get(TimeTrackingLabel, label_id)
+    if label is None or label.user_id != user_id:
+        from app.services.db_service import ValidationError
+        raise ValidationError("label not found")
+
+
 def _push_label(
     session: Session, user_id: int, item: LabelSyncItem
 ) -> SyncRecordResult:
@@ -162,6 +172,7 @@ def _push_task(
         if item.text is None or item.start_time is None:
             from app.services.db_service import ValidationError
             raise ValidationError("text and start_time are required for task create")
+        _validate_task_label_reference(session, user_id, item.label_id)
         task = TimeTrackingTask(
             id=item.id,
             user_id=user_id,
@@ -185,10 +196,13 @@ def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = getattr(item, "model_fields_set", getattr(item, "__fields_set__", set()))
+    provided_fields = item.model_fields_set
+    if not provided_fields and hasattr(item, "__fields_set__"):
+        provided_fields = item.__fields_set__
     if "text" in provided_fields:
         task.text = item.text
     if "label_id" in provided_fields:
+        _validate_task_label_reference(session, user_id, item.label_id)
         task.label_id = item.label_id
     if "start_time" in provided_fields:
         task.start_time = item.start_time
