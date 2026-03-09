@@ -28,6 +28,7 @@ removing the row, so pull queries can propagate the deletion to other clients.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import TypeAlias, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
@@ -355,6 +356,28 @@ def _push_work_location(
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
 
+SyncEntityModel: TypeAlias = (
+    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation
+)
+SyncEntityModelT = TypeVar("SyncEntityModelT", bound=SyncEntityModel)
+
+
+def _get_synced_entities(
+    session: Session, model: type[SyncEntityModelT], user_id: int, since_naive: datetime
+) -> list[SyncEntityModelT]:
+    statement = (
+        select(model)
+        .where(
+            model.user_id == user_id,
+            model.updated_at > since_naive,
+        )
+        .order_by(model.updated_at)
+    )
+    return list(session.exec(statement).all())
+
+
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -397,17 +420,6 @@ def pull_changes(
     """Return all records (including soft-deleted) modified after *since*."""
     # Normalise to naive UTC so SQLite comparisons work correctly.
     since_naive = _utc(since).replace(tzinfo=None)
-
-    def _get_synced_entities(session: Session, model, user_id: int, since_naive: datetime) -> list:
-        statement = (
-            select(model)
-            .where(
-                model.user_id == user_id,
-                model.updated_at > since_naive,
-            )
-            .order_by(model.updated_at)
-        )
-        return list(session.exec(statement).all())
 
     labels = _get_synced_entities(session, TimeTrackingLabel, user_id, since_naive)
     tasks = _get_synced_entities(session, TimeTrackingTask, user_id, since_naive)
