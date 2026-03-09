@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useDeveloperOptions } from "./DeveloperOptionsContext";
 
 const AUTH_SESSION_KEY = "worktime_auth";
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { options } = useDeveloperOptions();
   const { apiUrl, connectionStatus, enabled } = options;
 
-  // Initialise from sessionStorage on first render
+  // Initialize from sessionStorage on first render
   const [token, setToken] = useState<string | null>(() => loadStoredAuth()?.token ?? null);
   const [userId, setUserId] = useState<number | null>(() => loadStoredAuth()?.userId ?? null);
   const [displayName, setDisplayName] = useState<string | null>(
@@ -111,19 +111,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
   const [isValidating, setIsValidating] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  const isAuthenticated = useMemo(
-    () => token !== null && expiresAt !== null && Date.now() < expiresAt - 60_000,
-    [token, expiresAt],
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const stored = loadStoredAuth();
+    return stored !== null && Date.now() < stored.expiresAt - 60_000;
+  });
+  const currentTokenRef = useRef<string | null>(token);
 
   const clearAuthState = useCallback(() => {
+    currentTokenRef.current = null;
     clearStoredAuth();
     setToken(null);
     setUserId(null);
     setDisplayName(null);
     setExpiresAt(null);
   }, []);
+
+  useEffect(() => {
+    if (!token || expiresAt === null) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const timeoutMs = expiresAt - 60_000 - Date.now();
+    if (timeoutMs <= 0) {
+      clearAuthState();
+      setIsAuthenticated(false);
+      return;
+    }
+
+    setIsAuthenticated(true);
+    const timeoutId = window.setTimeout(() => {
+      clearAuthState();
+      setIsAuthenticated(false);
+    }, timeoutMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [token, expiresAt, clearAuthState]);
 
   /**
    * When the backend connects, validate any stored token via GET /v1/auth/me.
@@ -143,6 +166,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setIsValidating(true);
     const controller = new AbortController();
+    const requestToken = stored.token;
+    const isStaleRequest = () =>
+      controller.signal.aborted || requestToken !== currentTokenRef.current;
 
     fetch(`${apiUrl}/v1/auth/me`, {
       headers: {
@@ -152,20 +178,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signal: controller.signal,
     })
       .then((response) => {
+        if (isStaleRequest()) return null;
         if (!response.ok) throw new Error("Token validation failed");
         return response.json() as Promise<MeResponse>;
       })
       .then((user) => {
+        if (!user || isStaleRequest()) return;
+        currentTokenRef.current = stored.token;
         setToken(stored.token);
         setUserId(user.id);
         setDisplayName(user.display_name);
         setExpiresAt(stored.expiresAt);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (isStaleRequest()) {
+          setIsValidating(false);
+          return;
+        }
+        if (error instanceof Error && error.name === "AbortError") {
+          setIsValidating(false);
+          return;
+        }
         clearAuthState();
         setShowLoginModal(true);
       })
-      .finally(() => setIsValidating(false));
+      .finally(() => {
+        if (!isStaleRequest()) {
+          setIsValidating(false);
+        }
+      });
 
     return () => controller.abort();
   }, [apiUrl, enabled, connectionStatus, clearAuthState]);
@@ -215,6 +256,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         expiresAt: newExpiresAt,
       });
 
+      currentTokenRef.current = tokenData.access_token;
       setToken(tokenData.access_token);
       setUserId(user.id);
       setDisplayName(user.display_name);

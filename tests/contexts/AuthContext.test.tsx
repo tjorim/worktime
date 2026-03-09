@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../../src/constants/storageKeys";
 import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
@@ -32,7 +33,29 @@ function AuthActions() {
   );
 }
 
-function renderWithProviders(ui: React.ReactElement) {
+interface RenderOptions {
+  enabled?: boolean;
+  connectionStatus?: "disconnected" | "connecting" | "connected" | "error";
+  autoConnect?: boolean;
+}
+
+function renderWithProviders(ui: React.ReactElement, options: RenderOptions = {}) {
+  const { enabled, connectionStatus, autoConnect } = options;
+
+  if (enabled !== undefined || connectionStatus !== undefined || autoConnect !== undefined) {
+    localStorage.setItem(
+      DEVELOPER_OPTIONS_STORAGE_KEY,
+      JSON.stringify({
+        enabled: enabled ?? false,
+        apiUrl: "http://localhost:8000",
+        connectionStatus: connectionStatus ?? "disconnected",
+        lastConnectionTest: null,
+        autoConnect: autoConnect ?? false,
+        isDevMode: false,
+      }),
+    );
+  }
+
   return render(
     <DeveloperOptionsProvider>
       <ToastProvider>
@@ -45,11 +68,15 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("AuthContext", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
   afterEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe("initial state", () => {
@@ -65,8 +92,30 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("show-login-modal")).toHaveTextContent("false");
     });
 
-    it("loads valid token from sessionStorage", () => {
+    it("loads valid token from sessionStorage", async () => {
       const expiresAt = Date.now() + 3_600_000;
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/v1/health")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ status: "ok" }),
+          };
+        }
+
+        if (url.endsWith("/v1/auth/me")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ id: 7, display_name: "Bob" }),
+          };
+        }
+
+        throw new Error(`Unexpected fetch URL: ${url}`);
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
       sessionStorage.setItem(
         "worktime_auth",
         JSON.stringify({
@@ -76,7 +125,17 @@ describe("AuthContext", () => {
           expiresAt,
         }),
       );
-      renderWithProviders(<AuthStatusDisplay />);
+      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected", autoConnect: true });
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/v1/auth/me", {
+          headers: {
+            Authorization: "Bearer stored-token",
+            Accept: "application/json",
+          },
+          signal: expect.any(AbortSignal),
+        });
+      });
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
       expect(screen.getByTestId("user-id")).toHaveTextContent("7");
       expect(screen.getByTestId("display-name")).toHaveTextContent("Bob");
@@ -88,7 +147,7 @@ describe("AuthContext", () => {
         "worktime_auth",
         JSON.stringify({ token: "old", userId: 1, displayName: "X", expiresAt }),
       );
-      renderWithProviders(<AuthStatusDisplay />);
+      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected" });
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
     });
   });
