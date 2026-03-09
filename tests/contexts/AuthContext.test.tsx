@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -147,8 +147,6 @@ describe("AuthContext", () => {
   describe("login()", () => {
     it("calls /v1/auth/token and then /v1/auth/me on success", async () => {
       const user = userEvent.setup();
-      const expiresAt = Date.now() + 86_400_000;
-
       vi.stubGlobal(
         "fetch",
         vi
