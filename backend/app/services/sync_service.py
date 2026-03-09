@@ -64,7 +64,7 @@ def _utc(dt: datetime) -> datetime:
 
     SQLite stores datetimes without timezone information.  SQLAlchemy returns
     them as naive ``datetime`` objects.  Client-side timestamps are
-    timezone-aware (ISO 8601 with ``+00:00``).  This helper normalises both
+    timezone-aware (ISO 8601 with ``+00:00``).  This helper normalizes both
     ends so comparisons work correctly.
     """
     if dt.tzinfo is None:
@@ -185,15 +185,16 @@ def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    if item.text is not None:
+    provided_fields = getattr(item, "model_fields_set", getattr(item, "__fields_set__", set()))
+    if "text" in provided_fields:
         task.text = item.text
-    if item.label_id is not None:
+    if "label_id" in provided_fields:
         task.label_id = item.label_id
-    if item.start_time is not None:
+    if "start_time" in provided_fields:
         task.start_time = item.start_time
-    if item.stop_time is not None:
+    if "stop_time" in provided_fields:
         task.stop_time = item.stop_time
-    if item.includes_break is not None:
+    if "includes_break" in provided_fields:
         task.includes_break = item.includes_break
     if task.deleted_at is not None:
         task.deleted_at = None
