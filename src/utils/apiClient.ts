@@ -6,6 +6,8 @@
  */
 
 export interface ApiClientOptions {
+  /** Base API URL configured by developer options. */
+  apiUrl: string;
   /** Returns the current Authorization headers (or empty object). */
   getAuthHeaders: () => HeadersInit;
   /** Called when a 401 Unauthorized response is received. */
@@ -17,7 +19,7 @@ export interface ApiClientOptions {
 /**
  * Perform an authenticated fetch request.
  *
- * Merges the Authorization header into the request, then inspects the response:
+ * Conditionally merges the Authorization header into same-origin API requests, then inspects the response:
  * - On 401: calls `onUnauthorized` and throws.
  * - On 403: calls `onForbidden` and throws.
  * - Otherwise: returns the raw Response for the caller to inspect.
@@ -32,14 +34,30 @@ export async function apiFetch(
   init: RequestInit = {},
   clientOptions: ApiClientOptions,
 ): Promise<Response> {
-  const authHeaders = clientOptions.getAuthHeaders();
+  const resolvedUrl = new URL(url, window.location.origin);
+  const resolvedApiUrl = new URL(clientOptions.apiUrl, window.location.origin);
+  const shouldAttachAuth = resolvedUrl.origin === resolvedApiUrl.origin;
 
-  const mergedHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
+  const mergedHeaders = new Headers({
     Accept: "application/json",
-    ...(authHeaders as Record<string, string>),
-    ...(init.headers as Record<string, string>),
-  };
+  });
+
+  if (!(init.body instanceof FormData)) {
+    mergedHeaders.set("Content-Type", "application/json");
+  }
+
+  if (shouldAttachAuth) {
+    const authHeaders = new Headers(clientOptions.getAuthHeaders());
+    authHeaders.forEach((value, key) => mergedHeaders.set(key, value));
+  }
+
+  const requestHeaders = new Headers(init.headers);
+  requestHeaders.forEach((value, key) => {
+    if (!shouldAttachAuth && key.toLowerCase() === "authorization") {
+      return;
+    }
+    mergedHeaders.set(key, value);
+  });
 
   const response = await fetch(url, { ...init, headers: mergedHeaders });
 

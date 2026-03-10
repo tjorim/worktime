@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDeveloperOptions } from "./DeveloperOptionsContext";
 
 const AUTH_SESSION_KEY = "worktime_auth";
@@ -223,13 +231,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (!tokenResponse.ok) {
-        if (tokenResponse.status === 429) {
-          throw new Error("rate_limited");
+        switch (tokenResponse.status) {
+          case 429:
+            throw new Error("rate_limited");
+          case 401:
+            throw new Error("invalid_credentials");
+          default:
+            throw new Error("generic");
         }
-        if (tokenResponse.status === 401) {
-          throw new Error("invalid_credentials");
-        }
-        throw new Error("generic");
       }
 
       const tokenData = (await tokenResponse.json()) as TokenApiResponse;

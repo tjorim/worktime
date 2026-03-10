@@ -40,12 +40,15 @@ export function LoginModal({ show, onHide }: LoginModalProps) {
       setPassword("");
     } catch (err) {
       const message = err instanceof Error ? err.message : "generic";
-      if (message === "invalid_credentials") {
-        setError(m.login_error_invalid_credentials());
-      } else if (message === "rate_limited") {
-        setError(m.login_error_rate_limited());
-      } else {
-        setError(m.login_error_generic());
+      switch (message) {
+        case "invalid_credentials":
+          setError(m.login_error_invalid_credentials());
+          break;
+        case "rate_limited":
+          setError(m.login_error_rate_limited());
+          break;
+        default:
+          setError(m.login_error_generic());
       }
     } finally {
       setIsSubmitting(false);
@@ -115,11 +118,7 @@ export function LoginModal({ show, onHide }: LoginModalProps) {
           <Button variant="secondary" onClick={handleHide} disabled={isSubmitting}>
             {m.cancel()}
           </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isSubmitting || !username || !password}
-          >
+          <Button type="submit" variant="primary" disabled={isSubmitting || !username || !password}>
             {isSubmitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" aria-hidden="true" />

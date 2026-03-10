@@ -14,6 +14,35 @@ interface DevOptionsPanelProps {
   onHide: () => void;
 }
 
+function getApiUrlSecurityWarning(url: string): string | null {
+  if (!url) return m.dev_api_url_warning_invalid();
+
+  try {
+    const parsed = new URL(url);
+    const normalizedHostname = parsed.hostname.replace(/^\[/, "").replace(/\]$/, "");
+    const isLocalhost =
+      normalizedHostname === "localhost" ||
+      normalizedHostname === "127.0.0.1" ||
+      normalizedHostname === "::1";
+
+    if (parsed.protocol === "https:") {
+      return null;
+    }
+
+    if (parsed.protocol === "http:" && isLocalhost) {
+      return null;
+    }
+
+    if (parsed.protocol === "http:") {
+      return m.dev_api_url_warning_insecure();
+    }
+
+    return m.dev_api_url_warning_invalid_scheme();
+  } catch {
+    return m.dev_api_url_warning_invalid();
+  }
+}
+
 /**
  * Developer options panel for managing backend API connectivity.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
@@ -33,6 +62,9 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const normalizedLocalApiUrl = localApiUrl.trim();
+  const normalizedOptionApiUrl = options.apiUrl.trim();
+  const apiUrlSecurityWarning = getApiUrlSecurityWarning(normalizedLocalApiUrl);
 
   // Sync localApiUrl with options.apiUrl when panel opens or options change
   useEffect(() => {
@@ -47,7 +79,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   };
 
   const handleSaveUrl = () => {
-    updateApiUrl(localApiUrl);
+    if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+      return;
+    }
+
+    updateApiUrl(normalizedLocalApiUrl);
+    setLocalApiUrl(normalizedLocalApiUrl);
     setTestResult({ success: true, message: m.dev_url_updated() });
   };
 
@@ -56,8 +93,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setTestResult(null);
 
     try {
+      if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+        return;
+      }
+
       // Test with the current local URL (unsaved or saved)
-      const success = await testConnection(localApiUrl);
+      const success = await testConnection(normalizedLocalApiUrl);
       setTestResult({
         success,
         message: success ? m.dev_connection_success() : m.dev_connection_failed(),
@@ -157,8 +198,21 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Form.Text className="text-muted">{m.dev_api_url_help()}</Form.Text>
           </Form.Group>
 
-          {localApiUrl !== options.apiUrl && (
-            <Button variant="primary" size="sm" onClick={handleSaveUrl} className="mb-3">
+          {apiUrlSecurityWarning && (
+            <Alert variant="warning" className="mb-3">
+              <i className="bi bi-shield-exclamation me-2"></i>
+              {apiUrlSecurityWarning}
+            </Alert>
+          )}
+
+          {normalizedLocalApiUrl !== normalizedOptionApiUrl && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveUrl}
+              className="mb-3"
+              disabled={Boolean(apiUrlSecurityWarning)}
+            >
               <i className="bi bi-save me-1"></i>
               {m.dev_save_url()}
             </Button>
@@ -187,7 +241,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting || !localApiUrl}
+              disabled={isTesting || !normalizedLocalApiUrl || Boolean(apiUrlSecurityWarning)}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>
