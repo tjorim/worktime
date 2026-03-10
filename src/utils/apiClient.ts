@@ -39,9 +39,12 @@ export async function apiFetch(
   const shouldAttachAuth = resolvedUrl.origin === resolvedApiUrl.origin;
 
   const mergedHeaders = new Headers({
-    "Content-Type": "application/json",
     Accept: "application/json",
   });
+
+  if (!(init.body instanceof FormData)) {
+    mergedHeaders.set("Content-Type", "application/json");
+  }
 
   if (shouldAttachAuth) {
     const authHeaders = new Headers(clientOptions.getAuthHeaders());
