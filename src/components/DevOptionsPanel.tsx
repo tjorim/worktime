@@ -5,12 +5,42 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
+import { useAuth } from "../contexts/AuthContext";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import * as m from "../paraglide/messages.js";
 
 interface DevOptionsPanelProps {
   show: boolean;
   onHide: () => void;
+}
+
+function getApiUrlSecurityWarning(url: string): string | null {
+  if (!url) return m.dev_api_url_warning_invalid();
+
+  try {
+    const parsed = new URL(url);
+    const normalizedHostname = parsed.hostname.replace(/^\[/, "").replace(/\]$/, "");
+    const isLocalhost =
+      normalizedHostname === "localhost" ||
+      normalizedHostname === "127.0.0.1" ||
+      normalizedHostname === "::1";
+
+    if (parsed.protocol === "https:") {
+      return null;
+    }
+
+    if (parsed.protocol === "http:" && isLocalhost) {
+      return null;
+    }
+
+    if (parsed.protocol === "http:") {
+      return m.dev_api_url_warning_insecure();
+    }
+
+    return m.dev_api_url_warning_invalid_scheme();
+  } catch {
+    return m.dev_api_url_warning_invalid();
+  }
 }
 
 /**
@@ -24,6 +54,7 @@ interface DevOptionsPanelProps {
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   const { options, updateApiUrl, updateAutoConnect, testConnection, disconnect } =
     useDeveloperOptions();
+  const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [localApiUrl, setLocalApiUrl] = useState(options.apiUrl);
   const [isTesting, setIsTesting] = useState(false);
@@ -31,6 +62,9 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const normalizedLocalApiUrl = localApiUrl.trim();
+  const normalizedOptionApiUrl = options.apiUrl.trim();
+  const apiUrlSecurityWarning = getApiUrlSecurityWarning(normalizedLocalApiUrl);
 
   // Sync localApiUrl with options.apiUrl when panel opens or options change
   useEffect(() => {
@@ -45,7 +79,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   };
 
   const handleSaveUrl = () => {
-    updateApiUrl(localApiUrl);
+    if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+      return;
+    }
+
+    updateApiUrl(normalizedLocalApiUrl);
+    setLocalApiUrl(normalizedLocalApiUrl);
     setTestResult({ success: true, message: m.dev_url_updated() });
   };
 
@@ -54,8 +93,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setTestResult(null);
 
     try {
+      if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+        return;
+      }
+
       // Test with the current local URL (unsaved or saved)
-      const success = await testConnection(localApiUrl);
+      const success = await testConnection(normalizedLocalApiUrl);
       setTestResult({
         success,
         message: success ? m.dev_connection_success() : m.dev_connection_failed(),
@@ -155,8 +198,21 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Form.Text className="text-muted">{m.dev_api_url_help()}</Form.Text>
           </Form.Group>
 
-          {localApiUrl !== options.apiUrl && (
-            <Button variant="primary" size="sm" onClick={handleSaveUrl} className="mb-3">
+          {apiUrlSecurityWarning && (
+            <Alert variant="warning" className="mb-3">
+              <i className="bi bi-shield-exclamation me-2"></i>
+              {apiUrlSecurityWarning}
+            </Alert>
+          )}
+
+          {normalizedLocalApiUrl !== normalizedOptionApiUrl && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveUrl}
+              className="mb-3"
+              disabled={Boolean(apiUrlSecurityWarning)}
+            >
               <i className="bi bi-save me-1"></i>
               {m.dev_save_url()}
             </Button>
@@ -185,7 +241,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting || !localApiUrl}
+              disabled={isTesting || !normalizedLocalApiUrl || Boolean(apiUrlSecurityWarning)}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>
@@ -198,6 +254,38 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             </Button>
           )}
         </div>
+
+        {/* Authentication — only visible when connected */}
+        {options.connectionStatus === "connected" && (
+          <div className="mb-4 mt-4">
+            <h6 className="mb-3">{m.dev_auth_heading()}</h6>
+            <div className="d-flex align-items-center gap-3">
+              {isAuthenticated && displayName ? (
+                <>
+                  <span className="small text-success">
+                    <i className="bi bi-person-check me-1"></i>
+                    {m.auth_logged_in_as({ displayName })}
+                  </span>
+                  <Button variant="outline-secondary" size="sm" onClick={logout}>
+                    <i className="bi bi-box-arrow-right me-1"></i>
+                    {m.dev_auth_logout_btn()}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="small text-muted">
+                    <i className="bi bi-person-x me-1"></i>
+                    {m.dev_auth_not_authenticated()}
+                  </span>
+                  <Button variant="primary" size="sm" onClick={triggerLogin}>
+                    <i className="bi bi-box-arrow-in-right me-1"></i>
+                    {m.dev_auth_login_btn()}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Backend Information */}
         <div className="mt-4 p-3 bg-light rounded">

@@ -4,9 +4,11 @@ import { AboutModal } from "./components/AboutModal";
 import { CurrentStatus } from "./components/CurrentStatus";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
+import { LoginModal } from "./components/LoginModal";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import {
   SettingsProvider,
@@ -266,6 +268,7 @@ function AppContent() {
             }
           />
           <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
+          <AuthLoginGate />
         </Container>
       </div>
     </ErrorBoundary>
@@ -273,9 +276,19 @@ function AppContent() {
 }
 
 /**
+ * Renders the LoginModal driven by AuthContext state.
+ * Extracted so it can use the useAuth hook inside AppContent's ErrorBoundary.
+ */
+function AuthLoginGate() {
+  const { showLoginModal, dismissLogin } = useAuth();
+  return <LoginModal show={showLoginModal} onHide={dismissLogin} />;
+}
+
+/**
  * Root application component that composes context providers and renders the app content.
  *
- * @returns The root React element: SettingsProvider, EventStoreProvider, DeveloperOptionsProvider and ToastProvider wrapping AppContent
+ * @returns The root React element: SettingsProvider, EventStoreProvider, DeveloperOptionsProvider,
+ *   ToastProvider, and AuthProvider wrapping AppContent
  */
 function App() {
   return (
@@ -283,7 +296,9 @@ function App() {
       <EventStoreProvider>
         <DeveloperOptionsProvider>
           <ToastProvider>
-            <AppContent />
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
           </ToastProvider>
         </DeveloperOptionsProvider>
       </EventStoreProvider>
