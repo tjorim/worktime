@@ -15,15 +15,15 @@ interface DevOptionsPanelProps {
 }
 
 function getApiUrlSecurityWarning(url: string): string | null {
-  const trimmedUrl = url.trim();
-  if (!trimmedUrl) return null;
+  if (!url) return m.dev_api_url_warning_invalid();
 
   try {
-    const parsed = new URL(trimmedUrl);
+    const parsed = new URL(url);
+    const normalizedHostname = parsed.hostname.replace(/^\[/, "").replace(/\]$/, "");
     const isLocalhost =
-      parsed.hostname === "localhost" ||
-      parsed.hostname === "127.0.0.1" ||
-      parsed.hostname === "::1";
+      normalizedHostname === "localhost" ||
+      normalizedHostname === "127.0.0.1" ||
+      normalizedHostname === "::1";
 
     if (parsed.protocol === "https:") {
       return null;
@@ -62,7 +62,9 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     success: boolean;
     message: string;
   } | null>(null);
-  const apiUrlSecurityWarning = getApiUrlSecurityWarning(localApiUrl);
+  const normalizedLocalApiUrl = localApiUrl.trim();
+  const normalizedOptionApiUrl = options.apiUrl.trim();
+  const apiUrlSecurityWarning = getApiUrlSecurityWarning(normalizedLocalApiUrl);
 
   // Sync localApiUrl with options.apiUrl when panel opens or options change
   useEffect(() => {
@@ -77,7 +79,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   };
 
   const handleSaveUrl = () => {
-    updateApiUrl(localApiUrl);
+    if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+      return;
+    }
+
+    updateApiUrl(normalizedLocalApiUrl);
+    setLocalApiUrl(normalizedLocalApiUrl);
     setTestResult({ success: true, message: m.dev_url_updated() });
   };
 
@@ -86,8 +93,12 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     setTestResult(null);
 
     try {
+      if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
+        return;
+      }
+
       // Test with the current local URL (unsaved or saved)
-      const success = await testConnection(localApiUrl);
+      const success = await testConnection(normalizedLocalApiUrl);
       setTestResult({
         success,
         message: success ? m.dev_connection_success() : m.dev_connection_failed(),
@@ -194,7 +205,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             </Alert>
           )}
 
-          {localApiUrl !== options.apiUrl && (
+          {normalizedLocalApiUrl !== normalizedOptionApiUrl && (
             <Button
               variant="primary"
               size="sm"
@@ -230,7 +241,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting || !localApiUrl || Boolean(apiUrlSecurityWarning)}
+              disabled={isTesting || !normalizedLocalApiUrl || Boolean(apiUrlSecurityWarning)}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>

@@ -52,7 +52,12 @@ export async function apiFetch(
   }
 
   const requestHeaders = new Headers(init.headers);
-  requestHeaders.forEach((value, key) => mergedHeaders.set(key, value));
+  requestHeaders.forEach((value, key) => {
+    if (!shouldAttachAuth && key.toLowerCase() === "authorization") {
+      return;
+    }
+    mergedHeaders.set(key, value);
+  });
 
   const response = await fetch(url, { ...init, headers: mergedHeaders });
 
