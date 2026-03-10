@@ -11,7 +11,8 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
 import { type CountryCode } from "../types/countries";
 import { CountrySelect } from "./shared/CountrySelect";
-import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
+import { useEventStore } from "../contexts/EventStoreContext";
+import { TIME_OFF_STORAGE_KEY, TIME_TRACKING_STORAGE_KEYS } from "../constants/storageKeys";
 import { validateAppBackupPayload, restoreAppBackup } from "../utils/appBackup";
 import { BackupDialog } from "./BackupDialog";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
@@ -21,7 +22,6 @@ import { shareApp } from "../utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
-import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
 import * as m from "../paraglide/messages.js";
 import { getLocale, setLocale } from "../paraglide/runtime.js";
 

@@ -6,7 +6,7 @@ import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
 import type { ReactElement } from "react";
 import ReactSelect from "react-select";
-import type { TimeTrackingLabel } from "./constants";
+import type { TimeTrackingLabel } from "./labelTypes";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 import * as m from "../../paraglide/messages.js";

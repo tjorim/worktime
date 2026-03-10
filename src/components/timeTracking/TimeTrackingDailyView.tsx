@@ -24,10 +24,9 @@ import { TaskEntryForm } from "./TaskEntryForm";
 import {
   buildLabelColorMap,
   buildLabelNameMap,
-  getContrastingTextColor,
-  useDefaultLabelColor,
-  type TimeTrackingLabel,
-} from "./constants";
+} from "./labelUtils";
+import { getContrastingTextColor, useDefaultLabelColor } from "./labelTheme";
+import type { TimeTrackingLabel } from "./labelTypes";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import { isValidRange, overlaps } from "./timeUtils";
 

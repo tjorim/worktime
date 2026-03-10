@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 import { TimelineProgressBar } from "../../../src/components/timeTracking/TimelineProgressBar";
 import { BREAK_DURATION_MINUTES } from "../../../src/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
+import type { TimeTrackingLabel } from "../../../src/components/timeTracking/labelTypes";
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [{ id: "Support", name: "Support", color: "#c82333" }];

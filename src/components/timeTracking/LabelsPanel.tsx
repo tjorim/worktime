@@ -9,12 +9,12 @@ import { EmptyState } from "../shared/EmptyState";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import {
-  getContrastingTextColor,
   isHexColor,
   normalizeLabelName,
   sanitizeLabels,
-  type TimeTrackingLabel,
-} from "./constants";
+} from "./labelUtils";
+import { getContrastingTextColor } from "./labelTheme";
+import type { TimeTrackingLabel } from "./labelTypes";
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
 import * as m from "../../paraglide/messages.js";

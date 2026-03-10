@@ -6,8 +6,7 @@ import {
   restoreAppBackup,
   validateAppBackupPayload,
 } from "../../src/utils/appBackup";
-import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
-import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import { TIME_OFF_STORAGE_KEY, TIME_TRACKING_STORAGE_KEYS } from "../../src/constants/storageKeys";
 import {
   USER_STATE_STORAGE_KEY,
   WORK_LOCATIONS_STORAGE_PREFIX,

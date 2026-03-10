@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { DailyTaskList } from "../../../src/components/timeTracking/DailyTaskList";
 import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
+import type { TimeTrackingLabel } from "../../../src/components/timeTracking/labelTypes";
 import { dayjs } from "../../../src/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [

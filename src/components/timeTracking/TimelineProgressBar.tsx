@@ -3,10 +3,9 @@ import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import { dayjs } from "../../utils/dateTimeUtils";
 import {
   buildLabelColorMap,
-  getContrastingTextColor,
-  getDefaultLabelColor,
-  type TimeTrackingLabel,
-} from "./constants";
+} from "./labelUtils";
+import { getContrastingTextColor, getDefaultLabelColor } from "./labelTheme";
+import type { TimeTrackingLabel } from "./labelTypes";
 import type { StoredTimeTrackingTask } from "./types";
 import {
   BREAK_DURATION_MINUTES,

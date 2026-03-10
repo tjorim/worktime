@@ -2,7 +2,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-import type { TimeTrackingLabel } from "./constants";
+import type { TimeTrackingLabel } from "./labelTypes";
 import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
 import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
 import * as m from "../../paraglide/messages.js";

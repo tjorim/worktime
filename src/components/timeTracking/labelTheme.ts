@@ -1,34 +1,5 @@
 import { useEffect, useState } from "react";
 
-export type TimeTrackingLabel = {
-  id: string;
-  name: string;
-  color: string;
-};
-
-export type TimeTrackingLabelInput = Omit<TimeTrackingLabel, "id"> & { id?: string };
-
-const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
-
-export function isHexColor(value: unknown): value is string {
-  return typeof value === "string" && HEX_COLOR_RE.test(value);
-}
-
-export function isTimeTrackingLabelInput(value: unknown): value is TimeTrackingLabelInput {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const label = value as Record<string, unknown>;
-  const hasValidId =
-    label.id === undefined || (typeof label.id === "string" && label.id.length > 0);
-  return (
-    hasValidId &&
-    typeof label.name === "string" &&
-    label.name.trim().length > 0 &&
-    isHexColor(label.color)
-  );
-}
-
 /**
  * Cached default label color to avoid repeated getComputedStyle calls.
  * Reset when theme changes via the observer below.
@@ -54,7 +25,6 @@ if (typeof window !== "undefined" && typeof MutationObserver !== "undefined") {
       for (const mutation of mutations) {
         if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
           cachedDefaultLabelColor = null;
-          // Notify all listeners
           colorChangeListeners.forEach((listener) => {
             listener();
           });
@@ -84,12 +54,10 @@ export function getDefaultLabelColor(): string {
     return "#6c757d";
   }
 
-  // Return cached value if available
   if (cachedDefaultLabelColor !== null) {
     return cachedDefaultLabelColor;
   }
 
-  // Compute and cache the value
   const style = getComputedStyle(document.documentElement);
   const color = style.getPropertyValue("--wt-label-default").trim();
   cachedDefaultLabelColor = color || "#6c757d";
@@ -106,7 +74,6 @@ export function useDefaultLabelColor(): string {
   const [color, setColor] = useState(getDefaultLabelColor);
 
   useEffect(() => {
-    // Update color when theme changes
     const listener = () => {
       setColor(getDefaultLabelColor());
     };
@@ -142,54 +109,3 @@ export function getContrastingTextColor(backgroundColor?: string): string {
   const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
   return luminance > 0.6 ? "#000" : "#fff";
 }
-
-export function sanitizeLabels(labels: unknown[]): TimeTrackingLabel[] {
-  const seen = new Set<string>();
-  const sanitized: TimeTrackingLabel[] = [];
-
-  labels.forEach((label) => {
-    if (!isTimeTrackingLabelInput(label)) {
-      return;
-    }
-    const name = normalizeLabelName(label.name);
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    sanitized.push({
-      id: typeof label.id === "string" ? label.id : crypto.randomUUID(),
-      name,
-      color: label.color,
-    });
-  });
-
-  return sanitized;
-}
-
-export function buildLabelNameMap(labels: TimeTrackingLabel[]): Record<string, string> {
-  return labels.reduce<Record<string, string>>((map, label) => {
-    map[label.id] = label.name;
-    return map;
-  }, {});
-}
-
-export function buildLabelColorMap(labels: TimeTrackingLabel[]): Record<string, string> {
-  return labels.reduce<Record<string, string>>((map, label) => {
-    map[label.id] = label.color;
-    return map;
-  }, {});
-}
-
-export function normalizeLabelName(value: string): string {
-  return value.trim();
-}
-
-export const TIME_TRACKING_STORAGE_KEYS = {
-  tasks: "worktime_time_tracking_tasks",
-  templates: "worktime_time_tracking_templates",
-  labels: "worktime_time_tracking_labels",
-};

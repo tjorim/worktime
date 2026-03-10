@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import {
-  TIME_TRACKING_STORAGE_KEYS,
-  sanitizeLabels,
-  type TimeTrackingLabel,
-} from "../components/timeTracking/constants";
+import { sanitizeLabels } from "../components/timeTracking/labelUtils";
+import type { TimeTrackingLabel } from "../components/timeTracking/labelTypes";
+import { TIME_TRACKING_STORAGE_KEYS } from "../constants/storageKeys";
 import { isValidRange } from "../components/timeTracking/timeUtils";
 import type {
   StoredTimeTrackingTask,

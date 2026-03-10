@@ -19,7 +19,7 @@ import {
   getStepIndex,
   getTotalSteps,
   getVisibleSteps,
-} from "./wizardStepConfig";
+} from "./wizard/stepConfig";
 import { Step1Welcome } from "./wizard/Step1Welcome";
 import { Step2Features } from "./wizard/Step2Features";
 import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";

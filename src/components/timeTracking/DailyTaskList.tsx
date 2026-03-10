@@ -8,10 +8,9 @@ import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
 import { ConfirmationDialog } from "../ConfirmationDialog";
 import {
   buildLabelNameMap,
-  getContrastingTextColor,
-  getDefaultLabelColor,
-  type TimeTrackingLabel,
-} from "./constants";
+} from "./labelUtils";
+import { getContrastingTextColor, getDefaultLabelColor } from "./labelTheme";
+import type { TimeTrackingLabel } from "./labelTypes";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";

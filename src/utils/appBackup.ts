@@ -10,10 +10,10 @@
  * Device-specific data (developer options) is intentionally excluded.
  */
 
-import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
-import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
 import {
   GANTT_STORAGE_KEY,
+  TIME_OFF_STORAGE_KEY,
+  TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
   WORK_LOCATIONS_STORAGE_PREFIX,
 } from "../constants/storageKeys";

@@ -7,7 +7,7 @@ import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsCon
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
-import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import { TIME_OFF_STORAGE_KEY } from "../../src/constants/storageKeys";
 import {
   SIMPLE_HDAY,
   MULTI_TYPE_HDAY,

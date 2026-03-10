@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { TimeTrackingLabel } from "../components/timeTracking/constants";
+import type { TimeTrackingLabel } from "../components/timeTracking/labelTypes";
 
 export type LabelOption = { value: string; label: string };
 

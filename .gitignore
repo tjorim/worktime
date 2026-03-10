@@ -140,6 +140,10 @@ vite.config.ts.timestamp-*
 
 # Claude Code local settings (environment-specific)
 .claude/settings.local.json
+.agents/
+
+# Desloppify local state and generated outputs
+.desloppify/
 
 # Python
 __pycache__/

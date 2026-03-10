@@ -1,4 +1,4 @@
-import type { TimeTrackingLabel } from "./constants";
+import type { TimeTrackingLabel } from "./labelTypes";
 import { LabelsPanel } from "./LabelsPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";

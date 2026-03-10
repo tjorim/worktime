@@ -11,9 +11,8 @@ import type { HdayEvent } from "../lib/hday/types";
 import { parseHday, sortEvents, toLine } from "../lib/hday/parser";
 import { hdayToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
 import type { CalendarEvent } from "../lib/events/types";
+import { TIME_OFF_STORAGE_KEY } from "../constants/storageKeys";
 import { dayjs } from "../utils/dateTimeUtils";
-
-export const TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
 
 /**
  * Action types for event store reducer

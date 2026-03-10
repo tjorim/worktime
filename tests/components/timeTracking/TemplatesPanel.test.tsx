@@ -5,7 +5,7 @@ import "@testing-library/jest-dom";
 import { TemplatesPanel } from "../../../src/components/timeTracking/TemplatesPanel";
 
 import { ToastProvider } from "../../../src/contexts/ToastContext";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
+import type { TimeTrackingLabel } from "../../../src/components/timeTracking/labelTypes";
 import type { TimeTrackingTemplate } from "../../../src/components/timeTracking/types";
 
 const TEST_LABELS: TimeTrackingLabel[] = [
