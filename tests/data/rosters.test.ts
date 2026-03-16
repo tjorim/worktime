@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { SCHEDULE_OPTIONS, SHIFT_CODES } from "../../src/data/rosters";
 
 describe("Schedule pattern validation", () => {

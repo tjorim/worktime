@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vite-plus/test";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { HdayEvent } from "../../src/lib/hday/types";
 import type { PublicHolidayInfo } from "../../src/types/publicHolidays";

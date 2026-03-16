@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { SCHEDULE_OPTIONS } from "../../src/data/rosters";
 import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
 import {

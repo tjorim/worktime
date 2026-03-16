@@ -1,4 +1,4 @@
-import { beforeEach } from "vitest";
+import { beforeEach } from "vite-plus/test";
 import "@testing-library/jest-dom";
 import * as React from "react";
 
@@ -8,7 +8,7 @@ globalThis.React = React;
 // Type augmentation for jest-dom matchers
 import type { TestingLibraryMatchers } from "@testing-library/jest-dom/matchers";
 
-declare module "vitest" {
+declare module "vite-plus/test" {
   interface Assertion<T = any> extends TestingLibraryMatchers<T, void> {} // oxlint-disable-line typescript/no-explicit-any -- Required for generic type parameter defaults
   interface AsymmetricMatchersContaining<T = any> extends TestingLibraryMatchers<T, void> {} // oxlint-disable-line typescript/no-explicit-any -- Required for generic type parameter defaults
 }

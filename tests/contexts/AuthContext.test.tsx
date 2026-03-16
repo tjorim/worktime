@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../../src/constants/storageKeys";
 import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";

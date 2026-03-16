@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useShiftCalculation } from "../../src/hooks/useShiftCalculation";
 import { dayjs } from "../../src/utils/dateTimeUtils";

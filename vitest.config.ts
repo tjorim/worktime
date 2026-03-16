@@ -1,10 +1,11 @@
+// @ts-nocheck -- workaround for TypeScript 5.9.x internal crash (TS Debug Failure) with vite-plus alpha's deeply-nested defineConfig overloads
 import { fileURLToPath } from "node:url";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 
 // Read version from package.json for injection in tests
-import * as packageJson from "./package.json";
+import * as packageJson from "./package.json" with { type: "json" };
 
 export default defineConfig({
   define: {

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { useGanttTasks } from "../../src/hooks/useGanttTasks";
 import { GANTT_STORAGE_KEY } from "../../src/constants/storageKeys";
 

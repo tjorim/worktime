@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import type React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ShiftTimeline } from "../../src/components/ShiftTimeline";
 import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { TransferView } from "../../src/components/TransferView";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations, TransferType } from "../../src/hooks/useTransferCalculations";

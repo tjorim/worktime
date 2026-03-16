@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useLiveShiftStatus } from "../../src/hooks/useLiveShiftStatus";
 import { formatYYWWD } from "../../src/utils/dateTimeUtils";
 import {

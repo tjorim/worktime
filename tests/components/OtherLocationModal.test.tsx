@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import { OtherLocationModal } from "../../src/components/calendar/OtherLocationModal";
 import { toCountryCode } from "../../src/types/workLocation";

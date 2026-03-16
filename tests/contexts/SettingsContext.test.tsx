@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
 import { USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
 

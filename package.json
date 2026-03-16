@@ -24,17 +24,17 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "vite",
-    "dev:playwright:start": "vite --host 0.0.0.0 --port 4173",
-    "build": "npm run paraglide:compile && tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "vp dev",
+    "dev:playwright:start": "vp dev --host 0.0.0.0 --port 4173",
+    "build": "npm run paraglide:compile && tsc -b && vp build",
+    "preview": "vp preview",
     "typecheck": "npm run paraglide:compile && tsc -b --noEmit",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
-    "lint": "oxlint",
-    "format": "oxfmt .",
-    "test": "vitest run",
-    "test:ui": "vitest --ui",
-    "test:watch": "vitest",
+    "lint": "vp lint",
+    "format": "vp fmt .",
+    "test": "vp test run",
+    "test:ui": "vp test --ui",
+    "test:watch": "vp test",
     "generate-changelog": "tsx scripts/generate-changelog.ts",
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-version-consistency": "tsx scripts/check-version-consistency.ts"
@@ -67,21 +67,23 @@
     "canvas": "^3.2.1",
     "happy-dom": "^20.8.3",
     "lightningcss": "^1.31.1",
-    "oxfmt": "^0.40.0",
-    "oxlint": "^1.55.0",
     "sass": "^1.97.3",
     "terser": "^5.46.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.0",
-    "vitest": "^4.0.16"
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@latest",
+    "vite-plus": "latest"
   },
   "overrides": {
     "@vitejs/plugin-react": {
       "vite": "$vite"
-    }
+    },
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
   },
   "engines": {
     "node": ">=20.19.0"
-  }
+  },
+  "packageManager": "npm@11.11.1"
 }

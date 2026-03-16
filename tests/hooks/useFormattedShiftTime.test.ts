@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useSettings } from "../../src/contexts/SettingsContext";
 import { useFormattedShiftTime } from "../../src/hooks/useFormattedShiftTime";
 import { getFormattedShiftTime } from "../../src/utils/shiftCalculations";

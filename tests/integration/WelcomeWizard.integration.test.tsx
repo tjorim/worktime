@@ -8,7 +8,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { AboutModal } from "../../src/components/AboutModal";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 

@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vite-plus/test";
 import { LocationYearSummary } from "../../src/components/calendar/LocationYearSummary";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { toCountryCode } from "../../src/types/workLocation";

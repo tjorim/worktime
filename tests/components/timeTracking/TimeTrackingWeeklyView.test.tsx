@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vite-plus/test";
 import { act, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "../../../src/components/timeTracking/TimeTrackingWeeklyView";

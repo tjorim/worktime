@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vite-plus/test";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { EventStoreProvider, useEventStore } from "../../src/contexts/EventStoreContext";

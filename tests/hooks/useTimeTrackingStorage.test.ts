@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { useTimeTrackingStorage } from "../../src/hooks/useTimeTrackingStorage";
 import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { apiFetch } from "../../src/utils/apiClient";
 
 describe("apiFetch", () => {

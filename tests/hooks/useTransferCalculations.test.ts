@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import React, { type ReactNode } from "react";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import App from "../../src/App";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";

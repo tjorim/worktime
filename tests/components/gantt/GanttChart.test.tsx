@@ -1,6 +1,6 @@
 import { render, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { GanttChart } from "../../../src/components/gantt/GanttChart";
 
 const mockInstances: MockFrappeGantt[] = [];

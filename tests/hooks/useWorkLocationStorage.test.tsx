@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import type { ReactNode } from "react";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { useWorkLocationStorage } from "../../src/hooks/useWorkLocationStorage";

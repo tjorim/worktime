@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ChangelogModal } from "../../src/components/ChangelogModal";
 import { changelogData, futurePlans } from "../../src/data/changelog";
 

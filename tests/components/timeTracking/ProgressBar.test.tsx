@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vite-plus/test";
 import { render } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { ProgressBar } from "../../../src/components/timeTracking/ProgressBar";

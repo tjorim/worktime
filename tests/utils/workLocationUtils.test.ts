@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vite-plus/test";
 import { aggregateLocationCounts } from "../../src/utils/workLocationUtils";
 import { toCountryCode } from "../../src/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
