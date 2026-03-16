@@ -1,4 +1,4 @@
-// @ts-nocheck -- workaround for TypeScript 5.9.x internal crash (TS Debug Failure) with vite-plus alpha's deeply-nested defineConfig overloads
+// @ts-nocheck -- workaround for TypeScript 5.9.x internal crash (TS Debug Failure) with vite-plus 0.x's deeply-nested defineConfig overloads
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
 import { defineConfig } from "vite-plus";
