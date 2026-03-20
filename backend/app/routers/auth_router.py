@@ -8,13 +8,13 @@ from threading import Lock
 from time import monotonic
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from app.api.auth import AuthenticatedPrincipal, get_authenticated_principal
+from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.config import settings
 from app.database.engine import get_session
-from app.models.db_schemas import LoginRequest, TokenResponse, UserRead
+from app.schemas import LoginRequest, TokenResponse, UserRead
 from app.services.db_service import NotFoundError, ValidationError, authenticate_user, get_user
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
@@ -70,10 +70,10 @@ def get_login_rate_limiter() -> LoginRateLimiter:
 
 
 @router.post("/token", response_model=TokenResponse)
-def login(
+async def login(
     payload: LoginRequest,
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
     rate_limiter: LoginRateLimiter = Depends(get_login_rate_limiter),
 ) -> TokenResponse:
     client_ip = request.client.host if request.client else "unknown"
@@ -88,7 +88,7 @@ def login(
         )
 
     try:
-        user = authenticate_user(session, payload.username, payload.password)
+        user = await authenticate_user(session, payload.username, payload.password)
     except ValidationError as error:
         rate_limiter.register_failure(throttle_key)
         raise HTTPException(
@@ -111,12 +111,12 @@ def login(
 
 
 @router.get("/me", response_model=UserRead)
-def get_me(
+async def get_me(
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserRead:
     try:
-        user = get_user(session, principal.user_id)
+        user = await get_user(session, principal.user_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found") from error
 

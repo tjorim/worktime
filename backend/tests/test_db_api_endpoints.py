@@ -4,42 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi.testclient import TestClient
 import jwt
 import pytest
-from sqlalchemy import event
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine
+from fastapi.testclient import TestClient
 
 from app.config import settings
-from app.database.engine import get_session
-from app.main import app
-
-
-@pytest.fixture()
-def db_client() -> tuple[TestClient, Session]:
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_test_pragmas(dbapi_conn, _):
-        dbapi_conn.execute("PRAGMA foreign_keys=ON")
-
-    SQLModel.metadata.create_all(engine)
-
-    with Session(engine) as session:
-
-        def override_get_session():
-            yield session
-
-        app.dependency_overrides[get_session] = override_get_session
-        with TestClient(app) as client:
-            yield client, session
-
-    app.dependency_overrides.clear()
 
 
 def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
@@ -55,8 +24,8 @@ def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_db_user_crud_endpoints(db_client: tuple[TestClient, Session]) -> None:
-    client, _ = db_client
+def test_db_user_crud_endpoints(db_client: TestClient) -> None:
+    client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     unauthenticated_create = client.post(
@@ -175,8 +144,8 @@ def test_db_user_crud_endpoints(db_client: tuple[TestClient, Session]) -> None:
     assert missing_response.status_code == 404
 
 
-def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: tuple[TestClient, Session]) -> None:
-    client, _ = db_client
+def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: TestClient) -> None:
+    client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     owner_id = client.post(
@@ -200,8 +169,8 @@ def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: tuple
     assert forbidden.status_code == 403
 
 
-def test_db_time_tracking_endpoints(db_client: tuple[TestClient, Session]) -> None:
-    client, _ = db_client
+def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
+    client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     user_id = client.post(
@@ -321,8 +290,8 @@ def test_db_time_tracking_endpoints(db_client: tuple[TestClient, Session]) -> No
     assert missing_body_response.status_code == 422
 
 
-def test_work_location_endpoints_require_auth_and_user_match(db_client: tuple[TestClient, Session]) -> None:
-    client, _ = db_client
+def test_work_location_endpoints_require_auth_and_user_match(db_client: TestClient) -> None:
+    client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     owner_id = client.post(
@@ -346,8 +315,8 @@ def test_work_location_endpoints_require_auth_and_user_match(db_client: tuple[Te
     assert forbidden.status_code == 403
 
 
-def test_work_location_endpoints(db_client: tuple[TestClient, Session]) -> None:
-    client, _ = db_client
+def test_work_location_endpoints(db_client: TestClient) -> None:
+    client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     user_id = client.post(

@@ -2,7 +2,7 @@ version: 2
 updates:
   # Monitor npm dependencies for the main Worktime project
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/frontend"
     schedule:
       interval: "weekly"
       day: "friday"

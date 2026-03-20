@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import (
+from app.routers.auth import (
     AuthenticatedPrincipal,
     get_authenticated_principal,
     require_user_or_admin_match,
 )
 from app.database.engine import get_session
-from app.models.db_schemas import UserCreate, UserListResponse, UserRead, UserUpdate
+from app.schemas import UserCreate, UserListResponse, UserRead, UserUpdate
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
@@ -29,16 +29,16 @@ router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user_endpoint(
+async def create_user_endpoint(
     payload: UserCreate,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserRead:
     if not principal.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
-        user = create_user(session, payload)
+        user = await create_user(session, payload)
     except ConflictError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
@@ -46,17 +46,17 @@ def create_user_endpoint(
 
 
 @router.get("/", response_model=UserListResponse)
-def list_users_endpoint(
+async def list_users_endpoint(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=MAX_USER_LIST_LIMIT),
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserListResponse:
     if not principal.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
-        users, total = list_users(session, offset=offset, limit=limit)
+        users, total = await list_users(session, offset=offset, limit=limit)
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
@@ -67,14 +67,14 @@ def list_users_endpoint(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-def get_user_endpoint(
+async def get_user_endpoint(
     user_id: int,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserRead:
     require_user_or_admin_match(user_id, principal)
     try:
-        user = get_user(session, user_id)
+        user = await get_user(session, user_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
@@ -82,12 +82,12 @@ def get_user_endpoint(
 
 
 @router.get("/by-username/{username}", response_model=UserRead)
-def get_user_by_username_endpoint(
+async def get_user_by_username_endpoint(
     username: str,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserRead:
-    user = get_user_by_username(session, username)
+    user = await get_user_by_username(session, username)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
 
@@ -96,15 +96,15 @@ def get_user_by_username_endpoint(
 
 
 @router.put("/{user_id}", response_model=UserRead)
-def update_user_endpoint(
+async def update_user_endpoint(
     user_id: int,
     payload: UserUpdate,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> UserRead:
     require_user_or_admin_match(user_id, principal)
     try:
-        user = update_user(session, user_id, payload)
+        user = await update_user(session, user_id, payload)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except ValidationError as error:
@@ -114,14 +114,14 @@ def update_user_endpoint(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_endpoint(
+async def delete_user_endpoint(
     user_id: int,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_or_admin_match(user_id, principal)
     try:
-        delete_user(session, user_id)
+        await delete_user(session, user_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

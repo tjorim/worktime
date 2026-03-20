@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import get_authenticated_user_id
+from app.routers.auth import get_authenticated_user_id
 from app.database.engine import get_session
-from app.models.db_schemas import (
+from app.schemas import (
     SyncPullResponse,
     SyncPushRequest,
     SyncPushResponse,
@@ -26,10 +26,10 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 @router.post("/push", response_model=SyncPushResponse, status_code=status.HTTP_200_OK)
-def push_endpoint(
+async def push_endpoint(
     payload: SyncPushRequest,
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Push a batch of local changes to the server.
 
@@ -41,7 +41,7 @@ def push_endpoint(
     timings: dict[str, float] = {}
     try:
         with time_operation("sync", timings):
-            result = push_changes(session, authenticated_user_id, payload)
+            result = await push_changes(session, authenticated_user_id, payload)
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
@@ -53,10 +53,10 @@ def push_endpoint(
 
 
 @router.get("/pull", response_model=SyncPullResponse)
-def pull_endpoint(
+async def pull_endpoint(
     since: datetime = Query(default=_EPOCH, description="ISO timestamp; pull records modified after this point"),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Pull all records (including soft-deleted) modified after *since*.
 
@@ -65,7 +65,7 @@ def pull_endpoint(
     """
     timings: dict[str, float] = {}
     with time_operation("sync", timings):
-        result = pull_changes(session, authenticated_user_id, since)
+        result = await pull_changes(session, authenticated_user_id, since)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -75,18 +75,14 @@ def pull_endpoint(
 
 
 @router.get("/status", response_model=SyncStatusResponse)
-def status_endpoint(
+async def status_endpoint(
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    """Return the latest ``updated_at`` per entity type for the authenticated user.
-
-    Clients can compare these timestamps against their local ``lastSyncedAt``
-    to decide whether a sync is needed before fetching the full pull payload.
-    """
+    """Return the latest ``updated_at`` per entity type for the authenticated user."""
     timings: dict[str, float] = {}
     with time_operation("sync", timings):
-        result = get_sync_status(session, authenticated_user_id)
+        result = await get_sync_status(session, authenticated_user_id)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

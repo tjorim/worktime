@@ -6,11 +6,11 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import get_authenticated_user_id, require_user_match
+from app.routers.auth import get_authenticated_user_id, require_user_match
 from app.database.engine import get_session
-from app.models.db_schemas import (
+from app.schemas import (
     LabelCreate,
     LabelListResponse,
     LabelRead,
@@ -61,32 +61,32 @@ def _handle_error(error: Exception) -> None:
 
 
 @router.post("/labels", response_model=LabelRead, status_code=status.HTTP_201_CREATED)
-def create_label_endpoint(
+async def create_label_endpoint(
     payload: LabelCreate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        label = create_label(session, user_id, payload)
+        label = await create_label(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return LabelRead.model_validate(label, from_attributes=True)
 
 
 @router.get("/labels", response_model=LabelListResponse)
-def list_labels_endpoint(
+async def list_labels_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
-        labels = list_labels_for_user(session, user_id)
+        labels = await list_labels_for_user(session, user_id)
 
     response = LabelListResponse(
         items=[LabelRead.model_validate(item, from_attributes=True) for item in labels],
@@ -100,50 +100,50 @@ def list_labels_endpoint(
 
 
 @router.get("/labels/{label_id}", response_model=LabelRead)
-def get_label_endpoint(
+async def get_label_endpoint(
     label_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        label = get_label(session, user_id, label_id)
+        label = await get_label(session, user_id, label_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return LabelRead.model_validate(label, from_attributes=True)
 
 
 @router.put("/labels/{label_id}", response_model=LabelRead)
-def update_label_endpoint(
+async def update_label_endpoint(
     label_id: str,
     payload: LabelUpdate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> LabelRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        label = update_label(session, user_id, label_id, payload)
+        label = await update_label(session, user_id, label_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return LabelRead.model_validate(label, from_attributes=True)
 
 
 @router.delete("/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_label_endpoint(
+async def delete_label_endpoint(
     label_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_match(user_id, authenticated_user_id)
     try:
-        delete_label(session, user_id, label_id)
+        await delete_label(session, user_id, label_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 
@@ -151,36 +151,36 @@ def delete_label_endpoint(
 
 
 @router.post("/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
-def create_task_endpoint(
+async def create_task_endpoint(
     payload: TaskCreate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
     require_user_match(user_id, authenticated_user_id)
 
     try:
-        task = create_task(session, user_id, payload)
+        task = await create_task(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TaskRead.model_validate(task, from_attributes=True)
 
 
 @router.get("/tasks", response_model=TaskListResponse)
-def list_tasks_endpoint(
+async def list_tasks_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     label_id: str | None = None,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
-        tasks = list_tasks(
+        tasks = await list_tasks(
             session,
             user_id=user_id,
             start_date=start_date,
@@ -200,15 +200,15 @@ def list_tasks_endpoint(
 
 
 @router.get("/tasks/running", response_model=TaskRead | None)
-def get_running_task_endpoint(
+async def get_running_task_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
-        task = get_running_task(session, user_id)
+        task = await get_running_task(session, user_id)
 
     headers = {"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"}
     if task is None:
@@ -223,50 +223,50 @@ def get_running_task_endpoint(
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
-def get_task_endpoint(
+async def get_task_endpoint(
     task_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        task = get_task(session, user_id, task_id)
+        task = await get_task(session, user_id, task_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TaskRead.model_validate(task, from_attributes=True)
 
 
 @router.put("/tasks/{task_id}", response_model=TaskRead)
-def update_task_endpoint(
+async def update_task_endpoint(
     task_id: str,
     payload: TaskUpdate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TaskRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        task = update_task(session, user_id, task_id, payload)
+        task = await update_task(session, user_id, task_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TaskRead.model_validate(task, from_attributes=True)
 
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task_endpoint(
+async def delete_task_endpoint(
     task_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_match(user_id, authenticated_user_id)
     try:
-        delete_task(session, user_id, task_id)
+        await delete_task(session, user_id, task_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 
@@ -274,33 +274,33 @@ def delete_task_endpoint(
 
 
 @router.post("/templates", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
-def create_template_endpoint(
+async def create_template_endpoint(
     payload: TemplateCreate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
     require_user_match(user_id, authenticated_user_id)
 
     try:
-        template = create_template(session, user_id, payload)
+        template = await create_template(session, user_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TemplateRead.model_validate(template, from_attributes=True)
 
 
 @router.get("/templates", response_model=TemplateListResponse)
-def list_templates_endpoint(
+async def list_templates_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
     timings: dict[str, float] = {}
     with time_operation("query", timings):
-        templates = list_templates_for_user(session, user_id)
+        templates = await list_templates_for_user(session, user_id)
 
     response = TemplateListResponse(
         items=[TemplateRead.model_validate(item, from_attributes=True) for item in templates],
@@ -314,50 +314,50 @@ def list_templates_endpoint(
 
 
 @router.get("/templates/{template_id}", response_model=TemplateRead)
-def get_template_endpoint(
+async def get_template_endpoint(
     template_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        template = get_template(session, user_id, template_id)
+        template = await get_template(session, user_id, template_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TemplateRead.model_validate(template, from_attributes=True)
 
 
 @router.put("/templates/{template_id}", response_model=TemplateRead)
-def update_template_endpoint(
+async def update_template_endpoint(
     template_id: str,
     payload: TemplateUpdate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
     require_user_match(user_id, authenticated_user_id)
     try:
-        template = update_template(session, user_id, template_id, payload)
+        template = await update_template(session, user_id, template_id, payload)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
-        raise  # _handle_error always raises; this satisfies type checkers
+        raise
 
     return TemplateRead.model_validate(template, from_attributes=True)
 
 
 @router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_template_endpoint(
+async def delete_template_endpoint(
     template_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_match(user_id, authenticated_user_id)
     try:
-        delete_template(session, user_id, template_id)
+        await delete_template(session, user_id, template_id)
     except (NotFoundError, ConflictError, ValidationError) as error:
         _handle_error(error)
 
