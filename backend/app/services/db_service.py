@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from pwdlib import PasswordHash
-from sqlalchemy import func as sql_func
-from sqlmodel import Session, col, delete, select, update
+from sqlalchemy import delete, func as sql_func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     GanttTask,
@@ -16,7 +16,7 @@ from app.database.models import (
     User,
     WorkLocation,
 )
-from app.models.db_schemas import (
+from app.schemas import (
     GanttTaskCreate,
     GanttTaskUpdate,
     LabelCreate,
@@ -59,9 +59,9 @@ def verify_password(plain: str, hashed: str) -> bool:
     return _ph.verify(plain, hashed)
 
 
-def authenticate_user(session: Session, username: str, password: str) -> User:
+async def authenticate_user(session: AsyncSession, username: str, password: str) -> User:
     """Return User if credentials are valid, otherwise raise ValidationError."""
-    user = get_user_by_username(session, username)
+    user = await get_user_by_username(session, username)
     if user is None:
         verify_password(password, _DUMMY_PASSWORD_HASH)
         raise ValidationError("invalid credentials")
@@ -81,8 +81,8 @@ def _get_non_nullable_model_fields(model: type) -> set[str]:
 
 # User operations
 
-def create_user(session: Session, payload: UserCreate) -> User:
-    existing = get_user_by_username(session, payload.username)
+async def create_user(session: AsyncSession, payload: UserCreate) -> User:
+    existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ConflictError("username already exists")
 
@@ -91,24 +91,25 @@ def create_user(session: Session, payload: UserCreate) -> User:
     data["hashed_password"] = hash_password(plain_password)
     user = User(**data)
     session.add(user)
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
     return user
 
 
-def get_user(session: Session, user_id: int) -> User:
-    user = session.get(User, user_id)
+async def get_user(session: AsyncSession, user_id: int) -> User:
+    user = await session.get(User, user_id)
     if user is None:
         raise NotFoundError("user not found")
     return user
 
 
-def get_user_by_username(session: Session, username: str) -> User | None:
-    return session.exec(select(User).where(User.username == username)).first()
+async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
+    result = await session.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
 
 
-def list_users(
-    session: Session,
+async def list_users(
+    session: AsyncSession,
     *,
     offset: int = 0,
     limit: int = 100,
@@ -120,20 +121,17 @@ def list_users(
     if limit > MAX_USER_LIST_LIMIT:
         raise ValidationError(f"limit must be <= {MAX_USER_LIST_LIMIT}, got: {limit}")
 
-    total = int(session.exec(select(sql_func.count()).select_from(User)).one())
-    users = list(
-        session.exec(
-            select(User)
-            .order_by(User.id)
-            .offset(offset)
-            .limit(limit)
-        ).all()
+    total_result = await session.execute(select(sql_func.count()).select_from(User))
+    total = int(total_result.scalar_one())
+    users_result = await session.execute(
+        select(User).order_by(User.id).offset(offset).limit(limit)
     )
+    users = list(users_result.scalars().all())
     return users, total
 
 
-def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
-    user = get_user(session, user_id)
+async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) -> User:
+    user = await get_user(session, user_id)
     data = payload.model_dump(exclude_unset=True)
     non_nullable_fields = _get_non_nullable_model_fields(User)
     for field, value in data.items():
@@ -144,143 +142,146 @@ def update_user(session: Session, user_id: int, payload: UserUpdate) -> User:
         setattr(user, field, value)
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
     return user
 
 
-def delete_user(session: Session, user_id: int) -> None:
-    user = get_user(session, user_id)
+async def delete_user(session: AsyncSession, user_id: int) -> None:
+    user = await get_user(session, user_id)
 
-    session.exec(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
-    session.exec(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
-    session.exec(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))
-    session.exec(delete(WorkLocation).where(WorkLocation.user_id == user_id))
+    await session.execute(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
+    await session.execute(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
+    await session.execute(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))
+    await session.execute(delete(WorkLocation).where(WorkLocation.user_id == user_id))
 
-    session.delete(user)
-    session.commit()
+    await session.delete(user)
+    await session.commit()
 
 
 # Label operations
 
-def _ensure_user_exists(session: Session, user_id: int) -> User:
-    return get_user(session, user_id)
+async def _ensure_user_exists(session: AsyncSession, user_id: int) -> User:
+    return await get_user(session, user_id)
 
 
-def _ensure_label_for_user(session: Session, user_id: int, label_id: str) -> TimeTrackingLabel:
-    label = session.get(TimeTrackingLabel, label_id)
+async def _ensure_label_for_user(session: AsyncSession, user_id: int, label_id: str) -> TimeTrackingLabel:
+    label = await session.get(TimeTrackingLabel, label_id)
     if label is None or label.user_id != user_id:
         raise NotFoundError("label not found")
     return label
 
 
-def create_label(session: Session, user_id: int, payload: LabelCreate) -> TimeTrackingLabel:
-    _ensure_user_exists(session, user_id)
-    duplicate = session.exec(
+async def create_label(session: AsyncSession, user_id: int, payload: LabelCreate) -> TimeTrackingLabel:
+    await _ensure_user_exists(session, user_id)
+    result = await session.execute(
         select(TimeTrackingLabel).where(
             TimeTrackingLabel.user_id == user_id,
             TimeTrackingLabel.name == payload.name,
         )
-    ).first()
-    if duplicate is not None:
+    )
+    if result.scalar_one_or_none() is not None:
         raise ConflictError("label name must be unique per user")
 
     label = TimeTrackingLabel(user_id=user_id, **payload.model_dump())
     session.add(label)
-    session.commit()
-    session.refresh(label)
+    await session.commit()
+    await session.refresh(label)
     return label
 
 
-def get_label(session: Session, user_id: int, label_id: str) -> TimeTrackingLabel:
+async def get_label(session: AsyncSession, user_id: int, label_id: str) -> TimeTrackingLabel:
     """Get a label scoped to a specific user to prevent cross-user access."""
-    return _ensure_label_for_user(session, user_id, label_id)
+    return await _ensure_label_for_user(session, user_id, label_id)
 
 
-def list_labels_for_user(session: Session, user_id: int) -> list[TimeTrackingLabel]:
-    return list(
-        session.exec(
-            select(TimeTrackingLabel)
-            .where(TimeTrackingLabel.user_id == user_id)
-            .order_by(TimeTrackingLabel.created_at.desc())
-        ).all()
+async def list_labels_for_user(session: AsyncSession, user_id: int) -> list[TimeTrackingLabel]:
+    result = await session.execute(
+        select(TimeTrackingLabel)
+        .where(TimeTrackingLabel.user_id == user_id)
+        .order_by(TimeTrackingLabel.created_at.desc())
     )
+    return list(result.scalars().all())
 
 
-def update_label(session: Session, user_id: int, label_id: str, payload: LabelUpdate) -> TimeTrackingLabel:
-    label = _ensure_label_for_user(session, user_id, label_id)
+async def update_label(
+    session: AsyncSession, user_id: int, label_id: str, payload: LabelUpdate
+) -> TimeTrackingLabel:
+    label = await _ensure_label_for_user(session, user_id, label_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "name" in data:
-        duplicate = session.exec(
+        dup_result = await session.execute(
             select(TimeTrackingLabel).where(
                 TimeTrackingLabel.user_id == user_id,
                 TimeTrackingLabel.name == data["name"],
                 TimeTrackingLabel.id != label_id,
             )
-        ).first()
-        if duplicate is not None:
+        )
+        if dup_result.scalar_one_or_none() is not None:
             raise ConflictError("label name must be unique per user")
 
     for field, value in data.items():
         setattr(label, field, value)
     session.add(label)
-    session.commit()
-    session.refresh(label)
+    await session.commit()
+    await session.refresh(label)
     return label
 
 
-def delete_label(session: Session, user_id: int, label_id: str) -> None:
-    label = _ensure_label_for_user(session, user_id, label_id)
+async def delete_label(session: AsyncSession, user_id: int, label_id: str) -> None:
+    label = await _ensure_label_for_user(session, user_id, label_id)
 
-    session.exec(
+    await session.execute(
         update(TimeTrackingTask)
         .where(TimeTrackingTask.label_id == label_id)
         .values(label_id=None)
     )
-    session.exec(
+    await session.execute(
         update(TimeTrackingTemplate)
         .where(TimeTrackingTemplate.label_id == label_id)
         .values(label_id=None)
     )
-    session.delete(label)
-    session.commit()
+    await session.delete(label)
+    await session.commit()
 
 
 # Task operations
 
-def _validate_task_label_reference(session: Session, user_id: int, label_id: str | None) -> None:
+async def _validate_task_label_reference(
+    session: AsyncSession, user_id: int, label_id: str | None
+) -> None:
     if label_id is None:
         return
-    _ensure_label_for_user(session, user_id, label_id)
+    await _ensure_label_for_user(session, user_id, label_id)
 
 
-def create_task(session: Session, user_id: int, payload: TaskCreate) -> TimeTrackingTask:
-    _ensure_user_exists(session, user_id)
-    _validate_task_label_reference(session, user_id, payload.label_id)
+async def create_task(session: AsyncSession, user_id: int, payload: TaskCreate) -> TimeTrackingTask:
+    await _ensure_user_exists(session, user_id)
+    await _validate_task_label_reference(session, user_id, payload.label_id)
 
-    if payload.stop_time is None and get_running_task(session, user_id) is not None:
+    if payload.stop_time is None and await get_running_task(session, user_id) is not None:
         raise ConflictError("only one running task is allowed per user")
     if payload.stop_time is not None and payload.stop_time < payload.start_time:
         raise ValidationError("stop_time cannot be earlier than start_time")
 
     task = TimeTrackingTask(user_id=user_id, **payload.model_dump())
     session.add(task)
-    session.commit()
-    session.refresh(task)
+    await session.commit()
+    await session.refresh(task)
     return task
 
 
-def get_task(session: Session, user_id: int, task_id: str) -> TimeTrackingTask:
+async def get_task(session: AsyncSession, user_id: int, task_id: str) -> TimeTrackingTask:
     """Get a task scoped to a specific user to prevent cross-user access."""
-    task = session.get(TimeTrackingTask, task_id)
+    task = await session.get(TimeTrackingTask, task_id)
     if task is None or task.user_id != user_id:
         raise NotFoundError("task not found")
     return task
 
 
-def list_tasks(
-    session: Session,
+async def list_tasks(
+    session: AsyncSession,
     *,
     user_id: int,
     start_date: datetime | None = None,
@@ -295,113 +296,125 @@ def list_tasks(
     if label_id is not None:
         statement = statement.where(TimeTrackingTask.label_id == label_id)
 
-    return list(session.exec(statement.order_by(TimeTrackingTask.start_time.desc())).all())
+    result = await session.execute(statement.order_by(TimeTrackingTask.start_time.desc()))
+    return list(result.scalars().all())
 
 
-def get_running_task(session: Session, user_id: int) -> TimeTrackingTask | None:
-    return session.exec(
+async def get_running_task(session: AsyncSession, user_id: int) -> TimeTrackingTask | None:
+    result = await session.execute(
         select(TimeTrackingTask).where(
             TimeTrackingTask.user_id == user_id,
-            col(TimeTrackingTask.stop_time).is_(None),
+            TimeTrackingTask.stop_time.is_(None),
         )
-    ).first()
+    )
+    return result.scalar_one_or_none()
 
 
-def update_task(session: Session, user_id: int, task_id: str, payload: TaskUpdate) -> TimeTrackingTask:
-    task = get_task(session, user_id, task_id)
+async def update_task(
+    session: AsyncSession, user_id: int, task_id: str, payload: TaskUpdate
+) -> TimeTrackingTask:
+    task = await get_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
-        _validate_task_label_reference(session, user_id, data["label_id"])
+        await _validate_task_label_reference(session, user_id, data["label_id"])
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
     if candidate_stop_time is not None and candidate_stop_time < candidate_start_time:
         raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None:
-        running = get_running_task(session, user_id)
+        running = await get_running_task(session, user_id)
         if running is not None and running.id != task_id:
             raise ConflictError("only one running task is allowed per user")
 
     for field, value in data.items():
         setattr(task, field, value)
     session.add(task)
-    session.commit()
-    session.refresh(task)
+    await session.commit()
+    await session.refresh(task)
     return task
 
 
-def delete_task(session: Session, user_id: int, task_id: str) -> None:
-    task = get_task(session, user_id, task_id)
-    session.delete(task)
-    session.commit()
+async def delete_task(session: AsyncSession, user_id: int, task_id: str) -> None:
+    task = await get_task(session, user_id, task_id)
+    await session.delete(task)
+    await session.commit()
 
 
 # Template operations
 
-def create_template(session: Session, user_id: int, payload: TemplateCreate) -> TimeTrackingTemplate:
-    _ensure_user_exists(session, user_id)
-    _validate_task_label_reference(session, user_id, payload.label_id)
+async def create_template(
+    session: AsyncSession, user_id: int, payload: TemplateCreate
+) -> TimeTrackingTemplate:
+    await _ensure_user_exists(session, user_id)
+    await _validate_task_label_reference(session, user_id, payload.label_id)
 
     template = TimeTrackingTemplate(user_id=user_id, **payload.model_dump())
     session.add(template)
-    session.commit()
-    session.refresh(template)
+    await session.commit()
+    await session.refresh(template)
     return template
 
 
-def get_template(session: Session, user_id: int, template_id: str) -> TimeTrackingTemplate:
+async def get_template(
+    session: AsyncSession, user_id: int, template_id: str
+) -> TimeTrackingTemplate:
     """Get a template scoped to a specific user to prevent cross-user access."""
-    template = session.get(TimeTrackingTemplate, template_id)
+    template = await session.get(TimeTrackingTemplate, template_id)
     if template is None or template.user_id != user_id:
         raise NotFoundError("template not found")
     return template
 
 
-def list_templates_for_user(session: Session, user_id: int) -> list[TimeTrackingTemplate]:
-    return list(
-        session.exec(
-            select(TimeTrackingTemplate)
-            .where(TimeTrackingTemplate.user_id == user_id)
-            .order_by(TimeTrackingTemplate.created_at.desc())
-        ).all()
+async def list_templates_for_user(
+    session: AsyncSession, user_id: int
+) -> list[TimeTrackingTemplate]:
+    result = await session.execute(
+        select(TimeTrackingTemplate)
+        .where(TimeTrackingTemplate.user_id == user_id)
+        .order_by(TimeTrackingTemplate.created_at.desc())
     )
+    return list(result.scalars().all())
 
 
-def update_template(
-    session: Session, user_id: int, template_id: str, payload: TemplateUpdate
+async def update_template(
+    session: AsyncSession, user_id: int, template_id: str, payload: TemplateUpdate
 ) -> TimeTrackingTemplate:
-    template = get_template(session, user_id, template_id)
+    template = await get_template(session, user_id, template_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "label_id" in data:
-        _validate_task_label_reference(session, user_id, data["label_id"])
+        await _validate_task_label_reference(session, user_id, data["label_id"])
 
     for field, value in data.items():
         setattr(template, field, value)
     session.add(template)
-    session.commit()
-    session.refresh(template)
+    await session.commit()
+    await session.refresh(template)
     return template
 
 
-def delete_template(session: Session, user_id: int, template_id: str) -> None:
-    template = get_template(session, user_id, template_id)
-    session.delete(template)
-    session.commit()
+async def delete_template(session: AsyncSession, user_id: int, template_id: str) -> None:
+    template = await get_template(session, user_id, template_id)
+    await session.delete(template)
+    await session.commit()
 
 
 # Work location operations
 
 
-def create_or_update_work_location(
-    session: Session, user_id: int, payload: WorkLocationCreate
+async def create_or_update_work_location(
+    session: AsyncSession, user_id: int, payload: WorkLocationCreate
 ) -> WorkLocation:
-    _ensure_user_exists(session, user_id)
+    await _ensure_user_exists(session, user_id)
 
-    location = session.exec(
-        select(WorkLocation).where(WorkLocation.user_id == user_id, WorkLocation.date == payload.date)
-    ).first()
+    result = await session.execute(
+        select(WorkLocation).where(
+            WorkLocation.user_id == user_id, WorkLocation.date == payload.date
+        )
+    )
+    location = result.scalar_one_or_none()
 
     if location is None:
         location = WorkLocation(user_id=user_id, **payload.model_dump())
@@ -410,22 +423,27 @@ def create_or_update_work_location(
             setattr(location, field, value)
 
     session.add(location)
-    session.commit()
-    session.refresh(location)
+    await session.commit()
+    await session.refresh(location)
     return location
 
 
-def get_work_location(session: Session, user_id: int, value_date: date) -> WorkLocation:
-    location = session.exec(
-        select(WorkLocation).where(WorkLocation.user_id == user_id, WorkLocation.date == value_date)
-    ).first()
+async def get_work_location(
+    session: AsyncSession, user_id: int, value_date: date
+) -> WorkLocation:
+    result = await session.execute(
+        select(WorkLocation).where(
+            WorkLocation.user_id == user_id, WorkLocation.date == value_date
+        )
+    )
+    location = result.scalar_one_or_none()
     if location is None:
         raise NotFoundError("work location not found")
     return location
 
 
-def list_work_locations(
-    session: Session,
+async def list_work_locations(
+    session: AsyncSession,
     *,
     user_id: int,
     start_date: date | None = None,
@@ -437,13 +455,14 @@ def list_work_locations(
     if end_date is not None:
         statement = statement.where(WorkLocation.date <= end_date)
 
-    return list(session.exec(statement.order_by(WorkLocation.date)).all())
+    result = await session.execute(statement.order_by(WorkLocation.date))
+    return list(result.scalars().all())
 
 
-def update_work_location(
-    session: Session, user_id: int, value_date: date, payload: WorkLocationUpdate
+async def update_work_location(
+    session: AsyncSession, user_id: int, value_date: date, payload: WorkLocationUpdate
 ) -> WorkLocation:
-    location = get_work_location(session, user_id, value_date)
+    location = await get_work_location(session, user_id, value_date)
     data = payload.model_dump(exclude_unset=True)
     if "country_code" in data and data["country_code"] is None:
         raise ValidationError("country_code cannot be None")
@@ -451,53 +470,52 @@ def update_work_location(
     for field, value in data.items():
         setattr(location, field, value)
     session.add(location)
-    session.commit()
-    session.refresh(location)
+    await session.commit()
+    await session.refresh(location)
     return location
 
 
-def delete_work_location(session: Session, user_id: int, value_date: date) -> None:
-    location = get_work_location(session, user_id, value_date)
-    session.delete(location)
-    session.commit()
+async def delete_work_location(session: AsyncSession, user_id: int, value_date: date) -> None:
+    location = await get_work_location(session, user_id, value_date)
+    await session.delete(location)
+    await session.commit()
 
 
 # Gantt task operations
 
 
-def create_gantt_task(session: Session, user_id: int, payload: GanttTaskCreate) -> GanttTask:
-    _ensure_user_exists(session, user_id)
+async def create_gantt_task(
+    session: AsyncSession, user_id: int, payload: GanttTaskCreate
+) -> GanttTask:
+    await _ensure_user_exists(session, user_id)
     if payload.end_date < payload.start_date:
         raise ValidationError("end_date cannot be earlier than start_date")
 
     task = GanttTask(user_id=user_id, **payload.model_dump())
     session.add(task)
-    session.commit()
-    session.refresh(task)
+    await session.commit()
+    await session.refresh(task)
     return task
 
 
-def get_gantt_task(session: Session, user_id: int, task_id: str) -> GanttTask:
-    task = session.get(GanttTask, task_id)
+async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> GanttTask:
+    task = await session.get(GanttTask, task_id)
     if task is None or task.user_id != user_id:
         raise NotFoundError("gantt task not found")
     return task
 
 
-def list_gantt_tasks(session: Session, *, user_id: int) -> list[GanttTask]:
-    return list(
-        session.exec(
-            select(GanttTask)
-            .where(GanttTask.user_id == user_id)
-            .order_by(GanttTask.start_date)
-        ).all()
+async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]:
+    result = await session.execute(
+        select(GanttTask).where(GanttTask.user_id == user_id).order_by(GanttTask.start_date)
     )
+    return list(result.scalars().all())
 
 
-def update_gantt_task(
-    session: Session, user_id: int, task_id: str, payload: GanttTaskUpdate
+async def update_gantt_task(
+    session: AsyncSession, user_id: int, task_id: str, payload: GanttTaskUpdate
 ) -> GanttTask:
-    task = get_gantt_task(session, user_id, task_id)
+    task = await get_gantt_task(session, user_id, task_id)
 
     data = payload.model_dump(exclude_unset=True)
     candidate_start = data.get("start_date", task.start_date)
@@ -508,12 +526,12 @@ def update_gantt_task(
     for field, value in data.items():
         setattr(task, field, value)
     session.add(task)
-    session.commit()
-    session.refresh(task)
+    await session.commit()
+    await session.refresh(task)
     return task
 
 
-def delete_gantt_task(session: Session, user_id: int, task_id: str) -> None:
-    task = get_gantt_task(session, user_id, task_id)
-    session.delete(task)
-    session.commit()
+async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
+    task = await get_gantt_task(session, user_id, task_id)
+    await session.delete(task)
+    await session.commit()

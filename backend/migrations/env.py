@@ -1,25 +1,23 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from sqlmodel import SQLModel
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
 from app.config import settings
-from app.database import models as _models  # noqa: F401 — registers all tables with SQLModel.metadata
+from app.database.models import Base  # noqa: F401 — registers all tables with Base.metadata
 
 # Alembic Config object
 config = context.config
 
-# Set the database URL from app settings
+# Set the database URL from app settings (sync driver for Alembic)
 config.set_main_option("sqlalchemy.url", f"sqlite:///{settings.DATABASE_PATH}")
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
