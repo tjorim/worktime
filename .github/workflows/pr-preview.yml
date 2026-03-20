@@ -4,7 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-# Cancel previous runs for the same PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -15,8 +14,9 @@ permissions:
 
 jobs:
   preview:
-    name: Build Preview Artifact
+    name: Build Preview
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -44,25 +44,16 @@ jobs:
           path: dist/
           retention-days: 7
 
-      - name: Build comment body
-        id: build-comment
-        run: |
-          ARTIFACT_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          {
-            echo 'COMMENT_BODY<<EOF'
-            echo "## Preview Build"
-            echo ""
-            echo "A preview build for this PR is available as a downloadable artifact."
-            echo ""
-            echo "**[Download preview build]($ARTIFACT_URL)** (select \`pr-preview-${{ github.event.pull_request.number }}\` from Artifacts)"
-            echo ""
-            echo "Built from ${{ github.event.pull_request.head.sha }}"
-            echo 'EOF'
-          } >> "$GITHUB_ENV"
-
       - name: Comment PR with preview link
         if: github.event.pull_request.head.repo.fork == false
-        uses: ./.github/actions/upsert-comment
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
-          comment-identifier: "Preview Build"
-          comment-body: ${{ env.COMMENT_BODY }}
+          header: preview-build
+          message: |
+            ## Preview Build
+
+            A preview build for this PR is available as a downloadable artifact.
+
+            **[Download preview build](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})** (select `pr-preview-${{ github.event.pull_request.number }}` from Artifacts)
+
+            Built from ${{ github.event.pull_request.head.sha }}

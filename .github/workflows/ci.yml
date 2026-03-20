@@ -5,20 +5,19 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
-# Prevent concurrent runs on same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  validate-build:
-    name: Validate Build
+  quality:
+    name: Typecheck & Lint
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
 
     steps:
       - name: Checkout
@@ -39,151 +38,35 @@ jobs:
       - name: Validate release version consistency
         run: pnpm run check-version-consistency
 
-      - name: Validate TypeScript
+      - name: Typecheck
         run: pnpm run typecheck
 
-      - name: Run code quality checks
-        run: |
-          echo "Running OXC linting and tests..."
-          pnpm run lint
-          pnpm run test | tee test-output.txt
-          echo "✅ All quality checks passed"
+      - name: Lint
+        run: pnpm run lint
 
-      - name: Extract test count
-        run: |
-          echo "Extracting test count from Vitest output..."
-          # Parse test count from Vitest output (format: "Tests  462 passed (462)")
-          TEST_COUNT=$(grep -oP 'Tests\s+\K\d+(?=\s+passed)' test-output.txt || echo "unknown")
+  test_build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    needs: quality
 
-          if [ "$TEST_COUNT" = "unknown" ]; then
-            echo "⚠️  Could not extract test count, using fallback"
-          else
-            echo "✅ Found ${TEST_COUNT} tests"
-          fi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
-          echo "TEST_COUNT=${TEST_COUNT}" >> $GITHUB_ENV
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: Build application
-        run: |
-          echo "Building Worktime with Vite 8..."
-          pnpm run build
-
-          echo "Checking built application..."
-          # Core source files (Vite structure)
-          [ -f "index.html" ] && echo "✅ index.html found" || { echo "❌ index.html missing"; exit 1; }
-          [ -f "src/styles/main.scss" ] && echo "✅ src/styles/main.scss found" || { echo "❌ src/styles/main.scss missing"; exit 1; }
-          [ -f "src/App.tsx" ] && echo "✅ src/App.tsx found" || { echo "❌ src/App.tsx missing"; exit 1; }
-
-          # Built files
-          [ -f "dist/index.html" ] && echo "✅ Built index.html found" || { echo "❌ Built index.html missing"; exit 1; }
-
-          # Check for built CSS (Vite generates hashed filenames in subdirectories)
-          if ls dist/assets/css/*.css 1> /dev/null 2>&1; then
-            echo "✅ Built CSS files found"
-          else
-            echo "❌ Built CSS files missing"
-            exit 1
-          fi
-
-          # Check for built JS (Vite generates hashed filenames in subdirectories)
-          if ls dist/assets/js/*.js 1> /dev/null 2>&1; then
-            echo "✅ Built JS files found"
-          else
-            echo "❌ Built JS files missing"
-            exit 1
-          fi
-
-          # Application assets
-          [ -f "public/assets/icons/icon-192.png" ] && echo "✅ 192px icon found" || { echo "❌ 192px icon missing"; exit 1; }
-          [ -f "public/assets/icons/icon-512.png" ] && echo "✅ 512px icon found" || { echo "❌ 512px icon missing"; exit 1; }
-
-          echo "✅ All build requirements met"
-
-      - name: Calculate bundle size
-        env:
-          MAX_BUNDLE_SIZE_KB: ${{ vars.MAX_BUNDLE_SIZE_KB || '600' }}
-        run: |
-          echo "Calculating built bundle size..."
-
-          # Calculate built bundle size
-          DIST_SIZE=$(du -sb dist/ | cut -f1)
-          ICONS_SIZE=$(du -sb public/assets/icons/ | cut -f1)
-          TOTAL_SIZE=$((DIST_SIZE + ICONS_SIZE))
-          TOTAL_KB=$(( (TOTAL_SIZE + 1023) / 1024 ))
-
-          echo "📊 Bundle Size Analysis:"
-          echo "├── Built assets: $(( (DIST_SIZE + 1023) / 1024 ))KB"
-          echo "├── Icons: $(( (ICONS_SIZE + 1023) / 1024 ))KB"
-          echo "└── Total: ${TOTAL_KB}KB"
-
-          # List built files for transparency
-          echo ""
-          echo "📁 Built files:"
-          find dist -type f -exec ls -lh {} \; | awk '{print "├── " $9 ": " $5}'
-
-          # Bundle size check (warn if over threshold)
-          if [ $TOTAL_KB -gt $MAX_BUNDLE_SIZE_KB ]; then
-            echo "⚠️  Bundle size is large (${TOTAL_KB}KB > ${MAX_BUNDLE_SIZE_KB}KB)"
-          else
-            echo "✅ Bundle size is optimal (${TOTAL_KB}KB <= ${MAX_BUNDLE_SIZE_KB}KB)"
-          fi
-
-          # Save for PR comment
-          echo "BUNDLE_SIZE=${TOTAL_KB}KB" >> $GITHUB_ENV
-
-      - name: Validate shift tracking
-        run: |
-          echo "Validating shift tracking features..."
-          [ -f "src/utils/shiftCalculations.ts" ] && echo "✅ Shift calculations utility found" || { echo "❌ Shift calculations missing"; exit 1; }
-          [ -f "src/hooks/useShiftCalculation.ts" ] && echo "✅ Shift calculation hook found" || { echo "❌ Shift calculation hook missing"; exit 1; }
-          [ -f "src/components/WelcomeWizard.tsx" ] && echo "✅ WelcomeWizard component found" || { echo "❌ WelcomeWizard component missing"; exit 1; }
-          echo "✅ Shift tracking features validated"
-
-      - name: Validate .hday parser
-        run: |
-          echo "Validating .hday file parser..."
-          # Check parser module
-          [ -f "src/lib/hday/parser.ts" ] && echo "✅ Parser module found" || { echo "❌ Parser missing"; exit 1; }
-          [ -f "tests/lib/hday.test.ts" ] && echo "✅ Parser tests found (139 tests)" || { echo "❌ Parser tests missing"; exit 1; }
-
-          # Check event converters
-          [ -f "src/lib/events/converters.ts" ] && echo "✅ Event converters found" || { echo "❌ Event converters missing"; exit 1; }
-          [ -f "tests/lib/events/converters.test.ts" ] && echo "✅ Converter tests found" || { echo "❌ Converter tests missing"; exit 1; }
-
-          # Check EventStore
-          [ -f "src/contexts/EventStoreContext.tsx" ] && echo "✅ EventStoreContext found" || { echo "❌ EventStoreContext missing"; exit 1; }
-          [ -f "tests/contexts/EventStoreContext.test.tsx" ] && echo "✅ EventStore tests found" || { echo "❌ EventStore tests missing"; exit 1; }
-
-          # Check UI components
-          [ -f "src/components/TimeOffView.tsx" ] && echo "✅ TimeOffView component found" || { echo "❌ TimeOffView component missing"; exit 1; }
-          [ -f "src/components/EventModal.tsx" ] && echo "✅ EventModal component found" || { echo "❌ EventModal component missing"; exit 1; }
-
-          echo "✅ .hday parser and time-off management validated"
-
-      - name: Build comment body
-        if: github.event_name == 'pull_request'
-        id: build-comment
-        run: |
-          {
-            echo 'COMMENT_BODY<<EOF'
-            echo "## 🚀 Build Validation Results"
-            echo ""
-            echo "✅ All build requirements met"
-            echo "✅ Code quality checks passed (OXC)"
-            echo "✅ Tests passed (Vitest - ${TEST_COUNT} tests)"
-            echo "✅ Build successful (Vite 8)"
-            echo "✅ Core shift tracking present"
-            echo "✅ Time-off management (.hday) present"
-            echo ""
-            echo "📊 **Bundle Size:** ${BUNDLE_SIZE}"
-            echo ""
-            echo "Ready for deployment! 🎉"
-            echo 'EOF'
-          } >> $GITHUB_ENV
-
-      - name: Comment PR with results
-        if: github.event_name == 'pull_request'
-        uses: ./.github/actions/upsert-comment
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          comment-identifier: "🚀 Build Validation Results"
-          comment-body: ${{ env.COMMENT_BODY }}
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
