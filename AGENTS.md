@@ -5,14 +5,14 @@
 ### Frontend (project root)
 
 ```bash
-npm run dev                # Vite dev server (localhost:8000)
-npm run lint               # oxlint
-npm run format             # oxfmt
-npm run test               # vitest
-npm run build              # production build
-npm run preview            # serve dist/ — run build first or changes won't appear
-npm run generate-changelog # regenerate CHANGELOG.md from src/data/changelog.ts
-npm run generate-icons     # regenerate icons in public/assets/icons/
+pnpm dev                # Vite dev server (localhost:8000)
+pnpm lint               # oxlint
+pnpm format             # oxfmt
+pnpm test               # vitest
+pnpm build              # production build
+pnpm preview            # serve dist/ — run build first or changes won't appear
+pnpm generate-changelog # regenerate CHANGELOG.md from src/data/changelog.ts
+pnpm generate-icons     # regenerate icons in public/assets/icons/
 ```
 
 Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.

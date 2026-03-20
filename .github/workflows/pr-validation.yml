@@ -19,11 +19,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch full history for comparison
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version-file: .node-version
+          cache: pnpm
 
       - name: Analyze changed files
         run: |
@@ -92,10 +95,10 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Validate release version consistency
-        run: npm run check-version-consistency
+        run: pnpm run check-version-consistency
 
       - name: Validate core app changes
         if: env.CORE_CHANGES == 'true'
@@ -103,7 +106,7 @@ jobs:
           echo "🔧 Validating core app changes..."
 
           # Run OXC linting
-          if npm run lint; then
+          if pnpm run lint; then
             echo "✅ Code quality checks passed (oxlint)"
           else
             echo "❌ Code quality checks failed"
@@ -111,7 +114,7 @@ jobs:
           fi
 
           # Run tests
-          if npm run test; then
+          if pnpm run test; then
             echo "✅ Tests passed"
           else
             echo "❌ Tests failed"
@@ -171,7 +174,7 @@ jobs:
           echo "📄 Validating .hday parser changes..."
 
           # Check if .hday parser tests still pass
-          if npm run test -- hday.test.ts; then
+          if pnpm run test -- hday.test.ts; then
             echo "✅ .hday parser tests passed"
           else
             echo "❌ .hday parser tests failed"
@@ -192,7 +195,7 @@ jobs:
           echo "⚙️  Validating build configuration changes..."
 
           # Test build to ensure config is valid
-          npm run build
+          pnpm run build
           echo "✅ Build completed successfully"
 
       - name: Performance impact analysis
@@ -201,7 +204,7 @@ jobs:
           echo "📊 Analyzing performance impact..."
 
           # Build and calculate bundle size
-          npm run build
+          pnpm run build
           DIST_SIZE=$(du -sb dist/ | cut -f1)
           DIST_KB=$(( (DIST_SIZE + 1023) / 1024 ))
           echo "Built bundle size: ${DIST_KB}KB"
