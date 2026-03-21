@@ -18,6 +18,7 @@ import {
 } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
+import { AccessibilityProvider } from "./contexts/AccessibilityContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
@@ -287,22 +288,24 @@ function AuthLoginGate() {
 /**
  * Root application component that composes context providers and renders the app content.
  *
- * @returns The root React element: SettingsProvider, EventStoreProvider, DeveloperOptionsProvider,
- *   ToastProvider, and AuthProvider wrapping AppContent
+ * @returns The root React element: AccessibilityProvider, SettingsProvider, EventStoreProvider,
+ *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
 function App() {
   return (
-    <SettingsProvider>
-      <EventStoreProvider>
-        <DeveloperOptionsProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </ToastProvider>
-        </DeveloperOptionsProvider>
-      </EventStoreProvider>
-    </SettingsProvider>
+    <AccessibilityProvider>
+      <SettingsProvider>
+        <EventStoreProvider>
+          <DeveloperOptionsProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </ToastProvider>
+          </DeveloperOptionsProvider>
+        </EventStoreProvider>
+      </SettingsProvider>
+    </AccessibilityProvider>
   );
 }
 

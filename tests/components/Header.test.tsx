@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App";
 import { Header } from "../../src/components/Header";
+import { AccessibilityProvider } from "../../src/contexts/AccessibilityContext";
 import { AuthProvider } from "../../src/contexts/AuthContext";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
@@ -12,15 +13,17 @@ import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsCon
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
-    <SettingsProvider>
-      <EventStoreProvider>
-        <DeveloperOptionsProvider>
-          <ToastProvider>
-            <AuthProvider>{ui}</AuthProvider>
-          </ToastProvider>
-        </DeveloperOptionsProvider>
-      </EventStoreProvider>
-    </SettingsProvider>,
+    <AccessibilityProvider>
+      <SettingsProvider>
+        <EventStoreProvider>
+          <DeveloperOptionsProvider>
+            <ToastProvider>
+              <AuthProvider>{ui}</AuthProvider>
+            </ToastProvider>
+          </DeveloperOptionsProvider>
+        </EventStoreProvider>
+      </SettingsProvider>
+    </AccessibilityProvider>,
   );
 }
 

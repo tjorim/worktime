@@ -881,5 +881,20 @@
   "dev_auth_logout_btn": "Sign Out",
   "dev_api_url_warning_insecure": "Warning: This API URL uses insecure HTTP on a non-local host. Use HTTPS unless you are connecting to localhost.",
   "dev_api_url_warning_invalid_scheme": "Warning: API URL must use HTTPS (or HTTP for localhost).",
-  "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000)."
+  "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000).",
+  "accessibility_title": "Accessibility",
+  "accessibility_high_contrast_label": "High Contrast",
+  "accessibility_high_contrast_description": "Increase color contrast for better readability",
+  "accessibility_font_scale_label": "Text Size",
+  "accessibility_font_scale_description": "Adjust the application text size (75%–150%)",
+  "accessibility_font_scale_small": "A",
+  "accessibility_font_scale_default": "A",
+  "accessibility_font_scale_large": "A",
+  "accessibility_font_scale_xlarge": "A",
+  "accessibility_font_scale_small_aria": "Small (75%)",
+  "accessibility_font_scale_default_aria": "Default (100%)",
+  "accessibility_font_scale_large_aria": "Large (125%)",
+  "accessibility_font_scale_xlarge_aria": "Extra-large (150%)",
+  "accessibility_reduced_motion_label": "Reduce Motion",
+  "accessibility_reduced_motion_description": "Disable animations and transitions"
 }

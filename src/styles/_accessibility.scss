@@ -1,0 +1,196 @@
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================
+   High contrast mode, font scaling, reduced motion, and focus indicators.
+   Applied via data attributes set by AccessibilityContext:
+   - [data-wt-high-contrast="true"] on <html>
+   - --wt-font-scale CSS variable on <html>
+   - [data-wt-reduced-motion="true"] on <html>
+   ========================================================================= */
+
+/* ============================================================================
+   FONT SCALING
+   ============================================================================
+   The root font size is scaled by --wt-font-scale (set inline by
+   AccessibilityContext). Bootstrap uses rem units throughout, so all
+   components scale automatically.
+   ========================================================================= */
+
+html {
+  font-size: calc(16px * var(--wt-font-scale, 1));
+}
+
+/* ============================================================================
+   FOCUS INDICATORS
+   ============================================================================
+   Comprehensive visible focus ring for all interactive elements.
+   Only shown when navigating by keyboard (focus-visible).
+   ========================================================================= */
+
+:focus-visible {
+  outline: 3px solid var(--bs-focus-ring-color, #0d6efd);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   ============================================================================
+   Suppresses all CSS animations and transitions when:
+   - The user has set the OS "reduce motion" preference, OR
+   - The user has explicitly enabled "Reduce Motion" in Worktime settings.
+   ========================================================================= */
+
+@mixin reduce-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @include reduce-motion;
+}
+
+[data-wt-reduced-motion="true"] {
+  @include reduce-motion;
+}
+
+/* ============================================================================
+   HIGH CONTRAST MODE
+   ============================================================================
+   Overrides CSS custom properties to meet WCAG AA minimum contrast ratios
+   (4.5:1 for normal text, 3:1 for large text and UI components).
+   Active when [data-wt-high-contrast="true"] is set on <html>.
+   ========================================================================= */
+
+[data-wt-high-contrast="true"] {
+  /* --- Month Calendar Component --- */
+  --wt-month-calendar-bg: #fff;
+  --wt-month-calendar-border: #000;
+  --wt-month-calendar-day-bg: #fff;
+  --wt-month-calendar-day-other: #e0e0e0;
+  --wt-month-calendar-day-other-text: #595959; /* 7:1 on #e0e0e0 */
+  --wt-month-calendar-day-weekend: #fff8f8;
+  --wt-month-calendar-event-bg: #cce0ff;
+  --wt-month-calendar-event-hover: #99c2ff;
+  --wt-month-calendar-event-text: #00264d; /* 10:1+ on #cce0ff */
+  --wt-month-calendar-weekday-text: #595959; /* 7:1 on white */
+  --wt-month-calendar-today-border: #0040b0;
+  --wt-month-calendar-today-bg: #e0ecff;
+  --wt-month-calendar-today-shadow: rgb(0 64 176 / 0.7);
+  --wt-month-calendar-focus-outline: #0040b0;
+  --wt-month-calendar-public-holiday-border: #7a5500;
+  --wt-month-calendar-public-holiday-bg: #fff0c0;
+  --wt-month-calendar-school-holiday-border: #4b0082;
+  --wt-month-calendar-school-holiday-bg: #ece0ff;
+  --wt-month-calendar-payday-border: #004d1a;
+  --wt-month-calendar-payday-bg: #d0f0dc;
+
+  /* --- Context Menu Component --- */
+  --wt-context-menu-bg: #fff;
+  --wt-context-menu-border: #000;
+  --wt-context-menu-shadow: rgba(0, 0, 0, 0.4);
+  --wt-context-menu-item-hover: #e0ecff;
+  --wt-context-menu-item-text: #000;
+
+  /* --- Shift Badge Colors --- */
+  /* All combinations meet WCAG AA 4.5:1 for normal text */
+  --wt-shift-morning: #003f8f; /* 10.1:1 with #fff */
+  --wt-shift-morning-text: #fff;
+  --wt-shift-late: #8b1a00; /* 8.8:1 with #fff */
+  --wt-shift-late-text: #fff;
+  --wt-shift-day: #7a3c00; /* 7.1:1 with #fff */
+  --wt-shift-day-text: #fff;
+  --wt-shift-night: #4b0082; /* 9.9:1 with #fff */
+  --wt-shift-night-text: #fff;
+  --wt-shift-off: #3d3d3d; /* 9.7:1 with #fff */
+  --wt-shift-off-text: #fff;
+
+  /* --- Bootstrap overrides for better contrast --- */
+  --bs-body-color: #000;
+  --bs-body-bg: #fff;
+  --bs-secondary-color: #595959;
+  --bs-border-color: #595959;
+  --bs-link-color: #0040b0;
+  --bs-link-hover-color: #002880;
+
+  /* Stronger focus ring in high contrast */
+  --bs-focus-ring-color: #0040b0;
+
+  /* --- Team Calendar Grid --- */
+  --wt-team-cal-today: #fff0c0;
+  --wt-team-cal-weekend: #c0c0c0;
+  --wt-team-cal-available: #c0e8f0;
+  --wt-team-cal-weekend-cell: #d0d0d0;
+  --wt-team-cal-today-ring: #7a5500;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.25);
+}
+
+/* High contrast + dark mode combination */
+[data-bs-theme="dark"][data-wt-high-contrast="true"] {
+  /* --- Month Calendar Component --- */
+  --wt-month-calendar-bg: #0a0a0a;
+  --wt-month-calendar-border: #fff;
+  --wt-month-calendar-day-bg: #0a0a0a;
+  --wt-month-calendar-day-other: #1a1a1a;
+  --wt-month-calendar-day-other-text: #a0a0a0; /* 7:1 on #0a0a0a */
+  --wt-month-calendar-day-weekend: #0f0a0a;
+  --wt-month-calendar-event-bg: #001a40;
+  --wt-month-calendar-event-hover: #002a66;
+  --wt-month-calendar-event-text: #99c2ff; /* 7:1 on #001a40 */
+  --wt-month-calendar-weekday-text: #c0c0c0; /* 9.4:1 on #0a0a0a */
+  --wt-month-calendar-today-border: #80aaff;
+  --wt-month-calendar-today-bg: #001a33;
+  --wt-month-calendar-today-shadow: rgb(128 170 255 / 0.8);
+  --wt-month-calendar-focus-outline: #80aaff;
+  --wt-month-calendar-public-holiday-border: #ffd966;
+  --wt-month-calendar-public-holiday-bg: rgba(255, 217, 102, 0.2);
+  --wt-month-calendar-school-holiday-border: #c099ff;
+  --wt-month-calendar-school-holiday-bg: rgba(192, 153, 255, 0.2);
+  --wt-month-calendar-payday-border: #66cc88;
+  --wt-month-calendar-payday-bg: rgba(102, 204, 136, 0.2);
+
+  /* --- Context Menu Component --- */
+  --wt-context-menu-bg: #0a0a0a;
+  --wt-context-menu-border: #fff;
+  --wt-context-menu-shadow: rgba(255, 255, 255, 0.2);
+  --wt-context-menu-item-hover: #001a40;
+  --wt-context-menu-item-text: #fff;
+
+  /* --- Shift Badge Colors (dark + high contrast) --- */
+  --wt-shift-morning: #80aaff; /* 7.3:1 on #0a0a0a */
+  --wt-shift-morning-text: #000;
+  --wt-shift-late: #ff8c66; /* 5.7:1 on #0a0a0a */
+  --wt-shift-late-text: #000;
+  --wt-shift-day: #ffaa44; /* 6.5:1 on #0a0a0a */
+  --wt-shift-day-text: #000;
+  --wt-shift-night: #c099ff; /* 6.7:1 on #0a0a0a */
+  --wt-shift-night-text: #000;
+  --wt-shift-off: #c0c0c0; /* 9.4:1 on #0a0a0a */
+  --wt-shift-off-text: #000;
+
+  /* --- Bootstrap overrides --- */
+  --bs-body-color: #fff;
+  --bs-body-bg: #0a0a0a;
+  --bs-secondary-color: #c0c0c0;
+  --bs-border-color: #c0c0c0;
+  --bs-link-color: #80aaff;
+  --bs-link-hover-color: #aaccff;
+  --bs-focus-ring-color: #80aaff;
+
+  /* --- Team Calendar Grid --- */
+  --wt-team-cal-today: rgba(255, 217, 102, 0.35);
+  --wt-team-cal-weekend: #2a2a2a;
+  --wt-team-cal-available: #003344;
+  --wt-team-cal-weekend-cell: #222;
+  --wt-team-cal-today-ring: #ffd966;
+
+  /* --- Time Off Calendar Highlighting --- */
+  --wt-calendar-time-off-bg: rgba(255, 193, 7, 0.3);
+}

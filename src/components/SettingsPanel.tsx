@@ -8,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
+import { useAccessibility, FONT_SCALE_OPTIONS, type FontScale } from "../contexts/AccessibilityContext";
 import { useToast } from "../contexts/ToastContext";
 import { type CountryCode } from "../types/countries";
 import { CountrySelect } from "./shared/CountrySelect";
@@ -106,6 +107,9 @@ export function SettingsPanel({
     updateOfficeCountry,
     resetSettings,
   } = useSettings();
+
+  const { accessibility, updateHighContrast, updateFontScale, updateReducedMotion } =
+    useAccessibility();
 
   const handleChangelogClick = () => {
     setShowChangelog(true);
@@ -389,6 +393,98 @@ export function SettingsPanel({
                         NL
                       </Button>
                     </ButtonGroup>
+                  </div>
+                </ListGroup.Item>
+              </ListGroup>
+            </div>
+          </div>
+
+          {/* Accessibility Section */}
+          <div className="border-bottom">
+            <div className="p-3">
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-universal-access me-2"></i>
+                {m.accessibility_title()}
+              </h6>
+              <ListGroup variant="flush">
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">{m.accessibility_high_contrast_label()}</div>
+                      <small className="text-muted">
+                        {m.accessibility_high_contrast_description()}
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-high-contrast"
+                      checked={accessibility.highContrast}
+                      onChange={(event) => updateHighContrast(event.target.checked)}
+                      aria-label={m.accessibility_high_contrast_label()}
+                    />
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">{m.accessibility_font_scale_label()}</div>
+                      <small className="text-muted">
+                        {m.accessibility_font_scale_description()}
+                      </small>
+                    </div>
+                    <ButtonGroup size="sm" aria-label={m.accessibility_font_scale_label()}>
+                      {FONT_SCALE_OPTIONS.map((scale) => {
+                        const ariaLabels: Record<number, string> = {
+                          0.75: m.accessibility_font_scale_small_aria(),
+                          1: m.accessibility_font_scale_default_aria(),
+                          1.25: m.accessibility_font_scale_large_aria(),
+                          1.5: m.accessibility_font_scale_xlarge_aria(),
+                        };
+                        const labels: Record<number, string> = {
+                          0.75: m.accessibility_font_scale_small(),
+                          1: m.accessibility_font_scale_default(),
+                          1.25: m.accessibility_font_scale_large(),
+                          1.5: m.accessibility_font_scale_xlarge(),
+                        };
+                        const fontSizes: Record<number, string> = {
+                          0.75: "0.7rem",
+                          1: "0.875rem",
+                          1.25: "1rem",
+                          1.5: "1.2rem",
+                        };
+                        return (
+                          <Button
+                            key={scale}
+                            variant={
+                              accessibility.fontScale === scale ? "primary" : "outline-secondary"
+                            }
+                            aria-pressed={accessibility.fontScale === scale}
+                            aria-label={ariaLabels[scale]}
+                            onClick={() => updateFontScale(scale as FontScale)}
+                            style={{ fontSize: fontSizes[scale], fontWeight: "bold" }}
+                          >
+                            {labels[scale]}
+                          </Button>
+                        );
+                      })}
+                    </ButtonGroup>
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-medium">{m.accessibility_reduced_motion_label()}</div>
+                      <small className="text-muted">
+                        {m.accessibility_reduced_motion_description()}
+                      </small>
+                    </div>
+                    <Form.Check
+                      type="switch"
+                      id="toggle-reduced-motion"
+                      checked={accessibility.reducedMotion}
+                      onChange={(event) => updateReducedMotion(event.target.checked)}
+                      aria-label={m.accessibility_reduced_motion_label()}
+                    />
                   </div>
                 </ListGroup.Item>
               </ListGroup>
