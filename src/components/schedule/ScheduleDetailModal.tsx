@@ -1,13 +1,15 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
+import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import { ShiftBadge } from "../shared/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "../../data/rosters";
@@ -68,6 +70,79 @@ interface ScheduleDetailModalProps {
   onHide: () => void;
   teamNumber: number;
   scheduleType: ScheduleOption;
+}
+
+/**
+ * Format a time (fractional hours) as an iCal datetime string component (HHMMSS).
+ */
+function formatIcsTime(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}00`;
+}
+
+/**
+ * Generate and download a 7-day .ics calendar file for the given week schedule.
+ */
+function exportToIcs(
+  weekSchedule: Array<{
+    date: ReturnType<typeof dayjs>;
+    shift: { code: ShiftCode; start: number | null; end: number | null; name: string };
+    isToday: boolean;
+    isTomorrow: boolean;
+  }>,
+  filename: string,
+): void {
+  const now = dayjs().format("YYYYMMDDTHHmmss");
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Worktime//Schedule Export//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ];
+
+  for (const day of weekSchedule) {
+    if (day.shift.code === "O" || day.shift.start === null || day.shift.end === null) {
+      continue;
+    }
+
+    const dateStr = day.date.format("YYYYMMDD");
+    const dtStart = `${dateStr}T${formatIcsTime(day.shift.start)}`;
+    let dtEnd: string;
+    if (day.shift.end <= day.shift.start) {
+      // Night shift spans midnight — end is next day
+      const nextDay = day.date.add(1, "day").format("YYYYMMDD");
+      dtEnd = `${nextDay}T${formatIcsTime(day.shift.end)}`;
+    } else {
+      dtEnd = `${dateStr}T${formatIcsTime(day.shift.end)}`;
+    }
+
+    const uid = `worktime-${dateStr}-${day.shift.code}@worktime`;
+
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${now}`,
+      `DTSTART;TZID=Europe/Brussels:${dtStart}`,
+      `DTEND;TZID=Europe/Brussels:${dtEnd}`,
+      `SUMMARY:${day.shift.name} Shift`,
+      "END:VEVENT",
+    );
+  }
+
+  lines.push("END:VCALENDAR");
+
+  const icsContent = lines.join("\r\n");
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${filename}.ics`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -166,6 +241,18 @@ export function ScheduleDetailModal({
   const currentStatus = weekSchedule[0]!;
   const nextShift = weekSchedule.find((day) => day.shift.code !== "O" && !day.isToday);
 
+  // Handler for iCal export
+  const handleExportIcs = useCallback(() => {
+    exportToIcs(weekSchedule, "worktime-schedule");
+  }, [weekSchedule]);
+
+  // Available shift types (excluding off days) with time info
+  const availableShifts = useMemo(() => {
+    return (Object.entries(scheduleConfig.shiftConfig.shiftTimes) as [ShiftCode, (typeof scheduleConfig.shiftConfig.shiftTimes)[ShiftCode]][])
+      .filter(([code]) => code !== "O")
+      .map(([code, def]) => ({ code, def }));
+  }, [scheduleConfig.shiftConfig.shiftTimes]);
+
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header closeButton>
@@ -213,6 +300,76 @@ export function ScheduleDetailModal({
                 </div>
               )}
             </div>
+          </Card.Body>
+        </Card>
+
+        {/* Team Information Section */}
+        <Card className="mb-4">
+          <Card.Body>
+            <h6 className="mb-3">
+              <i className="bi bi-info-circle me-2"></i>
+              {m.schedule_team_info_heading()}
+            </h6>
+            <Row className="g-3">
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_team_info_type()}</small>
+                <span className="fw-semibold">{scheduleConfig.title}</span>
+              </Col>
+              {hasTeams && (
+                <Col xs={6} md={3}>
+                  <small className="text-muted d-block">{m.schedule_team_info_team()}</small>
+                  <span className="fw-semibold">
+                    {m.schedule_team_info_team_of({
+                      team: String(teamNumber),
+                      total: String(teamCount),
+                    })}
+                  </span>
+                </Col>
+              )}
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_team_info_cycle()}</small>
+                <span className="fw-semibold">
+                  {m.schedule_team_info_cycle_days({
+                    days: String(scheduleConfig.shiftConfig.cycleLengthDays),
+                  })}
+                </span>
+              </Col>
+              <Col xs={6} md={3}>
+                <small className="text-muted d-block">{m.schedule_team_info_shifts_per_day()}</small>
+                <span className="fw-semibold">{scheduleConfig.shiftConfig.shiftsPerDay}</span>
+              </Col>
+              <Col xs={12}>
+                <small className="text-muted d-block mb-1">
+                  {m.schedule_team_info_available_shifts()}
+                </small>
+                <div className="d-flex flex-wrap gap-2">
+                  {availableShifts.map(({ code, def }) => {
+                    const meta = SHIFT_DISPLAY_META[code] ?? {
+                      icon: "bi bi-circle",
+                      iconClassName: "text-muted",
+                      variant: "secondary",
+                    };
+                    const timeStr =
+                      def && def.start !== null && def.end !== null
+                        ? (getLocalizedShiftTime(def.start, def.end, settings.timeFormat) ?? "")
+                        : "";
+                    return (
+                      <Badge key={code} bg={meta.variant} className="fw-normal">
+                        <i className={clsx(meta.icon, "me-1")} aria-hidden="true"></i>
+                        {def?.name ?? code}
+                        {timeStr && <span className="ms-1 opacity-75">({timeStr})</span>}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </Col>
+              {scheduleConfig.description && (
+                <Col xs={12}>
+                  <small className="text-muted d-block">{m.schedule_team_info_description()}</small>
+                  <span className="text-body-secondary">{scheduleConfig.description}</span>
+                </Col>
+              )}
+            </Row>
           </Card.Body>
         </Card>
 
@@ -481,6 +638,15 @@ export function ScheduleDetailModal({
         </Row>
       </Modal.Body>
       <Modal.Footer>
+        <OverlayTrigger
+          placement="top"
+          overlay={<Tooltip>{m.schedule_export_ics_tooltip()}</Tooltip>}
+        >
+          <Button variant="outline-primary" onClick={handleExportIcs}>
+            <i className="bi bi-calendar-plus me-2" aria-hidden="true"></i>
+            {m.schedule_export_ics()}
+          </Button>
+        </OverlayTrigger>
         <Button variant="secondary" onClick={onHide}>
           {m.close()}
         </Button>

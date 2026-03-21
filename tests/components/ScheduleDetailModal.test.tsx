@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ScheduleDetailModal } from "../../src/components/schedule/ScheduleDetailModal";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
@@ -83,5 +83,60 @@ describe("ScheduleDetailModal", () => {
         <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={0} scheduleType="5-shift" />,
       ),
     ).toThrow(/Invalid team number/);
+  });
+
+  it("shows team information section with schedule details", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    expect(screen.getByText("Schedule Information")).toBeInTheDocument();
+    expect(screen.getByText("Schedule Type")).toBeInTheDocument();
+    expect(screen.getByText("9-5")).toBeInTheDocument();
+    expect(screen.getByText("Cycle Length")).toBeInTheDocument();
+    expect(screen.getByText("7 days")).toBeInTheDocument();
+    expect(screen.getByText("Shifts per Day")).toBeInTheDocument();
+    expect(screen.getByText("Available Shifts")).toBeInTheDocument();
+    expect(screen.getByText("Description")).toBeInTheDocument();
+  });
+
+  it("shows team number and count for multi-team schedules", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={2} scheduleType="5-shift" />,
+    );
+
+    expect(screen.getByText("Team")).toBeInTheDocument();
+    expect(screen.getByText("Team 2 of 5")).toBeInTheDocument();
+    expect(screen.getByText("10 days")).toBeInTheDocument();
+  });
+
+  it("renders export to calendar button", () => {
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    expect(screen.getByRole("button", { name: /Export to Calendar/i })).toBeInTheDocument();
+  });
+
+  it("triggers .ics download when export button is clicked", () => {
+    // Mock URL APIs used by exportToIcs
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    // Prevent actual navigation during the click
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    renderWithSettings(
+      <ScheduleDetailModal show={true} onHide={() => {}} teamNumber={1} scheduleType="9-5" />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Export to Calendar/i }));
+
+    expect(createObjectURLSpy).toHaveBeenCalledOnce();
+    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(revokeObjectURLSpy).toHaveBeenCalledOnce();
+
+    createObjectURLSpy.mockRestore();
+    revokeObjectURLSpy.mockRestore();
+    clickSpy.mockRestore();
   });
 });
