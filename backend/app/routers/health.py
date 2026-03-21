@@ -70,14 +70,7 @@ async def health_check() -> JSONResponse:
         )
 
 
-@router.get("/healthz")
-async def healthz_alias() -> JSONResponse:
-    """Kubernetes-compatible health check alias.
-    
-    This endpoint is an alias for /v1/health to support Kubernetes
-    health check conventions.
-    
-    Returns:
-        Same as /v1/health endpoint
-    """
+@router.get("/health")
+async def health() -> JSONResponse:
+    """Simple health-check endpoint used by the reverse proxy."""
     return await health_check()
