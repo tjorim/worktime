@@ -147,7 +147,12 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         logger.debug("Using serialized events")
     else:
         # Raw text is written directly when request.raw is provided
-        assert request.raw is not None
+        if request.raw is None:
+            logger.error("PUT request reached raw write branch without raw content")
+            raise HTTPException(
+                status_code=422,
+                detail="Either 'raw' or 'events' must be provided"
+            )
         content = request.raw
         logger.debug("Using raw content")
     

@@ -43,6 +43,6 @@ uv run uvicorn app.main:app --reload
 
 ## More Details
 
-- [backend/README.md](C:/Users/tiele/Offline/Git/worktime/backend/README.md) for backend architecture, API surface, and deployment
+- [backend/README.md](backend/README.md) for backend architecture, API surface, and deployment
 - `frontend/` for the web app source
 - `examples/` for sample `.hday` and share-style data

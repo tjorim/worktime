@@ -7,6 +7,7 @@ member lists, and aggregating .hday data across all team members.
 import logging
 import os
 import re
+import warnings
 from pathlib import Path
 
 from app.cache.store import get_cache
@@ -544,8 +545,7 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 
 def read_team_hday_files(
-    members_or_team_id: list[TeamMember] | str,
-    maybe_members: list[TeamMember] | bool | None = None,
+    members: list[TeamMember],
     parse_events: bool = True,
 ) -> list[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
@@ -556,14 +556,8 @@ def read_team_hday_files(
     empty events list, and None for etag. Continues processing other members 
     even if individual files are missing.
     
-    Supports both the current signature `read_team_hday_files(members, parse_events=...)`
-    and the legacy signature `read_team_hday_files(team_id, members, parse_events=...)`.
-    The legacy team_id argument is ignored because member .hday files live in the share root.
-
     Args:
-        members_or_team_id: Either the member list or a legacy team_id string.
-        maybe_members: Either the member list for the legacy signature or, for older
-            call sites, a boolean parse_events flag used with the current signature.
+        members: Team members whose `.hday` files should be read from the share root.
         parse_events: Whether to parse .hday content into events for the returned data.
                      When False, returned TeamMemberHdayData objects will have events=[]
                      (no per-call event parsing), but the implementation may still parse
@@ -574,13 +568,6 @@ def read_team_hday_files(
         List of TeamMemberHdayData objects with .hday data (parsed or unparsed)
     """
     cache = get_cache()
-
-    if isinstance(members_or_team_id, str):
-        members = maybe_members if isinstance(maybe_members, list) else []
-    else:
-        members = members_or_team_id
-        if isinstance(maybe_members, bool):
-            parse_events = maybe_members
     
     # Get share directory - .hday files are in the share root
     share_dir = settings.get_share_dir_path()
@@ -709,3 +696,23 @@ def read_team_hday_files(
 
     logger.info(f"Successfully processed .hday files for {len(member_data)} team members")
     return member_data
+
+
+def read_team_hday_files_legacy(
+    team_id: str,
+    members: list[TeamMember],
+    parse_events: bool = True,
+) -> list[TeamMemberHdayData]:
+    """Deprecated adapter for the old `read_team_hday_files(team_id, members)` signature."""
+    if not isinstance(team_id, str):
+        raise TypeError("team_id must be a string")
+    if not isinstance(members, list):
+        raise TypeError("members must be a list[TeamMember]")
+
+    warnings.warn(
+        "read_team_hday_files(team_id, members, ...) is deprecated; "
+        "use read_team_hday_files(members, ...) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return read_team_hday_files(members, parse_events=parse_events)

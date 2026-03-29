@@ -8,6 +8,7 @@ import jwt
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from app.cache.store import get_cache
@@ -33,6 +34,13 @@ async def test_db() -> AsyncGenerator[AsyncEngine, None]:
         "sqlite+aiosqlite://",
         connect_args={"check_same_thread": False},
     )
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragmas(dbapi_conn, _):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     try:

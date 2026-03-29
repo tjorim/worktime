@@ -8,7 +8,7 @@ from datetime import time as dt_time
 from typing import Any, Literal
 
 import pycountry
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
@@ -196,6 +196,12 @@ class GanttTaskCreate(BaseModel):
     dependencies: str | None = None
     notes: str | None = None
 
+    @model_validator(mode="after")
+    def validate_date_range(self) -> GanttTaskCreate:
+        if self.end_date < self.start_date:
+            raise ValueError("end_date cannot be earlier than start_date")
+        return self
+
 
 class GanttTaskRead(BaseModel):
     id: str
@@ -216,6 +222,16 @@ class GanttTaskUpdate(BaseModel):
     progress: int | None = Field(default=None, ge=0, le=100)
     dependencies: str | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> GanttTaskUpdate:
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.end_date < self.start_date
+        ):
+            raise ValueError("end_date cannot be earlier than start_date")
+        return self
 
 
 class GanttTaskListResponse(ListResponse[GanttTaskRead]):

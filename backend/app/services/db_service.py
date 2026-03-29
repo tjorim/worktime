@@ -151,7 +151,6 @@ async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) 
 async def delete_user(session: AsyncSession, user_id: int) -> None:
     user = await get_user(session, user_id)
 
-    await session.execute(delete(GanttTask).where(GanttTask.user_id == user_id))
     await session.execute(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
     await session.execute(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
     await session.execute(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))

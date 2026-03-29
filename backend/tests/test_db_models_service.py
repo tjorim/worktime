@@ -21,6 +21,7 @@ from app.schemas import (
     UserUpdate,
     WorkLocationCreate,
     GanttTaskCreate,
+    GanttTaskUpdate,
 )
 from app.services.db_service import (
     ConflictError,
@@ -41,6 +42,7 @@ from app.services.db_service import (
     get_template,
     list_users,
     list_tasks,
+    update_gantt_task,
     update_task,
     update_user,
 )
@@ -63,6 +65,20 @@ def test_schema_validates_color_and_country_code() -> None:
         WorkLocationCreate(
             date=date(2026, 2, 26),
             country_code="ZZ",
+        )
+
+    with pytest.raises(PydanticValidationError, match="end_date cannot be earlier than start_date"):
+        GanttTaskCreate(
+            name="Impossible range",
+            start_date=date(2026, 3, 8),
+            end_date=date(2026, 3, 1),
+            progress=10,
+        )
+
+    with pytest.raises(PydanticValidationError, match="end_date cannot be earlier than start_date"):
+        GanttTaskUpdate(
+            start_date=date(2026, 3, 8),
+            end_date=date(2026, 3, 1),
         )
 
 
@@ -271,6 +287,58 @@ async def test_delete_user_removes_gantt_tasks(db_session: AsyncSession) -> None
 
     result = await db_session.execute(select(GanttTask).where(GanttTask.user_id == user.id))
     assert result.scalar_one_or_none() is None
+
+
+async def test_gantt_task_create_rejects_invalid_date_range(db_session: AsyncSession) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(
+            username="gantt-invalid-create",
+            display_name="Gantt Invalid Create",
+            password="test-password-1",
+        ),
+    )
+
+    with pytest.raises(ServiceValidationError, match="end_date cannot be earlier than start_date"):
+        await create_gantt_task(
+            db_session,
+            user.id,
+            GanttTaskCreate.model_construct(
+                name="Impossible range",
+                start_date=date(2026, 3, 8),
+                end_date=date(2026, 3, 1),
+                progress=10,
+            ),
+        )
+
+
+async def test_gantt_task_update_rejects_invalid_date_range(db_session: AsyncSession) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(
+            username="gantt-invalid-update",
+            display_name="Gantt Invalid Update",
+            password="test-password-1",
+        ),
+    )
+    task = await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Planning",
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+            progress=25,
+        ),
+    )
+
+    with pytest.raises(ServiceValidationError, match="end_date cannot be earlier than start_date"):
+        await update_gantt_task(
+            db_session,
+            user.id,
+            task.id,
+            GanttTaskUpdate.model_construct(start_date=date(2026, 3, 10)),
+        )
 
 
 def test_template_time_types_can_be_constructed() -> None:
