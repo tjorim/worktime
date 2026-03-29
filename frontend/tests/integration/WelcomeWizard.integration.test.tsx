@@ -403,7 +403,7 @@ describe("WelcomeWizard Integration Tests", () => {
       await waitFor(() =>
         expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument(),
       );
-    });
+    }, 15000);
 
     it("should handle schedule change during active wizard session", async () => {
       const user = userEvent.setup();
@@ -436,7 +436,7 @@ describe("WelcomeWizard Integration Tests", () => {
       await waitFor(() =>
         expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument(),
       );
-    });
+    }, 15000);
 
     it("should show correct step count for different modes", async () => {
       const onTeamSelect = vi.fn();

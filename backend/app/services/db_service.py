@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from pwdlib import PasswordHash
-from sqlalchemy import delete, func as sql_func, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy import func as sql_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -140,7 +141,7 @@ async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) 
 
     for field, value in data.items():
         setattr(user, field, value)
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.now(UTC)
     session.add(user)
     await session.commit()
     await session.refresh(user)

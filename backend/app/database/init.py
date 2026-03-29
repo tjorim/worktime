@@ -6,7 +6,6 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +22,7 @@ def init_db() -> None:
         return
 
     logger.info(
-        "Skipping automatic migrations because AUTO_MIGRATE=%r. Run `PYTHONPATH=. alembic -c %s upgrade head` manually to apply pending migrations.",
+        "Skipping automatic migrations because AUTO_MIGRATE=%r. Run `uv run alembic -c %s upgrade head` manually to apply pending migrations.",
         auto_migrate_value,
         alembic_ini_path,
     )

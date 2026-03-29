@@ -5,14 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.engine import get_session
 from app.routers.auth import (
     AuthenticatedPrincipal,
     get_authenticated_principal,
     require_user_or_admin_match,
 )
-from app.database.engine import get_session
 from app.schemas import UserCreate, UserListResponse, UserRead, UserUpdate
 from app.services.db_service import (
+    MAX_USER_LIST_LIMIT,
     ConflictError,
     NotFoundError,
     ValidationError,
@@ -22,7 +23,6 @@ from app.services.db_service import (
     get_user_by_username,
     list_users,
     update_user,
-    MAX_USER_LIST_LIMIT,
 )
 
 router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])

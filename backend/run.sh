@@ -7,12 +7,15 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Install dependencies if needed
-if ! python3 -c "import fastapi" 2>/dev/null; then
-    echo "Installing dependencies..."
-    pip install -r requirements.txt
+# Sync dependencies if needed
+if ! command -v uv >/dev/null 2>&1; then
+    echo "uv is required. Install it from https://docs.astral.sh/uv/."
+    exit 1
 fi
+
+echo "Syncing dependencies..."
+uv sync
 
 # Run the server
 echo "Starting Worktime Backend..."
-python3 -m uvicorn app.main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000} --reload
+uv run uvicorn app.main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000} --reload

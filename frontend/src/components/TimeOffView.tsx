@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import type { HdayEvent } from "../lib/hday/types";
-import { buildPreviewLine, normalizeEventFlags, sortEvents, toLine } from "../lib/hday/parser";
+import type { HdayEvent } from "@/lib/hday/types";
+import { normalizeEventFlags } from "@/lib/hday/flags";
+import { buildPreviewLine, toLine } from "@/lib/hday/serializer";
+import { sortEvents } from "@/lib/hday/sort";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";

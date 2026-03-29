@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import type { PublicHolidayInfo } from "../types/publicHolidays";
 import { dayjs, formatHdayDate, getISOWeekday, pad2 } from "./dateTimeUtils";
 
@@ -6,7 +7,7 @@ import type { PaydayInfo } from "../types/paydays";
 const PAYDAY_LABEL = "Payday";
 const PAYDAY_DAY_OF_MONTH = 25;
 
-const isBusinessDay = (date: dayjs.Dayjs, holidayMap: Map<string, PublicHolidayInfo>) => {
+const isBusinessDay = (date: Dayjs, holidayMap: Map<string, PublicHolidayInfo>) => {
   const isoWeekday = getISOWeekday(date);
   const isWeekend = isoWeekday === 6 || isoWeekday === 7;
   const isHoliday = holidayMap.has(formatHdayDate(date));

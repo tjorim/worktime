@@ -32,15 +32,15 @@ def test_data(share_dir):
     user_file = share_dir / f"{username}.hday"
     user_file.write_text(user_content, encoding="utf-8")
     
-    # Create team directory
+    # Create config directory with team files
     team_id = "team1"
-    team_dir = share_dir / team_id
-    team_dir.mkdir()
-    
-    config_path = team_dir / "config"
-    config_path.write_text("Test Team", encoding="utf-8")
-    
-    people_path = team_dir / "people"
+    config_dir = share_dir / "config"
+    config_dir.mkdir()
+
+    config_path = config_dir / f"{team_id}.conf"
+    config_path.write_text("groupname=Test Team\n", encoding="utf-8")
+
+    people_path = config_dir / f"{team_id}.people"
     people_path.write_text("alice, Alice Smith\nbob, Bob Jones\n", encoding="utf-8")
     
     # Create .hday files for team members
@@ -127,14 +127,14 @@ class TestDebugBenchmarkEndpoint:
     
     def test_benchmark_only_team(self, client, share_dir):
         """Test benchmark endpoint with only team, no user files."""
-        # Create team directory but no .hday files
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        
-        config_path = team_dir / "config"
-        config_path.write_text("Test Team", encoding="utf-8")
-        
-        people_path = team_dir / "people"
+        # Create team config but no .hday files
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+
+        config_path = config_dir / "team1.conf"
+        config_path.write_text("groupname=Test Team\n", encoding="utf-8")
+
+        people_path = config_dir / "team1.people"
         people_path.write_text("alice, Alice\n", encoding="utf-8")
         
         response = client.get("/v1/debug/benchmark")
@@ -149,10 +149,10 @@ class TestDebugBenchmarkEndpoint:
         user_file = share_dir / "testuser.hday"
         user_file.write_text("2025/01/15 # Test\n", encoding="utf-8")
         
-        # Create incomplete team (missing config)
-        team_dir = share_dir / "team1"
-        team_dir.mkdir()
-        people_path = team_dir / "people"
+        # Create incomplete team config (missing .conf)
+        config_dir = share_dir / "config"
+        config_dir.mkdir()
+        people_path = config_dir / "team1.people"
         people_path.write_text("alice, Alice\n", encoding="utf-8")
         
         response = client.get("/v1/debug/benchmark")

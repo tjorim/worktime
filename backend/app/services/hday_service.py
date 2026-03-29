@@ -7,13 +7,14 @@ conflict detection using etags, and proper error handling.
 import hashlib
 import logging
 import os
-from pathlib import Path
 import re
+from contextlib import suppress
+from pathlib import Path
 
 from app.cache.store import get_cache
 from app.config.settings import settings
-from app.services.hday_parser import parse_text
 from app.models.hday import HdayEvent
+from app.services.hday_parser import parse_text
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ def read_hday_file(username: str) -> tuple[str, str]:
             
             # mtime changed - fall through to re-read file
             logger.debug("Cache stale: mtime changed, re-reading file")
-        except PermissionError as e:
+        except PermissionError:
             logger.error("Permission denied checking file mtime")
             # Fall through to regular file read which will handle the error
     
@@ -312,10 +313,8 @@ def write_hday_file(
             )
             # Attach cached data to exception if available
             if current_content and not cached_events:
-                try:
+                with suppress(Exception):
                     cached_events = parse_text(current_content)
-                except Exception:
-                    pass  # Ignore parse errors in conflict path
             raise error
     else:
         # Updating existing file - must exist with matching etag
@@ -354,12 +353,10 @@ def write_hday_file(
             )
             # Parse events if not already cached
             if not cached_events and current_content:
-                try:
+                with suppress(Exception):
                     cached_events = parse_text(current_content)
-                except Exception:
-                    pass  # Ignore parse errors in conflict path
             raise HdayConflictError(
-                f"Etag mismatch - file has been modified", current_etag
+                "Etag mismatch - file has been modified", current_etag
             )
 
     # Atomic write: write to temp file, then replace

@@ -5,14 +5,14 @@ This is the Python/FastAPI backend for Worktime, serving as a bridge between the
 ## Requirements
 
 - Python 3.12+
-- pip
+- `uv`
 
 ## Installation
 
 Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Configuration
@@ -47,21 +47,21 @@ cp .env.example .env
 
 ```bash
 # Development mode (with auto-reload)
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Production mode
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Using Python directly
 
 ```bash
-python3 -m app.main
+uv run python -m app.main
 ```
 
 ## API Endpoints
 
-- **GET /healthz** - Health check endpoint (returns "OK")
+- **GET /health** - Health check endpoint
 - **GET /** - API information (title and version)
 - **GET /docs** - Interactive API documentation (Swagger UI)
 - **GET /redoc** - Alternative API documentation (ReDoc)
@@ -80,12 +80,12 @@ backend/
 │   ├── config/              # Configuration module
 │   │   ├── __init__.py
 │   │   └── settings.py      # Environment settings
-│   ├── api/                 # API route handlers
+│   ├── routers/             # API route handlers
 │   ├── services/            # Business logic
 │   └── audit/               # Audit logging
 ├── data/
 │   └── hday_files/          # .hday files (created automatically)
-├── requirements.txt         # Python dependencies
+├── pyproject.toml           # Python dependencies and tool configuration
 ├── .env.example             # Example environment file
 └── run.sh                   # Quick start script
 ```
@@ -138,7 +138,7 @@ Cache:           enabled (TTL: 10s)
 Health check:
 
 ```bash
-curl http://localhost:8000/healthz
+curl http://localhost:8000/health
 ```
 
 API information:

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
+import type { Dayjs } from "dayjs";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -8,8 +9,8 @@ import Spinner from "react-bootstrap/Spinner";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import type { HdayEvent } from "../lib/hday/types";
-import { getEventColorClass } from "../lib/hday/parser";
+import type { HdayEvent } from "@/lib/hday/types";
+import { getEventColorClass } from "@/lib/hday/presentation";
 import { dayjs } from "../utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
 import { LAST_TEAM_ID_STORAGE_KEY } from "../constants/storageKeys";
@@ -41,7 +42,7 @@ interface TeamHdayResponse {
 /**
  * Check if a date has an event for a member
  */
-function getEventsForDate(member: TeamMemberHdayData, date: dayjs.Dayjs): HdayEvent[] {
+function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] {
   return member.events.filter((event) => {
     if (event.type === "range" && event.start && event.end) {
       const eventStart = dayjs(event.start.replace(/\//g, "-")); // Convert YYYY/MM/DD to YYYY-MM-DD
@@ -197,7 +198,7 @@ export function TeamScheduleView() {
 
   // Generate array of all dates in the range
   const dateRange = useMemo(() => {
-    const dates: dayjs.Dayjs[] = [];
+    const dates: Dayjs[] = [];
     let current = startMonth;
     while (current.isSameOrBefore(endMonth, "day")) {
       dates.push(current);

@@ -4,8 +4,7 @@ This module defines data models for reading and aggregating team information,
 including team membership and aggregated .hday data across all team members.
 """
 
-
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.hday import HdayEvent
 
@@ -45,9 +44,9 @@ class TeamInfoResponse(BaseModel):
     """
     
     team_id: str
-    name: str
-    sections: list[TeamSection]
-    members: list[TeamMember]  # Flat list for backward compatibility
+    name: str = ""
+    sections: list[TeamSection] = Field(default_factory=list)
+    members: list[TeamMember] = Field(default_factory=list)  # Flat list for backward compatibility
 
 
 class TeamMemberHdayData(BaseModel):
@@ -91,6 +90,6 @@ class TeamHdayResponse(BaseModel):
     """
     
     team_id: str
-    name: str
-    sections: list[TeamSectionHdayData]
-    members: list[TeamMemberHdayData]  # Flat list for backward compatibility
+    name: str = ""
+    sections: list[TeamSectionHdayData] = Field(default_factory=list)
+    members: list[TeamMemberHdayData] = Field(default_factory=list)  # Flat list for backward compatibility

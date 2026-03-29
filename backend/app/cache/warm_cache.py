@@ -6,7 +6,6 @@ startup by discovering and caching all .hday files and team configurations.
 
 import hashlib
 import logging
-import re
 from pathlib import Path
 
 from app.cache.store import get_cache

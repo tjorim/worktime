@@ -7,12 +7,12 @@ which are human-readable text files for managing time-off events.
 import logging
 import re
 
-from app.models.hday import HdayEvent
+from app.models.hday import Flag, HdayEvent
 
 logger = logging.getLogger(__name__)
 
 # Character to flag mapping
-PREFIX_MAP = {
+PREFIX_MAP: dict[str, Flag] = {
     "a": "half_am",
     "p": "half_pm",
     "b": "business",
@@ -31,7 +31,15 @@ PREFIX_MAP = {
 REV_MAP = {v: k for k, v in PREFIX_MAP.items()}
 
 # Type flags that determine event category (mutually exclusive)
-TYPE_FLAGS = ("business", "weekend", "birthday", "ill", "in", "course", "other")
+TYPE_FLAGS: tuple[Flag, ...] = (
+    "business",
+    "weekend",
+    "birthday",
+    "ill",
+    "in",
+    "course",
+    "other",
+)
 
 # Regex patterns for parsing
 RE_RANGE = re.compile(
@@ -55,7 +63,7 @@ def normalize_hday_date(value: str) -> str:
     return f"{year}/{month.zfill(2)}/{day.zfill(2)}"
 
 
-def normalize_flags(flags: list[str]) -> list[str]:
+def normalize_flags(flags: list[Flag]) -> list[Flag]:
     """Enforce mutual exclusivity of time/location flags and type flags.
     
     Only keeps the first flag found in each category.
@@ -66,7 +74,7 @@ def normalize_flags(flags: list[str]) -> list[str]:
     Returns:
         Normalized list with mutual exclusivity enforced
     """
-    normalized = list(flags)
+    normalized: list[Flag] = list(flags)
 
     # Enforce mutual exclusivity of time/location flags
     time_location_flags = ["half_am", "half_pm", "onsite", "no_fly", "can_fly"]

@@ -5,7 +5,7 @@ components including share directory accessibility.
 """
 
 import logging
-from pathlib import Path
+
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
@@ -56,7 +56,7 @@ async def health_check() -> JSONResponse:
             status_code=status.HTTP_200_OK,
             content={"status": "ok", "share": "accessible"}
         )
-    except PermissionError as e:
+    except PermissionError:
         logger.error(f"Health check failed: Permission denied for SHARE_DIR: {share_path}")
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -73,4 +73,10 @@ async def health_check() -> JSONResponse:
 @router.get("/health")
 async def health() -> JSONResponse:
     """Simple health-check endpoint used by the reverse proxy."""
+    return await health_check()
+
+
+@router.get("/healthz")
+async def healthz() -> JSONResponse:
+    """Compatibility alias for legacy health checks and test expectations."""
     return await health_check()

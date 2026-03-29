@@ -1,13 +1,12 @@
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import isoWeek from "dayjs/plugin/isoWeek";
 import isoWeeksInYear from "dayjs/plugin/isoWeeksInYear";
 import isLeapYear from "dayjs/plugin/isLeapYear";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import customParseFormat from "dayjs/plugin/customParseFormat";
 import "dayjs/locale/en-gb";
 
-// Configure dayjs with plugins and locale
 dayjs.extend(isoWeek);
 dayjs.extend(isLeapYear);
 dayjs.extend(isoWeeksInYear);
@@ -16,7 +15,6 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(customParseFormat);
 dayjs.locale("en-gb");
 
-// Export the configured dayjs instance
 export { dayjs };
 
 // Common date utility functions used across the app
@@ -41,7 +39,7 @@ export const formatDisplayDate = (date: Date): string => {
  * getISOWeekYear2Digit('2025-05-13') // "25"
  * getISOWeekYear2Digit('2024-12-30') // "25" (ISO week year can differ from calendar year at year boundaries)
  */
-export const getISOWeekYear2Digit = (date: string | Date | dayjs.Dayjs): string => {
+export const getISOWeekYear2Digit = (date: string | Date | Dayjs): string => {
   return dayjs(date).isoWeekYear().toString().slice(-2);
 };
 
@@ -54,7 +52,7 @@ export const getISOWeekYear2Digit = (date: string | Date | dayjs.Dayjs): string 
  * getISOWeek2Digit('2025-05-13') // "20" (week 20 of 2025)
  * getISOWeek2Digit('2025-01-06') // "02" (padded with zero)
  */
-export const getISOWeek2Digit = (date: string | Date | dayjs.Dayjs): string => {
+export const getISOWeek2Digit = (date: string | Date | Dayjs): string => {
   return dayjs(date).isoWeek().toString().padStart(2, "0");
 };
 
@@ -68,14 +66,14 @@ export const getISOWeek2Digit = (date: string | Date | dayjs.Dayjs): string => {
  * getISOWeekday('2025-05-13') // 2 (Tuesday)
  * getISOWeekday('2025-05-18') // 7 (Sunday)
  */
-export const getISOWeekday = (date: string | Date | dayjs.Dayjs): number => {
+export const getISOWeekday = (date: string | Date | Dayjs): number => {
   return dayjs(date).isoWeekday();
 };
 
 /**
  * Format a date as YYYY/MM/DD for .hday-style date strings.
  */
-export const formatHdayDate = (date: string | Date | dayjs.Dayjs): string => {
+export const formatHdayDate = (date: string | Date | Dayjs): string => {
   return dayjs(date).format("YYYY/MM/DD");
 };
 
@@ -114,7 +112,7 @@ export const pad2 = (value: number): string => {
  *
  * @see getShiftCode For combining this with shift types to create full shift codes
  */
-export const formatYYWWD = (date: string | Date | dayjs.Dayjs): string => {
+export const formatYYWWD = (date: string | Date | Dayjs): string => {
   const year = getISOWeekYear2Digit(date);
   const week = getISOWeek2Digit(date);
   const day = getISOWeekday(date);
@@ -133,7 +131,7 @@ export const formatYYWWD = (date: string | Date | dayjs.Dayjs): string => {
  * formatTimeByPreference(time, '12h') // "07:30 PM"
  * formatTimeByPreference(time, '24h') // "19:30"
  */
-export function formatTimeByPreference(dayjsObj: dayjs.Dayjs, timeFormat: "12h" | "24h"): string {
+export function formatTimeByPreference(dayjsObj: Dayjs, timeFormat: "12h" | "24h"): string {
   return dayjsObj.format(timeFormat === "12h" ? "hh:mm A" : "HH:mm");
 }
 
@@ -182,9 +180,9 @@ export const splitFractionalHour = (hourValue: number): { hours: number; minutes
  * setTimeFromFractionalHour(dayjs(), 7)    // Sets time to 07:00:00
  */
 export const setTimeFromFractionalHour = (
-  date: dayjs.Dayjs,
+  date: Dayjs,
   fractionalHour: number,
-): dayjs.Dayjs => {
+): Dayjs => {
   const { hours, minutes } = splitFractionalHour(fractionalHour);
   return date.hour(hours).minute(minutes).second(0);
 };

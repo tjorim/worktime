@@ -180,19 +180,19 @@ const navigateToTeamSelection = async (user: ReturnType<typeof userEvent.setup>)
     name: /Let's Get Started/i,
   });
   await user.click(getStartedButton);
-  await waitForStep(2, 8);
+  await screen.findByRole("button", { name: /Choose a Schedule/i });
 
   // Step 2 (features) -> Step 3 (schedule selection)
   const chooseScheduleButton = screen.getByRole("button", {
     name: /Choose a Schedule/i,
   });
   await user.click(chooseScheduleButton);
-  await waitForStep(3, 8);
+  await screen.findByRole("button", { name: /5-shift/i });
 
   // Step 3 (schedule selection) -> Step 4 (team selection)
   await user.click(screen.getByRole("button", { name: /5-shift/i }));
   await user.click(screen.getByRole("button", { name: /Continue/i }));
-  await waitForStep(4, 8);
+  await screen.findByRole("heading", { name: /Choose your team/i });
 };
 
 const finishOnboardingSetup = async (user: ReturnType<typeof userEvent.setup>) => {

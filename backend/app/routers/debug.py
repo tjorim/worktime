@@ -5,9 +5,8 @@ environments for benchmarking and diagnostic purposes.
 """
 
 import logging
-from pathlib import Path
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from fastapi.responses import JSONResponse
 
 from app.models.benchmark import (
@@ -25,8 +24,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/debug", tags=["Debug"])
 
 
-@router.get("/benchmark")
-def get_benchmark() -> BenchmarkResponse:
+@router.get("/benchmark", response_model=BenchmarkResponse)
+def get_benchmark() -> BenchmarkResponse | Response:
     """Run comprehensive benchmark suite and return performance metrics.
     
     Orchestrates all benchmark measurements including:
@@ -127,7 +126,7 @@ def get_benchmark() -> BenchmarkResponse:
                 "details": "Required benchmark test data was not found or could not be accessed."
             }
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error during benchmark execution")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

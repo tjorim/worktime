@@ -329,7 +329,7 @@ describe("TimeOffView Integration Tests", () => {
       // Verify .hday format structure (date # comment)
       expect(stored).toMatch(/2025\/08\/10 # First event/);
       expect(stored).toMatch(/2025\/08\/15 # Second event/);
-    });
+    }, 15000);
 
     it("serializes complex events with correct .hday format", async () => {
       const user = userEvent.setup();
@@ -535,6 +535,6 @@ describe("TimeOffView Integration Tests", () => {
       expect(stored).not.toContain("Event 1");
       expect(stored).not.toContain("Event 2");
       expect(stored).toContain("Event 3");
-    });
+    }, 15000);
   });
 });

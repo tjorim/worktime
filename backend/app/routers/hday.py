@@ -7,13 +7,12 @@ with proper error handling, response formatting, and audit logging.
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 
 from app.audit import logger as audit
 from app.models.hday import (
     HdayConflictResponse,
-    HdayEvent,
     HdayReadResponse,
     HdayWriteRequest,
     HdayWriteResponse,
@@ -34,11 +33,11 @@ ETAG_PREVIEW_LENGTH = 16
 router = APIRouter(tags=["Hday Files"])
 
 
-@router.get("/v1/hday/{username}")
+@router.get("/v1/hday/{username}", response_model=HdayReadResponse)
 def get_hday_file(
     username: str,
     format: Literal["raw", "parsed"] = Query("raw")
-) -> HdayReadResponse:
+) -> Response:
     """Get a user's .hday file content.
     
     Retrieves the raw content and etag for conflict detection.
@@ -104,7 +103,7 @@ def get_hday_file(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No events found for user: {username}"
-        )
+        ) from None
         
     except (ShareNotAccessibleError, PermissionError) as e:
         logger.error("Share directory not accessible", exc_info=e)
@@ -114,8 +113,8 @@ def get_hday_file(
         )
 
 
-@router.put("/v1/hday/{username}")
-async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteResponse:
+@router.put("/v1/hday/{username}", response_model=HdayWriteResponse)
+async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteResponse | Response:
     """Create or update a user's .hday file.
     
     Accepts either raw .hday content or a list of events to serialize.
@@ -147,7 +146,6 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         content = hday_parser.to_text(request.events)
         logger.debug("Using serialized events")
     else:
-        # Raw text is written directly when request.raw is provided
         content = request.raw
         logger.debug("Using raw content")
     

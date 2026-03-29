@@ -3,13 +3,13 @@ import { useEffect, useMemo, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
-import type { HdayEvent } from "../../lib/hday/types";
+import type { HdayEvent } from "@/lib/hday/types";
 import { EmptyState } from "../shared/EmptyState";
 import {
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
-} from "../../lib/hday/parser";
+} from "@/lib/hday/presentation";
 import { TimeOffToolbar } from "./TimeOffToolbar";
 import { TimeOffRawView } from "./TimeOffRawView";
 import { Weekday } from "../../data/timeoffConstants";

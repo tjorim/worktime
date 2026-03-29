@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 
 import { useSettings } from "../contexts/SettingsContext";
@@ -73,7 +74,7 @@ export function useWorkLocationStorage(year: number) {
    * @returns The WorkLocationInfo for that day, or null if no location was set
    */
   const getLocationForDate = useCallback(
-    (date: dayjs.Dayjs | Date | string): WorkLocationInfo | null => {
+    (date: Dayjs | Date | string): WorkLocationInfo | null => {
       const d = dayjs(date);
       if (!d.isValid()) return null;
       const key = d.format("YYYY-MM-DD");
@@ -102,7 +103,7 @@ export function useWorkLocationStorage(year: number) {
    */
   const setLocationForDate = useCallback(
     (
-      date: dayjs.Dayjs | Date | string,
+      date: Dayjs | Date | string,
       location: WorkLocation,
       extra?: { countryCode?: string; label?: string },
     ): boolean => {
@@ -162,7 +163,7 @@ export function useWorkLocationStorage(year: number) {
    * @param date - The date to clear (YYYY-MM-DD string, Date, or Dayjs)
    */
   const clearLocationForDate = useCallback(
-    (date: dayjs.Dayjs | Date | string) => {
+    (date: Dayjs | Date | string) => {
       const d = dayjs(date);
       if (!d.isValid()) {
         console.warn("Invalid date passed to clearLocationForDate:", date);

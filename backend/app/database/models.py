@@ -1,15 +1,32 @@
 """SQLAlchemy ORM models for Worktime persistence."""
 
-from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, timezone
+from datetime import UTC
+from datetime import date as dt_date
+from datetime import datetime as dt_datetime
+from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, JSON, String, Time, func, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Time,
+    func,
+)
+from sqlalchemy import (
+    text as sql_text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 def _utc_now() -> dt_datetime:
-    return dt_datetime.now(timezone.utc)
+    return dt_datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
@@ -23,7 +40,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, index=True, unique=True)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("0"))
     hashed_password: Mapped[str] = mapped_column(String)
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -60,8 +77,8 @@ class TimeTrackingLabel(Base):
             "user_id",
             "name",
             unique=True,
-            sqlite_where=text("deleted_at IS NULL"),
-            postgresql_where=text("deleted_at IS NULL"),
+            sqlite_where=sql_text("deleted_at IS NULL"),
+            postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )
 
@@ -81,7 +98,7 @@ class TimeTrackingTask(Base):
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
     stop_time: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
+    includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("0"))
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
@@ -143,8 +160,8 @@ class WorkLocation(Base):
             "user_id",
             "date",
             unique=True,
-            sqlite_where=text("deleted_at IS NULL"),
-            postgresql_where=text("deleted_at IS NULL"),
+            sqlite_where=sql_text("deleted_at IS NULL"),
+            postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )
 
@@ -161,7 +178,7 @@ class GanttTask(Base):
     name: Mapped[str] = mapped_column(String)
     start_date: Mapped[dt_date] = mapped_column(Date)
     end_date: Mapped[dt_date] = mapped_column(Date)
-    progress: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    progress: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     dependencies: Mapped[str | None] = mapped_column(String, nullable=True)
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[dt_datetime] = mapped_column(

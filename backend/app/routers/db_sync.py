@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.routers.auth import get_authenticated_user_id
 from app.database.engine import get_session
+from app.routers.auth import get_authenticated_user_id
 from app.schemas import (
     SyncPullResponse,
     SyncPushRequest,
@@ -22,7 +22,7 @@ from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/v1/db/sync", tags=["Database Sync"])
 
-_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 @router.post("/push", response_model=SyncPushResponse, status_code=status.HTTP_200_OK)

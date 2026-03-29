@@ -5,8 +5,10 @@ settings with sensible defaults for development and production environments.
 """
 
 import logging
+import os
 from pathlib import Path
 
+from dotenv import dotenv_values
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,6 +16,34 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
 ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
+
+
+def _expand_config_path(value: str) -> Path:
+    """Expand user-home shorthand predictably across platforms.
+
+    Windows does not always honor ``HOME`` in ``Path.expanduser()`` the way the
+    tests expect, so prefer explicit environment variables before falling back
+    to the standard implementation.
+    """
+    stripped = value.strip()
+    if stripped.startswith("~"):
+        home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+        if home:
+            if len(stripped) == 1:
+                return Path(home)
+            if len(stripped) > 1 and stripped[1] in ("/", "\\"):
+                return Path(home) / stripped[2:]
+    return Path(stripped).expanduser()
+
+
+def _load_runtime_settings() -> "Settings":
+    """Build the runtime settings singleton with `.env` values overlaid by real env vars."""
+    env_values = {
+        key: value
+        for key, value in dotenv_values(".env").items()
+        if value is not None
+    }
+    return Settings.model_validate_strings({**env_values, **os.environ})
 
 
 class Settings(BaseSettings):
@@ -24,10 +54,10 @@ class Settings(BaseSettings):
     """
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=None,
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"
+        extra="allow"
     )
     
     # File storage configuration
@@ -114,7 +144,7 @@ class Settings(BaseSettings):
         if not v or not v.strip():
             raise ValueError("DATABASE_PATH cannot be empty")
 
-        db_path = Path(v).expanduser().resolve()
+        db_path = _expand_config_path(v).resolve()
         parent = db_path.parent
 
         try:
@@ -211,8 +241,9 @@ class Settings(BaseSettings):
         logger.info("=" * 60)
 
 
-# Global settings instance
-settings = Settings()
+# Global settings instance used by the running application.
+# Tests can still construct bare Settings() objects without implicitly loading .env.
+settings = _load_runtime_settings()
 
 # Initialize share directory on module load
 settings.ensure_share_dir_exists()

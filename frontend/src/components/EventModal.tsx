@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
-import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
-import { getEventTypeLabel } from "../lib/hday/parser";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
+import { getEventTypeLabel } from "@/lib/hday/presentation";
 import { getWeekdayName } from "../utils/dateTimeUtils";
 import * as m from "../paraglide/messages.js";
 

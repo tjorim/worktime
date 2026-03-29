@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import { dayjs, getWeekdayName } from "../../utils/dateTimeUtils";
@@ -11,25 +12,25 @@ import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
 interface MonthCalendarProps {
   events: HdayEvent[];
-  month: dayjs.Dayjs;
+  month: Dayjs;
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
   paydayMap?: Map<string, PaydayInfo>;
   workLocationMap?: WorkLocationMap;
-  onMonthChange: (month: dayjs.Dayjs) => void;
-  onAddEvent: (date: dayjs.Dayjs) => void;
+  onMonthChange: (month: Dayjs) => void;
+  onAddEvent: (date: Dayjs) => void;
   onViewEvent: (index: number) => void;
   onEditEvent: (index: number) => void;
   onDeleteEvent?: (index: number) => void;
-  onSetWorkLocation?: (date: dayjs.Dayjs, location: WorkLocation | null) => void;
-  onSetOtherLocation?: (date: dayjs.Dayjs) => void;
+  onSetWorkLocation?: (date: Dayjs, location: WorkLocation | null) => void;
+  onSetOtherLocation?: (date: Dayjs) => void;
   allowEventActions?: boolean;
   showHomeLocationAction?: boolean;
   showOfficeLocationAction?: boolean;
   showOtherLocationAction?: boolean;
   // Optional: Provide shift calculation function to show working schedule
   getShiftForDate?: (
-    date: dayjs.Dayjs,
+    date: Dayjs,
   ) => { code: string; label: string; isWorking: boolean } | undefined;
 }
 
@@ -54,10 +55,10 @@ const parseHdayDate = (value?: string) => {
  * @param month - The target month as a dayjs object
  * @returns An array of dayjs objects representing all days to display in the grid
  */
-const buildCalendarDays = (month: dayjs.Dayjs) => {
+const buildCalendarDays = (month: Dayjs) => {
   const start = month.startOf("month").startOf("week");
   const end = month.endOf("month").endOf("week");
-  const days: dayjs.Dayjs[] = [];
+  const days: Dayjs[] = [];
   let current = start;
   while (current.isSameOrBefore(end, "day")) {
     days.push(current);
@@ -189,7 +190,7 @@ export function MonthCalendar({
     type: "day" | "event";
     x: number;
     y: number;
-    date?: dayjs.Dayjs;
+    date?: Dayjs;
     eventIndex?: number;
   } | null>(null);
 
@@ -208,7 +209,7 @@ export function MonthCalendar({
     const visibleEnd = days[days.length - 1]!;
     const dayKeys = new Set(days.map((day) => day.format(DAY_FORMAT)));
 
-    const addEvent = (date: dayjs.Dayjs, entry: DayEvent) => {
+    const addEvent = (date: Dayjs, entry: DayEvent) => {
       const key = date.format(DAY_FORMAT);
       if (!dayKeys.has(key)) return;
       const list = map.get(key) ?? [];
@@ -232,7 +233,7 @@ export function MonthCalendar({
           return;
         }
 
-        let current: dayjs.Dayjs = rangeStart;
+        let current: Dayjs = rangeStart;
         while (current.isSameOrBefore(rangeEnd, "day")) {
           addEvent(current, { event, index });
           current = current.add(1, "day");
@@ -264,7 +265,7 @@ export function MonthCalendar({
 
   // Context menu handlers — capture the triggering element for focus return
   const handleDayContextMenu = useCallback(
-    (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => {
+    (date: Dayjs, x: number, y: number, el: HTMLElement | null) => {
       // Use the actual triggering element for focus return
       triggerRef.current = el;
       setContextMenu({ type: "day", x, y, date });
@@ -288,7 +289,7 @@ export function MonthCalendar({
 
   // Wrap callbacks to close context menu when actions are taken
   const handleAddEventWrapper = useCallback(
-    (date: dayjs.Dayjs) => {
+    (date: Dayjs) => {
       handleCloseContextMenu();
       onAddEvent(date);
     },
@@ -408,7 +409,7 @@ export function MonthCalendar({
 
   // Split days into rows of 7 for ARIA grid row structure
   const rows = useMemo(() => {
-    const result: dayjs.Dayjs[][] = [];
+    const result: Dayjs[][] = [];
     for (let i = 0; i < days.length; i += 7) {
       result.push(days.slice(i, i + 7));
     }
