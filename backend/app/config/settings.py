@@ -31,9 +31,8 @@ def _expand_config_path(value: str) -> Path:
         if home:
             if len(stripped) == 1:
                 return Path(home)
-            if stripped[1] in ("/", "\\"):
+            if len(stripped) > 1 and stripped[1] in ("/", "\\"):
                 return Path(home) / stripped[2:]
-            return Path(home)
     return Path(stripped).expanduser()
 
 

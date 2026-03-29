@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -42,12 +43,12 @@ type DailyTaskListProps = {
   onRemoveTask: (id: string) => void;
   onToggleBreak: (taskId: string, includesBreak: boolean) => void;
   /** Live current time, used to render the "Now" indicator. */
-  liveTime?: dayjs.Dayjs;
+  liveTime?: Dayjs;
   /** Whether the selected date is today. */
   isToday?: boolean;
 };
 
-function NowIndicator({ liveTime }: { liveTime: dayjs.Dayjs }) {
+function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
   return (
     <div
       className="d-flex align-items-center gap-2 px-3 py-1"

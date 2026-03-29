@@ -63,11 +63,8 @@
  * @module lib/hday/parser
  */
 
-import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "./types";
-
-// Type flags that override the default 'holiday' flag
-const TYPE_FLAGS = ["business", "weekend", "birthday", "ill", "in", "course", "other"] as const;
-const TYPE_FLAGS_SET = new Set<string>(TYPE_FLAGS);
+import { normalizeEventFlags } from "./flags";
+import type { EventFlag, HdayEvent } from "./types";
 
 /**
  * Color constants for event backgrounds.
@@ -152,67 +149,6 @@ function parsePrefixFlags(prefix: string): EventFlag[] {
   }
 
   return normalizeEventFlags(flags);
-}
-
-/**
- * Normalises an array of event flags so it contains at most one time/location flag and at least one type flag.
- *
- * If multiple time/location flags (half_am, half_pm, onsite, no_fly, can_fly) are present, keeps the first one found in the input order and removes the others. If multiple type flags (business, weekend, birthday, ill, in, course, other) are present, keeps the first one found in the input order and removes the others; the `'holiday'` flag is treated as a default and is not considered when selecting the first explicit type. If no recognised type flag is present after filtering, `'holiday'` is appended.
- *
- * @param flags - The event flags to normalise
- * @returns A new array of flags with mutual exclusivity enforced and `'holiday'` appended if no type flag is present; the input array is not modified.
- */
-export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
-  let normalized = [...flags];
-
-  // Enforce mutual exclusivity of time/location flags (keep first one from input)
-  const timeLocationFlags: TimeLocationFlag[] = [
-    "half_am",
-    "half_pm",
-    "onsite",
-    "no_fly",
-    "can_fly",
-  ];
-  const firstTimeLocationInInput = normalized.find((f) =>
-    timeLocationFlags.includes(f as TimeLocationFlag),
-  );
-  const foundTimeLocation = normalized.filter((f) =>
-    timeLocationFlags.includes(f as TimeLocationFlag),
-  );
-
-  if (foundTimeLocation.length > 1) {
-    // Keep only the first time/location flag from the input, remove all others
-    normalized = normalized.filter(
-      (f) => !timeLocationFlags.includes(f as TimeLocationFlag) || f === firstTimeLocationInInput,
-    );
-    console.warn(
-      `Multiple time/location flags found (${foundTimeLocation.join(", ")}). ` +
-        `Keeping first from input: ${firstTimeLocationInInput}`,
-    );
-  }
-
-  // Enforce mutual exclusivity of type flags (keep first one from input)
-  // Exclude 'holiday' as it's the default fallback
-  const typeFlags: TypeFlag[] = ["business", "weekend", "birthday", "ill", "in", "course", "other"];
-  const firstTypeInInput = normalized.find((f) => typeFlags.includes(f as TypeFlag));
-  const foundTypes = normalized.filter((f) => typeFlags.includes(f as TypeFlag));
-
-  if (foundTypes.length > 1) {
-    // Keep only the first type flag from the input, remove all others
-    normalized = normalized.filter(
-      (f) => !typeFlags.includes(f as TypeFlag) || f === firstTypeInInput,
-    );
-    console.warn(
-      `Multiple type flags found (${foundTypes.join(", ")}). ` +
-        `Keeping first from input: ${firstTypeInInput}`,
-    );
-  }
-
-  // Default to 'holiday' if no type flags
-  if (!normalized.some((f) => TYPE_FLAGS_SET.has(f))) {
-    return [...normalized, "holiday"];
-  }
-  return normalized;
 }
 
 /**
@@ -417,142 +353,6 @@ export function toLine(ev: Omit<HdayEvent, "raw"> | HdayEvent): string {
 
   // Fallback for completely unsupported types
   throw new Error(`Unsupported event type for serialization: ${ev.type}`);
-}
-
-/**
- * Get the hex background color for an event based on its flags.
- *
- * Determines the color from EVENT_COLORS based on the event type flag
- * (`business`, `weekend`, `birthday`, `ill`, `course`, `in`, `other`, or `holiday`).
- * When multiple type flags are present (edge case), the priority is:
- * business > weekend > birthday > ill > course > in > other > holiday.
- * Half-day status is derived from the half-day flags: exactly one of
- * `half_am` or `half_pm` means a half-day; both or neither means a full day.
- *
- * @param flags - Optional list of event flags (type and/or half-day indicators).
- * @returns The hex color string to use as the event background.
- */
-export function getEventColor(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return EVENT_COLORS.HOLIDAY_FULL;
-
-  // Only treat as half-day if exactly one half flag is present (XOR logic)
-  // Both half_am and half_pm together means a full day
-  const hasHalfDay = flags.includes("half_am") !== flags.includes("half_pm");
-
-  // Determine base color based on type flags
-  if (flags.includes("business")) {
-    return hasHalfDay ? EVENT_COLORS.BUSINESS_HALF : EVENT_COLORS.BUSINESS_FULL;
-  } else if (flags.includes("weekend")) {
-    return hasHalfDay ? EVENT_COLORS.WEEKEND_HALF : EVENT_COLORS.WEEKEND_FULL;
-  } else if (flags.includes("birthday")) {
-    return hasHalfDay ? EVENT_COLORS.BIRTHDAY_HALF : EVENT_COLORS.BIRTHDAY_FULL;
-  } else if (flags.includes("ill")) {
-    return hasHalfDay ? EVENT_COLORS.ILL_HALF : EVENT_COLORS.ILL_FULL;
-  } else if (flags.includes("course")) {
-    return hasHalfDay ? EVENT_COLORS.COURSE_HALF : EVENT_COLORS.COURSE_FULL;
-  } else if (flags.includes("in")) {
-    return hasHalfDay ? EVENT_COLORS.IN_OFFICE_HALF : EVENT_COLORS.IN_OFFICE_FULL;
-  } else if (flags.includes("other")) {
-    return hasHalfDay ? EVENT_COLORS.OTHER_HALF : EVENT_COLORS.OTHER_FULL;
-  } else {
-    // Holiday/vacation (default)
-    return hasHalfDay ? EVENT_COLORS.HOLIDAY_HALF : EVENT_COLORS.HOLIDAY_FULL;
-  }
-}
-
-/**
- * Get CSS class name for event color based on flags.
- * Returns a class name that maps to styles in main.scss.
- *
- * @param flags - Optional list of event flags
- * @param eventType - Optional event type; weekly recurring events with no explicit type flag default to the weekly-off color instead of vacation
- * @returns CSS class name (e.g., "event-holiday-full", "event-business-half")
- */
-export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
-  const isWeekly = eventType === "weekly";
-
-  if (!flags || flags.length === 0) {
-    return isWeekly ? "event-recurring-full" : "event-holiday-full";
-  }
-
-  const hasHalfDay = flags.includes("half_am") !== flags.includes("half_pm");
-  const suffix = hasHalfDay ? "half" : "full";
-
-  if (flags.includes("business")) return `event-business-${suffix}`;
-  if (flags.includes("weekend")) return `event-weekend-${suffix}`;
-  if (flags.includes("birthday")) return `event-birthday-${suffix}`;
-  if (flags.includes("ill")) return `event-ill-${suffix}`;
-  if (flags.includes("course")) return `event-course-${suffix}`;
-  if (flags.includes("in")) return `event-in-${suffix}`;
-  if (flags.includes("other")) return `event-other-${suffix}`;
-
-  // No recognized type flag found — weekly events without an explicit type default to recurring day-off
-  return isWeekly ? `event-recurring-${suffix}` : `event-holiday-${suffix}`;
-}
-
-/**
- * Get a single-character symbol that represents time or location from event flags.
- *
- * @param flags - Optional array of event flags to inspect
- * @returns `◐` for `half_am`, `◑` for `half_pm`, `W` for `onsite`, `N` for `no_fly`, `F` for `can_fly`, or an empty string if none match
- */
-export function getTimeLocationSymbol(flags?: EventFlag[]): string {
-  if (!flags) return "";
-
-  // Only one time/location flag can be present (mutually exclusive)
-  if (flags.includes("half_am")) return "◐";
-  if (flags.includes("half_pm")) return "◑";
-  if (flags.includes("onsite")) return "W";
-  if (flags.includes("no_fly")) return "N";
-  if (flags.includes("can_fly")) return "F";
-
-  return "";
-}
-
-// Deprecated alias for backward compatibility
-/** @deprecated Use getTimeLocationSymbol - this function now handles all time/location flags, not just half-days */
-export const getHalfDaySymbol = getTimeLocationSymbol;
-
-/**
- * Determine the CSS class for an event based on its flags.
- *
- * @param flags - Event flags that indicate type (business, weekend, birthday, ill, course, in, other, holiday) and time-of-day (`half_am`, `half_pm`)
- * @returns A string of the form `event-{type}-{full|half}` where `type` is selected by priority (business, weekend, birthday, ill, course, in, other, holiday) and the suffix is `half` when exactly one of `half_am` or `half_pm` is present, `full` otherwise
- */
-export function getEventClass(flags?: EventFlag[]): string {
-  if (!flags || flags.length === 0) return "event-holiday-full";
-
-  const hasAm = flags.includes("half_am");
-  const hasPm = flags.includes("half_pm");
-  const half = hasAm !== hasPm ? "half" : "full";
-
-  if (flags.includes("business")) return `event-business-${half}`;
-  if (flags.includes("weekend")) return `event-weekend-${half}`;
-  if (flags.includes("birthday")) return `event-birthday-${half}`;
-  if (flags.includes("ill")) return `event-ill-${half}`;
-  if (flags.includes("course")) return `event-course-${half}`;
-  if (flags.includes("in")) return `event-in-full`;
-  if (flags.includes("other")) return `event-other-${half}`;
-  return `event-holiday-${half}`;
-}
-
-/**
- * Get a human-readable label for an event's type from its flags.
- *
- * @param flags - Optional list of event flags to inspect
- * @returns The label for the event type, for example "Business trip", "Weekend", "Birthday", "Sick leave", "Training", "In office", "Other" or "Holiday"
- */
-export function getEventTypeLabel(flags?: ReadonlyArray<EventFlag>): string {
-  if (!flags || flags.length === 0) return "Holiday";
-
-  if (flags.includes("business")) return "Business trip";
-  if (flags.includes("weekend")) return "Weekend";
-  if (flags.includes("birthday")) return "Birthday";
-  if (flags.includes("ill")) return "Sick leave";
-  if (flags.includes("course")) return "Training";
-  if (flags.includes("in")) return "In office";
-  if (flags.includes("other")) return "Other";
-  return "Holiday";
 }
 
 /**

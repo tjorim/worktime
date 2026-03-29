@@ -7,20 +7,18 @@
 // Re-export types
 export type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "./types";
 
-// Re-export parser functions
+export { parseHday } from "./parser";
+export { normalizeEventFlags } from "./flags";
 export {
-  buildPreviewLine,
   EVENT_COLORS,
   getEventClass,
   getEventColor,
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
-  normalizeEventFlags,
-  parseHday,
-  sortEvents,
-  toLine,
-} from "./parser";
+} from "./presentation";
+export { buildPreviewLine, toLine } from "./serializer";
+export { sortEvents } from "./sort";
 
 // Re-export validation functions
 export { isValidDate, parseHdayDate } from "./validation";

@@ -1,3 +1,4 @@
+import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import { dayjs } from "../../utils/dateTimeUtils";
@@ -20,7 +21,7 @@ type TimelineProgressBarProps = {
   tasks: StoredTimeTrackingTask[];
   labels: TimeTrackingLabel[];
   targetHours?: number;
-  liveTime?: dayjs.Dayjs;
+  liveTime?: Dayjs;
   /** Whether the selected date is today. Shows the Now line when true. */
   isToday?: boolean;
 };
@@ -44,7 +45,7 @@ type TaskSegment = {
 
 function calculateElapsedVisualHours(
   tasks: StoredTimeTrackingTask[],
-  liveTime: dayjs.Dayjs,
+  liveTime: Dayjs,
 ): number {
   let elapsedVisualHours = 0;
 

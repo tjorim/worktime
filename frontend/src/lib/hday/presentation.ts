@@ -82,6 +82,8 @@ export function getEventClass(flags?: EventFlag[]): string {
   const half = hasHalfDayFlag(flags) ? "half" : "full";
   const primaryType = getPrimaryTypeFlag(flags);
 
+  // "In office" intentionally ignores half-day styling in getEventClass:
+  // even when `half` is "half", the `primaryType === "in"` branch always maps to event-in-full.
   if (primaryType === "in") {
     return "event-in-full";
   }

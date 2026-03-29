@@ -1,17 +1,17 @@
+import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
-import type { HdayEvent } from "../../lib/hday/types";
+import type { HdayEvent } from "@/lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocationInfo } from "../../types/workLocation";
-import { dayjs } from "../../utils/dateTimeUtils";
 import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import {
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
-} from "../../lib/hday/parser";
+} from "@/lib/hday/presentation";
 import * as m from "../../paraglide/messages.js";
 import { getLocale } from "../../paraglide/runtime.js";
 
@@ -21,7 +21,7 @@ export type DayEvent = {
 };
 
 interface DayCellProps {
-  date: dayjs.Dayjs;
+  date: Dayjs;
   isCurrentMonth: boolean;
   isToday: boolean;
   isWeekend: boolean;
@@ -32,7 +32,7 @@ interface DayCellProps {
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
   onViewEvent: (index: number) => void;
-  onDayContextMenu?: (date: dayjs.Dayjs, x: number, y: number, el: HTMLElement | null) => void;
+  onDayContextMenu?: (date: Dayjs, x: number, y: number, el: HTMLElement | null) => void;
   onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
   /** Whether this cell is the roving-tabindex focus target */
   isFocusTarget?: boolean;

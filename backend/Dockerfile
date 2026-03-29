@@ -5,7 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY pyproject.toml uv.lock* ./
-RUN uv sync --no-dev --no-install-project
+RUN uv sync --locked --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim

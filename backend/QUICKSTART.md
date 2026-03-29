@@ -138,7 +138,7 @@ Cache:           enabled (TTL: 10s)
 Health check:
 
 ```bash
-curl http://localhost:8000/healthz
+curl http://localhost:8000/health
 ```
 
 API information:

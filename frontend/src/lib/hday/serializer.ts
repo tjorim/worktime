@@ -53,6 +53,14 @@ function serializeWeeklyEvent(event: HdayWeeklyEvent): string {
   return `d${event.weekday}${prefix}${title}`;
 }
 
+function validateWeeklyWeekday(weekday: number | undefined): number {
+  if (!Number.isInteger(weekday) || weekday === undefined || weekday < 1 || weekday > 7) {
+    throw new Error(`Weekly event missing or invalid weekday: ${weekday}. Expected an integer from 1 to 7.`);
+  }
+
+  return weekday;
+}
+
 export function toLine(event: HdayEvent): string {
   if (event.type === "unknown") {
     if (!event.raw) {
@@ -76,7 +84,7 @@ export function toLine(event: HdayEvent): string {
 
   return serializeWeeklyEvent({
     type: "weekly",
-    weekday: event.weekday ?? 0,
+    weekday: validateWeeklyWeekday(event.weekday),
     flags: event.flags,
     title: event.title,
     raw: event.raw,

@@ -7,9 +7,11 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
-import type { HdayEvent } from "../lib/hday/types";
-import { parseHday, sortEvents, toLine } from "../lib/hday/parser";
+import type { HdayEvent } from "@/lib/hday/types";
 import { hdayToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
+import { parseHday } from "@/lib/hday/parser";
+import { toLine } from "@/lib/hday/serializer";
+import { sortEvents } from "@/lib/hday/sort";
 import type { CalendarEvent } from "../lib/events/types";
 import { dayjs } from "../utils/dateTimeUtils";
 

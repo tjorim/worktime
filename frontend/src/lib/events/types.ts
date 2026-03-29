@@ -19,12 +19,9 @@ export type EventType = "shift" | "holiday" | "assignment";
  * All events (shifts, holidays, assignments) are normalized to this format
  * for consistent rendering and querying across the application.
  */
-export interface CalendarEvent {
+interface CalendarEventBase {
   /** Unique identifier (UUID v4) for React keys and references */
   id: string;
-
-  /** Event type discriminator */
-  type: EventType;
 
   /** Start date in ISO format (YYYY-MM-DD) */
   start: string;
@@ -34,10 +31,24 @@ export interface CalendarEvent {
 
   /** Display label for the event */
   label?: string;
-
-  /** Type-specific metadata for rendering and logic */
-  meta?: EventMetadata;
 }
+
+export interface ShiftEvent extends CalendarEventBase {
+  type: "shift";
+  meta: ShiftMetadata;
+}
+
+export interface HolidayEvent extends CalendarEventBase {
+  type: "holiday";
+  meta: HolidayMetadata;
+}
+
+export interface AssignmentEvent extends CalendarEventBase {
+  type: "assignment";
+  meta: AssignmentMetadata;
+}
+
+export type CalendarEvent = ShiftEvent | HolidayEvent | AssignmentEvent;
 
 /**
  * Metadata for different event types

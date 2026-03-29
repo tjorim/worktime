@@ -28,8 +28,8 @@
 import { v4 as uuidv4 } from "uuid";
 import type { ShiftResult } from "../../utils/shiftCalculations";
 import { dayjs, splitFractionalHour, pad2 } from "../../utils/dateTimeUtils";
-import type { HdayEvent } from "../hday/types";
-import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "../hday/parser";
+import type { HdayEvent } from "@/lib/hday/types";
+import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -263,11 +263,9 @@ function hdayWeeklyToCalendarEvents(
   // Generate occurrences for each matching weekday in the date range
   let current = dayjs(startDate);
   const end = dayjs(endDate);
-
-  // Find first occurrence of the target weekday
-  while (current.isoWeekday() !== event.weekday && current.isBefore(end, "day")) {
-    current = current.add(1, "day");
-  }
+  const currentDay = current.isoWeekday();
+  const daysUntilTarget = (event.weekday - currentDay + 7) % 7;
+  current = current.add(daysUntilTarget, "day");
 
   // Generate events for all occurrences
   while (current.isBefore(end, "day") || current.isSame(end, "day")) {

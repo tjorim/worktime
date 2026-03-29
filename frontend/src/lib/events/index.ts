@@ -8,11 +8,14 @@
 // Re-export types
 export type {
   AssignmentMetadata,
+  AssignmentEvent,
   CalendarEvent,
   EventMetadata,
   EventType,
   HolidayMetadata,
+  HolidayEvent,
   ShiftMetadata,
+  ShiftEvent,
 } from "./types";
 
 // Re-export converters

@@ -65,7 +65,7 @@ Only the **first** time/location flag is kept if multiple are present:
 - `a` - Half day AM
 - `p` - Half day PM
 - `w` - Onsite
-- `n` - No fly zone
+- `n` - No-fly zone
 - `f` - Can fly
 
 ## Usage

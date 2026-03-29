@@ -1,5 +1,6 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
+import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 // Read version from package.json for injection
@@ -7,6 +8,11 @@ import * as packageJson from "./package.json";
 
 export default defineConfig({
   base: "/worktime/",
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "src"),
+    },
+  },
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },

@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import reactPlugin from "@vitejs/plugin-react";
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Read version from package.json for injection in tests
@@ -21,6 +22,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      "@": resolve(__dirname, "src"),
       "frappe-gantt": fileURLToPath(new URL("tests/__mocks__/frappe-gantt.ts", import.meta.url)),
       "react-select": fileURLToPath(new URL("tests/__mocks__/react-select.tsx", import.meta.url)),
     },
