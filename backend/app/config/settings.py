@@ -18,24 +18,6 @@ DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
 ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
 
 
-def _expand_config_path(value: str) -> Path:
-    """Expand user-home shorthand predictably across platforms.
-
-    Windows does not always honor ``HOME`` in ``Path.expanduser()`` the way the
-    tests expect, so prefer explicit environment variables before falling back
-    to the standard implementation.
-    """
-    stripped = value.strip()
-    if stripped.startswith("~"):
-        home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
-        if home:
-            if len(stripped) == 1:
-                return Path(home)
-            if len(stripped) > 1 and stripped[1] in ("/", "\\"):
-                return Path(home) / stripped[2:]
-    return Path(stripped).expanduser()
-
-
 def _load_runtime_settings() -> "Settings":
     """Build the runtime settings singleton with `.env` values overlaid by real env vars."""
     env_values = {
@@ -78,7 +60,7 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
 
     # Database configuration
-    DATABASE_PATH: str = "./data/worktime.db"
+    DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
 
@@ -137,25 +119,6 @@ class Settings(BaseSettings):
             raise ValueError("JWT_ACCESS_TOKEN_EXPIRE_SECONDS must be positive")
         return v
 
-    @field_validator("DATABASE_PATH")
-    @classmethod
-    def validate_database_path(cls, v: str) -> str:
-        """Validate database path and ensure parent directory is writable/creatable."""
-        if not v or not v.strip():
-            raise ValueError("DATABASE_PATH cannot be empty")
-
-        db_path = _expand_config_path(v).resolve()
-        parent = db_path.parent
-
-        try:
-            parent.mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError) as e:
-            raise ValueError(
-                f"DATABASE_PATH parent directory cannot be created or accessed: {parent} ({e})"
-            ) from e
-
-        return str(db_path)
-    
     @model_validator(mode="after")
     def validate_production_jwt_secret(self) -> "Settings":
         """Reject insecure default JWT secret in production."""
@@ -221,7 +184,6 @@ class Settings(BaseSettings):
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
         logger.info(f"Share Directory: {self.get_share_dir_path()}")
-        logger.info(f"Database Path:   {Path(self.DATABASE_PATH).resolve()}")
         
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
@@ -237,7 +199,7 @@ class Settings(BaseSettings):
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {self.DATABASE_URL})")
         logger.info("=" * 60)
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from datetime import time as dt_time
@@ -12,6 +13,18 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
+
+def _ensure_utc(value: dt_datetime | None) -> dt_datetime | None:
+    """Return timezone-aware UTC datetime; treat naive datetimes as UTC.
+
+    Naive datetimes are assumed to be UTC and have their tzinfo set accordingly.
+    Timezone-aware datetimes are converted to UTC via ``astimezone``.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 
@@ -43,6 +56,19 @@ class UserUpdate(BaseModel):
     settings: dict[str, Any] | None = None
 
 
+def _validate_hex_color(value: str | None) -> str | None:
+    """Validate that a color value is in #RRGGBB hex format."""
+    if value is None:
+        return None
+    if not value.startswith("#") or len(value) != 7:
+        raise ValueError("color must be in #RRGGBB format")
+    try:
+        int(value[1:], 16)
+    except ValueError as error:
+        raise ValueError("color must be in #RRGGBB format") from error
+    return value.upper()
+
+
 class LabelCreate(BaseModel):
     name: str
     color: str
@@ -50,13 +76,9 @@ class LabelCreate(BaseModel):
     @field_validator("color")
     @classmethod
     def validate_hex_color(cls, value: str) -> str:
-        if not value.startswith("#") or len(value) != 7:
-            raise ValueError("color must be in #RRGGBB format")
-        try:
-            int(value[1:], 16)
-        except ValueError as error:
-            raise ValueError("color must be in #RRGGBB format") from error
-        return value.upper()
+        result = _validate_hex_color(value)
+        assert result is not None
+        return result
 
 
 class LabelRead(BaseModel):
@@ -71,7 +93,10 @@ class LabelUpdate(BaseModel):
     name: str | None = None
     color: str | None = None
 
-    _validate_hex_color = field_validator("color")(LabelCreate.validate_hex_color)
+    @field_validator("color")
+    @classmethod
+    def validate_hex_color(cls, value: str | None) -> str | None:
+        return _validate_hex_color(value)
 
 
 class TaskCreate(BaseModel):
@@ -80,6 +105,11 @@ class TaskCreate(BaseModel):
     start_time: dt_datetime
     stop_time: dt_datetime | None = None
     includes_break: bool = False
+
+    @field_validator("start_time", "stop_time", mode="after")
+    @classmethod
+    def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
+        return _ensure_utc(value)
 
 
 class TaskRead(BaseModel):
@@ -99,6 +129,11 @@ class TaskUpdate(BaseModel):
     start_time: dt_datetime | None = None
     stop_time: dt_datetime | None = None
     includes_break: bool | None = None
+
+    @field_validator("start_time", "stop_time", mode="after")
+    @classmethod
+    def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
+        return _ensure_utc(value)
 
 
 class TemplateCreate(BaseModel):

@@ -16,8 +16,8 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Data directory — mount a named volume here on the VPS to persist the DB and hday files.
-RUN mkdir -p /var/data/worktime
+# Data directory — mount a named volume here on the VPS to persist the hday files.
+RUN mkdir -p /var/data/worktime/hday_files
 
 # Run as non-root user for security hardening.
 # chown must happen BEFORE the VOLUME declaration so initial volume content
@@ -32,7 +32,7 @@ USER appuser
 
 ENV ENVIRONMENT=production
 ENV SHARE_DIR=/var/data/worktime/hday_files
-ENV DATABASE_PATH=/var/data/worktime/worktime.db
+ENV DATABASE_URL=postgresql+asyncpg://worktime:worktime@db/worktime
 
 EXPOSE 8000
 

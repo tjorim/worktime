@@ -8,7 +8,7 @@ FastAPI backend for shared `.hday` access and database-backed Worktime features.
 - Read team configuration from the shared file structure
 - Expose team and user time-off APIs
 - Provide database-backed APIs for users, time tracking, work locations, sync, and personal Gantt tasks
-- Run SQLite schema migrations with Alembic
+- Run PostgreSQL schema migrations with Alembic
 
 ## Layout
 
@@ -53,7 +53,7 @@ Important variables:
 - `HOST` / `PORT` — bind address and port
 - `SHARE_DIR` — directory containing `.hday` files and the `config/` subdirectory
 - `CACHE_ENABLED` / `CACHE_TTL` — file-cache behavior
-- `DATABASE_ENABLED` / `DATABASE_PATH` — SQLite database behavior
+- `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior
 - `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `JWT_ACCESS_TOKEN_EXPIRE_SECONDS` — auth settings for DB endpoints
 
 See `.env` and `QUICKSTART.md` for local setup details.

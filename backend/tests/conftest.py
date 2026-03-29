@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncGenerator, Callable, Generator
 
 import jwt
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 
 from app.cache.store import get_cache
 from app.config import settings
 from app.database.engine import get_session
 from app.database.models import Base
 from app.main import app
+
+_TEST_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://worktime:worktime@localhost/worktime_test",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -28,27 +33,26 @@ def reset_cache() -> Generator[None, None, None]:
     yield
 
 
-@pytest_asyncio.fixture()
-async def test_db() -> AsyncGenerator[AsyncEngine, None]:
-    """Create an isolated in-memory async SQLite engine with initialized schema."""
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragmas(dbapi_conn, _):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
+@pytest_asyncio.fixture(scope="session")
+async def _schema_engine() -> AsyncGenerator[AsyncEngine, None]:
+    """Session-scoped engine: create schema once, drop it after all tests."""
+    engine = create_async_engine(_TEST_DATABASE_URL, poolclass=NullPool)
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    try:
-        yield engine
-    finally:
-        await engine.dispose()
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture()
+async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine, None]:
+    """Per-test fixture: yields the shared engine and truncates all tables after each test."""
+    yield _schema_engine
+    async with _schema_engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
 
 
 @pytest_asyncio.fixture()

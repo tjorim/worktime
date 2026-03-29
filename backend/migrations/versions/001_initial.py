@@ -28,8 +28,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
-    with op.batch_alter_table("users") as batch_op:
-        batch_op.create_index("ix_users_username", ["username"], unique=True)
+    op.create_index("ix_users_username", "users", ["username"], unique=True)
 
     op.create_table(
         "time_tracking_labels",
@@ -41,16 +40,16 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
-    with op.batch_alter_table("time_tracking_labels") as batch_op:
-        batch_op.create_index("ix_time_tracking_labels_user_id", ["user_id"])
-        batch_op.create_index("ix_time_tracking_labels_updated_at", ["updated_at"])
-        batch_op.create_index("ix_time_tracking_labels_deleted_at", ["deleted_at"])
-        batch_op.create_index(
-            "uq_active_label_user_name",
-            ["user_id", "name"],
-            unique=True,
-            sqlite_where=sa.text("deleted_at IS NULL"),
-        )
+    op.create_index("ix_time_tracking_labels_user_id", "time_tracking_labels", ["user_id"])
+    op.create_index("ix_time_tracking_labels_updated_at", "time_tracking_labels", ["updated_at"])
+    op.create_index("ix_time_tracking_labels_deleted_at", "time_tracking_labels", ["deleted_at"])
+    op.create_index(
+        "uq_active_label_user_name",
+        "time_tracking_labels",
+        ["user_id", "name"],
+        unique=True,
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     op.create_table(
         "time_tracking_tasks",
@@ -65,11 +64,10 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
-    with op.batch_alter_table("time_tracking_tasks") as batch_op:
-        batch_op.create_index("ix_time_tracking_tasks_user_id", ["user_id"])
-        batch_op.create_index("ix_time_tracking_tasks_label_id", ["label_id"])
-        batch_op.create_index("ix_time_tracking_tasks_updated_at", ["updated_at"])
-        batch_op.create_index("ix_time_tracking_tasks_deleted_at", ["deleted_at"])
+    op.create_index("ix_time_tracking_tasks_user_id", "time_tracking_tasks", ["user_id"])
+    op.create_index("ix_time_tracking_tasks_label_id", "time_tracking_tasks", ["label_id"])
+    op.create_index("ix_time_tracking_tasks_updated_at", "time_tracking_tasks", ["updated_at"])
+    op.create_index("ix_time_tracking_tasks_deleted_at", "time_tracking_tasks", ["deleted_at"])
 
     op.create_table(
         "time_tracking_templates",
@@ -83,11 +81,10 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
-    with op.batch_alter_table("time_tracking_templates") as batch_op:
-        batch_op.create_index("ix_time_tracking_templates_user_id", ["user_id"])
-        batch_op.create_index("ix_time_tracking_templates_label_id", ["label_id"])
-        batch_op.create_index("ix_time_tracking_templates_updated_at", ["updated_at"])
-        batch_op.create_index("ix_time_tracking_templates_deleted_at", ["deleted_at"])
+    op.create_index("ix_time_tracking_templates_user_id", "time_tracking_templates", ["user_id"])
+    op.create_index("ix_time_tracking_templates_label_id", "time_tracking_templates", ["label_id"])
+    op.create_index("ix_time_tracking_templates_updated_at", "time_tracking_templates", ["updated_at"])
+    op.create_index("ix_time_tracking_templates_deleted_at", "time_tracking_templates", ["deleted_at"])
 
     op.create_table(
         "work_locations",
@@ -100,17 +97,17 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
-    with op.batch_alter_table("work_locations") as batch_op:
-        batch_op.create_index("ix_work_locations_user_id", ["user_id"])
-        batch_op.create_index("ix_work_locations_date", ["date"])
-        batch_op.create_index("ix_work_locations_updated_at", ["updated_at"])
-        batch_op.create_index("ix_work_locations_deleted_at", ["deleted_at"])
-        batch_op.create_index(
-            "uq_active_work_location_user_date",
-            ["user_id", "date"],
-            unique=True,
-            sqlite_where=sa.text("deleted_at IS NULL"),
-        )
+    op.create_index("ix_work_locations_user_id", "work_locations", ["user_id"])
+    op.create_index("ix_work_locations_date", "work_locations", ["date"])
+    op.create_index("ix_work_locations_updated_at", "work_locations", ["updated_at"])
+    op.create_index("ix_work_locations_deleted_at", "work_locations", ["deleted_at"])
+    op.create_index(
+        "uq_active_work_location_user_date",
+        "work_locations",
+        ["user_id", "date"],
+        unique=True,
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     op.create_table(
         "gantt_tasks",
@@ -125,9 +122,8 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
-    with op.batch_alter_table("gantt_tasks") as batch_op:
-        batch_op.create_index("ix_gantt_tasks_user_id", ["user_id"])
-        batch_op.create_index("ix_gantt_tasks_updated_at", ["updated_at"])
+    op.create_index("ix_gantt_tasks_user_id", "gantt_tasks", ["user_id"])
+    op.create_index("ix_gantt_tasks_updated_at", "gantt_tasks", ["updated_at"])
 
 
 def downgrade() -> None:

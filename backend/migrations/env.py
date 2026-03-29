@@ -10,8 +10,10 @@ from app.database.models import Base  # noqa: F401 — registers all tables with
 # Alembic Config object
 config = context.config
 
-# Set the database URL from app settings (sync driver for Alembic)
-config.set_main_option("sqlalchemy.url", f"sqlite:///{settings.DATABASE_PATH}")
+# Derive a synchronous URL for Alembic from the application's async DATABASE_URL.
+# asyncpg is an async-only driver; replace it with the psycopg2 sync driver.
+_sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+config.set_main_option("sqlalchemy.url", _sync_url)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
@@ -28,7 +30,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # required for SQLite ALTER TABLE support
     )
 
     with context.begin_transaction():
@@ -47,7 +48,6 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,  # required for SQLite ALTER TABLE support
         )
 
         with context.begin_transaction():

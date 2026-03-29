@@ -323,8 +323,14 @@ async def update_task(
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
-    if candidate_stop_time is not None and candidate_stop_time < candidate_start_time:
-        raise ValidationError("stop_time cannot be earlier than start_time")
+    # Normalize to UTC-aware for comparison (PostgreSQL returns aware datetimes;
+    # callers may supply naive datetimes treated as UTC).
+    if candidate_stop_time is not None:
+        def _as_utc(dt: datetime) -> datetime:
+            return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+        if _as_utc(candidate_stop_time) < _as_utc(candidate_start_time):
+            raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None:
         running = await get_running_task(session, user_id)
         if running is not None and running.id != task_id:
