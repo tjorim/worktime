@@ -2,65 +2,70 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Generator
+from collections.abc import AsyncGenerator, Callable, Generator
 
-from fastapi.testclient import TestClient
 import jwt
 import pytest
+import pytest_asyncio
+from fastapi.testclient import TestClient
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine
 
 from app.cache.store import get_cache
 from app.config import settings
 from app.database.engine import get_session
+from app.database.models import Base
 from app.main import app
 
 
 @pytest.fixture(autouse=True)
 def reset_cache() -> Generator[None, None, None]:
-    """Clear cache before each test to ensure test isolation.
-
-    This prevents cached data from one test affecting another test.
-    """
+    """Clear cache before each test to ensure test isolation."""
     cache = get_cache()
     cache._hday_entries.clear()
     cache._team_entries.clear()
     yield
 
 
-@pytest.fixture()
-def test_db() -> Generator:
-    """Create an isolated in-memory SQLite engine with initialized schema."""
-    engine = create_engine(
-        "sqlite://",
+@pytest_asyncio.fixture()
+async def test_db() -> AsyncGenerator[AsyncEngine, None]:
+    """Create an isolated in-memory async SQLite engine with initialized schema."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
 
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_test_pragmas(dbapi_conn, _):
-        dbapi_conn.execute("PRAGMA foreign_keys=ON")
-    SQLModel.metadata.create_all(engine)
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragmas(dbapi_conn, _):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     try:
         yield engine
     finally:
-        engine.dispose()
+        await engine.dispose()
 
 
-@pytest.fixture()
-def db_session(test_db) -> Generator[Session, None, None]:
-    """Provide direct session access to the isolated test database."""
-    with Session(test_db) as session:
+@pytest_asyncio.fixture()
+async def db_session(test_db: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """Provide direct async session access to the isolated test database."""
+    factory = async_sessionmaker(test_db, expire_on_commit=False)
+    async with factory() as session:
         yield session
 
 
 @pytest.fixture()
-def db_client(test_db) -> Generator[TestClient, None, None]:
-    """Create a TestClient that uses a test-specific database session."""
+def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
+    """Create a TestClient that uses a test-specific async database session."""
+    factory = async_sessionmaker(test_db, expire_on_commit=False)
 
-    def override_get_session() -> Generator[Session, None, None]:
-        with Session(test_db) as session:
+    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+        async with factory() as session:
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
@@ -89,6 +94,7 @@ def auth_headers() -> Callable[..., dict[str, str]]:
 
     return _headers
 
+
 @pytest.fixture()
 def create_user_factory() -> Callable[..., int]:
     """Create users through the DB user endpoint for integration tests."""
@@ -115,4 +121,3 @@ def create_user_factory() -> Callable[..., int]:
         return response.json()["id"]
 
     return _create_user
-

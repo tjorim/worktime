@@ -14,14 +14,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
-from .api.health import router as health_router
-from .api.hday import router as hday_router
-from .api.team import router as team_router
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .database import init_db
 from .middleware.timing import TimingMiddleware
+from .routers.hday import router as hday_router
+from .routers.health import router as health_router
+from .routers.team import router as team_router
 
 # Configure logging
 logging.basicConfig(
@@ -143,7 +143,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=False if "*" in cors_origins else True,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
@@ -158,13 +158,12 @@ app.include_router(hday_router)
 app.include_router(team_router)
 
 if settings.DATABASE_ENABLED:
-    from .api.auth_router import router as auth_router
-    from .api.db_gantt import router as db_gantt_router
-    from .api.db_time_tracking import router as db_time_tracking_router
-    from .api.db_users import router as db_users_router
-    from .api.db_work_locations import router as db_work_locations_router
-
-    from .api.db_sync import router as db_sync_router
+    from .routers.auth_router import router as auth_router
+    from .routers.db_gantt import router as db_gantt_router
+    from .routers.db_sync import router as db_sync_router
+    from .routers.db_time_tracking import router as db_time_tracking_router
+    from .routers.db_users import router as db_users_router
+    from .routers.db_work_locations import router as db_work_locations_router
 
     app.include_router(auth_router)
     app.include_router(db_users_router)
@@ -178,7 +177,7 @@ else:
 
 # Register debug router only in non-production environments
 if settings.ENVIRONMENT != "production":
-    from .api.debug import router as debug_router
+    from .routers.debug import router as debug_router
     app.include_router(debug_router)
     logger.info("✓ Debug endpoints enabled (development mode only)")
 

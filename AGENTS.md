@@ -1,53 +1,44 @@
 # AGENTS.md
 
+## Layout
+
+- `frontend/` contains the web app
+- `backend/` contains the FastAPI service
+
 ## Commands
 
-### Frontend (project root)
+### Frontend (`cd frontend`)
 
 ```bash
-pnpm dev                # Vite dev server (localhost:8000)
-pnpm lint               # oxlint
-pnpm format             # oxfmt
-pnpm test               # vitest
-pnpm build              # production build
-pnpm preview            # serve dist/ — run build first or changes won't appear
-pnpm generate-changelog # regenerate CHANGELOG.md from src/data/changelog.ts
-pnpm generate-icons     # regenerate icons in public/assets/icons/
+pnpm dev
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
 Do not manually edit `CHANGELOG.md` or files under `public/assets/icons/`.
 
-### Backend (`cd backend` first)
+### Backend (`cd backend`)
 
 ```bash
-uvicorn app.main:app --reload          # dev server
-PYTHONPATH=. pytest -q                 # full test suite
-PYTHONPATH=. pytest tests/test_X.py   # targeted tests
-
-# Alembic (schema migrations)
-PYTHONPATH=. alembic revision --autogenerate -m "describe change"  # generate migration
-PYTHONPATH=. alembic upgrade head      # apply pending migrations
-PYTHONPATH=. alembic stamp head        # mark existing DB as current (no-op migration)
-PYTHONPATH=. alembic current           # show current revision
-PYTHONPATH=. alembic downgrade -1      # roll back one revision
+uv run uvicorn app.main:app --reload
+uv run ruff check app
+uv run ty check app
+uv run pytest
+uv run alembic upgrade head
 ```
 
-## Source-of-truth files
+## Source Of Truth
 
-- `src/data/rosters.ts` — roster/schedule definitions
-- `src/utils/shiftCalculations.ts` — core shift logic
-- `src/contexts/SettingsContext.tsx` — user settings and state migrations
-- `src/lib/hday/parser.ts` — .hday parser
-- `src/data/changelog.ts` — release notes source
+- `frontend/src/data/rosters.ts` for roster and schedule definitions
+- `frontend/src/utils/shiftCalculations.ts` for shift logic
+- `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
+- `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
+- `frontend/src/data/changelog.ts` for release notes input
 
 ## Conventions
 
-- **American English** spelling in all code, comments, and UI text
-- Lint must pass (`npm run lint`); suppress inline only with a clear explanation
-- **Do not commit automatically** — Jorim handles all commits; only commit when explicitly asked
-
-## Testing
-
-- Run targeted tests for touched files first, then broader checks
-- For type-sensitive or cross-cutting changes, run `npm run build` before handoff
-- High-signal test files: `tests/data/rosters.test.ts`, `tests/utils/shiftCalculations.test.ts`, `tests/lib/hday.test.ts`, `tests/contexts/SettingsContext.test.tsx`
+- Use American English in code, comments, and UI text
+- Prefer targeted tests first, then broader checks before handoff
+- Do not commit automatically unless explicitly asked

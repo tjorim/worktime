@@ -5,7 +5,6 @@ from unittest.mock import Mock
 import pytest
 
 from app.database import engine as database_engine
-from app.database.engine import create_engine, get_session
 from app.database.init import init_db
 
 
@@ -14,45 +13,32 @@ def reset_database_engine_singleton() -> None:
     """Reset database engine singleton between tests for isolation."""
     existing_engine = database_engine._engine
     database_engine._engine = None
-
-    if existing_engine is not None:
-        existing_engine.dispose()
+    database_engine._session_factory = None
 
     yield
 
-    if database_engine._engine is not None:
-        database_engine._engine.dispose()
+    if existing_engine is not None:
+        existing_engine.sync_engine.dispose()
     database_engine._engine = None
+    database_engine._session_factory = None
 
 
 class TestDatabaseEngine:
     """Database engine creation tests."""
 
-    def test_create_engine_singleton(self):
+    def test_build_engine_singleton(self):
         """Engine factory should return the same instance repeatedly."""
-        engine_one = create_engine()
-        engine_two = create_engine()
+        engine_one, _ = database_engine._build_engine()
+        engine_two, _ = database_engine._build_engine()
 
         assert engine_one is engine_two
 
-    def test_engine_uses_sqlite(self):
-        """Engine should be configured for SQLite."""
-        engine = create_engine()
+    def test_engine_uses_sqlite_aiosqlite(self):
+        """Engine should be configured for async SQLite."""
+        engine, _ = database_engine._build_engine()
 
-        assert engine.url.drivername == "sqlite"
-
-
-class TestDatabaseSession:
-    """Database session dependency tests."""
-
-    def test_get_session_yields_open_session(self):
-        """Session dependency should yield an active session object."""
-        dependency = get_session()
-        session = next(dependency)
-
-        assert session.is_active
-
-        dependency.close()
+        assert "sqlite" in engine.url.drivername
+        assert "aiosqlite" in engine.url.drivername
 
 
 class TestDatabaseInit:

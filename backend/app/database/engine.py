@@ -2,42 +2,56 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+import logging
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from sqlalchemy import event
-from sqlalchemy.engine import Engine
-from sqlmodel import Session, create_engine as sqlmodel_create_engine
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 
-_engine: Engine | None = None
+logger = logging.getLogger(__name__)
+
+_engine = None
+_session_factory = None
 
 
-def create_engine() -> Engine:
-    """Create and return a singleton SQLModel engine instance."""
-    global _engine
+def _build_engine():
+    global _engine, _session_factory
 
     if _engine is None:
         db_path = Path(settings.DATABASE_PATH).expanduser().resolve()
-        database_url = f"sqlite:///{db_path}"
-        _engine = sqlmodel_create_engine(
+        database_url = f"sqlite+aiosqlite:///{db_path}"
+        resolved_db_path = make_url(database_url).database or ""
+        if resolved_db_path and resolved_db_path != ":memory:":
+            parent = Path(resolved_db_path).parent
+            parent.mkdir(parents=True, exist_ok=True)
+            logger.info("SQLite data directory ready: %s", parent)
+
+        _engine = create_async_engine(
             database_url,
             echo=settings.DATABASE_ECHO,
             connect_args={"check_same_thread": False},
         )
 
-        @event.listens_for(_engine, "connect")
+        @event.listens_for(_engine.sync_engine, "connect")
         def set_sqlite_pragmas(dbapi_conn, _):
-            dbapi_conn.execute("PRAGMA foreign_keys=ON")
-            dbapi_conn.execute("PRAGMA journal_mode=WAL")
-            dbapi_conn.execute("PRAGMA synchronous=NORMAL")
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
+            cursor.close()
 
-    return _engine
+        _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
+
+    return _engine, _session_factory
 
 
-def get_session() -> Generator[Session, None, None]:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting a database session."""
-    engine = create_engine()
-    with Session(engine) as session:
+    _, factory = _build_engine()
+    async with factory() as session:
         yield session

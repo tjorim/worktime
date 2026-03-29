@@ -17,6 +17,7 @@ from app.services.team_service import (
     get_team_path,
     read_team_config,
     read_team_hday_files,
+    read_team_hday_files_legacy,
     read_team_members,
 )
 
@@ -445,19 +446,24 @@ d1 # Every Monday
         assert member_data[0].events[1].type == "range"
         assert member_data[0].events[2].type == "weekly"
 
-    def test_read_team_hday_files_team_not_found(self, share_dir):
-        """Test that missing config directory is handled gracefully."""
+    def test_read_team_hday_files_legacy_signature(self, share_dir):
+        """Test the deprecated legacy wrapper still adapts the old call shape."""
         members = [TeamMember(username="jdoe", display_name="John Doe")]
 
         # Without config directory, files can still be read from share root
         # (they just won't find the files)
-        member_data = read_team_hday_files("nonexistent", members)
+        member_data = read_team_hday_files_legacy("nonexistent", members)
         
         # Should return empty data for missing files
         assert len(member_data) == 1
         assert member_data[0].raw == ""
         assert member_data[0].events == []
         assert member_data[0].etag is None
+
+    def test_read_team_hday_files_legacy_signature_rejects_invalid_members(self, share_dir):
+        """Test the legacy wrapper rejects invalid argument combinations."""
+        with pytest.raises(TypeError, match="members must be a list\\[TeamMember\\]"):
+            read_team_hday_files_legacy("team1", True)  # type: ignore[arg-type]
 
     def test_read_team_hday_files_rejects_path_traversal_username(self, share_dir):
         """Test that path traversal in username is rejected."""

@@ -7,6 +7,7 @@ member lists, and aggregating .hday data across all team members.
 import logging
 import os
 import re
+import warnings
 from pathlib import Path
 
 from app.cache.store import get_cache
@@ -471,7 +472,7 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, list[TeamSection], 
             
             # At least one mtime changed - fall through to re-read files
             logger.debug("Cache stale: mtime changed, re-reading files with sections")
-        except (FileNotFoundError, PermissionError) as e:
+        except (FileNotFoundError, PermissionError):
             # Files missing or inaccessible - invalidate cache and fall through
             logger.debug("Cache invalidated: files missing or inaccessible")
             cache.invalidate_team_config(team_id)
@@ -545,7 +546,7 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 def read_team_hday_files(
     members: list[TeamMember],
-    parse_events: bool = True
+    parse_events: bool = True,
 ) -> list[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
     
@@ -556,7 +557,7 @@ def read_team_hday_files(
     even if individual files are missing.
     
     Args:
-        members: List of team members
+        members: Team members whose `.hday` files should be read from the share root.
         parse_events: Whether to parse .hday content into events for the returned data.
                      When False, returned TeamMemberHdayData objects will have events=[]
                      (no per-call event parsing), but the implementation may still parse
@@ -695,3 +696,23 @@ def read_team_hday_files(
 
     logger.info(f"Successfully processed .hday files for {len(member_data)} team members")
     return member_data
+
+
+def read_team_hday_files_legacy(
+    team_id: str,
+    members: list[TeamMember],
+    parse_events: bool = True,
+) -> list[TeamMemberHdayData]:
+    """Deprecated adapter for the old `read_team_hday_files(team_id, members)` signature."""
+    if not isinstance(team_id, str):
+        raise TypeError("team_id must be a string")
+    if not isinstance(members, list):
+        raise TypeError("members must be a list[TeamMember]")
+
+    warnings.warn(
+        "read_team_hday_files(team_id, members, ...) is deprecated; "
+        "use read_team_hday_files(members, ...) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return read_team_hday_files(members, parse_events=parse_events)

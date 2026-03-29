@@ -1,18 +1,18 @@
-"""Tests for SQLModel table definitions, schemas, and DB service operations."""
+"""Tests for SQLAlchemy table definitions, schemas, and DB service operations."""
 
 from __future__ import annotations
 
 from datetime import date, datetime, time
 
 import pytest
+import pytest_asyncio
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import event
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.services.db_service as db_service
-from app.database.models import GanttTask, TimeTrackingLabel, TimeTrackingTask, TimeTrackingTemplate
-from app.models.db_schemas import (
+from app.database.models import GanttTask
+from app.schemas import (
     LabelCreate,
     TaskCreate,
     TaskUpdate,
@@ -21,6 +21,7 @@ from app.models.db_schemas import (
     UserUpdate,
     WorkLocationCreate,
     GanttTaskCreate,
+    GanttTaskUpdate,
 )
 from app.services.db_service import (
     ConflictError,
@@ -41,25 +42,10 @@ from app.services.db_service import (
     get_template,
     list_users,
     list_tasks,
+    update_gantt_task,
     update_task,
     update_user,
 )
-
-
-@pytest.fixture()
-def session() -> Session:
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_test_pragmas(dbapi_conn, _):
-        dbapi_conn.execute("PRAGMA foreign_keys=ON")
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as db_session:
-        yield db_session
 
 
 def test_schema_validates_color_and_country_code() -> None:
@@ -81,30 +67,45 @@ def test_schema_validates_color_and_country_code() -> None:
             country_code="ZZ",
         )
 
+    with pytest.raises(PydanticValidationError, match="end_date cannot be earlier than start_date"):
+        GanttTaskCreate(
+            name="Impossible range",
+            start_date=date(2026, 3, 8),
+            end_date=date(2026, 3, 1),
+            progress=10,
+        )
 
-def test_list_users(session: Session) -> None:
-    create_user(session, UserCreate(username="alice-list-test", display_name="Alice", password="test-password-1"))
-    create_user(session, UserCreate(username="bob-list-test", display_name="Bob", password="test-password-1"))
+    with pytest.raises(PydanticValidationError, match="end_date cannot be earlier than start_date"):
+        GanttTaskUpdate(
+            start_date=date(2026, 3, 8),
+            end_date=date(2026, 3, 1),
+        )
 
-    users, total = list_users(session)
+
+async def test_list_users(db_session: AsyncSession) -> None:
+    await create_user(db_session, UserCreate(username="alice-list-test", display_name="Alice", password="test-password-1"))
+    await create_user(db_session, UserCreate(username="bob-list-test", display_name="Bob", password="test-password-1"))
+
+    users, total = await list_users(db_session)
     assert len(users) == 2
     assert total == 2
 
 
-def test_list_users_validates_offset_and_limit(session: Session) -> None:
-    create_user(session, UserCreate(username="limit-test", display_name="Limit Test", password="test-password-1"))
+async def test_list_users_validates_offset_and_limit(db_session: AsyncSession) -> None:
+    await create_user(db_session, UserCreate(username="limit-test", display_name="Limit Test", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError, match="offset must be >= 0"):
-        list_users(session, offset=-1)
+        await list_users(db_session, offset=-1)
 
     with pytest.raises(ServiceValidationError, match="limit must be >= 1"):
-        list_users(session, limit=0)
+        await list_users(db_session, limit=0)
 
     with pytest.raises(ServiceValidationError, match="limit must be <= 1000"):
-        list_users(session, limit=1001)
+        await list_users(db_session, limit=1001)
 
 
-def test_authenticate_user_performs_dummy_verify_for_unknown_username(
+async def test_authenticate_user_performs_dummy_verify_for_unknown_username(
+    db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[str, str]] = []
@@ -113,21 +114,24 @@ def test_authenticate_user_performs_dummy_verify_for_unknown_username(
         calls.append((plain, hashed))
         return False
 
-    monkeypatch.setattr(db_service, "get_user_by_username", lambda *_args, **_kwargs: None)
+    async def fake_get_user_by_username(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(db_service, "get_user_by_username", fake_get_user_by_username)
     monkeypatch.setattr(db_service, "verify_password", fake_verify_password)
 
     with pytest.raises(ServiceValidationError, match="invalid credentials"):
-        authenticate_user(None, "missing-user", "test-password-1")  # type: ignore[arg-type]
+        await authenticate_user(db_session, "missing-user", "test-password-1")
 
     assert calls == [("test-password-1", db_service._DUMMY_PASSWORD_HASH)]
 
 
-def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
-    user = create_user(session, UserCreate(username="alice", display_name="Alice", password="test-password-1"))
-    label = create_label(session, user.id, LabelCreate(name="Deep work", color="#112233"))
+async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="alice", display_name="Alice", password="test-password-1"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Deep work", color="#112233"))
 
-    create_task(
-        session,
+    await create_task(
+        db_session,
         user.id,
         TaskCreate(
             text="Task A",
@@ -139,8 +143,8 @@ def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
     )
 
     with pytest.raises(ConflictError):
-        create_task(
-            session,
+        await create_task(
+            db_session,
             user.id,
             TaskCreate(
                 text="Task B",
@@ -152,13 +156,12 @@ def test_create_task_blocks_multiple_running_tasks(session: Session) -> None:
         )
 
 
-
-def test_create_task_rejects_negative_duration(session: Session) -> None:
-    user = create_user(session, UserCreate(username="neg-duration", display_name="Neg Duration", password="test-password-1"))
+async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="neg-duration", display_name="Neg Duration", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError):
-        create_task(
-            session,
+        await create_task(
+            db_session,
             user.id,
             TaskCreate(
                 text="Bad interval",
@@ -169,10 +172,10 @@ def test_create_task_rejects_negative_duration(session: Session) -> None:
         )
 
 
-def test_update_task_rejects_negative_duration_with_partial_data(session: Session) -> None:
-    user = create_user(session, UserCreate(username="update-neg-duration", display_name="Update Neg", password="test-password-1"))
-    task = create_task(
-        session,
+async def test_update_task_rejects_negative_duration_with_partial_data(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="update-neg-duration", display_name="Update Neg", password="test-password-1"))
+    task = await create_task(
+        db_session,
         user.id,
         TaskCreate(
             text="Task",
@@ -183,26 +186,27 @@ def test_update_task_rejects_negative_duration_with_partial_data(session: Sessio
     )
 
     with pytest.raises(ServiceValidationError):
-        update_task(
-            session,
+        await update_task(
+            db_session,
             user.id,
             task.id,
             TaskUpdate.model_construct(stop_time=datetime(2026, 2, 26, 8, 30)),
         )
 
 
-def test_update_user_rejects_null_for_non_nullable_fields(session: Session) -> None:
-    user = create_user(session, UserCreate(username="nullable-check", display_name="Nullable Check", password="test-password-1"))
+async def test_update_user_rejects_null_for_non_nullable_fields(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="nullable-check", display_name="Nullable Check", password="test-password-1"))
 
     with pytest.raises(ServiceValidationError):
-        update_user(session, user.id, UserUpdate.model_construct(display_name=None))
+        await update_user(db_session, user.id, UserUpdate.model_construct(display_name=None))
 
-def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
-    user = create_user(session, UserCreate(username="bob", display_name="Bob", password="test-password-1"))
-    label = create_label(session, user.id, LabelCreate(name="Ops", color="#445566"))
 
-    task = create_task(
-        session,
+async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="bob", display_name="Bob", password="test-password-1"))
+    label = await create_label(db_session, user.id, LabelCreate(name="Ops", color="#445566"))
+
+    task = await create_task(
+        db_session,
         user.id,
         TaskCreate(
             text="Deploy",
@@ -212,8 +216,8 @@ def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
             includes_break=False,
         ),
     )
-    template = create_template(
-        session,
+    template = await create_template(
+        db_session,
         user.id,
         TemplateCreate(
             text="Deploy template",
@@ -223,23 +227,23 @@ def test_delete_label_unlabels_tasks_and_templates(session: Session) -> None:
         ),
     )
 
-    delete_label(session, user.id, label.id)
+    await delete_label(db_session, user.id, label.id)
 
-    tasks = list_tasks(session, user_id=user.id)
+    tasks = await list_tasks(db_session, user_id=user.id)
     assert len(tasks) == 1
     assert tasks[0].id == task.id
     assert tasks[0].label_id is None
-    assert get_running_task(session, user.id) is None
+    assert await get_running_task(db_session, user.id) is None
 
-    persisted_template = get_template(session, user.id, template.id)
+    persisted_template = await get_template(db_session, user.id, template.id)
     assert persisted_template.label_id is None
 
 
-def test_work_location_upsert(session: Session) -> None:
-    user = create_user(session, UserCreate(username="carol", display_name="Carol", password="test-password-1"))
+async def test_work_location_upsert(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="carol", display_name="Carol", password="test-password-1"))
 
-    first = create_or_update_work_location(
-        session,
+    first = await create_or_update_work_location(
+        db_session,
         user.id,
         WorkLocationCreate(
             date=date(2026, 2, 26),
@@ -247,8 +251,8 @@ def test_work_location_upsert(session: Session) -> None:
             label=None,
         ),
     )
-    second = create_or_update_work_location(
-        session,
+    second = await create_or_update_work_location(
+        db_session,
         user.id,
         WorkLocationCreate(
             date=date(2026, 2, 26),
@@ -262,11 +266,11 @@ def test_work_location_upsert(session: Session) -> None:
     assert second.label == "Client office"
 
 
-def test_delete_user_removes_gantt_tasks(session: Session) -> None:
-    user = create_user(session, UserCreate(username="gantt-owner", display_name="Gantt Owner", password="test-password-1"))
+async def test_delete_user_removes_gantt_tasks(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="gantt-owner", display_name="Gantt Owner", password="test-password-1"))
 
-    create_gantt_task(
-        session,
+    await create_gantt_task(
+        db_session,
         user.id,
         GanttTaskCreate(
             name="Delivery window",
@@ -276,46 +280,89 @@ def test_delete_user_removes_gantt_tasks(session: Session) -> None:
         ),
     )
 
-    assert session.exec(select(GanttTask).where(GanttTask.user_id == user.id)).first() is not None
+    result = await db_session.execute(select(GanttTask).where(GanttTask.user_id == user.id))
+    assert result.scalar_one_or_none() is not None
 
-    delete_user(session, user.id)
+    await delete_user(db_session, user.id)
 
-    assert session.exec(select(GanttTask).where(GanttTask.user_id == user.id)).first() is None
+    result = await db_session.execute(select(GanttTask).where(GanttTask.user_id == user.id))
+    assert result.scalar_one_or_none() is None
+
+
+async def test_gantt_task_create_rejects_invalid_date_range(db_session: AsyncSession) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(
+            username="gantt-invalid-create",
+            display_name="Gantt Invalid Create",
+            password="test-password-1",
+        ),
+    )
+
+    with pytest.raises(ServiceValidationError, match="end_date cannot be earlier than start_date"):
+        await create_gantt_task(
+            db_session,
+            user.id,
+            GanttTaskCreate.model_construct(
+                name="Impossible range",
+                start_date=date(2026, 3, 8),
+                end_date=date(2026, 3, 1),
+                progress=10,
+            ),
+        )
+
+
+async def test_gantt_task_update_rejects_invalid_date_range(db_session: AsyncSession) -> None:
+    user = await create_user(
+        db_session,
+        UserCreate(
+            username="gantt-invalid-update",
+            display_name="Gantt Invalid Update",
+            password="test-password-1",
+        ),
+    )
+    task = await create_gantt_task(
+        db_session,
+        user.id,
+        GanttTaskCreate(
+            name="Planning",
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 8),
+            progress=25,
+        ),
+    )
+
+    with pytest.raises(ServiceValidationError, match="end_date cannot be earlier than start_date"):
+        await update_gantt_task(
+            db_session,
+            user.id,
+            task.id,
+            GanttTaskUpdate.model_construct(start_date=date(2026, 3, 10)),
+        )
 
 
 def test_template_time_types_can_be_constructed() -> None:
     assert time(8, 30).isoformat() == "08:30:00"
 
 
-def test_task_label_relationship_back_populates_pairing() -> None:
-    assert TimeTrackingLabel.tasks.property.back_populates == "label"
-    assert TimeTrackingTask.label.property.back_populates == "tasks"
+async def test_get_label_is_scoped_to_user(db_session: AsyncSession) -> None:
+    owner = await create_user(db_session, UserCreate(username="owner", display_name="Owner", password="test-password-1"))
+    other = await create_user(db_session, UserCreate(username="other", display_name="Other", password="test-password-1"))
+    label = await create_label(db_session, owner.id, LabelCreate(name="Private", color="#123456"))
 
-
-
-def test_template_label_relationship_back_populates_pairing() -> None:
-    assert TimeTrackingLabel.templates.property.back_populates == "label"
-    assert TimeTrackingTemplate.label.property.back_populates == "templates"
-
-
-def test_get_label_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="owner", display_name="Owner", password="test-password-1"))
-    other = create_user(session, UserCreate(username="other", display_name="Other", password="test-password-1"))
-    label = create_label(session, owner.id, LabelCreate(name="Private", color="#123456"))
-
-    fetched = get_label(session, owner.id, label.id)
+    fetched = await get_label(db_session, owner.id, label.id)
     assert fetched.id == label.id
 
     with pytest.raises(NotFoundError):
-        get_label(session, other.id, label.id)
+        await get_label(db_session, other.id, label.id)
 
 
-def test_get_task_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="task_owner", display_name="Task Owner", password="test-password-1"))
-    other = create_user(session, UserCreate(username="task_other", display_name="Task Other", password="test-password-1"))
+async def test_get_task_is_scoped_to_user(db_session: AsyncSession) -> None:
+    owner = await create_user(db_session, UserCreate(username="task_owner", display_name="Task Owner", password="test-password-1"))
+    other = await create_user(db_session, UserCreate(username="task_other", display_name="Task Other", password="test-password-1"))
 
-    task = create_task(
-        session,
+    task = await create_task(
+        db_session,
         owner.id,
         TaskCreate(
             text="Private task",
@@ -325,19 +372,19 @@ def test_get_task_is_scoped_to_user(session: Session) -> None:
         ),
     )
 
-    fetched = get_task(session, owner.id, task.id)
+    fetched = await get_task(db_session, owner.id, task.id)
     assert fetched.id == task.id
 
     with pytest.raises(NotFoundError):
-        get_task(session, other.id, task.id)
+        await get_task(db_session, other.id, task.id)
 
 
-def test_get_template_is_scoped_to_user(session: Session) -> None:
-    owner = create_user(session, UserCreate(username="tpl_owner", display_name="Tpl Owner", password="test-password-1"))
-    other = create_user(session, UserCreate(username="tpl_other", display_name="Tpl Other", password="test-password-1"))
+async def test_get_template_is_scoped_to_user(db_session: AsyncSession) -> None:
+    owner = await create_user(db_session, UserCreate(username="tpl_owner", display_name="Tpl Owner", password="test-password-1"))
+    other = await create_user(db_session, UserCreate(username="tpl_other", display_name="Tpl Other", password="test-password-1"))
 
-    template = create_template(
-        session,
+    template = await create_template(
+        db_session,
         owner.id,
         TemplateCreate(
             text="Reusable",
@@ -346,8 +393,8 @@ def test_get_template_is_scoped_to_user(session: Session) -> None:
         ),
     )
 
-    fetched = get_template(session, owner.id, template.id)
+    fetched = await get_template(db_session, owner.id, template.id)
     assert fetched.id == template.id
 
     with pytest.raises(NotFoundError):
-        get_template(session, other.id, template.id)
+        await get_template(db_session, other.id, template.id)

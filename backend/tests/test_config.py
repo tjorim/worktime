@@ -22,7 +22,7 @@ def test_default_settings():
     assert settings.CACHE_TTL == 10
     assert settings.DATABASE_ENABLED is True
     assert Path(settings.DATABASE_PATH).is_absolute()
-    assert settings.DATABASE_PATH.endswith("data/worktime.db")
+    assert Path(settings.DATABASE_PATH).parts[-2:] == ("data", "worktime.db")
     assert settings.DATABASE_ECHO is False
     assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 24 * 3600
 
@@ -58,7 +58,7 @@ def test_custom_settings():
         assert settings.CACHE_ENABLED is False
         assert settings.CACHE_TTL == 60
         assert settings.DATABASE_ENABLED is False
-        assert settings.DATABASE_PATH == "/tmp/worktime.db"
+        assert Path(settings.DATABASE_PATH) == Path("/tmp/worktime.db").resolve()
         assert settings.DATABASE_ECHO is True
         assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 7200
     finally:
@@ -208,10 +208,11 @@ def test_database_path_validation_expands_user_home(monkeypatch):
     """Test DATABASE_PATH expands home-directory shorthand."""
     fake_home = Path("/tmp/worktime-home")
     monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
 
     settings = Settings(DATABASE_PATH="~/worktime-db/worktime.db")
 
-    assert settings.DATABASE_PATH == str((fake_home / "worktime-db" / "worktime.db").resolve())
+    assert Path(settings.DATABASE_PATH) == (fake_home / "worktime-db" / "worktime.db").resolve()
 
 
 def test_database_path_validation_rejects_empty_value():
@@ -254,4 +255,3 @@ def test_jwt_access_token_expire_seconds_validation() -> None:
 
     with pytest.raises(ValueError, match="must be positive"):
         Settings(JWT_ACCESS_TOKEN_EXPIRE_SECONDS=0)
-
