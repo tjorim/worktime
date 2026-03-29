@@ -125,7 +125,7 @@ ${versionLinks.join("\n")}
  */
 function main() {
   const changelog = generateChangelog();
-  const changelogPath = join(process.cwd(), "CHANGELOG.md");
+  const changelogPath = join(process.cwd(), "../CHANGELOG.md");
 
   writeFileSync(changelogPath, changelog, "utf8");
   console.log("✅ CHANGELOG.md generated successfully");
