@@ -8,7 +8,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # Define all valid event flags
 Flag = Literal[
     "half_am",

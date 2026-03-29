@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
 from jwt import InvalidTokenError
 
 from app.config import settings
@@ -37,6 +37,9 @@ def get_authenticated_principal(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token") from error
 
     subject = payload.get("sub")
+    if not isinstance(subject, (str, int)):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token")
+
     try:
         user_id = int(subject)
     except (TypeError, ValueError) as error:

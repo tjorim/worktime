@@ -6,7 +6,7 @@ to a persistent log file with structured JSON entries.
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def append(target: str, action: str, details: str | None = None) -> None:
          "action": "read", "details": "via API"}
     """
     # Generate UTC ISO 8601 timestamp
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     
     # Create audit entry
     entry = {

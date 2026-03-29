@@ -7,19 +7,17 @@ aggregating .hday files across all team members.
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 
-from app.models.team import TeamHdayResponse, TeamInfoResponse
+from app.models.team import TeamHdayResponse, TeamInfoResponse, TeamSectionHdayData
+from app.services import hday_parser
 from app.services.hday_service import ShareNotAccessibleError
 from app.services.team_service import (
     TeamNotFoundError,
     read_team_hday_files,
-    read_team_info,
     read_team_info_with_sections,
-    read_team_members,
 )
-from app.services import hday_parser
 from app.utils.timing import time_operation
 
 logger = logging.getLogger(__name__)
@@ -81,11 +79,11 @@ def get_team_info(team_id: str) -> TeamInfoResponse:
         ) from e
 
 
-@router.get("/v1/team/{team_id}/hday")
+@router.get("/v1/team/{team_id}/hday", response_model=TeamHdayResponse)
 def get_team_hday(
     team_id: str,
     format: Literal["raw", "parsed"] = Query("raw")
-) -> TeamHdayResponse:
+) -> Response:
     """Get aggregated .hday data for all team members with team info and section grouping.
     
     Retrieves team name, member list with sections (if headers exist in people file),
@@ -112,8 +110,6 @@ def get_team_hday(
         404: Team not found
         503: Share directory not accessible
     """
-    from app.models.team import TeamSectionHdayData
-    
     # Dictionary to store timing measurements
     timings = {}
     

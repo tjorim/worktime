@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.routers.auth import get_authenticated_user_id, require_user_match
 from app.database.engine import get_session
+from app.routers.auth import get_authenticated_user_id, require_user_match
 from app.schemas import (
     WorkLocationCreate,
     WorkLocationListResponse,

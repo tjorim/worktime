@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import date as dt_date, datetime as dt_datetime, time as dt_time
-from typing import Any, Generic, Literal, TypeVar
+from datetime import date as dt_date
+from datetime import datetime as dt_datetime
+from datetime import time as dt_time
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
 import pycountry
-
-T = TypeVar("T")
-
+from pydantic import BaseModel, Field, field_validator
 
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
 
 
 
 
-class ListResponse(BaseModel, Generic[T]):
+class ListResponse[T](BaseModel):
     """Generic paged list response."""
 
     items: list[T]
@@ -197,12 +196,6 @@ class GanttTaskCreate(BaseModel):
     dependencies: str | None = None
     notes: str | None = None
 
-    @model_validator(mode="after")
-    def validate_date_range(self) -> "GanttTaskCreate":
-        if self.end_date < self.start_date:
-            raise ValueError("end_date must be on or after start_date")
-        return self
-
 
 class GanttTaskRead(BaseModel):
     id: str
@@ -223,12 +216,6 @@ class GanttTaskUpdate(BaseModel):
     progress: int | None = Field(default=None, ge=0, le=100)
     dependencies: str | None = None
     notes: str | None = None
-
-    @model_validator(mode="after")
-    def validate_date_range(self) -> "GanttTaskUpdate":
-        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
-            raise ValueError("end_date must be on or after start_date")
-        return self
 
 
 class GanttTaskListResponse(ListResponse[GanttTaskRead]):

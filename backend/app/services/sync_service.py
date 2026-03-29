@@ -27,11 +27,11 @@ removing the row, so pull queries can propagate the deletion to other clients.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import TypeAlias, TypeVar
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
-from sqlalchemy import func as sql_func, select
+from sqlalchemy import func as sql_func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -58,7 +58,7 @@ from app.schemas import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _utc(dt: datetime) -> datetime:
@@ -70,8 +70,8 @@ def _utc(dt: datetime) -> datetime:
     ends so comparisons work correctly.
     """
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -351,14 +351,16 @@ async def _push_work_location(
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
 
-SyncEntityModel: TypeAlias = (
+type SyncEntityModel = (
     TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation
 )
-SyncEntityModelT = TypeVar("SyncEntityModelT", bound=SyncEntityModel)
 
 
-async def _get_synced_entities(
-    session: AsyncSession, model: type[SyncEntityModelT], user_id: int, since_naive: datetime
+async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
+    session: AsyncSession,
+    model: type[SyncEntityModelT],
+    user_id: int,
+    since_naive: datetime,
 ) -> list[SyncEntityModelT]:
     statement = (
         select(model)

@@ -471,7 +471,7 @@ def read_team_info_with_sections(team_id: str) -> tuple[str, list[TeamSection], 
             
             # At least one mtime changed - fall through to re-read files
             logger.debug("Cache stale: mtime changed, re-reading files with sections")
-        except (FileNotFoundError, PermissionError) as e:
+        except (FileNotFoundError, PermissionError):
             # Files missing or inaccessible - invalidate cache and fall through
             logger.debug("Cache invalidated: files missing or inaccessible")
             cache.invalidate_team_config(team_id)
@@ -544,8 +544,9 @@ def _create_empty_member_data(member: TeamMember) -> TeamMemberHdayData:
 
 
 def read_team_hday_files(
-    members: list[TeamMember],
-    parse_events: bool = True
+    members_or_team_id: list[TeamMember] | str,
+    maybe_members: list[TeamMember] | bool | None = None,
+    parse_events: bool = True,
 ) -> list[TeamMemberHdayData]:
     """Read .hday files for all team members with cache optimization.
     
@@ -555,8 +556,14 @@ def read_team_hday_files(
     empty events list, and None for etag. Continues processing other members 
     even if individual files are missing.
     
+    Supports both the current signature `read_team_hday_files(members, parse_events=...)`
+    and the legacy signature `read_team_hday_files(team_id, members, parse_events=...)`.
+    The legacy team_id argument is ignored because member .hday files live in the share root.
+
     Args:
-        members: List of team members
+        members_or_team_id: Either the member list or a legacy team_id string.
+        maybe_members: Either the member list for the legacy signature or, for older
+            call sites, a boolean parse_events flag used with the current signature.
         parse_events: Whether to parse .hday content into events for the returned data.
                      When False, returned TeamMemberHdayData objects will have events=[]
                      (no per-call event parsing), but the implementation may still parse
@@ -567,6 +574,13 @@ def read_team_hday_files(
         List of TeamMemberHdayData objects with .hday data (parsed or unparsed)
     """
     cache = get_cache()
+
+    if isinstance(members_or_team_id, str):
+        members = maybe_members if isinstance(maybe_members, list) else []
+    else:
+        members = members_or_team_id
+        if isinstance(maybe_members, bool):
+            parse_events = maybe_members
     
     # Get share directory - .hday files are in the share root
     share_dir = settings.get_share_dir_path()

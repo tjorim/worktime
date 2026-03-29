@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from threading import Lock
 from time import monotonic
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-import jwt
 
-from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.config import settings
 from app.database.engine import get_session
+from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import LoginRequest, TokenResponse, UserRead
 from app.services.db_service import NotFoundError, ValidationError, authenticate_user, get_user
 
@@ -100,7 +100,7 @@ async def login(
     rate_limiter.reset(throttle_key)
 
     token_lifetime_seconds = settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS
-    exp = datetime.now(timezone.utc) + timedelta(seconds=token_lifetime_seconds)
+    exp = datetime.now(UTC) + timedelta(seconds=token_lifetime_seconds)
     token_payload = {
         "sub": str(user.id),
         "is_admin": user.is_admin,

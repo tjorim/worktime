@@ -8,7 +8,6 @@ and cache performance.
 import json
 import logging
 import time
-from pathlib import Path
 
 from app.cache.store import get_cache
 from app.config.settings import settings
