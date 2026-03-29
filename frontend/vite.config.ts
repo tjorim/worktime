@@ -7,7 +7,6 @@ import { defineConfig } from "vite";
 import * as packageJson from "./package.json";
 
 export default defineConfig({
-  base: "/worktime/",
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
