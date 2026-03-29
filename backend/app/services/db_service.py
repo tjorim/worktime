@@ -10,6 +10,7 @@ from sqlalchemy import func as sql_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
+    Base,
     GanttTask,
     TimeTrackingLabel,
     TimeTrackingTask,
@@ -72,7 +73,7 @@ async def authenticate_user(session: AsyncSession, username: str, password: str)
     return user
 
 
-def _get_non_nullable_model_fields(model: type) -> set[str]:
+def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
     return {
         column.name
         for column in model.__table__.columns

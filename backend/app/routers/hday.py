@@ -147,6 +147,7 @@ async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteRe
         logger.debug("Using serialized events")
     else:
         content = request.raw
+        assert content is not None  # Guaranteed non-None: validated above that at least one of raw/events is provided
         logger.debug("Using raw content")
     
     try:
