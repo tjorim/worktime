@@ -55,8 +55,8 @@ updates:
         patterns:
           - "@inlang/*"
 
-  # Monitor Python dependencies for backend API
-  - package-ecosystem: "pip"
+  # Monitor uv-managed Python dependencies for backend API
+  - package-ecosystem: "uv"
     directory: "/backend"
     schedule:
       interval: "weekly"
