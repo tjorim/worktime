@@ -117,7 +117,7 @@ export function buildPreviewLine(params: {
     });
   }
 
-  if (!weekday) {
+  if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
     return "";
   }
 

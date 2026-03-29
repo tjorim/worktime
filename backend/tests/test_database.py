@@ -17,6 +17,8 @@ def reset_database_engine_singleton() -> None:
 
     yield
 
+    if existing_engine is not None:
+        existing_engine.sync_engine.dispose()
     database_engine._engine = None
     database_engine._session_factory = None
 

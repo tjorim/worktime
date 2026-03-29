@@ -10,6 +10,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 from app.cache.store import get_cache
 from app.config import settings
@@ -31,8 +32,9 @@ def reset_cache() -> Generator[None, None, None]:
 async def test_db() -> AsyncGenerator[AsyncEngine, None]:
     """Create an isolated in-memory async SQLite engine with initialized schema."""
     engine = create_async_engine(
-        "sqlite+aiosqlite://",
+        "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
 
     @event.listens_for(engine.sync_engine, "connect")
