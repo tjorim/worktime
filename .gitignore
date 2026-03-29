@@ -1,3 +1,6 @@
+# npm lockfile — project uses pnpm; package-lock.json should not be committed
+package-lock.json
+
 # Logs
 logs
 *.log
@@ -5,6 +8,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+.pnpm-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -138,6 +142,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# macOS specific files
+.DS_Store
+
+# React Router
+.react-router/
+
 # Claude Code local settings (environment-specific)
 .claude/settings.local.json
 
@@ -152,9 +162,6 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
-!frontend/src/lib/
-!frontend/src/lib/**
 lib64/
 parts/
 sdist/
