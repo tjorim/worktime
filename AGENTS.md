@@ -30,7 +30,7 @@ uv run alembic upgrade head
 ```
 
 > **Prerequisites:** Backend development and tests require a running PostgreSQL instance.
-> Start one with `docker compose up db -d` from the repo root (uses `docker-compose.yml`).
+> Start one with `docker compose -f backend/docker-compose.yml up db -d` from the repo root.
 > Tests default to `postgresql+asyncpg://worktime:worktime@localhost/worktime_test`;
 > override via the `TEST_DATABASE_URL` environment variable.
 

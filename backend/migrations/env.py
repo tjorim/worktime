@@ -23,6 +23,8 @@ sync_url = database_url.replace("+asyncpg", "+psycopg") if database_url else Non
 
 
 def run_migrations_offline() -> None:
+    if not sync_url:
+        raise RuntimeError("No DATABASE_URL configured for migrations.")
     context.configure(
         url=sync_url,
         target_metadata=target_metadata,

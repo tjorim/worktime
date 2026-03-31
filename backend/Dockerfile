@@ -32,7 +32,8 @@ USER appuser
 
 ENV ENVIRONMENT=production
 ENV SHARE_DIR=/var/data/worktime/hday_files
-ENV DATABASE_URL=postgresql+asyncpg://worktime:worktime@db/worktime
+# DATABASE_URL must be provided at runtime via environment variables or secrets.
+# Example: postgresql+asyncpg://<user>:<password>@<host>/<database>
 
 EXPOSE 8000
 

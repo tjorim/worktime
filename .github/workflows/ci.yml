@@ -56,8 +56,6 @@ jobs:
         run: uv run ty check app
 
       - name: Test
-        env:
-          DATABASE_URL: postgresql+asyncpg://worktime:worktime@localhost/worktime_test
         run: uv run pytest
 
   quality:

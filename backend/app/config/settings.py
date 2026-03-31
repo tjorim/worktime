@@ -187,7 +187,14 @@ class Settings(BaseSettings):
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {self.DATABASE_URL})")
+        # Mask credentials from DATABASE_URL before logging.
+        try:
+            from sqlalchemy.engine.url import make_url
+            parsed = make_url(self.DATABASE_URL)
+            safe_url = parsed.render_as_string(hide_password=True)
+        except Exception:
+            safe_url = "<unparseable>"
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
         logger.info("=" * 60)
 
 

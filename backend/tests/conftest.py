@@ -9,6 +9,7 @@ import jwt
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -35,22 +36,14 @@ def _assert_test_database_url(url: str) -> None:
     localhost/127.0.0.1 — as a last-resort guard against accidentally running
     drop_all() against a production database.
     """
-    import re
+    from sqlalchemy.engine.url import make_url
 
-    # Extract host and database name from the DSN.
-    # Handles both:  scheme://user:pass@host:port/dbname
-    #                scheme://host/dbname
-    match = re.search(r"@([^/:]+)[:/].*?/([^?#]+)", url)
-    if match:
-        host, dbname = match.group(1), match.group(2)
-    else:
-        # Fallback: no userinfo — scheme://host/dbname
-        match2 = re.search(r"://([^/:]+)[:/].*?/([^?#]+)", url)
-        host = match2.group(1) if match2 else ""
-        dbname = match2.group(2) if match2 else url
+    parsed = make_url(url)
+    host = (parsed.host or "").lower()
+    dbname = (parsed.database or "").lower()
 
     is_local = host in ("localhost", "127.0.0.1", "::1")
-    is_test_db = "test" in dbname.lower()
+    is_test_db = "test" in dbname
     if not (is_local or is_test_db):
         raise RuntimeError(
             f"TEST_DATABASE_URL ({url!r}) does not appear to be a safe test database. "
@@ -87,8 +80,12 @@ async def test_db(_schema_engine: AsyncEngine) -> AsyncGenerator[AsyncEngine, No
     """Per-test fixture: yields the shared engine and truncates all tables after each test."""
     yield _schema_engine
     async with _schema_engine.begin() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            await conn.execute(table.delete())
+        table_names = ", ".join(
+            f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables)
+        )
+        await conn.execute(
+            sql_text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE")
+        )
 
 
 @pytest_asyncio.fixture()
