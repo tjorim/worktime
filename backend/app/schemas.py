@@ -77,7 +77,8 @@ class LabelCreate(BaseModel):
     @classmethod
     def validate_hex_color(cls, value: str) -> str:
         result = _validate_hex_color(value)
-        assert result is not None
+        if result is None:
+            raise ValueError("color must be in #RRGGBB format")
         return result
 
 
