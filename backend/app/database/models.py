@@ -7,21 +7,9 @@ from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Date,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Time,
-    func,
-)
-from sqlalchemy import (
-    text as sql_text,
-)
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
+from sqlalchemy import false as sa_false
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -40,7 +28,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, index=True, unique=True)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("0"))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     hashed_password: Mapped[str] = mapped_column(String)
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
@@ -77,7 +65,6 @@ class TimeTrackingLabel(Base):
             "user_id",
             "name",
             unique=True,
-            sqlite_where=sql_text("deleted_at IS NULL"),
             postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )
@@ -98,7 +85,7 @@ class TimeTrackingTask(Base):
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
     stop_time: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("0"))
+    includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
@@ -160,7 +147,6 @@ class WorkLocation(Base):
             "user_id",
             "date",
             unique=True,
-            sqlite_where=sql_text("deleted_at IS NULL"),
             postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )

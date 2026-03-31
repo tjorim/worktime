@@ -32,6 +32,7 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
+from app.utils.datetime import as_utc
 
 
 class NotFoundError(Exception):
@@ -323,7 +324,11 @@ async def update_task(
 
     candidate_start_time = data.get("start_time", task.start_time)
     candidate_stop_time = data.get("stop_time", task.stop_time)
-    if candidate_stop_time is not None and candidate_stop_time < candidate_start_time:
+    if candidate_start_time is None:
+        raise ValidationError("start_time cannot be None")
+    # Normalize to UTC-aware for comparison (PostgreSQL returns aware datetimes;
+    # callers may supply naive datetimes treated as UTC).
+    if candidate_stop_time is not None and as_utc(candidate_stop_time) < as_utc(candidate_start_time):
         raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None:
         running = await get_running_task(session, user_id)

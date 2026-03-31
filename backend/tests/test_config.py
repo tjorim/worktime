@@ -21,8 +21,7 @@ def test_default_settings():
     assert settings.CACHE_ENABLED is True
     assert settings.CACHE_TTL == 10
     assert settings.DATABASE_ENABLED is True
-    assert Path(settings.DATABASE_PATH).is_absolute()
-    assert Path(settings.DATABASE_PATH).parts[-2:] == ("data", "worktime.db")
+    assert settings.DATABASE_URL.startswith("postgresql+asyncpg://")
     assert settings.DATABASE_ECHO is False
     assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 24 * 3600
 
@@ -42,7 +41,7 @@ def test_custom_settings():
         os.environ["CACHE_ENABLED"] = "false"
         os.environ["CACHE_TTL"] = "60"
         os.environ["DATABASE_ENABLED"] = "false"
-        os.environ["DATABASE_PATH"] = "/tmp/worktime.db"
+        os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@dbhost/mydb"
         os.environ["DATABASE_ECHO"] = "true"
         os.environ["JWT_SECRET_KEY"] = "production-secret-key-that-is-very-long"
         os.environ["JWT_ACCESS_TOKEN_EXPIRE_SECONDS"] = "7200"
@@ -58,7 +57,7 @@ def test_custom_settings():
         assert settings.CACHE_ENABLED is False
         assert settings.CACHE_TTL == 60
         assert settings.DATABASE_ENABLED is False
-        assert Path(settings.DATABASE_PATH) == Path("/tmp/worktime.db").resolve()
+        assert settings.DATABASE_URL == "postgresql+asyncpg://user:pass@dbhost/mydb"
         assert settings.DATABASE_ECHO is True
         assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 7200
     finally:
@@ -186,39 +185,6 @@ def test_ensure_share_dir_exists_already_exists():
         
         # Directory should still exist
         assert test_dir.exists()
-
-
-def test_database_path_validation_creates_parent_directory():
-    """Test DATABASE_PATH validation creates missing parent directory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        database_parent = Path(tmpdir) / "db"
-        database_file = database_parent / "worktime.db"
-
-        assert not database_parent.exists()
-
-        settings = Settings(DATABASE_PATH=str(database_file))
-
-        assert settings.DATABASE_PATH == str(database_file.resolve())
-        assert database_parent.exists()
-        assert database_parent.is_dir()
-
-
-
-def test_database_path_validation_expands_user_home(monkeypatch):
-    """Test DATABASE_PATH expands home-directory shorthand."""
-    fake_home = Path("/tmp/worktime-home")
-    monkeypatch.setenv("HOME", str(fake_home))
-    monkeypatch.setenv("USERPROFILE", str(fake_home))
-
-    settings = Settings(DATABASE_PATH="~/worktime-db/worktime.db")
-
-    assert Path(settings.DATABASE_PATH) == (fake_home / "worktime-db" / "worktime.db").resolve()
-
-
-def test_database_path_validation_rejects_empty_value():
-    """Test DATABASE_PATH validation rejects empty values."""
-    with pytest.raises(ValueError, match="DATABASE_PATH cannot be empty"):
-        Settings(DATABASE_PATH="   ")
 
 
 def test_jwt_algorithm_validation_normalizes_case() -> None:

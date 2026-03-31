@@ -1,11 +1,11 @@
 # ── build stage ──────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml uv.lock* ./
-RUN uv sync --locked --no-dev --no-install-project
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim
@@ -16,8 +16,8 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Data directory — mount a named volume here on the VPS to persist the DB and hday files.
-RUN mkdir -p /var/data/worktime
+# Data directory — mount a named volume here on the VPS to persist the hday files.
+RUN mkdir -p /var/data/worktime/hday_files
 
 # Run as non-root user for security hardening.
 # chown must happen BEFORE the VOLUME declaration so initial volume content
@@ -32,7 +32,8 @@ USER appuser
 
 ENV ENVIRONMENT=production
 ENV SHARE_DIR=/var/data/worktime/hday_files
-ENV DATABASE_PATH=/var/data/worktime/worktime.db
+# DATABASE_URL must be provided at runtime via environment variables or secrets.
+# Example: postgresql+asyncpg://<user>:<password>@<host>/<database>
 
 EXPOSE 8000
 
