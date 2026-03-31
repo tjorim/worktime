@@ -7,7 +7,7 @@ settings with sensible defaults for development and production environments.
 import logging
 from pathlib import Path
 
-from pydantic import field_validator, model_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)

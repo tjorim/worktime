@@ -19,6 +19,8 @@ from supertokens_python import InputAppInfo, SupertokensConfig, init
 from supertokens_python.recipe import emailpassword, session
 from supertokens_python.recipe.session.interfaces import (
     RecipeInterface as SessionRecipeInterface,
+)
+from supertokens_python.recipe.session.interfaces import (
     SessionContainer,
 )
 from supertokens_python.types import RecipeUserId
