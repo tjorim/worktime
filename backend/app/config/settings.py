@@ -5,10 +5,8 @@ settings with sensible defaults for development and production environments.
 """
 
 import logging
-import os
 from pathlib import Path
 
-from dotenv import dotenv_values
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,25 +16,15 @@ DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
 ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
 
 
-def _load_runtime_settings() -> "Settings":
-    """Build the runtime settings singleton with `.env` values overlaid by real env vars."""
-    env_values = {
-        key: value
-        for key, value in dotenv_values(".env").items()
-        if value is not None
-    }
-    return Settings.model_validate_strings({**env_values, **os.environ})
-
-
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
-    
+
     All settings have sensible defaults for development convenience.
     In production, override via environment variables.
     """
-    
+
     model_config = SettingsConfigDict(
-        env_file=None,
+        env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="allow"
@@ -204,8 +192,4 @@ class Settings(BaseSettings):
 
 
 # Global settings instance used by the running application.
-# Tests can still construct bare Settings() objects without implicitly loading .env.
-settings = _load_runtime_settings()
-
-# Initialize share directory on module load
-settings.ensure_share_dir_exists()
+settings = Settings()

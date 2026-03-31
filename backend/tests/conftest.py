@@ -19,9 +19,44 @@ from app.database.models import Base
 from app.main import app
 
 _TEST_DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    # Default targets a *separate* test database (worktime_test) so the dev
+    # database (worktime, provisioned by docker-compose) is never touched.
+    # Create it once with: psql -U worktime -c "CREATE DATABASE worktime_test;"
+    # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://worktime:worktime@localhost/worktime_test",
 )
+
+
+def _assert_test_database_url(url: str) -> None:
+    """Raise RuntimeError if *url* does not look like a safe test database.
+
+    We require the database name to contain the word "test" OR the host to be
+    localhost/127.0.0.1 — as a last-resort guard against accidentally running
+    drop_all() against a production database.
+    """
+    import re
+
+    # Extract host and database name from the DSN.
+    # Handles both:  scheme://user:pass@host:port/dbname
+    #                scheme://host/dbname
+    match = re.search(r"@([^/:]+)[:/].*?/([^?#]+)", url)
+    if match:
+        host, dbname = match.group(1), match.group(2)
+    else:
+        # Fallback: no userinfo — scheme://host/dbname
+        match2 = re.search(r"://([^/:]+)[:/].*?/([^?#]+)", url)
+        host = match2.group(1) if match2 else ""
+        dbname = match2.group(2) if match2 else url
+
+    is_local = host in ("localhost", "127.0.0.1", "::1")
+    is_test_db = "test" in dbname.lower()
+    if not (is_local or is_test_db):
+        raise RuntimeError(
+            f"TEST_DATABASE_URL ({url!r}) does not appear to be a safe test database. "
+            "The host must be localhost or the database name must contain 'test'. "
+            "Refusing to run drop_all() to protect production data."
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -36,6 +71,7 @@ def reset_cache() -> Generator[None, None, None]:
 @pytest_asyncio.fixture(scope="session")
 async def _schema_engine() -> AsyncGenerator[AsyncEngine, None]:
     """Session-scoped engine: create schema once, drop it after all tests."""
+    _assert_test_database_url(_TEST_DATABASE_URL)
     engine = create_async_engine(_TEST_DATABASE_URL, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
