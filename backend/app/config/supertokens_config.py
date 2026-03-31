@@ -63,17 +63,22 @@ def _override_session_functions(
                     select(User).where(User.supertokens_user_id == user_id)
                 )
                 local_user = result.scalar_one_or_none()
-                if local_user is not None:
-                    access_token_payload["local_user_id"] = local_user.id
-                    access_token_payload["is_admin"] = local_user.is_admin
-                else:
-                    logger.warning(
-                        "No local user found for SuperTokens user %s; "
-                        "session will lack local_user_id claim",
-                        user_id,
-                    )
         except Exception:
             logger.exception("Failed to look up local user for session creation")
+            raise
+
+        if local_user is not None:
+            access_token_payload["local_user_id"] = local_user.id
+            access_token_payload["is_admin"] = local_user.is_admin
+        else:
+            logger.error(
+                "No local user found for SuperTokens user %s; "
+                "refusing to create session without local_user_id claim",
+                user_id,
+            )
+            raise RuntimeError(
+                "No local user found for SuperTokens user; cannot create session"
+            )
 
         return await original_create(
             user_id,

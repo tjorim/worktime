@@ -119,8 +119,15 @@ def _test_auth_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token format",
         )
+    try:
+        user_id = int(parts[1])
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: user_id is not an integer",
+        ) from None
     return AuthenticatedPrincipal(
-        user_id=int(parts[1]),
+        user_id=user_id,
         is_admin=parts[2] == "admin",
     )
 

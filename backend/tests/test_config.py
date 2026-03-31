@@ -27,7 +27,7 @@ def test_default_settings():
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/v1/auth"
 
 
 def test_custom_settings():
@@ -199,7 +199,7 @@ def test_supertokens_defaults() -> None:
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/v1/auth"
 
 
 def test_supertokens_custom_values() -> None:

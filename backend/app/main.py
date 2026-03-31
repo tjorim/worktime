@@ -157,7 +157,16 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    # Include standard SuperTokens headers required for session management
+    # and anti-CSRF protection alongside the usual Content-Type/Authorization.
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "anti-csrf",
+        "rid",
+        "fdi-version",
+        "st-auth-mode",
+    ],
 )
 
 # Add SuperTokens middleware (handles /auth/* routes and session management)
