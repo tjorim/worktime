@@ -18,7 +18,6 @@ describe("apiFetch", () => {
       { method: "POST", body },
       {
         apiUrl: "http://localhost:8000",
-        getAuthHeaders: () => ({ Authorization: "Bearer token" }),
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },
@@ -40,7 +39,6 @@ describe("apiFetch", () => {
       { method: "POST", body: JSON.stringify({ ok: true }) },
       {
         apiUrl: "http://localhost:8000",
-        getAuthHeaders: () => ({ Authorization: "Bearer token" }),
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },
@@ -53,21 +51,53 @@ describe("apiFetch", () => {
     expect(headers.get("Accept")).toBe("application/json");
   });
 
-  it("strips caller Authorization header for off-origin requests", async () => {
+  it("calls onUnauthorized and throws on 401", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onUnauthorized = vi.fn();
+
+    await expect(
+      apiFetch("/v1/data", {}, {
+        apiUrl: "http://localhost:8000",
+        onUnauthorized,
+        onForbidden: vi.fn(),
+      }),
+    ).rejects.toThrow("Unauthorized");
+
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  it("calls onForbidden and throws on 403", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onForbidden = vi.fn();
+
+    await expect(
+      apiFetch("/v1/data", {}, {
+        apiUrl: "http://localhost:8000",
+        onUnauthorized: vi.fn(),
+        onForbidden,
+      }),
+    ).rejects.toThrow("Forbidden");
+
+    expect(onForbidden).toHaveBeenCalledOnce();
+  });
+
+  it("preserves caller headers in requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch(
-      "https://third-party.example.com/data",
+      "/v1/data",
       {
         headers: {
-          Authorization: "Bearer user-supplied-token",
           "X-Custom": "value",
         },
       },
       {
         apiUrl: "http://localhost:8000",
-        getAuthHeaders: () => ({ Authorization: "Bearer internal-token" }),
         onUnauthorized: vi.fn(),
         onForbidden: vi.fn(),
       },
@@ -76,32 +106,6 @@ describe("apiFetch", () => {
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const headers = new Headers(init.headers);
 
-    expect(headers.get("Authorization")).toBeNull();
     expect(headers.get("X-Custom")).toBe("value");
-  });
-
-  it("allows caller Authorization header for same-origin requests", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    await apiFetch(
-      "http://localhost:8000/v1/data",
-      {
-        headers: {
-          Authorization: "Bearer caller-token",
-        },
-      },
-      {
-        apiUrl: "http://localhost:8000",
-        getAuthHeaders: () => ({ Authorization: "Bearer internal-token" }),
-        onUnauthorized: vi.fn(),
-        onForbidden: vi.fn(),
-      },
-    );
-
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const headers = new Headers(init.headers);
-
-    expect(headers.get("Authorization")).toBe("Bearer caller-token");
   });
 });

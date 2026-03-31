@@ -8,6 +8,25 @@ import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
+// Mock SuperTokens modules
+vi.mock("supertokens-auth-react", () => ({
+  redirectToAuth: vi.fn(),
+  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("supertokens-auth-react/recipe/session", () => ({
+  default: {
+    signOut: vi.fn().mockResolvedValue(undefined),
+  },
+  useSessionContext: () => ({
+    loading: false,
+    doesSessionExist: false,
+    userId: "",
+    accessTokenPayload: {},
+    invalidClaims: [],
+  }),
+}));
+
 vi.mock("react-select", () => ({
   default: ({
     options = [],

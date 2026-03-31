@@ -10,6 +10,25 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 
+// Mock SuperTokens modules
+vi.mock("supertokens-auth-react", () => ({
+  redirectToAuth: vi.fn(),
+  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("supertokens-auth-react/recipe/session", () => ({
+  default: {
+    signOut: vi.fn().mockResolvedValue(undefined),
+  },
+  useSessionContext: () => ({
+    loading: false,
+    doesSessionExist: false,
+    userId: "",
+    accessTokenPayload: {},
+    invalidClaims: [],
+  }),
+}));
+
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>
