@@ -1,17 +1,18 @@
-"""Authentication helpers for protected API endpoints."""
+"""Authentication helpers for protected API endpoints.
+
+Session verification is delegated to the SuperTokens SDK.  The helper
+dependencies exposed here (``get_authenticated_principal``,
+``get_authenticated_user_id``, …) extract identity information from the
+verified session so that existing endpoint code does not need to change.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt import InvalidTokenError
-
-from app.config import settings
-
-bearer_scheme = HTTPBearer(auto_error=False)
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.framework.fastapi import verify_session
 
 
 @dataclass(frozen=True)
@@ -21,35 +22,24 @@ class AuthenticatedPrincipal:
 
 
 def get_authenticated_principal(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session: SessionContainer = Depends(verify_session()),
 ) -> AuthenticatedPrincipal:
-    """Extract and validate authenticated principal data from a JWT bearer token."""
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    """Extract authenticated principal data from a verified SuperTokens session.
 
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
+    Reads ``local_user_id`` and ``is_admin`` custom claims that are stored in
+    the access-token payload during session creation (see
+    ``app.config.supertokens_config``).
+    """
+    payload = session.get_access_token_payload()
+    local_user_id = payload.get("local_user_id")
+    if local_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session missing local user mapping",
         )
-    except InvalidTokenError as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token") from error
-
-    subject = payload.get("sub")
-    if not isinstance(subject, (str, int)):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token")
-
-    try:
-        user_id = int(subject)
-    except (TypeError, ValueError) as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token") from error
-
-    if user_id < 1:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token")
 
     return AuthenticatedPrincipal(
-        user_id=user_id,
+        user_id=int(local_user_id),
         is_admin=bool(payload.get("is_admin", False)),
     )
 
@@ -73,3 +63,4 @@ def require_user_or_admin_match(user_id: int, principal: AuthenticatedPrincipal)
         return
     if principal.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+

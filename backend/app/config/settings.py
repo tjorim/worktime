@@ -12,9 +12,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
-ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
-
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
@@ -54,10 +51,11 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 5
     DATABASE_POOL_MAX_OVERFLOW: int = 10
 
-    # API authentication configuration
-    JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
-    JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 24 * 3600
+    # SuperTokens authentication configuration
+    SUPERTOKENS_CONNECTION_URI: str = "http://localhost:3567"
+    SUPERTOKENS_API_KEY: str = ""
+    SUPERTOKENS_API_DOMAIN: str = "http://localhost:8000"
+    SUPERTOKENS_WEBSITE_DOMAIN: str = "http://localhost:5173"
     
     @field_validator("DATABASE_URL")
     @classmethod
@@ -97,41 +95,6 @@ class Settings(BaseSettings):
         if v < 0:
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
-
-
-    @field_validator("JWT_ALGORITHM")
-    @classmethod
-    def validate_jwt_algorithm(cls, v: str) -> str:
-        """Validate JWT algorithm configuration."""
-        if not v or not v.strip():
-            raise ValueError("JWT_ALGORITHM cannot be empty")
-
-        normalized = v.strip().upper()
-        if normalized not in ALLOWED_JWT_ALGORITHMS:
-            allowed = ", ".join(sorted(ALLOWED_JWT_ALGORITHMS))
-            raise ValueError(f"JWT_ALGORITHM must be one of: {allowed}")
-        return normalized
-
-
-    @field_validator("JWT_ACCESS_TOKEN_EXPIRE_SECONDS")
-    @classmethod
-    def validate_jwt_access_token_expire_seconds(cls, v: int) -> int:
-        """Validate JWT access token lifetime is positive."""
-        if v <= 0:
-            raise ValueError("JWT_ACCESS_TOKEN_EXPIRE_SECONDS must be positive")
-        return v
-
-    @model_validator(mode="after")
-    def validate_production_jwt_secret(self) -> "Settings":
-        """Reject insecure default JWT secret in production."""
-        if (
-            self.ENVIRONMENT == "production"
-            and self.JWT_SECRET_KEY == DEFAULT_JWT_SECRET_KEY
-        ):
-            raise ValueError(
-                "JWT_SECRET_KEY must be overridden in production; refusing to use the development default"
-            )
-        return self
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.

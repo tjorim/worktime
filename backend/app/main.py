@@ -13,10 +13,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from supertokens_python.framework.fastapi import get_middleware
 
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
+from .config.supertokens_config import init_supertokens
 from .database import init_db
 from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
@@ -97,6 +99,13 @@ async def lifespan(app: FastAPI):
             f"   The health endpoint will report current status."
         )
     
+    # Initialize SuperTokens SDK before accepting connections
+    try:
+        init_supertokens()
+    except Exception as e:
+        logger.error(f"❌ SuperTokens initialization failed: {e}")
+        raise
+
     # Initialize database before accepting connections
     if settings.DATABASE_ENABLED:
         try:
@@ -151,6 +160,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+# Add SuperTokens middleware (handles /auth/* routes and session management)
+app.add_middleware(get_middleware())
+
 # Add timing middleware after CORS
 app.add_middleware(TimingMiddleware)
 
@@ -161,14 +173,12 @@ app.include_router(hday_router)
 app.include_router(team_router)
 
 if settings.DATABASE_ENABLED:
-    from .routers.auth_router import router as auth_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_sync import router as db_sync_router
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
 
-    app.include_router(auth_router)
     app.include_router(db_users_router)
     app.include_router(db_time_tracking_router)
     app.include_router(db_work_locations_router)
