@@ -17,12 +17,8 @@ from sqlalchemy import (
     Integer,
     String,
     Time,
-    func,
-)
-from sqlalchemy import (
     false as sa_false,
-)
-from sqlalchemy import (
+    func,
     text as sql_text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column

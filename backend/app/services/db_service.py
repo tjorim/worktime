@@ -4,11 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-
-def _as_utc(dt: datetime) -> datetime:
-    """Return *dt* as a UTC-aware datetime; naive datetimes are treated as UTC."""
-    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
-
 from pwdlib import PasswordHash
 from sqlalchemy import delete, select, update
 from sqlalchemy import func as sql_func
@@ -37,6 +32,11 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Return *dt* as a UTC-aware datetime; naive datetimes are treated as UTC."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
 class NotFoundError(Exception):

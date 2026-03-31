@@ -23,6 +23,10 @@ def _build_engine():
         _engine = create_async_engine(
             settings.DATABASE_URL,
             echo=settings.DATABASE_ECHO,
+            # Pool defaults: size=5, max_overflow=10, timeout=30s.
+            # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_POOL_MAX_OVERFLOW,
         )
         _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 

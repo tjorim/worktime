@@ -51,12 +51,27 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_POOL_MAX_OVERFLOW: int = 10
 
     # API authentication configuration
     JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 24 * 3600
     
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate DATABASE_URL is a PostgreSQL connection string."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_URL cannot be empty")
+        if not v.startswith("postgresql"):
+            raise ValueError(
+                "DATABASE_URL must be a PostgreSQL connection string "
+                "(expected prefix: postgresql+asyncpg://...)"
+            )
+        return v
+
     @field_validator("CORS_ORIGINS")
     @classmethod
     def validate_cors_origins(cls, v: str) -> str:
