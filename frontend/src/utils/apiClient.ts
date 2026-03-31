@@ -47,7 +47,11 @@ export async function apiFetch(
   const requestHeaders = new Headers(init.headers);
   requestHeaders.forEach((value, key) => mergedHeaders.set(key, value));
 
-  const response = await fetch(url, { ...init, headers: mergedHeaders });
+  // Resolve the provided URL against the configured API base URL so that
+  // relative paths (e.g. "/v1/data") target the correct backend origin.
+  const resolvedUrl = new URL(url, clientOptions.apiUrl).toString();
+
+  const response = await fetch(resolvedUrl, { ...init, headers: mergedHeaders });
 
   if (response.status === 401) {
     clientOptions.onUnauthorized();

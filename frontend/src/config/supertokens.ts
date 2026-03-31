@@ -6,16 +6,31 @@ import Session from "supertokens-auth-react/recipe/session";
  * Initialize SuperTokens with email-password and session recipes.
  *
  * Must be called once before rendering the React tree (e.g. in main.tsx).
- * The API domain matches the backend at worktime.tjor.im;
- * session cookies are managed automatically by the session recipe.
+ * Domains and base paths are read from Vite environment variables so that
+ * local development (e.g. http://localhost:5173 / http://localhost:8000) can
+ * override the production defaults without a code change.
+ *
+ * Environment variables (all optional, with production defaults):
+ *   VITE_API_DOMAIN       — Backend origin          (default: https://worktime.tjor.im)
+ *   VITE_WEBSITE_DOMAIN   — Frontend origin          (default: https://worktime.tjor.im)
+ *   VITE_API_BASE_PATH    — SuperTokens API base     (default: /auth)
+ *
+ * Session cookies are managed automatically by the session recipe.
  */
+
+const API_DOMAIN =
+  import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im";
+const WEBSITE_DOMAIN =
+  import.meta.env.VITE_WEBSITE_DOMAIN ?? "https://worktime.tjor.im";
+const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH ?? "/auth";
+
 export function initSuperTokens(): void {
   SuperTokens.init({
     appInfo: {
       appName: "Worktime",
-      apiDomain: "https://worktime.tjor.im",
-      websiteDomain: "https://worktime.tjor.im",
-      apiBasePath: "/v1/auth",
+      apiDomain: API_DOMAIN,
+      websiteDomain: WEBSITE_DOMAIN,
+      apiBasePath: API_BASE_PATH,
       websiteBasePath: "/auth",
     },
     recipeList: [EmailPassword.init(), Session.init()],

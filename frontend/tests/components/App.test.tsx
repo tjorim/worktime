@@ -5,24 +5,7 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
 
-// Mock SuperTokens modules
-vi.mock("supertokens-auth-react", () => ({
-  redirectToAuth: vi.fn(),
-  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-vi.mock("supertokens-auth-react/recipe/session", () => ({
-  default: {
-    signOut: vi.fn().mockResolvedValue(undefined),
-  },
-  useSessionContext: () => ({
-    loading: false,
-    doesSessionExist: false,
-    userId: "",
-    accessTokenPayload: {},
-    invalidClaims: [],
-  }),
-}));
+// SuperTokens mocks are provided globally by tests/setup.ts
 
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
 vi.mock("../../src/utils/dateTimeUtils", () => {

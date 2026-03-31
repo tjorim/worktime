@@ -1,4 +1,4 @@
-import { beforeEach } from "vitest";
+import { beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 import * as React from "react";
 
@@ -12,6 +12,30 @@ declare module "vitest" {
   interface Assertion<T = any> extends TestingLibraryMatchers<T, void> {} // oxlint-disable-line typescript/no-explicit-any -- Required for generic type parameter defaults
   interface AsymmetricMatchersContaining<T = any> extends TestingLibraryMatchers<T, void> {} // oxlint-disable-line typescript/no-explicit-any -- Required for generic type parameter defaults
 }
+
+// ---------------------------------------------------------------------------
+// Global SuperTokens mocks — default no-session state.
+//
+// Individual test files (e.g. AuthContext.test.tsx) can override with their
+// own vi.mock() calls for custom session behaviour.
+// ---------------------------------------------------------------------------
+vi.mock("supertokens-auth-react", () => ({
+  redirectToAuth: vi.fn(),
+  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock("supertokens-auth-react/recipe/session", () => ({
+  default: {
+    signOut: vi.fn().mockResolvedValue(undefined),
+  },
+  useSessionContext: () => ({
+    loading: false,
+    doesSessionExist: false,
+    userId: "",
+    accessTokenPayload: {},
+    invalidClaims: [],
+  }),
+}));
 
 // Mock localStorage (force override for compatibility)
 if (typeof window !== "undefined") {
