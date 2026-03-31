@@ -103,7 +103,7 @@ def init_supertokens() -> None:
             app_name="Worktime",
             api_domain=settings.SUPERTOKENS_API_DOMAIN,
             website_domain=settings.SUPERTOKENS_WEBSITE_DOMAIN,
-            api_base_path="/auth",
+            api_base_path=settings.SUPERTOKENS_API_BASE_PATH,
             website_base_path="/auth",
         ),
         supertokens_config=SupertokensConfig(

@@ -27,6 +27,7 @@ def test_default_settings():
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
 def test_custom_settings():
@@ -198,6 +199,7 @@ def test_supertokens_defaults() -> None:
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
 def test_supertokens_custom_values() -> None:
@@ -207,8 +209,10 @@ def test_supertokens_custom_values() -> None:
         SUPERTOKENS_API_KEY="my-api-key",
         SUPERTOKENS_API_DOMAIN="https://api.example.com",
         SUPERTOKENS_WEBSITE_DOMAIN="https://worktime.example.com",
+        SUPERTOKENS_API_BASE_PATH="/custom-auth",
     )
     assert settings.SUPERTOKENS_CONNECTION_URI == "http://supertokens:3567"
     assert settings.SUPERTOKENS_API_KEY == "my-api-key"
     assert settings.SUPERTOKENS_API_DOMAIN == "https://api.example.com"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "https://worktime.example.com"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/custom-auth"
