@@ -90,7 +90,7 @@ def _override_session_functions(
             user_context,
         )
 
-    original_implementation.create_new_session = create_new_session  # type: ignore[assignment]
+    original_implementation.create_new_session = create_new_session  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
     return original_implementation
 
 
