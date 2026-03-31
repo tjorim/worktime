@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+
+def _as_utc(dt: datetime) -> datetime:
+    """Return *dt* as a UTC-aware datetime; naive datetimes are treated as UTC."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
 from pwdlib import PasswordHash
 from sqlalchemy import delete, select, update
 from sqlalchemy import func as sql_func
@@ -326,9 +331,6 @@ async def update_task(
     # Normalize to UTC-aware for comparison (PostgreSQL returns aware datetimes;
     # callers may supply naive datetimes treated as UTC).
     if candidate_stop_time is not None:
-        def _as_utc(dt: datetime) -> datetime:
-            return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
-
         if _as_utc(candidate_stop_time) < _as_utc(candidate_start_time):
             raise ValidationError("stop_time cannot be earlier than start_time")
     if candidate_stop_time is None:

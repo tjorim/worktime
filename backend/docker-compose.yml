@@ -1,6 +1,8 @@
+# Local development only — do NOT use in production.
+# Credentials below are intentionally hardcoded dev defaults.
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: worktime
