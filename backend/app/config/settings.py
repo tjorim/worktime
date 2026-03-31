@@ -62,13 +62,12 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        """Validate DATABASE_URL is a PostgreSQL connection string."""
+        """Validate DATABASE_URL uses the postgresql+asyncpg async driver."""
         if not v or not v.strip():
             raise ValueError("DATABASE_URL cannot be empty")
-        if not v.startswith("postgresql"):
+        if not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "DATABASE_URL must be a PostgreSQL connection string "
-                "(expected prefix: postgresql+asyncpg://...)"
+                "DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://..."
             )
         return v
 

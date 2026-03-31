@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from datetime import time as dt_time
@@ -11,20 +10,9 @@ from typing import Any, Literal
 import pycountry
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.utils.datetime import ensure_utc
+
 ISO_ALPHA2_CODES = frozenset(country.alpha_2 for country in pycountry.countries)
-
-
-def _ensure_utc(value: dt_datetime | None) -> dt_datetime | None:
-    """Return timezone-aware UTC datetime; treat naive datetimes as UTC.
-
-    Naive datetimes are assumed to be UTC and have their tzinfo set accordingly.
-    Timezone-aware datetimes are converted to UTC via ``astimezone``.
-    """
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 
@@ -110,7 +98,7 @@ class TaskCreate(BaseModel):
     @field_validator("start_time", "stop_time", mode="after")
     @classmethod
     def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
-        return _ensure_utc(value)
+        return ensure_utc(value)
 
 
 class TaskRead(BaseModel):
@@ -134,7 +122,7 @@ class TaskUpdate(BaseModel):
     @field_validator("start_time", "stop_time", mode="after")
     @classmethod
     def normalize_datetime_tz(cls, value: dt_datetime | None) -> dt_datetime | None:
-        return _ensure_utc(value)
+        return ensure_utc(value)
 
 
 class TemplateCreate(BaseModel):
