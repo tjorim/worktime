@@ -64,7 +64,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/ui": "^4.1.2",
-    "canvas": "^3.2.2",
+    "canvas": "^3.2.3",
     "happy-dom": "^20.8.9",
     "lightningcss": "^1.31.1",
     "oxfmt": "^0.43.0",
