@@ -8,7 +8,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   /** True while the SuperTokens session context is loading. */
   isValidating: boolean;
-  /** User ID from the SuperTokens session, or null when not authenticated. */
+  /** User ID (string) from the SuperTokens session, or null when not authenticated. */
   userId: string | null;
   /** Human-readable display name from the access token payload, or null. */
   displayName: string | null;
