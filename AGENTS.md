@@ -5,7 +5,7 @@
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
 - Production hosting for `worktime.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
-- A local frontend build writes to `frontend/dist`, which the infra Caddy container serves from `/srv/worktime`
+- Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/worktime`
 
 ## Commands
 
