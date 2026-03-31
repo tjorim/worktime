@@ -5,10 +5,8 @@ settings with sensible defaults for development and production environments.
 """
 
 import logging
-import os
 from pathlib import Path
 
-from dotenv import dotenv_values
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,43 +16,15 @@ DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
 ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
 
 
-def _expand_config_path(value: str) -> Path:
-    """Expand user-home shorthand predictably across platforms.
-
-    Windows does not always honor ``HOME`` in ``Path.expanduser()`` the way the
-    tests expect, so prefer explicit environment variables before falling back
-    to the standard implementation.
-    """
-    stripped = value.strip()
-    if stripped.startswith("~"):
-        home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
-        if home:
-            if len(stripped) == 1:
-                return Path(home)
-            if len(stripped) > 1 and stripped[1] in ("/", "\\"):
-                return Path(home) / stripped[2:]
-    return Path(stripped).expanduser()
-
-
-def _load_runtime_settings() -> "Settings":
-    """Build the runtime settings singleton with `.env` values overlaid by real env vars."""
-    env_values = {
-        key: value
-        for key, value in dotenv_values(".env").items()
-        if value is not None
-    }
-    return Settings.model_validate_strings({**env_values, **os.environ})
-
-
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
-    
+
     All settings have sensible defaults for development convenience.
     In production, override via environment variables.
     """
-    
+
     model_config = SettingsConfigDict(
-        env_file=None,
+        env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="allow"
@@ -78,15 +48,29 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
 
     # Database configuration
-    DATABASE_PATH: str = "./data/worktime.db"
+    DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_POOL_MAX_OVERFLOW: int = 10
 
     # API authentication configuration
     JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 24 * 3600
     
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate DATABASE_URL uses the postgresql+asyncpg async driver."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_URL cannot be empty")
+        if not v.startswith("postgresql+asyncpg://"):
+            raise ValueError(
+                "DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://..."
+            )
+        return v
+
     @field_validator("CORS_ORIGINS")
     @classmethod
     def validate_cors_origins(cls, v: str) -> str:
@@ -137,25 +121,6 @@ class Settings(BaseSettings):
             raise ValueError("JWT_ACCESS_TOKEN_EXPIRE_SECONDS must be positive")
         return v
 
-    @field_validator("DATABASE_PATH")
-    @classmethod
-    def validate_database_path(cls, v: str) -> str:
-        """Validate database path and ensure parent directory is writable/creatable."""
-        if not v or not v.strip():
-            raise ValueError("DATABASE_PATH cannot be empty")
-
-        db_path = _expand_config_path(v).resolve()
-        parent = db_path.parent
-
-        try:
-            parent.mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError) as e:
-            raise ValueError(
-                f"DATABASE_PATH parent directory cannot be created or accessed: {parent} ({e})"
-            ) from e
-
-        return str(db_path)
-    
     @model_validator(mode="after")
     def validate_production_jwt_secret(self) -> "Settings":
         """Reject insecure default JWT secret in production."""
@@ -221,7 +186,6 @@ class Settings(BaseSettings):
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
         logger.info(f"Share Directory: {self.get_share_dir_path()}")
-        logger.info(f"Database Path:   {Path(self.DATABASE_PATH).resolve()}")
         
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
@@ -237,13 +201,16 @@ class Settings(BaseSettings):
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
+        # Mask credentials from DATABASE_URL before logging.
+        try:
+            from sqlalchemy.engine.url import make_url
+            parsed = make_url(self.DATABASE_URL)
+            safe_url = parsed.render_as_string(hide_password=True)
+        except Exception:
+            safe_url = "<unparseable>"
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
         logger.info("=" * 60)
 
 
 # Global settings instance used by the running application.
-# Tests can still construct bare Settings() objects without implicitly loading .env.
-settings = _load_runtime_settings()
-
-# Initialize share directory on module load
-settings.ensure_share_dir_exists()
+settings = Settings()

@@ -1,4 +1,4 @@
-"""Sync service: bidirectional push/pull for SQLite-backed entities.
+"""Sync service: bidirectional push/pull for PostgreSQL-backed entities.
 
 Strategy
 --------
@@ -55,23 +55,13 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
+from app.utils.datetime import as_utc
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _utc(dt: datetime) -> datetime:
-    """Return *dt* as a timezone-aware UTC datetime.
-
-    SQLite stores datetimes without timezone information.  SQLAlchemy returns
-    them as naive ``datetime`` objects.  Client-side timestamps are
-    timezone-aware (ISO 8601 with ``+00:00``).  This helper normalizes both
-    ends so comparisons work correctly.
-    """
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=UTC)
-    return dt.astimezone(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +98,7 @@ async def _push_label(
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(label.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -138,7 +128,7 @@ async def _push_label(
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
 
-    if _utc(item.client_updated_at) <= _utc(label.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -165,7 +155,7 @@ async def _push_task(
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(task.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -198,7 +188,7 @@ async def _push_task(
         from app.services.db_service import ValidationError
         raise ValidationError("task not found")
 
-    if _utc(item.client_updated_at) <= _utc(task.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -233,7 +223,7 @@ async def _push_template(
     if item.action == "delete":
         if template is None or template.user_id != user_id or template.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(template.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -265,7 +255,7 @@ async def _push_template(
         from app.services.db_service import ValidationError
         raise ValidationError("template not found")
 
-    if _utc(item.client_updated_at) <= _utc(template.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -307,7 +297,7 @@ async def _push_work_location(
     if item.action == "delete":
         if location is None or location.deleted_at is not None:
             return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(location.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
             return SyncRecordResult(
                 id=date_key,
                 status="conflict",
@@ -332,7 +322,7 @@ async def _push_work_location(
         session.add(location)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
-    if _utc(item.client_updated_at) <= _utc(location.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
         return SyncRecordResult(
             id=date_key,
             status="conflict",
@@ -360,13 +350,13 @@ async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
     session: AsyncSession,
     model: type[SyncEntityModelT],
     user_id: int,
-    since_naive: datetime,
+    since: datetime,
 ) -> list[SyncEntityModelT]:
     statement = (
         select(model)
         .where(
             model.user_id == user_id,
-            model.updated_at > since_naive,
+            model.updated_at > since,
         )
         .order_by(model.updated_at)
     )
@@ -410,12 +400,12 @@ async def pull_changes(
     session: AsyncSession, user_id: int, since: datetime
 ) -> SyncPullResponse:
     """Return all records (including soft-deleted) modified after *since*."""
-    since_naive = _utc(since).replace(tzinfo=None)
+    since_utc = as_utc(since)
 
-    labels = await _get_synced_entities(session, TimeTrackingLabel, user_id, since_naive)
-    tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_naive)
-    templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_naive)
-    work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_naive)
+    labels = await _get_synced_entities(session, TimeTrackingLabel, user_id, since_utc)
+    tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_utc)
+    templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
+    work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
 
     return SyncPullResponse(
         labels=[LabelSyncRead.model_validate(r, from_attributes=True) for r in labels],

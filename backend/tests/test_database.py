@@ -33,12 +33,12 @@ class TestDatabaseEngine:
 
         assert engine_one is engine_two
 
-    def test_engine_uses_sqlite_aiosqlite(self):
-        """Engine should be configured for async SQLite."""
+    def test_engine_uses_postgresql_asyncpg(self):
+        """Engine should be configured for async PostgreSQL."""
         engine, _ = database_engine._build_engine()
 
-        assert "sqlite" in engine.url.drivername
-        assert "aiosqlite" in engine.url.drivername
+        assert "postgresql" in engine.url.drivername
+        assert "asyncpg" in engine.url.drivername
 
 
 class TestDatabaseInit:

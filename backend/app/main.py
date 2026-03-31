@@ -63,7 +63,10 @@ async def lifespan(app: FastAPI):
     
     # Log configuration
     settings.log_configuration()
-    
+
+    # Ensure share directory exists (dev convenience; no-op in production with mounted volumes)
+    settings.ensure_share_dir_exists()
+
     # Verify share directory accessibility
     share_path = settings.get_share_dir_path()
     try:
