@@ -84,7 +84,9 @@ def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
 
 # User operations
 
-async def create_user(session: AsyncSession, payload: UserCreate) -> User:
+async def create_user(
+    session: AsyncSession, payload: UserCreate, *, supertokens_user_id: str
+) -> User:
     existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ConflictError("username already exists")
@@ -92,6 +94,7 @@ async def create_user(session: AsyncSession, payload: UserCreate) -> User:
     data = payload.model_dump()
     plain_password = data.pop("password")
     data["hashed_password"] = hash_password(plain_password)
+    data["supertokens_user_id"] = supertokens_user_id
     user = User(**data)
     session.add(user)
     await session.commit()

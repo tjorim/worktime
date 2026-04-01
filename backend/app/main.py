@@ -13,12 +13,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from supertokens_python import get_all_cors_headers
 from supertokens_python.framework.fastapi import get_middleware
 
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .config.supertokens_config import init_supertokens
+
+# Initialize SuperTokens at import time so get_all_cors_headers() is available
+# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
+# for logging and error surfacing; the SDK tolerates being initialized more than once.
+init_supertokens()
 from .database import init_db
 from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
@@ -152,27 +158,20 @@ if not cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {cors_origins}")
 
+# Add SuperTokens middleware first so it is innermost in the stack
+app.add_middleware(get_middleware())
+
+# CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
+# CORS headers are present on /auth/* responses that SuperTokens handles directly.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    # Include standard SuperTokens headers required for session management
-    # and anti-CSRF protection alongside the usual Content-Type/Authorization.
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "anti-csrf",
-        "rid",
-        "fdi-version",
-        "st-auth-mode",
-    ],
+    allow_headers=["Content-Type", "Authorization"] + get_all_cors_headers(),
 )
 
-# Add SuperTokens middleware (handles /auth/* routes and session management)
-app.add_middleware(get_middleware())
-
-# Add timing middleware after CORS
+# TimingMiddleware is outermost, timing the full request including CORS processing.
 app.add_middleware(TimingMiddleware)
 
 

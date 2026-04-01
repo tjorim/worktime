@@ -38,8 +38,16 @@ def get_authenticated_principal(
             detail="Session missing local user mapping",
         )
 
+    try:
+        user_id = int(local_user_id)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session contains invalid local user mapping",
+        )
+
     return AuthenticatedPrincipal(
-        user_id=int(local_user_id),
+        user_id=user_id,
         is_admin=bool(payload.get("is_admin", False)),
     )
 

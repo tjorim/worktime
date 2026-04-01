@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator, Callable, Generator
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -51,6 +53,22 @@ def _assert_test_database_url(url: str) -> None:
             "The host must be localhost or the database name must contain 'test'. "
             "Refusing to run drop_all() to protect production data."
         )
+
+
+@pytest.fixture(autouse=True)
+def mock_supertokens_signup() -> Generator[None, None, None]:
+    """Mock SuperTokens sign_up so tests don't require a live core.
+
+    Returns a fresh UUID as the SuperTokens user ID for each call, matching
+    the unique constraint on supertokens_user_id in the users table.
+    """
+    async def _fake_sign_up(*args: object, **kwargs: object) -> MagicMock:
+        result = MagicMock()
+        result.user.id = str(uuid4())
+        return result
+
+    with patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -126,6 +144,11 @@ def _test_auth_principal(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid test token: user_id is not an integer",
         ) from None
+    if parts[2] not in ("admin", "user"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: role must be 'admin' or 'user'",
+        )
     return AuthenticatedPrincipal(
         user_id=user_id,
         is_admin=parts[2] == "admin",

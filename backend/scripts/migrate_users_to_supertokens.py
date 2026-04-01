@@ -136,51 +136,53 @@ async def main() -> None:
     if api_key:
         st_headers["api-key"] = api_key
 
-    async with httpx.AsyncClient(timeout=30) as http_client, session_factory() as session:
-        result = await session.execute(
-            select(User).where(User.supertokens_user_id.is_(None))
-        )
-        users = result.scalars().all()
-
-        if not users:
-            logger.info("No users to migrate (all already have supertokens_user_id)")
-            return
-
-        logger.info("Found %d user(s) to migrate", len(users))
-
-        for user in users:
-            # SuperTokens emailpassword uses email; we use the username
-            # as the email identifier.
-            email = user.username if "@" in user.username else f"{user.username}@worktime.local"
-
-            st_user_id = await _create_supertokens_user(
-                http_client,
-                core_url,
-                email=email,
-                password_hash=user.hashed_password,
-                headers=st_headers,
+    try:
+        async with httpx.AsyncClient(timeout=30) as http_client, session_factory() as session:
+            result = await session.execute(
+                select(User).where(User.supertokens_user_id.is_(None))
             )
+            users = result.scalars().all()
 
-            if st_user_id is None:
-                skipped += 1
-                continue
+            if not users:
+                logger.info("No users to migrate (all already have supertokens_user_id)")
+                return
 
-            await session.execute(
-                update(User)
-                .where(User.id == user.id)
-                .values(supertokens_user_id=st_user_id)
-            )
-            migrated += 1
-            logger.info(
-                "Migrated user %s (id=%d) → SuperTokens %s",
-                user.username,
-                user.id,
-                st_user_id,
-            )
+            logger.info("Found %d user(s) to migrate", len(users))
 
-        await session.commit()
+            for user in users:
+                # SuperTokens emailpassword uses email; we use the username
+                # as the email identifier.
+                email = user.username if "@" in user.username else f"{user.username}@worktime.local"
 
-    await engine.dispose()
+                st_user_id = await _create_supertokens_user(
+                    http_client,
+                    core_url,
+                    email=email,
+                    password_hash=user.hashed_password,
+                    headers=st_headers,
+                )
+
+                if st_user_id is None:
+                    skipped += 1
+                    continue
+
+                await session.execute(
+                    update(User)
+                    .where(User.id == user.id)
+                    .values(supertokens_user_id=st_user_id)
+                )
+                migrated += 1
+                logger.info(
+                    "Migrated user %s (id=%d) → SuperTokens %s",
+                    user.username,
+                    user.id,
+                    st_user_id,
+                )
+
+            await session.commit()
+    finally:
+        await engine.dispose()
+
     logger.info("Migration complete: %d migrated, %d skipped", migrated, skipped)
 
 

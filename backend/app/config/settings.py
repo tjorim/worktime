@@ -7,7 +7,7 @@ settings with sensible defaults for development and production environments.
 import logging
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -56,8 +56,21 @@ class Settings(BaseSettings):
     SUPERTOKENS_API_KEY: str = ""
     SUPERTOKENS_API_DOMAIN: str = "http://localhost:8000"
     SUPERTOKENS_WEBSITE_DOMAIN: str = "http://localhost:5173"
-    SUPERTOKENS_API_BASE_PATH: str = "/v1/auth"
-    
+    SUPERTOKENS_API_BASE_PATH: str = "/auth"
+
+    @field_validator("SUPERTOKENS_API_BASE_PATH")
+    @classmethod
+    def validate_supertokens_api_base_path(cls, v: str) -> str:
+        """Validate SUPERTOKENS_API_BASE_PATH starts with '/' and is non-empty."""
+        v = v.strip()
+        if not v:
+            raise ValueError("SUPERTOKENS_API_BASE_PATH cannot be empty")
+        if not v.startswith("/"):
+            raise ValueError(
+                f"SUPERTOKENS_API_BASE_PATH must start with '/', got: {v!r}"
+            )
+        return v
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -89,6 +102,14 @@ class Settings(BaseSettings):
             )
         return v
     
+    @model_validator(mode="after")
+    def validate_production_supertokens_config(self) -> "Settings":
+        if self.ENVIRONMENT == "production" and not self.SUPERTOKENS_API_KEY:
+            raise ValueError(
+                "SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core"
+            )
+        return self
+
     @field_validator("CACHE_TTL")
     @classmethod
     def validate_cache_ttl(cls, v: int) -> int:
