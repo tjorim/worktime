@@ -44,7 +44,7 @@ def get_authenticated_principal(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session contains invalid local user mapping",
-        )
+        ) from None
 
     return AuthenticatedPrincipal(
         user_id=user_id,

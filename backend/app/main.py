@@ -20,16 +20,16 @@ from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
 from .config.supertokens_config import init_supertokens
-
-# Initialize SuperTokens at import time so get_all_cors_headers() is available
-# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
-# for logging and error surfacing; the SDK tolerates being initialized more than once.
-init_supertokens()
 from .database import init_db
 from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.team import router as team_router
+
+# Initialize SuperTokens at import time so get_all_cors_headers() is available
+# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
+# for logging and error surfacing; the SDK tolerates being initialized more than once.
+init_supertokens()
 
 # Configure logging
 logging.basicConfig(

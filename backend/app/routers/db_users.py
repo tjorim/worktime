@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from supertokens_python.recipe.emailpassword.asyncio import sign_up as st_sign_up
 from supertokens_python.recipe.emailpassword.interfaces import (
     EmailAlreadyExistsError as STEmailAlreadyExistsError,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
     SignUpOkResult as STSignUpOkResult,
 )
 
