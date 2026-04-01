@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-from pwdlib import PasswordHash
 from sqlalchemy import delete, select, update
 from sqlalchemy import func as sql_func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,30 +49,6 @@ class ValidationError(Exception):
 MAX_USER_LIST_LIMIT = 1000
 
 
-_ph = PasswordHash.recommended()
-_DUMMY_PASSWORD_HASH = _ph.hash("dummy-password-for-timing-mitigation")
-
-
-def hash_password(plain: str) -> str:
-    return _ph.hash(plain)
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return _ph.verify(plain, hashed)
-
-
-async def authenticate_user(session: AsyncSession, username: str, password: str) -> User:
-    """Return User if credentials are valid, otherwise raise ValidationError."""
-    user = await get_user_by_username(session, username)
-    if user is None:
-        verify_password(password, _DUMMY_PASSWORD_HASH)
-        raise ValidationError("invalid credentials")
-
-    if not verify_password(password, user.hashed_password):
-        raise ValidationError("invalid credentials")
-    return user
-
-
 def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
     return {
         column.name
@@ -92,8 +67,7 @@ async def create_user(
         raise ConflictError("username already exists")
 
     data = payload.model_dump()
-    plain_password = data.pop("password")
-    data["hashed_password"] = hash_password(plain_password)
+    data.pop("password")
     data["supertokens_user_id"] = supertokens_user_id
     user = User(**data)
     session.add(user)

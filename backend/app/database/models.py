@@ -32,7 +32,6 @@ class User(Base):
         String, unique=True, index=True, nullable=True
     )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
-    hashed_password: Mapped[str] = mapped_column(String)
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[dt_datetime] = mapped_column(

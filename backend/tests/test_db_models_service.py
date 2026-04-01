@@ -11,7 +11,6 @@ from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import app.services.db_service as db_service
 from app.database.models import GanttTask
 from app.schemas import (
     LabelCreate,
@@ -28,7 +27,6 @@ from app.services.db_service import (
     ConflictError,
     NotFoundError,
     ValidationError as ServiceValidationError,
-    authenticate_user,
     create_label,
     create_or_update_work_location,
     create_gantt_task,
@@ -103,28 +101,6 @@ async def test_list_users_validates_offset_and_limit(db_session: AsyncSession) -
 
     with pytest.raises(ServiceValidationError, match="limit must be <= 1000"):
         await list_users(db_session, limit=1001)
-
-
-async def test_authenticate_user_performs_dummy_verify_for_unknown_username(
-    db_session: AsyncSession,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    calls: list[tuple[str, str]] = []
-
-    def fake_verify_password(plain: str, hashed: str) -> bool:
-        calls.append((plain, hashed))
-        return False
-
-    async def fake_get_user_by_username(*_args, **_kwargs):
-        return None
-
-    monkeypatch.setattr(db_service, "get_user_by_username", fake_get_user_by_username)
-    monkeypatch.setattr(db_service, "verify_password", fake_verify_password)
-
-    with pytest.raises(ServiceValidationError, match="invalid credentials"):
-        await authenticate_user(db_session, "missing-user", "test-password-1")
-
-    assert calls == [("test-password-1", db_service._DUMMY_PASSWORD_HASH)]
 
 
 async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSession) -> None:
