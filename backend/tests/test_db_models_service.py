@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -83,8 +84,8 @@ def test_schema_validates_color_and_country_code() -> None:
 
 
 async def test_list_users(db_session: AsyncSession) -> None:
-    await create_user(db_session, UserCreate(username="alice-list-test", display_name="Alice", password="test-password-1"))
-    await create_user(db_session, UserCreate(username="bob-list-test", display_name="Bob", password="test-password-1"))
+    await create_user(db_session, UserCreate(username="alice-list-test", display_name="Alice", password="test-password-1"), supertokens_user_id=str(uuid4()))
+    await create_user(db_session, UserCreate(username="bob-list-test", display_name="Bob", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     users, total = await list_users(db_session)
     assert len(users) == 2
@@ -92,7 +93,7 @@ async def test_list_users(db_session: AsyncSession) -> None:
 
 
 async def test_list_users_validates_offset_and_limit(db_session: AsyncSession) -> None:
-    await create_user(db_session, UserCreate(username="limit-test", display_name="Limit Test", password="test-password-1"))
+    await create_user(db_session, UserCreate(username="limit-test", display_name="Limit Test", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     with pytest.raises(ServiceValidationError, match="offset must be >= 0"):
         await list_users(db_session, offset=-1)
@@ -127,7 +128,7 @@ async def test_authenticate_user_performs_dummy_verify_for_unknown_username(
 
 
 async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="alice", display_name="Alice", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="alice", display_name="Alice", password="test-password-1"), supertokens_user_id=str(uuid4()))
     label = await create_label(db_session, user.id, LabelCreate(name="Deep work", color="#112233"))
 
     await create_task(
@@ -157,7 +158,7 @@ async def test_create_task_blocks_multiple_running_tasks(db_session: AsyncSessio
 
 
 async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="neg-duration", display_name="Neg Duration", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="neg-duration", display_name="Neg Duration", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     with pytest.raises(ServiceValidationError):
         await create_task(
@@ -173,7 +174,7 @@ async def test_create_task_rejects_negative_duration(db_session: AsyncSession) -
 
 
 async def test_update_task_rejects_negative_duration_with_partial_data(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="update-neg-duration", display_name="Update Neg", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="update-neg-duration", display_name="Update Neg", password="test-password-1"), supertokens_user_id=str(uuid4()))
     task = await create_task(
         db_session,
         user.id,
@@ -195,14 +196,14 @@ async def test_update_task_rejects_negative_duration_with_partial_data(db_sessio
 
 
 async def test_update_user_rejects_null_for_non_nullable_fields(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="nullable-check", display_name="Nullable Check", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="nullable-check", display_name="Nullable Check", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     with pytest.raises(ServiceValidationError):
         await update_user(db_session, user.id, UserUpdate.model_construct(display_name=None))
 
 
 async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="bob", display_name="Bob", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="bob", display_name="Bob", password="test-password-1"), supertokens_user_id=str(uuid4()))
     label = await create_label(db_session, user.id, LabelCreate(name="Ops", color="#445566"))
 
     task = await create_task(
@@ -240,7 +241,7 @@ async def test_delete_label_unlabels_tasks_and_templates(db_session: AsyncSessio
 
 
 async def test_work_location_upsert(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="carol", display_name="Carol", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="carol", display_name="Carol", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     first = await create_or_update_work_location(
         db_session,
@@ -267,7 +268,7 @@ async def test_work_location_upsert(db_session: AsyncSession) -> None:
 
 
 async def test_delete_user_removes_gantt_tasks(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="gantt-owner", display_name="Gantt Owner", password="test-password-1"))
+    user = await create_user(db_session, UserCreate(username="gantt-owner", display_name="Gantt Owner", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     await create_gantt_task(
         db_session,
@@ -297,6 +298,7 @@ async def test_gantt_task_create_rejects_invalid_date_range(db_session: AsyncSes
             display_name="Gantt Invalid Create",
             password="test-password-1",
         ),
+        supertokens_user_id=str(uuid4()),
     )
 
     with pytest.raises(ServiceValidationError, match="end_date cannot be earlier than start_date"):
@@ -320,6 +322,7 @@ async def test_gantt_task_update_rejects_invalid_date_range(db_session: AsyncSes
             display_name="Gantt Invalid Update",
             password="test-password-1",
         ),
+        supertokens_user_id=str(uuid4()),
     )
     task = await create_gantt_task(
         db_session,
@@ -346,8 +349,8 @@ def test_template_time_types_can_be_constructed() -> None:
 
 
 async def test_get_label_is_scoped_to_user(db_session: AsyncSession) -> None:
-    owner = await create_user(db_session, UserCreate(username="owner", display_name="Owner", password="test-password-1"))
-    other = await create_user(db_session, UserCreate(username="other", display_name="Other", password="test-password-1"))
+    owner = await create_user(db_session, UserCreate(username="owner", display_name="Owner", password="test-password-1"), supertokens_user_id=str(uuid4()))
+    other = await create_user(db_session, UserCreate(username="other", display_name="Other", password="test-password-1"), supertokens_user_id=str(uuid4()))
     label = await create_label(db_session, owner.id, LabelCreate(name="Private", color="#123456"))
 
     fetched = await get_label(db_session, owner.id, label.id)
@@ -358,8 +361,8 @@ async def test_get_label_is_scoped_to_user(db_session: AsyncSession) -> None:
 
 
 async def test_get_task_is_scoped_to_user(db_session: AsyncSession) -> None:
-    owner = await create_user(db_session, UserCreate(username="task_owner", display_name="Task Owner", password="test-password-1"))
-    other = await create_user(db_session, UserCreate(username="task_other", display_name="Task Other", password="test-password-1"))
+    owner = await create_user(db_session, UserCreate(username="task_owner", display_name="Task Owner", password="test-password-1"), supertokens_user_id=str(uuid4()))
+    other = await create_user(db_session, UserCreate(username="task_other", display_name="Task Other", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     task = await create_task(
         db_session,
@@ -380,8 +383,8 @@ async def test_get_task_is_scoped_to_user(db_session: AsyncSession) -> None:
 
 
 async def test_get_template_is_scoped_to_user(db_session: AsyncSession) -> None:
-    owner = await create_user(db_session, UserCreate(username="tpl_owner", display_name="Tpl Owner", password="test-password-1"))
-    other = await create_user(db_session, UserCreate(username="tpl_other", display_name="Tpl Other", password="test-password-1"))
+    owner = await create_user(db_session, UserCreate(username="tpl_owner", display_name="Tpl Owner", password="test-password-1"), supertokens_user_id=str(uuid4()))
+    other = await create_user(db_session, UserCreate(username="tpl_other", display_name="Tpl Other", password="test-password-1"), supertokens_user_id=str(uuid4()))
 
     template = await create_template(
         db_session,

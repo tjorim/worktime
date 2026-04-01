@@ -62,8 +62,11 @@ def mock_supertokens_signup() -> Generator[None, None, None]:
     Returns a fresh UUID as the SuperTokens user ID for each call, matching
     the unique constraint on supertokens_user_id in the users table.
     """
+    from supertokens_python.recipe.emailpassword.interfaces import SignUpOkResult as STSignUpOkResult
+
     async def _fake_sign_up(*args: object, **kwargs: object) -> MagicMock:
         result = MagicMock()
+        result.__class__ = STSignUpOkResult  # makes isinstance(result, STSignUpOkResult) → True
         result.user.id = str(uuid4())
         return result
 

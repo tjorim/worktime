@@ -11,7 +11,7 @@ from app.config.settings import Settings
 
 def test_default_settings():
     """Test that default settings are loaded correctly."""
-    settings = Settings()
+    settings = Settings(_env_file=None)
     
     assert settings.ENVIRONMENT == "development"
     assert settings.HOST == "0.0.0.0"
@@ -27,7 +27,7 @@ def test_default_settings():
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/v1/auth"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
 def test_custom_settings():
@@ -103,7 +103,11 @@ def test_cors_origins_wildcard_development():
 
 def test_cors_origins_wildcard_production():
     """Test wildcard CORS is rejected in production mode."""
-    settings = Settings(ENVIRONMENT="production", CORS_ORIGINS="*")
+    settings = Settings(
+        ENVIRONMENT="production",
+        CORS_ORIGINS="*",
+        SUPERTOKENS_API_KEY="test-key",
+    )
     origins = settings.get_cors_origins_list()
     
     # Wildcard should be rejected in production
@@ -116,7 +120,7 @@ def test_environment_validation():
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
     
-    settings_prod = Settings(ENVIRONMENT="production")
+    settings_prod = Settings(ENVIRONMENT="production", SUPERTOKENS_API_KEY="test-key")
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -194,12 +198,12 @@ def test_ensure_share_dir_exists_already_exists():
 
 def test_supertokens_defaults() -> None:
     """Test default SuperTokens configuration values."""
-    settings = Settings()
+    settings = Settings(_env_file=None)
     assert settings.SUPERTOKENS_CONNECTION_URI == "http://localhost:3567"
     assert settings.SUPERTOKENS_API_KEY == ""
     assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
     assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/v1/auth"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
 def test_supertokens_custom_values() -> None:
