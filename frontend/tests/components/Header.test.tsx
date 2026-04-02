@@ -10,6 +10,8 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 
+// SuperTokens mocks are provided globally by tests/setup.ts
+
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>

@@ -13,6 +13,8 @@ import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 
+// SuperTokens mocks are provided globally by tests/setup.ts
+
 // ============================================================================
 // Test Helpers & Setup
 // ============================================================================

@@ -8,6 +8,8 @@ import { WelcomeWizard } from "../../src/components/WelcomeWizard";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
+// SuperTokens mocks are provided globally by tests/setup.ts
+
 vi.mock("react-select", () => ({
   default: ({
     options = [],

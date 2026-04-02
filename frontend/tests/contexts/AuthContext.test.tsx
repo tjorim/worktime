@@ -1,338 +1,149 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../../src/constants/storageKeys";
 import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
+
+// Mock supertokens-auth-react modules
+const mockRedirectToAuth = vi.fn().mockResolvedValue(undefined);
+const mockSignOut = vi.fn().mockResolvedValue(undefined);
+let mockSessionContext: Record<string, unknown> = { loading: true };
+
+vi.mock("supertokens-auth-react", () => ({
+  redirectToAuth: (...args: unknown[]) => mockRedirectToAuth(...args),
+}));
+
+vi.mock("supertokens-auth-react/recipe/session", () => ({
+  default: {
+    signOut: (...args: unknown[]) => mockSignOut(...args),
+  },
+  useSessionContext: () => mockSessionContext,
+}));
 
 // Minimal wrapper to expose auth context values via a test component
 function AuthStatusDisplay() {
-  const { isAuthenticated, userId, displayName, showLoginModal, isValidating } = useAuth();
+  const { isAuthenticated, userId, displayName, isValidating } = useAuth();
   return (
     <div>
       <span data-testid="is-authenticated">{String(isAuthenticated)}</span>
       <span data-testid="user-id">{userId ?? "null"}</span>
       <span data-testid="display-name">{displayName ?? "null"}</span>
-      <span data-testid="show-login-modal">{String(showLoginModal)}</span>
       <span data-testid="is-validating">{String(isValidating)}</span>
     </div>
   );
 }
 
 function AuthActions() {
-  const { login, logout, triggerLogin, dismissLogin } = useAuth();
+  const { triggerLogin, logout } = useAuth();
   return (
     <div>
-      <button onClick={() => login("alice", "secret")}>login</button>
       <button onClick={logout}>logout</button>
       <button onClick={triggerLogin}>triggerLogin</button>
-      <button onClick={dismissLogin}>dismissLogin</button>
     </div>
   );
 }
 
-interface RenderOptions {
-  enabled?: boolean;
-  connectionStatus?: "disconnected" | "connecting" | "connected" | "error";
-  autoConnect?: boolean;
-}
-
-function renderWithProviders(ui: React.ReactElement, options: RenderOptions = {}) {
-  const { enabled, connectionStatus, autoConnect } = options;
-
-  if (enabled !== undefined || connectionStatus !== undefined || autoConnect !== undefined) {
-    localStorage.setItem(
-      DEVELOPER_OPTIONS_STORAGE_KEY,
-      JSON.stringify({
-        enabled: enabled ?? false,
-        apiUrl: "http://localhost:8000",
-        connectionStatus: connectionStatus ?? "disconnected",
-        lastConnectionTest: null,
-        autoConnect: autoConnect ?? false,
-        isDevMode: false,
-      }),
-    );
-  }
-
-  return render(
-    <DeveloperOptionsProvider>
-      <ToastProvider>
-        <AuthProvider>{ui}</AuthProvider>
-      </ToastProvider>
-    </DeveloperOptionsProvider>,
-  );
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<ToastProvider><AuthProvider>{ui}</AuthProvider></ToastProvider>);
 }
 
 describe("AuthContext", () => {
   beforeEach(() => {
-    sessionStorage.clear();
-    localStorage.clear();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    mockSessionContext = { loading: true };
   });
 
   afterEach(() => {
-    sessionStorage.clear();
-    localStorage.clear();
     vi.restoreAllMocks();
-    vi.unstubAllGlobals();
   });
 
   describe("initial state", () => {
-    it("is not authenticated by default", () => {
+    it("shows validating state when session is loading", () => {
+      mockSessionContext = { loading: true };
+      renderWithProviders(<AuthStatusDisplay />);
+      expect(screen.getByTestId("is-validating")).toHaveTextContent("true");
+      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
+      expect(screen.getByTestId("user-id")).toHaveTextContent("null");
+    });
+
+    it("is not authenticated when session does not exist", () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: false,
+        userId: "",
+        accessTokenPayload: {},
+        invalidClaims: [],
+      };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
       expect(screen.getByTestId("user-id")).toHaveTextContent("null");
       expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
 
-    it("does not show login modal initially when backend is disconnected", () => {
+    it("is authenticated when session exists", () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: true,
+        userId: "42",
+        accessTokenPayload: { displayName: "Alice" },
+        invalidClaims: [],
+      };
       renderWithProviders(<AuthStatusDisplay />);
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("false");
+      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
+      expect(screen.getByTestId("user-id")).toHaveTextContent("42");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("Alice");
     });
 
-    it("loads valid token from sessionStorage", async () => {
-      const expiresAt = Date.now() + 3_600_000;
-      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.endsWith("/v1/health")) {
-          return {
-            ok: true,
-            status: 200,
-            json: async () => ({ status: "ok" }),
-          };
-        }
-
-        if (url.endsWith("/v1/auth/me")) {
-          return {
-            ok: true,
-            status: 200,
-            json: async () => ({ id: 7, display_name: "Bob" }),
-          };
-        }
-
-        throw new Error(`Unexpected fetch URL: ${url}`);
-      });
-      vi.stubGlobal("fetch", fetchMock);
-
-      sessionStorage.setItem(
-        "worktime_auth",
-        JSON.stringify({
-          token: "stored-token",
-          userId: 7,
-          displayName: "Bob",
-          expiresAt,
-        }),
-      );
-      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected", autoConnect: true });
-
-      await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/v1/auth/me", {
-          headers: {
-            Authorization: "Bearer stored-token",
-            Accept: "application/json",
-          },
-          signal: expect.any(AbortSignal),
-        });
-      });
+    it("handles missing displayName in access token payload", () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: true,
+        userId: "7",
+        accessTokenPayload: {},
+        invalidClaims: [],
+      };
+      renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
       expect(screen.getByTestId("user-id")).toHaveTextContent("7");
-      expect(screen.getByTestId("display-name")).toHaveTextContent("Bob");
-    });
-
-    it("ignores expired token in sessionStorage", () => {
-      const expiresAt = Date.now() - 1000;
-      sessionStorage.setItem(
-        "worktime_auth",
-        JSON.stringify({ token: "old", userId: 1, displayName: "X", expiresAt }),
-      );
-      renderWithProviders(<AuthStatusDisplay />, { enabled: true, connectionStatus: "connected" });
-      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
   });
 
-  describe("triggerLogin / dismissLogin", () => {
-    it("triggerLogin sets showLoginModal to true", async () => {
+  describe("triggerLogin", () => {
+    it("calls redirectToAuth when triggerLogin is invoked", async () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: false,
+        userId: "",
+        accessTokenPayload: {},
+        invalidClaims: [],
+      };
       const user = userEvent.setup();
-      renderWithProviders(
-        <>
-          <AuthStatusDisplay />
-          <AuthActions />
-        </>,
-      );
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("false");
+      renderWithProviders(<AuthActions />);
       await user.click(screen.getByText("triggerLogin"));
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("true");
-    });
-
-    it("dismissLogin sets showLoginModal to false", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(
-        <>
-          <AuthStatusDisplay />
-          <AuthActions />
-        </>,
-      );
-      await user.click(screen.getByText("triggerLogin"));
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("true");
-      await user.click(screen.getByText("dismissLogin"));
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("false");
+      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
     });
   });
 
   describe("logout", () => {
-    it("clears auth state and sessionStorage on logout", async () => {
+    it("calls Session.signOut when logout is invoked", async () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: true,
+        userId: "3",
+        accessTokenPayload: { displayName: "Alice" },
+        invalidClaims: [],
+      };
       const user = userEvent.setup();
-      const expiresAt = Date.now() + 3_600_000;
-      sessionStorage.setItem(
-        "worktime_auth",
-        JSON.stringify({ token: "t", userId: 3, displayName: "Alice", expiresAt }),
-      );
       renderWithProviders(
         <>
           <AuthStatusDisplay />
           <AuthActions />
         </>,
       );
-      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
       await user.click(screen.getByText("logout"));
-      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
-      expect(screen.getByTestId("user-id")).toHaveTextContent("null");
-      expect(sessionStorage.getItem("worktime_auth")).toBeNull();
-    });
-  });
-
-  describe("login()", () => {
-    it("calls /v1/auth/token and then /v1/auth/me on success", async () => {
-      const user = userEvent.setup();
-      vi.stubGlobal(
-        "fetch",
-        vi
-          .fn()
-          .mockResolvedValueOnce({
-            ok: true,
-            status: 200,
-            json: async () => ({ access_token: "jwt-token", expires_in: 86400 }),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            status: 200,
-            json: async () => ({ id: 42, display_name: "Alice" }),
-          }),
-      );
-
-      renderWithProviders(
-        <>
-          <AuthStatusDisplay />
-          <AuthActions />
-        </>,
-      );
-
-      await user.click(screen.getByText("login"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
-      });
-      expect(screen.getByTestId("user-id")).toHaveTextContent("42");
-      expect(screen.getByTestId("display-name")).toHaveTextContent("Alice");
-      expect(screen.getByTestId("show-login-modal")).toHaveTextContent("false");
-
-      const stored = JSON.parse(sessionStorage.getItem("worktime_auth")!);
-      expect(stored.token).toBe("jwt-token");
-      expect(stored.userId).toBe(42);
-    });
-
-    it("throws 'invalid_credentials' error on 401 from token endpoint", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValueOnce({ ok: false, status: 401 }),
-      );
-
-      let thrownError: Error | null = null;
-
-      function LoginTester() {
-        const { login } = useAuth();
-        return (
-          <button
-            onClick={() =>
-              login("bad", "creds").catch((e: Error) => {
-                thrownError = e;
-              })
-            }
-          >
-            try-login
-          </button>
-        );
-      }
-
-      renderWithProviders(<LoginTester />);
-      await userEvent.setup().click(screen.getByText("try-login"));
-      await waitFor(() => expect(thrownError).not.toBeNull());
-      expect(thrownError!.message).toBe("invalid_credentials");
-    });
-
-    it("throws 'rate_limited' error on 429 from token endpoint", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValueOnce({ ok: false, status: 429 }),
-      );
-
-      let thrownError: Error | null = null;
-
-      function LoginTester() {
-        const { login } = useAuth();
-        return (
-          <button
-            onClick={() =>
-              login("u", "p").catch((e: Error) => {
-                thrownError = e;
-              })
-            }
-          >
-            try-login
-          </button>
-        );
-      }
-
-      renderWithProviders(<LoginTester />);
-      await userEvent.setup().click(screen.getByText("try-login"));
-      await waitFor(() => expect(thrownError).not.toBeNull());
-      expect(thrownError!.message).toBe("rate_limited");
-    });
-  });
-
-  describe("getAuthHeaders()", () => {
-    it("returns empty object when not authenticated", () => {
-      let headers: HeadersInit = {};
-
-      function HeaderReader() {
-        const { getAuthHeaders } = useAuth();
-        headers = getAuthHeaders();
-        return null;
-      }
-
-      renderWithProviders(<HeaderReader />);
-      expect(headers).toEqual({});
-    });
-
-    it("returns Authorization header when authenticated", () => {
-      const expiresAt = Date.now() + 3_600_000;
-      sessionStorage.setItem(
-        "worktime_auth",
-        JSON.stringify({ token: "my-jwt", userId: 1, displayName: "User", expiresAt }),
-      );
-
-      let headers: HeadersInit = {};
-
-      function HeaderReader() {
-        const { getAuthHeaders } = useAuth();
-        headers = getAuthHeaders();
-        return null;
-      }
-
-      renderWithProviders(<HeaderReader />);
-      expect((headers as Record<string, string>)["Authorization"]).toBe("Bearer my-jwt");
+      expect(mockSignOut).toHaveBeenCalled();
     });
   });
 

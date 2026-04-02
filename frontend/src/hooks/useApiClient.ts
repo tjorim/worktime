@@ -6,19 +6,20 @@ import { apiFetch } from "../utils/apiClient";
 import * as m from "../paraglide/messages.js";
 
 /**
- * Hook that returns an authenticated `apiFetch` function.
+ * Hook that returns a `apiFetch` function with standard error handling.
  *
  * The returned function automatically:
- * - Injects the Authorization: Bearer header.
- * - Triggers the login modal on 401 Unauthorized and shows a session-expired toast.
+ * - Redirects to the login page on 401 Unauthorized and shows a session-expired toast.
  * - Shows an error toast and clears auth on 403 Forbidden.
+ *
+ * Session credentials are managed by SuperTokens session cookies.
  *
  * Must be used inside AuthProvider and ToastProvider.
  *
- * @returns `apiFetch(url, init?)` — an authenticated fetch wrapper.
+ * @returns `apiFetch(url, init?)` — a fetch wrapper with error handling.
  */
 export function useApiClient() {
-  const { getAuthHeaders, triggerLogin, logout } = useAuth();
+  const { triggerLogin, logout } = useAuth();
   const { options } = useDeveloperOptions();
   const { showError, showWarning } = useToast();
 
@@ -26,11 +27,10 @@ export function useApiClient() {
     async (url: string, init: RequestInit = {}): Promise<Response> => {
       return apiFetch(url, init, {
         apiUrl: options.apiUrl,
-        getAuthHeaders,
         onUnauthorized: () => {
           logout();
-          triggerLogin();
           showWarning(m.auth_session_expired());
+          triggerLogin();
         },
         onForbidden: () => {
           logout();
@@ -38,7 +38,7 @@ export function useApiClient() {
         },
       });
     },
-    [getAuthHeaders, options.apiUrl, triggerLogin, logout, showError, showWarning],
+    [options.apiUrl, triggerLogin, logout, showError, showWarning],
   );
 
   return authenticatedFetch;

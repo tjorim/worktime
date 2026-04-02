@@ -1,79 +1,22 @@
 import type { ReactNode } from "react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useDeveloperOptions } from "./DeveloperOptionsContext";
-
-const AUTH_SESSION_KEY = "worktime_auth";
-
-interface StoredAuth {
-  token: string;
-  userId: number;
-  displayName: string;
-  expiresAt: number; // Unix ms timestamp
-}
-
-function loadStoredAuth(): StoredAuth | null {
-  try {
-    const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as StoredAuth;
-    // Treat token as expired if within 60 seconds of expiry to prevent edge-case 401s
-    if (Date.now() >= data.expiresAt - 60_000) {
-      sessionStorage.removeItem(AUTH_SESSION_KEY);
-      return null;
-    }
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredAuth(data: StoredAuth): void {
-  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(data));
-}
-
-function clearStoredAuth(): void {
-  sessionStorage.removeItem(AUTH_SESSION_KEY);
-}
-
-interface MeResponse {
-  id: number;
-  display_name: string;
-}
-
-interface TokenApiResponse {
-  access_token: string;
-  expires_in: number;
-}
+import { createContext, useCallback, useContext, useMemo } from "react";
+import { redirectToAuth } from "supertokens-auth-react";
+import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+import { useToast } from "./ToastContext";
 
 export interface AuthContextType {
-  /** Whether the user has a valid, unexpired token. */
+  /** Whether the user has an active SuperTokens session. */
   isAuthenticated: boolean;
-  /** True while validating a stored token against the backend on connect. */
+  /** True while the SuperTokens session context is loading. */
   isValidating: boolean;
-  /** Numeric user ID returned by the backend, or null when not authenticated. */
-  userId: number | null;
-  /** Human-readable display name, or null when not authenticated. */
+  /** User ID (string) from the SuperTokens session, or null when not authenticated. */
+  userId: string | null;
+  /** Human-readable display name from the access token payload, or null. */
   displayName: string | null;
-  /** Whether the login modal should be visible. */
-  showLoginModal: boolean;
-  /** Authenticate with username and password. Throws on failure. */
-  login: (username: string, password: string) => Promise<void>;
-  /** Clear auth state and sessionStorage. */
-  logout: () => void;
-  /** Programmatically show the login modal (e.g. on 401). */
+  /** Redirect to the SuperTokens login page. */
   triggerLogin: () => void;
-  /** Dismiss the login modal without logging in. */
-  dismissLogin: () => void;
-  /** Return the Authorization header object when authenticated, or empty object. */
-  getAuthHeaders: () => HeadersInit;
+  /** Sign out and end the SuperTokens session. */
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -98,199 +41,37 @@ interface AuthProviderProps {
 /**
  * Provides authentication state to the application.
  *
- * Stores the JWT in sessionStorage and validates it against the backend
- * whenever the backend connection is established. Shows the login modal
- * when the backend is connected but no valid token exists.
+ * Delegates session management to SuperTokens. Session cookies and token
+ * refresh are handled automatically by the SuperTokens session recipe.
  *
- * Must be rendered inside both DeveloperOptionsProvider and ToastProvider.
+ * Must be rendered inside both a SuperTokensWrapper and a ToastProvider.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { options } = useDeveloperOptions();
-  const { apiUrl, connectionStatus, enabled } = options;
+  const session = useSessionContext();
 
-  // Initialize from sessionStorage on first render
-  const [token, setToken] = useState<string | null>(() => loadStoredAuth()?.token ?? null);
-  const [userId, setUserId] = useState<number | null>(() => loadStoredAuth()?.userId ?? null);
-  const [displayName, setDisplayName] = useState<string | null>(
-    () => loadStoredAuth()?.displayName ?? null,
-  );
-  const [expiresAt, setExpiresAt] = useState<number | null>(
-    () => loadStoredAuth()?.expiresAt ?? null,
-  );
-  const [isValidating, setIsValidating] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const stored = loadStoredAuth();
-    return stored !== null && Date.now() < stored.expiresAt - 60_000;
-  });
-  const currentTokenRef = useRef<string | null>(token);
+  const isValidating = session.loading;
+  const isAuthenticated = !session.loading && session.doesSessionExist;
+  const userId = !session.loading && session.doesSessionExist ? session.userId : null;
+  // displayName is populated from a custom claim injected by the backend (PR #469).
+  // It will be null when authenticated but the backend has not yet set this claim.
+  const displayName =
+    !session.loading && session.doesSessionExist
+      ? ((session.accessTokenPayload?.displayName as string | undefined) ?? null)
+      : null;
 
-  const clearAuthState = useCallback(() => {
-    currentTokenRef.current = null;
-    clearStoredAuth();
-    setToken(null);
-    setUserId(null);
-    setDisplayName(null);
-    setExpiresAt(null);
-  }, []);
-
-  useEffect(() => {
-    if (!token || expiresAt === null) {
-      setIsAuthenticated(false);
-      return;
-    }
-
-    const timeoutMs = expiresAt - 60_000 - Date.now();
-    if (timeoutMs <= 0) {
-      clearAuthState();
-      setIsAuthenticated(false);
-      return;
-    }
-
-    setIsAuthenticated(true);
-    const timeoutId = window.setTimeout(() => {
-      clearAuthState();
-      setIsAuthenticated(false);
-    }, timeoutMs);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [token, expiresAt, clearAuthState]);
-
-  /**
-   * When the backend connects, validate any stored token via GET /v1/auth/me.
-   * Show the login modal if no valid token exists or validation fails.
-   */
-  useEffect(() => {
-    if (!enabled || connectionStatus !== "connected") {
-      return;
-    }
-
-    const stored = loadStoredAuth();
-    if (!stored) {
-      clearAuthState();
-      setShowLoginModal(true);
-      return;
-    }
-
-    setIsValidating(true);
-    const controller = new AbortController();
-    const requestToken = stored.token;
-    const isStaleRequest = () =>
-      controller.signal.aborted || requestToken !== currentTokenRef.current;
-
-    fetch(`${apiUrl}/v1/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${stored.token}`,
-        Accept: "application/json",
-      },
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (isStaleRequest()) return null;
-        if (!response.ok) throw new Error("Token validation failed");
-        return response.json() as Promise<MeResponse>;
-      })
-      .then((user) => {
-        if (!user || isStaleRequest()) return;
-        currentTokenRef.current = stored.token;
-        setToken(stored.token);
-        setUserId(user.id);
-        setDisplayName(user.display_name);
-        setExpiresAt(stored.expiresAt);
-      })
-      .catch((error: unknown) => {
-        if (isStaleRequest()) {
-          setIsValidating(false);
-          return;
-        }
-        if (error instanceof Error && error.name === "AbortError") {
-          setIsValidating(false);
-          return;
-        }
-        clearAuthState();
-        setShowLoginModal(true);
-      })
-      .finally(() => {
-        if (!isStaleRequest()) {
-          setIsValidating(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [apiUrl, enabled, connectionStatus, clearAuthState]);
-
-  const login = useCallback(
-    async (username: string, password: string): Promise<void> => {
-      const tokenResponse = await fetch(`${apiUrl}/v1/auth/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!tokenResponse.ok) {
-        switch (tokenResponse.status) {
-          case 429:
-            throw new Error("rate_limited");
-          case 401:
-            throw new Error("invalid_credentials");
-          default:
-            throw new Error("generic");
-        }
-      }
-
-      const tokenData = (await tokenResponse.json()) as TokenApiResponse;
-      const newExpiresAt = Date.now() + tokenData.expires_in * 1000;
-
-      // Fetch user info with the new token
-      const meResponse = await fetch(`${apiUrl}/v1/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
-          Accept: "application/json",
-        },
-      });
-
-      if (!meResponse.ok) {
-        throw new Error("generic");
-      }
-
-      const user = (await meResponse.json()) as MeResponse;
-
-      saveStoredAuth({
-        token: tokenData.access_token,
-        userId: user.id,
-        displayName: user.display_name,
-        expiresAt: newExpiresAt,
-      });
-
-      currentTokenRef.current = tokenData.access_token;
-      setToken(tokenData.access_token);
-      setUserId(user.id);
-      setDisplayName(user.display_name);
-      setExpiresAt(newExpiresAt);
-      setShowLoginModal(false);
-    },
-    [apiUrl],
-  );
-
-  const logout = useCallback(() => {
-    clearAuthState();
-  }, [clearAuthState]);
+  const { showError } = useToast();
 
   const triggerLogin = useCallback(() => {
-    setShowLoginModal(true);
-  }, []);
+    redirectToAuth({ show: "signin" }).catch(() => {
+      showError("Failed to redirect to the login page. Please refresh and try again.");
+    });
+  }, [showError]);
 
-  const dismissLogin = useCallback(() => {
-    setShowLoginModal(false);
-  }, []);
-
-  const getAuthHeaders = useCallback((): HeadersInit => {
-    if (!token || !isAuthenticated) return {};
-    return { Authorization: `Bearer ${token}` };
-  }, [token, isAuthenticated]);
+  const logout = useCallback(() => {
+    Session.signOut().catch(() => {
+      showError("Sign out failed. Please refresh the page.");
+    });
+  }, [showError]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({
@@ -298,25 +79,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isValidating,
       userId,
       displayName,
-      showLoginModal,
-      login,
-      logout,
       triggerLogin,
-      dismissLogin,
-      getAuthHeaders,
+      logout,
     }),
-    [
-      isAuthenticated,
-      isValidating,
-      userId,
-      displayName,
-      showLoginModal,
-      login,
-      logout,
-      triggerLogin,
-      dismissLogin,
-      getAuthHeaders,
-    ],
+    [isAuthenticated, isValidating, userId, displayName, triggerLogin, logout],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
