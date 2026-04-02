@@ -20,7 +20,7 @@ declare module "vitest" {
 // own vi.mock() calls for custom session behaviour.
 // ---------------------------------------------------------------------------
 vi.mock("supertokens-auth-react", () => ({
-  redirectToAuth: vi.fn(),
+  redirectToAuth: vi.fn().mockResolvedValue(undefined),
   SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 

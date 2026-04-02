@@ -3,9 +3,10 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 
 // Mock supertokens-auth-react modules
-const mockRedirectToAuth = vi.fn();
+const mockRedirectToAuth = vi.fn().mockResolvedValue(undefined);
 const mockSignOut = vi.fn().mockResolvedValue(undefined);
 let mockSessionContext: Record<string, unknown> = { loading: true };
 
@@ -44,7 +45,7 @@ function AuthActions() {
 }
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<AuthProvider>{ui}</AuthProvider>);
+  return render(<ToastProvider><AuthProvider>{ui}</AuthProvider></ToastProvider>);
 }
 
 describe("AuthContext", () => {
