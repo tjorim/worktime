@@ -26,17 +26,17 @@ from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.team import router as team_router
 
-# Initialize SuperTokens at import time so get_all_cors_headers() is available
-# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
-# for logging and error surfacing; the SDK tolerates being initialized more than once.
-init_supertokens()
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Initialize SuperTokens at import time so get_all_cors_headers() is available
+# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
+# for logging and error surfacing; the SDK tolerates being initialized more than once.
+init_supertokens()
 
 
 async def _warm_cache_async():

@@ -57,18 +57,17 @@ class Settings(BaseSettings):
     SUPERTOKENS_API_DOMAIN: str = "http://localhost:8000"
     SUPERTOKENS_WEBSITE_DOMAIN: str = "http://localhost:5173"
     SUPERTOKENS_API_BASE_PATH: str = "/auth"
+    SUPERTOKENS_WEBSITE_BASE_PATH: str = "/auth"
 
-    @field_validator("SUPERTOKENS_API_BASE_PATH")
+    @field_validator("SUPERTOKENS_API_BASE_PATH", "SUPERTOKENS_WEBSITE_BASE_PATH")
     @classmethod
-    def validate_supertokens_api_base_path(cls, v: str) -> str:
-        """Validate SUPERTOKENS_API_BASE_PATH starts with '/' and is non-empty."""
+    def validate_supertokens_base_path(cls, v: str) -> str:
+        """Validate SuperTokens base paths start with '/' and are non-empty."""
         v = v.strip()
         if not v:
-            raise ValueError("SUPERTOKENS_API_BASE_PATH cannot be empty")
+            raise ValueError("Base path cannot be empty")
         if not v.startswith("/"):
-            raise ValueError(
-                f"SUPERTOKENS_API_BASE_PATH must start with '/', got: {v!r}"
-            )
+            raise ValueError(f"Base path must start with '/', got: {v!r}")
         return v
 
     @field_validator("DATABASE_URL")

@@ -109,7 +109,7 @@ def init_supertokens() -> None:
             api_domain=settings.SUPERTOKENS_API_DOMAIN,
             website_domain=settings.SUPERTOKENS_WEBSITE_DOMAIN,
             api_base_path=settings.SUPERTOKENS_API_BASE_PATH,
-            website_base_path="/auth",
+            website_base_path=settings.SUPERTOKENS_WEBSITE_BASE_PATH,
         ),
         supertokens_config=SupertokensConfig(
             connection_uri=connection_uri,
@@ -127,4 +127,4 @@ def init_supertokens() -> None:
         mode="asgi",
     )
 
-    logger.info("✓ SuperTokens SDK initialized (core: %s)", connection_uri)
+    logger.info("SuperTokens SDK initialized (core: %s)", connection_uri)

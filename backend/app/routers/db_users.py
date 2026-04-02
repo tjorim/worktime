@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from supertokens_python.asyncio import delete_user as st_delete_user
 from supertokens_python.recipe.emailpassword.asyncio import sign_up as st_sign_up
 from supertokens_python.recipe.emailpassword.interfaces import (
     EmailAlreadyExistsError as STEmailAlreadyExistsError,
@@ -60,10 +61,15 @@ async def create_user_endpoint(
             detail="SuperTokens sign-up failed unexpectedly",
         )
 
+    st_user_id = st_result.user.id
     try:
-        user = await create_user(session, payload, supertokens_user_id=st_result.user.id)
+        user = await create_user(session, payload, supertokens_user_id=st_user_id)
     except ConflictError as error:
+        await st_delete_user(st_user_id)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except Exception:
+        await st_delete_user(st_user_id)
+        raise
 
     return UserRead.model_validate(user, from_attributes=True)
 

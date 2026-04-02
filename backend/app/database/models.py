@@ -28,8 +28,8 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, index=True, unique=True)
-    supertokens_user_id: Mapped[str | None] = mapped_column(
-        String, unique=True, index=True, nullable=True
+    supertokens_user_id: Mapped[str] = mapped_column(
+        String, unique=True, index=True
     )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     display_name: Mapped[str] = mapped_column(String)
