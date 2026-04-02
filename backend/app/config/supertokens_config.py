@@ -12,7 +12,9 @@ extra query per request.
 from __future__ import annotations
 
 import logging
+from hashlib import sha256
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import select
 from supertokens_python import InputAppInfo, SupertokensConfig, init
@@ -26,8 +28,17 @@ from supertokens_python.recipe.session.interfaces import (
 from supertokens_python.types import RecipeUserId
 
 from app.config import settings
+from app.database.engine import get_session_factory
 
 logger = logging.getLogger(__name__)
+
+
+def _connection_uri_tag(connection_uri: str) -> str:
+    """Create a non-sensitive identifier for connection URI logging."""
+    parsed = urlparse(connection_uri)
+    scheme = parsed.scheme or "unknown"
+    fingerprint = sha256(connection_uri.encode("utf-8")).hexdigest()[:8]
+    return f"{scheme}://***#{fingerprint}"
 
 
 def _override_session_functions(
@@ -54,10 +65,9 @@ def _override_session_functions(
         # the session's access-token payload.  This query only runs when a
         # new session is created (i.e. at login time), not on every request.
         try:
-            from app.database.engine import _build_engine
             from app.database.models import User
 
-            _, session_factory = _build_engine()
+            session_factory = get_session_factory()
             async with session_factory() as db_session:
                 result = await db_session.execute(
                     select(User).where(User.supertokens_user_id == user_id)
@@ -127,4 +137,7 @@ def init_supertokens() -> None:
         mode="asgi",
     )
 
-    logger.info("SuperTokens SDK initialized (core: %s)", connection_uri)
+    logger.info(
+        "SuperTokens SDK initialized (core: %s)",
+        _connection_uri_tag(connection_uri),
+    )

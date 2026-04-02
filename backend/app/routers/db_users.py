@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from supertokens_python.asyncio import delete_user as st_delete_user
@@ -32,6 +34,8 @@ from app.services.db_service import (
     list_users,
     update_user,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
 
@@ -65,10 +69,24 @@ async def create_user_endpoint(
     try:
         user = await create_user(session, payload, supertokens_user_id=st_user_id)
     except ConflictError as error:
-        await st_delete_user(st_user_id)
+        try:
+            await st_delete_user(st_user_id)
+        except Exception as rollback_error:
+            logger.error(
+                "Failed to roll back SuperTokens user %s after ConflictError: %s",
+                st_user_id,
+                rollback_error,
+            )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     except Exception:
-        await st_delete_user(st_user_id)
+        try:
+            await st_delete_user(st_user_id)
+        except Exception as rollback_error:
+            logger.error(
+                "Failed to roll back SuperTokens user %s after unexpected error: %s",
+                st_user_id,
+                rollback_error,
+            )
         raise
 
     return UserRead.model_validate(user, from_attributes=True)

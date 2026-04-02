@@ -103,7 +103,10 @@ class Settings(BaseSettings):
     
     @model_validator(mode="after")
     def validate_production_supertokens_config(self) -> "Settings":
-        if self.ENVIRONMENT == "production" and not self.SUPERTOKENS_API_KEY:
+        key = (self.SUPERTOKENS_API_KEY or "").strip()
+        self.SUPERTOKENS_API_KEY = key
+
+        if self.ENVIRONMENT == "production" and not key:
             raise ValueError(
                 "SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core"
             )
