@@ -17,7 +17,7 @@ declare module "vitest" {
 // Global SuperTokens mocks — default no-session state.
 //
 // Individual test files (e.g. AuthContext.test.tsx) can override with their
-// own vi.mock() calls for custom session behaviour.
+// own vi.mock() calls for custom session behavior.
 // ---------------------------------------------------------------------------
 vi.mock("supertokens-auth-react", () => ({
   redirectToAuth: vi.fn().mockResolvedValue(undefined),

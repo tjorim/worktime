@@ -29,8 +29,8 @@ export function useApiClient() {
         apiUrl: options.apiUrl,
         onUnauthorized: () => {
           logout();
-          triggerLogin();
           showWarning(m.auth_session_expired());
+          triggerLogin();
         },
         onForbidden: () => {
           logout();
