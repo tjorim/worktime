@@ -81,7 +81,7 @@ The shared directory is expected to look like this:
 ## API Groups
 
 - Legacy file/share endpoints: `/v1/hday/*`, `/v1/team/*`, `/v1/health`
-- Auth endpoints: `/v1/auth/*`
+- Auth endpoints: `/auth/*`
 - Database endpoints: `/v1/db/users/*`, `/v1/db/time-tracking/*`, `/v1/db/work-locations/*`, `/v1/db/gantt-tasks/*`, `/v1/db/sync/*`
 - Debug endpoint in non-production only: `/v1/debug/benchmark`
 

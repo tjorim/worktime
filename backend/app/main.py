@@ -162,7 +162,7 @@ else:
 app.add_middleware(get_middleware())
 
 # CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
-# CORS headers are present on /auth/* responses that SuperTokens handles directly.
+# CORS headers are present on auth responses that SuperTokens handles directly.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

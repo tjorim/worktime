@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     SUPERTOKENS_API_KEY: str = ""
     SUPERTOKENS_API_DOMAIN: str = "http://localhost:8000"
     SUPERTOKENS_WEBSITE_DOMAIN: str = "http://localhost:5173"
-    SUPERTOKENS_API_BASE_PATH: str = "/v1/auth"
+    SUPERTOKENS_API_BASE_PATH: str = "/auth"
     SUPERTOKENS_WEBSITE_BASE_PATH: str = "/auth"
 
     @field_validator("SUPERTOKENS_API_BASE_PATH", "SUPERTOKENS_WEBSITE_BASE_PATH")
