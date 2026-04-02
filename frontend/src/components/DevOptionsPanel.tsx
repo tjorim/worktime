@@ -277,7 +277,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
                     <i className="bi bi-person-x me-1"></i>
                     {m.dev_auth_not_authenticated()}
                   </span>
-                  <Button variant="primary" size="sm" onClick={() => triggerLogin()}>
+                  <Button variant="primary" size="sm" onClick={triggerLogin}>
                     <i className="bi bi-box-arrow-in-right me-1"></i>
                     {m.dev_auth_login_btn()}
                   </Button>

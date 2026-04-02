@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { redirectToAuth } from "supertokens-auth-react";
 import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+import { useToast } from "./ToastContext";
 
 export interface AuthContextType {
   /** Whether the user has an active SuperTokens session. */
@@ -43,7 +44,7 @@ interface AuthProviderProps {
  * Delegates session management to SuperTokens. Session cookies and token
  * refresh are handled automatically by the SuperTokens session recipe.
  *
- * Must be rendered inside a SuperTokensWrapper.
+ * Must be rendered inside both a SuperTokensWrapper and a ToastProvider.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const session = useSessionContext();
@@ -51,18 +52,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isValidating = session.loading;
   const isAuthenticated = !session.loading && session.doesSessionExist;
   const userId = !session.loading && session.doesSessionExist ? session.userId : null;
+  // displayName is populated from a custom claim injected by the backend (PR #469).
+  // It will be null when authenticated but the backend has not yet set this claim.
   const displayName =
     !session.loading && session.doesSessionExist
       ? ((session.accessTokenPayload?.displayName as string | undefined) ?? null)
       : null;
 
+  const { showError } = useToast();
+
   const triggerLogin = useCallback(() => {
-    void redirectToAuth({ show: "signin" });
-  }, []);
+    redirectToAuth({ show: "signin" }).catch(() => {
+      showError("Failed to redirect to the login page. Please refresh and try again.");
+    });
+  }, [showError]);
 
   const logout = useCallback(() => {
-    void Session.signOut();
-  }, []);
+    Session.signOut().catch(() => {
+      showError("Sign out failed. Please refresh the page.");
+    });
+  }, [showError]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({
