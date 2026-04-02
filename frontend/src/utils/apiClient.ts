@@ -51,7 +51,11 @@ export async function apiFetch(
   // relative paths (e.g. "/v1/data") target the correct backend origin.
   const resolvedUrl = new URL(url, clientOptions.apiUrl).toString();
 
-  const response = await fetch(resolvedUrl, { ...init, headers: mergedHeaders });
+  const response = await fetch(resolvedUrl, {
+    ...init,
+    headers: mergedHeaders,
+    credentials: "include",
+  });
 
   if (response.status === 401) {
     clientOptions.onUnauthorized();

@@ -23,7 +23,7 @@ def test_unauthenticated_request_returns_401(
 def test_malformed_token_returns_401(
     db_client: TestClient,
 ) -> None:
-    """Tokens with an invalid role segment should be rejected with 401."""
+    """Tokens with a non-integer user_id segment should be rejected with 401."""
     response = db_client.get(
         "/v1/db/users/1",
         headers={"Authorization": "Bearer test.not-an-int.user"},
