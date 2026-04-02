@@ -1,15 +1,14 @@
 /**
- * Authenticated API client wrapper.
+ * API client wrapper.
  *
- * Injects the Authorization header, handles common error responses,
- * and surfaces the appropriate callbacks for auth failures.
+ * Handles common error responses and surfaces the appropriate callbacks
+ * for auth failures. Authentication is managed automatically by
+ * SuperTokens session cookies — no manual header injection required.
  */
 
 export interface ApiClientOptions {
   /** Base API URL configured by developer options. */
   apiUrl: string;
-  /** Returns the current Authorization headers (or empty object). */
-  getAuthHeaders: () => HeadersInit;
   /** Called when a 401 Unauthorized response is received. */
   onUnauthorized: () => void;
   /** Called when a 403 Forbidden response is received. */
@@ -17,16 +16,19 @@ export interface ApiClientOptions {
 }
 
 /**
- * Perform an authenticated fetch request.
+ * Perform a fetch request with standard error handling.
  *
- * Conditionally merges the Authorization header into same-origin API requests, then inspects the response:
+ * Sets default Accept/Content-Type headers, then inspects the response:
  * - On 401: calls `onUnauthorized` and throws.
  * - On 403: calls `onForbidden` and throws.
  * - Otherwise: returns the raw Response for the caller to inspect.
  *
+ * Session credentials are attached automatically by the SuperTokens
+ * session recipe, so no Authorization header is injected here.
+ *
  * @param url - The URL to fetch.
- * @param init - Optional fetch options (headers here are merged with auth headers).
- * @param clientOptions - Auth callbacks and header provider.
+ * @param init - Optional fetch options.
+ * @param clientOptions - Error callbacks.
  * @returns The fetch Response on success (non-401/403 status).
  */
 export async function apiFetch(
@@ -34,10 +36,6 @@ export async function apiFetch(
   init: RequestInit = {},
   clientOptions: ApiClientOptions,
 ): Promise<Response> {
-  const resolvedUrl = new URL(url, window.location.origin);
-  const resolvedApiUrl = new URL(clientOptions.apiUrl, window.location.origin);
-  const shouldAttachAuth = resolvedUrl.origin === resolvedApiUrl.origin;
-
   const mergedHeaders = new Headers({
     Accept: "application/json",
   });
@@ -46,20 +44,18 @@ export async function apiFetch(
     mergedHeaders.set("Content-Type", "application/json");
   }
 
-  if (shouldAttachAuth) {
-    const authHeaders = new Headers(clientOptions.getAuthHeaders());
-    authHeaders.forEach((value, key) => mergedHeaders.set(key, value));
-  }
-
   const requestHeaders = new Headers(init.headers);
-  requestHeaders.forEach((value, key) => {
-    if (!shouldAttachAuth && key.toLowerCase() === "authorization") {
-      return;
-    }
-    mergedHeaders.set(key, value);
-  });
+  requestHeaders.forEach((value, key) => mergedHeaders.set(key, value));
 
-  const response = await fetch(url, { ...init, headers: mergedHeaders });
+  // Resolve the provided URL against the configured API base URL so that
+  // relative paths (e.g. "/v1/data") target the correct backend origin.
+  const resolvedUrl = new URL(url, clientOptions.apiUrl).toString();
+
+  const response = await fetch(resolvedUrl, {
+    ...init,
+    headers: mergedHeaders,
+    credentials: "include",
+  });
 
   if (response.status === 401) {
     clientOptions.onUnauthorized();

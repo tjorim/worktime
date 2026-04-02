@@ -1,4 +1,9 @@
-"""Tests for authentication endpoints: POST /v1/auth/token and GET /v1/auth/me."""
+"""Tests for SuperTokens-based authentication helpers.
+
+The SuperTokens core is not available in the test environment, so these
+tests exercise the ``get_authenticated_principal`` dependency through the
+``_test_auth_principal`` override registered by the ``db_client`` fixture.
+"""
 
 from __future__ import annotations
 
@@ -7,96 +12,93 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 
 
-def test_login_valid_credentials_returns_token(
+def test_unauthenticated_request_returns_401(
+    db_client: TestClient,
+) -> None:
+    """Requests without an Authorization header should be rejected."""
+    response = db_client.get("/v1/db/users/1")
+    assert response.status_code == 401
+
+
+def test_malformed_token_returns_401(
+    db_client: TestClient,
+) -> None:
+    """Tokens with a non-integer user_id segment should be rejected with 401."""
+    response = db_client.get(
+        "/v1/db/users/1",
+        headers={"Authorization": "Bearer test.not-an-int.user"},
+    )
+    assert response.status_code == 401
+
+
+def test_authenticated_request_succeeds(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
 ) -> None:
+    """A valid test token should grant access to protected endpoints."""
     admin_headers = auth_headers(1, is_admin=True)
-    create_user_factory(db_client, admin_headers, "auth-user")
+    user_id = create_user_factory(db_client, admin_headers, "auth-user")
 
-    response = db_client.post(
-        "/v1/auth/token",
-        json={"username": "auth-user", "password": "test-password-1"},
+    response = db_client.get(
+        f"/v1/db/users/{user_id}",
+        headers=auth_headers(user_id),
     )
     assert response.status_code == 200
+    assert response.json()["username"] == "auth-user"
+
+
+def test_non_admin_cannot_create_user(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+) -> None:
+    """Only admins should be able to create new users."""
+    response = db_client.post(
+        "/v1/db/users/",
+        json={
+            "username": "non-admin-user",
+            "display_name": "Non Admin",
+            "settings": {},
+            "password": "test-password-1",
+        },
+        headers=auth_headers(99),
+    )
+    assert response.status_code == 403
+
+
+def test_admin_can_create_user(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+) -> None:
+    """Admins should be able to create new users."""
+    admin_headers = auth_headers(1, is_admin=True)
+    response = db_client.post(
+        "/v1/db/users/",
+        json={
+            "username": "admin-created-user",
+            "display_name": "Admin Created",
+            "settings": {},
+            "password": "test-password-1",
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 201
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
-    assert isinstance(data["expires_in"], int)
-    assert data["expires_in"] > 0
+    assert data["username"] == "admin-created-user"
 
 
-def test_login_token_is_usable_for_me(
+def test_user_cannot_access_other_user(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
 ) -> None:
+    """Users should not be able to access other users' data."""
     admin_headers = auth_headers(1, is_admin=True)
-    user_id = create_user_factory(db_client, admin_headers, "me-user")
+    user_a = create_user_factory(db_client, admin_headers, "user-a")
+    user_b = create_user_factory(db_client, admin_headers, "user-b")
 
-    login_response = db_client.post(
-        "/v1/auth/token",
-        json={"username": "me-user", "password": "test-password-1"},
+    response = db_client.get(
+        f"/v1/db/users/{user_b}",
+        headers=auth_headers(user_a),
     )
-    assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
-
-    me_response = db_client.get(
-        "/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert me_response.status_code == 200
-    data = me_response.json()
-    assert data["id"] == user_id
-    assert data["username"] == "me-user"
-
-
-def test_login_wrong_password_returns_401(
-    db_client: TestClient,
-    auth_headers: Callable[..., dict[str, str]],
-    create_user_factory: Callable[..., int],
-) -> None:
-    admin_headers = auth_headers(1, is_admin=True)
-    create_user_factory(db_client, admin_headers, "wrong-pw-user")
-
-    response = db_client.post(
-        "/v1/auth/token",
-        json={"username": "wrong-pw-user", "password": "wrong-password"},
-    )
-    assert response.status_code == 401
-
-
-def test_login_unknown_username_returns_401(
-    db_client: TestClient,
-) -> None:
-    response = db_client.post(
-        "/v1/auth/token",
-        json={"username": "nobody", "password": "some-password"},
-    )
-    assert response.status_code == 401
-
-
-def test_me_without_token_returns_401(
-    db_client: TestClient,
-) -> None:
-    response = db_client.get("/v1/auth/me")
-    assert response.status_code == 401
-
-
-def test_login_rate_limit_returns_429_after_repeated_failures(
-    db_client: TestClient,
-) -> None:
-    for _ in range(5):
-        response = db_client.post(
-            "/v1/auth/token",
-            json={"username": "throttle-user", "password": "wrong-password"},
-        )
-        assert response.status_code == 401
-
-    limited_response = db_client.post(
-        "/v1/auth/token",
-        json={"username": "throttle-user", "password": "wrong-password"},
-    )
-    assert limited_response.status_code == 429
-    assert "Retry-After" in limited_response.headers
+    assert response.status_code == 403

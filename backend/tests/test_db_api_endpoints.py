@@ -4,23 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import jwt
-import pytest
 from fastapi.testclient import TestClient
-
-from app.config import settings
 
 
 def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
-    token_payload = {"sub": str(user_id)}
-    if is_admin:
-        token_payload["is_admin"] = True
-
-    token = jwt.encode(
-        token_payload,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM,
-    )
+    role = "admin" if is_admin else "user"
+    token = f"test.{user_id}.{role}"
     return {"Authorization": f"Bearer {token}"}
 
 

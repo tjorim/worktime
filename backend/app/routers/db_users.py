@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from supertokens_python.asyncio import delete_user as st_delete_user
+from supertokens_python.recipe.emailpassword.asyncio import sign_up as st_sign_up
+from supertokens_python.recipe.emailpassword.interfaces import (
+    EmailAlreadyExistsError as STEmailAlreadyExistsError,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
+    SignUpOkResult as STSignUpOkResult,
+)
 
 from app.database.engine import get_session
 from app.routers.auth import (
@@ -25,6 +35,8 @@ from app.services.db_service import (
     update_user,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
 
 
@@ -37,10 +49,45 @@ async def create_user_endpoint(
     if not principal.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
+    # Register the user in SuperTokens first. Uses username as the email
+    # identifier, matching the convention used by the migration script.
+    st_email = (
+        payload.username
+        if "@" in payload.username
+        else f"{payload.username}@worktime.local"
+    )
+    st_result = await st_sign_up(tenant_id="public", email=st_email, password=payload.password)
+    if isinstance(st_result, STEmailAlreadyExistsError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
+    if not isinstance(st_result, STSignUpOkResult):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SuperTokens sign-up failed unexpectedly",
+        )
+
+    st_user_id = st_result.user.id
     try:
-        user = await create_user(session, payload)
+        user = await create_user(session, payload, supertokens_user_id=st_user_id)
     except ConflictError as error:
+        try:
+            await st_delete_user(st_user_id)
+        except Exception as rollback_error:
+            logger.error(
+                "Failed to roll back SuperTokens user %s after ConflictError: %s",
+                st_user_id,
+                rollback_error,
+            )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except Exception:
+        try:
+            await st_delete_user(st_user_id)
+        except Exception as rollback_error:
+            logger.error(
+                "Failed to roll back SuperTokens user %s after unexpected error: %s",
+                st_user_id,
+                rollback_error,
+            )
+        raise
 
     return UserRead.model_validate(user, from_attributes=True)
 

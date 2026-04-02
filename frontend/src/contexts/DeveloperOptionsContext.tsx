@@ -26,7 +26,7 @@ interface DeveloperOptionsContextType {
 
 const defaultOptions: DeveloperOptions = {
   enabled: false,
-  apiUrl: "http://localhost:8000",
+  apiUrl: import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im",
   connectionStatus: "disconnected",
   lastConnectionTest: null,
   autoConnect: false,

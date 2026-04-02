@@ -33,8 +33,14 @@ def _build_engine():
     return _engine, _session_factory
 
 
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Return the shared async session factory singleton."""
+    _, factory = _build_engine()
+    return factory
+
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting a database session."""
-    _, factory = _build_engine()
+    factory = get_session_factory()
     async with factory() as session:
         yield session

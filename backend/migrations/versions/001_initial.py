@@ -1,4 +1,4 @@
-"""Initial schema — all tables at final state.
+"""Initial schema — all tables at final state, including SuperTokens integration.
 
 Revision ID: 001
 Revises:
@@ -21,14 +21,15 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("username", sa.String(), nullable=False),
+        sa.Column("supertokens_user_id", sa.String(), nullable=False),
         sa.Column("is_admin", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("hashed_password", sa.String(), nullable=False),
         sa.Column("display_name", sa.String(), nullable=False),
         sa.Column("settings", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
     op.create_index("ix_users_username", "users", ["username"], unique=True)
+    op.create_index("ix_users_supertokens_user_id", "users", ["supertokens_user_id"], unique=True)
 
     op.create_table(
         "time_tracking_labels",
@@ -132,4 +133,5 @@ def downgrade() -> None:
     op.drop_table("time_tracking_templates")
     op.drop_table("time_tracking_tasks")
     op.drop_table("time_tracking_labels")
+    op.drop_index("ix_users_supertokens_user_id", table_name="users")
     op.drop_table("users")

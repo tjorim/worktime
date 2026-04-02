@@ -13,10 +13,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from supertokens_python import get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
 
 from .cache.warm_cache import warm_cache
 from .config import settings
 from .config.cors import get_cors_origins
+from .config.supertokens_config import init_supertokens
 from .database import init_db
 from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
@@ -29,6 +32,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Initialize SuperTokens at import time so get_all_cors_headers() is available
+# when CORSMiddleware is registered below. The lifespan also calls init_supertokens()
+# for logging and error surfacing; the SDK tolerates being initialized more than once.
+init_supertokens()
 
 
 async def _warm_cache_async():
@@ -97,6 +105,13 @@ async def lifespan(app: FastAPI):
             f"   The health endpoint will report current status."
         )
     
+    # Initialize SuperTokens SDK before accepting connections
+    try:
+        init_supertokens()
+    except Exception as e:
+        logger.error(f"❌ SuperTokens initialization failed: {e}")
+        raise
+
     # Initialize database before accepting connections
     if settings.DATABASE_ENABLED:
         try:
@@ -143,15 +158,20 @@ if not cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {cors_origins}")
 
+# Add SuperTokens middleware first so it is innermost in the stack
+app.add_middleware(get_middleware())
+
+# CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
+# CORS headers are present on auth responses that SuperTokens handles directly.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials="*" not in cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization"] + get_all_cors_headers(),
 )
 
-# Add timing middleware after CORS
+# TimingMiddleware is outermost, timing the full request including CORS processing.
 app.add_middleware(TimingMiddleware)
 
 
@@ -161,14 +181,12 @@ app.include_router(hday_router)
 app.include_router(team_router)
 
 if settings.DATABASE_ENABLED:
-    from .routers.auth_router import router as auth_router
     from .routers.db_gantt import router as db_gantt_router
     from .routers.db_sync import router as db_sync_router
     from .routers.db_time_tracking import router as db_time_tracking_router
     from .routers.db_users import router as db_users_router
     from .routers.db_work_locations import router as db_work_locations_router
 
-    app.include_router(auth_router)
     app.include_router(db_users_router)
     app.include_router(db_time_tracking_router)
     app.include_router(db_work_locations_router)

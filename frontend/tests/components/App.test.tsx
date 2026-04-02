@@ -5,6 +5,8 @@ import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
 import type { ShiftResult } from "../../src/utils/shiftCalculations";
 
+// SuperTokens mocks are provided globally by tests/setup.ts
+
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
 vi.mock("../../src/utils/dateTimeUtils", () => {
   const mockDayjs = vi.fn(() => ({

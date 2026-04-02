@@ -4,20 +4,23 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator, Callable, Generator
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
-import jwt
 import pytest
 import pytest_asyncio
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
 from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.cache.store import get_cache
-from app.config import settings
 from app.database.engine import get_session
 from app.database.models import Base
 from app.main import app
+from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -50,6 +53,25 @@ def _assert_test_database_url(url: str) -> None:
             "The host must be localhost or the database name must contain 'test'. "
             "Refusing to run drop_all() to protect production data."
         )
+
+
+@pytest.fixture(autouse=True)
+def mock_supertokens_signup() -> Generator[None, None, None]:
+    """Mock SuperTokens sign_up so tests don't require a live core.
+
+    Returns a fresh UUID as the SuperTokens user ID for each call, matching
+    the unique constraint on supertokens_user_id in the users table.
+    """
+    from supertokens_python.recipe.emailpassword.interfaces import SignUpOkResult as STSignUpOkResult
+
+    async def _fake_sign_up(*args: object, **kwargs: object) -> MagicMock:
+        result = MagicMock()
+        result.__class__ = STSignUpOkResult  # makes isinstance(result, STSignUpOkResult) → True
+        result.user.id = str(uuid4())
+        return result
+
+    with patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -96,6 +118,46 @@ async def db_session(test_db: AsyncEngine) -> AsyncGenerator[AsyncSession, None]
         yield session
 
 
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _test_auth_principal(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> AuthenticatedPrincipal:
+    """Test-only override for ``get_authenticated_principal``.
+
+    Expects a test token in the format ``test.<user_id>.admin`` or
+    ``test.<user_id>.user`` (produced by the ``auth_headers`` fixture).
+    """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    parts = credentials.credentials.split(".")
+    if len(parts) != 3 or parts[0] != "test":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token format",
+        )
+    try:
+        user_id = int(parts[1])
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: user_id is not an integer",
+        ) from None
+    if parts[2] not in ("admin", "user"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid test token: role must be 'admin' or 'user'",
+        )
+    return AuthenticatedPrincipal(
+        user_id=user_id,
+        is_admin=parts[2] == "admin",
+    )
+
+
 @pytest.fixture()
 def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
     """Create a TestClient that uses a test-specific async database session."""
@@ -106,27 +168,27 @@ def db_client(test_db: AsyncEngine) -> Generator[TestClient, None, None]:
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_authenticated_principal] = _test_auth_principal
     try:
         with TestClient(app) as client:
             yield client
     finally:
         app.dependency_overrides.pop(get_session, None)
+        app.dependency_overrides.pop(get_authenticated_principal, None)
 
 
 @pytest.fixture()
 def auth_headers() -> Callable[..., dict[str, str]]:
-    """Build bearer auth headers for a user token."""
+    """Build bearer auth headers using a simple test token format.
+
+    Tokens are ``test.<user_id>.admin`` or ``test.<user_id>.user`` and are
+    parsed by the ``_test_auth_principal`` dependency override in
+    ``db_client``.
+    """
 
     def _headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
-        token_payload: dict[str, str | bool] = {"sub": str(user_id)}
-        if is_admin:
-            token_payload["is_admin"] = True
-
-        token = jwt.encode(
-            token_payload,
-            settings.JWT_SECRET_KEY,
-            algorithm=settings.JWT_ALGORITHM,
-        )
+        role = "admin" if is_admin else "user"
+        token = f"test.{user_id}.{role}"
         return {"Authorization": f"Bearer {token}"}
 
     return _headers

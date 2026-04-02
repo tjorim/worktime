@@ -11,7 +11,7 @@ from app.config.settings import Settings
 
 def test_default_settings():
     """Test that default settings are loaded correctly."""
-    settings = Settings()
+    settings = Settings(_env_file=None)
     
     assert settings.ENVIRONMENT == "development"
     assert settings.HOST == "0.0.0.0"
@@ -23,7 +23,11 @@ def test_default_settings():
     assert settings.DATABASE_ENABLED is True
     assert settings.DATABASE_URL.startswith("postgresql+asyncpg://")
     assert settings.DATABASE_ECHO is False
-    assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 24 * 3600
+    assert settings.SUPERTOKENS_CONNECTION_URI == "http://localhost:3567"
+    assert settings.SUPERTOKENS_API_KEY == ""
+    assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
+    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
 def test_custom_settings():
@@ -43,8 +47,8 @@ def test_custom_settings():
         os.environ["DATABASE_ENABLED"] = "false"
         os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@dbhost/mydb"
         os.environ["DATABASE_ECHO"] = "true"
-        os.environ["JWT_SECRET_KEY"] = "production-secret-key-that-is-very-long"
-        os.environ["JWT_ACCESS_TOKEN_EXPIRE_SECONDS"] = "7200"
+        os.environ["SUPERTOKENS_CONNECTION_URI"] = "http://supertokens:3567"
+        os.environ["SUPERTOKENS_API_KEY"] = "test-api-key"
         
         # Create new settings instance
         settings = Settings()
@@ -59,7 +63,8 @@ def test_custom_settings():
         assert settings.DATABASE_ENABLED is False
         assert settings.DATABASE_URL == "postgresql+asyncpg://user:pass@dbhost/mydb"
         assert settings.DATABASE_ECHO is True
-        assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 7200
+        assert settings.SUPERTOKENS_CONNECTION_URI == "http://supertokens:3567"
+        assert settings.SUPERTOKENS_API_KEY == "test-api-key"
     finally:
         # Restore original environment
         os.environ.clear()
@@ -98,7 +103,11 @@ def test_cors_origins_wildcard_development():
 
 def test_cors_origins_wildcard_production():
     """Test wildcard CORS is rejected in production mode."""
-    settings = Settings(ENVIRONMENT="production", CORS_ORIGINS="*", JWT_SECRET_KEY="production-secret-key-that-is-very-long")
+    settings = Settings(
+        ENVIRONMENT="production",
+        CORS_ORIGINS="*",
+        SUPERTOKENS_API_KEY="test-key",
+    )
     origins = settings.get_cors_origins_list()
     
     # Wildcard should be rejected in production
@@ -111,7 +120,7 @@ def test_environment_validation():
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
     
-    settings_prod = Settings(ENVIRONMENT="production", JWT_SECRET_KEY="production-secret-key-that-is-very-long")
+    settings_prod = Settings(ENVIRONMENT="production", SUPERTOKENS_API_KEY="test-key")
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -187,37 +196,27 @@ def test_ensure_share_dir_exists_already_exists():
         assert test_dir.exists()
 
 
-def test_jwt_algorithm_validation_normalizes_case() -> None:
-    """Test JWT algorithm normalization/whitelist."""
-    settings = Settings(JWT_ALGORITHM=" hs512 ")
-    assert settings.JWT_ALGORITHM == "HS512"
+def test_supertokens_defaults() -> None:
+    """Test default SuperTokens configuration values."""
+    settings = Settings(_env_file=None)
+    assert settings.SUPERTOKENS_CONNECTION_URI == "http://localhost:3567"
+    assert settings.SUPERTOKENS_API_KEY == ""
+    assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
+    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/auth"
 
 
-
-def test_jwt_algorithm_validation_rejects_unknown_algorithm() -> None:
-    """Test JWT algorithm whitelist rejection."""
-    with pytest.raises(ValueError, match="JWT_ALGORITHM must be one of"):
-        Settings(JWT_ALGORITHM="none")
-
-
-
-def test_production_rejects_default_jwt_secret() -> None:
-    """Test production mode requires non-default JWT secret."""
-    with pytest.raises(ValueError, match="JWT_SECRET_KEY must be overridden in production"):
-        Settings(ENVIRONMENT="production")
-
-
-
-def test_development_allows_default_jwt_secret() -> None:
-    """Test development mode allows default JWT secret."""
-    settings = Settings(ENVIRONMENT="development")
-    assert settings.JWT_SECRET_KEY == "dev-only-change-me-at-least-32-bytes"
-
-
-def test_jwt_access_token_expire_seconds_validation() -> None:
-    """Test JWT access token lifetime validation."""
-    settings = Settings(JWT_ACCESS_TOKEN_EXPIRE_SECONDS=3600)
-    assert settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS == 3600
-
-    with pytest.raises(ValueError, match="must be positive"):
-        Settings(JWT_ACCESS_TOKEN_EXPIRE_SECONDS=0)
+def test_supertokens_custom_values() -> None:
+    """Test overriding SuperTokens configuration."""
+    settings = Settings(
+        SUPERTOKENS_CONNECTION_URI="http://supertokens:3567",
+        SUPERTOKENS_API_KEY="my-api-key",
+        SUPERTOKENS_API_DOMAIN="https://api.example.com",
+        SUPERTOKENS_WEBSITE_DOMAIN="https://worktime.example.com",
+        SUPERTOKENS_API_BASE_PATH="/custom-auth",
+    )
+    assert settings.SUPERTOKENS_CONNECTION_URI == "http://supertokens:3567"
+    assert settings.SUPERTOKENS_API_KEY == "my-api-key"
+    assert settings.SUPERTOKENS_API_DOMAIN == "https://api.example.com"
+    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "https://worktime.example.com"
+    assert settings.SUPERTOKENS_API_BASE_PATH == "/custom-auth"
