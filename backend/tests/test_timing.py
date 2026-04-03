@@ -103,9 +103,9 @@ class TestTimingMiddleware:
         decimal_part = timing_header.split(".")[1]
         assert len(decimal_part) == 3
     
-    def test_timing_header_on_healthz(self, client):
-        """Test that timing header is added to healthz endpoint."""
-        response = client.get("/healthz")
+    def test_timing_header_on_health(self, client):
+        """Test that timing header is added to health endpoint."""
+        response = client.get("/health")
         
         assert "X-Total-Ms" in response.headers
         timing_value = float(response.headers["X-Total-Ms"])

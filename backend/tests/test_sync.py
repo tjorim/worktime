@@ -1,4 +1,4 @@
-"""Tests for the bidirectional sync endpoints (/v1/db/sync)."""
+"""Tests for the bidirectional sync endpoints (/db/sync)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
     resp = client.post(
-        "/v1/db/users/",
+        "/db/users/",
         json={"username": username, "display_name": username, "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
@@ -39,27 +39,27 @@ class TestSyncAuth:
     """Sync endpoints require authentication."""
 
     def test_push_requires_auth(self, db_client: TestClient) -> None:
-        resp = db_client.post("/v1/db/sync/push", json={"labels": [], "tasks": [], "templates": [], "work_locations": []})
+        resp = db_client.post("/db/sync/push", json={"labels": [], "tasks": [], "templates": [], "work_locations": []})
         assert resp.status_code == 401
 
     def test_pull_requires_auth(self, db_client: TestClient) -> None:
-        resp = db_client.get("/v1/db/sync/pull")
+        resp = db_client.get("/db/sync/pull")
         assert resp.status_code == 401
 
     def test_status_requires_auth(self, db_client: TestClient) -> None:
-        resp = db_client.get("/v1/db/sync/status")
+        resp = db_client.get("/db/sync/status")
         assert resp.status_code == 401
 
 
 class TestSyncStatus:
-    """GET /v1/db/sync/status"""
+    """GET /db/sync/status"""
 
     def test_status_returns_nulls_for_empty_user(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "status-user")
         headers = auth_headers(user_id)
 
-        resp = db_client.get("/v1/db/sync/status", headers=headers)
+        resp = db_client.get("/db/sync/status", headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["labels_updated_at"] is None
@@ -76,12 +76,12 @@ class TestSyncStatus:
 
         # Create a label via the CRUD endpoint.
         db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Work", "color": "#AABBCC"},
             headers=headers,
         )
 
-        resp = db_client.get("/v1/db/sync/status", headers=headers)
+        resp = db_client.get("/db/sync/status", headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["labels_updated_at"] is not None
@@ -89,7 +89,7 @@ class TestSyncStatus:
 
 
 class TestSyncPull:
-    """GET /v1/db/sync/pull"""
+    """GET /db/sync/pull"""
 
     def test_pull_returns_all_records_without_since(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
@@ -97,12 +97,12 @@ class TestSyncPull:
         headers = auth_headers(user_id)
 
         db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Deep Work", "color": "#112233"},
             headers=headers,
         )
 
-        resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        resp = db_client.get("/db/sync/pull", headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert len(body["labels"]) == 1
@@ -119,19 +119,19 @@ class TestSyncPull:
 
         # Create a label, then record a timestamp, then create another.
         db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Before", "color": "#001122"},
             headers=headers,
         )
         since = datetime.now(timezone.utc).isoformat()
         time.sleep(0.01)
         db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "After", "color": "#223344"},
             headers=headers,
         )
 
-        resp = db_client.get("/v1/db/sync/pull", params={"since": since}, headers=headers)
+        resp = db_client.get("/db/sync/pull", params={"since": since}, headers=headers)
         assert resp.status_code == 200
         names = [item["name"] for item in resp.json()["labels"]]
         assert "After" in names
@@ -145,7 +145,7 @@ class TestSyncPull:
         # Push a label, then soft-delete it via the sync endpoint.
         label_id = str(uuid4())
         db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -163,7 +163,7 @@ class TestSyncPull:
         since = datetime.now(timezone.utc).isoformat()
 
         db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -176,7 +176,7 @@ class TestSyncPull:
             headers=headers,
         )
 
-        resp = db_client.get("/v1/db/sync/pull", params={"since": since}, headers=headers)
+        resp = db_client.get("/db/sync/pull", params={"since": since}, headers=headers)
         assert resp.status_code == 200
         labels = resp.json()["labels"]
         deleted = [lbl for lbl in labels if lbl["id"] == label_id]
@@ -185,7 +185,7 @@ class TestSyncPull:
 
 
 class TestSyncPush:
-    """POST /v1/db/sync/push"""
+    """POST /db/sync/push"""
 
     def test_push_mixed_creates_updates_deletes(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
@@ -216,7 +216,7 @@ class TestSyncPush:
                 }
             ],
         }
-        resp = db_client.post("/v1/db/sync/push", json=payload, headers=headers)
+        resp = db_client.post("/db/sync/push", json=payload, headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["results"]["labels"][0]["status"] == "ok"
@@ -224,7 +224,7 @@ class TestSyncPush:
 
         # Update the label.
         resp2 = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -242,13 +242,13 @@ class TestSyncPush:
         assert resp2.json()["results"]["labels"][0]["status"] == "ok"
 
         # Verify via pull.
-        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
         names = [lbl["name"] for lbl in pull_resp.json()["labels"]]
         assert "Deep Focus" in names
 
         # Delete the template via sync.
         resp3 = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "templates": [
                     {
@@ -272,7 +272,7 @@ class TestSyncPush:
         label_id = str(uuid4())
         # Initial create.
         db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -289,7 +289,7 @@ class TestSyncPush:
 
         # Client with a *newer* timestamp pushes an update — should win.
         resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -306,7 +306,7 @@ class TestSyncPush:
         assert resp.status_code == 200
         assert resp.json()["results"]["labels"][0]["status"] == "ok"
 
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "NewerName"
 
     def test_last_write_wins_older_client_rejected(self, db_client: TestClient, auth_headers) -> None:
@@ -318,7 +318,7 @@ class TestSyncPush:
         label_id = str(uuid4())
         # Initial create (server records current time as updated_at).
         db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -335,7 +335,7 @@ class TestSyncPush:
 
         # Stale client tries to overwrite with an older timestamp — conflict.
         resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -355,7 +355,7 @@ class TestSyncPush:
         assert result["conflict_reason"] is not None
 
         # Server name should be unchanged.
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "ServerName"
 
     def test_idempotent_create_reprocessed_as_update(self, db_client: TestClient, auth_headers) -> None:
@@ -380,14 +380,14 @@ class TestSyncPush:
             }
 
         # First create.
-        r1 = db_client.post("/v1/db/sync/push", json=_push_create("First", -10), headers=headers)
+        r1 = db_client.post("/db/sync/push", json=_push_create("First", -10), headers=headers)
         assert r1.json()["results"]["labels"][0]["status"] == "ok"
 
         # Re-send 'create' with a newer timestamp — treated as update.
-        r2 = db_client.post("/v1/db/sync/push", json=_push_create("Second", 10), headers=headers)
+        r2 = db_client.post("/db/sync/push", json=_push_create("Second", 10), headers=headers)
         assert r2.json()["results"]["labels"][0]["status"] == "ok"
 
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         assert pull.json()["labels"][0]["name"] == "Second"
 
     def test_push_task_rejects_foreign_label_on_update(self, db_client: TestClient, auth_headers) -> None:
@@ -398,7 +398,7 @@ class TestSyncPush:
         other_headers = auth_headers(other_id)
 
         other_label_resp = db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={other_id}",
+            f"/db/time-tracking/labels?user_id={other_id}",
             json={"name": "Other Label", "color": "#ABCDEF"},
             headers=other_headers,
         )
@@ -407,7 +407,7 @@ class TestSyncPush:
 
         task_id = str(uuid4())
         create_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "tasks": [
                     {
@@ -424,7 +424,7 @@ class TestSyncPush:
         assert create_resp.status_code == 200
 
         update_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "tasks": [
                     {
@@ -446,7 +446,7 @@ class TestSyncPush:
         headers = auth_headers(user_id)
 
         label_resp = db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Own Label", "color": "#123ABC"},
             headers=headers,
         )
@@ -455,7 +455,7 @@ class TestSyncPush:
 
         task_id = str(uuid4())
         create_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "tasks": [
                     {
@@ -474,7 +474,7 @@ class TestSyncPush:
         assert create_resp.status_code == 200
 
         update_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "tasks": [
                     {
@@ -490,7 +490,7 @@ class TestSyncPush:
         )
         assert update_resp.status_code == 200
 
-        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         task = next(item for item in pull_resp.json()["tasks"] if item["id"] == task_id)
         assert task["label_id"] is None
@@ -503,7 +503,7 @@ class TestSyncPush:
         headers = auth_headers(user_id)
 
         resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "work_locations": [
                     {
@@ -519,7 +519,7 @@ class TestSyncPush:
         assert resp.status_code == 200
         assert resp.json()["results"]["work_locations"][0]["status"] == "ok"
 
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         wls = pull.json()["work_locations"]
         assert len(wls) == 1
         assert wls[0]["country_code"] == "BE"
@@ -531,7 +531,7 @@ class TestSyncPush:
         headers = auth_headers(user_id)
 
         db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "work_locations": [
                     {
@@ -547,7 +547,7 @@ class TestSyncPush:
         )
 
         update_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "work_locations": [
                     {
@@ -563,7 +563,7 @@ class TestSyncPush:
         assert update_resp.status_code == 200
         assert update_resp.json()["results"]["work_locations"][0]["status"] == "ok"
 
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         wls = pull.json()["work_locations"]
         assert len(wls) == 1
         assert wls[0]["country_code"] == "DE"
@@ -577,7 +577,7 @@ class TestSyncPush:
         other_headers = auth_headers(other_id)
 
         other_label_resp = db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={other_id}",
+            f"/db/time-tracking/labels?user_id={other_id}",
             json={"name": "Other Label", "color": "#FEDCBA"},
             headers=other_headers,
         )
@@ -586,7 +586,7 @@ class TestSyncPush:
 
         template_id = str(uuid4())
         create_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "templates": [
                     {
@@ -604,7 +604,7 @@ class TestSyncPush:
         assert create_resp.status_code == 200
 
         update_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "templates": [
                     {
@@ -626,7 +626,7 @@ class TestSyncPush:
         headers = auth_headers(user_id)
 
         label_resp = db_client.post(
-            f"/v1/db/time-tracking/labels?user_id={user_id}",
+            f"/db/time-tracking/labels?user_id={user_id}",
             json={"name": "Own Label", "color": "#123456"},
             headers=headers,
         )
@@ -635,7 +635,7 @@ class TestSyncPush:
 
         template_id = str(uuid4())
         create_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "templates": [
                     {
@@ -654,7 +654,7 @@ class TestSyncPush:
         assert create_resp.status_code == 200
 
         update_resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "templates": [
                     {
@@ -669,7 +669,7 @@ class TestSyncPush:
         )
         assert update_resp.status_code == 200
 
-        pull_resp = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         template = next(item for item in pull_resp.json()["templates"] if item["id"] == template_id)
         assert template["label_id"] is None
@@ -700,11 +700,11 @@ class TestSyncPush:
                 },
             ]
         }
-        resp = db_client.post("/v1/db/sync/push", json=payload, headers=headers)
+        resp = db_client.post("/db/sync/push", json=payload, headers=headers)
         assert resp.status_code == 400
 
         # Nothing should have been committed.
-        pull = db_client.get("/v1/db/sync/pull", headers=headers)
+        pull = db_client.get("/db/sync/pull", headers=headers)
         ids = [lbl["id"] for lbl in pull.json()["labels"]]
         assert valid_id not in ids
 
@@ -715,7 +715,7 @@ class TestSyncPush:
         headers = auth_headers(user_id)
 
         resp = db_client.post(
-            "/v1/db/sync/push",
+            "/db/sync/push",
             json={
                 "labels": [
                     {
@@ -735,6 +735,6 @@ class TestSyncPush:
         user_id = _create_user(db_client, admin_h, "header-user")
         headers = auth_headers(user_id)
 
-        resp = db_client.post("/v1/db/sync/push", json={}, headers=headers)
+        resp = db_client.post("/db/sync/push", json={}, headers=headers)
         assert resp.status_code == 200
         assert "X-Sync-Ms" in resp.headers

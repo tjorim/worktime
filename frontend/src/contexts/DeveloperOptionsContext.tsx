@@ -119,7 +119,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         const controller = new AbortController();
         timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch(`${testUrl}/v1/health`, {
+        const response = await fetch(`${testUrl}/health`, {
           method: "GET",
           signal: controller.signal,
           headers: {

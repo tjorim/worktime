@@ -48,7 +48,7 @@ export async function apiFetch(
   requestHeaders.forEach((value, key) => mergedHeaders.set(key, value));
 
   // Resolve the provided URL against the configured API base URL so that
-  // relative paths (e.g. "/v1/data") target the correct backend origin.
+  // relative paths (e.g. "/data") target the correct backend origin.
   const resolvedUrl = new URL(url, clientOptions.apiUrl).toString();
 
   const response = await fetch(resolvedUrl, {

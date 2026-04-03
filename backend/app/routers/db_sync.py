@@ -20,7 +20,7 @@ from app.services.db_service import ValidationError
 from app.services.sync_service import get_sync_status, pull_changes, push_changes
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/v1/db/sync", tags=["Database Sync"])
+router = APIRouter(prefix="/db/sync", tags=["Database Sync"])
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 

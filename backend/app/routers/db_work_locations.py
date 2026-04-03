@@ -25,7 +25,7 @@ from app.services.db_service import (
 )
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/v1/db/work-locations", tags=["Database Work Locations"])
+router = APIRouter(prefix="/db/work-locations", tags=["Database Work Locations"])
 
 
 @router.post("/", response_model=WorkLocationRead, status_code=status.HTTP_201_CREATED)

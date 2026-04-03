@@ -14,7 +14,7 @@ describe("apiFetch", () => {
     body.append("file", new Blob(["x"]), "x.txt");
 
     await apiFetch(
-      "/v1/upload",
+      "/upload",
       { method: "POST", body },
       {
         apiUrl: "http://localhost:8000",
@@ -35,7 +35,7 @@ describe("apiFetch", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch(
-      "/v1/data",
+      "/data",
       { method: "POST", body: JSON.stringify({ ok: true }) },
       {
         apiUrl: "http://localhost:8000",
@@ -58,7 +58,7 @@ describe("apiFetch", () => {
     const onUnauthorized = vi.fn();
 
     await expect(
-      apiFetch("/v1/data", {}, {
+      apiFetch("/data", {}, {
         apiUrl: "http://localhost:8000",
         onUnauthorized,
         onForbidden: vi.fn(),
@@ -75,7 +75,7 @@ describe("apiFetch", () => {
     const onForbidden = vi.fn();
 
     await expect(
-      apiFetch("/v1/data", {}, {
+      apiFetch("/data", {}, {
         apiUrl: "http://localhost:8000",
         onUnauthorized: vi.fn(),
         onForbidden,
@@ -90,7 +90,7 @@ describe("apiFetch", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch(
-      "/v1/data",
+      "/data",
       {
         headers: {
           "X-Custom": "value",

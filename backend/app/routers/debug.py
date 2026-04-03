@@ -21,7 +21,7 @@ from app.services.team_service import TeamNotFoundError
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/debug", tags=["Debug"])
+router = APIRouter(prefix="/debug", tags=["Debug"])
 
 
 @router.get("/benchmark", response_model=BenchmarkResponse)

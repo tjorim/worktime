@@ -118,6 +118,12 @@ async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) 
         if field in non_nullable_fields and value is None:
             raise ValidationError(f"{field} cannot be None")
 
+    username = data.get("username")
+    if username is not None and username != user.username:
+        existing = await get_user_by_username(session, username)
+        if existing is not None and existing.id != user_id:
+            raise ConflictError("username already exists")
+
     for field, value in data.items():
         setattr(user, field, value)
     user.updated_at = datetime.now(UTC)
