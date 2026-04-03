@@ -1,24 +1,10 @@
 /* ============================================================================
    ACCESSIBILITY
    ============================================================================
-   High contrast mode, font scaling, reduced motion, and focus indicators.
-   Applied via data attributes set by AccessibilityContext:
-   - [data-wt-high-contrast="true"] on <html>
-   - --wt-font-scale CSS variable on <html>
-   - [data-wt-reduced-motion="true"] on <html>
+   High contrast mode, reduced motion, and focus indicators.
+   High contrast is applied via [data-wt-high-contrast="true"] on <html>,
+   set by SettingsContext when the user enables it.
    ========================================================================= */
-
-/* ============================================================================
-   FONT SCALING
-   ============================================================================
-   The root font size is scaled by --wt-font-scale (set inline by
-   AccessibilityContext). Bootstrap uses rem units throughout, so all
-   components scale automatically.
-   ========================================================================= */
-
-html {
-  font-size: calc(16px * var(--wt-font-scale, 1));
-}
 
 /* ============================================================================
    FOCUS INDICATORS
@@ -35,12 +21,12 @@ html {
 /* ============================================================================
    REDUCED MOTION
    ============================================================================
-   Suppresses all CSS animations and transitions when:
-   - The user has set the OS "reduce motion" preference, OR
-   - The user has explicitly enabled "Reduce Motion" in Worktime settings.
+   Suppresses all CSS animations and transitions when the user has set the
+   OS "reduce motion" preference. The browser handles this natively via the
+   media query; no React toggle is needed.
    ========================================================================= */
 
-@mixin reduce-motion {
+@media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
@@ -51,20 +37,12 @@ html {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  @include reduce-motion;
-}
-
-[data-wt-reduced-motion="true"] {
-  @include reduce-motion;
-}
-
 /* ============================================================================
    HIGH CONTRAST MODE
    ============================================================================
    Overrides CSS custom properties to meet WCAG AA minimum contrast ratios
    (4.5:1 for normal text, 3:1 for large text and UI components).
-   Active when [data-wt-high-contrast="true"] is set on <html>.
+   Active when [data-wt-high-contrast="true"] is set on <html> by SettingsContext.
    ========================================================================= */
 
 [data-wt-high-contrast="true"] {

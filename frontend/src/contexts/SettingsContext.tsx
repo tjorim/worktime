@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import type { CountryCode } from "../types/countries";
@@ -38,6 +38,7 @@ interface UserSettings {
   enableCrossBorderTracking: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
+  highContrast: boolean;
 }
 
 interface SettingsContextType {
@@ -53,6 +54,7 @@ interface SettingsContextType {
   updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
+  updateHighContrast: (enabled: boolean) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -117,6 +119,7 @@ export const defaultSettings: UserSettings = {
   enableCrossBorderTracking: false,
   homeCountry: null,
   officeCountry: null,
+  highContrast: false,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -147,7 +150,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 4;
+export const USER_STATE_VERSION = 5;
 const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
@@ -325,6 +328,21 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v5: Add highContrast setting (no-op audit migration).
+  5: (state) => {
+    const settings = (
+      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
+    ) as RawSettings;
+
+    return {
+      ...state,
+      settings: {
+        ...settings,
+        highContrast: (settings as unknown as Record<string, unknown>).highContrast ?? defaultSettings.highContrast,
+      },
+    };
+  },
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -428,6 +446,11 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const officeCountry = isValidCountryCode(settings.officeCountry)
     ? settings.officeCountry
     : defaultSettings.officeCountry;
+
+  const highContrast =
+    typeof settings.highContrast === "boolean"
+      ? settings.highContrast
+      : defaultSettings.highContrast;
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -543,6 +566,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       enableCrossBorderTracking,
       homeCountry,
       officeCountry,
+      highContrast,
     },
     lastUsed: {
       activeTab,
@@ -683,6 +707,26 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     },
     [setUserState],
   );
+
+  const updateHighContrast = useCallback(
+    (enabled: boolean) => {
+      setUserState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, highContrast: enabled },
+      }));
+    },
+    [setUserState],
+  );
+
+  // Apply high contrast data attribute to <html> so CSS can react without re-renders
+  useEffect(() => {
+    const html = document.documentElement;
+    if (userState.settings.highContrast) {
+      html.setAttribute("data-wt-high-contrast", "true");
+    } else {
+      html.removeAttribute("data-wt-high-contrast");
+    }
+  }, [userState.settings.highContrast]);
 
   const updateLastActiveTab = useCallback(
     (tab: TabKey) => {
@@ -905,6 +949,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateHighContrast,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -937,6 +982,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
+      updateHighContrast,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,

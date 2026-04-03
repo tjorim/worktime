@@ -884,17 +884,5 @@
   "dev_api_url_warning_invalid": "Waarschuwing: Voer een geldige API-URL in (bijvoorbeeld https://api.example.com of http://localhost:8000).",
   "accessibility_title": "Toegankelijkheid",
   "accessibility_high_contrast_label": "Hoog contrast",
-  "accessibility_high_contrast_description": "Vergroot het kleurcontrast voor betere leesbaarheid",
-  "accessibility_font_scale_label": "Tekstgrootte",
-  "accessibility_font_scale_description": "Pas de tekstgrootte aan (75%–150%)",
-  "accessibility_font_scale_small": "A",
-  "accessibility_font_scale_default": "A",
-  "accessibility_font_scale_large": "A",
-  "accessibility_font_scale_xlarge": "A",
-  "accessibility_font_scale_small_aria": "Klein (75%)",
-  "accessibility_font_scale_default_aria": "Standaard (100%)",
-  "accessibility_font_scale_large_aria": "Groot (125%)",
-  "accessibility_font_scale_xlarge_aria": "Extra groot (150%)",
-  "accessibility_reduced_motion_label": "Beweging verminderen",
-  "accessibility_reduced_motion_description": "Schakel animaties en overgangen uit"
+  "accessibility_high_contrast_description": "Vergroot het kleurcontrast voor betere leesbaarheid"
 }

@@ -157,7 +157,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 4,
+      version: 5,
       hasCompletedOnboarding: false,
       lastOnboardedVersion: 0,
       myTeam: null,
@@ -177,6 +177,7 @@ describe("SettingsContext unified user state", () => {
         enableCrossBorderTracking: false,
         homeCountry: null,
         officeCountry: null,
+        highContrast: false,
       },
       lastUsed: {
         activeTab: "calendar",

@@ -18,7 +18,6 @@ import {
 } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
-import { AccessibilityProvider } from "./contexts/AccessibilityContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
@@ -278,25 +277,23 @@ function AppContent() {
 /**
  * Root application component that composes context providers and renders the app content.
  *
- * @returns The root React element: SuperTokensWrapper, AccessibilityProvider, SettingsProvider,
+ * @returns The root React element: SuperTokensWrapper, SettingsProvider,
  *   EventStoreProvider, DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
 function App() {
   return (
     <SuperTokensWrapper>
-      <AccessibilityProvider>
-        <SettingsProvider>
-          <EventStoreProvider>
-            <DeveloperOptionsProvider>
-              <ToastProvider>
-                <AuthProvider>
-                  <AppContent />
-                </AuthProvider>
-              </ToastProvider>
-            </DeveloperOptionsProvider>
-          </EventStoreProvider>
-        </SettingsProvider>
-      </AccessibilityProvider>
+      <SettingsProvider>
+        <EventStoreProvider>
+          <DeveloperOptionsProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </ToastProvider>
+          </DeveloperOptionsProvider>
+        </EventStoreProvider>
+      </SettingsProvider>
     </SuperTokensWrapper>
   );
 }
