@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 def test_register_success_defaults_display_name(db_client: TestClient) -> None:
     """Happy path: display_name defaults to username when not provided."""
     response = db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={"username": "newuser", "password": "securepass123"},
     )
     assert response.status_code == 201
@@ -25,7 +25,7 @@ def test_register_success_defaults_display_name(db_client: TestClient) -> None:
 def test_register_success_with_display_name(db_client: TestClient) -> None:
     """Registration with an explicit display_name stores it correctly."""
     response = db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={
             "username": "nameduser",
             "password": "securepass123",
@@ -41,7 +41,7 @@ def test_register_success_with_display_name(db_client: TestClient) -> None:
 def test_register_no_auth_required(db_client: TestClient) -> None:
     """Registration endpoint must not require authentication."""
     response = db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={"username": "publicuser", "password": "securepass123"},
     )
     assert response.status_code == 201
@@ -50,11 +50,11 @@ def test_register_no_auth_required(db_client: TestClient) -> None:
 def test_register_duplicate_username_db_conflict(db_client: TestClient) -> None:
     """Second registration with the same username returns 409 Conflict."""
     db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={"username": "duplicate", "password": "securepass123"},
     )
     response = db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={"username": "duplicate", "password": "anotherpass456"},
     )
     assert response.status_code == 409
@@ -74,7 +74,7 @@ def test_register_duplicate_username_st_conflict(db_client: TestClient) -> None:
         new=AsyncMock(return_value=st_conflict),
     ):
         response = db_client.post(
-            "/v1/users/register",
+            "/users/register",
             json={"username": "stconflict", "password": "securepass123"},
         )
     assert response.status_code == 409
@@ -93,7 +93,7 @@ def test_register_rollback_on_db_failure(db_client: TestClient) -> None:
         new_callable=AsyncMock,
     ) as mock_delete:
         response = db_client.post(
-            "/v1/users/register",
+            "/users/register",
             json={"username": "rollback-user", "password": "securepass123"},
         )
 
@@ -111,7 +111,7 @@ def test_register_rollback_on_unexpected_db_error(db_client: TestClient) -> None
         new_callable=AsyncMock,
     ) as mock_delete:
         response = db_client.post(
-            "/v1/users/register",
+            "/users/register",
             json={"username": "error-user", "password": "securepass123"},
         )
 
@@ -122,7 +122,7 @@ def test_register_rollback_on_unexpected_db_error(db_client: TestClient) -> None
 def test_register_password_too_short(db_client: TestClient) -> None:
     """Passwords shorter than 8 characters are rejected with 422."""
     response = db_client.post(
-        "/v1/users/register",
+        "/users/register",
         json={"username": "shortpw", "password": "short"},
     )
     assert response.status_code == 422
