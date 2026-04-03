@@ -96,10 +96,11 @@ e.g., account was used on another device that has since been cleared):
 4. **Local `localStorage` is empty**: the frontend automatically starts a pull
    (`GET /v1/db/sync/pull?since=<epoch>`) and writes the result to
    `localStorage`. No prompt is required.
-5. If the Welcome Wizard has not yet been dismissed on this device, it skips
-   straight to the final "All set!" step after a successful restore, rather
-   than asking the user to re-configure their roster/schedule (since that data
-   was already restored).
+5. If the Welcome Wizard has not yet been dismissed on this device, it runs
+   normally so the user can configure their roster and schedule. The restored
+   time-tracking data (tasks, templates, labels, work locations) is available
+   immediately; settings such as roster selection are re-entered through the
+   wizard.
 6. The frontend stores the `server_timestamp` from the pull response as its
    high-water mark.
 
@@ -111,8 +112,8 @@ edits stay local until the user manually syncs again.
 ### 5. Conflict Handling and Overwrite Choices
 
 Conflicts arise when both local data and server data exist and at least one
-record's `client_updated_at` is older than the server's `updated_at` for the
-same record.
+record's `client_updated_at` is older than **or equal to** the server's
+`updated_at` for the same record.
 
 #### Backend conflict rule (existing behavior)
 
