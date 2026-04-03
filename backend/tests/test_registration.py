@@ -58,8 +58,7 @@ def test_register_duplicate_username_db_conflict(db_client: TestClient) -> None:
         json={"username": "duplicate", "password": "anotherpass456"},
     )
     assert response.status_code == 409
-    detail = response.json()["detail"].lower()
-    assert "duplicate" in detail or "already" in detail or "username" in detail
+    assert "username already exists" in response.json()["detail"]
 
 
 def test_register_duplicate_username_st_conflict(db_client: TestClient) -> None:
@@ -79,7 +78,7 @@ def test_register_duplicate_username_st_conflict(db_client: TestClient) -> None:
             json={"username": "stconflict", "password": "securepass123"},
         )
     assert response.status_code == 409
-    assert "username" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "username already exists"
 
 
 def test_register_rollback_on_db_failure(db_client: TestClient) -> None:
