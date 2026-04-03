@@ -1,6 +1,6 @@
 """Self-serve user registration endpoint.
 
-Provides a public ``POST /v1/users/register`` route that is the only
+Provides a public ``POST /users/register`` route that is the only
 supported self-serve registration path for non-admin users.  It creates
 both a SuperTokens email-password identity and a local database user row in
 a single atomic flow.  If the local DB write fails the SuperTokens identity
@@ -28,7 +28,7 @@ from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/users", tags=["Registration"])
+router = APIRouter(prefix="/users", tags=["Registration"])
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
