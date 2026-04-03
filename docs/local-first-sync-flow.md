@@ -8,25 +8,29 @@
 ## Summary
 
 Worktime is a **local-first** application. All user data lives in the browser's
-`localStorage` by default. Signing in enables optional cloud backup and
-restore — it does **not** change where the primary copy lives. The app is
-fully usable without an account and without any network access.
+`localStorage` by default and the app is fully usable without an account or
+network access.
 
-Sync capability is **bidirectional** (push + pull) but is **user-initiated**
-on a per-session basis, not continuous or automatic. The system is therefore
-best described as **backup-and-restore-capable with incremental sync**, rather
-than a real-time multi-device sync product.
+When a user signs in, Worktime becomes an **account-backed, cross-device sync**
+product. Changes made on any signed-in device are pushed to the backend as part
+of normal use so that another device with the same account can pick them up.
+Local-first and offline remain first-class concerns: while offline, changes are
+queued locally and flushed automatically when connectivity is restored.
+
+The intended experience for a signed-in user is **one account across devices**,
+not two local apps with an occasional manual copy step.
 
 ---
 
 ## States
 
-| State | Auth | Data location | Description |
-|-------|------|---------------|-------------|
-| **Local-only** | None | localStorage | Default; no account required |
-| **Signed in, no backup** | Yes | localStorage | User logged in but has never synced |
-| **Backed up** | Yes | localStorage + server | Data has been pushed at least once |
-| **Restored** | Yes | localStorage (from server) | Second device loaded data from server |
+| State | Auth | Data location | Sync behavior |
+|-------|------|---------------|---------------|
+| **Local-only** | None | localStorage only | No sync; manual JSON export available |
+| **Signed in — first use** | Yes | localStorage only | Initial pull on sign-in; push all local data once confirmed |
+| **Synced** | Yes | localStorage + server | Changes pushed automatically; periodic pull for remote changes |
+| **Offline (signed in)** | Yes | localStorage (server stale) | Changes queued; flushed on reconnect |
+| **Restored (new device)** | Yes | localStorage (from server) | Initial pull fills local store; then transitions to Synced |
 
 ---
 
@@ -37,83 +41,95 @@ than a real-time multi-device sync product.
 1. User opens Worktime for the first time.
 2. The Welcome Wizard runs (onboarding).
 3. All data is written to `localStorage` under well-known keys
-   (`worktime_user_state`, time-tracking keys, work-locations keys, etc.).
-4. The user never sees an account prompt unless they visit the Settings page or
+   (`worktime_user_state`, time-tracking keys, work-location keys, etc.).
+4. The user is never prompted to sign in unless they visit the Settings page or
    a feature explicitly requires authentication.
-5. Manual JSON backup (`Settings → Export`) is always available and works
-   without an account.
+5. Manual JSON backup (`Settings → Export`) is always available without an account.
 
-**Invariant**: The app must be 100% functional in this state. No feature may
-be gated behind sign-in unless the feature is inherently server-side (e.g.,
-shared team calendars, cross-device access).
+**Invariant**: The app must be 100% functional without sign-in. No feature may
+be gated behind authentication unless the feature is inherently server-side
+(e.g., cross-device access, shared team calendars).
 
 ---
 
-### 2. Signing In (No Prior Backup)
+### 2. Signing In
 
 1. User signs in via the SuperTokens flow.
 2. `AuthContext.isAuthenticated` becomes `true`; `userId` is set.
-3. The frontend calls `GET /v1/db/sync/status` to check whether the server
-   holds any data for this account.
-4. **Server is empty** (`labels_updated_at`, `tasks_updated_at`, etc. are all
-   `null`): no prompt is shown; local data is preserved as-is.
-5. The sync badge/indicator shows "Not yet backed up".
+3. The frontend immediately calls `GET /db/sync/status` to determine whether
+   the server holds any data for this account.
 
-At this point the user's data is still local-only. Nothing is sent to the
-server automatically.
+**Branch A — Server is empty** (first-ever sign-in for this account):
 
----
+4. The frontend pushes all local data to `POST /db/sync/push`. Because there is
+   no server data yet, no conflicts can arise.
+5. The frontend stores the returned `server_timestamp` as the sync cursor under
+   `worktime_sync_cursor_<userId>` in `localStorage`.
+6. The app transitions to the **Synced** state.
 
-### 3. First-Time Backup (Existing Local Data)
+**Branch B — Server already has data** (account used on a previous device):
 
-1. User clicks "Back up now" (or the equivalent sync trigger in Settings).
-2. The frontend reads all time-tracking data from `localStorage` and calls
-   `POST /v1/db/sync/push` with the full local dataset.
-3. Every record carries its `client_updated_at` timestamp.
-4. The server stores all records. Because no server data exists yet for this
-   account, there will be no conflicts.
-5. The frontend stores the returned `server_timestamp` (or the current clock
-   time) as the high-water mark for future incremental pulls.
-6. The sync indicator updates to "Backed up" with the timestamp.
-
-**Behavior when server already has data for this account** (rare but possible,
-e.g., account was used on another device that has since been cleared):
-
-- The frontend first calls `GET /v1/db/sync/pull?since=<epoch>` to retrieve
-  all server records.
-- If the pull response is non-empty the user is shown a **conflict prompt**
-  (see §5 below) before any push occurs.
+4. The frontend pulls all server records via `GET /db/sync/pull?since=<epoch>`.
+5. If `localStorage` is empty (new device), the pulled data is written directly
+   with no conflict prompt. The Welcome Wizard runs so the user can configure
+   their roster and schedule (see §4).
+6. If `localStorage` has existing data, local and server records are merged
+   in memory by timestamp. Conflicting records are surfaced to the user (see §5).
+7. After any conflicts are resolved, the frontend stores the `server_timestamp`
+   and transitions to the **Synced** state.
 
 ---
 
-### 4. Restoring on a Second Device
+### 3. Ongoing Sync (Signed-In Normal Use)
+
+Once signed in, changes are persisted to the backend as part of normal usage:
+
+- **On write**: whenever the user creates, updates, or deletes a syncable record
+  (task, template, label, work location), the frontend pushes the change to
+  `POST /db/sync/push` in the background. If the push fails (e.g., offline),
+  the change is added to an **outbox queue** stored in `localStorage`.
+- **On reconnect / app focus**: the frontend flushes any queued outbox items and
+  then pulls incremental updates via `GET /db/sync/pull?since=<cursor>` to pick
+  up changes from other devices.
+- **Conflicts**: handled as described in §5. During ongoing sync, conflicts
+  should be rare because the last-write-wins rule resolves most cases silently.
+  The user is only prompted when a conflict cannot be resolved automatically
+  (i.e., when the frontend detects that a local record and a pulled server
+  record both changed since the last sync).
+
+**Offline behavior**: all writes succeed locally. The outbox queue accumulates
+changes. When the app comes back online (detected via the `online` browser
+event or a failed fetch followed by a retry), the queue is flushed in order.
+No user action is required.
+
+---
+
+### 4. Signing In on a New Device (Restore)
 
 1. User opens Worktime on a new device and signs in.
-2. `localStorage` on the new device is empty (or contains only fresh
-   onboarding defaults).
-3. The frontend calls `GET /v1/db/sync/status`. One or more entity timestamps
-   are non-null → server has data.
-4. **Local `localStorage` is empty**: the frontend automatically starts a pull
-   (`GET /v1/db/sync/pull?since=<epoch>`) and writes the result to
-   `localStorage`. No prompt is required.
-5. If the Welcome Wizard has not yet been dismissed on this device, it runs
-   normally so the user can configure their roster and schedule. The restored
-   time-tracking data (tasks, templates, labels, work locations) is available
-   immediately; settings such as roster selection are re-entered through the
-   wizard.
-6. The frontend stores the `server_timestamp` from the pull response as its
-   high-water mark.
-
-**After restore**, the device operates as a normal local-first device. Future
-edits stay local until the user manually syncs again.
+2. `localStorage` is empty (no prior use on this device).
+3. The frontend calls `GET /db/sync/status`. One or more entity timestamps
+   are non-null → the account has server data.
+4. The frontend automatically pulls all records via
+   `GET /db/sync/pull?since=<epoch>` and writes them to `localStorage`.
+   No user confirmation is needed.
+5. The Welcome Wizard runs on first use of this browser. Because
+   `worktime_user_state` is not yet synced (see Data Scope below, temporary
+   limitation), the user re-configures their roster and schedule. All
+   time-tracking data (tasks, templates, labels, work locations) is already
+   present in `localStorage` from the pull.
+6. The frontend stores the `server_timestamp` from the pull as the sync cursor
+   and transitions to the **Synced** state. Future edits on this device follow
+   the ongoing-sync flow (§3).
 
 ---
 
-### 5. Conflict Handling and Overwrite Choices
+### 5. Conflict Handling
 
-Conflicts arise when both local data and server data exist and at least one
-record's `client_updated_at` is older than **or equal to** the server's
-`updated_at` for the same record.
+Conflicts arise when both a local record and the server record for the same ID
+have been modified since the last sync, and the local version's
+`client_updated_at` is **less than or equal to** the server's `updated_at`
+(the backend's last-write-wins rule).
 
 #### Backend conflict rule (existing behavior)
 
@@ -121,40 +137,46 @@ The sync service uses **last-write-wins** based on timestamps:
 
 - A push record is accepted if `client_updated_at > server.updated_at`.
 - A push record is rejected (`status: "conflict"`) if
-  `client_updated_at ≤ server.updated_at`; the server value is returned in
-  `server_updated_at`.
+  `client_updated_at ≤ server.updated_at`; the server's `server_updated_at` is
+  returned in the response.
 
-#### Frontend responsibility on conflict
+#### Conflict handling during ongoing sync
 
-When the frontend receives one or more `status: "conflict"` records in the
-push response it **must not silently drop them**. The required behavior is:
+In the ongoing-sync flow (§3), most conflicts are silent:
 
-1. Collect all conflicting record IDs and their server-side values (returned
-   in the push response).
-2. Display a summary to the user: "N records on the server are newer than your
-   local copy."
+- **Server wins automatically** when the server record is newer than what the
+  client last saw. The client updates `localStorage` with the server value.
+- **Client wins automatically** when the client record is newer than the server
+  record (normal case for an active user on one device).
+
+The user is only prompted when it is unclear which version to keep — typically
+when **two devices edited the same record while both were offline**. In that
+case:
+
+1. Collect all ambiguous records and their server-side values.
+2. Display a summary: "N records were changed on another device at the same
+   time. Which version should be kept?"
 3. Offer two options:
-   - **Keep server version** — overwrite local records with the server values
-     (client accepts server data).
-   - **Keep my version** — re-push local records with an updated
-     `client_updated_at` set to `now()` so they will win the timestamp check.
-4. The user's choice is applied immediately; no partial state should persist.
+   - **Keep server version** — overwrite local records with the server values.
+   - **Keep my version** — re-push local records with `client_updated_at` set
+     to `now()` so they win the timestamp check.
+4. Apply the user's choice immediately; no partial state should persist.
 
-#### Full-overwrite scenarios (two-device conflict at first backup)
+#### Conflicts on first sync (two devices, same account)
 
-When the user triggers a first-time backup on Device A after Device B has
-already backed up data for the same account, the frontend must:
+When Device A signs in and the server already has data from Device B (Branch B
+of §2):
 
-1. Pull all server records first (as described in §3).
-2. Merge local records with server records in memory, comparing timestamps.
-3. Present the conflict resolution prompt (above) for any overlapping records.
-4. After the user resolves conflicts, push the merged dataset.
+1. Pull all server records first.
+2. Merge with local records in memory, comparing `updated_at` timestamps.
+3. Present the conflict resolution prompt for any overlapping records.
+4. After the user resolves conflicts, push the merged result.
 
 ---
 
-## Data Covered by Sync
+## Data Scope
 
-The following localStorage keys/namespaces are in scope for sync:
+### Currently synced
 
 | Data category | localStorage key / prefix | Backend entity |
 |---------------|---------------------------|----------------|
@@ -163,14 +185,22 @@ The following localStorage keys/namespaces are in scope for sync:
 | Time-tracking labels | `TIME_TRACKING_STORAGE_KEYS.labels` | `labels` |
 | Work locations | `worktime_work_locations_` (per-year prefix) | `work_locations` |
 
-The following data is **not** synced and stays local-only:
+### Not yet synced (temporary limitations)
+
+The following data does not currently sync across devices. Each item is a
+near-term gap, not a deliberate permanent exclusion.
+
+| Data category | Gap description |
+|---------------|-----------------|
+| `worktime_user_state` (roster, schedule, settings) | No backend schema for user preferences yet; causes Welcome Wizard to re-run on new devices |
+| Time-off (`.hday` text) | Backend stores `.hday` as a file, not as structured rows; needs schema work before sync |
+| Gantt tasks | Exist in the database (`/v1/db/gantt-tasks`) but are not exposed via the sync endpoints yet |
+
+### Permanently local-only
 
 | Data category | Reason |
 |---------------|--------|
-| `worktime_user_state` (roster, schedule, settings) | User-specific preferences; onboarding handles re-setup |
-| Time-off (`.hday` text) | Managed via file import/export, not database rows |
-| Gantt tasks | Not yet exposed in the sync API |
-| Developer options | Device-specific, intentionally excluded |
+| Developer options | Device-specific debug flags; intentionally not portable |
 
 ---
 
@@ -178,56 +208,61 @@ The following data is **not** synced and stays local-only:
 
 ### Frontend
 
-1. **`useSyncStatus` hook** (to be created): wraps `GET /v1/db/sync/status` and
-   exposes `{ hasServerData, lastSyncedAt, isSyncing }`. Call this once after
-   sign-in and cache the result in React state.
+1. **Sync on write**: whenever a syncable record is mutated in `localStorage`,
+   immediately attempt `POST /db/sync/push` in the background. On success,
+   update the sync cursor. On failure, append the change to an outbox queue
+   stored at `worktime_sync_outbox_<userId>` in `localStorage`.
 
-2. **Sync trigger function**: a single `syncNow()` async function that
-   orchestrates pull → conflict resolution prompt → push. Keep this outside
-   React render so it can be called from Settings, a toolbar button, or after
-   the Welcome Wizard.
+2. **Outbox flush**: listen for the `online` browser event and on each app
+   focus/visibility change. Drain the outbox queue in order, retrying failed
+   items with exponential back-off. After a successful flush, pull incremental
+   changes via `GET /db/sync/pull?since=<cursor>`.
 
-3. **Conflict resolution UI**: a modal that lists conflicting record IDs (or
-   summarizes by category) and offers the two choices. Reuse the existing
-   `Modal` component from React-Bootstrap.
+3. **`useSyncStatus` hook** (to be created): exposes
+   `{ isSyncing, lastSyncedAt, outboxCount, hasConflicts }`. Drive the sync
+   indicator in the UI from this hook.
 
-4. **High-water mark**: store the last successful `server_timestamp` in
-   `localStorage` under a stable key (e.g., `worktime_sync_cursor`). Use this
-   as the `since` parameter on all future pull calls to limit payload size.
+4. **Conflict resolution UI**: a modal that summarizes conflicting records by
+   category and offers the two choices. Reuse the existing `Modal` component
+   from React-Bootstrap.
 
-5. **Welcome Wizard integration**: after a successful restore (Step §4), set
-   `hasCompletedOnboarding: true` in `worktime_user_state` programmatically so
-   the wizard does not re-run on subsequent visits.
+5. **Sync cursor**: store the last successful `server_timestamp` in
+   `localStorage` under `worktime_sync_cursor_<userId>` so it is per-account
+   and survives sign-out/sign-in cycles.
+
+6. **New-device restore**: on sign-in, if `GET /db/sync/status` returns
+   non-null timestamps and local syncable data is absent, pull automatically
+   before rendering the main UI.
 
 ### Backend
 
-1. **Existing sync endpoints are sufficient** for the flows described above.
-   No new endpoints are required to implement this document.
+1. **Existing sync endpoints are sufficient** for all flows above. No new
+   endpoints are required.
+   - `GET /db/sync/status` — pre-flight check; all-null means no server data.
+   - `POST /db/sync/push` — accepts batches of any size; use this for both
+     initial upload and ongoing per-write pushes.
+   - `GET /db/sync/pull?since=<timestamp>` — incremental pull from cursor.
 
-2. **`GET /v1/db/sync/status`** is the correct pre-flight check. Return `null`
-   for all timestamps if the user has no records; return the latest
-   `updated_at` per entity otherwise.
+2. **Conflict semantics**: the existing last-write-wins rule is correct and
+   should not change. The frontend owns conflict surfacing and resolution.
 
-3. **Bulk initial push**: the existing `POST /v1/db/sync/push` endpoint accepts
-   batches of any size. No special "initial backup" endpoint is needed; the
-   client should simply include all records in a single request (or paginate if
-   the payload would be very large).
+3. **`worktime_user_state` sync** (near-term): add a `user_preferences` table
+   (keyed by `user_id`) and a matching sync endpoint so roster and schedule
+   settings are portable. Once live, the Welcome Wizard should skip
+   configuration steps when preferences are restored from the server.
 
-4. **Conflict semantics**: the existing last-write-wins rule is correct and
-   should not change. The frontend is responsible for surfacing conflicts to the
-   user and deciding which version wins before re-pushing.
-
-5. **Gantt tasks sync**: when Gantt tasks are added to the sync API, follow the
-   same schema pattern as `tasks` (UUID primary key, `created_at`, `updated_at`,
-   `deleted_at`, `user_id`).
+4. **Gantt tasks sync** (near-term): expose the existing `gantt-tasks` data
+   through the sync endpoints. Follow the same schema pattern as `tasks`
+   (UUID primary key, `created_at`, `updated_at`, `deleted_at`, `user_id`).
 
 ---
 
 ## Open Questions
 
-- Should "Keep my version" (client wins) be the default, or should the user
-  always make an explicit choice? (Recommendation: explicit choice, no default.)
-- Should the sync cursor survive a sign-out/sign-in cycle? (Recommendation:
-  yes — store it keyed by `userId` so it survives account switches.)
-- Should there be an automatic background sync interval for long-running
-  sessions? (Out of scope for this document; keep manual-only for now.)
+- Should "Keep my version" (client wins) be the default in the conflict UI, or
+  should the user always make an explicit choice? (Recommendation: explicit
+  choice, no default.)
+- Should silent last-write-wins resolution apply to all ongoing-sync conflicts,
+  or only to non-overlapping device edits? (Recommendation: silent for
+  non-overlapping; prompt only when both devices edited the same record offline
+  simultaneously.)
