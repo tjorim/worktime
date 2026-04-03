@@ -61,8 +61,9 @@ be gated behind authentication unless the feature is inherently server-side
 
 **Branch A — Server is empty** (first-ever sign-in for this account):
 
-4. The frontend pushes all local data to `POST /db/sync/push`. Because there is
-   no server data yet, no conflicts can arise.
+4. The frontend pushes all local data to `POST /db/sync/push`, establishing
+   this device's current local state as the initial server copy. Because
+   there is no server data yet, no conflicts can arise.
 5. The frontend stores the returned `server_timestamp` as the sync cursor under
    `worktime_sync_cursor_<userId>` in `localStorage`.
 6. The app transitions to the **Synced** state.
@@ -135,23 +136,30 @@ have been modified since the last sync, and the local version's
 
 The sync service uses **last-write-wins** based on timestamps:
 
-- A push record is accepted if `client_updated_at > server.updated_at`.
-- A push record is rejected (`status: "conflict"`) if
-  `client_updated_at ≤ server.updated_at`; the server's `server_updated_at` is
-  returned in the response.
+- A push record is **accepted** if `client_updated_at > server.updated_at`
+  (client version is strictly newer).
+- A push record is **rejected** (`status: "conflict"`) if
+  `client_updated_at ≤ server.updated_at`; the server's current value is
+  returned in the response so the client can decide what to do.
 
 #### Conflict handling during ongoing sync
 
-In the ongoing-sync flow (§3), most conflicts are silent:
+In the ongoing-sync flow (§3), most rejections are **stale-update resolutions**,
+not true conflicts:
 
-- **Server wins automatically** when the server record is newer than what the
-  client last saw. The client updates `localStorage` with the server value.
-- **Client wins automatically** when the client record is newer than the server
-  record (normal case for an active user on one device).
+- **Stale update (silent)**: the client pushes a record that another device
+  already updated. Because the server record is simply newer, the client
+  accepts the server value silently and updates `localStorage`. No user prompt
+  is shown.
+- **Client write wins (silent)**: the client's record is newer than the
+  server's. The push is accepted; `localStorage` already has the correct value.
 
-The user is only prompted when it is unclear which version to keep — typically
-when **two devices edited the same record while both were offline**. In that
-case:
+A **true conflict** — requiring a user prompt — occurs only when **two devices
+edited the same record while both were offline**, and neither version is
+obviously the "latest." Specifically: the client attempts to push a record
+whose `client_updated_at` is older than the server's `updated_at`, but the
+client also has local edits made after its last-known sync cursor (meaning it
+cannot simply accept the server value without losing work). In that case:
 
 1. Collect all ambiguous records and their server-side values.
 2. Display a summary: "N records were changed on another device at the same
@@ -194,7 +202,7 @@ near-term gap, not a deliberate permanent exclusion.
 |---------------|-----------------|
 | `worktime_user_state` (roster, schedule, settings) | No backend schema for user preferences yet; causes Welcome Wizard to re-run on new devices |
 | Time-off (`.hday` text) | Backend stores `.hday` as a file, not as structured rows; needs schema work before sync |
-| Gantt tasks | Exist in the database (`/v1/db/gantt-tasks`) but are not exposed via the sync endpoints yet |
+| Gantt tasks | Exist in the database (`/db/gantt-tasks`) but are not exposed via the sync endpoints yet |
 
 ### Permanently local-only
 
@@ -236,8 +244,10 @@ near-term gap, not a deliberate permanent exclusion.
 
 ### Backend
 
-1. **Existing sync endpoints are sufficient** for all flows above. No new
-   endpoints are required.
+1. **Existing sync endpoints are sufficient for the currently synced entities**
+   (tasks, templates, labels, work locations). No new endpoints are required
+   for those flows. Preferences and Gantt tasks still need additional server
+   support (see items 3 and 4 below).
    - `GET /db/sync/status` — pre-flight check; all-null means no server data.
    - `POST /db/sync/push` — accepts batches of any size; use this for both
      initial upload and ongoing per-write pushes.
