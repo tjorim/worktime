@@ -108,6 +108,19 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("user-id")).toHaveTextContent("7");
       expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
+
+    it("falls back to display_name in access token payload", () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: true,
+        userId: "9",
+        accessTokenPayload: { display_name: "Alice Fallback" },
+        invalidClaims: [],
+      };
+      renderWithProviders(<AuthStatusDisplay />);
+      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("Alice Fallback");
+    });
   });
 
   describe("triggerLogin", () => {

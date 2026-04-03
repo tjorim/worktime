@@ -21,14 +21,14 @@ def test_work_location_upsert_and_filtering(
     other_headers = auth_headers(other_id)
 
     first_create = db_client.post(
-        f"/v1/db/work-locations/?user_id={owner_id}",
+        f"/db/work-locations/?user_id={owner_id}",
         json={"date": "2026-02-01", "country_code": "nl", "label": "Home"},
         headers=owner_headers,
     )
     assert first_create.status_code == 201
 
     upsert_update = db_client.post(
-        f"/v1/db/work-locations/?user_id={owner_id}",
+        f"/db/work-locations/?user_id={owner_id}",
         json={"date": "2026-02-01", "country_code": "BE", "label": "Client office"},
         headers=owner_headers,
     )
@@ -38,14 +38,14 @@ def test_work_location_upsert_and_filtering(
     assert upsert_update.json()["label"] == "Client office"
 
     other_user_location = db_client.post(
-        f"/v1/db/work-locations/?user_id={other_id}",
+        f"/db/work-locations/?user_id={other_id}",
         json={"date": "2026-02-01", "country_code": "DE", "label": "HQ"},
         headers=other_headers,
     )
     assert other_user_location.status_code == 201
 
     owner_filtered = db_client.get(
-        f"/v1/db/work-locations/?user_id={owner_id}&start_date=2026-02-01&end_date=2026-02-01",
+        f"/db/work-locations/?user_id={owner_id}&start_date=2026-02-01&end_date=2026-02-01",
         headers=owner_headers,
     )
     assert owner_filtered.status_code == 200
@@ -53,7 +53,7 @@ def test_work_location_upsert_and_filtering(
     assert owner_filtered.json()["items"][0]["date"] == "2026-02-01"
 
     owner_out_of_range = db_client.get(
-        f"/v1/db/work-locations/?user_id={owner_id}&start_date=2026-02-02&end_date=2026-02-03",
+        f"/db/work-locations/?user_id={owner_id}&start_date=2026-02-02&end_date=2026-02-03",
         headers=owner_headers,
     )
     assert owner_out_of_range.status_code == 200
@@ -70,7 +70,7 @@ def test_work_location_country_code_validation(
     headers = auth_headers(user_id)
 
     invalid_country_code = db_client.post(
-        f"/v1/db/work-locations/?user_id={user_id}",
+        f"/db/work-locations/?user_id={user_id}",
         json={"date": "2026-02-02", "country_code": "ZZ", "label": "Unknown"},
         headers=headers,
     )

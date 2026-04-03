@@ -56,7 +56,7 @@ Important variables:
 - `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior
 - `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `JWT_ACCESS_TOKEN_EXPIRE_SECONDS` — auth settings for DB endpoints
 
-See `.env` and `QUICKSTART.md` for local setup details.
+See `.env`, `QUICKSTART.md`, and `BACKEND_GUIDE.md` for local setup details.
 
 ## Share Structure
 
@@ -80,11 +80,11 @@ The shared directory is expected to look like this:
 
 ## API Groups
 
-- Legacy file/share endpoints: `/v1/hday/*`, `/v1/team/*`, `/v1/health`
+- File/share endpoints: `/hday/*`, `/team/*`, `/health`
 - Auth endpoints: `/auth/*`
-- Registration endpoint (public): `POST /v1/users/register`
-- Database endpoints: `/v1/db/users/*`, `/v1/db/time-tracking/*`, `/v1/db/work-locations/*`, `/v1/db/gantt-tasks/*`, `/v1/db/sync/*`
-- Debug endpoint in non-production only: `/v1/debug/benchmark`
+- Registration endpoint (public): `POST /users/register`
+- Database endpoints: `/db/users/*`, `/db/time-tracking/*`, `/db/work-locations/*`, `/db/gantt-tasks/*`, `/db/sync/*`
+- Debug endpoint in non-production only: `/debug/benchmark`
 
 Use `/docs` or `/redoc` for the full OpenAPI view while the server is running.
 

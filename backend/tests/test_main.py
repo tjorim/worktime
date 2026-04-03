@@ -14,7 +14,7 @@ def client():
 
 def test_health_check(client):
     """Test the health check endpoint."""
-    response = client.get("/healthz")
+    response = client.get("/health")
     
     # Should return 200 or 503 depending on share directory state
     assert response.status_code in [200, 503]
@@ -48,7 +48,7 @@ def test_openapi_docs(client):
     assert data["openapi"] == "3.1.0"
     assert data["info"]["title"] == "Worktime Backend API"
     assert data["info"]["version"] == "1.0.0"
-    assert "/healthz" in data["paths"]
+    assert "/health" in data["paths"]
     assert "/" in data["paths"]
 
 

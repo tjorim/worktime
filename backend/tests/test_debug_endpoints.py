@@ -54,13 +54,13 @@ def test_data(share_dir):
 
 
 class TestDebugBenchmarkEndpoint:
-    """Tests for GET /v1/debug/benchmark endpoint."""
+    """Tests for GET /debug/benchmark endpoint."""
     
     def test_benchmark_with_valid_data(self, client, test_data):
         """Test benchmark endpoint with valid test data."""
         username, team_id = test_data
         
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 200
         data = response.json()
@@ -103,7 +103,7 @@ class TestDebugBenchmarkEndpoint:
     def test_benchmark_no_test_data(self, client, share_dir):
         """Test benchmark endpoint when no test data is available."""
         # Share dir exists but is empty
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 503
         data = response.json()
@@ -119,7 +119,7 @@ class TestDebugBenchmarkEndpoint:
         user_file = share_dir / "testuser.hday"
         user_file.write_text("2025/01/15 # Test\n", encoding="utf-8")
         
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 503
         data = response.json()
@@ -137,7 +137,7 @@ class TestDebugBenchmarkEndpoint:
         people_path = config_dir / "team1.people"
         people_path.write_text("alice, Alice\n", encoding="utf-8")
         
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 503
         data = response.json()
@@ -155,7 +155,7 @@ class TestDebugBenchmarkEndpoint:
         people_path = config_dir / "team1.people"
         people_path.write_text("alice, Alice\n", encoding="utf-8")
         
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 503
         data = response.json()
@@ -166,7 +166,7 @@ class TestDebugBenchmarkEndpoint:
         non_existent = tmp_path / "nonexistent"
         monkeypatch.setattr(settings, "SHARE_DIR", str(non_existent))
         
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 503
         data = response.json()
@@ -191,7 +191,7 @@ class TestDebugBenchmarkEndpoint:
             'benchmark_individual_file',
             side_effect=mock_benchmark_individual_file
         ):
-            response = client.get("/v1/debug/benchmark")
+            response = client.get("/debug/benchmark")
             
             assert response.status_code == 503
             data = response.json()
@@ -199,7 +199,7 @@ class TestDebugBenchmarkEndpoint:
     
     def test_benchmark_response_size_reasonable(self, client, test_data):
         """Test that benchmark response size is reasonable."""
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 200
         data = response.json()
@@ -212,7 +212,7 @@ class TestDebugBenchmarkEndpoint:
     
     def test_benchmark_timing_reasonable(self, client, test_data):
         """Test that benchmark timings are reasonable."""
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         assert response.status_code == 200
         data = response.json()
@@ -245,9 +245,9 @@ class TestDebugRouterRegistration:
         
         client = TestClient(main.app)
         
-        # The /v1/debug/benchmark endpoint should be available
+        # The /debug/benchmark endpoint should be available
         # Even though it will fail without data, it should be registered
-        response = client.get("/v1/debug/benchmark")
+        response = client.get("/debug/benchmark")
         
         # Should not be 404 (not found), should be 503 (no data) since we have no test data
         assert response.status_code == 503
@@ -268,8 +268,8 @@ class TestDebugRouterRegistration:
         
         client = TestClient(main.app)
         
-        # The /v1/debug/benchmark endpoint should NOT be available
-        response = client.get("/v1/debug/benchmark")
+        # The /debug/benchmark endpoint should NOT be available
+        response = client.get("/debug/benchmark")
         
         # Should be 404 (not found) in production
         assert response.status_code == 404

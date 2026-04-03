@@ -77,6 +77,53 @@ def mock_supertokens_signup() -> Generator[None, None, None]:
         yield
 
 
+@pytest.fixture()
+def supertokens_update_email_calls() -> Generator[list[dict[str, str | None]], None, None]:
+    """Capture SuperTokens email update calls without requiring a live core."""
+    from supertokens_python.recipe.emailpassword.interfaces import (
+        UpdateEmailOrPasswordOkResult as STUpdateEmailOrPasswordOkResult,
+    )
+
+    calls: list[dict[str, str | None]] = []
+
+    async def _fake_update_email_or_password(
+        recipe_user_id: object,
+        email: str | None = None,
+        password: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> MagicMock:
+        calls.append(
+            {
+                "recipe_user_id": str(recipe_user_id),
+                "email": email,
+                "password": password,
+            }
+        )
+        result = MagicMock()
+        result.__class__ = STUpdateEmailOrPasswordOkResult
+        return result
+
+    with patch(
+        "app.routers.db_users.st_update_email_or_password",
+        side_effect=_fake_update_email_or_password,
+    ):
+        yield calls
+
+
+@pytest.fixture()
+def supertokens_delete_calls() -> Generator[list[str], None, None]:
+    """Capture SuperTokens delete calls without requiring a live core."""
+    calls: list[str] = []
+
+    async def _fake_delete_user(user_id: str, *args: object, **kwargs: object) -> bool:
+        calls.append(user_id)
+        return True
+
+    with patch("app.routers.db_users.st_delete_user", side_effect=_fake_delete_user):
+        yield calls
+
+
 @pytest.fixture(autouse=True)
 def reset_cache() -> Generator[None, None, None]:
     """Clear cache before each test to ensure test isolation."""
@@ -210,7 +257,7 @@ def create_user_factory() -> Callable[..., int]:
         settings_payload: dict | None = None,
     ) -> int:
         response = db_client.post(
-            "/v1/db/users/",
+            "/db/users/",
             json={
                 "username": username,
                 "display_name": display_name or username.title(),

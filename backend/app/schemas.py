@@ -51,6 +51,7 @@ class UserRead(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: str | None = None
     display_name: str | None = None
     settings: dict[str, Any] | None = None
 

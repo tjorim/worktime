@@ -26,7 +26,7 @@ from app.services.db_service import (
 )
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/v1/db/gantt-tasks", tags=["Database Gantt"])
+router = APIRouter(prefix="/db/gantt-tasks", tags=["Database Gantt"])
 
 
 def _handle_error(error: Exception) -> None:

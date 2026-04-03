@@ -33,7 +33,7 @@ ETAG_PREVIEW_LENGTH = 16
 router = APIRouter(tags=["Hday Files"])
 
 
-@router.get("/v1/hday/{username}", response_model=HdayReadResponse)
+@router.get("/hday/{username}", response_model=HdayReadResponse)
 def get_hday_file(
     username: str,
     format: Literal["raw", "parsed"] = Query("raw")
@@ -113,7 +113,7 @@ def get_hday_file(
         )
 
 
-@router.put("/v1/hday/{username}", response_model=HdayWriteResponse)
+@router.put("/hday/{username}", response_model=HdayWriteResponse)
 async def put_hday_file(username: str, request: HdayWriteRequest) -> HdayWriteResponse | Response:
     """Create or update a user's .hday file.
     
