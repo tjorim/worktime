@@ -70,6 +70,38 @@ def test_gantt_task_crud_and_validation(
     assert update_resp.json()["name"] == "Design & prototyping"
     assert update_resp.json()["progress"] == 50
     assert update_resp.json()["end_date"] == "2026-03-15"  # unchanged
+    persisted_start_date = update_resp.json()["start_date"]
+    persisted_end_date = update_resp.json()["end_date"]
+
+    # 400 for end_date < start_date on partial update against existing persisted dates
+    bad_update_resp = db_client.put(
+        f"/v1/db/gantt-tasks/{task_id}?user_id={owner_id}",
+        json={"start_date": "2026-03-20"},
+        headers=owner_headers,
+    )
+    assert bad_update_resp.status_code == 400
+    after_bad_update_resp = db_client.get(
+        f"/v1/db/gantt-tasks/{task_id}?user_id={owner_id}",
+        headers=owner_headers,
+    )
+    assert after_bad_update_resp.status_code == 200
+    assert after_bad_update_resp.json()["start_date"] == persisted_start_date
+    assert after_bad_update_resp.json()["end_date"] == persisted_end_date
+
+    # 422 for end_date < start_date when both dates are invalid in the request payload
+    bad_update_payload_resp = db_client.put(
+        f"/v1/db/gantt-tasks/{task_id}?user_id={owner_id}",
+        json={"start_date": "2026-03-20", "end_date": "2026-03-10"},
+        headers=owner_headers,
+    )
+    assert bad_update_payload_resp.status_code == 422
+    after_bad_update_payload_resp = db_client.get(
+        f"/v1/db/gantt-tasks/{task_id}?user_id={owner_id}",
+        headers=owner_headers,
+    )
+    assert after_bad_update_payload_resp.status_code == 200
+    assert after_bad_update_payload_resp.json()["start_date"] == persisted_start_date
+    assert after_bad_update_payload_resp.json()["end_date"] == persisted_end_date
 
     # Delete → 204, subsequent GET returns 404
     delete_resp = db_client.delete(
@@ -111,7 +143,7 @@ def test_gantt_task_crud_and_validation(
     )
     assert nonexistent_resp.status_code == 404
 
-    # 400 for end_date < start_date
+    # 422 for end_date < start_date at request validation time
     bad_dates_resp = db_client.post(
         f"/v1/db/gantt-tasks?user_id={owner_id}",
         json={
@@ -122,7 +154,7 @@ def test_gantt_task_crud_and_validation(
         },
         headers=owner_headers,
     )
-    assert bad_dates_resp.status_code == 400
+    assert bad_dates_resp.status_code == 422
 
     # 422 for progress out of 0–100 range
     bad_progress_resp = db_client.post(

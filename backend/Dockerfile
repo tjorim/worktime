@@ -1,41 +1,43 @@
-# Worktime Backend - Dockerfile
-# Base image: Python 3.11-slim for optimal size and compatibility
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM python:3.12-slim AS builder
 
-FROM python:3.11-slim
+COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
 
-# Set working directory
 WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Copy requirements file
-COPY requirements.txt .
+# ── runtime stage ─────────────────────────────────────────────────────────────
+FROM python:3.12-slim
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
+COPY . .
 
-# Copy application code
-COPY app/ ./app/
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Create data directory for local development
-# Note: In production, mount share directory as a volume at /app/data/hday_files
-# Example: docker run -v /path/to/share:/app/data/hday_files worktime-backend
-RUN mkdir -p /app/data/hday_files
+# Data directory — mount a named volume here on the VPS to persist the hday files.
+RUN mkdir -p /var/data/worktime/hday_files
 
-# Environment variable defaults (can be overridden at runtime)
+# Run as non-root user for security hardening.
+# chown must happen BEFORE the VOLUME declaration so initial volume content
+# inherits the correct ownership when Docker initialises a new named volume.
+RUN groupadd --gid 1000 appgroup \
+    && useradd --uid 1000 --gid appgroup --shell /bin/bash --no-create-home appuser \
+    && chown -R appuser:appgroup /app /var/data/worktime
+
+VOLUME ["/var/data/worktime"]
+
+USER appuser
+
 ENV ENVIRONMENT=production
-ENV HOST=0.0.0.0
-ENV PORT=8000
-ENV SHARE_DIR=/app/data/hday_files
-ENV CORS_ORIGINS=http://localhost:5173
-ENV CACHE_ENABLED=true
-ENV CACHE_TTL=10
+ENV SHARE_DIR=/var/data/worktime/hday_files
+# DATABASE_URL must be provided at runtime via environment variables or secrets.
+# Example: postgresql+asyncpg://<user>:<password>@<host>/<database>
 
-# Expose port
 EXPOSE 8000
 
-# Health check (optional but recommended for container orchestration)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-# Run application with Uvicorn
-# Use exec form to ensure proper signal handling
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

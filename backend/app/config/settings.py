@@ -12,22 +12,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_JWT_SECRET_KEY = "dev-only-change-me-at-least-32-bytes"
-ALLOWED_JWT_ALGORITHMS = {"HS256", "HS384", "HS512"}
-
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
-    
+
     All settings have sensible defaults for development convenience.
     In production, override via environment variables.
     """
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"
+        extra="allow"
     )
     
     # File storage configuration
@@ -48,15 +45,43 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = True
 
     # Database configuration
-    DATABASE_PATH: str = "./data/worktime.db"
+    DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"
     DATABASE_ECHO: bool = False
     DATABASE_ENABLED: bool = True
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_POOL_MAX_OVERFLOW: int = 10
 
-    # API authentication configuration
-    JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
-    JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 24 * 3600
-    
+    # SuperTokens authentication configuration
+    SUPERTOKENS_CONNECTION_URI: str = "http://localhost:3567"
+    SUPERTOKENS_API_KEY: str = ""
+    SUPERTOKENS_API_DOMAIN: str = "http://localhost:8000"
+    SUPERTOKENS_WEBSITE_DOMAIN: str = "http://localhost:5173"
+    SUPERTOKENS_API_BASE_PATH: str = "/auth"
+    SUPERTOKENS_WEBSITE_BASE_PATH: str = "/auth"
+
+    @field_validator("SUPERTOKENS_API_BASE_PATH", "SUPERTOKENS_WEBSITE_BASE_PATH")
+    @classmethod
+    def validate_supertokens_base_path(cls, v: str) -> str:
+        """Validate SuperTokens base paths start with '/' and are non-empty."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Base path cannot be empty")
+        if not v.startswith("/"):
+            raise ValueError(f"Base path must start with '/', got: {v!r}")
+        return v
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate DATABASE_URL uses the postgresql+asyncpg async driver."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_URL cannot be empty")
+        if not v.startswith("postgresql+asyncpg://"):
+            raise ValueError(
+                "DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://..."
+            )
+        return v
+
     @field_validator("CORS_ORIGINS")
     @classmethod
     def validate_cors_origins(cls, v: str) -> str:
@@ -76,6 +101,17 @@ class Settings(BaseSettings):
             )
         return v
     
+    @model_validator(mode="after")
+    def validate_production_supertokens_config(self) -> "Settings":
+        key = (self.SUPERTOKENS_API_KEY or "").strip()
+        self.SUPERTOKENS_API_KEY = key
+
+        if self.ENVIRONMENT == "production" and not key:
+            raise ValueError(
+                "SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core"
+            )
+        return self
+
     @field_validator("CACHE_TTL")
     @classmethod
     def validate_cache_ttl(cls, v: int) -> int:
@@ -83,60 +119,6 @@ class Settings(BaseSettings):
         if v < 0:
             raise ValueError(f"CACHE_TTL must be non-negative, got: {v}")
         return v
-
-
-    @field_validator("JWT_ALGORITHM")
-    @classmethod
-    def validate_jwt_algorithm(cls, v: str) -> str:
-        """Validate JWT algorithm configuration."""
-        if not v or not v.strip():
-            raise ValueError("JWT_ALGORITHM cannot be empty")
-
-        normalized = v.strip().upper()
-        if normalized not in ALLOWED_JWT_ALGORITHMS:
-            allowed = ", ".join(sorted(ALLOWED_JWT_ALGORITHMS))
-            raise ValueError(f"JWT_ALGORITHM must be one of: {allowed}")
-        return normalized
-
-
-    @field_validator("JWT_ACCESS_TOKEN_EXPIRE_SECONDS")
-    @classmethod
-    def validate_jwt_access_token_expire_seconds(cls, v: int) -> int:
-        """Validate JWT access token lifetime is positive."""
-        if v <= 0:
-            raise ValueError("JWT_ACCESS_TOKEN_EXPIRE_SECONDS must be positive")
-        return v
-
-    @field_validator("DATABASE_PATH")
-    @classmethod
-    def validate_database_path(cls, v: str) -> str:
-        """Validate database path and ensure parent directory is writable/creatable."""
-        if not v or not v.strip():
-            raise ValueError("DATABASE_PATH cannot be empty")
-
-        db_path = Path(v).expanduser().resolve()
-        parent = db_path.parent
-
-        try:
-            parent.mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError) as e:
-            raise ValueError(
-                f"DATABASE_PATH parent directory cannot be created or accessed: {parent} ({e})"
-            ) from e
-
-        return str(db_path)
-    
-    @model_validator(mode="after")
-    def validate_production_jwt_secret(self) -> "Settings":
-        """Reject insecure default JWT secret in production."""
-        if (
-            self.ENVIRONMENT == "production"
-            and self.JWT_SECRET_KEY == DEFAULT_JWT_SECRET_KEY
-        ):
-            raise ValueError(
-                "JWT_SECRET_KEY must be overridden in production; refusing to use the development default"
-            )
-        return self
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list of allowed origins.
@@ -191,7 +173,6 @@ class Settings(BaseSettings):
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
         logger.info(f"Share Directory: {self.get_share_dir_path()}")
-        logger.info(f"Database Path:   {Path(self.DATABASE_PATH).resolve()}")
         
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()
@@ -207,12 +188,16 @@ class Settings(BaseSettings):
         logger.info(f"Cache:           {cache_status} (TTL: {self.CACHE_TTL}s)")
 
         db_status = "enabled" if self.DATABASE_ENABLED else "disabled"
-        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO})")
+        # Mask credentials from DATABASE_URL before logging.
+        try:
+            from sqlalchemy.engine.url import make_url
+            parsed = make_url(self.DATABASE_URL)
+            safe_url = parsed.render_as_string(hide_password=True)
+        except Exception:
+            safe_url = "<unparseable>"
+        logger.info(f"Database:        {db_status} (echo: {self.DATABASE_ECHO}, url: {safe_url})")
         logger.info("=" * 60)
 
 
-# Global settings instance
+# Global settings instance used by the running application.
 settings = Settings()
-
-# Initialize share directory on module load
-settings.ensure_share_dir_exists()

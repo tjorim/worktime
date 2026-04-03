@@ -15,8 +15,10 @@ from app.services.hday_parser import (
 )
 
 # Load test vectors from shared JSON file
-TEST_VECTORS_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "parser-test-vectors.json"
-with open(TEST_VECTORS_PATH, "r") as f:
+TEST_VECTORS_PATH = (
+    Path(__file__).parent.parent.parent / "frontend" / "tests" / "fixtures" / "parser-test-vectors.json"
+)
+with open(TEST_VECTORS_PATH, encoding="utf-8") as f:
     TEST_VECTORS = json.load(f)
 
 

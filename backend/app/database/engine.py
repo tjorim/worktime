@@ -2,42 +2,45 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from pathlib import Path
+import logging
+from collections.abc import AsyncGenerator
 
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
-from sqlmodel import Session, create_engine as sqlmodel_create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 
-_engine: Engine | None = None
+logger = logging.getLogger(__name__)
+
+_engine = None
+_session_factory = None
 
 
-def create_engine() -> Engine:
-    """Create and return a singleton SQLModel engine instance."""
-    global _engine
+def _build_engine():
+    global _engine, _session_factory
 
     if _engine is None:
-        db_path = Path(settings.DATABASE_PATH).expanduser().resolve()
-        database_url = f"sqlite:///{db_path}"
-        _engine = sqlmodel_create_engine(
-            database_url,
+        logger.info("Creating PostgreSQL async engine")
+        _engine = create_async_engine(
+            settings.DATABASE_URL,
             echo=settings.DATABASE_ECHO,
-            connect_args={"check_same_thread": False},
+            # Pool defaults: size=5, max_overflow=10, timeout=30s.
+            # Override via DATABASE_POOL_SIZE / DATABASE_POOL_MAX_OVERFLOW env vars if needed.
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_POOL_MAX_OVERFLOW,
         )
+        _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
-        @event.listens_for(_engine, "connect")
-        def set_sqlite_pragmas(dbapi_conn, _):
-            dbapi_conn.execute("PRAGMA foreign_keys=ON")
-            dbapi_conn.execute("PRAGMA journal_mode=WAL")
-            dbapi_conn.execute("PRAGMA synchronous=NORMAL")
-
-    return _engine
+    return _engine, _session_factory
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Return the shared async session factory singleton."""
+    _, factory = _build_engine()
+    return factory
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for injecting a database session."""
-    engine = create_engine()
-    with Session(engine) as session:
+    factory = get_session_factory()
+    async with factory() as session:
         yield session

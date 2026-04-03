@@ -27,12 +27,15 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/.node-version
           cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Extract version
         id: version
@@ -42,34 +45,39 @@ jobs:
             VERSION="${VERSION#v}"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
-            VERSION=$(node -p "require('./package.json').version")
+            VERSION=$(node -p "require('./frontend/package.json').version")
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Sync package.json version
         if: github.event_name == 'release'
+        working-directory: frontend
         run: pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --ignore-scripts
 
       - name: Install dependencies
+        working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Lint
+        working-directory: frontend
         run: pnpm run lint
 
       - name: Test
+        working-directory: frontend
         run: pnpm run test
 
       - name: Build
+        working-directory: frontend
         run: pnpm run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: frontend/dist
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

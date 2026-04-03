@@ -136,16 +136,16 @@ class TestReadHdayFile:
         """Test reading a nonexistent file."""
         test_file = tmp_path / "nonexistent.hday"
 
+        def mocked_exists(path: Path) -> bool:
+            return path != test_file
+
         with patch("app.services.hday_service.get_hday_path", return_value=test_file):
             with patch("app.services.hday_service.os.access", return_value=True):
-                with patch.object(Path, "exists", return_value=True):
-                    # Mock file existence check to return False for file itself
-                    test_file_mock = Path(test_file)
-                    with patch.object(test_file_mock, "exists", return_value=False):
-                        with pytest.raises(HdayFileNotFoundError) as exc_info:
-                            read_hday_file("nonexistent")
+                with patch("app.services.hday_service.Path.exists", autospec=True, side_effect=mocked_exists):
+                    with pytest.raises(HdayFileNotFoundError) as exc_info:
+                        read_hday_file("nonexistent")
 
-                        assert "nonexistent" in str(exc_info.value)
+                    assert "nonexistent" in str(exc_info.value)
 
     def test_read_file_with_unicode(self, tmp_path):
         """Test reading a file with Unicode content."""

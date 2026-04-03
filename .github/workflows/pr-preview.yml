@@ -23,17 +23,22 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/.node-version
           cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
+        working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        working-directory: frontend
         run: pnpm run build
 
       - name: Upload preview artifact
@@ -41,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pr-preview-${{ github.event.pull_request.number }}
-          path: dist/
+          path: frontend/dist/
           retention-days: 7
 
       - name: Comment PR with preview link

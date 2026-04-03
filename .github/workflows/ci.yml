@@ -15,6 +15,51 @@ permissions:
   contents: read
 
 jobs:
+  backend:
+    name: Backend Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: worktime
+          POSTGRES_PASSWORD: worktime
+          POSTGRES_DB: worktime_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff check)
+        run: uv run ruff check app
+
+      - name: Typecheck (ty)
+        run: uv run ty check app
+
+      - name: Test
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://worktime:worktime@localhost/worktime_test
+        run: uv run pytest
+
   quality:
     name: Typecheck & Lint
     runs-on: ubuntu-latest
@@ -25,23 +70,30 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/.node-version
           cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
+        working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Validate release version consistency
+        working-directory: frontend
         run: pnpm run check-version-consistency
 
       - name: Typecheck
+        working-directory: frontend
         run: pnpm run typecheck
 
       - name: Lint
+        working-directory: frontend
         run: pnpm run lint
 
   test_build:
@@ -55,18 +107,24 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/.node-version
           cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
+        working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Test
+        working-directory: frontend
         run: pnpm run test
 
       - name: Build
+        working-directory: frontend
         run: pnpm run build
