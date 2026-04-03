@@ -1,86 +1,65 @@
-"""SQLModel database table definitions for Worktime persistence."""
+"""SQLAlchemy ORM models for Worktime persistence."""
 
-from datetime import date as dt_date, datetime as dt_datetime, time as dt_time, timezone
+from datetime import UTC
+from datetime import date as dt_date
+from datetime import datetime as dt_datetime
+from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, Date, DateTime, ForeignKey, Index, Integer, UniqueConstraint, func, text
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
+from sqlalchemy import false as sa_false
+from sqlalchemy import text as sql_text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 def _utc_now() -> dt_datetime:
-    return dt_datetime.now(timezone.utc)
+    return dt_datetime.now(UTC)
 
 
-class User(SQLModel, table=True):
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
     """User account and preferences."""
 
     __tablename__ = "users"
 
-    id: int | None = Field(default=None, primary_key=True)
-    username: str = Field(index=True, unique=True)
-    is_admin: bool = Field(default=False)
-    hashed_password: str
-    display_name: str
-    settings: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSON, nullable=False),
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String, index=True, unique=True)
+    supertokens_user_id: Mapped[str] = mapped_column(
+        String, unique=True, index=True
     )
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    display_name: Mapped[str] = mapped_column(String)
+    settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-        ),
-    )
-
-    labels: list["TimeTrackingLabel"] = Relationship(back_populates="user")
-    tasks: list["TimeTrackingTask"] = Relationship(back_populates="user")
-    templates: list["TimeTrackingTemplate"] = Relationship(back_populates="user")
-    work_locations: list["WorkLocation"] = Relationship(back_populates="user")
-    gantt_tasks: list["GanttTask"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"passive_deletes": True},
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now
     )
 
 
-class TimeTrackingLabel(SQLModel, table=True):
+class TimeTrackingLabel(Base):
     """Time tracking label for categorizing tasks and templates."""
 
     __tablename__ = "time_tracking_labels"
 
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    name: str
-    color: str
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String)
+    color: Mapped[str] = mapped_column(String)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-            index=True,
-        ),
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
-
-    user: User = Relationship(back_populates="labels")
-    tasks: list["TimeTrackingTask"] = Relationship(back_populates="label")
-    templates: list["TimeTrackingTemplate"] = Relationship(back_populates="label")
 
     __table_args__ = (
         Index(
@@ -88,117 +67,81 @@ class TimeTrackingLabel(SQLModel, table=True):
             "user_id",
             "name",
             unique=True,
-            sqlite_where=text("deleted_at IS NULL"),
-            postgresql_where=text("deleted_at IS NULL"),
+            postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )
 
 
-class TimeTrackingTask(SQLModel, table=True):
+class TimeTrackingTask(Base):
     """Tracked work task entry."""
 
     __tablename__ = "time_tracking_tasks"
 
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    label_id: str | None = Field(default=None, foreign_key="time_tracking_labels.id", index=True)
-    text: str
-    start_time: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    label_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
     )
-    stop_time: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+    text: Mapped[str] = mapped_column(String)
+    start_time: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    includes_break: bool = Field(default=False)
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    stop_time: Mapped[dt_datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    includes_break: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-            index=True,
-        ),
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
 
-    user: User = Relationship(back_populates="tasks")
-    label: TimeTrackingLabel | None = Relationship(back_populates="tasks")
 
-
-class TimeTrackingTemplate(SQLModel, table=True):
+class TimeTrackingTemplate(Base):
     """Reusable time tracking template."""
 
     __tablename__ = "time_tracking_templates"
 
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    label_id: str | None = Field(default=None, foreign_key="time_tracking_labels.id", index=True)
-    text: str
-    start_time: dt_time
-    stop_time: dt_time
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    label_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("time_tracking_labels.id"), nullable=True, index=True
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-            index=True,
-        ),
+    text: Mapped[str] = mapped_column(String)
+    start_time: Mapped[dt_time] = mapped_column(Time)
+    stop_time: Mapped[dt_time] = mapped_column(Time)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    deleted_at: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
+    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
 
-    user: User = Relationship(back_populates="templates")
-    label: TimeTrackingLabel | None = Relationship(back_populates="templates")
 
-
-class WorkLocation(SQLModel, table=True):
+class WorkLocation(Base):
     """Per-day country assignment for where a user worked."""
 
     __tablename__ = "work_locations"
 
-    id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    date: dt_date = Field(index=True)
-    country_code: str = Field(max_length=2)
-    label: str | None = None
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    date: Mapped[dt_date] = mapped_column(Date, index=True)
+    country_code: Mapped[str] = mapped_column(String(2))
+    label: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-            index=True,
-        ),
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-    deleted_at: dt_datetime | None = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
-
-    user: User = Relationship(back_populates="work_locations")
 
     __table_args__ = (
         Index(
@@ -206,40 +149,29 @@ class WorkLocation(SQLModel, table=True):
             "user_id",
             "date",
             unique=True,
-            sqlite_where=text("deleted_at IS NULL"),
-            postgresql_where=text("deleted_at IS NULL"),
+            postgresql_where=sql_text("deleted_at IS NULL"),
         ),
     )
 
 
-class GanttTask(SQLModel, table=True):
+class GanttTask(Base):
     """Personal Gantt chart task."""
 
     __tablename__ = "gantt_tasks"
 
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(
-        sa_column=Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    name: str
-    start_date: dt_date = Field(sa_column=Column(Date(), nullable=False))
-    end_date: dt_date = Field(sa_column=Column(Date(), nullable=False))
-    progress: int = Field(default=0)
-    dependencies: str | None = Field(default=None)
-    notes: str | None = Field(default=None)
-    created_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+    name: Mapped[str] = mapped_column(String)
+    start_date: Mapped[dt_date] = mapped_column(Date)
+    end_date: Mapped[dt_date] = mapped_column(Date)
+    progress: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
+    dependencies: Mapped[str | None] = mapped_column(String, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
-    updated_at: dt_datetime = Field(
-        default_factory=_utc_now,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-            index=True,
-        ),
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
-
-    user: "User" = Relationship(back_populates="gantt_tasks")

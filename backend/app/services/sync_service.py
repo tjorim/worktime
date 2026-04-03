@@ -1,4 +1,4 @@
-"""Sync service: bidirectional push/pull for SQLite-backed entities.
+"""Sync service: bidirectional push/pull for PostgreSQL-backed entities.
 
 Strategy
 --------
@@ -27,12 +27,12 @@ removing the row, so pull queries can propagate the deletion to other clients.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import TypeAlias, TypeVar
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlalchemy import func as sql_func
-from sqlmodel import Session, select
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     TimeTrackingLabel,
@@ -40,7 +40,7 @@ from app.database.models import (
     TimeTrackingTemplate,
     WorkLocation,
 )
-from app.models.db_schemas import (
+from app.schemas import (
     LabelSyncItem,
     LabelSyncRead,
     SyncPullResponse,
@@ -55,30 +55,18 @@ from app.models.db_schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
+from app.utils.datetime import as_utc
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def _utc(dt: datetime) -> datetime:
-    """Return *dt* as a timezone-aware UTC datetime.
-
-    SQLite stores datetimes without timezone information.  SQLAlchemy returns
-    them as naive ``datetime`` objects.  Client-side timestamps are
-    timezone-aware (ISO 8601 with ``+00:00``).  This helper normalizes both
-    ends so comparisons work correctly.
-    """
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
 # Push helpers
 # ---------------------------------------------------------------------------
-
-
 
 
 def _get_provided_fields(item: BaseModel) -> set[str]:
@@ -89,27 +77,28 @@ def _get_provided_fields(item: BaseModel) -> set[str]:
     return provided
 
 
-def _validate_task_label_reference(session: Session, user_id: int, label_id: str | None) -> None:
+async def _validate_task_label_reference(
+    session: AsyncSession, user_id: int, label_id: str | None
+) -> None:
     if label_id is None:
         return
 
-    label = session.get(TimeTrackingLabel, label_id)
+    label = await session.get(TimeTrackingLabel, label_id)
     if label is None or label.user_id != user_id or label.deleted_at is not None:
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
 
 
-def _push_label(
-    session: Session, user_id: int, item: LabelSyncItem
+async def _push_label(
+    session: AsyncSession, user_id: int, item: LabelSyncItem
 ) -> SyncRecordResult:
     now = _now()
-    label: TimeTrackingLabel | None = session.get(TimeTrackingLabel, item.id)
+    label: TimeTrackingLabel | None = await session.get(TimeTrackingLabel, item.id)
 
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
-            # Already absent / deleted — idempotent success.
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(label.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -123,7 +112,6 @@ def _push_label(
 
     # action == 'create' or 'update'
     if label is None:
-        # Create (or idempotent re-create after server has no record).
         if item.name is None or item.color is None:
             from app.services.db_service import ValidationError
             raise ValidationError("name and color are required for label create")
@@ -140,8 +128,7 @@ def _push_label(
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
 
-    # Record exists — LWW check (applies to both 'create' and 'update').
-    if _utc(item.client_updated_at) <= _utc(label.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -159,16 +146,16 @@ def _push_label(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-def _push_task(
-    session: Session, user_id: int, item: TaskSyncItem
+async def _push_task(
+    session: AsyncSession, user_id: int, item: TaskSyncItem
 ) -> SyncRecordResult:
     now = _now()
-    task: TimeTrackingTask | None = session.get(TimeTrackingTask, item.id)
+    task: TimeTrackingTask | None = await session.get(TimeTrackingTask, item.id)
 
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(task.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -184,7 +171,7 @@ def _push_task(
         if item.text is None or item.start_time is None:
             from app.services.db_service import ValidationError
             raise ValidationError("text and start_time are required for task create")
-        _validate_task_label_reference(session, user_id, item.label_id)
+        await _validate_task_label_reference(session, user_id, item.label_id)
         task = TimeTrackingTask(
             id=item.id,
             user_id=user_id,
@@ -201,7 +188,7 @@ def _push_task(
         from app.services.db_service import ValidationError
         raise ValidationError("task not found")
 
-    if _utc(item.client_updated_at) <= _utc(task.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -212,7 +199,7 @@ def _push_task(
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
-        _validate_task_label_reference(session, user_id, item.label_id)
+        await _validate_task_label_reference(session, user_id, item.label_id)
         task.label_id = item.label_id
     if "start_time" in provided_fields and item.start_time is not None:
         task.start_time = item.start_time
@@ -227,16 +214,16 @@ def _push_task(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-def _push_template(
-    session: Session, user_id: int, item: TemplateSyncItem
+async def _push_template(
+    session: AsyncSession, user_id: int, item: TemplateSyncItem
 ) -> SyncRecordResult:
     now = _now()
-    template: TimeTrackingTemplate | None = session.get(TimeTrackingTemplate, item.id)
+    template: TimeTrackingTemplate | None = await session.get(TimeTrackingTemplate, item.id)
 
     if item.action == "delete":
         if template is None or template.user_id != user_id or template.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(template.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
@@ -252,7 +239,7 @@ def _push_template(
         if item.text is None or item.start_time is None or item.stop_time is None:
             from app.services.db_service import ValidationError
             raise ValidationError("text, start_time and stop_time are required for template create")
-        _validate_task_label_reference(session, user_id, item.label_id)
+        await _validate_task_label_reference(session, user_id, item.label_id)
         template = TimeTrackingTemplate(
             id=item.id,
             user_id=user_id,
@@ -268,7 +255,7 @@ def _push_template(
         from app.services.db_service import ValidationError
         raise ValidationError("template not found")
 
-    if _utc(item.client_updated_at) <= _utc(template.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -279,7 +266,7 @@ def _push_template(
     if "text" in provided_fields and item.text is not None:
         template.text = item.text
     if "label_id" in provided_fields:
-        _validate_task_label_reference(session, user_id, item.label_id)
+        await _validate_task_label_reference(session, user_id, item.label_id)
         template.label_id = item.label_id
     if "start_time" in provided_fields and item.start_time is not None:
         template.start_time = item.start_time
@@ -292,27 +279,25 @@ def _push_template(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-def _push_work_location(
-    session: Session, user_id: int, item: WorkLocationSyncItem
+async def _push_work_location(
+    session: AsyncSession, user_id: int, item: WorkLocationSyncItem
 ) -> SyncRecordResult:
-    """Work locations use (user_id, date) as their natural key.
-
-    The result ``id`` is the ISO date string so the caller has a stable key.
-    """
+    """Work locations use (user_id, date) as their natural key."""
     now = _now()
     date_key = item.date.isoformat()
 
-    location: WorkLocation | None = session.exec(
+    result = await session.execute(
         select(WorkLocation).where(
             WorkLocation.user_id == user_id,
             WorkLocation.date == item.date,
         )
-    ).first()
+    )
+    location: WorkLocation | None = result.scalar_one_or_none()
 
     if item.action == "delete":
         if location is None or location.deleted_at is not None:
             return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
-        if _utc(item.client_updated_at) <= _utc(location.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
             return SyncRecordResult(
                 id=date_key,
                 status="conflict",
@@ -337,7 +322,7 @@ def _push_work_location(
         session.add(location)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
-    if _utc(item.client_updated_at) <= _utc(location.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
         return SyncRecordResult(
             id=date_key,
             status="conflict",
@@ -356,26 +341,27 @@ def _push_work_location(
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
 
-SyncEntityModel: TypeAlias = (
+type SyncEntityModel = (
     TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation
 )
-SyncEntityModelT = TypeVar("SyncEntityModelT", bound=SyncEntityModel)
 
 
-def _get_synced_entities(
-    session: Session, model: type[SyncEntityModelT], user_id: int, since_naive: datetime
+async def _get_synced_entities[SyncEntityModelT: SyncEntityModel](
+    session: AsyncSession,
+    model: type[SyncEntityModelT],
+    user_id: int,
+    since: datetime,
 ) -> list[SyncEntityModelT]:
     statement = (
         select(model)
         .where(
             model.user_id == user_id,
-            model.updated_at > since_naive,
+            model.updated_at > since,
         )
         .order_by(model.updated_at)
     )
-    return list(session.exec(statement).all())
-
-
+    result = await session.execute(statement)
+    return list(result.scalars().all())
 
 
 # ---------------------------------------------------------------------------
@@ -383,14 +369,10 @@ def _get_synced_entities(
 # ---------------------------------------------------------------------------
 
 
-def push_changes(
-    session: Session, user_id: int, changes: SyncPushRequest
+async def push_changes(
+    session: AsyncSession, user_id: int, changes: SyncPushRequest
 ) -> SyncPushResponse:
-    """Apply a batched set of client changes within a single transaction.
-
-    Conflict results (LWW rejection) are returned per-record and do not abort
-    the transaction.  Any other exception rolls back the whole batch.
-    """
+    """Apply a batched set of client changes within a single transaction."""
     results: dict[str, list[SyncRecordResult]] = {
         "labels": [],
         "tasks": [],
@@ -399,32 +381,31 @@ def push_changes(
     }
 
     for item in changes.labels:
-        results["labels"].append(_push_label(session, user_id, item))
+        results["labels"].append(await _push_label(session, user_id, item))
 
     for item in changes.tasks:
-        results["tasks"].append(_push_task(session, user_id, item))
+        results["tasks"].append(await _push_task(session, user_id, item))
 
     for item in changes.templates:
-        results["templates"].append(_push_template(session, user_id, item))
+        results["templates"].append(await _push_template(session, user_id, item))
 
     for item in changes.work_locations:
-        results["work_locations"].append(_push_work_location(session, user_id, item))
+        results["work_locations"].append(await _push_work_location(session, user_id, item))
 
-    session.commit()
+    await session.commit()
     return SyncPushResponse(results=results)
 
 
-def pull_changes(
-    session: Session, user_id: int, since: datetime
+async def pull_changes(
+    session: AsyncSession, user_id: int, since: datetime
 ) -> SyncPullResponse:
     """Return all records (including soft-deleted) modified after *since*."""
-    # Normalise to naive UTC so SQLite comparisons work correctly.
-    since_naive = _utc(since).replace(tzinfo=None)
+    since_utc = as_utc(since)
 
-    labels = _get_synced_entities(session, TimeTrackingLabel, user_id, since_naive)
-    tasks = _get_synced_entities(session, TimeTrackingTask, user_id, since_naive)
-    templates = _get_synced_entities(session, TimeTrackingTemplate, user_id, since_naive)
-    work_locations = _get_synced_entities(session, WorkLocation, user_id, since_naive)
+    labels = await _get_synced_entities(session, TimeTrackingLabel, user_id, since_utc)
+    tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_utc)
+    templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
+    work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
 
     return SyncPullResponse(
         labels=[LabelSyncRead.model_validate(r, from_attributes=True) for r in labels],
@@ -435,19 +416,19 @@ def pull_changes(
     )
 
 
-def get_sync_status(session: Session, user_id: int) -> SyncStatusResponse:
+async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResponse:
     """Return the most-recent ``updated_at`` per entity type for the user."""
 
-    def _max_ts(model, user_id: int) -> datetime | None:
-        result = session.exec(
+    async def _max_ts(model, user_id: int) -> datetime | None:
+        result = await session.execute(
             select(sql_func.max(model.updated_at)).where(model.user_id == user_id)
-        ).first()
-        return result
+        )
+        return result.scalar_one_or_none()
 
     return SyncStatusResponse(
-        labels_updated_at=_max_ts(TimeTrackingLabel, user_id),
-        tasks_updated_at=_max_ts(TimeTrackingTask, user_id),
-        templates_updated_at=_max_ts(TimeTrackingTemplate, user_id),
-        work_locations_updated_at=_max_ts(WorkLocation, user_id),
+        labels_updated_at=await _max_ts(TimeTrackingLabel, user_id),
+        tasks_updated_at=await _max_ts(TimeTrackingTask, user_id),
+        templates_updated_at=await _max_ts(TimeTrackingTemplate, user_id),
+        work_locations_updated_at=await _max_ts(WorkLocation, user_id),
         server_timestamp=_now(),
     )

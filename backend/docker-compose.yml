@@ -1,0 +1,38 @@
+# Local development only — do NOT use in production.
+# Credentials below are intentionally hardcoded dev defaults.
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: worktime
+      POSTGRES_PASSWORD: worktime
+      POSTGRES_DB: worktime
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worktime"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://worktime:worktime@db/worktime
+      AUTO_MIGRATE: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - hday_files:/var/data/worktime/hday_files
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  hday_files:
