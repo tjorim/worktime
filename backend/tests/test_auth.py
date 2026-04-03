@@ -16,7 +16,7 @@ def test_unauthenticated_request_returns_401(
     db_client: TestClient,
 ) -> None:
     """Requests without an Authorization header should be rejected."""
-    response = db_client.get("/v1/db/users/1")
+    response = db_client.get("/db/users/1")
     assert response.status_code == 401
 
 
@@ -25,7 +25,7 @@ def test_malformed_token_returns_401(
 ) -> None:
     """Tokens with a non-integer user_id segment should be rejected with 401."""
     response = db_client.get(
-        "/v1/db/users/1",
+        "/db/users/1",
         headers={"Authorization": "Bearer test.not-an-int.user"},
     )
     assert response.status_code == 401
@@ -41,7 +41,7 @@ def test_authenticated_request_succeeds(
     user_id = create_user_factory(db_client, admin_headers, "auth-user")
 
     response = db_client.get(
-        f"/v1/db/users/{user_id}",
+        f"/db/users/{user_id}",
         headers=auth_headers(user_id),
     )
     assert response.status_code == 200
@@ -54,7 +54,7 @@ def test_non_admin_cannot_create_user(
 ) -> None:
     """Only admins should be able to create new users."""
     response = db_client.post(
-        "/v1/db/users/",
+        "/db/users/",
         json={
             "username": "non-admin-user",
             "display_name": "Non Admin",
@@ -73,7 +73,7 @@ def test_admin_can_create_user(
     """Admins should be able to create new users."""
     admin_headers = auth_headers(1, is_admin=True)
     response = db_client.post(
-        "/v1/db/users/",
+        "/db/users/",
         json={
             "username": "admin-created-user",
             "display_name": "Admin Created",
@@ -98,7 +98,7 @@ def test_user_cannot_access_other_user(
     user_b = create_user_factory(db_client, admin_headers, "user-b")
 
     response = db_client.get(
-        f"/v1/db/users/{user_b}",
+        f"/db/users/{user_b}",
         headers=auth_headers(user_a),
     )
     assert response.status_code == 403

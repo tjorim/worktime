@@ -29,7 +29,7 @@ def test_health_check_success(client, tmp_path, monkeypatch):
     # Mock the settings to use our temporary directory
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     
-    response = client.get("/v1/health")
+    response = client.get("/health")
     
     assert response.status_code == 200
     data = response.json()
@@ -45,7 +45,7 @@ def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
     # Mock the settings to use our non-existent directory
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     
-    response = client.get("/v1/health")
+    response = client.get("/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -62,7 +62,7 @@ def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
     # Mock the settings to use our file
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_file))
     
-    response = client.get("/v1/health")
+    response = client.get("/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -89,7 +89,7 @@ def test_health_check_permission_denied(client, tmp_path, monkeypatch):
     
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
     
-    response = client.get("/v1/health")
+    response = client.get("/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -116,7 +116,7 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
     
-    response = client.get("/v1/health")
+    response = client.get("/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -127,34 +127,3 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     assert data["error"] == "internal_error"
 
 
-def test_healthz_alias(client, tmp_path, monkeypatch):
-    """Test that /healthz is an alias for /v1/health."""
-    # Create a temporary directory
-    share_dir = tmp_path / "share"
-    share_dir.mkdir()
-    
-    # Mock the settings to use our temporary directory
-    monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
-    
-    response = client.get("/healthz")
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert data["share"] == "accessible"
-
-
-def test_healthz_alias_error(client, tmp_path, monkeypatch):
-    """Test that /healthz alias properly propagates error states."""
-    # Use a non-existent directory
-    share_dir = tmp_path / "nonexistent"
-    
-    # Mock the settings to use our non-existent directory
-    monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
-    
-    response = client.get("/healthz")
-    
-    assert response.status_code == 503
-    data = response.json()
-    assert data["status"] == "degraded"
-    assert data["share"] == "not_found"
