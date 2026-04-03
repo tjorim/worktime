@@ -70,7 +70,10 @@ def mock_supertokens_signup() -> Generator[None, None, None]:
         result.user.id = str(uuid4())
         return result
 
-    with patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up):
+    with (
+        patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up),
+        patch("app.routers.registration.st_sign_up", side_effect=_fake_sign_up),
+    ):
         yield
 
 
