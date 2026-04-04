@@ -23,6 +23,17 @@ class ListResponse[T](BaseModel):
     total: int
 
 
+class UserRegister(BaseModel):
+    """Payload for the self-serve registration endpoint.
+
+    ``display_name`` is optional; it defaults to the username when omitted.
+    """
+
+    username: str = Field(min_length=1, max_length=150)
+    password: str = Field(min_length=8)
+    display_name: str | None = None
+
+
 class UserCreate(BaseModel):
     username: str
     display_name: str
@@ -43,6 +54,22 @@ class UserUpdate(BaseModel):
     username: str | None = None
     display_name: str | None = None
     settings: dict[str, Any] | None = None
+
+
+class AccountCapabilities(BaseModel):
+    """Capability flags relevant for frontend feature enablement."""
+
+    backup_enabled: bool
+
+
+class AccountProfile(BaseModel):
+    """Response schema for the authenticated account profile endpoint."""
+
+    id: int
+    username: str
+    display_name: str
+    is_admin: bool
+    capabilities: AccountCapabilities
 
 
 def _validate_hex_color(value: str | None) -> str | None:
