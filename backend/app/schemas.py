@@ -29,7 +29,7 @@ class UserRegister(BaseModel):
     ``display_name`` is optional; it defaults to the username when omitted.
     """
 
-    username: str
+    username: str = Field(min_length=1, max_length=150)
     password: str = Field(min_length=8)
     display_name: str | None = None
 

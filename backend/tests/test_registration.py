@@ -49,10 +49,13 @@ def test_register_no_auth_required(db_client: TestClient) -> None:
 
 def test_register_duplicate_username_db_conflict(db_client: TestClient) -> None:
     """Second registration with the same username returns 409 Conflict."""
-    db_client.post(
+    first_response = db_client.post(
         "/users/register",
         json={"username": "duplicate", "password": "securepass123"},
     )
+    assert first_response.status_code == 201
+    assert first_response.json()["username"] == "duplicate"
+
     response = db_client.post(
         "/users/register",
         json={"username": "duplicate", "password": "anotherpass456"},
@@ -124,5 +127,23 @@ def test_register_password_too_short(db_client: TestClient) -> None:
     response = db_client.post(
         "/users/register",
         json={"username": "shortpw", "password": "short"},
+    )
+    assert response.status_code == 422
+
+
+def test_register_empty_username_rejected(db_client: TestClient) -> None:
+    """Empty username is rejected with 422."""
+    response = db_client.post(
+        "/users/register",
+        json={"username": "", "password": "securepass123"},
+    )
+    assert response.status_code == 422
+
+
+def test_register_username_too_long_rejected(db_client: TestClient) -> None:
+    """Usernames longer than 150 characters are rejected with 422."""
+    response = db_client.post(
+        "/users/register",
+        json={"username": "x" * 151, "password": "securepass123"},
     )
     assert response.status_code == 422
