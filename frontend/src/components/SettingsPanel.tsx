@@ -366,7 +366,7 @@ export function SettingsPanel({
                         <i className="bi bi-person-plus me-1"></i>
                         {m.account_connect_btn()}
                       </Button>
-                      <Button variant="outline-secondary" size="sm" onClick={triggerLogin}>
+                      <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
                         <i className="bi bi-box-arrow-in-right me-1"></i>
                         {m.account_sign_in_btn()}
                       </Button>
