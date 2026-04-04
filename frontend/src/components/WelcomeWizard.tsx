@@ -405,7 +405,10 @@ export function WelcomeWizard({
               <Step9AccountSetup
                 isAuthenticated={isAuthenticated}
                 displayName={displayName}
-                onConnectAccount={triggerSignup}
+                onConnectAccount={() => {
+                  handleAccountSetupComplete();
+                  triggerSignup();
+                }}
                 onSkip={handleAccountSetupComplete}
                 onPrev={prevStep}
                 firstButtonRef={firstButtonRef}

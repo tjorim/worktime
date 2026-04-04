@@ -157,7 +157,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 4;
+export const USER_STATE_VERSION = 5;
 const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
@@ -333,6 +333,14 @@ const migrations: Record<number, Migration> = {
         enableGantt: settings.enableGantt ?? defaultSettings.enableGantt,
       },
     };
+  },
+
+  // → v5: Add per-feature announcement flags (accountSyncEnabled, ganttAnnouncementSeen,
+  //        crossBorderAnnouncementSeen) to WorktimeUserState.
+  //        Existing installs leave these fields undefined so banners surface on the next visit.
+  //        This is a no-op audit migration — normalizeUserState handles default values.
+  5: (state) => {
+    return { ...state };
   },
 };
 
@@ -850,14 +858,17 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             ? preferences.accountConnected
             : prev.accountSyncEnabled,
         // Mark Gantt and Cross-Border based on the user's wizard choices:
-        // true = saw + enabled, false = saw + declined. Falls back to the
-        // current value (or false when the wizard step was skipped entirely).
+        // true = saw + enabled, false = saw + declined. If the wizard step was
+        // skipped entirely (preference is undefined), preserve the existing value
+        // so the feature-intro banner can still surface later.
         ganttAnnouncementSeen:
-          preferences?.enableGantt ?? prev.ganttAnnouncementSeen ?? false,
+          preferences?.enableGantt !== undefined
+            ? preferences.enableGantt
+            : prev.ganttAnnouncementSeen,
         crossBorderAnnouncementSeen:
-          preferences?.enableCrossBorderTracking ??
-          prev.crossBorderAnnouncementSeen ??
-          false,
+          preferences?.enableCrossBorderTracking !== undefined
+            ? preferences.enableCrossBorderTracking
+            : prev.crossBorderAnnouncementSeen,
         scheduleType,
         myTeam: team,
         settings: {

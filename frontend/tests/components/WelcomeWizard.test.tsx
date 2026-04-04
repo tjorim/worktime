@@ -550,6 +550,38 @@ describe("WelcomeWizard", () => {
         expect.objectContaining({ accountConnected: false }),
       );
     });
+
+    it("persists wizard state and triggers signup redirect when clicking Connect Account", async () => {
+      const user = userEvent.setup();
+      const mockOnHide = vi.fn();
+      const mockRedirectToAuth = vi.mocked(
+        (await import("supertokens-auth-react")).redirectToAuth,
+      );
+
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={mockOnHide}
+          startStep="account-setup"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /Connect Your Account/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /Connect Account/i }));
+
+      // Wizard state is persisted before the auth redirect
+      expect(mockOnHide).toHaveBeenCalledWith(
+        expect.objectContaining({ accountConnected: false }),
+      );
+      // Auth redirect is triggered with signup mode
+      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
+    });
   });
 
   describe("Integration tests", () => {

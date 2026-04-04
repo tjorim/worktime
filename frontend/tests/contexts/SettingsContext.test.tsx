@@ -157,7 +157,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 4,
+      version: 5,
       hasCompletedOnboarding: false,
       myTeam: null,
       scheduleType: null,

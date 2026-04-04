@@ -21,6 +21,7 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
+import * as m from "./paraglide/messages.js";
 
 /**
  * The main application component for team selection and shift management.
@@ -68,13 +69,13 @@ function AppContent() {
   const featureAnnouncements = hasCompletedOnboarding
     ? [
         ...(ganttAnnouncementSeen === undefined
-          ? [{ name: "Personal Gantt Chart", detail: "Visualize and track project tasks on a timeline" }]
+          ? [{ name: m.feature_announcement_gantt_name(), detail: m.feature_announcement_gantt_detail() }]
           : []),
         ...(crossBorderAnnouncementSeen === undefined
-          ? [{ name: "Cross-Border Tracking", detail: "Log your daily work location for tax reporting" }]
+          ? [{ name: m.feature_announcement_cross_border_name(), detail: m.feature_announcement_cross_border_detail() }]
           : []),
         ...(accountSyncEnabled === undefined
-          ? [{ name: "Account Sync", detail: "Enable secure data backup and access your data from any device" }]
+          ? [{ name: m.feature_announcement_account_sync_name(), detail: m.feature_announcement_account_sync_detail() }]
           : []),
       ]
     : [];
