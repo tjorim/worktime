@@ -132,7 +132,9 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        // After push we need the latest server_timestamp; pull status again.
+        // Fetch the updated server_timestamp after the push so the cursor
+        // reflects the post-push server state. Fall back to the pre-push
+        // timestamp (still a valid server timestamp) if the re-fetch fails.
         const newStatus = await fetchSyncStatus(fetch);
         storeSyncCursor(uid, newStatus?.server_timestamp ?? status.server_timestamp);
         setPhase("done");
@@ -169,14 +171,21 @@ export function useFirstSyncFlow(
       const execute = async () => {
         if (choice === "keep-local") {
           setPhase("pushing");
+          // Capture a pre-push server_timestamp so we have a valid fallback
+          // if the post-push status re-fetch fails.
+          const preStatus = await fetchSyncStatus(fetch);
+          if (!preStatus) {
+            setPhase("error");
+            return;
+          }
           const payload = buildLocalSyncPushPayload();
           const result = await pushSyncPayload(fetch, payload);
           if (!result) {
             setPhase("error");
             return;
           }
-          const newStatus = await fetchSyncStatus(fetch);
-          storeSyncCursor(uid, newStatus?.server_timestamp ?? new Date().toISOString());
+          const postStatus = await fetchSyncStatus(fetch);
+          storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus.server_timestamp);
           setPhase("done");
         } else {
           setPhase("pulling");

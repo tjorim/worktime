@@ -59,10 +59,10 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
-  // The authenticated fetch function is used by the first-sync flow.
-  // It is null when the user is not authenticated so the hook knows to skip.
-  const authenticatedFetch = useApiClient();
-  const fetchFnOrNull = isAuthenticated ? authenticatedFetch : null;
+  // useApiClient must be called unconditionally (React rules of hooks).
+  // The result is only passed to the sync flow when the user is authenticated.
+  const apiFetch = useApiClient();
+  const fetchFnOrNull = isAuthenticated ? apiFetch : null;
 
   const { phase: syncPhase, resolveConflict, dismiss: dismissSync } = useFirstSyncFlow(
     isAuthenticated,

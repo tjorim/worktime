@@ -29,6 +29,7 @@ export function FirstSyncConflictDialog({
   const [selected, setSelected] = useState<ConflictChoice | null>(null);
 
   const handleConfirm = () => {
+    // Guard is redundant with the disabled button state, but kept for safety.
     if (!selected) return;
     onResolve(selected);
     setSelected(null);

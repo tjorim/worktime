@@ -160,8 +160,9 @@ describe("useFirstSyncFlow", () => {
 
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status
+      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // pre-push status
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });   // re-fetch status
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });   // post-push status
 
     const { result } = renderHook(() =>
       useFirstSyncFlow(true, "user-1", mockFetch),

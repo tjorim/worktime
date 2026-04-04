@@ -389,8 +389,14 @@ export function applySyncPullResponse(data: SyncPullResponse): void {
   localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(localTemplates));
 
   // Work locations — group per year into the per-year localStorage format.
-  // The server only stores country_code and label; the local `location` type
-  // (home/office/other) cannot be recovered from sync data and defaults to "other".
+  //
+  // ⚠️ Data-loss note: The backend sync schema only stores `country_code` and
+  // `label`; it does not persist the local `location` type ("home"/"office"/
+  // "other"). When restoring from the server, all entries are written with
+  // `location: "other"` as a safe default. The home/office distinction visible
+  // in the UI will be lost for any work-location entry that was originally
+  // synced from local data. This is a known temporary limitation of the sync
+  // schema (see docs/local-first-sync-flow.md §Data Scope).
   const byYear: Record<string, Record<string, unknown>> = {};
   for (const wl of data.work_locations) {
     if (wl.deleted_at !== null) continue;
