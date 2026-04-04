@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
+import { FirstSyncConflictDialog } from "./components/FirstSyncConflictDialog";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
@@ -19,6 +20,8 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
+import { useApiClient } from "./hooks/useApiClient";
+import { useFirstSyncFlow } from "./hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
 import * as m from "./paraglide/messages.js";
@@ -32,7 +35,7 @@ import * as m from "./paraglide/messages.js";
  */
 function AppContent() {
   const { showSuccess, showInfo, showError } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const {
     myTeam,
     setMyTeam,
@@ -55,6 +58,26 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
+
+  // The authenticated fetch function is used by the first-sync flow.
+  // It is null when the user is not authenticated so the hook knows to skip.
+  const authenticatedFetch = useApiClient();
+  const fetchFnOrNull = isAuthenticated ? authenticatedFetch : null;
+
+  const { phase: syncPhase, resolveConflict, dismiss: dismissSync } = useFirstSyncFlow(
+    isAuthenticated,
+    userId,
+    fetchFnOrNull,
+  );
+
+  // Show a toast when the first-sync flow completes or errors.
+  useEffect(() => {
+    if (syncPhase === "done") {
+      showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
+    } else if (syncPhase === "error") {
+      showError(m.first_sync_error());
+    }
+  }, [syncPhase, showSuccess, showError]);
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
@@ -280,6 +303,11 @@ function AppContent() {
                   ? "schedule-selection"
                   : "team-selection"
             }
+          />
+          <FirstSyncConflictDialog
+            show={syncPhase === "conflict"}
+            onResolve={resolveConflict}
+            onDismiss={dismissSync}
           />
           <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
         </Container>
