@@ -274,7 +274,7 @@ export function WelcomeWizard({
 
   const getStepTitle = () => {
     const config = getStepConfig(effectiveStep);
-    return config.title;
+    return config.title();
   };
 
   return (
