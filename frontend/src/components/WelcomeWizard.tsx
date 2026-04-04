@@ -63,6 +63,8 @@ export type WizardCompletionPayload = {
   enableCrossBorderTracking?: boolean;
   homeCountry?: CountryCode | null;
   officeCountry?: CountryCode | null;
+  /** True when the user connected (or was already connected to) an account during the wizard. */
+  accountConnected?: boolean;
 };
 
 interface WelcomeWizardProps {
@@ -225,6 +227,7 @@ export function WelcomeWizard({
       enableCrossBorderTracking: isCrossBorderEnabled,
       homeCountry: isCrossBorderEnabled ? homeCountry : undefined,
       officeCountry: isCrossBorderEnabled ? officeCountry : undefined,
+      accountConnected: isAuthenticated,
     });
   };
 

@@ -190,7 +190,10 @@ function AppContent() {
       }
       const requiresTeam = selectedScheduleConfig.shiftConfig.teamCount > 1;
       const teamForCompletion = requiresTeam ? myTeam : null;
-      completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
+      completeOnboardingWithSchedule(scheduleType, teamForCompletion, {
+        ...payload,
+        lastOnboardedVersion: payload?.accountConnected === false ? USER_STATE_VERSION - 1 : USER_STATE_VERSION,
+      });
       if (teamForCompletion !== null) {
         showSuccess(
           `Team ${teamForCompletion} selected! Your shifts are now personalized.`,

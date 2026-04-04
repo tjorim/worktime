@@ -98,6 +98,7 @@ interface SettingsContextType {
       enableCrossBorderTracking?: boolean;
       homeCountry?: CountryCode | null;
       officeCountry?: CountryCode | null;
+      lastOnboardedVersion?: number;
     },
   ) => void;
 }
@@ -833,12 +834,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         enableCrossBorderTracking?: boolean;
         homeCountry?: CountryCode | null;
         officeCountry?: CountryCode | null;
+        lastOnboardedVersion?: number;
       },
     ) => {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
+        lastOnboardedVersion: preferences?.lastOnboardedVersion ?? CURRENT_VERSION,
         scheduleType,
         myTeam: team,
         settings: {
