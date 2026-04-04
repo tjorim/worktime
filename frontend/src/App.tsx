@@ -26,6 +26,11 @@ import { validateVacationAllowance } from "./utils/vacationCalculations";
 // Features added in each schema version. Shown as an inline alert to users who haven't seen them.
 const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[] = [
   {
+    version: 5,
+    name: "Account Sync",
+    detail: "Connect an account to back up your data and access it from any device",
+  },
+  {
     version: 4,
     name: "Personal Gantt Chart",
     detail: "Visualize and track project tasks on a timeline",

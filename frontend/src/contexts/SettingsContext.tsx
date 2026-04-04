@@ -147,7 +147,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 4;
+export const USER_STATE_VERSION = 5;
 const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
@@ -325,6 +325,9 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // → v5: Account & cloud sync feature introduction (no-op audit migration).
+  5: (state) => state,
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
