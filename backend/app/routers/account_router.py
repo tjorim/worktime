@@ -13,7 +13,14 @@ from app.services.db_service import NotFoundError, get_user
 router = APIRouter(tags=["Account"])
 
 
-@router.get("/me", response_model=AccountProfile)
+@router.get(
+    "/me",
+    response_model=AccountProfile,
+    responses={
+        401: {"description": "Unauthorized - no valid session"},
+        404: {"description": "User not found - session references a deleted local user"},
+    },
+)
 async def get_account_profile(
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),

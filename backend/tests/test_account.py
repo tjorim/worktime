@@ -50,3 +50,12 @@ def test_admin_me_returns_admin_flag(
     assert data["id"] == user_id
     assert data["is_admin"] is False
     assert "capabilities" in data
+
+
+def test_me_stale_principal_returns_404(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+) -> None:
+    """A token for a user that does not exist in the DB should yield 404."""
+    response = db_client.get("/me", headers=auth_headers(9999))
+    assert response.status_code == 404
