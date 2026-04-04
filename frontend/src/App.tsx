@@ -26,11 +26,6 @@ import { validateVacationAllowance } from "./utils/vacationCalculations";
 // Features added in each schema version. Shown as an inline alert to users who haven't seen them.
 const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[] = [
   {
-    version: 5,
-    name: "Account Sync",
-    detail: "Connect an account to back up your data and access it from any device",
-  },
-  {
     version: 4,
     name: "Personal Gantt Chart",
     detail: "Visualize and track project tasks on a timeline",
@@ -56,6 +51,8 @@ function AppContent() {
     setMyTeam,
     hasCompletedOnboarding,
     lastOnboardedVersion,
+    accountSyncEnabled,
+    setAccountSyncEnabled,
     completeOnboardingWithSchedule,
     completeFeatureIntro,
     scheduleType,
@@ -70,10 +67,13 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
-  // Features the user hasn't been shown yet — drives the inline announcement banner.
+  // Version-based features the user hasn't been shown yet.
   const newFeatures = hasCompletedOnboarding
     ? FEATURE_ANNOUNCEMENTS.filter((f) => f.version > lastOnboardedVersion)
     : [];
+  // Account sync announcement: shown when completed onboarding but never interacted with the feature.
+  const showAccountSyncAnnouncement =
+    hasCompletedOnboarding && accountSyncEnabled === undefined;
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
@@ -190,10 +190,7 @@ function AppContent() {
       }
       const requiresTeam = selectedScheduleConfig.shiftConfig.teamCount > 1;
       const teamForCompletion = requiresTeam ? myTeam : null;
-      completeOnboardingWithSchedule(scheduleType, teamForCompletion, {
-        ...payload,
-        lastOnboardedVersion: payload?.accountConnected === false ? USER_STATE_VERSION - 1 : USER_STATE_VERSION,
-      });
+      completeOnboardingWithSchedule(scheduleType, teamForCompletion, payload);
       if (teamForCompletion !== null) {
         showSuccess(
           `Team ${teamForCompletion} selected! Your shifts are now personalized.`,
@@ -231,10 +228,25 @@ function AppContent() {
             onChangeSchedule={handleChangeSchedule}
             onChangeTeam={handleChangeTeam}
           />
-          {newFeatures.length > 0 && (
+          {(newFeatures.length > 0 || showAccountSyncAnnouncement) && (
             <FeatureIntroAlert
-              features={newFeatures}
-              onDismiss={() => completeFeatureIntro(USER_STATE_VERSION)}
+              features={[
+                ...newFeatures,
+                ...(showAccountSyncAnnouncement
+                  ? [
+                      {
+                        name: "Account Sync",
+                        detail: "Connect an account to back up your data and access it from any device",
+                      },
+                    ]
+                  : []),
+              ]}
+              onDismiss={() => {
+                completeFeatureIntro(USER_STATE_VERSION);
+                if (showAccountSyncAnnouncement) {
+                  setAccountSyncEnabled(false);
+                }
+              }}
             />
           )}
           <ErrorBoundary>

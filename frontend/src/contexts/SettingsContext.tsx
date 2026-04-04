@@ -69,6 +69,14 @@ interface SettingsContextType {
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
   lastOnboardedVersion: number;
+  /**
+   * Tracks whether the user has interacted with the Account Sync feature.
+   * - `undefined` (missing): not yet shown → display the feature announcement banner
+   * - `false`: shown but declined (local-only chosen)
+   * - `true`: account connected / sync enabled
+   */
+  accountSyncEnabled: boolean | undefined;
+  setAccountSyncEnabled: (value: boolean) => void;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
   // Atomic update for onboarding completion with optional vacation allowance
@@ -98,7 +106,7 @@ interface SettingsContextType {
       enableCrossBorderTracking?: boolean;
       homeCountry?: CountryCode | null;
       officeCountry?: CountryCode | null;
-      lastOnboardedVersion?: number;
+      accountConnected?: boolean;
     },
   ) => void;
 }
@@ -140,6 +148,13 @@ interface WorktimeUserState {
   version: number;
   hasCompletedOnboarding: boolean;
   lastOnboardedVersion: number;
+  /**
+   * Tracks whether the user has interacted with the Account Sync feature.
+   * - `undefined` (missing): not yet shown → display the feature announcement banner
+   * - `false`: shown but declined (local-only chosen)
+   * - `true`: account connected / sync enabled
+   */
+  accountSyncEnabled?: boolean;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
@@ -148,7 +163,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 5;
+export const USER_STATE_VERSION = 4;
 const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
@@ -326,9 +341,6 @@ const migrations: Record<number, Migration> = {
       },
     };
   },
-
-  // → v5: Account & cloud sync feature introduction (no-op audit migration).
-  5: (state) => state,
 };
 
 function handleMigrationError(state: RawState, version: number): RawState {
@@ -529,6 +541,8 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
     lastOnboardedVersion,
+    // accountSyncEnabled: undefined = never shown, false = shown but declined, true = connected
+    accountSyncEnabled: s.accountSyncEnabled === true ? true : s.accountSyncEnabled === false ? false : undefined,
     myTeam:
       s.myTeam === undefined
         ? defaultUserState.myTeam
@@ -834,13 +848,20 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         enableCrossBorderTracking?: boolean;
         homeCountry?: CountryCode | null;
         officeCountry?: CountryCode | null;
-        lastOnboardedVersion?: number;
+        accountConnected?: boolean;
       },
     ) => {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: preferences?.lastOnboardedVersion ?? CURRENT_VERSION,
+        lastOnboardedVersion: CURRENT_VERSION,
+        // When accountConnected is explicitly set in the wizard, record the result.
+        // undefined (flag not passed) leaves the existing value untouched so the
+        // feature-intro banner can still surface on the next visit.
+        accountSyncEnabled:
+          preferences?.accountConnected !== undefined
+            ? preferences.accountConnected
+            : prev.accountSyncEnabled,
         scheduleType,
         myTeam: team,
         settings: {
@@ -896,6 +917,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
+  const setAccountSyncEnabled = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, accountSyncEnabled: value }));
+    },
+    [setUserState],
+  );
+
   const contextValue: SettingsContextType = useMemo(
     () => ({
       settings: userState.settings,
@@ -925,6 +953,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
       lastOnboardedVersion: userState.lastOnboardedVersion,
+      accountSyncEnabled: userState.accountSyncEnabled,
+      setAccountSyncEnabled,
       completeFeatureIntro,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
@@ -953,6 +983,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setMyTeam,
       setScheduleType,
       setHasCompletedOnboarding,
+      setAccountSyncEnabled,
       completeFeatureIntro,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
