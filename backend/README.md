@@ -82,6 +82,7 @@ The shared directory is expected to look like this:
 
 - File/share endpoints: `/hday/*`, `/team/*`, `/health`
 - Auth endpoints: `/auth/*`
+- Registration endpoint (public): `POST /users/register`
 - Database endpoints: `/db/users/*`, `/db/time-tracking/*`, `/db/work-locations/*`, `/db/gantt-tasks/*`, `/db/sync/*`
 - Debug endpoint in non-production only: `/debug/benchmark`
 
