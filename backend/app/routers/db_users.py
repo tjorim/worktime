@@ -44,6 +44,7 @@ from app.services.db_service import (
     list_users,
     update_user,
 )
+from app.utils.supertokens import username_to_st_email
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ router = APIRouter(prefix="/db/users", tags=["Database Users"])
 
 def _username_to_st_email(username: str) -> str:
     """Map a local username to the SuperTokens email-password identifier."""
-    return username if "@" in username else f"{username}@worktime.local"
+    return username_to_st_email(username)
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)

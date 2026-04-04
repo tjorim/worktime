@@ -70,7 +70,9 @@ be gated behind authentication unless the feature is inherently server-side
 
 **Branch B — Server already has data** (account used on a previous device):
 
-4. The frontend pulls all server records via `GET /db/sync/pull?since=<epoch>`.
+4. The frontend pulls all server records via `GET /db/sync/pull` (omit
+   `since` for a full pull), or `GET /db/sync/pull?since=<ISO-8601 timestamp>`
+   when a prior sync cursor exists.
 5. If `localStorage` is empty (new device), the pulled data is written directly
    with no conflict prompt. The Welcome Wizard runs so the user can configure
    their roster and schedule (see §4).
@@ -90,8 +92,10 @@ Once signed in, changes are persisted to the backend as part of normal usage:
   `POST /db/sync/push` in the background. If the push fails (e.g., offline),
   the change is added to an **outbox queue** stored in `localStorage`.
 - **On reconnect / app focus**: the frontend flushes any queued outbox items and
-  then pulls incremental updates via `GET /db/sync/pull?since=<cursor>` to pick
-  up changes from other devices.
+  then pulls incremental updates via
+  `GET /db/sync/pull?since=<server_timestamp>` (the ISO-8601 `server_timestamp`
+  returned by the last successful push or pull, stored as the sync cursor) to
+  pick up changes from other devices.
 - **Conflicts**: handled as described in §5. During ongoing sync, conflicts
   should be rare because the last-write-wins rule resolves most cases silently.
   The user is only prompted when a conflict cannot be resolved automatically
@@ -112,7 +116,7 @@ No user action is required.
 3. The frontend calls `GET /db/sync/status`. One or more entity timestamps
    are non-null → the account has server data.
 4. The frontend automatically pulls all records via
-   `GET /db/sync/pull?since=<epoch>` and writes them to `localStorage`.
+   `GET /db/sync/pull` and writes them to `localStorage`.
    No user confirmation is needed.
 5. The Welcome Wizard runs on first use of this browser. Because
    `worktime_user_state` is not yet synced (see Data Scope below, temporary
@@ -139,8 +143,10 @@ The sync service uses **last-write-wins** based on timestamps:
 - A push record is **accepted** if `client_updated_at > server.updated_at`
   (client version is strictly newer).
 - A push record is **rejected** (`status: "conflict"`) if
-  `client_updated_at ≤ server.updated_at`; the server's current value is
-  returned in the response so the client can decide what to do.
+  `client_updated_at ≤ server.updated_at`; the response reports the conflict
+  via `server_updated_at` and `conflict_reason`. The client must then issue a
+  subsequent `GET /db/sync/pull` to fetch the server's current record value
+  before deciding what to do.
 
 #### Conflict handling during ongoing sync
 
@@ -148,8 +154,9 @@ In the ongoing-sync flow (§3), most rejections are **stale-update resolutions**
 not true conflicts:
 
 - **Stale update (silent)**: the client pushes a record that another device
-  already updated. Because the server record is simply newer, the client
-  accepts the server value silently and updates `localStorage`. No user prompt
+  already updated. Because the server record is simply newer, the push is
+  rejected with a conflict status. The client issues a follow-up pull to fetch
+  the server's current value, updates `localStorage` silently. No user prompt
   is shown.
 - **Client write wins (silent)**: the client's record is newer than the
   server's. The push is accepted; `localStorage` already has the correct value.
@@ -224,7 +231,7 @@ near-term gap, not a deliberate permanent exclusion.
 2. **Outbox flush**: listen for the `online` browser event and on each app
    focus/visibility change. Drain the outbox queue in order, retrying failed
    items with exponential back-off. After a successful flush, pull incremental
-   changes via `GET /db/sync/pull?since=<cursor>`.
+   changes via `GET /db/sync/pull?since=<server_timestamp>` (ISO-8601).
 
 3. **`useSyncStatus` hook** (to be created): exposes
    `{ isSyncing, lastSyncedAt, outboxCount, hasConflicts }`. Drive the sync
@@ -251,7 +258,7 @@ near-term gap, not a deliberate permanent exclusion.
    - `GET /db/sync/status` — pre-flight check; all-null means no server data.
    - `POST /db/sync/push` — accepts batches of any size; use this for both
      initial upload and ongoing per-write pushes.
-   - `GET /db/sync/pull?since=<timestamp>` — incremental pull from cursor.
+   - `GET /db/sync/pull?since=<ISO-8601 timestamp>` — incremental pull from cursor (omit `since` for a full pull).
 
 2. **Conflict semantics**: the existing last-write-wins rule is correct and
    should not change. The frontend owns conflict surfacing and resolution.

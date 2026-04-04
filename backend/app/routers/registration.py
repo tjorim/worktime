@@ -25,6 +25,7 @@ from supertokens_python.recipe.emailpassword.interfaces import (
 from app.database.engine import get_session
 from app.schemas import UserCreate, UserRead, UserRegister
 from app.services.db_service import ConflictError, create_user
+from app.utils.supertokens import username_to_st_email
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,7 @@ async def register_user(
     On any failure after the SuperTokens identity has been created the
     SuperTokens user is deleted to prevent orphaned auth state.
     """
-    st_email = (
-        payload.username
-        if "@" in payload.username
-        else f"{payload.username}@worktime.local"
-    )
+    st_email = username_to_st_email(payload.username)
 
     st_result = await st_sign_up(tenant_id="public", email=st_email, password=payload.password)
     if isinstance(st_result, STEmailAlreadyExistsError):
