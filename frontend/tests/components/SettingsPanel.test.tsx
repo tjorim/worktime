@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsPanel } from "../../src/components/SettingsPanel";
 import { AuthProvider } from "../../src/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
@@ -34,6 +34,10 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("SettingsPanel Account Section", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders sign in and create account buttons when not authenticated", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
     expect(screen.getByText("Sign In")).toBeInTheDocument();
