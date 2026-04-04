@@ -11,7 +11,9 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
+import { AuthProvider } from "../../src/contexts/AuthContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { ToastProvider } from "../../src/contexts/ToastContext";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
@@ -110,7 +112,13 @@ function renderWithProviders(
   overrides?: DeepPartial<typeof defaultUserState>,
 ) {
   seedUserState(overrides);
-  return render(<SettingsProvider>{ui}</SettingsProvider>);
+  return render(
+    <SettingsProvider>
+      <ToastProvider>
+        <AuthProvider>{ui}</AuthProvider>
+      </ToastProvider>
+    </SettingsProvider>,
+  );
 }
 
 /**
@@ -456,7 +464,7 @@ describe("WelcomeWizard Integration Tests", () => {
       );
 
       await findModalTitle(/Welcome to Worktime/i);
-      await waitFor(() => expect(screen.getByText(/Step 1 of 8/i)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText(/Step 1 of 9/i)).toBeInTheDocument());
       unmount();
 
       // Change-schedule mode with team selection - 2 steps

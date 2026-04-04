@@ -157,9 +157,7 @@ describe("SettingsContext unified user state", () => {
     expect(userStateStored).not.toBeNull();
     const parsedState = JSON.parse(userStateStored || "{}");
     expect(parsedState).toEqual({
-      version: 4,
       hasCompletedOnboarding: false,
-      lastOnboardedVersion: 0,
       myTeam: null,
       scheduleType: null,
       settings: {
@@ -383,42 +381,6 @@ describe("SettingsContext unified user state", () => {
   });
 
   describe("lastUsed migration and updaters", () => {
-    it("migrates last* fields from settings to lastUsed", () => {
-      // Simulate old-format state with last* fields inside settings
-      window.localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({
-          hasCompletedOnboarding: true,
-          myTeam: 2,
-          scheduleType: "5-shift",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "on",
-            vacationAllowance: { amount: 25, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-            timeTrackingWeeklyTargetHours: 40,
-            lastActiveTab: "schedule",
-            lastScheduleView: "week",
-            lastTimeOffView: "stats",
-            lastTimeTrackingView: "weekly",
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      // Values should have been migrated to lastUsed
-      expect(result.current.lastUsed.activeTab).toBe("schedule");
-      expect(result.current.lastUsed.scheduleView).toBe("week");
-      expect(result.current.lastUsed.timeOffView).toBe("stats");
-      expect(result.current.lastUsed.timeTrackingView).toBe("weekly");
-      // New fields should have defaults
-      expect(result.current.lastUsed.otherSchedule).toBe(null);
-      expect(result.current.lastUsed.otherTeam).toBe(null);
-    });
-
     it("prefers lastUsed over settings when both present", () => {
       window.localStorage.setItem(
         USER_STATE_STORAGE_KEY,
@@ -549,83 +511,9 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.hasCompletedOnboarding).toBe(false);
       expect(result.current.lastUsed.activeTab).toBe("calendar");
     });
-
-    it("recovers with salvaged values when a migration throws", () => {
-      const parsedState = new Proxy(
-        {
-          version: 0,
-          myTeam: 3,
-          scheduleType: "5-shift",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "on",
-            vacationAllowance: { amount: 10, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-            timeTrackingWeeklyTargetHours: 40,
-          },
-        },
-        {
-          get(target, prop, receiver) {
-            if (prop === "lastUsed") {
-              throw new Error("forced migration failure");
-            }
-            return Reflect.get(target, prop, receiver);
-          },
-        },
-      );
-
-      vi.spyOn(JSON, "parse").mockImplementation(() => parsedState as any);
-      window.localStorage.setItem(USER_STATE_STORAGE_KEY, "{}");
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.myTeam).toBe(3);
-      expect(result.current.scheduleType).toBe("5-shift");
-      expect(result.current.settings.timeFormat).toBe("12h");
-      expect(result.current.lastUsed.activeTab).toBe("calendar");
-    });
   });
 
   describe("v1 to v2 migration (yearlyAmounts)", () => {
-    it("migrates vacationAllowance.amount to yearlyAmounts[currentYear]", () => {
-      const currentYear = String(new Date().getFullYear());
-      window.localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({
-          version: 1,
-          hasCompletedOnboarding: true,
-          myTeam: 2,
-          scheduleType: "5-shift",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: { amount: 30, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.settings.vacationAllowance.yearlyAmounts[currentYear]).toBe(30);
-      expect(result.current.settings.vacationAllowance.unit).toBe("days");
-      expect(result.current.settings.vacationAllowance.hoursPerDay).toBe(8);
-      // amount should no longer exist
-      expect((result.current.settings.vacationAllowance as any).amount).toBeUndefined();
-    });
-
     it("does not overwrite existing yearlyAmounts entry for current year", () => {
       const currentYear = String(new Date().getFullYear());
       window.localStorage.setItem(

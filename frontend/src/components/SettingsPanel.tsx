@@ -9,6 +9,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
 import { type CountryCode } from "../types/countries";
 import { CountrySelect } from "./shared/CountrySelect";
 import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
@@ -93,6 +94,8 @@ export function SettingsPanel({
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
+  const { isAuthenticated, isValidating, displayName, triggerLogin, triggerSignup, logout } =
+    useAuth();
   const {
     settings,
     scheduleType,
@@ -301,6 +304,79 @@ export function SettingsPanel({
           </Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body className="p-0 d-flex flex-column">
+          {/* Account Section */}
+          <div className="border-bottom">
+            <div className="p-3">
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-person-circle me-2"></i>
+                {m.account_section_title()}
+              </h6>
+              <ListGroup variant="flush">
+                {isValidating ? (
+                  <ListGroup.Item>
+                    <div className="d-flex align-items-center gap-2 text-muted small">
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      <span>{m.loading()}</span>
+                    </div>
+                  </ListGroup.Item>
+                ) : isAuthenticated ? (
+                  <ListGroup.Item>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-person-check me-2 text-success"></i>
+                          {displayName
+                            ? m.auth_logged_in_as({ displayName })
+                            : m.account_signed_in()}
+                        </div>
+                      </div>
+                      <Button variant="outline-secondary" size="sm" onClick={logout}>
+                        <i className="bi bi-box-arrow-right me-1"></i>
+                        {m.auth_logout()}
+                      </Button>
+                    </div>
+                  </ListGroup.Item>
+                ) : (
+                  <ListGroup.Item>
+                    <div className="mb-2">
+                      <div className="fw-medium mb-1">
+                        <i className="bi bi-person-x me-2 text-muted"></i>
+                        {m.account_not_signed_in()}
+                      </div>
+                      <small className="text-muted d-block mb-2">
+                        {m.account_sync_benefits()}
+                      </small>
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <small className="text-muted">
+                          <i className="bi bi-cloud-check text-success me-1"></i>
+                          {m.account_sync_benefit_backup()}
+                        </small>
+                        <small className="text-muted">
+                          <i className="bi bi-phone text-success me-1"></i>
+                          {m.account_sync_benefit_crossdevice()}
+                        </small>
+                      </div>
+                    </div>
+                    <div className="d-flex gap-2 flex-wrap">
+                      <Button variant="primary" size="sm" onClick={triggerSignup}>
+                        <i className="bi bi-person-plus me-1"></i>
+                        {m.account_connect_btn()}
+                      </Button>
+                      <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
+                        <i className="bi bi-box-arrow-in-right me-1"></i>
+                        {m.account_sign_in_btn()}
+                      </Button>
+                    </div>
+                  </ListGroup.Item>
+                )}
+              </ListGroup>
+            </div>
+          </div>
+
           {/* App Preferences Section */}
           <div className="border-bottom">
             <div className="p-3">

@@ -5,6 +5,7 @@ import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App";
 import { WelcomeWizard } from "../../src/components/WelcomeWizard";
+import { AuthProvider } from "../../src/contexts/AuthContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
@@ -147,7 +148,13 @@ function renderWithProviders(
   overrides?: DeepPartial<typeof defaultUserState>,
 ) {
   seedScheduleOption(overrides);
-  return render(<SettingsProvider>{ui}</SettingsProvider>);
+  return render(
+    <SettingsProvider>
+      <ToastProvider>
+        <AuthProvider>{ui}</AuthProvider>
+      </ToastProvider>
+    </SettingsProvider>,
+  );
 }
 
 // Test helper functions
@@ -158,7 +165,7 @@ const findModalTitle = async (text: RegExp) => {
   return modalHeading;
 };
 
-const waitForStep = async (stepNumber: number, totalSteps: number = 8, timeout = 3000) => {
+const waitForStep = async (stepNumber: number, totalSteps: number = 9, timeout = 3000) => {
   await waitFor(
     () => {
       expect(
@@ -215,7 +222,12 @@ const finishOnboardingSetup = async (user: ReturnType<typeof userEvent.setup>) =
   await waitFor(() => {
     expect(screen.getByRole("heading", { name: /Track Where You Work/i })).toBeInTheDocument();
   });
-  await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
+  await user.click(screen.getByRole("button", { name: /Continue/i }));
+
+  await waitFor(() => {
+    expect(screen.getByRole("heading", { name: /Connect Your Account/i })).toBeInTheDocument();
+  });
+  await user.click(screen.getByRole("button", { name: /Skip/i }));
 };
 
 describe("WelcomeWizard", () => {
@@ -421,7 +433,7 @@ describe("WelcomeWizard", () => {
         />,
       );
 
-      expect(screen.getByText(/Step 5 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
     });
 
     it("should show validation error for negative vacation amount", async () => {
@@ -509,6 +521,67 @@ describe("WelcomeWizard", () => {
           },
         }),
       );
+    });
+  });
+
+  describe("Account Setup Step", () => {
+    it("calls onHide with accountConnected: false when user skips the account setup step", async () => {
+      const user = userEvent.setup();
+      const mockOnHide = vi.fn();
+
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={mockOnHide}
+          startStep="account-setup"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /Connect Your Account/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /Skip/i }));
+
+      expect(mockOnHide).toHaveBeenCalledWith(
+        expect.objectContaining({ accountConnected: false }),
+      );
+    });
+
+    it("persists wizard state and triggers signup redirect when clicking Connect Account", async () => {
+      const user = userEvent.setup();
+      const mockOnHide = vi.fn();
+      const mockRedirectToAuth = vi.mocked(
+        (await import("supertokens-auth-react")).redirectToAuth,
+      );
+
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={mockOnHide}
+          startStep="account-setup"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /Connect Your Account/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /Connect Account/i }));
+
+      // Wizard state is persisted before the auth redirect; accountConnected is not set
+      // so the feature banner can still surface when the user returns authenticated.
+      expect(mockOnHide).toHaveBeenCalledWith(
+        expect.not.objectContaining({ accountConnected: expect.anything() }),
+      );
+      // Auth redirect is triggered with signup mode
+      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
     });
   });
 
@@ -640,24 +713,24 @@ describe("WelcomeWizard", () => {
 
       // Verify welcome wizard appears with correct initial step
       await findModalTitle(/Welcome to Worktime/i);
-      expect(screen.getByText(/Step 1 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 1 of 9/i)).toBeInTheDocument();
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      expect(screen.getByText(/Step 2 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 2 of 9/i)).toBeInTheDocument();
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      expect(screen.getByText(/Step 3 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 3 of 9/i)).toBeInTheDocument();
 
       // Choose 5-shift to reveal team selection
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
-      expect(screen.getByText(/Step 4 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 4 of 9/i)).toBeInTheDocument();
 
       // Select a team to go to vacation allowance step
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      expect(screen.getByText(/Step 5 of 8/i)).toBeInTheDocument();
+      expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
     });
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
@@ -1031,13 +1104,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 8);
+      await waitForStep(2, 9);
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 8);
+      await waitForStep(3, 9);
 
       // Select a valid schedule
       const fiveShiftButton = screen.getByRole("button", { name: /5-shift/i });
@@ -1065,7 +1138,9 @@ describe("WelcomeWizard", () => {
       render(
         <SettingsProvider>
           <ToastProvider>
-            <WelcomeWizard {...defaultProps} />
+            <AuthProvider>
+              <WelcomeWizard {...defaultProps} />
+            </AuthProvider>
           </ToastProvider>
         </SettingsProvider>,
       );
@@ -1075,13 +1150,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 7); // 7 steps total when no schedule selected (no team selection)
+      await waitForStep(2, 8); // 8 steps total when no schedule selected (no team selection)
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 7); // 7 steps total when no schedule selected (no team selection)
+      await waitForStep(3, 8); // 8 steps total when no schedule selected (no team selection)
 
       // Without selecting a schedule, the continue button should be disabled
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });
@@ -1106,7 +1181,9 @@ describe("WelcomeWizard", () => {
       render(
         <SettingsProvider>
           <ToastProvider>
-            <WelcomeWizard {...defaultProps} onScheduleSelect={onScheduleSelect} />
+            <AuthProvider>
+              <WelcomeWizard {...defaultProps} onScheduleSelect={onScheduleSelect} />
+            </AuthProvider>
           </ToastProvider>
         </SettingsProvider>,
       );
@@ -1116,13 +1193,13 @@ describe("WelcomeWizard", () => {
         name: /Let's Get Started/i,
       });
       await user.click(getStartedButton);
-      await waitForStep(2, 7); // 7 steps total when no schedule selected (no team selection)
+      await waitForStep(2, 8); // 8 steps total when no schedule selected (no team selection)
 
       const chooseScheduleButton = screen.getByRole("button", {
         name: /Choose a Schedule/i,
       });
       await user.click(chooseScheduleButton);
-      await waitForStep(3, 7); // 7 steps total when no schedule selected (no team selection)
+      await waitForStep(3, 8); // 8 steps total when no schedule selected (no team selection)
 
       // Verify onScheduleSelect was not called implicitly
       expect(onScheduleSelect).not.toHaveBeenCalled();
@@ -1190,11 +1267,11 @@ describe("WelcomeWizard", () => {
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      await waitForStep(2, 7); // 7 steps when no schedule (no team selection)
+      await waitForStep(2, 8); // 8 steps when no schedule (no team selection)
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      await waitForStep(3, 7);
+      await waitForStep(3, 8);
 
       // Try to continue without selecting a schedule
       const continueButtons = screen.getAllByRole("button", { name: /Continue/i });

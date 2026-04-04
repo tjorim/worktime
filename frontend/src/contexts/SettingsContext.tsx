@@ -68,23 +68,24 @@ interface SettingsContextType {
   setScheduleType: (schedule: ScheduleOption | null) => void;
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
-  lastOnboardedVersion: number;
+  /**
+   * Per-feature announcement flags.
+   * - `undefined` (missing): not yet shown → display the feature announcement banner
+   * - `false`: shown but dismissed (or seen during wizard without enabling)
+   * - `true`: seen and feature is enabled / connected
+   */
+  accountSyncAnnouncementSeen: boolean | undefined;
+  setAccountSyncAnnouncementSeen: (value: boolean) => void;
+  ganttAnnouncementSeen: boolean | undefined;
+  setGanttAnnouncementSeen: (value: boolean) => void;
+  crossBorderAnnouncementSeen: boolean | undefined;
+  setCrossBorderAnnouncementSeen: (value: boolean) => void;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
   // Atomic update for onboarding completion with optional vacation allowance
   completeOnboardingWithVacation: (
     team: number | null,
     vacationAllowance?: Partial<VacationAllowanceSettings>,
-  ) => void;
-  // Mark feature-intro steps as seen and apply any changed feature settings
-  completeFeatureIntro: (
-    targetVersion: number,
-    preferences?: {
-      enableGantt?: boolean;
-      enableCrossBorderTracking?: boolean;
-      homeCountry?: CountryCode | null;
-      officeCountry?: CountryCode | null;
-    },
   ) => void;
   // Atomic update for onboarding completion with schedule selection
   completeOnboardingWithSchedule: (
@@ -98,6 +99,7 @@ interface SettingsContextType {
       enableCrossBorderTracking?: boolean;
       homeCountry?: CountryCode | null;
       officeCountry?: CountryCode | null;
+      accountConnected?: boolean;
     },
   ) => void;
 }
@@ -136,241 +138,31 @@ const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly
 const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);
 
 interface WorktimeUserState {
-  version: number;
   hasCompletedOnboarding: boolean;
-  lastOnboardedVersion: number;
+  /**
+   * Per-feature announcement flags.
+   * - `undefined` (missing): not yet shown → display the feature announcement banner
+   * - `false`: shown but dismissed (or seen during wizard without enabling)
+   * - `true`: seen and feature is enabled / connected
+   */
+  accountSyncAnnouncementSeen?: boolean;
+  ganttAnnouncementSeen?: boolean;
+  crossBorderAnnouncementSeen?: boolean;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
   lastUsed: LastUsed;
-  rawStateBackup?: RawState;
-  hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 4;
-const CURRENT_VERSION = USER_STATE_VERSION;
+type RawState = Record<string, unknown>;
 
 const defaultUserState: WorktimeUserState = {
-  version: CURRENT_VERSION,
   hasCompletedOnboarding: false,
-  lastOnboardedVersion: 0,
   myTeam: null,
   scheduleType: null,
   settings: defaultSettings,
   lastUsed: defaultLastUsed,
 };
-
-// --- Versioned migrations ---
-// Each key is the target version. The function transforms state from (key-1) → key.
-// Migrations receive and return a raw Record so they can reshape freely.
-type RawState = Record<string, unknown>;
-type Migration = (state: RawState) => RawState;
-
-interface RawSettings extends UserSettings {
-  lastActiveTab?: TabKey;
-  lastScheduleView?: ScheduleViewKey;
-  lastTimeOffView?: TimeOffViewKey;
-  lastTimeTrackingView?: TimeTrackingViewKey;
-}
-
-const migrations: Record<number, Migration> = {
-  // → v1: Move last* view fields from settings into a dedicated lastUsed group.
-  //        Rename scheduleOption → scheduleType.
-  1: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    const lastUsed = (
-      typeof state.lastUsed === "object" && state.lastUsed !== null ? state.lastUsed : {}
-    ) as RawState;
-
-    // Migrate last* from settings → lastUsed (only if lastUsed doesn't already have them)
-    const pick = (lastUsedKey: string, settingsKey: keyof RawSettings) =>
-      (lastUsed as RawState)[lastUsedKey] !== undefined
-        ? (lastUsed as RawState)[lastUsedKey]
-        : settings[settingsKey];
-
-    const migratedLastUsed: RawState = {
-      activeTab: pick("activeTab", "lastActiveTab"),
-      scheduleView: pick("scheduleView", "lastScheduleView"),
-      timeOffView: pick("timeOffView", "lastTimeOffView"),
-      timeTrackingView: pick("timeTrackingView", "lastTimeTrackingView"),
-      otherSchedule: lastUsed.otherSchedule ?? null,
-      otherTeam: lastUsed.otherTeam ?? null,
-    };
-
-    // Remove migrated fields from settings
-    const {
-      lastActiveTab: _lastActiveTab,
-      lastScheduleView: _lastScheduleView,
-      lastTimeOffView: _lastTimeOffView,
-      lastTimeTrackingView: _lastTimeTrackingView,
-      ...cleanSettings
-    } = settings;
-
-    // Rename scheduleOption → scheduleType
-    const scheduleType =
-      state.scheduleType !== undefined ? state.scheduleType : state.scheduleOption;
-
-    return {
-      ...state,
-      scheduleType,
-      settings: cleanSettings,
-      lastUsed: migratedLastUsed,
-    };
-  },
-
-  // → v2: Replace vacationAllowance.amount with yearlyAmounts[currentYear].
-  2: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    const va =
-      settings.vacationAllowance && typeof settings.vacationAllowance === "object"
-        ? (settings.vacationAllowance as unknown as RawState)
-        : {};
-
-    const oldAmount =
-      typeof va.amount === "number" &&
-      Number.isFinite(va.amount as number) &&
-      (va.amount as number) >= 0
-        ? (va.amount as number)
-        : 0;
-
-    const existingYearly =
-      typeof va.yearlyAmounts === "object" && va.yearlyAmounts !== null
-        ? (va.yearlyAmounts as Record<string, unknown>)
-        : {};
-
-    // Attempt to use a timestamp field (if present) to derive target year; otherwise fallback to best-effort currentYear.
-    // This minimizes time-dependent behavior during migration.
-    const yearFromTimestamp =
-      typeof state.timestamp === "number" ? new Date(state.timestamp).getFullYear() : undefined;
-    const yearFromLastUpdated =
-      typeof state.lastUpdated === "string" ? new Date(state.lastUpdated).getFullYear() : undefined;
-    const fallbackYear = new Date().getFullYear();
-
-    const targetYear = String(
-      yearFromTimestamp !== undefined && Number.isFinite(yearFromTimestamp) && yearFromTimestamp > 0
-        ? yearFromTimestamp
-        : yearFromLastUpdated !== undefined &&
-            Number.isFinite(yearFromLastUpdated) &&
-            yearFromLastUpdated > 0
-          ? yearFromLastUpdated
-          : fallbackYear,
-    );
-
-    const yearlyAmounts: Record<string, number> = {};
-    for (const [key, val] of Object.entries(existingYearly)) {
-      if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
-        yearlyAmounts[key] = val;
-      } else if (val !== undefined) {
-        console.warn(`Migration v2: skipped invalid yearlyAmounts entry "${key}":`, val);
-      }
-    }
-    // Only seed from old amount if there's no entry for the target year yet
-    if (oldAmount > 0 && !(targetYear in yearlyAmounts)) {
-      yearlyAmounts[targetYear] = oldAmount;
-    }
-
-    const { amount: _amount, yearlyAmounts: _existingYearly, ...restVa } = va;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        vacationAllowance: {
-          ...restVa,
-          yearlyAmounts,
-        },
-      },
-    };
-  },
-
-  // → v3: Add homeCountry, officeCountry, and enableCrossBorderTracking to settings.
-  // Note: normalizeUserState already applies defaults for any missing field, so this migration
-  // is effectively a no-op for typical v2→v3 upgrades. It exists as an explicit audit trail of
-  // the schema change and ensures the stored JSON immediately reflects the new shape after the
-  // first load, rather than waiting for the next settings save to persist the defaults.
-  3: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        homeCountry: settings.homeCountry ?? defaultSettings.homeCountry,
-        officeCountry: settings.officeCountry ?? defaultSettings.officeCountry,
-        enableCrossBorderTracking:
-          settings.enableCrossBorderTracking ?? defaultSettings.enableCrossBorderTracking,
-      },
-    };
-  },
-
-  // → v4: Add enableGantt setting (no-op audit migration).
-  4: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        enableGantt: settings.enableGantt ?? defaultSettings.enableGantt,
-      },
-    };
-  },
-};
-
-function handleMigrationError(state: RawState, version: number): RawState {
-  console.warn(`Migration for version ${version} not found or failed. Attempting recovery.`);
-  const rawStateBackup = state;
-  const recovered = {
-    myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
-    scheduleType:
-      typeof rawStateBackup.scheduleType === "string"
-        ? rawStateBackup.scheduleType
-        : typeof rawStateBackup.scheduleOption === "string"
-          ? rawStateBackup.scheduleOption
-          : null,
-    settings:
-      typeof rawStateBackup.settings === "object" && rawStateBackup.settings !== null
-        ? rawStateBackup.settings
-        : undefined,
-  };
-
-  return {
-    ...defaultUserState,
-    ...recovered,
-    rawStateBackup,
-    hasMigrationError: true,
-  };
-}
-
-function migrateState(state: RawState): RawState {
-  let version = typeof state.version === "number" ? state.version : 0;
-  while (version < CURRENT_VERSION) {
-    const nextVersion = version + 1;
-    const migrate = migrations[nextVersion];
-    if (!migrate) {
-      return handleMigrationError(state, nextVersion);
-    }
-    try {
-      state = migrate(state);
-    } catch (error) {
-      console.error(`Migration ${nextVersion} failed. Attempting recovery.`, error);
-      return handleMigrationError(state, nextVersion);
-    }
-    state.version = nextVersion;
-    version = nextVersion;
-  }
-  return state;
-}
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
@@ -383,8 +175,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState;
   }
 
-  // Run versioned migrations first to get data into the current shape
-  const s = migrateState(state as RawState);
+  const s = state as RawState;
 
   const settings = (
     typeof s.settings === "object" && s.settings !== null ? s.settings : {}
@@ -511,20 +302,18 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState.scheduleType;
   })();
 
-  const lastOnboardedVersion =
-    typeof s.lastOnboardedVersion === "number" &&
-    Number.isInteger(s.lastOnboardedVersion) &&
-    s.lastOnboardedVersion >= 0
-      ? s.lastOnboardedVersion
-      : 0;
+  const toOptionalBool = (v: unknown): boolean | undefined =>
+    v === true ? true : v === false ? false : undefined;
 
   return {
-    version: CURRENT_VERSION,
     hasCompletedOnboarding:
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
-    lastOnboardedVersion,
+    // Per-feature announcement flags: undefined = not yet shown, false = seen/dismissed, true = seen and enabled
+    accountSyncAnnouncementSeen: toOptionalBool(s.accountSyncAnnouncementSeen),
+    ganttAnnouncementSeen: toOptionalBool(s.ganttAnnouncementSeen),
+    crossBorderAnnouncementSeen: toOptionalBool(s.crossBorderAnnouncementSeen),
     myTeam:
       s.myTeam === undefined
         ? defaultUserState.myTeam
@@ -553,11 +342,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       otherTeam,
       ganttViewMode,
     },
-    rawStateBackup:
-      typeof s.rawStateBackup === "object" && s.rawStateBackup !== null
-        ? (s.rawStateBackup as RawState)
-        : undefined,
-    hasMigrationError: s.hasMigrationError === true ? true : undefined,
   };
 };
 
@@ -793,7 +577,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
       }));
     },
@@ -805,7 +588,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
         settings: {
           ...prev.settings,
@@ -830,12 +612,31 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         enableCrossBorderTracking?: boolean;
         homeCountry?: CountryCode | null;
         officeCountry?: CountryCode | null;
+        accountConnected?: boolean;
       },
     ) => {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
+        // When accountConnected is explicitly set in the wizard, record the result.
+        // undefined (flag not passed) leaves the existing value untouched so the
+        // feature-intro banner can still surface on the next visit.
+        accountSyncAnnouncementSeen:
+          preferences?.accountConnected !== undefined
+            ? preferences.accountConnected
+            : prev.accountSyncAnnouncementSeen,
+        // Mark Gantt and Cross-Border based on the user's wizard choices:
+        // true = saw + enabled, false = saw + declined. If the wizard step was
+        // skipped entirely (preference is undefined), preserve the existing value
+        // so the feature-intro banner can still surface later.
+        ganttAnnouncementSeen:
+          preferences?.enableGantt !== undefined
+            ? preferences.enableGantt
+            : prev.ganttAnnouncementSeen,
+        crossBorderAnnouncementSeen:
+          preferences?.enableCrossBorderTracking !== undefined
+            ? preferences.enableCrossBorderTracking
+            : prev.crossBorderAnnouncementSeen,
         scheduleType,
         myTeam: team,
         settings: {
@@ -859,34 +660,23 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
-  const completeFeatureIntro = useCallback(
-    (
-      targetVersion: number,
-      preferences?: {
-        enableGantt?: boolean;
-        enableCrossBorderTracking?: boolean;
-        homeCountry?: CountryCode | null;
-        officeCountry?: CountryCode | null;
-      },
-    ) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastOnboardedVersion: targetVersion,
-        settings: {
-          ...prev.settings,
-          enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
-          enableCrossBorderTracking:
-            preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
-          homeCountry:
-            preferences?.homeCountry !== undefined
-              ? preferences.homeCountry
-              : prev.settings.homeCountry,
-          officeCountry:
-            preferences?.officeCountry !== undefined
-              ? preferences.officeCountry
-              : prev.settings.officeCountry,
-        },
-      }));
+  const setAccountSyncAnnouncementSeen = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, accountSyncAnnouncementSeen: value }));
+    },
+    [setUserState],
+  );
+
+  const setGanttAnnouncementSeen = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, ganttAnnouncementSeen: value }));
+    },
+    [setUserState],
+  );
+
+  const setCrossBorderAnnouncementSeen = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, crossBorderAnnouncementSeen: value }));
     },
     [setUserState],
   );
@@ -919,8 +709,12 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setScheduleType,
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
-      lastOnboardedVersion: userState.lastOnboardedVersion,
-      completeFeatureIntro,
+      accountSyncAnnouncementSeen: userState.accountSyncAnnouncementSeen,
+      setAccountSyncAnnouncementSeen,
+      ganttAnnouncementSeen: userState.ganttAnnouncementSeen,
+      setGanttAnnouncementSeen,
+      crossBorderAnnouncementSeen: userState.crossBorderAnnouncementSeen,
+      setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
@@ -948,7 +742,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setMyTeam,
       setScheduleType,
       setHasCompletedOnboarding,
-      completeFeatureIntro,
+      setAccountSyncAnnouncementSeen,
+      setGanttAnnouncementSeen,
+      setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
