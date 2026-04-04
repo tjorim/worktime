@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Container from "react-bootstrap/Container";
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { AboutModal } from "./components/AboutModal";
@@ -70,14 +71,20 @@ function AppContent() {
     fetchFnOrNull,
   );
 
-  // Show a toast when the first-sync flow completes or errors.
+  // Show a toast for each phase of the first-sync flow.
   useEffect(() => {
-    if (syncPhase === "done") {
+    if (syncPhase === "checking") {
+      showInfo(m.first_sync_checking());
+    } else if (syncPhase === "pushing") {
+      showInfo(m.first_sync_pushing());
+    } else if (syncPhase === "pulling") {
+      showInfo(m.first_sync_pulling());
+    } else if (syncPhase === "done") {
       showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
     } else if (syncPhase === "error") {
       showError(m.first_sync_error());
     }
-  }, [syncPhase, showSuccess, showError]);
+  }, [syncPhase, showInfo, showSuccess, showError]);
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
@@ -322,21 +329,25 @@ function AppContent() {
  * @returns The root React element: SuperTokensWrapper, SettingsProvider, EventStoreProvider,
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <SuperTokensWrapper>
-      <SettingsProvider>
-        <EventStoreProvider>
-          <DeveloperOptionsProvider>
-            <ToastProvider>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-            </ToastProvider>
-          </DeveloperOptionsProvider>
-        </EventStoreProvider>
-      </SettingsProvider>
-    </SuperTokensWrapper>
+    <QueryClientProvider client={queryClient}>
+      <SuperTokensWrapper>
+        <SettingsProvider>
+          <EventStoreProvider>
+            <DeveloperOptionsProvider>
+              <ToastProvider>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </ToastProvider>
+            </DeveloperOptionsProvider>
+          </EventStoreProvider>
+        </SettingsProvider>
+      </SuperTokensWrapper>
+    </QueryClientProvider>
   );
 }
 

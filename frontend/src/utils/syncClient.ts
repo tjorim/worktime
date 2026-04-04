@@ -184,6 +184,7 @@ export async function pushSyncPayload(
   try {
     const response = await fetch("/db/sync/push", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) return null;
@@ -397,6 +398,18 @@ export function applySyncPullResponse(data: SyncPullResponse): void {
   // in the UI will be lost for any work-location entry that was originally
   // synced from local data. This is a known temporary limitation of the sync
   // schema (see docs/local-first-sync-flow.md §Data Scope).
+  // Clear all existing work-location keys before writing pulled data so that
+  // years not present in the server response (e.g. all entries were deleted)
+  // don't leave stale records behind.
+  const existingWlKeys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) existingWlKeys.push(key);
+  }
+  for (const key of existingWlKeys) {
+    localStorage.removeItem(key);
+  }
+
   const byYear: Record<string, Record<string, unknown>> = {};
   for (const wl of data.work_locations) {
     if (wl.deleted_at !== null) continue;

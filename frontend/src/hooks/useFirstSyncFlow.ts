@@ -34,6 +34,7 @@ import {
   pullSyncData,
   pushSyncPayload,
   syncStatusHasData,
+  type SyncStatusResponse,
 } from "../utils/syncClient";
 import { getSyncCursorKey } from "../constants/storageKeys";
 
@@ -96,6 +97,19 @@ export function useFirstSyncFlow(
 
   // Guard against running the flow more than once per mount when deps change.
   const flowStartedForUser = useRef<string | null>(null);
+  // Status captured when the flow reaches Branch C; reused by resolveConflict
+  // to avoid an extra /db/sync/status round-trip on "keep-local".
+  const capturedStatusRef = useRef<SyncStatusResponse | null>(null);
+  // Tracks whether the hook is still active. Set to false on unmount so
+  // in-flight async operations do not call setPhase on a stale instance.
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const runFlow = useCallback(
     async (uid: string, fetch: (url: string, init?: RequestInit) => Promise<Response>) => {
@@ -155,7 +169,10 @@ export function useFirstSyncFlow(
         return;
       }
 
-      // Branch C — both have data → show conflict dialog
+      // Branch C — both have data → show conflict dialog.
+      // Capture the status so resolveConflict can use it as a cursor fallback
+      // without an extra /db/sync/status call.
+      capturedStatusRef.current = status;
       setPhase("conflict");
     },
     [],
@@ -167,29 +184,30 @@ export function useFirstSyncFlow(
 
       const uid = userId;
       const fetch = fetchFn;
+      // Use the status we already fetched when entering Branch C as the
+      // fallback timestamp, avoiding an extra /db/sync/status round-trip.
+      const preStatus = capturedStatusRef.current;
 
       const execute = async () => {
         if (choice === "keep-local") {
+          if (!mountedRef.current) return;
           setPhase("pushing");
-          // Capture a pre-push server_timestamp so we have a valid fallback
-          // if the post-push status re-fetch fails.
-          const preStatus = await fetchSyncStatus(fetch);
-          if (!preStatus) {
-            setPhase("error");
-            return;
-          }
           const payload = buildLocalSyncPushPayload();
           const result = await pushSyncPayload(fetch, payload);
+          if (!mountedRef.current) return;
           if (!result) {
             setPhase("error");
             return;
           }
           const postStatus = await fetchSyncStatus(fetch);
-          storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus.server_timestamp);
+          if (!mountedRef.current) return;
+          storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus?.server_timestamp ?? new Date().toISOString());
           setPhase("done");
         } else {
+          if (!mountedRef.current) return;
           setPhase("pulling");
           const pullResult = await pullSyncData(fetch);
+          if (!mountedRef.current) return;
           if (!pullResult) {
             setPhase("error");
             return;
@@ -201,7 +219,7 @@ export function useFirstSyncFlow(
       };
 
       execute().catch(() => {
-        setPhase("error");
+        if (mountedRef.current) setPhase("error");
       });
     },
     [phase, userId, fetchFn],
@@ -209,8 +227,10 @@ export function useFirstSyncFlow(
 
   const dismiss = useCallback(() => {
     setPhase("idle");
-    // Do NOT reset flowStartedForUser.current — the user chose to "decide later".
-    // The flow will re-run next time they sign in (sign-out resets the ref).
+    capturedStatusRef.current = null;
+    // Reset so the flow can re-run on next sign-in or page reload.
+    // It will not re-trigger automatically in the current session.
+    flowStartedForUser.current = null;
   }, []);
 
   // Reset the flow state when the user signs out.
