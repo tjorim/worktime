@@ -524,6 +524,34 @@ describe("WelcomeWizard", () => {
     });
   });
 
+  describe("Account Setup Step", () => {
+    it("calls onHide with accountConnected: false when user skips the account setup step", async () => {
+      const user = userEvent.setup();
+      const mockOnHide = vi.fn();
+
+      renderWithProviders(
+        <WelcomeWizard
+          show={true}
+          onTeamSelect={vi.fn()}
+          onHide={mockOnHide}
+          startStep="account-setup"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /Connect Your Account/i }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /Skip/i }));
+
+      expect(mockOnHide).toHaveBeenCalledWith(
+        expect.objectContaining({ accountConnected: false }),
+      );
+    });
+  });
+
   describe("Integration tests", () => {
     let originalLocalStorage: Storage;
     let testStorage: Record<string, string>;

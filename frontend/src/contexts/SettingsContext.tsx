@@ -849,9 +849,15 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
           preferences?.accountConnected !== undefined
             ? preferences.accountConnected
             : prev.accountSyncEnabled,
-        // Mark Gantt and Cross-Border as seen (user went through the wizard steps for these).
-        ganttAnnouncementSeen: prev.ganttAnnouncementSeen ?? false,
-        crossBorderAnnouncementSeen: prev.crossBorderAnnouncementSeen ?? false,
+        // Mark Gantt and Cross-Border based on the user's wizard choices:
+        // true = saw + enabled, false = saw + declined. Falls back to the
+        // current value (or false when the wizard step was skipped entirely).
+        ganttAnnouncementSeen:
+          preferences?.enableGantt ?? prev.ganttAnnouncementSeen ?? false,
+        crossBorderAnnouncementSeen:
+          preferences?.enableCrossBorderTracking ??
+          prev.crossBorderAnnouncementSeen ??
+          false,
         scheduleType,
         myTeam: team,
         settings: {
