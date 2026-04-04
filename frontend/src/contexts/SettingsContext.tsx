@@ -157,7 +157,7 @@ interface WorktimeUserState {
   hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 5;
+export const USER_STATE_VERSION = 4;
 const CURRENT_VERSION = USER_STATE_VERSION;
 
 const defaultUserState: WorktimeUserState = {
@@ -333,14 +333,6 @@ const migrations: Record<number, Migration> = {
         enableGantt: settings.enableGantt ?? defaultSettings.enableGantt,
       },
     };
-  },
-
-  // → v5: Add per-feature announcement flags (accountSyncEnabled, ganttAnnouncementSeen,
-  //        crossBorderAnnouncementSeen) to WorktimeUserState.
-  //        Existing installs leave these fields undefined so banners surface on the next visit.
-  //        This is a no-op audit migration — normalizeUserState handles default values.
-  5: (state) => {
-    return { ...state };
   },
 };
 
