@@ -31,6 +31,11 @@ async function fetchOpenHolidays<T>(
     if (err instanceof Error && (err.name === "TimeoutError" || timeoutSignal.aborted)) {
       throw new Error(timeoutError);
     }
+    // Let React Query handle request cancellation (unmount / query invalidation)
+    // silently rather than surfacing a user-visible error toast.
+    if (signal.aborted || (err instanceof Error && err.name === "AbortError")) {
+      throw err;
+    }
     throw new Error(networkError);
   }
 

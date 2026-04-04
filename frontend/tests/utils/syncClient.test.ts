@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applySyncPullResponse,
+  buildKeepLocalReplacePayload,
   buildLocalSyncPushPayload,
   fetchSyncStatus,
   pullSyncData,
@@ -238,6 +239,37 @@ describe("syncClient", () => {
       });
     });
 
+    it("excludes labels with missing or non-string color", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.labels,
+        JSON.stringify([
+          { id: "lbl-good", name: "Good", color: "#FF0000" },
+          { id: "lbl-no-color", name: "Bad", color: null },
+          { id: "lbl-num-color", name: "Numeric", color: 123 },
+        ]),
+      );
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.labels).toHaveLength(1);
+      expect(payload.labels[0].id).toBe("lbl-good");
+    });
+
+    it("excludes templates with missing required fields", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.templates,
+        JSON.stringify([
+          { id: "tmpl-good", text: "Valid", label: "", start: "09:00", stop: "09:15" },
+          { id: "tmpl-no-text", text: "", label: "", start: "09:00", stop: "09:15" },
+          { id: "tmpl-bad-start", text: "Bad start", label: "", start: "9:00", stop: "09:15" },
+          { id: "tmpl-no-stop", text: "No stop", label: "", start: "09:00", stop: "" },
+        ]),
+      );
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.templates).toHaveLength(1);
+      expect(payload.templates[0].id).toBe("tmpl-good");
+    });
+
     it("excludes soft-deleted tasks from the payload", () => {
       localStorage.setItem(
         TIME_TRACKING_STORAGE_KEYS.tasks,
@@ -413,6 +445,186 @@ describe("syncClient", () => {
       });
 
       expect(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // buildKeepLocalReplacePayload
+  // ---------------------------------------------------------------------------
+
+  describe("buildKeepLocalReplacePayload", () => {
+    const makeEmptyPullResponse = () => ({
+      labels: [] as never[],
+      tasks: [] as never[],
+      templates: [] as never[],
+      work_locations: [] as never[],
+      server_timestamp: "2026-01-01T00:00:00Z",
+    });
+
+    const makeServerLabel = (id: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      name: `Label ${id}`,
+      color: "#AABBCC",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeServerTask = (id: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      label_id: null,
+      text: `Task ${id}`,
+      start_time: "2026-01-01T09:00:00Z",
+      stop_time: null,
+      includes_break: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeServerTemplate = (id: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      label_id: null,
+      text: `Template ${id}`,
+      start_time: "09:00:00",
+      stop_time: "09:15:00",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeServerWorkLocation = (date: string, deletedAt: string | null = null) => ({
+      id: 1,
+      user_id: 1,
+      date,
+      country_code: "NL",
+      label: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    it("preserves all local records in the output payload", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.labels,
+        JSON.stringify([{ id: "local-lbl", name: "Local", color: "#FFFFFF" }]),
+      );
+      const localPayload = buildLocalSyncPushPayload();
+      const result = buildKeepLocalReplacePayload(localPayload, makeEmptyPullResponse());
+
+      expect(result.labels.find((l) => l.id === "local-lbl")).toBeDefined();
+      expect(result.labels.find((l) => l.id === "local-lbl")?.action).toBe("create");
+    });
+
+    it("adds delete entries for server-only labels not present locally", () => {
+      localStorage.clear(); // no local labels
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("server-only-lbl")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+
+      const deleted = result.labels.find((l) => l.id === "server-only-lbl");
+      expect(deleted).toBeDefined();
+      expect(deleted?.action).toBe("delete");
+    });
+
+    it("does not re-delete already soft-deleted server labels", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("already-deleted-lbl", "2026-01-02T00:00:00Z")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.labels.find((l) => l.id === "already-deleted-lbl")).toBeUndefined();
+    });
+
+    it("adds delete entries for server-only tasks", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        tasks: [makeServerTask("server-task")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.tasks.find((t) => t.id === "server-task")?.action).toBe("delete");
+    });
+
+    it("does not re-delete already soft-deleted server tasks", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        tasks: [makeServerTask("deleted-task", "2026-01-02T00:00:00Z")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.tasks.find((t) => t.id === "deleted-task")).toBeUndefined();
+    });
+
+    it("adds delete entries for server-only templates", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        templates: [makeServerTemplate("server-tmpl")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.templates.find((t) => t.id === "server-tmpl")?.action).toBe("delete");
+    });
+
+    it("does not delete server labels that also exist locally", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.labels,
+        JSON.stringify([{ id: "shared-lbl", name: "Shared", color: "#FF0000" }]),
+      );
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        labels: [makeServerLabel("shared-lbl"), makeServerLabel("server-only-lbl")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+
+      // shared-lbl: present locally → keep (create), NOT deleted
+      expect(result.labels.find((l) => l.id === "shared-lbl")?.action).toBe("create");
+      expect(result.labels.filter((l) => l.id === "shared-lbl")).toHaveLength(1);
+
+      // server-only-lbl: not in local → delete
+      expect(result.labels.find((l) => l.id === "server-only-lbl")?.action).toBe("delete");
+    });
+
+    it("adds delete entries for server-only work locations", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        work_locations: [makeServerWorkLocation("2026-01-10")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.work_locations.find((wl) => wl.date === "2026-01-10")?.action).toBe("delete");
+    });
+
+    it("does not re-delete already soft-deleted work locations", () => {
+      localStorage.clear();
+      const localPayload = buildLocalSyncPushPayload();
+      const serverData = {
+        ...makeEmptyPullResponse(),
+        work_locations: [makeServerWorkLocation("2026-01-10", "2026-01-09T00:00:00Z")],
+      };
+
+      const result = buildKeepLocalReplacePayload(localPayload, serverData);
+      expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
     });
   });
 });

@@ -265,10 +265,18 @@ function localTimeToUtcIso(localTime: string): string | null {
 export function buildLocalSyncPushPayload(): SyncPushPayload {
   const now = new Date().toISOString();
 
-  // Labels
+  // Labels — filter out rows with missing/invalid required fields so that a
+  // single corrupted label cannot cause the entire first-sync push to fail.
   const rawLabels = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.labels) as TimeTrackingLabel[];
   const labels: LabelSyncItem[] = rawLabels
-    .filter((l) => l && typeof l.id === "string" && typeof l.name === "string")
+    .filter(
+      (l) =>
+        l &&
+        typeof l.id === "string" &&
+        typeof l.name === "string" &&
+        // color is required by the backend for create actions
+        typeof l.color === "string",
+    )
     .map((l) => ({
       id: l.id,
       action: "create",
@@ -303,12 +311,24 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       includes_break: t.includesBreak ?? false,
     }));
 
-  // Templates
+  // Templates — filter out rows missing required fields (text, start, stop) so
+  // that a single malformed template cannot cause the entire push to fail.
+  const HH_MM_RE = /^\d{2}:\d{2}$/;
   const rawTemplates = safeParseJsonArray(
     TIME_TRACKING_STORAGE_KEYS.templates,
   ) as TimeTrackingTemplate[];
   const templates: TemplateSyncItem[] = rawTemplates
-    .filter((t) => t && typeof t.id === "string")
+    .filter(
+      (t) =>
+        t &&
+        typeof t.id === "string" &&
+        typeof t.text === "string" &&
+        t.text.trim().length > 0 &&
+        typeof t.start === "string" &&
+        HH_MM_RE.test(t.start) &&
+        typeof t.stop === "string" &&
+        HH_MM_RE.test(t.stop),
+    )
     .map((t) => ({
       id: t.id,
       action: "create",
@@ -316,8 +336,8 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       label_id: t.label || null,
       text: t.text,
       // Local format is "HH:mm"; server expects "HH:mm:ss"
-      start_time: t.start ? `${t.start}:00` : null,
-      stop_time: t.stop ? `${t.stop}:00` : null,
+      start_time: `${t.start}:00`,
+      stop_time: `${t.stop}:00`,
     }));
 
   // Work locations — iterate all matching localStorage keys

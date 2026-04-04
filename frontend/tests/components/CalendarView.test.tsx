@@ -1,18 +1,24 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CalendarView } from "../../src/components/CalendarView";
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
 
+const createTestQueryClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (
-  <SettingsProvider>
-    <ToastProvider>
-      <EventStoreProvider>{children}</EventStoreProvider>
-    </ToastProvider>
-  </SettingsProvider>
+  <QueryClientProvider client={createTestQueryClient()}>
+    <SettingsProvider>
+      <ToastProvider>
+        <EventStoreProvider>{children}</EventStoreProvider>
+      </ToastProvider>
+    </SettingsProvider>
+  </QueryClientProvider>
 );
 
 describe("CalendarView", () => {

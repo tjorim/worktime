@@ -159,10 +159,10 @@ describe("useFirstSyncFlow", () => {
     seedTasks();
 
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status
-      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // pre-push status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });   // post-push status
+      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus })  // initial status → conflict
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull server data
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push replace payload
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });      // post-push status
 
     const { result } = renderHook(() =>
       useFirstSyncFlow(true, "user-1", mockFetch),

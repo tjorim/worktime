@@ -198,10 +198,10 @@ export function useFirstSyncFlow(
       const execute = async () => {
         if (choice === "keep-local") {
           // Pull the current server state so we can tombstone server-only rows.
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           setPhase("pulling");
           const serverData = await pullSyncData(fetch);
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           if (!serverData) {
             setPhase("error");
             return;
@@ -211,20 +211,20 @@ export function useFirstSyncFlow(
           // Build a replace payload: local creates + delete entries for server-only rows.
           const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
           const result = await pushSyncPayload(fetch, replacePayload);
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           if (!result) {
             setPhase("error");
             return;
           }
           const postStatus = await fetchSyncStatus(fetch);
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus?.server_timestamp ?? new Date().toISOString());
           setPhase("done");
         } else {
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           setPhase("pulling");
           const pullResult = await pullSyncData(fetch);
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
           if (!pullResult) {
             setPhase("error");
             return;
