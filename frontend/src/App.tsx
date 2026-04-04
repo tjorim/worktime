@@ -8,12 +8,11 @@ import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import {
   SettingsProvider,
   type TabKey,
-  USER_STATE_VERSION,
   useSettings,
 } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
@@ -22,20 +21,6 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
-
-// Features added in each schema version. Shown as an inline alert to users who haven't seen them.
-const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[] = [
-  {
-    version: 4,
-    name: "Personal Gantt Chart",
-    detail: "Visualize and track project tasks on a timeline",
-  },
-  {
-    version: 3,
-    name: "Cross-Border Tracking",
-    detail: "Log your daily work location for tax reporting",
-  },
-];
 
 /**
  * The main application component for team selection and shift management.
@@ -46,13 +31,18 @@ const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[]
  */
 function AppContent() {
   const { showSuccess, showInfo, showError } = useToast();
+  const { isAuthenticated } = useAuth();
   const {
     myTeam,
     setMyTeam,
     hasCompletedOnboarding,
-    lastOnboardedVersion,
+    accountSyncEnabled,
+    setAccountSyncEnabled,
+    ganttAnnouncementSeen,
+    setGanttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+    setCrossBorderAnnouncementSeen,
     completeOnboardingWithSchedule,
-    completeFeatureIntro,
     scheduleType,
     setScheduleType,
     updateVacationAllowance,
@@ -65,9 +55,28 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
-  // Features the user hasn't been shown yet — drives the inline announcement banner.
-  const newFeatures = hasCompletedOnboarding
-    ? FEATURE_ANNOUNCEMENTS.filter((f) => f.version > lastOnboardedVersion)
+  // When the user authenticates (e.g. via SettingsPanel CTAs), mark account sync as enabled
+  // so the banner is suppressed and state stays consistent with the actual session.
+  useEffect(() => {
+    if (isAuthenticated && accountSyncEnabled !== true) {
+      setAccountSyncEnabled(true);
+    }
+  }, [isAuthenticated, accountSyncEnabled, setAccountSyncEnabled]);
+
+  // Per-feature announcements: each flag drives an independent banner entry.
+  // undefined = user hasn't interacted with the feature yet → show announcement.
+  const featureAnnouncements = hasCompletedOnboarding
+    ? [
+        ...(ganttAnnouncementSeen === undefined
+          ? [{ name: "Personal Gantt Chart", detail: "Visualize and track project tasks on a timeline" }]
+          : []),
+        ...(crossBorderAnnouncementSeen === undefined
+          ? [{ name: "Cross-Border Tracking", detail: "Log your daily work location for tax reporting" }]
+          : []),
+        ...(accountSyncEnabled === undefined
+          ? [{ name: "Account Sync", detail: "Enable secure data backup and access your data from any device" }]
+          : []),
+      ]
     : [];
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
@@ -223,10 +232,14 @@ function AppContent() {
             onChangeSchedule={handleChangeSchedule}
             onChangeTeam={handleChangeTeam}
           />
-          {newFeatures.length > 0 && (
+          {featureAnnouncements.length > 0 && (
             <FeatureIntroAlert
-              features={newFeatures}
-              onDismiss={() => completeFeatureIntro(USER_STATE_VERSION)}
+              features={featureAnnouncements}
+              onDismiss={() => {
+                if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
+                if (crossBorderAnnouncementSeen === undefined) setCrossBorderAnnouncementSeen(false);
+                if (accountSyncEnabled === undefined) setAccountSyncEnabled(false);
+              }}
             />
           )}
           <ErrorBoundary>

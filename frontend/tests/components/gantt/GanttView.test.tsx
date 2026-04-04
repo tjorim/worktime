@@ -74,7 +74,6 @@ import { GanttView } from "../../../src/components/gantt/GanttView";
 type MockUserState = {
   version: number;
   hasCompletedOnboarding: boolean;
-  lastOnboardedVersion: number;
   myTeam: number | null;
   scheduleType: string | null;
   settings: typeof defaultSettings;
@@ -92,7 +91,6 @@ function createMockUserState(
   const baseState: MockUserState = {
     version: USER_STATE_VERSION,
     hasCompletedOnboarding: true,
-    lastOnboardedVersion: USER_STATE_VERSION,
     myTeam: 1,
     scheduleType: "5-shift",
     settings: {

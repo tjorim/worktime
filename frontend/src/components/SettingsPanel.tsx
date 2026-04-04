@@ -342,24 +342,34 @@ export function SettingsPanel({
                   </ListGroup.Item>
                 ) : (
                   <ListGroup.Item>
-                    <div className="d-flex justify-content-between align-items-center gap-3">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-person-x me-2 text-muted"></i>
-                          {m.account_not_signed_in()}
-                        </div>
-                        <small className="text-muted">{m.account_sign_in_description()}</small>
+                    <div className="mb-2">
+                      <div className="fw-medium mb-1">
+                        <i className="bi bi-person-x me-2 text-muted"></i>
+                        {m.account_not_signed_in()}
                       </div>
-                      <div className="d-flex gap-2 flex-shrink-0">
-                        <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
-                          <i className="bi bi-box-arrow-in-right me-1"></i>
-                          {m.account_sign_in_btn()}
-                        </Button>
-                        <Button variant="primary" size="sm" onClick={triggerSignup}>
-                          <i className="bi bi-person-plus me-1"></i>
-                          {m.account_sign_up_btn()}
-                        </Button>
+                      <small className="text-muted d-block mb-2">
+                        {m.account_sync_benefits()}
+                      </small>
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <small className="text-muted">
+                          <i className="bi bi-cloud-check text-success me-1"></i>
+                          {m.account_sync_benefit_backup()}
+                        </small>
+                        <small className="text-muted">
+                          <i className="bi bi-phone text-success me-1"></i>
+                          {m.account_sync_benefit_crossdevice()}
+                        </small>
                       </div>
+                    </div>
+                    <div className="d-flex gap-2 flex-wrap">
+                      <Button variant="primary" size="sm" onClick={triggerSignup}>
+                        <i className="bi bi-person-plus me-1"></i>
+                        {m.account_connect_btn()}
+                      </Button>
+                      <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
+                        <i className="bi bi-box-arrow-in-right me-1"></i>
+                        {m.account_sign_in_btn()}
+                      </Button>
                     </div>
                   </ListGroup.Item>
                 )}
@@ -688,6 +698,20 @@ export function SettingsPanel({
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
                 </ListGroup.Item>
+                {!isAuthenticated && !isValidating && (
+                  <ListGroup.Item action onClick={triggerSignup}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">
+                          <i className="bi bi-cloud-arrow-up me-2 text-primary"></i>
+                          {m.sync_enable_label()}
+                        </div>
+                        <small className="text-muted">{m.sync_enable_description()}</small>
+                      </div>
+                      <i className="bi bi-chevron-right text-muted"></i>
+                    </div>
+                  </ListGroup.Item>
+                )}
                 <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>

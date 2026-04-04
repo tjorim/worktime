@@ -38,16 +38,16 @@ describe("SettingsPanel Account Section", () => {
     vi.clearAllMocks();
   });
 
-  it("renders sign in and create account buttons when not authenticated", () => {
+  it("renders connect account and sign in buttons when not authenticated", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
+    expect(screen.getByText("Connect Account")).toBeInTheDocument();
     expect(screen.getByText("Sign In")).toBeInTheDocument();
-    expect(screen.getByText("Create Account")).toBeInTheDocument();
   });
 
-  it("shows sign in description when not authenticated", () => {
+  it("shows sync benefits description when not authenticated", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
     expect(
-      screen.getByText("Sign in to enable cross-device sync"),
+      screen.getByText(/Your data stays local by default/i),
     ).toBeInTheDocument();
   });
 
@@ -58,10 +58,10 @@ describe("SettingsPanel Account Section", () => {
     expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
   });
 
-  it("calls redirectToAuth with signup when Create Account is clicked", async () => {
+  it("calls redirectToAuth with signup when Connect Account is clicked", async () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    await user.click(screen.getByText("Create Account"));
+    await user.click(screen.getByText("Connect Account"));
     expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
   });
 
@@ -91,5 +91,45 @@ describe("SettingsPanel Account Section", () => {
   it("renders account section title regardless of auth state", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
     expect(screen.getByText("Account")).toBeInTheDocument();
+  });
+
+  it("shows sync benefits (backup and cross-device icons) when not authenticated", () => {
+    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
+    expect(screen.getByText("Automatic backup")).toBeInTheDocument();
+    expect(screen.getByText("Cross-device access")).toBeInTheDocument();
+  });
+
+  it("shows Enable Cloud Sync entry in quick actions when not authenticated", () => {
+    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
+    expect(screen.getByText("Enable Cloud Sync")).toBeInTheDocument();
+    expect(
+      screen.getByText("Connect an account to back up and sync your data across devices"),
+    ).toBeInTheDocument();
+  });
+
+  it("clicking Enable Cloud Sync calls redirectToAuth with signup", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
+    await user.click(screen.getByText("Enable Cloud Sync"));
+    expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
+  });
+
+  it("does not show Enable Cloud Sync in quick actions when authenticated", async () => {
+    const sessionMod = await import("supertokens-auth-react/recipe/session");
+    const useSessionContextSpy = vi
+      .spyOn(sessionMod, "useSessionContext")
+      .mockReturnValue({
+        loading: false,
+        doesSessionExist: true,
+        userId: "u2",
+        accessTokenPayload: { displayName: "Bob" },
+        invalidClaims: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
+    expect(screen.queryByText("Enable Cloud Sync")).not.toBeInTheDocument();
+
+    useSessionContextSpy.mockRestore();
   });
 });
