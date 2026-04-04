@@ -159,7 +159,6 @@ describe("SettingsContext unified user state", () => {
     expect(parsedState).toEqual({
       version: 4,
       hasCompletedOnboarding: false,
-      lastOnboardedVersion: 0,
       myTeam: null,
       scheduleType: null,
       settings: {

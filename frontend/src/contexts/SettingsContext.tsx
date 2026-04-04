@@ -68,31 +68,24 @@ interface SettingsContextType {
   setScheduleType: (schedule: ScheduleOption | null) => void;
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
-  lastOnboardedVersion: number;
   /**
-   * Tracks whether the user has interacted with the Account Sync feature.
+   * Per-feature announcement flags.
    * - `undefined` (missing): not yet shown → display the feature announcement banner
-   * - `false`: shown but declined (local-only chosen)
-   * - `true`: account connected / sync enabled
+   * - `false`: shown but dismissed (or seen during wizard without enabling)
+   * - `true`: seen and feature is enabled
    */
   accountSyncEnabled: boolean | undefined;
   setAccountSyncEnabled: (value: boolean) => void;
+  ganttAnnouncementSeen: boolean | undefined;
+  setGanttAnnouncementSeen: (value: boolean) => void;
+  crossBorderAnnouncementSeen: boolean | undefined;
+  setCrossBorderAnnouncementSeen: (value: boolean) => void;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
   // Atomic update for onboarding completion with optional vacation allowance
   completeOnboardingWithVacation: (
     team: number | null,
     vacationAllowance?: Partial<VacationAllowanceSettings>,
-  ) => void;
-  // Mark feature-intro steps as seen and apply any changed feature settings
-  completeFeatureIntro: (
-    targetVersion: number,
-    preferences?: {
-      enableGantt?: boolean;
-      enableCrossBorderTracking?: boolean;
-      homeCountry?: CountryCode | null;
-      officeCountry?: CountryCode | null;
-    },
   ) => void;
   // Atomic update for onboarding completion with schedule selection
   completeOnboardingWithSchedule: (
@@ -147,14 +140,15 @@ const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Yea
 interface WorktimeUserState {
   version: number;
   hasCompletedOnboarding: boolean;
-  lastOnboardedVersion: number;
   /**
-   * Tracks whether the user has interacted with the Account Sync feature.
+   * Per-feature announcement flags.
    * - `undefined` (missing): not yet shown → display the feature announcement banner
-   * - `false`: shown but declined (local-only chosen)
-   * - `true`: account connected / sync enabled
+   * - `false`: shown but dismissed (or seen during wizard without enabling)
+   * - `true`: seen and feature is enabled
    */
   accountSyncEnabled?: boolean;
+  ganttAnnouncementSeen?: boolean;
+  crossBorderAnnouncementSeen?: boolean;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
@@ -169,7 +163,6 @@ const CURRENT_VERSION = USER_STATE_VERSION;
 const defaultUserState: WorktimeUserState = {
   version: CURRENT_VERSION,
   hasCompletedOnboarding: false,
-  lastOnboardedVersion: 0,
   myTeam: null,
   scheduleType: null,
   settings: defaultSettings,
@@ -527,12 +520,8 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState.scheduleType;
   })();
 
-  const lastOnboardedVersion =
-    typeof s.lastOnboardedVersion === "number" &&
-    Number.isInteger(s.lastOnboardedVersion) &&
-    s.lastOnboardedVersion >= 0
-      ? s.lastOnboardedVersion
-      : 0;
+  const toOptionalBool = (v: unknown): boolean | undefined =>
+    v === true ? true : v === false ? false : undefined;
 
   return {
     version: CURRENT_VERSION,
@@ -540,9 +529,10 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
-    lastOnboardedVersion,
-    // accountSyncEnabled: undefined = never shown, false = shown but declined, true = connected
-    accountSyncEnabled: s.accountSyncEnabled === true ? true : s.accountSyncEnabled === false ? false : undefined,
+    // Per-feature announcement flags: undefined = not yet shown, false = seen/dismissed, true = seen and enabled
+    accountSyncEnabled: toOptionalBool(s.accountSyncEnabled),
+    ganttAnnouncementSeen: toOptionalBool(s.ganttAnnouncementSeen),
+    crossBorderAnnouncementSeen: toOptionalBool(s.crossBorderAnnouncementSeen),
     myTeam:
       s.myTeam === undefined
         ? defaultUserState.myTeam
@@ -811,7 +801,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
       }));
     },
@@ -823,7 +812,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
         myTeam: team,
         settings: {
           ...prev.settings,
@@ -854,7 +842,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         hasCompletedOnboarding: true,
-        lastOnboardedVersion: CURRENT_VERSION,
         // When accountConnected is explicitly set in the wizard, record the result.
         // undefined (flag not passed) leaves the existing value untouched so the
         // feature-intro banner can still surface on the next visit.
@@ -862,6 +849,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
           preferences?.accountConnected !== undefined
             ? preferences.accountConnected
             : prev.accountSyncEnabled,
+        // Mark Gantt and Cross-Border as seen (user went through the wizard steps for these).
+        ganttAnnouncementSeen: prev.ganttAnnouncementSeen ?? false,
+        crossBorderAnnouncementSeen: prev.crossBorderAnnouncementSeen ?? false,
         scheduleType,
         myTeam: team,
         settings: {
@@ -885,41 +875,23 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
-  const completeFeatureIntro = useCallback(
-    (
-      targetVersion: number,
-      preferences?: {
-        enableGantt?: boolean;
-        enableCrossBorderTracking?: boolean;
-        homeCountry?: CountryCode | null;
-        officeCountry?: CountryCode | null;
-      },
-    ) => {
-      setUserState((prev) => ({
-        ...prev,
-        lastOnboardedVersion: targetVersion,
-        settings: {
-          ...prev.settings,
-          enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
-          enableCrossBorderTracking:
-            preferences?.enableCrossBorderTracking ?? prev.settings.enableCrossBorderTracking,
-          homeCountry:
-            preferences?.homeCountry !== undefined
-              ? preferences.homeCountry
-              : prev.settings.homeCountry,
-          officeCountry:
-            preferences?.officeCountry !== undefined
-              ? preferences.officeCountry
-              : prev.settings.officeCountry,
-        },
-      }));
+  const setAccountSyncEnabled = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, accountSyncEnabled: value }));
     },
     [setUserState],
   );
 
-  const setAccountSyncEnabled = useCallback(
+  const setGanttAnnouncementSeen = useCallback(
     (value: boolean) => {
-      setUserState((prev) => ({ ...prev, accountSyncEnabled: value }));
+      setUserState((prev) => ({ ...prev, ganttAnnouncementSeen: value }));
+    },
+    [setUserState],
+  );
+
+  const setCrossBorderAnnouncementSeen = useCallback(
+    (value: boolean) => {
+      setUserState((prev) => ({ ...prev, crossBorderAnnouncementSeen: value }));
     },
     [setUserState],
   );
@@ -952,10 +924,12 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setScheduleType,
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
-      lastOnboardedVersion: userState.lastOnboardedVersion,
       accountSyncEnabled: userState.accountSyncEnabled,
       setAccountSyncEnabled,
-      completeFeatureIntro,
+      ganttAnnouncementSeen: userState.ganttAnnouncementSeen,
+      setGanttAnnouncementSeen,
+      crossBorderAnnouncementSeen: userState.crossBorderAnnouncementSeen,
+      setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
@@ -984,7 +958,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setScheduleType,
       setHasCompletedOnboarding,
       setAccountSyncEnabled,
-      completeFeatureIntro,
+      setGanttAnnouncementSeen,
+      setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
       completeOnboardingWithVacation,
       completeOnboardingWithSchedule,

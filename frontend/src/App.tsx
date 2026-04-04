@@ -13,7 +13,6 @@ import { EventStoreProvider } from "./contexts/EventStoreContext";
 import {
   SettingsProvider,
   type TabKey,
-  USER_STATE_VERSION,
   useSettings,
 } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
@@ -22,20 +21,6 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
-
-// Features added in each schema version. Shown as an inline alert to users who haven't seen them.
-const FEATURE_ANNOUNCEMENTS: { version: number; name: string; detail: string }[] = [
-  {
-    version: 4,
-    name: "Personal Gantt Chart",
-    detail: "Visualize and track project tasks on a timeline",
-  },
-  {
-    version: 3,
-    name: "Cross-Border Tracking",
-    detail: "Log your daily work location for tax reporting",
-  },
-];
 
 /**
  * The main application component for team selection and shift management.
@@ -50,11 +35,13 @@ function AppContent() {
     myTeam,
     setMyTeam,
     hasCompletedOnboarding,
-    lastOnboardedVersion,
     accountSyncEnabled,
     setAccountSyncEnabled,
+    ganttAnnouncementSeen,
+    setGanttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+    setCrossBorderAnnouncementSeen,
     completeOnboardingWithSchedule,
-    completeFeatureIntro,
     scheduleType,
     setScheduleType,
     updateVacationAllowance,
@@ -67,13 +54,21 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
-  // Version-based features the user hasn't been shown yet.
-  const newFeatures = hasCompletedOnboarding
-    ? FEATURE_ANNOUNCEMENTS.filter((f) => f.version > lastOnboardedVersion)
+  // Per-feature announcements: each flag drives an independent banner entry.
+  // undefined = user hasn't interacted with the feature yet → show announcement.
+  const featureAnnouncements = hasCompletedOnboarding
+    ? [
+        ...(ganttAnnouncementSeen === undefined
+          ? [{ name: "Personal Gantt Chart", detail: "Visualize and track project tasks on a timeline" }]
+          : []),
+        ...(crossBorderAnnouncementSeen === undefined
+          ? [{ name: "Cross-Border Tracking", detail: "Log your daily work location for tax reporting" }]
+          : []),
+        ...(accountSyncEnabled === undefined
+          ? [{ name: "Account Sync", detail: "Connect an account to back up your data and access it from any device" }]
+          : []),
+      ]
     : [];
-  // Account sync announcement: shown when completed onboarding but never interacted with the feature.
-  const showAccountSyncAnnouncement =
-    hasCompletedOnboarding && accountSyncEnabled === undefined;
   const [activeTab, setActiveTab] = useState<TabKey>(lastUsed.activeTab);
   const [showAbout, setShowAbout] = useState(false);
   const { currentDate, setCurrentDate } = useShiftCalculation();
@@ -228,24 +223,13 @@ function AppContent() {
             onChangeSchedule={handleChangeSchedule}
             onChangeTeam={handleChangeTeam}
           />
-          {(newFeatures.length > 0 || showAccountSyncAnnouncement) && (
+          {featureAnnouncements.length > 0 && (
             <FeatureIntroAlert
-              features={[
-                ...newFeatures,
-                ...(showAccountSyncAnnouncement
-                  ? [
-                      {
-                        name: "Account Sync",
-                        detail: "Connect an account to back up your data and access it from any device",
-                      },
-                    ]
-                  : []),
-              ]}
+              features={featureAnnouncements}
               onDismiss={() => {
-                completeFeatureIntro(USER_STATE_VERSION);
-                if (showAccountSyncAnnouncement) {
-                  setAccountSyncEnabled(false);
-                }
+                if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
+                if (crossBorderAnnouncementSeen === undefined) setCrossBorderAnnouncementSeen(false);
+                if (accountSyncEnabled === undefined) setAccountSyncEnabled(false);
               }}
             />
           )}
