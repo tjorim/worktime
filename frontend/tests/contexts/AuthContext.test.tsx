@@ -35,11 +35,12 @@ function AuthStatusDisplay() {
 }
 
 function AuthActions() {
-  const { triggerLogin, logout } = useAuth();
+  const { triggerLogin, triggerSignup, logout } = useAuth();
   return (
     <div>
       <button onClick={logout}>logout</button>
       <button onClick={triggerLogin}>triggerLogin</button>
+      <button onClick={triggerSignup}>triggerSignup</button>
     </div>
   );
 }
@@ -136,6 +137,22 @@ describe("AuthContext", () => {
       renderWithProviders(<AuthActions />);
       await user.click(screen.getByText("triggerLogin"));
       expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
+    });
+  });
+
+  describe("triggerSignup", () => {
+    it("calls redirectToAuth with signup when triggerSignup is invoked", async () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: false,
+        userId: "",
+        accessTokenPayload: {},
+        invalidClaims: [],
+      };
+      const user = userEvent.setup();
+      renderWithProviders(<AuthActions />);
+      await user.click(screen.getByText("triggerSignup"));
+      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
     });
   });
 

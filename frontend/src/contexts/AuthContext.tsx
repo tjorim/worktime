@@ -15,6 +15,8 @@ export interface AuthContextType {
   displayName: string | null;
   /** Redirect to the SuperTokens login page. */
   triggerLogin: () => void;
+  /** Redirect to the SuperTokens sign-up page. */
+  triggerSignup: () => void;
   /** Sign out and end the SuperTokens session. */
   logout: () => void;
 }
@@ -69,6 +71,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }, [showError]);
 
+  const triggerSignup = useCallback(() => {
+    redirectToAuth({ show: "signup" }).catch(() => {
+      showError("Failed to redirect to the sign-up page. Please refresh and try again.");
+    });
+  }, [showError]);
+
   const logout = useCallback(() => {
     Session.signOut().catch(() => {
       showError("Sign out failed. Please refresh the page.");
@@ -82,9 +90,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       userId,
       displayName,
       triggerLogin,
+      triggerSignup,
       logout,
     }),
-    [isAuthenticated, isValidating, userId, displayName, triggerLogin, logout],
+    [isAuthenticated, isValidating, userId, displayName, triggerLogin, triggerSignup, logout],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
