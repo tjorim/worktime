@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SettingsProvider,
-  USER_STATE_VERSION,
   defaultLastUsed,
   defaultSettings,
 } from "../../../src/contexts/SettingsContext";
@@ -72,7 +71,6 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
 import { GanttView } from "../../../src/components/gantt/GanttView";
 
 type MockUserState = {
-  version: number;
   hasCompletedOnboarding: boolean;
   myTeam: number | null;
   scheduleType: string | null;
@@ -89,7 +87,6 @@ function createMockUserState(
   } = {},
 ): MockUserState {
   const baseState: MockUserState = {
-    version: USER_STATE_VERSION,
     hasCompletedOnboarding: true,
     myTeam: 1,
     scheduleType: "5-shift",

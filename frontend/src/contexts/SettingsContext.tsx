@@ -138,7 +138,6 @@ const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly
 const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);
 
 interface WorktimeUserState {
-  version: number;
   hasCompletedOnboarding: boolean;
   /**
    * Per-feature announcement flags.
@@ -153,233 +152,17 @@ interface WorktimeUserState {
   scheduleType: ScheduleOption | null;
   settings: UserSettings;
   lastUsed: LastUsed;
-  rawStateBackup?: RawState;
-  hasMigrationError?: boolean;
 }
 
-export const USER_STATE_VERSION = 4;
-const CURRENT_VERSION = USER_STATE_VERSION;
+type RawState = Record<string, unknown>;
 
 const defaultUserState: WorktimeUserState = {
-  version: CURRENT_VERSION,
   hasCompletedOnboarding: false,
   myTeam: null,
   scheduleType: null,
   settings: defaultSettings,
   lastUsed: defaultLastUsed,
 };
-
-// --- Versioned migrations ---
-// Each key is the target version. The function transforms state from (key-1) → key.
-// Migrations receive and return a raw Record so they can reshape freely.
-type RawState = Record<string, unknown>;
-type Migration = (state: RawState) => RawState;
-
-interface RawSettings extends UserSettings {
-  lastActiveTab?: TabKey;
-  lastScheduleView?: ScheduleViewKey;
-  lastTimeOffView?: TimeOffViewKey;
-  lastTimeTrackingView?: TimeTrackingViewKey;
-}
-
-const migrations: Record<number, Migration> = {
-  // → v1: Move last* view fields from settings into a dedicated lastUsed group.
-  //        Rename scheduleOption → scheduleType.
-  1: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    const lastUsed = (
-      typeof state.lastUsed === "object" && state.lastUsed !== null ? state.lastUsed : {}
-    ) as RawState;
-
-    // Migrate last* from settings → lastUsed (only if lastUsed doesn't already have them)
-    const pick = (lastUsedKey: string, settingsKey: keyof RawSettings) =>
-      (lastUsed as RawState)[lastUsedKey] !== undefined
-        ? (lastUsed as RawState)[lastUsedKey]
-        : settings[settingsKey];
-
-    const migratedLastUsed: RawState = {
-      activeTab: pick("activeTab", "lastActiveTab"),
-      scheduleView: pick("scheduleView", "lastScheduleView"),
-      timeOffView: pick("timeOffView", "lastTimeOffView"),
-      timeTrackingView: pick("timeTrackingView", "lastTimeTrackingView"),
-      otherSchedule: lastUsed.otherSchedule ?? null,
-      otherTeam: lastUsed.otherTeam ?? null,
-    };
-
-    // Remove migrated fields from settings
-    const {
-      lastActiveTab: _lastActiveTab,
-      lastScheduleView: _lastScheduleView,
-      lastTimeOffView: _lastTimeOffView,
-      lastTimeTrackingView: _lastTimeTrackingView,
-      ...cleanSettings
-    } = settings;
-
-    // Rename scheduleOption → scheduleType
-    const scheduleType =
-      state.scheduleType !== undefined ? state.scheduleType : state.scheduleOption;
-
-    return {
-      ...state,
-      scheduleType,
-      settings: cleanSettings,
-      lastUsed: migratedLastUsed,
-    };
-  },
-
-  // → v2: Replace vacationAllowance.amount with yearlyAmounts[currentYear].
-  2: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    const va =
-      settings.vacationAllowance && typeof settings.vacationAllowance === "object"
-        ? (settings.vacationAllowance as unknown as RawState)
-        : {};
-
-    const oldAmount =
-      typeof va.amount === "number" &&
-      Number.isFinite(va.amount as number) &&
-      (va.amount as number) >= 0
-        ? (va.amount as number)
-        : 0;
-
-    const existingYearly =
-      typeof va.yearlyAmounts === "object" && va.yearlyAmounts !== null
-        ? (va.yearlyAmounts as Record<string, unknown>)
-        : {};
-
-    // Attempt to use a timestamp field (if present) to derive target year; otherwise fallback to best-effort currentYear.
-    // This minimizes time-dependent behavior during migration.
-    const yearFromTimestamp =
-      typeof state.timestamp === "number" ? new Date(state.timestamp).getFullYear() : undefined;
-    const yearFromLastUpdated =
-      typeof state.lastUpdated === "string" ? new Date(state.lastUpdated).getFullYear() : undefined;
-    const fallbackYear = new Date().getFullYear();
-
-    const targetYear = String(
-      yearFromTimestamp !== undefined && Number.isFinite(yearFromTimestamp) && yearFromTimestamp > 0
-        ? yearFromTimestamp
-        : yearFromLastUpdated !== undefined &&
-            Number.isFinite(yearFromLastUpdated) &&
-            yearFromLastUpdated > 0
-          ? yearFromLastUpdated
-          : fallbackYear,
-    );
-
-    const yearlyAmounts: Record<string, number> = {};
-    for (const [key, val] of Object.entries(existingYearly)) {
-      if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
-        yearlyAmounts[key] = val;
-      } else if (val !== undefined) {
-        console.warn(`Migration v2: skipped invalid yearlyAmounts entry "${key}":`, val);
-      }
-    }
-    // Only seed from old amount if there's no entry for the target year yet
-    if (oldAmount > 0 && !(targetYear in yearlyAmounts)) {
-      yearlyAmounts[targetYear] = oldAmount;
-    }
-
-    const { amount: _amount, yearlyAmounts: _existingYearly, ...restVa } = va;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        vacationAllowance: {
-          ...restVa,
-          yearlyAmounts,
-        },
-      },
-    };
-  },
-
-  // → v3: Add homeCountry, officeCountry, and enableCrossBorderTracking to settings.
-  // Note: normalizeUserState already applies defaults for any missing field, so this migration
-  // is effectively a no-op for typical v2→v3 upgrades. It exists as an explicit audit trail of
-  // the schema change and ensures the stored JSON immediately reflects the new shape after the
-  // first load, rather than waiting for the next settings save to persist the defaults.
-  3: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        homeCountry: settings.homeCountry ?? defaultSettings.homeCountry,
-        officeCountry: settings.officeCountry ?? defaultSettings.officeCountry,
-        enableCrossBorderTracking:
-          settings.enableCrossBorderTracking ?? defaultSettings.enableCrossBorderTracking,
-      },
-    };
-  },
-
-  // → v4: Add enableGantt setting (no-op audit migration).
-  4: (state) => {
-    const settings = (
-      typeof state.settings === "object" && state.settings !== null ? state.settings : {}
-    ) as RawSettings;
-
-    return {
-      ...state,
-      settings: {
-        ...settings,
-        enableGantt: settings.enableGantt ?? defaultSettings.enableGantt,
-      },
-    };
-  },
-};
-
-function handleMigrationError(state: RawState, version: number): RawState {
-  console.warn(`Migration for version ${version} not found or failed. Attempting recovery.`);
-  const rawStateBackup = state;
-  const recovered = {
-    myTeam: typeof rawStateBackup.myTeam === "number" ? rawStateBackup.myTeam : null,
-    scheduleType:
-      typeof rawStateBackup.scheduleType === "string"
-        ? rawStateBackup.scheduleType
-        : typeof rawStateBackup.scheduleOption === "string"
-          ? rawStateBackup.scheduleOption
-          : null,
-    settings:
-      typeof rawStateBackup.settings === "object" && rawStateBackup.settings !== null
-        ? rawStateBackup.settings
-        : undefined,
-  };
-
-  return {
-    ...defaultUserState,
-    ...recovered,
-    rawStateBackup,
-    hasMigrationError: true,
-  };
-}
-
-function migrateState(state: RawState): RawState {
-  let version = typeof state.version === "number" ? state.version : 0;
-  while (version < CURRENT_VERSION) {
-    const nextVersion = version + 1;
-    const migrate = migrations[nextVersion];
-    if (!migrate) {
-      return handleMigrationError(state, nextVersion);
-    }
-    try {
-      state = migrate(state);
-    } catch (error) {
-      console.error(`Migration ${nextVersion} failed. Attempting recovery.`, error);
-      return handleMigrationError(state, nextVersion);
-    }
-    state.version = nextVersion;
-    version = nextVersion;
-  }
-  return state;
-}
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
@@ -392,8 +175,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     return defaultUserState;
   }
 
-  // Run versioned migrations first to get data into the current shape
-  const s = migrateState(state as RawState);
+  const s = state as RawState;
 
   const settings = (
     typeof s.settings === "object" && s.settings !== null ? s.settings : {}
@@ -524,7 +306,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     v === true ? true : v === false ? false : undefined;
 
   return {
-    version: CURRENT_VERSION,
     hasCompletedOnboarding:
       typeof s.hasCompletedOnboarding === "boolean"
         ? s.hasCompletedOnboarding
@@ -561,11 +342,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       otherTeam,
       ganttViewMode,
     },
-    rawStateBackup:
-      typeof s.rawStateBackup === "object" && s.rawStateBackup !== null
-        ? (s.rawStateBackup as RawState)
-        : undefined,
-    hasMigrationError: s.hasMigrationError === true ? true : undefined,
   };
 };
 
