@@ -39,7 +39,7 @@ export function Step9AccountSetup({
       ) : (
         <div className="row g-3 mb-3">
           {/* Local Only card */}
-          <div className="col-6">
+          <div className="col-12 col-md-6">
             <Card className="h-100 border-secondary">
               <Card.Body className="p-3">
                 <Card.Title className="fs-6 fw-semibold text-secondary mb-3">
@@ -77,7 +77,7 @@ export function Step9AccountSetup({
           </div>
 
           {/* With Account card */}
-          <div className="col-6">
+          <div className="col-12 col-md-6">
             <Card className="h-100 border-primary">
               <Card.Body className="p-3">
                 <Card.Title className="fs-6 fw-semibold text-primary mb-3">

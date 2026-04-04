@@ -8,7 +8,7 @@ import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
 import {
   SettingsProvider,
@@ -31,6 +31,7 @@ import { validateVacationAllowance } from "./utils/vacationCalculations";
  */
 function AppContent() {
   const { showSuccess, showInfo, showError } = useToast();
+  const { isAuthenticated } = useAuth();
   const {
     myTeam,
     setMyTeam,
@@ -54,6 +55,14 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
+  // When the user authenticates (e.g. via SettingsPanel CTAs), mark account sync as enabled
+  // so the banner is suppressed and state stays consistent with the actual session.
+  useEffect(() => {
+    if (isAuthenticated && accountSyncEnabled !== true) {
+      setAccountSyncEnabled(true);
+    }
+  }, [isAuthenticated, accountSyncEnabled, setAccountSyncEnabled]);
+
   // Per-feature announcements: each flag drives an independent banner entry.
   // undefined = user hasn't interacted with the feature yet → show announcement.
   const featureAnnouncements = hasCompletedOnboarding
@@ -65,7 +74,7 @@ function AppContent() {
           ? [{ name: "Cross-Border Tracking", detail: "Log your daily work location for tax reporting" }]
           : []),
         ...(accountSyncEnabled === undefined
-          ? [{ name: "Account Sync", detail: "Connect an account to back up your data and access it from any device" }]
+          ? [{ name: "Account Sync", detail: "Enable secure data backup and access your data from any device" }]
           : []),
       ]
     : [];
