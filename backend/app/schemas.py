@@ -56,6 +56,22 @@ class UserUpdate(BaseModel):
     settings: dict[str, Any] | None = None
 
 
+class AccountCapabilities(BaseModel):
+    """Capability flags relevant for frontend feature enablement."""
+
+    backup_enabled: bool
+
+
+class AccountProfile(BaseModel):
+    """Response schema for the authenticated account profile endpoint."""
+
+    id: int
+    username: str
+    display_name: str
+    is_admin: bool
+    capabilities: AccountCapabilities
+
+
 def _validate_hex_color(value: str | None) -> str | None:
     """Validate that a color value is in #RRGGBB hex format."""
     if value is None:
