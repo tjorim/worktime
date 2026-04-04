@@ -38,5 +38,8 @@ async def get_account_profile(
         username=user.username,
         display_name=user.display_name,
         is_admin=user.is_admin,
+        # All authenticated local users are eligible for backup and sync.
+        # This flag is reserved for future conditional logic (e.g. feature flags
+        # or per-user settings) without changing the response shape.
         capabilities=AccountCapabilities(backup_enabled=True),
     )
