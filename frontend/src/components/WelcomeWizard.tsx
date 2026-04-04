@@ -3,6 +3,7 @@ import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
 import { useSettings } from "../contexts/SettingsContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useSyncedState } from "../hooks/useSyncedState";
 import type { ScheduleOption } from "../data/rosters";
 import {
@@ -28,6 +29,7 @@ import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
+import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
 import * as m from "../paraglide/messages.js";
 
 /**
@@ -106,6 +108,7 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
+  const { isAuthenticated, displayName, triggerSignup } = useAuth();
   const currentYear = String(new Date().getFullYear());
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
@@ -206,6 +209,10 @@ export function WelcomeWizard({
   };
 
   const handleWorkLocationComplete = () => {
+    nextStep();
+  };
+
+  const handleAccountSetupComplete = () => {
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
@@ -388,6 +395,16 @@ export function WelcomeWizard({
                 onOfficeCountryChange={setOfficeCountry}
                 onPrev={prevStep}
                 onComplete={handleWorkLocationComplete}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {effectiveStep === "account-setup" && (
+              <Step9AccountSetup
+                isAuthenticated={isAuthenticated}
+                displayName={displayName}
+                onConnectAccount={triggerSignup}
+                onSkip={handleAccountSetupComplete}
+                onPrev={prevStep}
                 firstButtonRef={firstButtonRef}
               />
             )}

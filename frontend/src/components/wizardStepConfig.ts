@@ -13,7 +13,8 @@ export type WizardStep =
   | "timeoff-setup"
   | "time-tracking-setup"
   | "gantt-setup"
-  | "work-location-setup";
+  | "work-location-setup"
+  | "account-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
 
@@ -136,8 +137,15 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
     id: "work-location-setup",
     title: "Cross-Border Tracking",
     isVisible: (ctx) => ctx.mode === "onboarding",
-    getNextStep: () => null,
+    getNextStep: () => "account-setup",
     getPrevStep: () => "gantt-setup",
+  },
+  {
+    id: "account-setup",
+    title: "Connect Your Account",
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => null,
+    getPrevStep: () => "work-location-setup",
   },
 ];
 
