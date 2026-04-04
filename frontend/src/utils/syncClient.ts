@@ -243,10 +243,13 @@ function safeParseJsonObject(key: string): Record<string, unknown> {
 /**
  * Convert a local time string ("YYYY-MM-DDTHH:mm") to a UTC ISO-8601 string
  * suitable for sending to the backend. The local string is parsed as browser
- * local time (matching how it was written) and then serialised to UTC.
+ * local time (matching how it was written) and then serialized to UTC.
+ * Returns null if the string cannot be parsed as a valid date.
  */
-function localTimeToUtcIso(localTime: string): string {
-  return new Date(localTime).toISOString();
+function localTimeToUtcIso(localTime: string): string | null {
+  const parsed = new Date(localTime);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
 }
 
 /**
@@ -279,14 +282,23 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     TIME_TRACKING_STORAGE_KEYS.tasks,
   ) as StoredTimeTrackingTask[];
   const tasks: TaskSyncItem[] = rawTasks
-    .filter((t) => t && typeof t.id === "string" && typeof t.startTime === "string")
+    .filter((t) => {
+      if (!t || typeof t.id !== "string" || typeof t.startTime !== "string") return false;
+      // Exclude soft-deleted tasks (e.g. rows carrying a deleted_at marker from a prior sync).
+      if ((t as unknown as Record<string, unknown>)["deleted_at"] != null) return false;
+      // Exclude tasks with timestamps that cannot be parsed — a single bad row
+      // must not abort the whole sync.
+      if (localTimeToUtcIso(t.startTime) === null) return false;
+      if (t.stopTime != null && localTimeToUtcIso(t.stopTime) === null) return false;
+      return true;
+    })
     .map((t) => ({
       id: t.id,
-      action: "create",
+      action: "create" as const,
       client_updated_at: now,
       label_id: t.label || null,
       text: t.text,
-      start_time: localTimeToUtcIso(t.startTime),
+      start_time: localTimeToUtcIso(t.startTime)!,
       stop_time: t.stopTime ? localTimeToUtcIso(t.stopTime) : null,
       includes_break: t.includesBreak ?? false,
     }));
@@ -327,6 +339,48 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
   }
 
   return { labels, tasks, templates, work_locations: workLocations };
+}
+
+/**
+ * Build the payload for the "keep-local" conflict resolution path.
+ *
+ * Combines the local push payload (all local records as `action: "create"`) with
+ * delete entries for any server-side records that do not exist locally, so that
+ * the server ends up holding exactly what the local device has.
+ */
+export function buildKeepLocalReplacePayload(
+  localPayload: SyncPushPayload,
+  serverData: SyncPullResponse,
+): SyncPushPayload {
+  const now = new Date().toISOString();
+
+  const localLabelIds = new Set(localPayload.labels.map((l) => l.id));
+  const localTaskIds = new Set(localPayload.tasks.map((t) => t.id));
+  const localTemplateIds = new Set(localPayload.templates.map((t) => t.id));
+  const localWorkLocationDates = new Set(localPayload.work_locations.map((wl) => wl.date));
+
+  const deleteLabels: LabelSyncItem[] = serverData.labels
+    .filter((l) => !localLabelIds.has(l.id) && l.deleted_at === null)
+    .map((l) => ({ id: l.id, action: "delete", client_updated_at: now }));
+
+  const deleteTasks: TaskSyncItem[] = serverData.tasks
+    .filter((t) => !localTaskIds.has(t.id) && t.deleted_at === null)
+    .map((t) => ({ id: t.id, action: "delete", client_updated_at: now }));
+
+  const deleteTemplates: TemplateSyncItem[] = serverData.templates
+    .filter((t) => !localTemplateIds.has(t.id) && t.deleted_at === null)
+    .map((t) => ({ id: t.id, action: "delete", client_updated_at: now }));
+
+  const deleteWorkLocations: WorkLocationSyncItem[] = serverData.work_locations
+    .filter((wl) => !localWorkLocationDates.has(wl.date) && wl.deleted_at === null)
+    .map((wl) => ({ date: wl.date, action: "delete", client_updated_at: now }));
+
+  return {
+    labels: [...localPayload.labels, ...deleteLabels],
+    tasks: [...localPayload.tasks, ...deleteTasks],
+    templates: [...localPayload.templates, ...deleteTemplates],
+    work_locations: [...localPayload.work_locations, ...deleteWorkLocations],
+  };
 }
 
 // ---------------------------------------------------------------------------

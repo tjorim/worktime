@@ -238,6 +238,26 @@ describe("syncClient", () => {
       });
     });
 
+    it("excludes soft-deleted tasks from the payload", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "task-live", text: "Live", label: "", startTime: "2026-01-01T09:00" },
+          {
+            id: "task-deleted",
+            text: "Gone",
+            label: "",
+            startTime: "2026-01-01T10:00",
+            deleted_at: "2026-01-02T00:00:00.000Z",
+          },
+        ]),
+      );
+
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.tasks).toHaveLength(1);
+      expect(payload.tasks[0].id).toBe("task-live");
+    });
+
     it("converts work locations from per-year localStorage keys", () => {
       localStorage.setItem(
         `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,

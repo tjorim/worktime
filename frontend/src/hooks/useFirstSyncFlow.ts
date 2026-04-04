@@ -26,14 +26,15 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { checkBackupDataPresence } from "../utils/appBackup";
 import {
   applySyncPullResponse,
+  buildKeepLocalReplacePayload,
   buildLocalSyncPushPayload,
   fetchSyncStatus,
   pullSyncData,
   pushSyncPayload,
   syncStatusHasData,
+  type SyncPushPayload,
   type SyncStatusResponse,
 } from "../utils/syncClient";
 import { getSyncCursorKey } from "../constants/storageKeys";
@@ -77,14 +78,13 @@ function storeSyncCursor(userId: string, serverTimestamp: string): void {
   localStorage.setItem(getSyncCursorKey(userId), serverTimestamp);
 }
 
-/** Returns true if there are any syncable records in localStorage. */
-function hasLocalSyncableData(): boolean {
-  const presence = checkBackupDataPresence();
+/** Returns true when the push payload contains at least one syncable record. */
+function payloadHasData(payload: SyncPushPayload): boolean {
   return (
-    presence.hasTasks ||
-    presence.hasTemplates ||
-    presence.hasLabels ||
-    presence.hasWorkLocations
+    payload.labels.length > 0 ||
+    payload.tasks.length > 0 ||
+    payload.templates.length > 0 ||
+    payload.work_locations.length > 0
   );
 }
 
@@ -122,13 +122,18 @@ export function useFirstSyncFlow(
       setPhase("checking");
 
       const status = await fetchSyncStatus(fetch);
+      // Bail if the component unmounted or auth changed while we were awaiting.
+      if (!mountedRef.current || flowStartedForUser.current !== uid) return;
       if (!status) {
         setPhase("error");
         return;
       }
 
       const serverHasData = syncStatusHasData(status);
-      const localHasData = hasLocalSyncableData();
+      // Build the push payload once so both the localHasData check and Branch A
+      // use the same filtered dataset (malformed rows are excluded by the builder).
+      const localPayload = buildLocalSyncPushPayload();
+      const localHasData = payloadHasData(localPayload);
 
       // Branch D — nothing anywhere
       if (!localHasData && !serverHasData) {
@@ -140,8 +145,8 @@ export function useFirstSyncFlow(
       // Branch A — server empty, local has data → push
       if (localHasData && !serverHasData) {
         setPhase("pushing");
-        const payload = buildLocalSyncPushPayload();
-        const result = await pushSyncPayload(fetch, payload);
+        const result = await pushSyncPayload(fetch, localPayload);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         if (!result) {
           setPhase("error");
           return;
@@ -150,6 +155,7 @@ export function useFirstSyncFlow(
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
         const newStatus = await fetchSyncStatus(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         storeSyncCursor(uid, newStatus?.server_timestamp ?? status.server_timestamp);
         setPhase("done");
         return;
@@ -159,6 +165,7 @@ export function useFirstSyncFlow(
       if (!localHasData && serverHasData) {
         setPhase("pulling");
         const pullResult = await pullSyncData(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         if (!pullResult) {
           setPhase("error");
           return;
@@ -190,10 +197,20 @@ export function useFirstSyncFlow(
 
       const execute = async () => {
         if (choice === "keep-local") {
+          // Pull the current server state so we can tombstone server-only rows.
           if (!mountedRef.current) return;
+          setPhase("pulling");
+          const serverData = await pullSyncData(fetch);
+          if (!mountedRef.current) return;
+          if (!serverData) {
+            setPhase("error");
+            return;
+          }
           setPhase("pushing");
-          const payload = buildLocalSyncPushPayload();
-          const result = await pushSyncPayload(fetch, payload);
+          const localPayload = buildLocalSyncPushPayload();
+          // Build a replace payload: local creates + delete entries for server-only rows.
+          const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+          const result = await pushSyncPayload(fetch, replacePayload);
           if (!mountedRef.current) return;
           if (!result) {
             setPhase("error");
