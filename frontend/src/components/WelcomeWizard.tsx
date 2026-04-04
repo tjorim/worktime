@@ -214,7 +214,7 @@ export function WelcomeWizard({
     nextStep();
   };
 
-  const handleAccountSetupComplete = () => {
+  const handleAccountSetupComplete = (accountConnected?: boolean) => {
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
@@ -227,7 +227,7 @@ export function WelcomeWizard({
       enableCrossBorderTracking: isCrossBorderEnabled,
       homeCountry: isCrossBorderEnabled ? homeCountry : undefined,
       officeCountry: isCrossBorderEnabled ? officeCountry : undefined,
-      accountConnected: isAuthenticated,
+      accountConnected,
     });
   };
 
@@ -406,10 +406,12 @@ export function WelcomeWizard({
                 isAuthenticated={isAuthenticated}
                 displayName={displayName}
                 onConnectAccount={() => {
-                  handleAccountSetupComplete();
+                  // Complete the wizard without marking the flag — the useEffect in App.tsx
+                  // sets accountSyncAnnouncementSeen: true when the user returns authenticated.
+                  handleAccountSetupComplete(undefined);
                   triggerSignup();
                 }}
-                onSkip={handleAccountSetupComplete}
+                onSkip={() => handleAccountSetupComplete(isAuthenticated)}
                 onPrev={prevStep}
                 firstButtonRef={firstButtonRef}
               />

@@ -72,10 +72,10 @@ interface SettingsContextType {
    * Per-feature announcement flags.
    * - `undefined` (missing): not yet shown → display the feature announcement banner
    * - `false`: shown but dismissed (or seen during wizard without enabling)
-   * - `true`: seen and feature is enabled
+   * - `true`: seen and feature is enabled / connected
    */
-  accountSyncEnabled: boolean | undefined;
-  setAccountSyncEnabled: (value: boolean) => void;
+  accountSyncAnnouncementSeen: boolean | undefined;
+  setAccountSyncAnnouncementSeen: (value: boolean) => void;
   ganttAnnouncementSeen: boolean | undefined;
   setGanttAnnouncementSeen: (value: boolean) => void;
   crossBorderAnnouncementSeen: boolean | undefined;
@@ -143,9 +143,9 @@ interface WorktimeUserState {
    * Per-feature announcement flags.
    * - `undefined` (missing): not yet shown → display the feature announcement banner
    * - `false`: shown but dismissed (or seen during wizard without enabling)
-   * - `true`: seen and feature is enabled
+   * - `true`: seen and feature is enabled / connected
    */
-  accountSyncEnabled?: boolean;
+  accountSyncAnnouncementSeen?: boolean;
   ganttAnnouncementSeen?: boolean;
   crossBorderAnnouncementSeen?: boolean;
   myTeam: number | null; // The user's team from onboarding
@@ -311,7 +311,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
         ? s.hasCompletedOnboarding
         : defaultUserState.hasCompletedOnboarding,
     // Per-feature announcement flags: undefined = not yet shown, false = seen/dismissed, true = seen and enabled
-    accountSyncEnabled: toOptionalBool(s.accountSyncEnabled),
+    accountSyncAnnouncementSeen: toOptionalBool(s.accountSyncAnnouncementSeen),
     ganttAnnouncementSeen: toOptionalBool(s.ganttAnnouncementSeen),
     crossBorderAnnouncementSeen: toOptionalBool(s.crossBorderAnnouncementSeen),
     myTeam:
@@ -621,10 +621,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         // When accountConnected is explicitly set in the wizard, record the result.
         // undefined (flag not passed) leaves the existing value untouched so the
         // feature-intro banner can still surface on the next visit.
-        accountSyncEnabled:
+        accountSyncAnnouncementSeen:
           preferences?.accountConnected !== undefined
             ? preferences.accountConnected
-            : prev.accountSyncEnabled,
+            : prev.accountSyncAnnouncementSeen,
         // Mark Gantt and Cross-Border based on the user's wizard choices:
         // true = saw + enabled, false = saw + declined. If the wizard step was
         // skipped entirely (preference is undefined), preserve the existing value
@@ -660,9 +660,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
-  const setAccountSyncEnabled = useCallback(
+  const setAccountSyncAnnouncementSeen = useCallback(
     (value: boolean) => {
-      setUserState((prev) => ({ ...prev, accountSyncEnabled: value }));
+      setUserState((prev) => ({ ...prev, accountSyncAnnouncementSeen: value }));
     },
     [setUserState],
   );
@@ -709,8 +709,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setScheduleType,
       hasCompletedOnboarding: userState.hasCompletedOnboarding,
       setHasCompletedOnboarding,
-      accountSyncEnabled: userState.accountSyncEnabled,
-      setAccountSyncEnabled,
+      accountSyncAnnouncementSeen: userState.accountSyncAnnouncementSeen,
+      setAccountSyncAnnouncementSeen,
       ganttAnnouncementSeen: userState.ganttAnnouncementSeen,
       setGanttAnnouncementSeen,
       crossBorderAnnouncementSeen: userState.crossBorderAnnouncementSeen,
@@ -742,7 +742,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setMyTeam,
       setScheduleType,
       setHasCompletedOnboarding,
-      setAccountSyncEnabled,
+      setAccountSyncAnnouncementSeen,
       setGanttAnnouncementSeen,
       setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,

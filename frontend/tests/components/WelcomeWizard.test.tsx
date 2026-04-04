@@ -575,9 +575,10 @@ describe("WelcomeWizard", () => {
 
       await user.click(screen.getByRole("button", { name: /Connect Account/i }));
 
-      // Wizard state is persisted before the auth redirect
+      // Wizard state is persisted before the auth redirect; accountConnected is not set
+      // so the feature banner can still surface when the user returns authenticated.
       expect(mockOnHide).toHaveBeenCalledWith(
-        expect.objectContaining({ accountConnected: false }),
+        expect.not.objectContaining({ accountConnected: expect.anything() }),
       );
       // Auth redirect is triggered with signup mode
       expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });

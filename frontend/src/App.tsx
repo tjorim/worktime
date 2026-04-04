@@ -37,8 +37,8 @@ function AppContent() {
     myTeam,
     setMyTeam,
     hasCompletedOnboarding,
-    accountSyncEnabled,
-    setAccountSyncEnabled,
+    accountSyncAnnouncementSeen,
+    setAccountSyncAnnouncementSeen,
     ganttAnnouncementSeen,
     setGanttAnnouncementSeen,
     crossBorderAnnouncementSeen,
@@ -56,13 +56,13 @@ function AppContent() {
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
 
-  // When the user authenticates (e.g. via SettingsPanel CTAs), mark account sync as enabled
-  // so the banner is suppressed and state stays consistent with the actual session.
+  // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
+  // announcement as seen so the banner is suppressed and state is consistent with the session.
   useEffect(() => {
-    if (isAuthenticated && accountSyncEnabled !== true) {
-      setAccountSyncEnabled(true);
+    if (isAuthenticated && accountSyncAnnouncementSeen !== true) {
+      setAccountSyncAnnouncementSeen(true);
     }
-  }, [isAuthenticated, accountSyncEnabled, setAccountSyncEnabled]);
+  }, [isAuthenticated, accountSyncAnnouncementSeen, setAccountSyncAnnouncementSeen]);
 
   // Per-feature announcements: each flag drives an independent banner entry.
   // undefined = user hasn't interacted with the feature yet → show announcement.
@@ -74,7 +74,7 @@ function AppContent() {
         ...(crossBorderAnnouncementSeen === undefined
           ? [{ name: m.feature_announcement_cross_border_name(), detail: m.feature_announcement_cross_border_detail() }]
           : []),
-        ...(accountSyncEnabled === undefined
+        ...(accountSyncAnnouncementSeen === undefined
           ? [{ name: m.feature_announcement_account_sync_name(), detail: m.feature_announcement_account_sync_detail() }]
           : []),
       ]
@@ -239,7 +239,7 @@ function AppContent() {
               onDismiss={() => {
                 if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
                 if (crossBorderAnnouncementSeen === undefined) setCrossBorderAnnouncementSeen(false);
-                if (accountSyncEnabled === undefined) setAccountSyncEnabled(false);
+                if (accountSyncAnnouncementSeen === undefined) setAccountSyncAnnouncementSeen(false);
               }}
             />
           )}

@@ -698,20 +698,6 @@ export function SettingsPanel({
                     <i className="bi bi-chevron-right text-muted"></i>
                   </div>
                 </ListGroup.Item>
-                {!isAuthenticated && !isValidating && (
-                  <ListGroup.Item action onClick={triggerSignup}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-cloud-arrow-up me-2 text-primary"></i>
-                          {m.sync_enable_label()}
-                        </div>
-                        <small className="text-muted">{m.sync_enable_description()}</small>
-                      </div>
-                      <i className="bi bi-chevron-right text-muted"></i>
-                    </div>
-                  </ListGroup.Item>
-                )}
                 <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
                   <div className="d-flex justify-content-between align-items-center">
                     <div>

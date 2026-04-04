@@ -99,37 +99,4 @@ describe("SettingsPanel Account Section", () => {
     expect(screen.getByText("Cross-device access")).toBeInTheDocument();
   });
 
-  it("shows Enable Cloud Sync entry in quick actions when not authenticated", () => {
-    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    expect(screen.getByText("Enable Cloud Sync")).toBeInTheDocument();
-    expect(
-      screen.getByText("Connect an account to back up and sync your data across devices"),
-    ).toBeInTheDocument();
-  });
-
-  it("clicking Enable Cloud Sync calls redirectToAuth with signup", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    await user.click(screen.getByText("Enable Cloud Sync"));
-    expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
-  });
-
-  it("does not show Enable Cloud Sync in quick actions when authenticated", async () => {
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    const useSessionContextSpy = vi
-      .spyOn(sessionMod, "useSessionContext")
-      .mockReturnValue({
-        loading: false,
-        doesSessionExist: true,
-        userId: "u2",
-        accessTokenPayload: { displayName: "Bob" },
-        invalidClaims: [],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
-
-    renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    expect(screen.queryByText("Enable Cloud Sync")).not.toBeInTheDocument();
-
-    useSessionContextSpy.mockRestore();
-  });
 });

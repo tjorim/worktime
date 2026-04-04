@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { redirectToAuth } from "supertokens-auth-react";
 import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+import * as m from "../paraglide/messages.js";
 import { useToast } from "./ToastContext";
 
 export interface AuthContextType {
@@ -67,13 +68,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const triggerLogin = useCallback(() => {
     redirectToAuth({ show: "signin" }).catch(() => {
-      showError("Failed to redirect to the login page. Please refresh and try again.");
+      showError(m.auth_error_redirect_signin());
     });
   }, [showError]);
 
   const triggerSignup = useCallback(() => {
     redirectToAuth({ show: "signup" }).catch(() => {
-      showError("Failed to redirect to the sign-up page. Please refresh and try again.");
+      showError(m.auth_error_redirect_signup());
     });
   }, [showError]);
 

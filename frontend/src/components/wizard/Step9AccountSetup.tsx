@@ -116,7 +116,7 @@ export function Step9AccountSetup({
         </div>
       )}
 
-      <div className="d-flex justify-content-start mt-2">
+      <div className="d-flex justify-content-between mt-2">
         <Button
           variant="outline-secondary"
           size="sm"
@@ -126,11 +126,7 @@ export function Step9AccountSetup({
           <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         {isAuthenticated && (
-          <Button
-            variant="primary"
-            onClick={onSkip}
-            className="ms-auto"
-          >
+          <Button variant="primary" onClick={onSkip}>
             {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1"></i>
           </Button>
         )}
