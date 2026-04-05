@@ -922,5 +922,20 @@
   "dev_auth_logout_btn": "Sign Out",
   "dev_api_url_warning_insecure": "Warning: This API URL uses insecure HTTP on a non-local host. Use HTTPS unless you are connecting to localhost.",
   "dev_api_url_warning_invalid_scheme": "Warning: API URL must use HTTPS (or HTTP for localhost).",
-  "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000)."
+  "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000).",
+
+  "first_sync_checking": "Checking server…",
+  "first_sync_pushing": "Uploading your local data…",
+  "first_sync_pulling": "Restoring your data from the server…",
+  "first_sync_done": "Sync set up successfully.",
+  "first_sync_error": "Sync setup failed. Your local data is unchanged.",
+
+  "first_sync_conflict_title": "Your local data and your account both have data",
+  "first_sync_conflict_body": "This device has local data and your account already has data on the server. Choose which version to keep. The other will be overwritten.",
+  "first_sync_conflict_keep_local": "Keep my local data",
+  "first_sync_conflict_keep_local_desc": "Your local data will be uploaded to the server, replacing the server copy.",
+  "first_sync_conflict_use_server": "Use server data",
+  "first_sync_conflict_use_server_desc": "Server data will be downloaded to this device, replacing your local copy.",
+  "first_sync_conflict_confirm": "Apply",
+  "first_sync_conflict_cancel": "Decide later"
 }

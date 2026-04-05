@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Container from "react-bootstrap/Container";
 import { SuperTokensWrapper } from "supertokens-auth-react";
 import { AboutModal } from "./components/AboutModal";
@@ -7,6 +8,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
+import { FirstSyncConflictDialog } from "./components/FirstSyncConflictDialog";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
@@ -19,6 +21,8 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
 import { useShiftCalculation } from "./hooks/useShiftCalculation";
+import { useApiClient } from "./hooks/useApiClient";
+import { useFirstSyncFlow } from "./hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
 import * as m from "./paraglide/messages.js";
@@ -32,7 +36,7 @@ import * as m from "./paraglide/messages.js";
  */
 function AppContent() {
   const { showSuccess, showInfo, showError } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const {
     myTeam,
     setMyTeam,
@@ -55,6 +59,40 @@ function AppContent() {
   const [teamModalMode, setTeamModalMode] = useState<
     "onboarding" | "change-team" | "change-schedule"
   >("onboarding");
+
+  // useApiClient must be called unconditionally (React rules of hooks).
+  // The result is only passed to the sync flow when the user is authenticated.
+  const apiFetch = useApiClient();
+  const fetchFnOrNull = isAuthenticated ? apiFetch : null;
+
+  const { phase: syncPhase, resolveConflict, dismiss: dismissSync } = useFirstSyncFlow(
+    isAuthenticated,
+    userId,
+    fetchFnOrNull,
+  );
+
+  // Show a toast for each phase of the first-sync flow.
+  useEffect(() => {
+    switch (syncPhase) {
+      case "checking":
+        showInfo(m.first_sync_checking());
+        break;
+      case "pushing":
+        showInfo(m.first_sync_pushing());
+        break;
+      case "pulling":
+        showInfo(m.first_sync_pulling());
+        break;
+      case "done":
+        showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
+        break;
+      case "error":
+        showError(m.first_sync_error());
+        break;
+      default:
+        break;
+    }
+  }, [syncPhase, showInfo, showSuccess, showError]);
 
   // When the user authenticates (e.g. via SettingsPanel CTAs), mark the account sync
   // announcement as seen so the banner is suppressed and state is consistent with the session.
@@ -281,6 +319,11 @@ function AppContent() {
                   : "team-selection"
             }
           />
+          <FirstSyncConflictDialog
+            show={syncPhase === "conflict"}
+            onResolve={resolveConflict}
+            onDismiss={dismissSync}
+          />
           <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
         </Container>
       </div>
@@ -294,21 +337,25 @@ function AppContent() {
  * @returns The root React element: SuperTokensWrapper, SettingsProvider, EventStoreProvider,
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <SuperTokensWrapper>
-      <SettingsProvider>
-        <EventStoreProvider>
-          <DeveloperOptionsProvider>
-            <ToastProvider>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-            </ToastProvider>
-          </DeveloperOptionsProvider>
-        </EventStoreProvider>
-      </SettingsProvider>
-    </SuperTokensWrapper>
+    <QueryClientProvider client={queryClient}>
+      <SuperTokensWrapper>
+        <SettingsProvider>
+          <EventStoreProvider>
+            <DeveloperOptionsProvider>
+              <ToastProvider>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </ToastProvider>
+            </DeveloperOptionsProvider>
+          </EventStoreProvider>
+        </SettingsProvider>
+      </SuperTokensWrapper>
+    </QueryClientProvider>
   );
 }
 
