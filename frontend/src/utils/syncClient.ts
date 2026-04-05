@@ -313,7 +313,14 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   // Templates — filter out rows missing required fields (text, start, stop) so
   // that a single malformed template cannot cause the entire push to fail.
-  const HH_MM_RE = /^\d{2}:\d{2}$/;
+  // Strict time validation: hours 00-23, minutes 00-59.
+  const isValidTime = (time: string): boolean => {
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) return false;
+    const parts = time.split(":").map(Number);
+    const h = parts[0];
+    const m = parts[1];
+    return h !== undefined && h >= 0 && h <= 23 && m !== undefined && m >= 0 && m <= 59;
+  };
   const rawTemplates = safeParseJsonArray(
     TIME_TRACKING_STORAGE_KEYS.templates,
   ) as TimeTrackingTemplate[];
@@ -325,9 +332,9 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
         typeof t.text === "string" &&
         t.text.trim().length > 0 &&
         typeof t.start === "string" &&
-        HH_MM_RE.test(t.start) &&
+        isValidTime(t.start) &&
         typeof t.stop === "string" &&
-        HH_MM_RE.test(t.stop),
+        isValidTime(t.stop),
     )
     .map((t) => ({
       id: t.id,
@@ -341,6 +348,17 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }));
 
   // Work locations — iterate all matching localStorage keys
+  // Validate date keys: must be YYYY-MM-DD and produce a valid calendar date.
+  const isValidDateKey = (dateStr: string): boolean => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+    const parsed = new Date(dateStr);
+    if (Number.isNaN(parsed.getTime())) return false;
+    // Verify the date round-trips correctly (e.g., "2026-02-30" would parse but not round-trip).
+    const yyyy = parsed.getUTCFullYear();
+    const mm = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(parsed.getUTCDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}` === dateStr;
+  };
   const workLocations: WorkLocationSyncItem[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -348,6 +366,8 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     const yearData = safeParseJsonObject(key) as Record<string, WorkLocationInfo>;
     for (const [date, info] of Object.entries(yearData)) {
       if (!info || typeof info.countryCode !== "string") continue;
+      // Validate the date key before pushing.
+      if (!isValidDateKey(date)) continue;
       workLocations.push({
         date,
         action: "create",

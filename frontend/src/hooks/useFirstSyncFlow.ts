@@ -103,6 +103,8 @@ export function useFirstSyncFlow(
   // Tracks whether the hook is still active. Set to false on unmount so
   // in-flight async operations do not call setPhase on a stale instance.
   const mountedRef = useRef(true);
+  // Lock to prevent concurrent resolveConflict executions.
+  const conflictResolutionForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -188,6 +190,8 @@ export function useFirstSyncFlow(
   const resolveConflict = useCallback(
     (choice: ConflictChoice) => {
       if (phase !== "conflict" || !userId || !fetchFn) return;
+      // Guard: return if conflict resolution is already in progress.
+      if (conflictResolutionForUserRef.current !== null) return;
 
       const uid = userId;
       const fetch = fetchFn;
@@ -196,42 +200,49 @@ export function useFirstSyncFlow(
       const preStatus = capturedStatusRef.current;
 
       const execute = async () => {
-        if (choice === "keep-local") {
-          // Pull the current server state so we can tombstone server-only rows.
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          setPhase("pulling");
-          const serverData = await pullSyncData(fetch);
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          if (!serverData) {
-            setPhase("error");
-            return;
+        // Lock the conflict resolution to this user.
+        conflictResolutionForUserRef.current = uid;
+        try {
+          if (choice === "keep-local") {
+            // Pull the current server state so we can tombstone server-only rows.
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            setPhase("pulling");
+            const serverData = await pullSyncData(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!serverData) {
+              setPhase("error");
+              return;
+            }
+            setPhase("pushing");
+            const localPayload = buildLocalSyncPushPayload();
+            // Build a replace payload: local creates + delete entries for server-only rows.
+            const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
+            const result = await pushSyncPayload(fetch, replacePayload);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!result) {
+              setPhase("error");
+              return;
+            }
+            const postStatus = await fetchSyncStatus(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus?.server_timestamp ?? new Date().toISOString());
+            setPhase("done");
+          } else {
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            setPhase("pulling");
+            const pullResult = await pullSyncData(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (!pullResult) {
+              setPhase("error");
+              return;
+            }
+            applySyncPullResponse(pullResult);
+            storeSyncCursor(uid, pullResult.server_timestamp);
+            setPhase("done");
           }
-          setPhase("pushing");
-          const localPayload = buildLocalSyncPushPayload();
-          // Build a replace payload: local creates + delete entries for server-only rows.
-          const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
-          const result = await pushSyncPayload(fetch, replacePayload);
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          if (!result) {
-            setPhase("error");
-            return;
-          }
-          const postStatus = await fetchSyncStatus(fetch);
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus?.server_timestamp ?? new Date().toISOString());
-          setPhase("done");
-        } else {
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          setPhase("pulling");
-          const pullResult = await pullSyncData(fetch);
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-          if (!pullResult) {
-            setPhase("error");
-            return;
-          }
-          applySyncPullResponse(pullResult);
-          storeSyncCursor(uid, pullResult.server_timestamp);
-          setPhase("done");
+        } finally {
+          // Always clear the lock, even on error.
+          conflictResolutionForUserRef.current = null;
         }
       };
 
@@ -248,6 +259,8 @@ export function useFirstSyncFlow(
     // Reset so the flow can re-run on next sign-in or page reload.
     // It will not re-trigger automatically in the current session.
     flowStartedForUser.current = null;
+    // Clear the conflict resolution lock.
+    conflictResolutionForUserRef.current = null;
   }, []);
 
   // Reset the flow state when the user signs out.
@@ -255,6 +268,7 @@ export function useFirstSyncFlow(
     if (!isAuthenticated) {
       setPhase("idle");
       flowStartedForUser.current = null;
+      conflictResolutionForUserRef.current = null;
     }
   }, [isAuthenticated]);
 
