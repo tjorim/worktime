@@ -53,6 +53,10 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(<TestProviders>{ui}</TestProviders>);
 }
 
+function wrapWithTestProviders(ui: React.ReactElement) {
+  return <TestProviders>{ui}</TestProviders>;
+}
+
 describe("MainTabs", () => {
   describe("Tab rendering", () => {
     it("renders all tab buttons", () => {
@@ -93,7 +97,7 @@ describe("MainTabs", () => {
       const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
       expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
 
-      rerender(<TestProviders><MainTabs {...defaultProps} activeTab="timeoff" /></TestProviders>);
+      rerender(wrapWithTestProviders(<MainTabs {...defaultProps} activeTab="timeoff" />));
       expect(screen.getByRole("tab", { name: "Time Off" })).toHaveAttribute(
         "aria-selected",
         "true",
