@@ -73,16 +73,24 @@ function AppContent() {
 
   // Show a toast for each phase of the first-sync flow.
   useEffect(() => {
-    if (syncPhase === "checking") {
-      showInfo(m.first_sync_checking());
-    } else if (syncPhase === "pushing") {
-      showInfo(m.first_sync_pushing());
-    } else if (syncPhase === "pulling") {
-      showInfo(m.first_sync_pulling());
-    } else if (syncPhase === "done") {
-      showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
-    } else if (syncPhase === "error") {
-      showError(m.first_sync_error());
+    switch (syncPhase) {
+      case "checking":
+        showInfo(m.first_sync_checking());
+        break;
+      case "pushing":
+        showInfo(m.first_sync_pushing());
+        break;
+      case "pulling":
+        showInfo(m.first_sync_pulling());
+        break;
+      case "done":
+        showSuccess(m.first_sync_done(), "bi-cloud-check-fill");
+        break;
+      case "error":
+        showError(m.first_sync_error());
+        break;
+      default:
+        break;
     }
   }, [syncPhase, showInfo, showSuccess, showError]);
 

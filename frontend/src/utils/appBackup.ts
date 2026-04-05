@@ -10,6 +10,7 @@
  * Device-specific data (developer options) is intentionally excluded.
  */
 
+import dayjs from "dayjs";
 import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
 import {
@@ -170,7 +171,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   };
 
   const payload: AppBackupPayload = {
-    exportedAt: new Date().toISOString(),
+    exportedAt: dayjs().toISOString(),
     version: 1,
   };
 
