@@ -257,9 +257,7 @@ export function EventModal({
   timeLocationFlagsAsEventFlags,
   onHide,
   onEntered,
-  onEventTypeChange,
   onEventTitleChange,
-  onEventWeekdayChange,
   onStartDateChange,
   onEndDateChange,
   onTypeFlagChange,
@@ -319,14 +317,7 @@ export function EventModal({
             <Col md={6}>
               <Form.Group controlId="eventType">
                 <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
-                <Form.Select
-                  value={eventType}
-                  onChange={(event) => onEventTypeChange(event.target.value as "range" | "weekly")}
-                  disabled={mode === "view"}
-                >
-                  <option value="range">{m.event_modal_type_range()}</option>
-                  <option value="weekly">{m.event_modal_type_weekly()}</option>
-                </Form.Select>
+                <Form.Control value={m.event_modal_type_range()} disabled readOnly />
               </Form.Group>
             </Col>
 
@@ -343,76 +334,49 @@ export function EventModal({
               </Form.Group>
             </Col>
 
-            {eventType === "range" ? (
-              <>
-                <Col md={6}>
-                  <Form.Group controlId="eventStart">
-                    <Form.Label>
-                      {m.event_modal_start_label()} <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={eventStart ? eventStart.replace(/\//g, "-") : ""}
-                      onChange={(event) =>
-                        onStartDateChange(
-                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
-                        )
-                      }
-                      isInvalid={!!startDateError}
-                      aria-required="true"
-                      aria-describedby={startDateError ? "eventStart-error" : undefined}
-                      disabled={mode === "view"}
-                    />
-                    {startDateError && (
-                      <Form.Control.Feedback type="invalid" id="eventStart-error">
-                        {startDateError}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group controlId="eventEnd">
-                    <Form.Label>{m.event_modal_end_label()}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
-                      onChange={(event) =>
-                        onEndDateChange(
-                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
-                        )
-                      }
-                      isInvalid={!!endDateError}
-                      aria-describedby={endDateError ? "eventEnd-error" : undefined}
-                      disabled={mode === "view"}
-                    />
-                    {endDateError && (
-                      <Form.Control.Feedback type="invalid" id="eventEnd-error">
-                        {endDateError}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                </Col>
-              </>
-            ) : (
-              <Col md={6}>
-                <Form.Group controlId="eventWeekday">
-                  <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
-                  <Form.Select
-                    value={eventWeekday}
-                    onChange={(event) => onEventWeekdayChange(parseInt(event.target.value, 10))}
-                    disabled={mode === "view"}
-                  >
-                    <option value="1">{m.weekday_mon()}</option>
-                    <option value="2">{m.weekday_tue()}</option>
-                    <option value="3">{m.weekday_wed()}</option>
-                    <option value="4">{m.weekday_thu()}</option>
-                    <option value="5">{m.weekday_fri()}</option>
-                    <option value="6">{m.weekday_sat()}</option>
-                    <option value="7">{m.weekday_sun()}</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            )}
+            <Col md={6}>
+              <Form.Group controlId="eventStart">
+                <Form.Label>
+                  {m.event_modal_start_label()} <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="date"
+                  value={eventStart ? eventStart.replace(/\//g, "-") : ""}
+                  onChange={(event) =>
+                    onStartDateChange(event.target.value ? event.target.value.replace(/-/g, "/") : "")
+                  }
+                  isInvalid={!!startDateError}
+                  aria-required="true"
+                  aria-describedby={startDateError ? "eventStart-error" : undefined}
+                  disabled={mode === "view"}
+                />
+                {startDateError && (
+                  <Form.Control.Feedback type="invalid" id="eventStart-error">
+                    {startDateError}
+                  </Form.Control.Feedback>
+                )}
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group controlId="eventEnd">
+                <Form.Label>{m.event_modal_end_label()}</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
+                  onChange={(event) =>
+                    onEndDateChange(event.target.value ? event.target.value.replace(/-/g, "/") : "")
+                  }
+                  isInvalid={!!endDateError}
+                  aria-describedby={endDateError ? "eventEnd-error" : undefined}
+                  disabled={mode === "view"}
+                />
+                {endDateError && (
+                  <Form.Control.Feedback type="invalid" id="eventEnd-error">
+                    {endDateError}
+                  </Form.Control.Feedback>
+                )}
+              </Form.Group>
+            </Col>
 
             <FlagSection
               mode={mode}

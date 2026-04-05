@@ -30,6 +30,8 @@ import type { ShiftResult } from "../../utils/shiftCalculations";
 import { dayjs, splitFractionalHour, pad2 } from "../../utils/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
+import { getEntryFlagsForDisplay } from "../timeOff/codecs";
+import type { TimeOffEntry } from "../timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -152,6 +154,33 @@ export function hdayToCalendarEvents(
 
   // Unknown events are not rendered as calendar events
   return [];
+}
+
+export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[] {
+  return entries.map((entry) => {
+    const flags = getEntryFlagsForDisplay(entry);
+    const color = getEventColor(flags);
+    const typeLabel = getEventTypeLabel(flags);
+    const symbol = getTimeLocationSymbol(flags);
+
+    const meta: HolidayMetadata = {
+      type: "holiday",
+      color,
+      flags,
+      typeLabel,
+      symbol,
+      sourceIndex: undefined,
+    };
+
+    return {
+      id: entry.id,
+      type: "holiday",
+      start: entry.date,
+      end: entry.date,
+      label: entry.note || typeLabel,
+      meta,
+    };
+  });
 }
 
 /**

@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { TimeOffEntry } from "../lib/timeOff/types";
+import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
 import { serializeEventFormState } from "../utils/eventFormState";
@@ -134,6 +136,17 @@ export function useEventForm() {
     setEndDateError("");
   }, []);
 
+  const prefillFormFromEntry = useCallback((entry: TimeOffEntry) => {
+    setEventType("range");
+    setEventWeekday(DEFAULT_WEEKDAY);
+    setEventStart(entry.date.replace(/-/g, "/"));
+    setEventEnd(entry.date.replace(/-/g, "/"));
+    setEventTitle(entry.note || "");
+    setEventFlags(getEntryFlagsForDisplay(entry));
+    setStartDateError("");
+    setEndDateError("");
+  }, []);
+
   /**
    * Handle type flag change (mutually exclusive radio buttons).
    * @param flag - The selected type flag or "none"
@@ -188,6 +201,7 @@ export function useEventForm() {
     validateForm,
     initFormForDate,
     prefillFormFromEvent,
+    prefillFormFromEntry,
     handleTypeFlagChange,
     handleTimeFlagChange,
   };

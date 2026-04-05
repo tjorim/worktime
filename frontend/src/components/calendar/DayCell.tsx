@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
-import type { HdayEvent } from "@/lib/hday/types";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
@@ -12,12 +12,12 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "@/lib/hday/presentation";
+import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import * as m from "../../paraglide/messages.js";
 import { getLocale } from "../../paraglide/runtime.js";
 
 export type DayEvent = {
-  event: HdayEvent;
-  index: number;
+  entry: TimeOffEntry;
 };
 
 interface DayCellProps {
@@ -31,9 +31,9 @@ interface DayCellProps {
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
-  onViewEvent: (index: number) => void;
+  onViewEvent: (id: string) => void;
   onDayContextMenu?: (date: Dayjs, x: number, y: number, el: HTMLElement | null) => void;
-  onEventContextMenu?: (index: number, x: number, y: number, el: HTMLElement | null) => void;
+  onEventContextMenu?: (id: string, x: number, y: number, el: HTMLElement | null) => void;
   /** Whether this cell is the roving-tabindex focus target */
   isFocusTarget?: boolean;
   /** Callback ref so MonthCalendar can imperatively focus this cell */
@@ -72,8 +72,8 @@ function getSymbolLabel(symbol: string): string {
 const getIndicatorIcons = (events: DayEvent[]) => {
   const icons = new Set<string>();
 
-  events.forEach(({ event }) => {
-    const flags = event.flags ?? [];
+  events.forEach(({ entry }) => {
+    const flags = getEntryFlagsForDisplay(entry);
     if (flags.includes("course")) {
       icons.add("📘");
     }
@@ -291,13 +291,13 @@ export function DayCell({
 
   // Keyboard handler for event chip buttons
   const handleEventKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    (e: KeyboardEvent<HTMLButtonElement>, id: string) => {
       if (!onEventContextMenu) return;
       if ((e.key === "F10" && e.shiftKey) || e.key === "ContextMenu") {
         e.preventDefault();
         e.stopPropagation();
         openMenuFromElement(e.currentTarget, (x, y) =>
-          onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+          onEventContextMenu(id, x, y, e.currentTarget as HTMLElement),
         );
       }
     },
@@ -305,32 +305,33 @@ export function DayCell({
   );
 
   const renderEventButton = useCallback(
-    ({ event, index }: DayEvent) => {
-      const colorClass = getEventColorClass(event.flags, event.type);
-      const label = event.title || getEventTypeLabel(event.flags);
-      const symbol = getTimeLocationSymbol(event.flags);
+    ({ entry }: DayEvent) => {
+      const entryFlags = getEntryFlagsForDisplay(entry);
+      const colorClass = getEventColorClass(entryFlags, "range");
+      const label = entry.note || getEventTypeLabel(entryFlags);
+      const symbol = getTimeLocationSymbol(entryFlags);
 
       return (
         <button
-          key={`${date.format("YYYY-MM-DD")}-${index}`}
+          key={`${date.format("YYYY-MM-DD")}-${entry.id}`}
           type="button"
           className="month-calendar-event"
           onClick={(eventClick) => {
             eventClick.stopPropagation();
-            onViewEvent(index);
+            onViewEvent(entry.id);
           }}
           onContextMenu={(e) => {
             if (onEventContextMenu) {
               e.preventDefault();
               e.stopPropagation();
-              onEventContextMenu(index, e.clientX, e.clientY, e.currentTarget);
+              onEventContextMenu(entry.id, e.clientX, e.clientY, e.currentTarget);
             }
           }}
-          onKeyDown={(e) => handleEventKeyDown(e, index)}
+          onKeyDown={(e) => handleEventKeyDown(e, entry.id)}
           onTouchStart={(e) => {
             if (onEventContextMenu && e.touches[0]) {
               startLongPress(e.touches[0], (x, y) =>
-                onEventContextMenu(index, x, y, e.currentTarget as HTMLElement),
+                onEventContextMenu(entry.id, x, y, e.currentTarget as HTMLElement),
               );
             }
           }}

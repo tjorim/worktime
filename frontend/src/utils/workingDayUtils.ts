@@ -26,8 +26,11 @@ import type { Dayjs } from "dayjs";
 import type { HdayEvent } from "../lib/hday/types";
 import type { ScheduleOption } from "../data/rosters";
 import type { PublicHolidayInfo } from "../types/publicHolidays";
+import type { TimeOffEntry } from "../lib/timeOff/types";
+import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
+import { toLine } from "../lib/hday/serializer";
 import { calculateShift } from "./shiftCalculations";
-import { dayjs, formatHdayDate } from "./dateTimeUtils";
+import { formatHdayDate } from "./dateTimeUtils";
 
 /**
  * Checks if a date matches any time-off event.
@@ -36,29 +39,25 @@ import { dayjs, formatHdayDate } from "./dateTimeUtils";
  * @param events - Array of time-off events
  * @returns True if the date has a time-off event, false otherwise
  */
-export function hasTimeOffEvent(date: Dayjs, events: HdayEvent[]): boolean {
-  for (const event of events) {
-    // Check range events
-    if (event.type === "range" && event.start && event.end) {
-      const start = dayjs(event.start.replace(/\//g, "-"));
-      const end = dayjs(event.end.replace(/\//g, "-"));
-      if (date.isSameOrAfter(start, "day") && date.isSameOrBefore(end, "day")) {
-        return true;
-      }
-    }
-
-    // Check weekly recurring events
-    if (event.type === "weekly" && event.weekday) {
-      // weekday is 1-7 (Monday-Sunday), dayjs.day() is 0-6 (Sunday-Saturday)
-      // Convert: event.weekday 1=Mon → dayjs 1, event.weekday 7=Sun → dayjs 0
-      const targetDayOfWeek = event.weekday === 7 ? 0 : event.weekday;
-      if (date.day() === targetDayOfWeek) {
-        return true;
-      }
-    }
+function normalizeEntries(entries: TimeOffEntry[] | HdayEvent[]): TimeOffEntry[] {
+  if (entries.length === 0) return [];
+  const first = entries[0] as TimeOffEntry | HdayEvent;
+  if ("date" in first) {
+    return entries as TimeOffEntry[];
   }
 
-  return false;
+  return hdayToTimeOffEntries(
+    (entries as HdayEvent[])
+      .filter((event) => event.type === "range")
+      .map((event) => toLine(event))
+      .join("\n"),
+  ).entries;
+}
+
+export function hasTimeOffEvent(date: Dayjs, entries: TimeOffEntry[] | HdayEvent[]): boolean {
+  const normalizedEntries = normalizeEntries(entries);
+  const targetDate = date.format("YYYY-MM-DD");
+  return normalizedEntries.some((entry) => entry.date === targetDate);
 }
 
 /**
@@ -118,7 +117,7 @@ export function isPublicHolidayForShift(
  * @param date - The date to check
  * @param teamNumber - The user's team number (1-based), or null if not selected
  * @param scheduleType - The user's schedule type
- * @param events - Array of time-off events
+ * @param entries - Array of time-off entries
  * @param publicHolidays - Map of public holidays by date string (YYYY/MM/DD format)
  * @returns True if this is a working day, false otherwise
  */
@@ -126,7 +125,7 @@ export function isWorkingDay(
   date: Dayjs,
   teamNumber: number | null,
   scheduleType: ScheduleOption | null | undefined,
-  events: HdayEvent[],
+  entries: TimeOffEntry[] | HdayEvent[],
   publicHolidays: Map<string, PublicHolidayInfo>,
 ): boolean {
   // If no team selected, we can't determine working days
@@ -142,7 +141,7 @@ export function isWorkingDay(
     }
 
     // Check for time-off events
-    if (hasTimeOffEvent(date, events)) {
+    if (hasTimeOffEvent(date, entries)) {
       return false;
     }
 
@@ -165,7 +164,7 @@ export function isWorkingDay(
  * @param date - The date to check
  * @param teamNumber - The user's team number (1-based), or null if not selected
  * @param scheduleType - The user's schedule type
- * @param events - Array of time-off events
+ * @param entries - Array of time-off entries
  * @param publicHolidays - Map of public holidays by date string (YYYY/MM/DD format)
  * @returns A reason string, or null if it's a working day
  */
@@ -173,7 +172,7 @@ export function getNonWorkingReason(
   date: Dayjs,
   teamNumber: number | null,
   scheduleType: ScheduleOption | null | undefined,
-  events: HdayEvent[],
+  entries: TimeOffEntry[] | HdayEvent[],
   publicHolidays: Map<string, PublicHolidayInfo>,
 ): string | null {
   if (!teamNumber) {
@@ -188,7 +187,7 @@ export function getNonWorkingReason(
     }
 
     // Check for time-off events
-    if (hasTimeOffEvent(date, events)) {
+    if (hasTimeOffEvent(date, entries)) {
       return "Time off";
     }
 

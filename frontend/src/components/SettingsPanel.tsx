@@ -12,7 +12,7 @@ import { useToast } from "../contexts/ToastContext";
 import { useAuth } from "../contexts/AuthContext";
 import { type CountryCode } from "../types/countries";
 import { CountrySelect } from "./shared/CountrySelect";
-import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
+import { useEventStore } from "../contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "../utils/appBackup";
 import { BackupDialog } from "./BackupDialog";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
@@ -23,6 +23,7 @@ import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
 import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
+import { saveTimeOffEntries } from "../lib/timeOff/storage";
 import * as m from "../paraglide/messages.js";
 import { getLocale, setLocale } from "../paraglide/runtime.js";
 
@@ -211,7 +212,7 @@ export function SettingsPanel({
     if (clearTimeOffData) {
       try {
         clearTimeOffEvents();
-        localStorage.removeItem(TIME_OFF_STORAGE_KEY);
+        saveTimeOffEntries([]);
         timeOffCleared = true;
       } catch (error) {
         console.error("Failed to clear time off data:", error);

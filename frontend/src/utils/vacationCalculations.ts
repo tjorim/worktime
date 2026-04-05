@@ -1,5 +1,7 @@
-import type { EventFlag, HdayEvent } from "../lib/hday/types";
-import { parseHdayDate as parseHdayDateString } from "../lib/hday/validation";
+import type { HdayEvent } from "../lib/hday/types";
+import type { TimeOffEntryFlag, TimeOffEntry } from "../lib/timeOff/types";
+import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
+import { toLine } from "../lib/hday/serializer";
 import { dayjs } from "./dateTimeUtils";
 
 export type VacationAllowanceUnit = "days" | "hours";
@@ -98,113 +100,61 @@ export interface VacationYearStats {
   byType: VacationTypeTotals[];
 }
 
-const HALF_DAY_FLAGS: EventFlag[] = ["half_am", "half_pm"];
+const HALF_DAY_FLAGS: TimeOffEntryFlag[] = ["half_am", "half_pm"];
 
-const isHalfDay = (flags?: EventFlag[]): boolean => {
+const isHalfDay = (flags?: TimeOffEntryFlag[]): boolean => {
   if (!flags) return false;
   const hasAm = flags.includes("half_am");
   const hasPm = flags.includes("half_pm");
   return hasAm !== hasPm;
 };
 
-const getDayWeight = (flags?: EventFlag[]): number => (isHalfDay(flags) ? 0.5 : 1);
+const getDayWeight = (flags?: TimeOffEntryFlag[]): number => (isHalfDay(flags) ? 0.5 : 1);
 
-const getEventTypeKey = (flags?: EventFlag[]): EventTypeKey => {
-  if (!flags || flags.length === 0) return "holiday";
-
-  // Find the first type flag that matches one of our known event types
-  // Skip "holiday" initially to check for more specific type flags first
-  const specificTypeFlag = EVENT_TYPE_ORDER.slice(1).find((type) =>
-    flags.includes(type as EventFlag),
-  );
-
-  // If a specific type flag is found, return it; otherwise default to "holiday"
-  return specificTypeFlag || "holiday";
+const getEventTypeKey = (entryType: TimeOffEntry["entryType"]): EventTypeKey => {
+  return entryType === "vacation" ? "holiday" : entryType;
 };
 
-/**
- * Parse a date string from an HdayEvent and return a Dayjs object.
- * Uses the shared parseHdayDate validation function.
- */
-const parseHdayDate = (value?: string) => {
-  if (!value) return null;
-  const date = parseHdayDateString(value);
-  return date ? dayjs(date) : null;
-};
-
-const countRangeDaysInYear = (event: HdayEvent, year: number): number => {
-  const start = parseHdayDate(event.start);
-  const end = parseHdayDate(event.end ?? event.start);
-  if (!start || !end) return 0;
-
+const isDateInYear = (date: string, year: number): boolean => {
+  const parsed = dayjs(date);
+  if (!parsed.isValid()) return false;
   const yearStart = dayjs(`${year}-01-01`).startOf("day");
   const yearEnd = dayjs(`${year}-12-31`).startOf("day");
-
-  // Clamp the range to the target year boundaries
-  const rangeStart = start.startOf("day");
-  const rangeEnd = end.startOf("day");
-  const clampedStart = rangeStart.isBefore(yearStart) ? yearStart : rangeStart;
-  const clampedEnd = rangeEnd.isAfter(yearEnd) ? yearEnd : rangeEnd;
-
-  // If the range doesn't overlap with the year, return 0
-  if (clampedStart.isAfter(yearEnd) || clampedEnd.isBefore(yearStart)) {
-    return 0;
-  }
-
-  // Handle inverted ranges (start > end) due to malformed data
-  if (clampedStart.isAfter(clampedEnd)) {
-    return 0;
-  }
-
-  // Calculate the difference in days and add 1 to include both start and end dates
-  return clampedEnd.diff(clampedStart, "day") + 1;
+  return parsed.isSameOrAfter(yearStart, "day") && parsed.isSameOrBefore(yearEnd, "day");
 };
 
-const countWeeklyDaysInYear = (weekday: number, year: number): number => {
-  if (weekday < 1 || weekday > 7) return 0;
-
-  const startOfYear = dayjs(`${year}-01-01`);
-  const endOfYear = dayjs(`${year}-12-31`);
-  let current = startOfYear.isoWeekday(weekday);
-
-  if (current.isBefore(startOfYear, "day")) {
-    current = current.add(7, "day");
+function normalizeEntries(entries: TimeOffEntry[] | HdayEvent[]): TimeOffEntry[] {
+  if (entries.length === 0) return [];
+  const first = entries[0] as TimeOffEntry | HdayEvent;
+  if ("date" in first) {
+    return entries as TimeOffEntry[];
   }
 
-  let count = 0;
-  while (current.isSameOrBefore(endOfYear, "day")) {
-    count += 1;
-    current = current.add(7, "day");
-  }
+  const lines = (entries as HdayEvent[])
+    .filter((event) => event.type === "range")
+    .map((event) => toLine(event));
+  return hdayToTimeOffEntries(lines.join("\n")).entries;
+}
 
-  return count;
-};
-
-export const getAvailableYears = (events: HdayEvent[], fallbackYear: number): number[] => {
+export const getAvailableYears = (entries: TimeOffEntry[] | HdayEvent[], fallbackYear: number): number[] => {
+  const normalizedEntries = normalizeEntries(entries);
   const years = new Set<number>();
   years.add(fallbackYear);
 
-  events.forEach((event) => {
-    if (event.type === "range") {
-      const start = parseHdayDate(event.start);
-      const end = parseHdayDate(event.end ?? event.start);
-      if (!start || !end) return;
-      const startYear = start.year();
-      const endYear = end.year();
-      for (let year = startYear; year <= endYear; year += 1) {
-        years.add(year);
-      }
-    }
+  normalizedEntries.forEach((entry) => {
+    const parsed = dayjs(entry.date);
+    if (parsed.isValid()) years.add(parsed.year());
   });
 
   return Array.from(years).sort((a, b) => b - a);
 };
 
 export const calculateVacationStats = (
-  events: HdayEvent[],
+  entries: TimeOffEntry[] | HdayEvent[],
   year: number,
   hoursPerDay: number,
 ): VacationYearStats => {
+  const normalizedEntries = normalizeEntries(entries);
   const totals: Record<EventTypeKey, { days: number; hours: number }> = {
     holiday: { days: 0, hours: 0 },
     business: { days: 0, hours: 0 },
@@ -218,19 +168,11 @@ export const calculateVacationStats = (
 
   let totalDays = 0;
 
-  events.forEach((event) => {
-    if (event.type === "unknown") return;
+  normalizedEntries.forEach((entry) => {
+    if (!isDateInYear(entry.date, year)) return;
 
-    const typeKey = getEventTypeKey(event.flags);
-    const weight = getDayWeight(event.flags);
-    const count =
-      event.type === "range"
-        ? countRangeDaysInYear(event, year)
-        : countWeeklyDaysInYear(event.weekday ?? 0, year);
-
-    if (count === 0) return;
-
-    const dayValue = count * weight;
+    const typeKey = getEventTypeKey(entry.entryType);
+    const dayValue = getDayWeight(entry.flags);
     const hourValue = dayValue * hoursPerDay;
 
     totals[typeKey].days += dayValue;
@@ -312,7 +254,7 @@ export const formatVacationValue = (value: number): string => {
   return value.toFixed(1);
 };
 
-export const getHalfDayLabel = (flags?: EventFlag[]): string | null => {
+export const getHalfDayLabel = (flags?: TimeOffEntryFlag[]): string | null => {
   if (!flags) return null;
   const hasHalfFlag = flags.some((flag) => HALF_DAY_FLAGS.includes(flag));
   if (!hasHalfFlag) return null;
