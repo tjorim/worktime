@@ -54,7 +54,6 @@ interface EventStoreContextType {
   updateEntry: (id: string, entry: TimeOffEntry) => void;
   deleteEntry: (id: string) => void;
   deleteEntries: (ids: string[]) => void;
-  deleteEvents: (ids: string[]) => void;
   importHday: (text: string) => TimeOffImportResult;
   clearAll: () => void;
   canUndo: boolean;
@@ -284,7 +283,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       updateEntry,
       deleteEntry,
       deleteEntries,
-      deleteEvents: deleteEntries,
       importHday,
       clearAll,
       canUndo: state.history.length > 0,

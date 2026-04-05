@@ -209,7 +209,7 @@ describe("EventStoreContext", () => {
     });
   });
 
-  describe("deleteEvents", () => {
+  describe("deleteEntries", () => {
     it("should delete multiple entries by id", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
@@ -226,7 +226,7 @@ describe("EventStoreContext", () => {
       );
 
       act(() => {
-        result.current.deleteEvents(idsToDelete);
+        result.current.deleteEntries(idsToDelete);
       });
 
       const events = getEvents(result.current.entries);
