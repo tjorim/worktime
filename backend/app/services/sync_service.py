@@ -349,6 +349,8 @@ async def _push_time_off_entry(
     session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
 ) -> SyncRecordResult:
     """Time-off entries use (user_id, entry_id) as their natural key."""
+    from app.services.db_service import _apply_time_off_shape
+
     now = _now()
     provided_fields = _get_provided_fields(item) - {"id", "action", "client_updated_at"}
 
@@ -379,14 +381,17 @@ async def _push_time_off_entry(
         entry = TimeOffEntry(
             entry_id=item.id,
             user_id=user_id,
-            kind=item.kind or "date",
-            date=item.date if item.kind == "date" else None,
-            start_date=item.start_date if item.kind == "range" else None,
-            end_date=item.end_date if item.kind == "range" else None,
-            weekday=item.weekday if item.kind == "weekly" else None,
             entry_type=item.entry_type or "vacation",
             flags=item.flags or [],
             note=item.note,
+        )
+        _apply_time_off_shape(
+            entry,
+            kind=item.kind or "date",
+            value_date=item.date,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            weekday=item.weekday,
         )
         session.add(entry)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -399,11 +404,14 @@ async def _push_time_off_entry(
             conflict_reason="server version is newer",
         )
     if "kind" in provided_fields and item.kind is not None:
-        entry.kind = item.kind
-        entry.date = item.date if item.kind == "date" else None
-        entry.start_date = item.start_date if item.kind == "range" else None
-        entry.end_date = item.end_date if item.kind == "range" else None
-        entry.weekday = item.weekday if item.kind == "weekly" else None
+        _apply_time_off_shape(
+            entry,
+            kind=item.kind,
+            value_date=item.date,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            weekday=item.weekday,
+        )
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
     if "flags" in provided_fields and item.flags is not None:

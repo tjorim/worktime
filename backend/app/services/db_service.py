@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from uuid import uuid4
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy import func as sql_func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
@@ -627,12 +627,19 @@ async def list_time_off_entries(
         TimeOffEntry.deleted_at.is_(None),
     )
     if start_date is not None:
+        # Weekly entries (all date fields NULL) are always included — they recur every week.
         statement = statement.where(
-            sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.end_date) >= start_date
+            or_(
+                TimeOffEntry.kind == "weekly",
+                sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.end_date) >= start_date,
+            )
         )
     if end_date is not None:
         statement = statement.where(
-            sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date) <= end_date
+            or_(
+                TimeOffEntry.kind == "weekly",
+                sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date) <= end_date,
+            )
         )
 
     result = await session.execute(

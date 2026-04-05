@@ -314,7 +314,7 @@ class UserPreferencesWrite(BaseModel):
 class TimeOffEntryCreate(BaseModel):
     """Request schema for creating or upserting a time-off entry."""
 
-    entry_id: str | None = None
+    entry_id: str | None = Field(default=None, min_length=1)
     kind: Literal["date", "range", "weekly"] = "date"
     date: dt_date | None = None
     start_date: dt_date | None = None
@@ -379,6 +379,9 @@ class TimeOffEntryUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_shape(self) -> TimeOffEntryUpdate:
+        shape_fields_set = self.model_fields_set & {"date", "start_date", "end_date", "weekday"}
+        if shape_fields_set and self.kind is None:
+            raise ValueError("kind must be provided when updating date, start_date, end_date, or weekday fields")
         if self.kind is None:
             return self
 
@@ -532,7 +535,7 @@ class WorkLocationSyncItem(BaseModel):
 class TimeOffEntrySyncItem(BaseModel):
     """Time-off entries are identified by a stable client-generated entry id."""
 
-    id: str
+    id: str = Field(min_length=1)
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     kind: Literal["date", "range", "weekly"] | None = None

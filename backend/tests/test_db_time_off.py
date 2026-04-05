@@ -65,6 +65,24 @@ class TestTimeOffAuth:
 
 
 class TestCreateTimeOff:
+    def test_create_forbidden_for_other_user(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-create-forbidden-a")
+        user_b = create_user_factory(db_client, admin_h, "to-create-forbidden-b")
+        headers_b = auth_headers(user_b)
+
+        resp = db_client.post(
+            f"/db/time-off/?user_id={user_a}",
+            json={"date": "2026-09-01", "entry_type": "vacation"},
+            headers=headers_b,
+        )
+        assert resp.status_code == 403
+
     def test_creates_date_entry(
         self,
         db_client: TestClient,
@@ -207,6 +225,38 @@ class TestListTimeOff:
         assert resp.status_code == 200
         assert resp.json()["total"] == 2
         assert {item["kind"] for item in resp.json()["items"]} == {"date", "range"}
+
+    def test_does_not_return_other_users_entries(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-isolation-a")
+        user_b = create_user_factory(db_client, admin_h, "to-isolation-b")
+        headers_a = auth_headers(user_a)
+        headers_b = auth_headers(user_b)
+
+        _create_entry(db_client, user_a, headers_a, {"date": "2026-07-01", "entry_type": "vacation"})
+
+        resp = db_client.get(f"/db/time-off/?user_id={user_b}", headers=headers_b)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+
+    def test_list_forbidden_for_other_user(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-list-forbidden-a")
+        user_b = create_user_factory(db_client, admin_h, "to-list-forbidden-b")
+        headers_b = auth_headers(user_b)
+
+        resp = db_client.get(f"/db/time-off/?user_id={user_a}", headers=headers_b)
+        assert resp.status_code == 403
 
 
 class TestGetPatchDeleteTimeOff:
