@@ -225,7 +225,12 @@ export function useFirstSyncFlow(
             }
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-            storeSyncCursor(uid, postStatus?.server_timestamp ?? preStatus?.server_timestamp ?? new Date().toISOString());
+            const cursor = postStatus?.server_timestamp ?? preStatus?.server_timestamp;
+            if (!cursor) {
+              setPhase("error");
+              return;
+            }
+            storeSyncCursor(uid, cursor);
             setPhase("done");
           } else {
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
