@@ -9,13 +9,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import type { CalendarEvent } from "../lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
-import { parseHday } from "../lib/hday/parser";
-import type { HdayEvent } from "../lib/hday/types";
 import {
-  buildTimeOffEntryForRange,
-  createWeeklyTimeOffEntry,
-  getEntryTimeFlagsFromDisplayFlags,
-  getEntryTypeFromDisplayFlags,
   hdayToTimeOffEntries,
   timeOffEntriesToHday,
 } from "../lib/timeOff/codecs";
@@ -54,17 +48,13 @@ interface EventStoreState {
 interface EventStoreContextType {
   rawText: string;
   entries: TimeOffEntry[];
-  events: HdayEvent[];
   getEventsInRange: (startDate: Date, endDate: Date) => CalendarEvent[];
-  addEvent: (event: HdayEvent) => void;
   addEntries: (entries: TimeOffEntry[]) => void;
   replaceEntries: (entries: TimeOffEntry[]) => void;
-  updateEvent: (index: number, event: HdayEvent) => void;
   updateEntry: (id: string, entry: TimeOffEntry) => void;
-  deleteEvent: (index: number) => void;
-  deleteEntry: (id: string | number) => void;
-  deleteEntries: (ids: string[] | number[]) => void;
-  deleteEvents: (ids: string[] | number[]) => void;
+  deleteEntry: (id: string) => void;
+  deleteEntries: (ids: string[]) => void;
+  deleteEvents: (ids: string[]) => void;
   importHday: (text: string) => TimeOffImportResult;
   clearAll: () => void;
   canUndo: boolean;
@@ -80,47 +70,6 @@ interface EventStoreProviderProps {
 }
 
 const HISTORY_LIMIT = 50;
-
-function eventToEntries(event: HdayEvent): TimeOffEntry[] {
-  const entryType = getEntryTypeFromDisplayFlags(event.flags ?? []);
-  const flags = getEntryTimeFlagsFromDisplayFlags(event.flags ?? []);
-
-  if (event.type === "weekly") {
-    if (!event.weekday) {
-      return [];
-    }
-
-    return [
-      createWeeklyTimeOffEntry({
-        weekday: event.weekday,
-        note: event.title,
-        entryType,
-        flags,
-      }),
-    ];
-  }
-
-  if (!event.start) {
-    return [];
-  }
-
-  return [
-    buildTimeOffEntryForRange({
-      start: event.start.replace(/\//g, "-"),
-      end: (event.end ?? event.start).replace(/\//g, "-"),
-      note: event.title,
-      entryType,
-      flags,
-    }),
-  ];
-}
-
-function getMatchingEntryIds(entries: TimeOffEntry[], event: HdayEvent): string[] {
-  const identityKeys = new Set(eventToEntries(event).map((entry) => getTimeOffEntryIdentityKey(entry)));
-  return entries
-    .filter((entry) => identityKeys.has(getTimeOffEntryIdentityKey(entry)))
-    .map((entry) => entry.id);
-}
 
 function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   return [...entries].sort((a, b) => {
@@ -284,13 +233,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "ADD_ENTRIES", payload: entries });
   }, []);
 
-  const addEvent = useCallback(
-    (event: HdayEvent) => {
-      addEntries(eventToEntries(event));
-    },
-    [addEntries],
-  );
-
   const replaceEntries = useCallback((entries: TimeOffEntry[]) => {
     dispatch({ type: "REPLACE_ENTRIES", payload: entries });
   }, []);
@@ -299,96 +241,19 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "UPDATE_ENTRY", payload: { id, entry } });
   }, []);
 
-  const events = useMemo(() => (rawText.trim() ? parseHday(rawText) : []), [rawText]);
-
-  const updateEvent = useCallback(
-    (index: number, event: HdayEvent) => {
-      const currentEvent = events[index];
-      if (!currentEvent) {
-        console.error(`Invalid event index: ${index}`);
-        return;
-      }
-
-      const currentIds = new Set(getMatchingEntryIds(state.entries, currentEvent));
-      const nextEntries = eventToEntries(event);
-      if (currentIds.size === 0 || nextEntries.length === 0) {
-        console.error(`Invalid event update at index: ${index}`);
-        return;
-      }
-
-      if (nextEntries.length === 1) {
-        const [firstId] = Array.from(currentIds);
-        if (firstId) {
-          updateEntry(firstId, nextEntries[0]!);
-          return;
-        }
-      }
-
-      const nextIdentityKeys = new Set(nextEntries.map((entry) => getTimeOffEntryIdentityKey(entry)));
-      replaceEntries([
-        ...state.entries.filter(
-          (entry) =>
-            !currentIds.has(entry.id) && !nextIdentityKeys.has(getTimeOffEntryIdentityKey(entry)),
-        ),
-        ...nextEntries,
-      ]);
-    },
-    [events, replaceEntries, state.entries, updateEntry],
-  );
-
   const deleteEntry = useCallback(
-    (id: string | number) => {
-      if (typeof id === "number") {
-        const resolvedId = state.entries[id]?.id;
-        if (!resolvedId) {
-          console.error(`Invalid entry identifier: ${id}`);
-          return;
-        }
-        dispatch({ type: "DELETE_ENTRY", payload: resolvedId });
-        return;
-      }
-
-      const groupedEvent = events.find((event) => getMatchingEntryIds(state.entries, event).includes(id));
-      const groupedIds = groupedEvent ? getMatchingEntryIds(state.entries, groupedEvent) : [id];
-      if (groupedIds.length === 0) {
-        console.error(`Invalid entry identifier: ${id}`);
-        return;
-      }
-      if (groupedIds.length === 1) {
-        dispatch({ type: "DELETE_ENTRY", payload: groupedIds[0]! });
-        return;
-      }
-      dispatch({ type: "DELETE_ENTRIES", payload: groupedIds });
+    (id: string) => {
+      dispatch({ type: "DELETE_ENTRY", payload: id });
     },
-    [events, state.entries],
+    [],
   );
 
   const deleteEntries = useCallback(
-    (ids: string[] | number[]) => {
-      const resolvedIds = ids
-        .flatMap((id) => {
-          if (typeof id === "number") {
-            const currentEvent = events[id];
-            return currentEvent ? getMatchingEntryIds(state.entries, currentEvent) : [];
-          }
-          return [id];
-        })
-        .filter((id, index, allIds): id is string => typeof id === "string" && allIds.indexOf(id) === index);
+    (ids: string[]) => {
+      const resolvedIds = ids.filter((id, index, allIds) => allIds.indexOf(id) === index);
       dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
     },
-    [events, state.entries],
-  );
-
-  const deleteEvent = useCallback(
-    (index: number) => {
-      const currentEvent = events[index];
-      if (!currentEvent) {
-        console.error(`Invalid event index: ${index}`);
-        return;
-      }
-      deleteEntries(getMatchingEntryIds(state.entries, currentEvent));
-    },
-    [deleteEntries, events, state.entries],
+    [],
   );
 
   const importHday = useCallback((text: string) => {
@@ -413,14 +278,10 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     () => ({
       rawText,
       entries: state.entries,
-      events,
       getEventsInRange,
-      addEvent,
       addEntries,
       replaceEntries,
-      updateEvent,
       updateEntry,
-      deleteEvent,
       deleteEntry,
       deleteEntries,
       deleteEvents: deleteEntries,
@@ -434,14 +295,10 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     [
       rawText,
       state.entries,
-      events,
       getEventsInRange,
-      addEvent,
       addEntries,
       replaceEntries,
-      updateEvent,
       updateEntry,
-      deleteEvent,
       deleteEntry,
       deleteEntries,
       importHday,

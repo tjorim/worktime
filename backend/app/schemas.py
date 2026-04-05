@@ -314,18 +314,52 @@ class UserPreferencesWrite(BaseModel):
 class TimeOffEntryCreate(BaseModel):
     """Request schema for creating or upserting a time-off entry."""
 
-    date: dt_date
+    entry_id: str | None = None
+    kind: Literal["date", "range", "weekly"] = "date"
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
     entry_type: str = "vacation"
     flags: list[str] = Field(default_factory=list)
     note: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntryCreate:
+        if self.kind == "date":
+            if self.date is None:
+                raise ValueError("date is required for date entries")
+            if self.start_date is not None or self.end_date is not None or self.weekday is not None:
+                raise ValueError("date entries cannot include range or weekday fields")
+            return self
+
+        if self.kind == "range":
+            if self.start_date is None or self.end_date is None:
+                raise ValueError("start_date and end_date are required for range entries")
+            if self.end_date < self.start_date:
+                raise ValueError("end_date cannot be earlier than start_date")
+            if self.date is not None or self.weekday is not None:
+                raise ValueError("range entries cannot include date or weekday fields")
+            return self
+
+        if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+            raise ValueError("weekday must be between 1 and 7 for weekly entries")
+        if self.date is not None or self.start_date is not None or self.end_date is not None:
+            raise ValueError("weekly entries cannot include date or range fields")
+        return self
 
 
 class TimeOffEntryRead(BaseModel):
     """Response schema for a single time-off entry."""
 
     id: int
+    entry_id: str
     user_id: int
-    date: dt_date
+    kind: Literal["date", "range", "weekly"]
+    date: dt_date | None
+    start_date: dt_date | None
+    end_date: dt_date | None
+    weekday: int | None
     entry_type: str
     flags: list[str]
     note: str | None
@@ -334,9 +368,35 @@ class TimeOffEntryRead(BaseModel):
 
 
 class TimeOffEntryUpdate(BaseModel):
+    kind: Literal["date", "range", "weekly"] | None = None
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
     entry_type: str | None = None
     flags: list[str] | None = None
     note: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntryUpdate:
+        if self.kind is None:
+            return self
+
+        if self.kind == "date":
+            if self.date is None:
+                raise ValueError("date is required when kind is date")
+            return self
+
+        if self.kind == "range":
+            if self.start_date is None or self.end_date is None:
+                raise ValueError("start_date and end_date are required when kind is range")
+            if self.end_date < self.start_date:
+                raise ValueError("end_date cannot be earlier than start_date")
+            return self
+
+        if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+            raise ValueError("weekday must be between 1 and 7 when kind is weekly")
+        return self
 
 
 class TimeOffEntryListResponse(ListResponse[TimeOffEntryRead]):
@@ -410,8 +470,13 @@ class TimeOffEntrySyncRead(BaseModel):
     """Sync read shape for a time-off entry (includes soft-delete fields)."""
 
     id: int
+    entry_id: str
     user_id: int
-    date: dt_date
+    kind: Literal["date", "range", "weekly"]
+    date: dt_date | None
+    start_date: dt_date | None
+    end_date: dt_date | None
+    weekday: int | None
     entry_type: str
     flags: list[str]
     note: str | None
@@ -465,14 +530,43 @@ class WorkLocationSyncItem(BaseModel):
 
 
 class TimeOffEntrySyncItem(BaseModel):
-    """Time-off entries are identified by date (natural key per user)."""
+    """Time-off entries are identified by a stable client-generated entry id."""
 
-    date: dt_date
+    id: str
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
+    kind: Literal["date", "range", "weekly"] | None = None
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
     entry_type: str | None = None
     flags: list[str] | None = None
     note: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntrySyncItem:
+        if self.action == "delete":
+            return self
+
+        if self.kind == "date":
+            if self.date is None:
+                raise ValueError("date is required for date entries")
+            return self
+
+        if self.kind == "range":
+            if self.start_date is None or self.end_date is None:
+                raise ValueError("start_date and end_date are required for range entries")
+            if self.end_date < self.start_date:
+                raise ValueError("end_date cannot be earlier than start_date")
+            return self
+
+        if self.kind == "weekly":
+            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+                raise ValueError("weekday must be between 1 and 7 for weekly entries")
+            return self
+
+        raise ValueError("kind is required for non-delete time_off_entries")
 
 
 class SyncPushRequest(BaseModel):

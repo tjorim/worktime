@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
-import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import type { TimeOffEntry } from "../lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
@@ -114,22 +114,6 @@ export function useEventForm() {
     });
   }, []);
 
-  /**
-   * Prefill form fields from an existing event.
-   * @param event - The event to load into the form
-   */
-  const prefillFormFromEvent = useCallback((event: HdayEvent) => {
-    setEventType(event.type === "weekly" ? "weekly" : "range");
-    setEventStart(event.type === "range" ? event.start || "" : "");
-    setEventEnd(event.type === "range" ? event.end || "" : "");
-    setEventWeekday(event.type === "weekly" ? event.weekday || DEFAULT_WEEKDAY : DEFAULT_WEEKDAY);
-
-    setEventTitle(event.title || "");
-    setEventFlags(event.flags || []);
-    setStartDateError("");
-    setEndDateError("");
-  }, []);
-
   const prefillFormFromEntry = useCallback((entry: TimeOffEntry) => {
     setEventType(isTimeOffWeeklyEntry(entry) ? "weekly" : "range");
     setEventWeekday(isTimeOffWeeklyEntry(entry) ? entry.weekday : DEFAULT_WEEKDAY);
@@ -206,7 +190,6 @@ export function useEventForm() {
     resetForm,
     validateForm,
     initFormForDate,
-    prefillFormFromEvent,
     prefillFormFromEntry,
     handleTypeFlagChange,
     handleTimeFlagChange,

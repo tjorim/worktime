@@ -6,7 +6,6 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
-import type { HdayEvent } from "../../lib/hday/types";
 import type { TimeOffEntry } from "../../lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
@@ -14,7 +13,6 @@ import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
 interface MonthCalendarProps {
   entries?: TimeOffEntry[];
-  events?: HdayEvent[];
   month: Dayjs;
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
@@ -22,9 +20,9 @@ interface MonthCalendarProps {
   workLocationMap?: WorkLocationMap;
   onMonthChange: (month: Dayjs) => void;
   onAddEvent: (date: Dayjs) => void;
-  onViewEvent: (id: string | number) => void;
-  onEditEvent: (id: string | number) => void;
-  onDeleteEvent?: (id: string | number) => void;
+  onViewEvent: (id: string) => void;
+  onEditEvent: (id: string) => void;
+  onDeleteEvent?: (id: string) => void;
   onSetWorkLocation?: (date: Dayjs, location: WorkLocation | null) => void;
   onSetOtherLocation?: (date: Dayjs) => void;
   allowEventActions?: boolean;
@@ -79,7 +77,6 @@ const buildCalendarDays = (month: Dayjs) => {
  */
 export function MonthCalendar({
   entries,
-  events,
   month,
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
@@ -99,7 +96,6 @@ export function MonthCalendar({
   getShiftForDate,
 }: MonthCalendarProps) {
   const sourceEntries = entries ?? [];
-  const sourceEvents = events ?? [];
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
 
@@ -185,7 +181,7 @@ export function MonthCalendar({
     x: number;
     y: number;
     date?: Dayjs;
-    eventId?: string | number;
+    eventId?: string;
   } | null>(null);
 
   // Track which element triggered the context menu for focus return
@@ -211,32 +207,7 @@ export function MonthCalendar({
       map.set(key, list);
     };
 
-    if (sourceEvents.length > 0) {
-      sourceEvents.forEach((event, index) => {
-        if (event.type === "weekly") {
-          let current = visibleStart;
-          while (current.isSameOrBefore(visibleEnd, "day")) {
-            if (current.isoWeekday() === event.weekday) {
-              addEvent(current, { event, index });
-            }
-            current = current.add(1, "day");
-          }
-          return;
-        }
-
-        if (event.type !== "range" || !event.start) return;
-        let current = dayjs(event.start.replace(/\//g, "-")).startOf("day");
-        const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
-        if (!current.isValid() || !end.isValid() || end.isBefore(current, "day")) return;
-
-        while (current.isSameOrBefore(end, "day")) {
-          if (!current.isBefore(visibleStart, "day") && !current.isAfter(visibleEnd, "day")) {
-            addEvent(current, { event, index });
-          }
-          current = current.add(1, "day");
-        }
-      });
-    } else if (sourceEntries.length > 0) {
+    if (sourceEntries.length > 0) {
       sourceEntries.forEach((entry) => {
         if (isTimeOffDateEntry(entry)) {
           const date = dayjs(entry.date);
@@ -276,7 +247,7 @@ export function MonthCalendar({
     }
 
     return map;
-  }, [days, sourceEntries, sourceEvents]);
+  }, [days, sourceEntries]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
@@ -294,7 +265,7 @@ export function MonthCalendar({
   );
 
   const handleEventContextMenu = useCallback(
-    (id: string | number, x: number, y: number, el: HTMLElement | null) => {
+    (id: string, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
@@ -317,7 +288,7 @@ export function MonthCalendar({
   );
 
   const handleViewEventWrapper = useCallback(
-    (id: string | number) => {
+    (id: string) => {
       handleCloseContextMenu();
       onViewEvent(id);
     },
@@ -325,7 +296,7 @@ export function MonthCalendar({
   );
 
   const handleEditEventWrapper = useCallback(
-    (id: string | number) => {
+    (id: string) => {
       handleCloseContextMenu();
       onEditEvent(id);
     },

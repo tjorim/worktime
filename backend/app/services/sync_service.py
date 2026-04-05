@@ -348,25 +348,24 @@ async def _push_work_location(
 async def _push_time_off_entry(
     session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
 ) -> SyncRecordResult:
-    """Time-off entries use (user_id, date) as their natural key."""
+    """Time-off entries use (user_id, entry_id) as their natural key."""
     now = _now()
-    date_key = item.date.isoformat()
-    provided_fields = _get_provided_fields(item) - {"date", "action", "client_updated_at"}
+    provided_fields = _get_provided_fields(item) - {"id", "action", "client_updated_at"}
 
     result = await session.execute(
         select(TimeOffEntry).where(
             TimeOffEntry.user_id == user_id,
-            TimeOffEntry.date == item.date,
+            TimeOffEntry.entry_id == item.id,
         )
     )
     entry: TimeOffEntry | None = result.scalar_one_or_none()
 
     if item.action == "delete":
         if entry is None or entry.deleted_at is not None:
-            return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+            return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
         if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
             return SyncRecordResult(
-                id=date_key,
+                id=item.id,
                 status="conflict",
                 server_updated_at=entry.updated_at,
                 conflict_reason="server version is newer",
@@ -374,26 +373,37 @@ async def _push_time_off_entry(
         entry.deleted_at = now
         entry.updated_at = now
         session.add(entry)
-        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if entry is None:
         entry = TimeOffEntry(
+            entry_id=item.id,
             user_id=user_id,
-            date=item.date,
+            kind=item.kind or "date",
+            date=item.date if item.kind == "date" else None,
+            start_date=item.start_date if item.kind == "range" else None,
+            end_date=item.end_date if item.kind == "range" else None,
+            weekday=item.weekday if item.kind == "weekly" else None,
             entry_type=item.entry_type or "vacation",
             flags=item.flags or [],
             note=item.note,
         )
         session.add(entry)
-        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
         return SyncRecordResult(
-            id=date_key,
+            id=item.id,
             status="conflict",
             server_updated_at=entry.updated_at,
             conflict_reason="server version is newer",
         )
+    if "kind" in provided_fields and item.kind is not None:
+        entry.kind = item.kind
+        entry.date = item.date if item.kind == "date" else None
+        entry.start_date = item.start_date if item.kind == "range" else None
+        entry.end_date = item.end_date if item.kind == "range" else None
+        entry.weekday = item.weekday if item.kind == "weekly" else None
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
     if "flags" in provided_fields and item.flags is not None:
@@ -404,7 +414,7 @@ async def _push_time_off_entry(
         entry.deleted_at = None
     entry.updated_at = now
     session.add(entry)
-    return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+    return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
 type SyncEntityModel = (

@@ -23,7 +23,6 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { HdayEvent } from "../lib/hday/types";
 import type { ScheduleOption } from "../data/rosters";
 import type { PublicHolidayInfo } from "../types/publicHolidays";
 import type { TimeOffEntry } from "../lib/timeOff/types";
@@ -35,42 +34,21 @@ import { dayjs, formatHdayDate } from "./dateTimeUtils";
  * Checks if a date matches any time-off event.
  *
  * @param date - The date to check
- * @param events - Array of time-off events
+ * @param entries - Array of time-off entries
  * @returns True if the date has a time-off event, false otherwise
  */
-function isEntryArray(entries: TimeOffEntry[] | HdayEvent[]): entries is TimeOffEntry[] {
-  return entries.length === 0 || "kind" in entries[0]!;
-}
-
-function matchesLegacyEvent(date: Dayjs, event: HdayEvent): boolean {
-  if (event.type === "weekly") {
-    return date.isoWeekday() === event.weekday;
-  }
-
-  if (event.type !== "range" || !event.start) return false;
-  const start = dayjs(event.start.replace(/\//g, "-")).startOf("day");
-  const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
-  if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return false;
-
-  return date.isSameOrAfter(start, "day") && date.isSameOrBefore(end, "day");
-}
-
-export function hasTimeOffEvent(date: Dayjs, entries: TimeOffEntry[] | HdayEvent[]): boolean {
+export function hasTimeOffEvent(date: Dayjs, entries: TimeOffEntry[]): boolean {
   const targetDate = date.format("YYYY-MM-DD");
-  if (isEntryArray(entries)) {
-    return entries.some((entry) =>
-      isTimeOffDateEntry(entry)
-        ? entry.date === targetDate
-        : isTimeOffRangeEntry(entry)
-          ? date.isSameOrAfter(dayjs(entry.start).startOf("day"), "day") &&
-            date.isSameOrBefore(dayjs(entry.end).startOf("day"), "day")
-        : isTimeOffWeeklyEntry(entry)
-          ? date.isoWeekday() === entry.weekday
-          : false,
-    );
-  }
-
-  return entries.some((event) => matchesLegacyEvent(date, event));
+  return entries.some((entry) =>
+    isTimeOffDateEntry(entry)
+      ? entry.date === targetDate
+      : isTimeOffRangeEntry(entry)
+        ? date.isSameOrAfter(dayjs(entry.start).startOf("day"), "day") &&
+          date.isSameOrBefore(dayjs(entry.end).startOf("day"), "day")
+      : isTimeOffWeeklyEntry(entry)
+        ? date.isoWeekday() === entry.weekday
+        : false,
+  );
 }
 
 /**
@@ -138,7 +116,7 @@ export function isWorkingDay(
   date: Dayjs,
   teamNumber: number | null,
   scheduleType: ScheduleOption | null | undefined,
-  entries: TimeOffEntry[] | HdayEvent[],
+  entries: TimeOffEntry[],
   publicHolidays: Map<string, PublicHolidayInfo>,
 ): boolean {
   // If no team selected, we can't determine working days
@@ -185,7 +163,7 @@ export function getNonWorkingReason(
   date: Dayjs,
   teamNumber: number | null,
   scheduleType: ScheduleOption | null | undefined,
-  entries: TimeOffEntry[] | HdayEvent[],
+  entries: TimeOffEntry[],
   publicHolidays: Map<string, PublicHolidayInfo>,
 ): string | null {
   if (!teamNumber) {

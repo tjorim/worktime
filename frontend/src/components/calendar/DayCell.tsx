@@ -1,7 +1,6 @@
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
-import type { HdayEvent } from "@/lib/hday/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
@@ -17,14 +16,9 @@ import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import * as m from "../../paraglide/messages.js";
 import { getLocale } from "../../paraglide/runtime.js";
 
-export type DayEvent =
-  | {
-      entry: TimeOffEntry;
-    }
-  | {
-      event: HdayEvent;
-      index: number;
-    };
+export interface DayEvent {
+  entry: TimeOffEntry;
+}
 
 interface DayCellProps {
   date: Dayjs;
@@ -37,9 +31,9 @@ interface DayCellProps {
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
-  onViewEvent: (id: string | number) => void;
+  onViewEvent: (id: string) => void;
   onDayContextMenu?: (date: Dayjs, x: number, y: number, el: HTMLElement | null) => void;
-  onEventContextMenu?: (id: string | number, x: number, y: number, el: HTMLElement | null) => void;
+  onEventContextMenu?: (id: string, x: number, y: number, el: HTMLElement | null) => void;
   /** Whether this cell is the roving-tabindex focus target */
   isFocusTarget?: boolean;
   /** Callback ref so MonthCalendar can imperatively focus this cell */
@@ -79,8 +73,7 @@ const getIndicatorIcons = (events: DayEvent[]) => {
   const icons = new Set<string>();
 
   events.forEach((dayEvent) => {
-    const flags =
-      "entry" in dayEvent ? getEntryFlagsForDisplay(dayEvent.entry) : (dayEvent.event.flags ?? ["holiday"]);
+    const flags = getEntryFlagsForDisplay(dayEvent.entry);
     if (flags.includes("course")) {
       icons.add("📘");
     }
@@ -298,7 +291,7 @@ export function DayCell({
 
   // Keyboard handler for event chip buttons
   const handleEventKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLButtonElement>, id: string | number) => {
+    (e: KeyboardEvent<HTMLButtonElement>, id: string) => {
       if (!onEventContextMenu) return;
       if ((e.key === "F10" && e.shiftKey) || e.key === "ContextMenu") {
         e.preventDefault();
@@ -313,17 +306,15 @@ export function DayCell({
 
   const renderEventButton = useCallback(
     (dayEvent: DayEvent) => {
-      const isEntry = "entry" in dayEvent;
-      const entryFlags = isEntry
-        ? getEntryFlagsForDisplay(dayEvent.entry)
-        : (dayEvent.event.flags ?? ["holiday"]);
-      const colorClass = getEventColorClass(entryFlags, isEntry ? "range" : dayEvent.event.type);
-      const label = isEntry
-        ? dayEvent.entry.note || getEventTypeLabel(entryFlags)
-        : dayEvent.event.title || getEventTypeLabel(entryFlags);
+      const entryFlags = getEntryFlagsForDisplay(dayEvent.entry);
+      const colorClass = getEventColorClass(
+        entryFlags,
+        dayEvent.entry.kind === "weekly" ? "weekly" : "range",
+      );
+      const label = dayEvent.entry.note || getEventTypeLabel(entryFlags);
       const symbol = getTimeLocationSymbol(entryFlags);
-      const id = isEntry ? dayEvent.entry.id : dayEvent.index;
-      const keyId = isEntry ? dayEvent.entry.id : String(dayEvent.index);
+      const id = dayEvent.entry.id;
+      const keyId = dayEvent.entry.id;
 
       return (
         <button

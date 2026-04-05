@@ -38,13 +38,13 @@ import {
   pushPreferences,
   pushSyncPayload,
   syncStatusHasData,
+  timeOffEntriesToSyncItems,
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "../utils/syncClient";
 import { getSyncCursorKey } from "../constants/storageKeys";
 import { LEGACY_TIME_OFF_STORAGE_KEY } from "../lib/timeOff/storage";
 import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
-import { isTimeOffDateEntry, isTimeOffRangeEntry } from "../lib/timeOff/types";
 import { dayjs } from "../utils/dateTimeUtils";
 
 export type FirstSyncPhase =
@@ -102,43 +102,8 @@ function buildSafeLocalSyncPushPayload(): SyncPushPayload {
     return buildLocalSyncPushPayload();
   } catch {
     const legacyRaw = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
-    const now = dayjs().toISOString();
     const legacyTimeOffEntries = legacyRaw
-      ? hdayToTimeOffEntries(legacyRaw).entries.flatMap((entry) => {
-          if (isTimeOffDateEntry(entry)) {
-            return [
-              {
-                date: entry.date,
-                action: "create" as const,
-                client_updated_at: now,
-                entry_type: entry.entryType,
-                flags: entry.flags,
-                note: entry.note,
-              },
-            ];
-          }
-
-          if (!isTimeOffRangeEntry(entry)) return [];
-
-          const start = dayjs(entry.start).startOf("day");
-          const end = dayjs(entry.end).startOf("day");
-          if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return [];
-
-          const items: SyncPushPayload["time_off_entries"] = [];
-          let current = start;
-          while (current.isSameOrBefore(end, "day")) {
-            items.push({
-              date: current.format("YYYY-MM-DD"),
-              action: "create",
-              client_updated_at: now,
-              entry_type: entry.entryType,
-              flags: entry.flags,
-              note: entry.note,
-            });
-            current = current.add(1, "day");
-          }
-          return items;
-        })
+      ? timeOffEntriesToSyncItems(hdayToTimeOffEntries(legacyRaw).entries, dayjs().toISOString())
       : [];
 
     return {
