@@ -1,7 +1,10 @@
-import type { HdayEvent } from "../lib/hday/types";
+import type { EventFlag, HdayEvent } from "../lib/hday/types";
 import type { TimeOffEntryFlag, TimeOffEntry } from "../lib/timeOff/types";
-import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
-import { toLine } from "../lib/hday/serializer";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import {
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+} from "../lib/timeOff/codecs";
 import { dayjs } from "./dateTimeUtils";
 
 export type VacationAllowanceUnit = "days" | "hours";
@@ -123,38 +126,96 @@ const isDateInYear = (date: string, year: number): boolean => {
   return parsed.isSameOrAfter(yearStart, "day") && parsed.isSameOrBefore(yearEnd, "day");
 };
 
-function normalizeEntries(entries: TimeOffEntry[] | HdayEvent[]): TimeOffEntry[] {
-  if (entries.length === 0) return [];
-  const first = entries[0] as TimeOffEntry | HdayEvent;
-  if ("date" in first) {
-    return entries as TimeOffEntry[];
-  }
-
-  const lines = (entries as HdayEvent[])
-    .filter((event) => event.type === "range")
-    .map((event) => toLine(event));
-  return hdayToTimeOffEntries(lines.join("\n")).entries;
+function isEntryArray(entries: TimeOffEntry[] | HdayEvent[] | undefined): entries is TimeOffEntry[] {
+  return !entries || entries.length === 0 || "kind" in entries[0]!;
 }
 
-export const getAvailableYears = (entries: TimeOffEntry[] | HdayEvent[], fallbackYear: number): number[] => {
-  const normalizedEntries = normalizeEntries(entries);
+function getTypeKeyFromLegacyFlags(flags?: EventFlag[]): EventTypeKey {
+  const rawFlags = flags ?? [];
+  const explicitTypeFlag = rawFlags.find(
+    (flag) =>
+      flag === "business" ||
+      flag === "course" ||
+      flag === "in" ||
+      flag === "weekend" ||
+      flag === "birthday" ||
+      flag === "ill" ||
+      flag === "other",
+  );
+  const entryType = getEntryTypeFromDisplayFlags(explicitTypeFlag ? [explicitTypeFlag] : ["holiday"]);
+  return getEventTypeKey(entryType);
+}
+
+function getDayWeightFromLegacyFlags(flags?: EventFlag[]): number {
+  const rawFlags = flags ?? [];
+  const hasAm = rawFlags.includes("half_am");
+  const hasPm = rawFlags.includes("half_pm");
+  if (hasAm !== hasPm) return 0.5;
+  if (hasAm && hasPm) return 1;
+  return getDayWeight(getEntryTimeFlagsFromDisplayFlags(rawFlags));
+}
+
+function parseLegacyRange(event: HdayEvent): { start: ReturnType<typeof dayjs>; end: ReturnType<typeof dayjs> } | null {
+  if (event.type !== "range" || !event.start) return null;
+  const start = dayjs(event.start.replace(/\//g, "-")).startOf("day");
+  const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
+  if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return null;
+  return { start, end };
+}
+
+function countWeeklyOccurrencesInYear(year: number, weekday: number): number {
+  if (weekday < 1 || weekday > 7) return 0;
+  let current = dayjs(`${year}-01-01`).startOf("day");
+  const end = dayjs(`${year}-12-31`).startOf("day");
+  let count = 0;
+
+  while (current.isSameOrBefore(end, "day")) {
+    if (current.isoWeekday() === weekday) count += 1;
+    current = current.add(1, "day");
+  }
+
+  return count;
+}
+
+export const getAvailableYears = (
+  entries: TimeOffEntry[] | HdayEvent[] | undefined,
+  fallbackYear: number,
+): number[] => {
   const years = new Set<number>();
   years.add(fallbackYear);
 
-  normalizedEntries.forEach((entry) => {
-    const parsed = dayjs(entry.date);
-    if (parsed.isValid()) years.add(parsed.year());
-  });
+  if (!entries || entries.length === 0) {
+    return Array.from(years).sort((a, b) => b - a);
+  }
+
+  if (isEntryArray(entries)) {
+    entries.forEach((entry) => {
+      if (isTimeOffDateEntry(entry)) {
+        const parsed = dayjs(entry.date);
+        if (parsed.isValid()) years.add(parsed.year());
+      }
+    });
+  } else {
+    entries.forEach((event) => {
+      if (event.type !== "range") return;
+      const range = parseLegacyRange(event);
+      if (!range) return;
+      let current = range.start;
+      while (current.isSameOrBefore(range.end, "day")) {
+        years.add(current.year());
+        current = current.add(1, "day");
+      }
+    });
+  }
 
   return Array.from(years).sort((a, b) => b - a);
 };
 
 export const calculateVacationStats = (
-  entries: TimeOffEntry[] | HdayEvent[],
+  entries: TimeOffEntry[] | HdayEvent[] | undefined,
   year: number,
   hoursPerDay: number,
 ): VacationYearStats => {
-  const normalizedEntries = normalizeEntries(entries);
   const totals: Record<EventTypeKey, { days: number; hours: number }> = {
     holiday: { days: 0, hours: 0 },
     business: { days: 0, hours: 0 },
@@ -168,17 +229,75 @@ export const calculateVacationStats = (
 
   let totalDays = 0;
 
-  normalizedEntries.forEach((entry) => {
-    if (!isDateInYear(entry.date, year)) return;
+  if (!entries || entries.length === 0) {
+    return {
+      year,
+      totalDays: 0,
+      totalHours: 0,
+      holidayDays: 0,
+      holidayHours: 0,
+      byType: EVENT_TYPE_ORDER.map((key) => ({
+        key,
+        label: EVENT_TYPE_LABELS[key],
+        days: 0,
+        hours: 0,
+      })),
+    };
+  }
 
-    const typeKey = getEventTypeKey(entry.entryType);
-    const dayValue = getDayWeight(entry.flags);
-    const hourValue = dayValue * hoursPerDay;
+  if (isEntryArray(entries)) {
+    entries.forEach((entry) => {
+      const typeKey = getEventTypeKey(entry.entryType);
+      const dayValue = getDayWeight(entry.flags);
+      if (isTimeOffWeeklyEntry(entry)) {
+        const occurrences = countWeeklyOccurrencesInYear(year, entry.weekday);
+        const totalForEntry = occurrences * dayValue;
+        totals[typeKey].days += totalForEntry;
+        totals[typeKey].hours += totalForEntry * hoursPerDay;
+        totalDays += totalForEntry;
+        return;
+      }
 
-    totals[typeKey].days += dayValue;
-    totals[typeKey].hours += hourValue;
-    totalDays += dayValue;
-  });
+      if (!isDateInYear(entry.date, year)) return;
+
+      const hourValue = dayValue * hoursPerDay;
+      totals[typeKey].days += dayValue;
+      totals[typeKey].hours += hourValue;
+      totalDays += dayValue;
+    });
+  } else {
+    entries.forEach((event) => {
+      if (event.type === "unknown") return;
+
+      const rawFlags = event.flags ?? ["holiday"];
+      const typeKey = getTypeKeyFromLegacyFlags(rawFlags);
+      const dayValue = getDayWeightFromLegacyFlags(rawFlags);
+
+      if (event.type === "weekly") {
+        const occurrences = countWeeklyOccurrencesInYear(year, event.weekday ?? 0);
+        const totalForEvent = occurrences * dayValue;
+        totals[typeKey].days += totalForEvent;
+        totals[typeKey].hours += totalForEvent * hoursPerDay;
+        totalDays += totalForEvent;
+        return;
+      }
+
+      const range = parseLegacyRange(event);
+      if (!range) return;
+
+      const yearStart = dayjs(`${year}-01-01`).startOf("day");
+      const yearEnd = dayjs(`${year}-12-31`).startOf("day");
+      const effectiveStart = range.start.isBefore(yearStart, "day") ? yearStart : range.start;
+      const effectiveEnd = range.end.isAfter(yearEnd, "day") ? yearEnd : range.end;
+      if (effectiveEnd.isBefore(effectiveStart, "day")) return;
+
+      const daysInYear = effectiveEnd.diff(effectiveStart, "day") + 1;
+      const totalForEvent = daysInYear * dayValue;
+      totals[typeKey].days += totalForEvent;
+      totals[typeKey].hours += totalForEvent * hoursPerDay;
+      totalDays += totalForEvent;
+    });
+  }
 
   const totalHours = totalDays * hoursPerDay;
   const holidayDays = totals.holiday.days;

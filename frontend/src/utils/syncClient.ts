@@ -14,11 +14,22 @@ import dayjs from "dayjs";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "../components/timeTracking/types";
 import type { TimeTrackingLabel } from "../components/timeTracking/constants";
+import type { HdayEvent } from "../lib/hday/types";
 import type { WorkLocationInfo } from "../types/workLocation";
 import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
-import { createTimeOffEntry } from "../lib/timeOff/codecs";
-import { loadTimeOffEntries, saveTimeOffEntries } from "../lib/timeOff/storage";
+import {
+  createTimeOffEntry,
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+  hdayToTimeOffEntries,
+} from "../lib/timeOff/codecs";
+import {
+  LEGACY_TIME_OFF_STORAGE_KEY,
+  loadTimeOffEntries,
+  saveTimeOffEntries,
+} from "../lib/timeOff/storage";
 import type { TimeOffEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry } from "../lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -495,14 +506,24 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }
   }
 
-  const timeOffEntries = loadTimeOffEntries().map((entry) => ({
-    date: entry.date,
-    action: "create" as const,
-    client_updated_at: now,
-    entry_type: entry.entryType,
-    flags: entry.flags,
-    note: entry.note,
-  }));
+  const legacyRawTimeOff = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
+  const localTimeOffEntries: TimeOffEntry[] =
+    loadTimeOffEntries().length > 0
+      ? loadTimeOffEntries()
+      : legacyRawTimeOff
+        ? hdayToTimeOffEntries(legacyRawTimeOff).entries
+        : [];
+
+  const timeOffEntries = localTimeOffEntries
+    .filter(isTimeOffDateEntry)
+    .map((entry) => ({
+      date: entry.date,
+      action: "create" as const,
+      client_updated_at: now,
+      entry_type: entry.entryType,
+      flags: entry.flags,
+      note: entry.note,
+    }));
 
   return { labels, tasks, templates, work_locations: workLocations, time_off_entries: timeOffEntries };
 }
@@ -527,17 +548,70 @@ function isoToHdayDate(isoDate: string): string {
  * - The event title becomes the `note` field.
  */
 export function hdayEventsToSyncItems(
-  events: Array<Pick<TimeOffEntry, "date" | "entryType" | "flags" | "note">>,
+  events:
+    | Array<{
+        date: string;
+        entryType: TimeOffEntry["entryType"];
+        flags: TimeOffEntry["flags"];
+        note: string | null;
+      }>
+    | HdayEvent[],
   clientUpdatedAt: string,
 ): TimeOffEntrySyncItem[] {
-  return events.map((entry) => ({
-    date: entry.date,
-    action: "create",
-    client_updated_at: clientUpdatedAt,
-    entry_type: entry.entryType,
-    flags: entry.flags,
-    note: entry.note,
-  }));
+  if (events.length === 0) return [];
+
+  const first = events[0] as
+    | {
+        date: string;
+        entryType: TimeOffEntry["entryType"];
+        flags: TimeOffEntry["flags"];
+        note: string | null;
+      }
+    | HdayEvent;
+  if ("date" in first) {
+    return (events as Array<{
+      date: string;
+      entryType: TimeOffEntry["entryType"];
+      flags: TimeOffEntry["flags"];
+      note: string | null;
+    }>).map(
+      (entry) => ({
+        date: entry.date,
+        action: "create",
+        client_updated_at: clientUpdatedAt,
+        entry_type: entry.entryType,
+        flags: entry.flags,
+        note: entry.note,
+      }),
+    );
+  }
+
+  const items: TimeOffEntrySyncItem[] = [];
+  for (const event of events as HdayEvent[]) {
+    if (event.type !== "range" || !event.start) continue;
+
+    const start = dayjs(event.start.replace(/\//g, "-")).startOf("day");
+    const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
+    if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) continue;
+
+    const entryType = getEntryTypeFromDisplayFlags(event.flags ?? ["holiday"]);
+    const flags = getEntryTimeFlagsFromDisplayFlags(event.flags ?? []);
+    let current = start;
+
+    while (current.isSameOrBefore(end, "day")) {
+      items.push({
+        date: current.format("YYYY-MM-DD"),
+        action: "create",
+        client_updated_at: clientUpdatedAt,
+        entry_type: entryType,
+        flags,
+        note: event.title?.trim() || null,
+      });
+      current = current.add(1, "day");
+    }
+  }
+
+  return items;
 }
 
 /**
@@ -592,6 +666,7 @@ function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[
     .filter((item) => item.deleted_at === null)
     .map((item) =>
       createTimeOffEntry({
+        kind: "date",
         date: item.date,
         entryType: (item.entry_type === "vacation" ? "vacation" : item.entry_type) as TimeOffEntry["entryType"],
         flags: item.flags as TimeOffEntry["flags"],

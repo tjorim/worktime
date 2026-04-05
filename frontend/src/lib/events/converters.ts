@@ -32,6 +32,7 @@ import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "../timeOff/codecs";
 import type { TimeOffEntry } from "../timeOff/types";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -157,7 +158,7 @@ export function hdayToCalendarEvents(
 }
 
 export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[] {
-  return entries.map((entry) => {
+  return entries.flatMap((entry) => {
     const flags = getEntryFlagsForDisplay(entry);
     const color = getEventColor(flags);
     const typeLabel = getEventTypeLabel(flags);
@@ -172,14 +173,31 @@ export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[
       sourceIndex: undefined,
     };
 
-    return {
-      id: entry.id,
-      type: "holiday",
-      start: entry.date,
-      end: entry.date,
-      label: entry.note || typeLabel,
-      meta,
-    };
+    if (isTimeOffDateEntry(entry)) {
+      return {
+        id: entry.id,
+        type: "holiday",
+        start: entry.date,
+        end: entry.date,
+        label: entry.note || typeLabel,
+        meta,
+      };
+    }
+
+    if (isTimeOffWeeklyEntry(entry)) {
+      return hdayWeeklyToCalendarEvents(
+        {
+          type: "weekly",
+          weekday: entry.weekday,
+          title: entry.note ?? "",
+          flags,
+        },
+        new Date("2000-01-01"),
+        new Date("2100-12-31"),
+      ).map((event) => ({ ...event, id: `${entry.id}:${event.start}` }));
+    }
+
+    return [];
   });
 }
 

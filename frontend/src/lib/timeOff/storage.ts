@@ -1,6 +1,10 @@
 import { hdayToTimeOffEntries, timeOffEntriesToHday } from "./codecs";
 import type { TimeOffEntry, TimeOffEntryFlag, TimeOffEntryType } from "./types";
-import { TIME_OFF_ENTRY_TYPES } from "./types";
+import {
+  getTimeOffEntryIdentityKey,
+  getTimeOffEntrySortKey,
+  TIME_OFF_ENTRY_TYPES,
+} from "./types";
 
 export const TIME_OFF_ENTRIES_STORAGE_KEY = "worktime_time_off_entries";
 export const LEGACY_TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
@@ -36,28 +40,48 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
 
     const candidate = item as Record<string, unknown>;
     if (typeof candidate.id !== "string" || candidate.id.length === 0) continue;
-    if (!isValidDateKey(candidate.date)) continue;
     if (!isValidEntryType(candidate.entryType)) continue;
 
     const flags = Array.isArray(candidate.flags)
       ? candidate.flags.filter(isValidFlag)
       : [];
 
+    const note =
+      typeof candidate.note === "string" && candidate.note.trim().length > 0
+        ? candidate.note.trim()
+        : null;
+
+    if (candidate.kind === "weekly") {
+      if (typeof candidate.weekday !== "number" || candidate.weekday < 1 || candidate.weekday > 7) {
+        continue;
+      }
+      entries.push({
+        id: candidate.id,
+        kind: "weekly",
+        weekday: candidate.weekday,
+        entryType: candidate.entryType,
+        flags,
+        note,
+      });
+      continue;
+    }
+
+    if (!isValidDateKey(candidate.date)) continue;
     entries.push({
       id: candidate.id,
+      kind: "date",
       date: candidate.date,
       entryType: candidate.entryType,
       flags,
-      note:
-        typeof candidate.note === "string" && candidate.note.trim().length > 0
-          ? candidate.note.trim()
-          : null,
+      note,
     });
   }
 
   return entries.sort((a, b) => {
-    const byDate = a.date.localeCompare(b.date);
-    if (byDate !== 0) return byDate;
+    const byKey = getTimeOffEntrySortKey(a).localeCompare(getTimeOffEntrySortKey(b));
+    if (byKey !== 0) return byKey;
+    const byIdentity = getTimeOffEntryIdentityKey(a).localeCompare(getTimeOffEntryIdentityKey(b));
+    if (byIdentity !== 0) return byIdentity;
     return a.id.localeCompare(b.id);
   });
 }

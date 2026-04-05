@@ -3,24 +3,18 @@ import { useEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { HdayEvent } from "@/lib/hday/types";
 import { EmptyState } from "../shared/EmptyState";
 import { getEventColorClass, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
-import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import { TimeOffToolbar } from "./TimeOffToolbar";
 import { TimeOffRawView } from "./TimeOffRawView";
 import type { TimeOffViewMode } from "../../data/timeoffConstants";
 import * as m from "../../paraglide/messages.js";
 
-/**
- * Weekday names for display (Monday through Sunday, ISO weekday 1-7).
- * Hoisted to module scope to avoid repeated allocations on each render.
- */
-/**
- * Generate a unique key for an event table row from its index and properties.
- */
-function getEntryRowKey(entry: TimeOffEntry): string {
-  return `${entry.id}-${entry.date}`;
+function getEventRowKey(event: HdayEvent, index: number): string {
+  return event.type === "weekly"
+    ? `weekly-${event.weekday ?? 0}-${event.title ?? ""}-${index}`
+    : `range-${event.start ?? ""}-${event.end ?? ""}-${event.title ?? ""}-${index}`;
 }
 
 type TimeOffTableViewProps = {
@@ -37,12 +31,11 @@ type TimeOffTableViewProps = {
   onExport: () => void;
   onAddEvent: () => void;
   viewMode: TimeOffViewMode;
-  entries: TimeOffEntry[];
-  selectedIds: Set<string>;
-  onToggleSelection: (id: string) => void;
-  onEditEntry: (id: string) => void;
-  onDeleteEntry: (id: string) => void;
-  // Raw editor props
+  events: HdayEvent[];
+  selectedIds: Set<number>;
+  onToggleSelection: (index: number) => void;
+  onEditEvent: (index: number) => void;
+  onDeleteEvent: (index: number) => void;
   rawEditorText: string;
   rawEditorError?: string;
   isRawEditorDirty: boolean;
@@ -65,11 +58,11 @@ export function TimeOffTableView({
   onExport,
   onAddEvent,
   viewMode,
-  entries,
+  events,
   selectedIds,
   onToggleSelection,
-  onEditEntry,
-  onDeleteEntry,
+  onEditEvent,
+  onDeleteEvent,
   rawEditorText,
   rawEditorError,
   isRawEditorDirty,
@@ -81,10 +74,10 @@ export function TimeOffTableView({
 
   useEffect(() => {
     if (selectAllRef.current) {
-      const isIndeterminate = selectedIds.size > 0 && selectedIds.size < entries.length;
+      const isIndeterminate = selectedIds.size > 0 && selectedIds.size < events.length;
       selectAllRef.current.indeterminate = isIndeterminate;
     }
-  }, [selectedIds, entries.length]);
+  }, [events.length, selectedIds]);
 
   return (
     <>
@@ -105,7 +98,7 @@ export function TimeOffTableView({
           viewMode={viewMode}
         />
         <Card.Body>
-          {entries.length === 0 ? (
+          {events.length === 0 ? (
             <EmptyState
               icon="bi-calendar-x"
               title={m.timeoff_no_events_title()}
@@ -121,7 +114,7 @@ export function TimeOffTableView({
                       type="checkbox"
                       className="form-check-input"
                       aria-label={m.timeoff_select_all_events_aria()}
-                      checked={entries.length > 0 && selectedIds.size === entries.length}
+                      checked={events.length > 0 && selectedIds.size === events.length}
                       onChange={(event) => {
                         if (event.target.checked) {
                           onSelectAll();
@@ -139,23 +132,22 @@ export function TimeOffTableView({
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => {
-                  const entryFlags = getEntryFlagsForDisplay(entry);
-                  const eventColorClass = getEventColorClass(entryFlags, "range");
-                  const eventLabel = getEventTypeLabel(entryFlags);
-                  const symbol = getTimeLocationSymbol(entryFlags);
+                {events.map((event, index) => {
+                  const flags = event.flags ?? [];
+                  const eventColorClass = getEventColorClass(flags, event.type);
+                  const eventLabel = getEventTypeLabel(flags);
+                  const symbol = getTimeLocationSymbol(flags);
+                  const title = event.title || eventLabel;
 
                   return (
-                    <tr key={getEntryRowKey(entry)}>
+                    <tr key={getEventRowKey(event, index)}>
                       <td>
                         <input
                           type="checkbox"
                           className="form-check-input"
-                          aria-label={m.timeoff_select_event_aria({
-                            name: entry.note || eventLabel,
-                          })}
-                          checked={selectedIds.has(entry.id)}
-                          onChange={() => onToggleSelection(entry.id)}
+                          aria-label={m.timeoff_select_event_aria({ name: title })}
+                          checked={selectedIds.has(index)}
+                          onChange={() => onToggleSelection(index)}
                         />
                       </td>
                       <td>
@@ -164,11 +156,11 @@ export function TimeOffTableView({
                           {eventLabel}
                         </span>
                       </td>
-                      <td>{entry.date}</td>
-                      <td>{entry.note || <span className="text-muted">—</span>}</td>
+                      <td>{renderEventDisplayDate(event)}</td>
+                      <td>{event.title || <span className="text-muted">—</span>}</td>
                       <td>
-                        {entryFlags.length ? (
-                          <span className="text-muted small">{entryFlags.join(", ")}</span>
+                        {flags.length ? (
+                          <span className="text-muted small">{flags.join(", ")}</span>
                         ) : (
                           <span className="text-muted">—</span>
                         )}
@@ -177,17 +169,17 @@ export function TimeOffTableView({
                         <Button
                           variant="outline-secondary"
                           size="sm"
-                          onClick={() => onEditEntry(entry.id)}
+                          onClick={() => onEditEvent(index)}
                           className="me-2"
-                          aria-label={m.edit_with_name({ name: entry.note || eventLabel })}
+                          aria-label={m.edit_with_name({ name: title })}
                         >
                           <i className="bi bi-pencil" aria-hidden="true"></i>
                         </Button>
                         <Button
                           variant="outline-danger"
                           size="sm"
-                          onClick={() => onDeleteEntry(entry.id)}
-                          aria-label={m.delete_with_name({ name: entry.note || eventLabel })}
+                          onClick={() => onDeleteEvent(index)}
+                          aria-label={m.delete_with_name({ name: title })}
                         >
                           <i className="bi bi-trash" aria-hidden="true"></i>
                         </Button>
@@ -201,7 +193,6 @@ export function TimeOffTableView({
         </Card.Body>
       </Card>
 
-      {/* Raw .hday Editor */}
       <TimeOffRawView
         rawText={rawEditorText}
         error={rawEditorError}
@@ -212,4 +203,26 @@ export function TimeOffTableView({
       />
     </>
   );
+}
+
+function toDisplayDate(value: string): string {
+  return value.replace(/-/g, "/");
+}
+
+function renderEventDisplayDate(event: HdayEvent) {
+  if (event.type === "weekly") {
+    return `Every ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][(event.weekday ?? 1) - 1]}`;
+  }
+
+  if (event.start && event.end && event.end !== event.start) {
+    return (
+      <>
+        <span>{toDisplayDate(event.start)}</span>
+        {" - "}
+        <span>{toDisplayDate(event.end)}</span>
+      </>
+    );
+  }
+
+  return event.start ? toDisplayDate(event.start) : "";
 }

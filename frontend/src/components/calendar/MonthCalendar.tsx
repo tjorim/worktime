@@ -6,12 +6,15 @@ import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
+import type { HdayEvent } from "../../lib/hday/types";
 import type { TimeOffEntry } from "../../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
 interface MonthCalendarProps {
-  entries: TimeOffEntry[];
+  entries?: TimeOffEntry[];
+  events?: HdayEvent[];
   month: Dayjs;
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
@@ -76,6 +79,7 @@ const buildCalendarDays = (month: Dayjs) => {
  */
 export function MonthCalendar({
   entries,
+  events,
   month,
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
@@ -94,6 +98,8 @@ export function MonthCalendar({
   showOtherLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
+  const sourceEntries = entries ?? [];
+  const sourceEvents = events ?? [];
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
 
@@ -205,16 +211,56 @@ export function MonthCalendar({
       map.set(key, list);
     };
 
-    entries.forEach((entry) => {
-      const date = dayjs(entry.date);
-      if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
-        return;
-      }
-      addEvent(date, { entry });
-    });
+    if (sourceEntries.length > 0) {
+      sourceEntries.forEach((entry) => {
+        if (isTimeOffDateEntry(entry)) {
+          const date = dayjs(entry.date);
+          if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
+            return;
+          }
+          addEvent(date, { entry });
+          return;
+        }
+
+        if (isTimeOffWeeklyEntry(entry)) {
+          let current = visibleStart;
+          while (current.isSameOrBefore(visibleEnd, "day")) {
+            if (current.isoWeekday() === entry.weekday) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
+        }
+      });
+    } else {
+      sourceEvents.forEach((event, index) => {
+        if (event.type === "weekly") {
+          let current = visibleStart;
+          while (current.isSameOrBefore(visibleEnd, "day")) {
+            if (current.isoWeekday() === event.weekday) {
+              addEvent(current, { event, index });
+            }
+            current = current.add(1, "day");
+          }
+          return;
+        }
+
+        if (event.type !== "range" || !event.start) return;
+        let current = dayjs(event.start.replace(/\//g, "-")).startOf("day");
+        const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
+        if (!current.isValid() || !end.isValid() || end.isBefore(current, "day")) return;
+
+        while (current.isSameOrBefore(end, "day")) {
+          if (!current.isBefore(visibleStart, "day") && !current.isAfter(visibleEnd, "day")) {
+            addEvent(current, { event, index });
+          }
+          current = current.add(1, "day");
+        }
+      });
+    }
 
     return map;
-  }, [days, entries]);
+  }, [days, sourceEntries, sourceEvents]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),

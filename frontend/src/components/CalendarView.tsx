@@ -42,9 +42,11 @@ import {
 import type { WorkLocation } from "../types/workLocation";
 import {
   buildTimeOffEntriesForDateRange,
+  createWeeklyTimeOffEntry,
   getEntryTimeFlagsFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "../lib/timeOff/codecs";
+import { getTimeOffEntryIdentityKey } from "../lib/timeOff/types";
 
 interface CalendarViewProps {
   myTeam: number | null;
@@ -222,21 +224,34 @@ export function CalendarView({
 
     const normalizedFlags = normalizeEventFlags(eventFlags);
 
-    const nextEntries = buildTimeOffEntriesForDateRange({
-      start: eventStart.replace(/\//g, "-"),
-      end: (eventEnd || eventStart).replace(/\//g, "-"),
-      note: eventTitle,
-      entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-      flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
-    });
+    const nextEntries =
+      eventType === "weekly"
+        ? [
+            createWeeklyTimeOffEntry({
+              weekday: eventWeekday,
+              note: eventTitle,
+              entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+              flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+            }),
+          ]
+        : buildTimeOffEntriesForDateRange({
+            start: eventStart.replace(/\//g, "-"),
+            end: (eventEnd || eventStart).replace(/\//g, "-"),
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          });
 
     if (modalMode === "edit" && editEntryId) {
       if (nextEntries.length === 1) {
         updateEntry(editEntryId, nextEntries[0]!);
       } else {
-        const nextDates = new Set(nextEntries.map((entry) => entry.date));
+        const nextKeys = new Set(nextEntries.map((entry) => getTimeOffEntryIdentityKey(entry)));
         replaceEntries([
-          ...entries.filter((entry) => entry.id !== editEntryId && !nextDates.has(entry.date)),
+          ...entries.filter(
+            (entry) =>
+              entry.id !== editEntryId && !nextKeys.has(getTimeOffEntryIdentityKey(entry)),
+          ),
           ...nextEntries,
         ]);
       }

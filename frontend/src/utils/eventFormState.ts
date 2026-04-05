@@ -1,5 +1,6 @@
 import type { EventFlag, HdayEvent } from "../lib/hday/types";
 import type { TimeOffEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
 
 export type EventFormState = {
@@ -33,11 +34,13 @@ export function toEventFormStateFromEvent(
   event: HdayEvent,
   defaultWeekday: number,
 ): EventFormState {
+  const normalizedType = event.type === "weekly" ? "weekly" : "range";
+
   return {
-    type: event.type === "weekly" ? "weekly" : "range",
+    type: normalizedType,
     weekday: event.weekday || defaultWeekday,
-    start: event.start || "",
-    end: event.end || "",
+    start: normalizedType === "range" ? event.start || "" : "",
+    end: normalizedType === "range" ? event.end || "" : "",
     title: event.title || "",
     flags: event.flags || [],
   };
@@ -56,10 +59,10 @@ export function serializeEventFormStateFromEvent(event: HdayEvent, defaultWeekda
 
 export function serializeEventFormStateFromEntry(entry: TimeOffEntry, defaultWeekday: number): string {
   return serializeEventFormState({
-    type: "range",
-    weekday: defaultWeekday,
-    start: entry.date.replace(/-/g, "/"),
-    end: entry.date.replace(/-/g, "/"),
+    type: isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+    weekday: isTimeOffWeeklyEntry(entry) ? entry.weekday : defaultWeekday,
+    start: isTimeOffDateEntry(entry) ? entry.date.replace(/-/g, "/") : "",
+    end: isTimeOffDateEntry(entry) ? entry.date.replace(/-/g, "/") : "",
     title: entry.note || "",
     flags: getEntryFlagsForDisplay(entry),
   });

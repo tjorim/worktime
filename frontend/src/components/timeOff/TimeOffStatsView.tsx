@@ -5,6 +5,7 @@ import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
+import type { HdayEvent } from "../../lib/hday/types";
 import type { TimeOffEntry } from "../../lib/timeOff/types";
 import { dayjs } from "../../utils/dateTimeUtils";
 import type {
@@ -25,12 +26,19 @@ import * as m from "../../paraglide/messages.js";
 export const DEFAULT_HOURS_PER_DAY = 8;
 
 interface TimeOffStatsViewProps {
-  entries: TimeOffEntry[];
+  entries?: TimeOffEntry[];
+  events?: HdayEvent[];
   allowance: VacationAllowanceSettings;
   onUpdateAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
 }
 
-export function TimeOffStatsView({ entries, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
+export function TimeOffStatsView({
+  entries,
+  events,
+  allowance,
+  onUpdateAllowance,
+}: TimeOffStatsViewProps) {
+  const sourceData = entries ?? events ?? [];
   const getUnitLabel = (unit: VacationAllowanceUnit) => {
     switch (unit) {
       case "days":
@@ -43,7 +51,7 @@ export function TimeOffStatsView({ entries, allowance, onUpdateAllowance }: Time
       }
     }
   };
-  const years = useMemo(() => getAvailableYears(entries, dayjs().year()), [entries]);
+  const years = useMemo(() => getAvailableYears(sourceData, dayjs().year()), [sourceData]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
   // Local state for input values to allow typing intermediate invalid values
@@ -67,8 +75,8 @@ export function TimeOffStatsView({ entries, allowance, onUpdateAllowance }: Time
   }, [selectedYear, years]);
 
   const stats = useMemo(
-    () => calculateVacationStats(entries, selectedYear, allowance.hoursPerDay),
-    [allowance.hoursPerDay, entries, selectedYear],
+    () => calculateVacationStats(sourceData, selectedYear, allowance.hoursPerDay),
+    [allowance.hoursPerDay, selectedYear, sourceData],
   );
 
   // Memoize filtered types to avoid duplicate filtering

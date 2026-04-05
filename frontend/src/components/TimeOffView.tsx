@@ -16,7 +16,7 @@ import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
-  serializeEventFormStateFromEntry,
+  serializeEventFormStateFromEvent,
 } from "../utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
@@ -29,11 +29,6 @@ import {
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
-import {
-  buildTimeOffEntriesForDateRange,
-  getEntryTimeFlagsFromDisplayFlags,
-  getEntryTypeFromDisplayFlags,
-} from "../lib/timeOff/codecs";
 import * as m from "../paraglide/messages.js";
 
 /**
@@ -74,10 +69,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
     entries,
-    addEntries,
-    replaceEntries,
-    updateEntry,
-    deleteEntry,
+    events,
+    addEvent,
+    updateEvent,
+    deleteEvent,
     deleteEvents,
     importHday,
     canUndo,
@@ -116,19 +111,20 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setEventTitle,
     resetForm,
     validateForm,
-    prefillFormFromEntry,
+    prefillFormFromEvent,
     handleTypeFlagChange,
     handleTimeFlagChange,
   } = useEventForm();
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
-  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editEventIndex, setEditEventIndex] = useState<number | null>(null);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [initialFormState, setInitialFormState] = useState("");
 
-  // Raw .hday editor state (kept in sync but not rendered in UI)
+  // Raw .hday adapter state for the explicit import/export panel.
+  // The canonical runtime data remains `entries`; this text is just the editable codec surface.
   const [rawEditorText, setRawEditorText] = useState(rawText);
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
   const rawEditorTextRef = useRef(rawText);
@@ -140,9 +136,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  const [deleteEventIndex, setDeleteEventIndex] = useState<number | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
@@ -165,25 +161,25 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         flags: [],
       }),
     );
-    setEditEntryId(null);
+    setEditEventIndex(null);
     setModalMode("add");
     setShowEventModal(true);
   }, [resetForm]);
 
   const loadEventIntoForm = useCallback(
-    (entryId: string, mode: "view" | "edit") => {
-      const entry = entries.find((item) => item.id === entryId);
-      if (!entry) return;
-      prefillFormFromEntry(entry);
-      setInitialFormState(serializeEventFormStateFromEntry(entry, DEFAULT_WEEKDAY));
+    (eventIndex: number, mode: "view" | "edit") => {
+      const event = events[eventIndex];
+      if (!event) return;
+      prefillFormFromEvent(event);
+      setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
       setModalMode(mode);
     },
-    [entries, prefillFormFromEntry],
+    [events, prefillFormFromEvent],
   );
 
-  const handleOpenEditModal = (entryId: string) => {
-    setEditEntryId(entryId);
-    loadEventIntoForm(entryId, "edit");
+  const handleOpenEditModal = (eventIndex: number) => {
+    setEditEventIndex(eventIndex);
+    loadEventIntoForm(eventIndex, "edit");
     setShowEventModal(true);
   };
 
@@ -197,11 +193,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleCancelEditMode = useCallback(() => {
-    if (!editEntryId) {
+    if (editEventIndex === null) {
       return;
     }
-    loadEventIntoForm(editEntryId, "view");
-  }, [editEntryId, loadEventIntoForm]);
+    loadEventIntoForm(editEventIndex, "view");
+  }, [editEventIndex, loadEventIntoForm]);
 
   const handleResetForm = () => {
     if (isFormDirty) {
@@ -224,27 +220,27 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     const normalizedFlags = normalizeEventFlags(eventFlags);
 
-    const nextEntries = buildTimeOffEntriesForDateRange({
-      start: eventStart.replace(/\//g, "-"),
-      end: (eventEnd || eventStart).replace(/\//g, "-"),
-      note: eventTitle,
-      entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-      flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
-    });
+    const nextEvent =
+      eventType === "weekly"
+        ? {
+            type: "weekly" as const,
+            weekday: eventWeekday,
+            title: eventTitle,
+            flags: normalizedFlags,
+          }
+        : {
+            type: "range" as const,
+            start: eventStart,
+            end: eventEnd || eventStart,
+            title: eventTitle,
+            flags: normalizedFlags,
+          };
 
-    if (editEntryId) {
-      if (nextEntries.length === 1) {
-        updateEntry(editEntryId, nextEntries[0]!);
-      } else {
-        const nextDates = new Set(nextEntries.map((entry) => entry.date));
-        replaceEntries([
-          ...entries.filter((entry) => entry.id !== editEntryId && !nextDates.has(entry.date)),
-          ...nextEntries,
-        ]);
-      }
+    if (editEventIndex !== null) {
+      updateEvent(editEventIndex, nextEvent);
       toast.showSuccess(m.timeoff_event_updated(), "bi-pencil-fill");
     } else {
-      addEntries(nextEntries);
+      addEvent(nextEvent);
       toast.showSuccess(m.timeoff_event_added());
     }
 
@@ -253,22 +249,22 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     resetForm();
   };
 
-  const handleDeleteClick = (entryId: string) => {
-    setDeleteEntryId(entryId);
+  const handleDeleteClick = (eventIndex: number) => {
+    setDeleteEventIndex(eventIndex);
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
-    if (deleteEntryId) {
-      deleteEntry(deleteEntryId);
+    if (deleteEventIndex !== null) {
+      deleteEvent(deleteEventIndex);
       setSelectedIds(new Set());
       toast.showSuccess(m.timeoff_event_deleted(), "bi-trash");
     }
     setShowDeleteConfirm(false);
-    setDeleteEntryId(null);
+    setDeleteEventIndex(null);
   };
 
-  const handleToggleSelection = (id: string) => {
+  const handleToggleSelection = (id: number) => {
     setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -281,7 +277,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleSelectAll = () => {
-    setSelectedIds(new Set(entries.map((entry) => entry.id)));
+    setSelectedIds(new Set(events.map((_, index) => index)));
   };
 
   const handleClearSelection = () => {
@@ -299,9 +295,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   useEffect(() => {
     setSelectedIds((prev) => {
-      const newSet = new Set<string>();
+      const newSet = new Set<number>();
+      const existingIds = new Set(events.map((_, index) => index));
       let changed = false;
-      const existingIds = new Set(entries.map((entry) => entry.id));
       prev.forEach((id) => {
         if (existingIds.has(id)) {
           newSet.add(id);
@@ -311,7 +307,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       });
       return changed ? newSet : prev;
     });
-  }, [entries]);
+  }, [events]);
 
   useEffect(() => {
     if (!isRawEditorDirty) {
@@ -415,7 +411,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       isActive,
       showEventModal,
       modalMode,
-      editIndex: editEntryId ? 0 : -1,
+      editIndex: editEventIndex !== null ? editEventIndex : -1,
       viewMode,
       selectedIndicesCount: selectedIds.size,
     },
@@ -480,7 +476,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           canRedo={canRedo}
           onUndo={handleUndo}
           onRedo={handleRedo}
-          eventCount={entries.length}
+          eventCount={events.length}
           selectedCount={selectedIds.size}
           onSelectAll={handleSelectAll}
           onClearSelection={handleClearSelection}
@@ -489,11 +485,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onExport={handleExport}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
-          entries={entries}
+          events={events}
           selectedIds={selectedIds}
           onToggleSelection={handleToggleSelection}
-          onEditEntry={handleOpenEditModal}
-          onDeleteEntry={handleDeleteClick}
+          onEditEvent={handleOpenEditModal}
+          onDeleteEvent={handleDeleteClick}
           rawEditorText={rawEditorText}
           rawEditorError={undefined}
           isRawEditorDirty={isRawEditorDirty}

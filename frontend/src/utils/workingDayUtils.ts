@@ -27,10 +27,9 @@ import type { HdayEvent } from "../lib/hday/types";
 import type { ScheduleOption } from "../data/rosters";
 import type { PublicHolidayInfo } from "../types/publicHolidays";
 import type { TimeOffEntry } from "../lib/timeOff/types";
-import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
-import { toLine } from "../lib/hday/serializer";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import { calculateShift } from "./shiftCalculations";
-import { formatHdayDate } from "./dateTimeUtils";
+import { dayjs, formatHdayDate } from "./dateTimeUtils";
 
 /**
  * Checks if a date matches any time-off event.
@@ -39,25 +38,36 @@ import { formatHdayDate } from "./dateTimeUtils";
  * @param events - Array of time-off events
  * @returns True if the date has a time-off event, false otherwise
  */
-function normalizeEntries(entries: TimeOffEntry[] | HdayEvent[]): TimeOffEntry[] {
-  if (entries.length === 0) return [];
-  const first = entries[0] as TimeOffEntry | HdayEvent;
-  if ("date" in first) {
-    return entries as TimeOffEntry[];
+function isEntryArray(entries: TimeOffEntry[] | HdayEvent[]): entries is TimeOffEntry[] {
+  return entries.length === 0 || "kind" in entries[0]!;
+}
+
+function matchesLegacyEvent(date: Dayjs, event: HdayEvent): boolean {
+  if (event.type === "weekly") {
+    return date.isoWeekday() === event.weekday;
   }
 
-  return hdayToTimeOffEntries(
-    (entries as HdayEvent[])
-      .filter((event) => event.type === "range")
-      .map((event) => toLine(event))
-      .join("\n"),
-  ).entries;
+  if (event.type !== "range" || !event.start) return false;
+  const start = dayjs(event.start.replace(/\//g, "-")).startOf("day");
+  const end = dayjs((event.end ?? event.start).replace(/\//g, "-")).startOf("day");
+  if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return false;
+
+  return date.isSameOrAfter(start, "day") && date.isSameOrBefore(end, "day");
 }
 
 export function hasTimeOffEvent(date: Dayjs, entries: TimeOffEntry[] | HdayEvent[]): boolean {
-  const normalizedEntries = normalizeEntries(entries);
   const targetDate = date.format("YYYY-MM-DD");
-  return normalizedEntries.some((entry) => entry.date === targetDate);
+  if (isEntryArray(entries)) {
+    return entries.some((entry) =>
+      isTimeOffDateEntry(entry)
+        ? entry.date === targetDate
+        : isTimeOffWeeklyEntry(entry)
+          ? date.isoWeekday() === entry.weekday
+          : false,
+    );
+  }
+
+  return entries.some((event) => matchesLegacyEvent(date, event));
 }
 
 /**

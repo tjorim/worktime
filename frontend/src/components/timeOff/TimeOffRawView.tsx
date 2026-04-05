@@ -22,6 +22,10 @@ export function TimeOffRawView({
   onReset,
 }: TimeOffRawViewProps) {
   const errorId = useId();
+  const handleCopy = async () => {
+    if (!navigator?.clipboard) return;
+    await navigator.clipboard.writeText(rawText);
+  };
 
   return (
     <Accordion>
@@ -56,6 +60,18 @@ export function TimeOffRawView({
             )}
           </Form.Group>
           <div className="d-flex flex-wrap gap-2">
+            <Button
+              variant="outline-secondary"
+              onClick={() => {
+                void handleCopy();
+              }}
+              disabled={!rawText}
+              aria-label="Copy raw .hday text"
+              title="Copy raw .hday text"
+            >
+              <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
+              Copy
+            </Button>
             <Button variant="primary" onClick={onApply}>
               <i className="bi bi-check-circle me-1" aria-hidden="true"></i>
               {m.timeoff_apply_raw()}

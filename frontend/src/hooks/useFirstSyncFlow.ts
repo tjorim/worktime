@@ -42,6 +42,10 @@ import {
   type SyncStatusResponse,
 } from "../utils/syncClient";
 import { getSyncCursorKey } from "../constants/storageKeys";
+import { LEGACY_TIME_OFF_STORAGE_KEY } from "../lib/timeOff/storage";
+import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
+import { isTimeOffDateEntry } from "../lib/timeOff/types";
+import { dayjs } from "../utils/dateTimeUtils";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -91,6 +95,35 @@ function payloadHasData(payload: SyncPushPayload): boolean {
     payload.work_locations.length > 0 ||
     payload.time_off_entries.length > 0
   );
+}
+
+function buildSafeLocalSyncPushPayload(): SyncPushPayload {
+  try {
+    return buildLocalSyncPushPayload();
+  } catch {
+    const legacyRaw = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
+    const now = dayjs().toISOString();
+    const legacyTimeOffEntries = legacyRaw
+      ? hdayToTimeOffEntries(legacyRaw).entries
+          .filter(isTimeOffDateEntry)
+          .map((entry) => ({
+            date: entry.date,
+            action: "create" as const,
+            client_updated_at: now,
+            entry_type: entry.entryType,
+            flags: entry.flags,
+            note: entry.note,
+          }))
+      : [];
+
+    return {
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: legacyTimeOffEntries,
+    };
+  }
 }
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -172,7 +205,7 @@ export function useFirstSyncFlow(
       const serverHasData = syncStatusHasData(status);
       // Build the push payload once so both the localHasData check and Branch A
       // use the same filtered dataset (malformed rows are excluded by the builder).
-      const localPayload = buildLocalSyncPushPayload();
+      const localPayload = buildSafeLocalSyncPushPayload();
       const localHasData = payloadHasData(localPayload);
 
       // Branch D — nothing anywhere
@@ -261,7 +294,7 @@ export function useFirstSyncFlow(
               return;
             }
             setPhase("pushing");
-            const localPayload = buildLocalSyncPushPayload();
+            const localPayload = buildSafeLocalSyncPushPayload();
             // Build a replace payload: local creates + delete entries for server-only rows.
             const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
             const result = await pushSyncPayload(fetch, replacePayload);

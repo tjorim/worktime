@@ -9,13 +9,26 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import type { CalendarEvent } from "../lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
-import { hdayToTimeOffEntries, timeOffEntriesToHday } from "../lib/timeOff/codecs";
+import { parseHday } from "../lib/hday/parser";
+import type { HdayEvent } from "../lib/hday/types";
+import {
+  buildTimeOffEntriesForDateRange,
+  createWeeklyTimeOffEntry,
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+  hdayToTimeOffEntries,
+  timeOffEntriesToHday,
+} from "../lib/timeOff/codecs";
 import {
   LEGACY_TIME_OFF_STORAGE_KEY,
   loadTimeOffEntries,
   saveTimeOffEntries,
 } from "../lib/timeOff/storage";
 import type { TimeOffEntry } from "../lib/timeOff/types";
+import {
+  getTimeOffEntryIdentityKey,
+  getTimeOffEntrySortKey,
+} from "../lib/timeOff/types";
 import { dayjs } from "../utils/dateTimeUtils";
 
 export const TIME_OFF_STORAGE_KEY = LEGACY_TIME_OFF_STORAGE_KEY;
@@ -40,13 +53,17 @@ interface EventStoreState {
 interface EventStoreContextType {
   rawText: string;
   entries: TimeOffEntry[];
+  events: HdayEvent[];
   getEventsInRange: (startDate: Date, endDate: Date) => CalendarEvent[];
+  addEvent: (event: HdayEvent) => void;
   addEntries: (entries: TimeOffEntry[]) => void;
   replaceEntries: (entries: TimeOffEntry[]) => void;
+  updateEvent: (index: number, event: HdayEvent) => void;
   updateEntry: (id: string, entry: TimeOffEntry) => void;
-  deleteEntry: (id: string) => void;
-  deleteEntries: (ids: string[]) => void;
-  deleteEvents: (ids: string[]) => void;
+  deleteEvent: (index: number) => void;
+  deleteEntry: (id: string | number) => void;
+  deleteEntries: (ids: string[] | number[]) => void;
+  deleteEvents: (ids: string[] | number[]) => void;
   importHday: (text: string) => void;
   clearAll: () => void;
   canUndo: boolean;
@@ -63,21 +80,63 @@ interface EventStoreProviderProps {
 
 const HISTORY_LIMIT = 50;
 
+function eventToEntries(event: HdayEvent): TimeOffEntry[] {
+  const entryType = getEntryTypeFromDisplayFlags(event.flags ?? []);
+  const flags = getEntryTimeFlagsFromDisplayFlags(event.flags ?? []);
+
+  if (event.type === "weekly") {
+    if (!event.weekday) {
+      return [];
+    }
+
+    return [
+      createWeeklyTimeOffEntry({
+        weekday: event.weekday,
+        note: event.title,
+        entryType,
+        flags,
+      }),
+    ];
+  }
+
+  if (!event.start) {
+    return [];
+  }
+
+  return buildTimeOffEntriesForDateRange({
+    start: event.start.replace(/\//g, "-"),
+    end: (event.end ?? event.start).replace(/\//g, "-"),
+    note: event.title,
+    entryType,
+    flags,
+  });
+}
+
+function getMatchingEntryIds(entries: TimeOffEntry[], event: HdayEvent): string[] {
+  const identityKeys = new Set(eventToEntries(event).map((entry) => getTimeOffEntryIdentityKey(entry)));
+  return entries
+    .filter((entry) => identityKeys.has(getTimeOffEntryIdentityKey(entry)))
+    .map((entry) => entry.id);
+}
+
 function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   return [...entries].sort((a, b) => {
-    const byDate = a.date.localeCompare(b.date);
-    if (byDate !== 0) return byDate;
+    const byKey = getTimeOffEntrySortKey(a).localeCompare(getTimeOffEntrySortKey(b));
+    if (byKey !== 0) return byKey;
+    const byIdentity = getTimeOffEntryIdentityKey(a).localeCompare(getTimeOffEntryIdentityKey(b));
+    if (byIdentity !== 0) return byIdentity;
     return a.id.localeCompare(b.id);
   });
 }
 
 function mergeEntries(currentEntries: TimeOffEntry[], nextEntries: TimeOffEntry[]): TimeOffEntry[] {
-  const byDate = new Map(currentEntries.map((entry) => [entry.date, entry]));
+  const byKey = new Map(currentEntries.map((entry) => [getTimeOffEntryIdentityKey(entry), entry]));
   for (const entry of nextEntries) {
-    const previous = byDate.get(entry.date);
-    byDate.set(entry.date, previous ? { ...entry, id: previous.id } : entry);
+    const identityKey = getTimeOffEntryIdentityKey(entry);
+    const previous = byKey.get(identityKey);
+    byKey.set(identityKey, previous ? { ...entry, id: previous.id } : entry);
   }
-  return sortEntries(Array.from(byDate.values()));
+  return sortEntries(Array.from(byKey.values()));
 }
 
 function applyWithHistory(state: EventStoreState, nextEntries: TimeOffEntry[]): EventStoreState {
@@ -108,7 +167,9 @@ function entriesReducer(state: EventStoreState, action: EventStoreAction): Event
       }
 
       const filteredEntries = state.entries.filter(
-        (currentEntry) => currentEntry.id !== id && currentEntry.date !== entry.date,
+        (currentEntry) =>
+          currentEntry.id !== id &&
+          getTimeOffEntryIdentityKey(currentEntry) !== getTimeOffEntryIdentityKey(entry),
       );
       return applyWithHistory(state, sortEntries([...filteredEntries, { ...entry, id }]));
     }
@@ -220,6 +281,13 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "ADD_ENTRIES", payload: entries });
   }, []);
 
+  const addEvent = useCallback(
+    (event: HdayEvent) => {
+      addEntries(eventToEntries(event));
+    },
+    [addEntries],
+  );
+
   const replaceEntries = useCallback((entries: TimeOffEntry[]) => {
     dispatch({ type: "REPLACE_ENTRIES", payload: entries });
   }, []);
@@ -228,13 +296,97 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "UPDATE_ENTRY", payload: { id, entry } });
   }, []);
 
-  const deleteEntry = useCallback((id: string) => {
-    dispatch({ type: "DELETE_ENTRY", payload: id });
-  }, []);
+  const events = useMemo(() => (rawText.trim() ? parseHday(rawText) : []), [rawText]);
 
-  const deleteEntries = useCallback((ids: string[]) => {
-    dispatch({ type: "DELETE_ENTRIES", payload: ids });
-  }, []);
+  const updateEvent = useCallback(
+    (index: number, event: HdayEvent) => {
+      const currentEvent = events[index];
+      if (!currentEvent) {
+        console.error(`Invalid event index: ${index}`);
+        return;
+      }
+
+      const currentIds = new Set(getMatchingEntryIds(state.entries, currentEvent));
+      const nextEntries = eventToEntries(event);
+      if (currentIds.size === 0 || nextEntries.length === 0) {
+        console.error(`Invalid event update at index: ${index}`);
+        return;
+      }
+
+      if (nextEntries.length === 1) {
+        const [firstId] = Array.from(currentIds);
+        if (firstId) {
+          updateEntry(firstId, nextEntries[0]!);
+          return;
+        }
+      }
+
+      const nextIdentityKeys = new Set(nextEntries.map((entry) => getTimeOffEntryIdentityKey(entry)));
+      replaceEntries([
+        ...state.entries.filter(
+          (entry) =>
+            !currentIds.has(entry.id) && !nextIdentityKeys.has(getTimeOffEntryIdentityKey(entry)),
+        ),
+        ...nextEntries,
+      ]);
+    },
+    [events, replaceEntries, state.entries, updateEntry],
+  );
+
+  const deleteEntry = useCallback(
+    (id: string | number) => {
+      if (typeof id === "number") {
+        const resolvedId = state.entries[id]?.id;
+        if (!resolvedId) {
+          console.error(`Invalid entry identifier: ${id}`);
+          return;
+        }
+        dispatch({ type: "DELETE_ENTRY", payload: resolvedId });
+        return;
+      }
+
+      const groupedEvent = events.find((event) => getMatchingEntryIds(state.entries, event).includes(id));
+      const groupedIds = groupedEvent ? getMatchingEntryIds(state.entries, groupedEvent) : [id];
+      if (groupedIds.length === 0) {
+        console.error(`Invalid entry identifier: ${id}`);
+        return;
+      }
+      if (groupedIds.length === 1) {
+        dispatch({ type: "DELETE_ENTRY", payload: groupedIds[0]! });
+        return;
+      }
+      dispatch({ type: "DELETE_ENTRIES", payload: groupedIds });
+    },
+    [events, state.entries],
+  );
+
+  const deleteEntries = useCallback(
+    (ids: string[] | number[]) => {
+      const resolvedIds = ids
+        .flatMap((id) => {
+          if (typeof id === "number") {
+            const currentEvent = events[id];
+            return currentEvent ? getMatchingEntryIds(state.entries, currentEvent) : [];
+          }
+          return [id];
+        })
+        .filter((id, index, allIds): id is string => typeof id === "string" && allIds.indexOf(id) === index);
+      dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
+    },
+    [events, state.entries],
+  );
+
+  const deleteEvent = useCallback(
+    (index: number) => {
+      const currentEvent = events[index];
+      if (!currentEvent) {
+        console.error(`Invalid event index: ${index}`);
+        return;
+      }
+      deleteEntries(getMatchingEntryIds(state.entries, currentEvent));
+    },
+    [deleteEntries, events, state.entries],
+  );
 
   const importHday = useCallback((text: string) => {
     dispatch({ type: "IMPORT_HDAY", payload: text });
@@ -256,10 +408,14 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     () => ({
       rawText,
       entries: state.entries,
+      events,
       getEventsInRange,
+      addEvent,
       addEntries,
       replaceEntries,
+      updateEvent,
       updateEntry,
+      deleteEvent,
       deleteEntry,
       deleteEntries,
       deleteEvents: deleteEntries,
@@ -273,10 +429,14 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     [
       rawText,
       state.entries,
+      events,
       getEventsInRange,
+      addEvent,
       addEntries,
       replaceEntries,
+      updateEvent,
       updateEntry,
+      deleteEvent,
       deleteEntry,
       deleteEntries,
       importHday,

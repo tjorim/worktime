@@ -1,6 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
+import type { HdayEvent } from "@/lib/hday/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
@@ -16,9 +17,14 @@ import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import * as m from "../../paraglide/messages.js";
 import { getLocale } from "../../paraglide/runtime.js";
 
-export type DayEvent = {
-  entry: TimeOffEntry;
-};
+export type DayEvent =
+  | {
+      entry: TimeOffEntry;
+    }
+  | {
+      event: HdayEvent;
+      index: number;
+    };
 
 interface DayCellProps {
   date: Dayjs;
@@ -72,8 +78,9 @@ function getSymbolLabel(symbol: string): string {
 const getIndicatorIcons = (events: DayEvent[]) => {
   const icons = new Set<string>();
 
-  events.forEach(({ entry }) => {
-    const flags = getEntryFlagsForDisplay(entry);
+  events.forEach((dayEvent) => {
+    const flags =
+      "entry" in dayEvent ? getEntryFlagsForDisplay(dayEvent.entry) : (dayEvent.event.flags ?? ["holiday"]);
     if (flags.includes("course")) {
       icons.add("📘");
     }
@@ -305,33 +312,40 @@ export function DayCell({
   );
 
   const renderEventButton = useCallback(
-    ({ entry }: DayEvent) => {
-      const entryFlags = getEntryFlagsForDisplay(entry);
-      const colorClass = getEventColorClass(entryFlags, "range");
-      const label = entry.note || getEventTypeLabel(entryFlags);
+    (dayEvent: DayEvent) => {
+      const isEntry = "entry" in dayEvent;
+      const entryFlags = isEntry
+        ? getEntryFlagsForDisplay(dayEvent.entry)
+        : (dayEvent.event.flags ?? ["holiday"]);
+      const colorClass = getEventColorClass(entryFlags, isEntry ? "range" : dayEvent.event.type);
+      const label = isEntry
+        ? dayEvent.entry.note || getEventTypeLabel(entryFlags)
+        : dayEvent.event.title || getEventTypeLabel(entryFlags);
       const symbol = getTimeLocationSymbol(entryFlags);
+      const id = isEntry ? dayEvent.entry.id : (dayEvent.index as unknown as string);
+      const keyId = isEntry ? dayEvent.entry.id : String(dayEvent.index);
 
       return (
         <button
-          key={`${date.format("YYYY-MM-DD")}-${entry.id}`}
+          key={`${date.format("YYYY-MM-DD")}-${keyId}`}
           type="button"
           className="month-calendar-event"
           onClick={(eventClick) => {
             eventClick.stopPropagation();
-            onViewEvent(entry.id);
+            onViewEvent(id);
           }}
           onContextMenu={(e) => {
             if (onEventContextMenu) {
               e.preventDefault();
               e.stopPropagation();
-              onEventContextMenu(entry.id, e.clientX, e.clientY, e.currentTarget);
+              onEventContextMenu(id, e.clientX, e.clientY, e.currentTarget);
             }
           }}
-          onKeyDown={(e) => handleEventKeyDown(e, entry.id)}
+          onKeyDown={(e) => handleEventKeyDown(e, id)}
           onTouchStart={(e) => {
             if (onEventContextMenu && e.touches[0]) {
               startLongPress(e.touches[0], (x, y) =>
-                onEventContextMenu(entry.id, x, y, e.currentTarget as HTMLElement),
+                onEventContextMenu(id, x, y, e.currentTarget as HTMLElement),
               );
             }
           }}

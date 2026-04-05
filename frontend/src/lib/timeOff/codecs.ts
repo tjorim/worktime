@@ -5,11 +5,14 @@ import { parseHday } from "../hday/parser";
 import { toLine } from "../hday/serializer";
 import type { EventFlag, HdayEvent } from "../hday/types";
 import type {
+  TimeOffDateEntry,
   TimeOffEntry,
   TimeOffEntryFlag,
   TimeOffEntryType,
   TimeOffImportResult,
+  TimeOffWeeklyEntry,
 } from "./types";
+import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "./types";
 
 const TYPE_FLAG_TO_ENTRY_TYPE: Record<string, TimeOffEntryType> = {
   holiday: "vacation",
@@ -60,11 +63,43 @@ function expandRange(start: string, end: string): string[] {
   return dates;
 }
 
-export function createTimeOffEntry(
-  data: Omit<TimeOffEntry, "id"> & { id?: string },
-): TimeOffEntry {
+function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
+  entryType: TimeOffEntryType;
+  flags: TimeOffEntryFlag[];
+} {
+  const normalizedFlags = normalizeEventFlags(flags ?? ["holiday"]);
+  const typeFlag = normalizedFlags.find((flag) => flag in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
+  const entryType = TYPE_FLAG_TO_ENTRY_TYPE[typeFlag] ?? "vacation";
+  const timeFlags = normalizedFlags.filter(
+    (flag): flag is TimeOffEntryFlag =>
+      flag === "half_am" ||
+      flag === "half_pm" ||
+      flag === "onsite" ||
+      flag === "no_fly" ||
+      flag === "can_fly",
+  );
+  return { entryType, flags: timeFlags };
+}
+
+type TimeOffEntryInput =
+  | (Omit<TimeOffDateEntry, "id"> & { id?: string })
+  | (Omit<TimeOffWeeklyEntry, "id"> & { id?: string });
+
+export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
+  if (data.kind === "weekly") {
+    return {
+      id: data.id ?? uuidv4(),
+      kind: "weekly",
+      weekday: data.weekday,
+      entryType: data.entryType,
+      flags: [...data.flags],
+      note: data.note?.trim() || null,
+    };
+  }
+
   return {
     id: data.id ?? uuidv4(),
+    kind: "date",
     date: data.date,
     entryType: data.entryType,
     flags: [...data.flags],
@@ -79,11 +114,32 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
   let skippedUnknownCount = 0;
 
   for (const event of parsed) {
-    if (event.type === "weekly") {
-      skippedWeeklyCount += 1;
+    if (event.type === "unknown") {
+      skippedUnknownCount += 1;
       continue;
     }
-    if (event.type === "unknown" || !event.start) {
+
+    const metadata = getEntryMetadataFromFlags(event.flags);
+
+    if (event.type === "weekly") {
+      if (!event.weekday || event.weekday < 1 || event.weekday > 7) {
+        skippedWeeklyCount += 1;
+        continue;
+      }
+
+      entries.push(
+        createTimeOffEntry({
+          kind: "weekly",
+          weekday: event.weekday,
+          entryType: metadata.entryType,
+          flags: metadata.flags,
+          note: event.title?.trim() || null,
+        }),
+      );
+      continue;
+    }
+
+    if (!event.start) {
       skippedUnknownCount += 1;
       continue;
     }
@@ -94,24 +150,13 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
       continue;
     }
 
-    const normalizedFlags = normalizeEventFlags(event.flags ?? ["holiday"]);
-    const typeFlag = normalizedFlags.find((flag) => flag in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
-    const entryType = TYPE_FLAG_TO_ENTRY_TYPE[typeFlag] ?? "vacation";
-    const flags = normalizedFlags.filter(
-      (flag): flag is TimeOffEntryFlag =>
-        flag === "half_am" ||
-        flag === "half_pm" ||
-        flag === "onsite" ||
-        flag === "no_fly" ||
-        flag === "can_fly",
-    );
-
     for (const date of dates) {
       entries.push(
         createTimeOffEntry({
+          kind: "date",
           date,
-          entryType,
-          flags,
+          entryType: metadata.entryType,
+          flags: metadata.flags,
           note: event.title?.trim() || null,
         }),
       );
@@ -129,7 +174,10 @@ type EntryRangeGroup = {
   note: string | null;
 };
 
-function sameMetadata(left: TimeOffEntry, right: TimeOffEntry): boolean {
+function sameMetadata(
+  left: Pick<TimeOffDateEntry | TimeOffWeeklyEntry, "entryType" | "flags" | "note">,
+  right: Pick<TimeOffDateEntry | TimeOffWeeklyEntry, "entryType" | "flags" | "note">,
+): boolean {
   return (
     left.entryType === right.entryType &&
     left.note === right.note &&
@@ -138,10 +186,15 @@ function sameMetadata(left: TimeOffEntry, right: TimeOffEntry): boolean {
 }
 
 export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  const groups: EntryRangeGroup[] = [];
+  const datedEntries = entries
+    .filter(isTimeOffDateEntry)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const weeklyEntries = entries
+    .filter(isTimeOffWeeklyEntry)
+    .sort((a, b) => a.weekday - b.weekday || a.id.localeCompare(b.id));
 
-  for (const entry of sorted) {
+  const groups: EntryRangeGroup[] = [];
+  for (const entry of datedEntries) {
     const previous = groups[groups.length - 1];
     if (!previous) {
       groups.push({
@@ -154,13 +207,14 @@ export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
       continue;
     }
 
-    const previousEntry = createTimeOffEntry({
+    const previousEntry: TimeOffDateEntry = {
       id: "group",
+      kind: "date",
       date: previous.end,
       entryType: previous.entryType,
       flags: previous.flags,
       note: previous.note,
-    });
+    };
     const nextExpectedDate = dayjs(previous.end).add(1, "day").format("YYYY-MM-DD");
     if (sameMetadata(previousEntry, entry) && entry.date === nextExpectedDate) {
       previous.end = entry.date;
@@ -176,27 +230,45 @@ export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
     });
   }
 
-  return groups
-    .map((group) =>
-      toLine({
-        type: "range",
-        start: toHdayDate(group.start),
-        end: toHdayDate(group.end),
-        title: group.note ?? "",
-        flags: getEntryFlags(group.entryType, group.flags),
-      }),
-    )
-    .join("\n");
+  const rangeLines = groups.map((group) =>
+    toLine({
+      type: "range",
+      start: toHdayDate(group.start),
+      end: toHdayDate(group.end),
+      title: group.note ?? "",
+      flags: getEntryFlags(group.entryType, group.flags),
+    }),
+  );
+
+  const weeklyLines = weeklyEntries.map((entry) =>
+    toLine({
+      type: "weekly",
+      weekday: entry.weekday,
+      title: entry.note ?? "",
+      flags: getEntryFlags(entry.entryType, entry.flags),
+    }),
+  );
+
+  return [...rangeLines, ...weeklyLines].join("\n");
 }
 
 export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
-  return entries.map((entry) => ({
-    type: "range",
-    start: toHdayDate(entry.date),
-    end: toHdayDate(entry.date),
-    title: entry.note ?? "",
-    flags: getEntryFlags(entry.entryType, entry.flags),
-  }));
+  return entries.map((entry) =>
+    isTimeOffDateEntry(entry)
+      ? {
+          type: "range",
+          start: toHdayDate(entry.date),
+          end: toHdayDate(entry.date),
+          title: entry.note ?? "",
+          flags: getEntryFlags(entry.entryType, entry.flags),
+        }
+      : {
+          type: "weekly",
+          weekday: entry.weekday,
+          title: entry.note ?? "",
+          flags: getEntryFlags(entry.entryType, entry.flags),
+        },
+  );
 }
 
 export function buildTimeOffEntriesForDateRange(input: {
@@ -211,12 +283,28 @@ export function buildTimeOffEntriesForDateRange(input: {
   const dates = expandRange(start, end);
   return dates.map((date) =>
     createTimeOffEntry({
+      kind: "date",
       date,
       entryType: input.entryType,
       flags: input.flags,
       note: input.note?.trim() || null,
     }),
   );
+}
+
+export function createWeeklyTimeOffEntry(input: {
+  weekday: number;
+  note?: string;
+  entryType: TimeOffEntryType;
+  flags: TimeOffEntryFlag[];
+}): TimeOffEntry {
+  return createTimeOffEntry({
+    kind: "weekly",
+    weekday: input.weekday,
+    entryType: input.entryType,
+    flags: input.flags,
+    note: input.note?.trim() || null,
+  });
 }
 
 export function getEntryFlagsForDisplay(entry: TimeOffEntry): EventFlag[] {

@@ -18,6 +18,7 @@ import {
   WORK_LOCATIONS_STORAGE_PREFIX,
 } from "../constants/storageKeys";
 import {
+  LEGACY_TIME_OFF_STORAGE_KEY,
   loadTimeOffEntries,
   normalizeTimeOffEntries,
   saveTimeOffEntries,
@@ -28,7 +29,7 @@ export type AppBackupPayload = {
   exportedAt: string;
   version: 1;
   userState?: unknown;
-  timeOff?: unknown[];
+  timeOff?: unknown[] | string;
   workLocations?: Record<string, unknown>;
   tasks?: unknown[];
   templates?: unknown[];
@@ -185,8 +186,13 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.timeOff) {
-    const timeOff = loadTimeOffEntries();
-    if (timeOff.length > 0) payload.timeOff = timeOff;
+    const rawTimeOff = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
+    if (rawTimeOff) {
+      payload.timeOff = rawTimeOff;
+    } else {
+      const timeOff = loadTimeOffEntries();
+      if (timeOff.length > 0) payload.timeOff = timeOff;
+    }
   }
 
   if (include.workLocations) {
@@ -304,7 +310,14 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     }
   }
 
-  if ("timeOff" in p && p.timeOff !== undefined && !Array.isArray(p.timeOff)) return false;
+  if (
+    "timeOff" in p &&
+    p.timeOff !== undefined &&
+    !Array.isArray(p.timeOff) &&
+    typeof p.timeOff !== "string"
+  ) {
+    return false;
+  }
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
   if ("templates" in p && p.templates !== undefined && !Array.isArray(p.templates)) return false;
   if ("labels" in p && p.labels !== undefined && !Array.isArray(p.labels)) return false;
@@ -325,7 +338,9 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
   }
 
-  if (Array.isArray(payload.timeOff)) {
+  if (typeof payload.timeOff === "string") {
+    localStorage.setItem(LEGACY_TIME_OFF_STORAGE_KEY, payload.timeOff);
+  } else if (Array.isArray(payload.timeOff)) {
     saveTimeOffEntries(normalizeTimeOffEntries(payload.timeOff));
   }
 
