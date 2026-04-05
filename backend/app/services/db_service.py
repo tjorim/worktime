@@ -690,7 +690,7 @@ async def update_time_off_entry(
     non_nullable_fields = _get_non_nullable_model_fields(TimeOffEntry)
     for field, value in data.items():
         if field in non_nullable_fields and value is None:
-            raise ValidationError(f"{field} cannot be null")
+            raise ValidationError(f"{field} cannot be None")
     for field, value in data.items():
         setattr(entry, field, value)
     entry.updated_at = datetime.now(UTC)
