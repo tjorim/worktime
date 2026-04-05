@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy import func as sql_func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -551,35 +552,32 @@ async def upsert_user_preferences(
     ``client_updated_at``. Returns the current stored row (possibly unchanged).
     """
     candidate_client_updated_at = as_utc(payload.client_updated_at)
+    now = datetime.now(UTC)
 
-    while True:
-        try:
-            async with session.begin():
-                result = await session.execute(
-                    select(UserPreferences)
-                    .where(UserPreferences.user_id == user_id)
-                    .with_for_update()
-                )
-                prefs = result.scalar_one_or_none()
+    statement = pg_insert(UserPreferences).values(
+        user_id=user_id,
+        data=payload.data,
+        client_updated_at=candidate_client_updated_at,
+        updated_at=now,
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["user_id"],
+        set_={
+            "data": statement.excluded.data,
+            "client_updated_at": statement.excluded.client_updated_at,
+            "updated_at": statement.excluded.updated_at,
+        },
+        where=statement.excluded.client_updated_at > UserPreferences.client_updated_at,
+    ).returning(UserPreferences)
 
-                if prefs is None:
-                    prefs = UserPreferences(
-                        user_id=user_id,
-                        data=payload.data,
-                        client_updated_at=candidate_client_updated_at,
-                    )
-                    session.add(prefs)
-                elif candidate_client_updated_at > as_utc(prefs.client_updated_at):
-                    prefs.data = payload.data
-                    prefs.client_updated_at = candidate_client_updated_at
-                    prefs.updated_at = datetime.now(UTC)
-                    session.add(prefs)
-            break
-        except IntegrityError:
-            await session.rollback()
-            continue
+    result = await session.execute(statement)
+    prefs = result.scalar_one_or_none()
+    if prefs is None:
+        prefs = await session.get(UserPreferences, user_id)
+        if prefs is None:
+            raise RuntimeError("user preferences upsert failed to return or load a row")
 
-    await session.refresh(prefs)
+    await session.commit()
     return prefs
 
 
