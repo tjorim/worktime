@@ -2,16 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MainTabs } from "../../src/components/MainTabs";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
 import { dayjs } from "../../src/utils/dateTimeUtils";
-
-const createTestQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+import { TestProviders } from "../utils/testProviders";
 
 // Mock the child components
 vi.mock("../../src/components/ScheduleTabView", () => ({
@@ -57,21 +50,7 @@ function renderWithProviders(ui: React.ReactElement) {
       },
     }),
   );
-  return render(wrapWithProviders(ui));
-}
-
-function wrapWithProviders(ui: React.ReactElement) {
-  return (
-    <QueryClientProvider client={createTestQueryClient()}>
-      <ToastProvider>
-        <DeveloperOptionsProvider>
-          <SettingsProvider>
-            <EventStoreProvider>{ui}</EventStoreProvider>
-          </SettingsProvider>
-        </DeveloperOptionsProvider>
-      </ToastProvider>
-    </QueryClientProvider>
-  );
+  return render(<TestProviders>{ui}</TestProviders>);
 }
 
 describe("MainTabs", () => {
@@ -114,7 +93,7 @@ describe("MainTabs", () => {
       const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
       expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
 
-      rerender(wrapWithProviders(<MainTabs {...defaultProps} activeTab="timeoff" />));
+      rerender(<TestProviders><MainTabs {...defaultProps} activeTab="timeoff" /></TestProviders>);
       expect(screen.getByRole("tab", { name: "Time Off" })).toHaveAttribute(
         "aria-selected",
         "true",

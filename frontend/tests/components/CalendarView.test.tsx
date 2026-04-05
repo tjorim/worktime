@@ -1,25 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CalendarView } from "../../src/components/CalendarView";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-
-const createTestQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
-
-// Wrapper with all necessary providers
-const AllProviders = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={createTestQueryClient()}>
-    <SettingsProvider>
-      <ToastProvider>
-        <EventStoreProvider>{children}</EventStoreProvider>
-      </ToastProvider>
-    </SettingsProvider>
-  </QueryClientProvider>
-);
+import { TestProviders } from "../utils/testProviders";
 
 describe("CalendarView", () => {
   beforeEach(() => {
@@ -29,9 +12,9 @@ describe("CalendarView", () => {
   describe("Empty State", () => {
     it("should show empty-state guidance when myTeam is null and no schedule", () => {
       render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={null} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       expect(screen.getByText(/Welcome to Your Working Calendar/i)).toBeInTheDocument();
@@ -41,9 +24,9 @@ describe("CalendarView", () => {
 
     it("should render calendar title", () => {
       render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={null} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       expect(screen.getByText(/My Working Calendar/i)).toBeInTheDocument();
@@ -51,9 +34,9 @@ describe("CalendarView", () => {
 
     it("should show schedule selection message when no team selected", () => {
       render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={null} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       expect(
@@ -91,9 +74,9 @@ describe("CalendarView", () => {
       );
 
       const { container } = render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={1} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       // Component should render with calendar grid (not empty state)
@@ -102,9 +85,9 @@ describe("CalendarView", () => {
 
     it("should render calendar card structure", () => {
       render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={null} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       // Should have card structure with title
@@ -141,9 +124,9 @@ describe("CalendarView", () => {
       );
 
       render(
-        <AllProviders>
+        <TestProviders>
           <CalendarView myTeam={1} />
-        </AllProviders>,
+        </TestProviders>,
       );
 
       // Assert: shift badges should be visible in the calendar with valid shift codes

@@ -55,8 +55,13 @@ export function useOpenHolidays<T>({
   networkError,
   unknownError,
 }: UseOpenHolidaysOptions) {
+  // Serialize params so the query key is stable regardless of whether callers
+  // (e.g. usePublicHolidays / useSchoolHolidays) pass a new object reference
+  // on every render. Those hooks already memoize params, but this extra step
+  // prevents spurious cache misses if a future consumer forgets to do so.
+  const stableParamsKey = JSON.stringify(params);
   const { data, isLoading, error } = useQuery<T[], Error>({
-    queryKey: ["openHolidays", endpoint, params],
+    queryKey: ["openHolidays", endpoint, stableParamsKey],
     queryFn: ({ signal }) =>
       fetchOpenHolidays<T>(endpoint, params, responseErrorPrefix, timeoutError, networkError, signal),
     enabled,
