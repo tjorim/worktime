@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-
 # ---------------------------------------------------------------------------
 # Auth tests
 # ---------------------------------------------------------------------------

@@ -3,22 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _ts(offset_seconds: float = 0.0) -> str:
-    """Return an ISO timestamp offset from now."""
-    from datetime import timedelta
-
-    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
-
+from tests.conftest import utc_timestamp_offset as _ts
 
 # ---------------------------------------------------------------------------
 # Auth tests
