@@ -541,19 +541,26 @@ const TYPE_FLAGS = new Set([
  * Returns an empty array if the dates are invalid or end is before start.
  */
 function expandHdayRange(start: string, end: string): string[] {
+  // .hday uses YYYY/MM/DD; dayjs/ISO-8601 uses YYYY-MM-DD.
   const toIso = (d: string) => d.replace(/\//g, "-");
   const startDay = dayjs(toIso(start));
   const endDay = dayjs(toIso(end));
   if (!startDay.isValid() || !endDay.isValid() || endDay.isBefore(startDay)) return [];
   const dates: string[] = [];
   let current = startDay;
-  // Guard against accidental generation of thousands of entries (max 3 years).
+  // Limit to 3 years of individual dates to prevent accidental generation of
+  // thousands of entries from a malformed or very long range in the .hday file.
   const maxDays = 365 * 3;
   while (!current.isAfter(endDay) && dates.length <= maxDays) {
     dates.push(current.format("YYYY-MM-DD"));
     current = current.add(1, "day");
   }
   return dates;
+}
+
+/** Convert a backend ISO date string (YYYY-MM-DD) to the .hday date format (YYYY/MM/DD). */
+function isoToHdayDate(isoDate: string): string {
+  return isoDate.replace(/-/g, "/");
 }
 
 /**
@@ -637,9 +644,8 @@ export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
   for (const item of items) {
     if (item.deleted_at !== null) continue;
     // Convert YYYY-MM-DD to YYYY/MM/DD for .hday format
-    const dateParts = item.date.split("-");
-    if (dateParts.length !== 3) continue;
-    const hdayDate = dateParts.join("/");
+    const hdayDate = isoToHdayDate(item.date);
+    if (!hdayDate.includes("/")) continue; // guard against non-date strings
 
     const typeChar = ENTRY_TYPE_TO_FLAG[item.entry_type] ?? null;
     const locChars = (item.flags ?? [])

@@ -88,8 +88,42 @@ function payloadHasData(payload: SyncPushPayload): boolean {
     payload.labels.length > 0 ||
     payload.tasks.length > 0 ||
     payload.templates.length > 0 ||
-    payload.work_locations.length > 0
+    payload.work_locations.length > 0 ||
+    payload.time_off_entries.length > 0
   );
+}
+
+type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+type MountedCheck = () => boolean;
+
+/**
+ * Push local user preferences to the server if they exist in localStorage.
+ * Returns false and does nothing if `mounted()` returns false (component unmounted).
+ */
+async function pushLocalPreferencesIfPresent(
+  fetch: FetchFn,
+  mounted: MountedCheck,
+): Promise<boolean> {
+  const prefsPayload = buildLocalPreferencesPayload();
+  if (!prefsPayload) return true; // nothing to push — not a failure
+  await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
+  return mounted();
+}
+
+/**
+ * Pull server preferences and apply them to localStorage if the server has any.
+ * Returns false if `mounted()` returns false after the fetch (component unmounted).
+ */
+async function pullAndApplyServerPreferencesIfPresent(
+  fetch: FetchFn,
+  mounted: MountedCheck,
+): Promise<boolean> {
+  const serverPrefs = await fetchPreferences(fetch);
+  if (!mounted()) return false;
+  if (serverPrefs) {
+    applyPreferencesPull(serverPrefs.data);
+  }
+  return true;
 }
 
 export function useFirstSyncFlow(
@@ -158,11 +192,11 @@ export function useFirstSyncFlow(
           return;
         }
         // Also push local preferences (user state) to the server.
-        const prefsPayload = buildLocalPreferencesPayload();
-        if (prefsPayload) {
-          await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
-          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-        }
+        const stillMounted = await pushLocalPreferencesIfPresent(
+          fetch,
+          () => mountedRef.current && flowStartedForUser.current === uid,
+        );
+        if (!stillMounted) return;
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
@@ -184,11 +218,11 @@ export function useFirstSyncFlow(
         }
         applySyncPullResponse(pullResult);
         // Also pull preferences from the server and apply to localStorage.
-        const serverPrefs = await fetchPreferences(fetch);
-        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-        if (serverPrefs) {
-          applyPreferencesPull(serverPrefs.data);
-        }
+        const stillMounted = await pullAndApplyServerPreferencesIfPresent(
+          fetch,
+          () => mountedRef.current && flowStartedForUser.current === uid,
+        );
+        if (!stillMounted) return;
         storeSyncCursor(uid, pullResult.server_timestamp);
         setPhase("done");
         return;
@@ -237,11 +271,11 @@ export function useFirstSyncFlow(
               return;
             }
             // Push local preferences to the server (keep-local means local wins).
-            const prefsPayload = buildLocalPreferencesPayload();
-            if (prefsPayload) {
-              await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
-              if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-            }
+            const prefsMounted = await pushLocalPreferencesIfPresent(
+              fetch,
+              () => mountedRef.current && flowStartedForUser.current === uid,
+            );
+            if (!prefsMounted) return;
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             const cursor = postStatus?.server_timestamp ?? serverData.server_timestamp;
@@ -262,11 +296,11 @@ export function useFirstSyncFlow(
             }
             applySyncPullResponse(pullResult);
             // Pull preferences from the server (use-server means server wins).
-            const serverPrefs = await fetchPreferences(fetch);
-            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-            if (serverPrefs) {
-              applyPreferencesPull(serverPrefs.data);
-            }
+            const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
+              fetch,
+              () => mountedRef.current && flowStartedForUser.current === uid,
+            );
+            if (!prefsMounted) return;
             storeSyncCursor(uid, pullResult.server_timestamp);
             setPhase("done");
           }

@@ -46,6 +46,10 @@ function seedTasks() {
   );
 }
 
+function seedTimeOff() {
+  localStorage.setItem("worktime_hday_raw", "2026/07/14 # Bastille Day");
+}
+
 describe("useFirstSyncFlow", () => {
   beforeEach(() => {
     mockFetch.mockReset();
@@ -122,6 +126,32 @@ describe("useFirstSyncFlow", () => {
     );
     expect(pushCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).not.toBeNull();
+  });
+
+  it("Branch A: pushes local time-off entries when only time-off data exists", async () => {
+    seedTimeOff(); // only time-off, no tasks
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus })    // status check
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });   // re-fetch status
+
+    const { result } = renderHook(() =>
+      useFirstSyncFlow(true, "user-1", mockFetch),
+    );
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("done");
+    });
+
+    // Push endpoint should have been called with time-off entries
+    const pushCall = mockFetch.mock.calls.find(
+      ([url]: [string]) => url === "/db/sync/push",
+    );
+    expect(pushCall).toBeDefined();
+    const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
+    expect(body.time_off_entries).toHaveLength(1);
+    expect(body.time_off_entries[0].date).toBe("2026-07-14");
   });
 
   it("Branch B: pulls server data when local is empty", async () => {
