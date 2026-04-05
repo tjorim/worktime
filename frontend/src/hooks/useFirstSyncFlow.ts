@@ -195,9 +195,6 @@ export function useFirstSyncFlow(
 
       const uid = userId;
       const fetch = fetchFn;
-      // Use the status we already fetched when entering Branch C as the
-      // fallback timestamp, avoiding an extra /db/sync/status round-trip.
-      const preStatus = capturedStatusRef.current;
 
       const execute = async () => {
         // Lock the conflict resolution to this user.
@@ -225,7 +222,7 @@ export function useFirstSyncFlow(
             }
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
-            const cursor = postStatus?.server_timestamp ?? preStatus?.server_timestamp;
+            const cursor = postStatus?.server_timestamp ?? serverData.server_timestamp;
             if (!cursor) {
               setPhase("error");
               return;
