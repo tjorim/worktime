@@ -199,7 +199,7 @@ async def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = _get_provided_fields(item) - {"date", "action", "client_updated_at"}
+    provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
