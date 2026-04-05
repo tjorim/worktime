@@ -738,3 +738,158 @@ class TestSyncPush:
         resp = db_client.post("/db/sync/push", json={}, headers=headers)
         assert resp.status_code == 200
         assert "X-Sync-Ms" in resp.headers
+
+
+class TestSyncTimeOffEntries:
+    """Sync push/pull for time-off entries."""
+
+    def _create_user(self, client: TestClient, admin_headers: dict, username: str) -> int:
+        resp = client.post(
+            "/db/users/",
+            json={"username": username, "display_name": username, "settings": {}, "password": "test-password-1"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 201, resp.text
+        return resp.json()["id"]
+
+    def test_push_create_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-to-create")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-07-01",
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "entry_type": "vacation",
+                        "flags": [],
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        results = resp.json()["results"]["time_off_entries"]
+        assert len(results) == 1
+        assert results[0]["status"] == "ok"
+
+    def test_push_delete_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-to-delete")
+        headers = auth_headers(user_id)
+
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-08-01",
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "entry_type": "sick",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-08-01",
+                        "action": "delete",
+                        "client_updated_at": _ts(),
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+    def test_pull_includes_time_off_entries(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-to-pull")
+        headers = auth_headers(user_id)
+
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-09-01",
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "entry_type": "vacation",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        assert len(pull_resp.json()["time_off_entries"]) == 1
+        assert pull_resp.json()["time_off_entries"][0]["date"] == "2026-09-01"
+
+    def test_status_includes_time_off_and_preferences_fields(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-status-new-fields")
+        headers = auth_headers(user_id)
+
+        resp = db_client.get("/db/sync/status", headers=headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "time_off_entries_updated_at" in body
+        assert body["time_off_entries_updated_at"] is None
+        assert "preferences_updated_at" in body
+        assert body["preferences_updated_at"] is None
+
+    def test_time_off_conflict_detection(self, db_client: TestClient, auth_headers) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-to-conflict")
+        headers = auth_headers(user_id)
+
+        # Push with a newer timestamp first
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-10-01",
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "entry_type": "vacation",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        # Push with an older timestamp → conflict
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-10-01",
+                        "action": "update",
+                        "client_updated_at": _ts(-100),
+                        "entry_type": "sick",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["time_off_entries"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "server version is newer"

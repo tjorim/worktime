@@ -1,0 +1,131 @@
+"""REST API endpoints for database-backed time-off entries (local-first sync)."""
+
+from __future__ import annotations
+
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.engine import get_session
+from app.routers.auth import get_authenticated_user_id, require_user_match
+from app.schemas import (
+    TimeOffEntryCreate,
+    TimeOffEntryListResponse,
+    TimeOffEntryRead,
+    TimeOffEntryUpdate,
+)
+from app.services.db_service import (
+    NotFoundError,
+    create_or_update_time_off_entry,
+    delete_time_off_entry,
+    get_time_off_entry,
+    list_time_off_entries,
+    update_time_off_entry,
+)
+from app.utils.timing import time_operation
+
+router = APIRouter(prefix="/db/time-off", tags=["Database Time Off"])
+
+
+@router.post("/", response_model=TimeOffEntryRead, status_code=status.HTTP_201_CREATED)
+async def create_or_update_time_off_endpoint(
+    payload: TimeOffEntryCreate,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: AsyncSession = Depends(get_session),
+) -> TimeOffEntryRead:
+    require_user_match(user_id, authenticated_user_id)
+    entry = await create_or_update_time_off_entry(session, user_id, payload)
+    return TimeOffEntryRead.model_validate(entry, from_attributes=True)
+
+
+@router.get("/", response_model=TimeOffEntryListResponse)
+async def list_time_off_entries_endpoint(
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    start_date: date | None = None,
+    end_date: date | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    require_user_match(user_id, authenticated_user_id)
+    timings: dict[str, float] = {}
+    with time_operation("query", timings):
+        entries = await list_time_off_entries(
+            session,
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    response = TimeOffEntryListResponse(
+        items=[TimeOffEntryRead.model_validate(e, from_attributes=True) for e in entries],
+        total=len(entries),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=response.model_dump(mode="json"),
+        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+    )
+
+
+@router.get("/{entry_date}", response_model=TimeOffEntryRead)
+async def get_time_off_entry_endpoint(
+    entry_date: date,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    require_user_match(user_id, authenticated_user_id)
+    timings: dict[str, float] = {}
+    try:
+        with time_operation("query", timings):
+            entry = await get_time_off_entry(session, user_id, entry_date)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json"),
+        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+    )
+
+
+@router.patch("/{entry_date}", response_model=TimeOffEntryRead)
+async def update_time_off_entry_endpoint(
+    entry_date: date,
+    payload: TimeOffEntryUpdate,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    require_user_match(user_id, authenticated_user_id)
+    timings: dict[str, float] = {}
+    try:
+        with time_operation("query", timings):
+            entry = await update_time_off_entry(session, user_id, entry_date, payload)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=TimeOffEntryRead.model_validate(entry, from_attributes=True).model_dump(mode="json"),
+        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+    )
+
+
+@router.delete("/{entry_date}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_time_off_entry_endpoint(
+    entry_date: date,
+    user_id: int = Query(..., ge=1),
+    authenticated_user_id: int = Depends(get_authenticated_user_id),
+    session: AsyncSession = Depends(get_session),
+) -> Response:
+    require_user_match(user_id, authenticated_user_id)
+    try:
+        await delete_time_off_entry(session, user_id, entry_date)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

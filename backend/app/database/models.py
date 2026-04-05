@@ -175,3 +175,69 @@ class GanttTask(Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
+
+
+class UserPreferences(Base):
+    """Account-backed storage for a user's local-first preferences/settings blob.
+
+    One row per user.  The ``data`` column stores the full ``worktime_user_state``
+    JSON payload as-is from the client.  ``client_updated_at`` carries the
+    client-side timestamp used for last-write-wins conflict detection during sync.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    client_updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
+    )
+
+
+class TimeOffEntry(Base):
+    """Per-day structured time-off record for account-backed sync.
+
+    Uses (user_id, date) as the natural key (similar to WorkLocation).
+    ``entry_type`` is a free-form string (e.g. ``"vacation"``, ``"sick"``,
+    ``"holiday"``); ``flags`` stores additional hday flag tokens as a JSON
+    array; ``note`` is an optional human-readable label.
+
+    Soft-deleted rows (``deleted_at IS NOT NULL``) are propagated to other
+    devices during pull so that deletions sync correctly.
+    """
+
+    __tablename__ = "time_off_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    date: Mapped[dt_date] = mapped_column(Date, index=True)
+    entry_type: Mapped[str] = mapped_column(String, default="vacation")
+    flags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    note: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+    updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
+    )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_active_time_off_user_date",
+            "user_id",
+            "date",
+            unique=True,
+            postgresql_where=sql_text("deleted_at IS NULL"),
+        ),
+    )

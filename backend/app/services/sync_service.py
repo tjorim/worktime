@@ -35,9 +35,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
+    TimeOffEntry,
     TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
+    UserPreferences,
     WorkLocation,
 )
 from app.schemas import (
@@ -52,6 +54,8 @@ from app.schemas import (
     TaskSyncRead,
     TemplateSyncItem,
     TemplateSyncRead,
+    TimeOffEntrySyncItem,
+    TimeOffEntrySyncRead,
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
@@ -341,8 +345,70 @@ async def _push_work_location(
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
 
+async def _push_time_off_entry(
+    session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
+) -> SyncRecordResult:
+    """Time-off entries use (user_id, date) as their natural key."""
+    now = _now()
+    date_key = item.date.isoformat()
+
+    result = await session.execute(
+        select(TimeOffEntry).where(
+            TimeOffEntry.user_id == user_id,
+            TimeOffEntry.date == item.date,
+        )
+    )
+    entry: TimeOffEntry | None = result.scalar_one_or_none()
+
+    if item.action == "delete":
+        if entry is None or entry.deleted_at is not None:
+            return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+        if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
+            return SyncRecordResult(
+                id=date_key,
+                status="conflict",
+                server_updated_at=entry.updated_at,
+                conflict_reason="server version is newer",
+            )
+        entry.deleted_at = now
+        entry.updated_at = now
+        session.add(entry)
+        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+
+    if entry is None:
+        entry = TimeOffEntry(
+            user_id=user_id,
+            date=item.date,
+            entry_type=item.entry_type or "vacation",
+            flags=item.flags or [],
+            note=item.note,
+        )
+        session.add(entry)
+        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+
+    if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
+        return SyncRecordResult(
+            id=date_key,
+            status="conflict",
+            server_updated_at=entry.updated_at,
+            conflict_reason="server version is newer",
+        )
+    provided_fields = _get_provided_fields(item)
+    if "entry_type" in provided_fields and item.entry_type is not None:
+        entry.entry_type = item.entry_type
+    if "flags" in provided_fields and item.flags is not None:
+        entry.flags = item.flags
+    if "note" in provided_fields:
+        entry.note = item.note
+    if entry.deleted_at is not None:
+        entry.deleted_at = None
+    entry.updated_at = now
+    session.add(entry)
+    return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+
+
 type SyncEntityModel = (
-    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation
+    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry
 )
 
 
@@ -378,6 +444,7 @@ async def push_changes(
         "tasks": [],
         "templates": [],
         "work_locations": [],
+        "time_off_entries": [],
     }
 
     for item in changes.labels:
@@ -391,6 +458,9 @@ async def push_changes(
 
     for item in changes.work_locations:
         results["work_locations"].append(await _push_work_location(session, user_id, item))
+
+    for item in changes.time_off_entries:
+        results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
 
     await session.commit()
     return SyncPushResponse(results=results)
@@ -406,12 +476,14 @@ async def pull_changes(
     tasks = await _get_synced_entities(session, TimeTrackingTask, user_id, since_utc)
     templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
     work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
+    time_off_entries = await _get_synced_entities(session, TimeOffEntry, user_id, since_utc)
 
     return SyncPullResponse(
         labels=[LabelSyncRead.model_validate(r, from_attributes=True) for r in labels],
         tasks=[TaskSyncRead.model_validate(r, from_attributes=True) for r in tasks],
         templates=[TemplateSyncRead.model_validate(r, from_attributes=True) for r in templates],
         work_locations=[WorkLocationSyncRead.model_validate(r, from_attributes=True) for r in work_locations],
+        time_off_entries=[TimeOffEntrySyncRead.model_validate(r, from_attributes=True) for r in time_off_entries],
         server_timestamp=_now(),
     )
 
@@ -425,10 +497,18 @@ async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResp
         )
         return result.scalar_one_or_none()
 
+    async def _prefs_updated_at(user_id: int) -> datetime | None:
+        result = await session.execute(
+            select(UserPreferences.updated_at).where(UserPreferences.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
     return SyncStatusResponse(
         labels_updated_at=await _max_ts(TimeTrackingLabel, user_id),
         tasks_updated_at=await _max_ts(TimeTrackingTask, user_id),
         templates_updated_at=await _max_ts(TimeTrackingTemplate, user_id),
         work_locations_updated_at=await _max_ts(WorkLocation, user_id),
+        time_off_entries_updated_at=await _max_ts(TimeOffEntry, user_id),
+        preferences_updated_at=await _prefs_updated_at(user_id),
         server_timestamp=_now(),
     )

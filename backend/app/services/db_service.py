@@ -11,10 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.models import (
     Base,
     GanttTask,
+    TimeOffEntry,
     TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     User,
+    UserPreferences,
     WorkLocation,
 )
 from app.schemas import (
@@ -26,7 +28,10 @@ from app.schemas import (
     TaskUpdate,
     TemplateCreate,
     TemplateUpdate,
+    TimeOffEntryCreate,
+    TimeOffEntryUpdate,
     UserCreate,
+    UserPreferencesWrite,
     UserUpdate,
     WorkLocationCreate,
     WorkLocationUpdate,
@@ -524,4 +529,146 @@ async def update_gantt_task(
 async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_gantt_task(session, user_id, task_id)
     await session.delete(task)
+    await session.commit()
+
+
+# User preferences operations
+
+
+async def get_user_preferences(session: AsyncSession, user_id: int) -> UserPreferences | None:
+    """Return the user's preferences row, or None if not yet set."""
+    return await session.get(UserPreferences, user_id)
+
+
+async def upsert_user_preferences(
+    session: AsyncSession, user_id: int, payload: UserPreferencesWrite
+) -> UserPreferences:
+    """Create or update the user's preferences row.
+
+    Last-write-wins: if a row already exists, the payload is accepted only when
+    ``payload.client_updated_at`` is strictly newer than the stored
+    ``client_updated_at``.  Returns the current stored row (possibly unchanged)
+    and a flag indicating whether the update was applied.
+    """
+    prefs = await session.get(UserPreferences, user_id)
+    if prefs is None:
+        prefs = UserPreferences(
+            user_id=user_id,
+            data=payload.data,
+            client_updated_at=as_utc(payload.client_updated_at),
+        )
+        session.add(prefs)
+        await session.commit()
+        await session.refresh(prefs)
+        return prefs
+
+    if as_utc(payload.client_updated_at) <= as_utc(prefs.client_updated_at):
+        # Server version is same age or newer — return without modification.
+        return prefs
+
+    prefs.data = payload.data
+    prefs.client_updated_at = as_utc(payload.client_updated_at)
+    prefs.updated_at = datetime.now(UTC)
+    session.add(prefs)
+    await session.commit()
+    await session.refresh(prefs)
+    return prefs
+
+
+# Time-off entry operations
+
+
+async def get_time_off_entry(session: AsyncSession, user_id: int, entry_date: date) -> TimeOffEntry:
+    result = await session.execute(
+        select(TimeOffEntry).where(
+            TimeOffEntry.user_id == user_id,
+            TimeOffEntry.date == entry_date,
+            TimeOffEntry.deleted_at.is_(None),
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if entry is None:
+        raise NotFoundError("time off entry not found")
+    return entry
+
+
+async def list_time_off_entries(
+    session: AsyncSession,
+    *,
+    user_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[TimeOffEntry]:
+    statement = select(TimeOffEntry).where(
+        TimeOffEntry.user_id == user_id,
+        TimeOffEntry.deleted_at.is_(None),
+    )
+    if start_date is not None:
+        statement = statement.where(TimeOffEntry.date >= start_date)
+    if end_date is not None:
+        statement = statement.where(TimeOffEntry.date <= end_date)
+
+    result = await session.execute(statement.order_by(TimeOffEntry.date))
+    return list(result.scalars().all())
+
+
+async def create_or_update_time_off_entry(
+    session: AsyncSession, user_id: int, payload: TimeOffEntryCreate
+) -> TimeOffEntry:
+    """Upsert a time-off entry for (user_id, date).
+
+    If an active row exists for the date, its fields are updated.
+    If a soft-deleted row exists, it is restored with the new payload.
+    If no row exists, a new one is created.
+    """
+    result = await session.execute(
+        select(TimeOffEntry).where(
+            TimeOffEntry.user_id == user_id,
+            TimeOffEntry.date == payload.date,
+        )
+    )
+    entry = result.scalar_one_or_none()
+
+    if entry is None:
+        entry = TimeOffEntry(
+            user_id=user_id,
+            date=payload.date,
+            entry_type=payload.entry_type,
+            flags=payload.flags,
+            note=payload.note,
+        )
+    else:
+        entry.entry_type = payload.entry_type
+        entry.flags = payload.flags
+        entry.note = payload.note
+        entry.deleted_at = None
+        entry.updated_at = datetime.now(UTC)
+
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+
+async def update_time_off_entry(
+    session: AsyncSession, user_id: int, entry_date: date, payload: TimeOffEntryUpdate
+) -> TimeOffEntry:
+    entry = await get_time_off_entry(session, user_id, entry_date)
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(entry, field, value)
+    entry.updated_at = datetime.now(UTC)
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+
+async def delete_time_off_entry(session: AsyncSession, user_id: int, entry_date: date) -> None:
+    """Soft-delete a time-off entry so deletions sync to other devices."""
+    entry = await get_time_off_entry(session, user_id, entry_date)
+    now = datetime.now(UTC)
+    entry.deleted_at = now
+    entry.updated_at = now
+    session.add(entry)
     await session.commit()

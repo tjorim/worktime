@@ -280,6 +280,70 @@ class GanttTaskListResponse(ListResponse[GanttTaskRead]):
 
 
 # ---------------------------------------------------------------------------
+# User Preferences schemas
+# ---------------------------------------------------------------------------
+
+
+class UserPreferencesRead(BaseModel):
+    """Response schema for the authenticated user's preferences blob."""
+
+    user_id: int
+    data: dict[str, Any]
+    client_updated_at: dt_datetime
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+
+class UserPreferencesWrite(BaseModel):
+    """Request schema for writing the authenticated user's preferences blob.
+
+    ``client_updated_at`` is the client-side timestamp of the local state being
+    pushed, used for last-write-wins conflict detection.
+    ``data`` is the full preferences JSON object (opaque to the server).
+    """
+
+    data: dict[str, Any]
+    client_updated_at: dt_datetime
+
+
+# ---------------------------------------------------------------------------
+# Time-off entry schemas
+# ---------------------------------------------------------------------------
+
+
+class TimeOffEntryCreate(BaseModel):
+    """Request schema for creating or upserting a time-off entry."""
+
+    date: dt_date
+    entry_type: str = "vacation"
+    flags: list[str] = Field(default_factory=list)
+    note: str | None = None
+
+
+class TimeOffEntryRead(BaseModel):
+    """Response schema for a single time-off entry."""
+
+    id: int
+    user_id: int
+    date: dt_date
+    entry_type: str
+    flags: list[str]
+    note: str | None
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+
+class TimeOffEntryUpdate(BaseModel):
+    entry_type: str | None = None
+    flags: list[str] | None = None
+    note: str | None = None
+
+
+class TimeOffEntryListResponse(ListResponse[TimeOffEntryRead]):
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Sync schemas
 # ---------------------------------------------------------------------------
 
@@ -342,6 +406,20 @@ class WorkLocationSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
+class TimeOffEntrySyncRead(BaseModel):
+    """Sync read shape for a time-off entry (includes soft-delete fields)."""
+
+    id: int
+    user_id: int
+    date: dt_date
+    entry_type: str
+    flags: list[str]
+    note: str | None
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
 # Sync push request item schemas — one per entity type.
 # For 'create'/'update' actions the entity fields are required in practice;
 # for 'delete' only the identity field is strictly needed.
@@ -386,6 +464,17 @@ class WorkLocationSyncItem(BaseModel):
     label: str | None = None
 
 
+class TimeOffEntrySyncItem(BaseModel):
+    """Time-off entries are identified by date (natural key per user)."""
+
+    date: dt_date
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    entry_type: str | None = None
+    flags: list[str] | None = None
+    note: str | None = None
+
+
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
@@ -393,6 +482,7 @@ class SyncPushRequest(BaseModel):
     tasks: list[TaskSyncItem] = []
     templates: list[TemplateSyncItem] = []
     work_locations: list[WorkLocationSyncItem] = []
+    time_off_entries: list[TimeOffEntrySyncItem] = []
 
 
 class SyncPushResponse(BaseModel):
@@ -408,6 +498,7 @@ class SyncPullResponse(BaseModel):
     tasks: list[TaskSyncRead]
     templates: list[TemplateSyncRead]
     work_locations: list[WorkLocationSyncRead]
+    time_off_entries: list[TimeOffEntrySyncRead]
     server_timestamp: dt_datetime
 
 
@@ -418,4 +509,6 @@ class SyncStatusResponse(BaseModel):
     tasks_updated_at: dt_datetime | None
     templates_updated_at: dt_datetime | None
     work_locations_updated_at: dt_datetime | None
+    time_off_entries_updated_at: dt_datetime | None
+    preferences_updated_at: dt_datetime | None
     server_timestamp: dt_datetime
