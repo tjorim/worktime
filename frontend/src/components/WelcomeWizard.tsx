@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import dayjs from "dayjs";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
@@ -111,7 +112,7 @@ export function WelcomeWizard({
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
   const { isAuthenticated, displayName, triggerSignup } = useAuth();
-  const currentYear = String(new Date().getFullYear());
+  const currentYear = dayjs().format("YYYY");
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);

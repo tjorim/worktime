@@ -10,6 +10,7 @@
  * tasks, templates, labels, and work locations.
  */
 
+import dayjs from "dayjs";
 import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "../components/timeTracking/types";
 import type { TimeTrackingLabel } from "../components/timeTracking/constants";
@@ -263,7 +264,7 @@ function localTimeToUtcIso(localTime: string): string | null {
  * guaranteed to be no conflicting server state.
  */
 export function buildLocalSyncPushPayload(): SyncPushPayload {
-  const now = new Date().toISOString();
+  const now = dayjs().toISOString();
 
   // Labels — filter out rows with missing/invalid required fields so that a
   // single corrupted label cannot cause the entire first-sync push to fail.
@@ -392,7 +393,7 @@ export function buildKeepLocalReplacePayload(
   localPayload: SyncPushPayload,
   serverData: SyncPullResponse,
 ): SyncPushPayload {
-  const now = new Date().toISOString();
+  const now = dayjs().toISOString();
 
   const localLabelIds = new Set(localPayload.labels.map((l) => l.id));
   const localTaskIds = new Set(localPayload.tasks.map((t) => t.id));
