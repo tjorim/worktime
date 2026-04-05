@@ -1,6 +1,6 @@
 import type { EventFlag, HdayEvent } from "../lib/hday/types";
 import type { TimeOffEntryFlag, TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import {
   getEntryTimeFlagsFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
@@ -177,6 +177,22 @@ function countWeeklyOccurrencesInYear(year: number, weekday: number): number {
   return count;
 }
 
+function countRangeDaysInYear(start: string, end: string, year: number): number {
+  const rangeStart = dayjs(start).startOf("day");
+  const rangeEnd = dayjs(end).startOf("day");
+  if (!rangeStart.isValid() || !rangeEnd.isValid() || rangeEnd.isBefore(rangeStart, "day")) {
+    return 0;
+  }
+
+  const yearStart = dayjs(`${year}-01-01`).startOf("day");
+  const yearEnd = dayjs(`${year}-12-31`).startOf("day");
+  const effectiveStart = rangeStart.isBefore(yearStart, "day") ? yearStart : rangeStart;
+  const effectiveEnd = rangeEnd.isAfter(yearEnd, "day") ? yearEnd : rangeEnd;
+  if (effectiveEnd.isBefore(effectiveStart, "day")) return 0;
+
+  return effectiveEnd.diff(effectiveStart, "day") + 1;
+}
+
 export const getAvailableYears = (
   entries: TimeOffEntry[] | HdayEvent[] | undefined,
   fallbackYear: number,
@@ -193,6 +209,17 @@ export const getAvailableYears = (
       if (isTimeOffDateEntry(entry)) {
         const parsed = dayjs(entry.date);
         if (parsed.isValid()) years.add(parsed.year());
+        return;
+      }
+
+      if (isTimeOffRangeEntry(entry)) {
+        const start = dayjs(entry.start).startOf("day");
+        const end = dayjs(entry.end).startOf("day");
+        if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return;
+
+        for (let coveredYear = start.year(); coveredYear <= end.year(); coveredYear += 1) {
+          years.add(coveredYear);
+        }
       }
     });
   } else {
@@ -258,12 +285,25 @@ export const calculateVacationStats = (
         return;
       }
 
-      if (!isDateInYear(entry.date, year)) return;
+      if (isTimeOffDateEntry(entry)) {
+        if (!isDateInYear(entry.date, year)) return;
 
-      const hourValue = dayValue * hoursPerDay;
-      totals[typeKey].days += dayValue;
-      totals[typeKey].hours += hourValue;
-      totalDays += dayValue;
+        const hourValue = dayValue * hoursPerDay;
+        totals[typeKey].days += dayValue;
+        totals[typeKey].hours += hourValue;
+        totalDays += dayValue;
+        return;
+      }
+
+      if (isTimeOffRangeEntry(entry)) {
+        const daysInYear = countRangeDaysInYear(entry.start, entry.end, year);
+        if (daysInYear === 0) return;
+
+        const totalForEntry = daysInYear * dayValue;
+        totals[typeKey].days += totalForEntry;
+        totals[typeKey].hours += totalForEntry * hoursPerDay;
+        totalDays += totalForEntry;
+      }
     });
   } else {
     entries.forEach((event) => {

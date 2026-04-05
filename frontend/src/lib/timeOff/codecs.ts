@@ -10,6 +10,7 @@ import type {
   TimeOffEntryFlag,
   TimeOffEntryType,
   TimeOffImportResult,
+  TimeOffRangeEntry,
   TimeOffWeeklyEntry,
 } from "./types";
 import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "./types";
@@ -48,21 +49,6 @@ function getEntryFlags(entryType: TimeOffEntryType, flags: TimeOffEntryFlag[]): 
   return normalizeEventFlags([ENTRY_TYPE_TO_EVENT_FLAG[entryType], ...flags]);
 }
 
-function expandRange(start: string, end: string): string[] {
-  const startDay = dayjs(toIsoDate(start));
-  const endDay = dayjs(toIsoDate(end));
-  if (!startDay.isValid() || !endDay.isValid() || endDay.isBefore(startDay, "day")) return [];
-
-  const dates: string[] = [];
-  let current = startDay.startOf("day");
-  while (current.isSameOrBefore(endDay, "day")) {
-    dates.push(current.format("YYYY-MM-DD"));
-    current = current.add(1, "day");
-  }
-
-  return dates;
-}
-
 function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
   entryType: TimeOffEntryType;
   flags: TimeOffEntryFlag[];
@@ -81,8 +67,15 @@ function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
   return { entryType, flags: timeFlags };
 }
 
+function isValidRange(start: string, end: string): boolean {
+  const startDay = dayjs(start);
+  const endDay = dayjs(end);
+  return startDay.isValid() && endDay.isValid() && !endDay.isBefore(startDay, "day");
+}
+
 type TimeOffEntryInput =
   | (Omit<TimeOffDateEntry, "id"> & { id?: string })
+  | (Omit<TimeOffRangeEntry, "id"> & { id?: string })
   | (Omit<TimeOffWeeklyEntry, "id"> & { id?: string });
 
 export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
@@ -91,6 +84,18 @@ export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
       id: data.id ?? uuidv4(),
       kind: "weekly",
       weekday: data.weekday,
+      entryType: data.entryType,
+      flags: [...data.flags],
+      note: data.note?.trim() || null,
+    };
+  }
+
+  if (data.kind === "range") {
+    return {
+      id: data.id ?? uuidv4(),
+      kind: "range",
+      start: data.start,
+      end: data.end,
       entryType: data.entryType,
       flags: [...data.flags],
       note: data.note?.trim() || null,
@@ -144,152 +149,143 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
       continue;
     }
 
-    const dates = expandRange(event.start, event.end ?? event.start);
-    if (dates.length === 0) {
+    const start = toIsoDate(event.start);
+    const end = toIsoDate(event.end ?? event.start);
+    if (!isValidRange(start, end)) {
       skippedUnknownCount += 1;
       continue;
     }
 
-    for (const date of dates) {
-      entries.push(
-        createTimeOffEntry({
-          kind: "date",
-          date,
-          entryType: metadata.entryType,
-          flags: metadata.flags,
-          note: event.title?.trim() || null,
-        }),
-      );
-    }
+    entries.push(
+      start === end
+        ? createTimeOffEntry({
+            kind: "date",
+            date: start,
+            entryType: metadata.entryType,
+            flags: metadata.flags,
+            note: event.title?.trim() || null,
+          })
+        : createTimeOffEntry({
+            kind: "range",
+            start,
+            end,
+            entryType: metadata.entryType,
+            flags: metadata.flags,
+            note: event.title?.trim() || null,
+          }),
+    );
   }
 
   return { entries, skippedWeeklyCount, skippedUnknownCount };
 }
 
-type EntryRangeGroup = {
-  start: string;
-  end: string;
-  entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
-  note: string | null;
-};
-
-function sameMetadata(
-  left: Pick<TimeOffDateEntry | TimeOffWeeklyEntry, "entryType" | "flags" | "note">,
-  right: Pick<TimeOffDateEntry | TimeOffWeeklyEntry, "entryType" | "flags" | "note">,
-): boolean {
-  return (
-    left.entryType === right.entryType &&
-    left.note === right.note &&
-    left.flags.join("|") === right.flags.join("|")
-  );
-}
-
 export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
-  const datedEntries = entries
-    .filter(isTimeOffDateEntry)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  const weeklyEntries = entries
-    .filter(isTimeOffWeeklyEntry)
-    .sort((a, b) => a.weekday - b.weekday || a.id.localeCompare(b.id));
-
-  const groups: EntryRangeGroup[] = [];
-  for (const entry of datedEntries) {
-    const previous = groups[groups.length - 1];
-    if (!previous) {
-      groups.push({
-        start: entry.date,
-        end: entry.date,
-        entryType: entry.entryType,
-        flags: [...entry.flags],
-        note: entry.note,
-      });
-      continue;
+  const sortedEntries = [...entries].sort((a, b) => {
+    if (isTimeOffWeeklyEntry(a) && isTimeOffWeeklyEntry(b)) {
+      return a.weekday - b.weekday || a.id.localeCompare(b.id);
     }
 
-    const previousEntry: TimeOffDateEntry = {
-      id: "group",
-      kind: "date",
-      date: previous.end,
-      entryType: previous.entryType,
-      flags: previous.flags,
-      note: previous.note,
-    };
-    const nextExpectedDate = dayjs(previous.end).add(1, "day").format("YYYY-MM-DD");
-    if (sameMetadata(previousEntry, entry) && entry.date === nextExpectedDate) {
-      previous.end = entry.date;
-      continue;
-    }
+    if (isTimeOffWeeklyEntry(a)) return 1;
+    if (isTimeOffWeeklyEntry(b)) return -1;
 
-    groups.push({
-      start: entry.date,
-      end: entry.date,
-      entryType: entry.entryType,
-      flags: [...entry.flags],
-      note: entry.note,
-    });
-  }
+    const leftStart = isTimeOffDateEntry(a) ? a.date : a.start;
+    const rightStart = isTimeOffDateEntry(b) ? b.date : b.start;
+    return leftStart.localeCompare(rightStart) || a.id.localeCompare(b.id);
+  });
 
-  const rangeLines = groups.map((group) =>
-    toLine({
-      type: "range",
-      start: toHdayDate(group.start),
-      end: toHdayDate(group.end),
-      title: group.note ?? "",
-      flags: getEntryFlags(group.entryType, group.flags),
-    }),
-  );
-
-  const weeklyLines = weeklyEntries.map((entry) =>
-    toLine({
-      type: "weekly",
-      weekday: entry.weekday,
-      title: entry.note ?? "",
-      flags: getEntryFlags(entry.entryType, entry.flags),
-    }),
-  );
-
-  return [...rangeLines, ...weeklyLines].join("\n");
-}
-
-export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
-  return entries.map((entry) =>
-    isTimeOffDateEntry(entry)
-      ? {
-          type: "range",
-          start: toHdayDate(entry.date),
-          end: toHdayDate(entry.date),
-          title: entry.note ?? "",
-          flags: getEntryFlags(entry.entryType, entry.flags),
-        }
-      : {
+  return sortedEntries
+    .map((entry) => {
+      if (isTimeOffWeeklyEntry(entry)) {
+        return toLine({
           type: "weekly",
           weekday: entry.weekday,
           title: entry.note ?? "",
           flags: getEntryFlags(entry.entryType, entry.flags),
-        },
-  );
+        });
+      }
+
+      const isDateEntry = isTimeOffDateEntry(entry);
+      const start = isDateEntry ? entry.date : entry.start;
+      const end = isDateEntry ? undefined : entry.end;
+      return toLine({
+        type: "range",
+        start: toHdayDate(start),
+        end: end ? toHdayDate(end) : undefined,
+        title: entry.note ?? "",
+        flags: getEntryFlags(entry.entryType, entry.flags),
+      });
+    })
+    .join("\n");
 }
 
-export function buildTimeOffEntriesForDateRange(input: {
+export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
+  return entries.map((entry) => {
+    if (isTimeOffWeeklyEntry(entry)) {
+      return {
+        type: "weekly",
+        weekday: entry.weekday,
+        title: entry.note ?? "",
+        flags: getEntryFlags(entry.entryType, entry.flags),
+      };
+    }
+
+    const isDateEntry = isTimeOffDateEntry(entry);
+    const start = isDateEntry ? entry.date : entry.start;
+    const end = isDateEntry ? undefined : entry.end;
+    return {
+      type: "range",
+      start: toHdayDate(start),
+      end: end ? toHdayDate(end) : undefined,
+      title: entry.note ?? "",
+      flags: getEntryFlags(entry.entryType, entry.flags),
+    };
+  });
+}
+
+export function buildTimeOffEntryForDate(input: {
+  date: string;
+  note?: string;
+  entryType: TimeOffEntryType;
+  flags: TimeOffEntryFlag[];
+}): TimeOffEntry {
+  return createTimeOffEntry({
+    kind: "date",
+    date: input.date,
+    entryType: input.entryType,
+    flags: input.flags,
+    note: input.note?.trim() || null,
+  });
+}
+
+export function buildTimeOffEntryForRange(input: {
   start: string;
   end?: string;
   note?: string;
   entryType: TimeOffEntryType;
   flags: TimeOffEntryFlag[];
-}): TimeOffEntry[] {
+}): TimeOffEntry {
   const start = input.start.replace(/-/g, "/");
   const end = (input.end ?? input.start).replace(/-/g, "/");
-  const dates = expandRange(start, end);
-  return dates.map((date) =>
-    createTimeOffEntry({
-      kind: "date",
-      date,
+  const startIso = toIsoDate(start);
+  const endIso = toIsoDate(end);
+
+  if (startIso === endIso) {
+    return buildTimeOffEntryForDate({
+      date: startIso,
+      note: input.note,
       entryType: input.entryType,
       flags: input.flags,
-      note: input.note?.trim() || null,
-    }),
-  );
+    });
+  }
+
+  return createTimeOffEntry({
+    kind: "range",
+    start: startIso,
+    end: endIso,
+    entryType: input.entryType,
+    flags: input.flags,
+    note: input.note?.trim() || null,
+  });
 }
 
 export function createWeeklyTimeOffEntry(input: {

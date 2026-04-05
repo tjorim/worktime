@@ -8,7 +8,7 @@ import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
 import type { HdayEvent } from "../../lib/hday/types";
 import type { TimeOffEntry } from "../../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
@@ -22,9 +22,9 @@ interface MonthCalendarProps {
   workLocationMap?: WorkLocationMap;
   onMonthChange: (month: Dayjs) => void;
   onAddEvent: (date: Dayjs) => void;
-  onViewEvent: (id: string) => void;
-  onEditEvent: (id: string) => void;
-  onDeleteEvent?: (id: string) => void;
+  onViewEvent: (id: string | number) => void;
+  onEditEvent: (id: string | number) => void;
+  onDeleteEvent?: (id: string | number) => void;
   onSetWorkLocation?: (date: Dayjs, location: WorkLocation | null) => void;
   onSetOtherLocation?: (date: Dayjs) => void;
   allowEventActions?: boolean;
@@ -185,7 +185,7 @@ export function MonthCalendar({
     x: number;
     y: number;
     date?: Dayjs;
-    eventId?: string;
+    eventId?: string | number;
   } | null>(null);
 
   // Track which element triggered the context menu for focus return
@@ -211,28 +211,7 @@ export function MonthCalendar({
       map.set(key, list);
     };
 
-    if (sourceEntries.length > 0) {
-      sourceEntries.forEach((entry) => {
-        if (isTimeOffDateEntry(entry)) {
-          const date = dayjs(entry.date);
-          if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
-            return;
-          }
-          addEvent(date, { entry });
-          return;
-        }
-
-        if (isTimeOffWeeklyEntry(entry)) {
-          let current = visibleStart;
-          while (current.isSameOrBefore(visibleEnd, "day")) {
-            if (current.isoWeekday() === entry.weekday) {
-              addEvent(current, { entry });
-            }
-            current = current.add(1, "day");
-          }
-        }
-      });
-    } else {
+    if (sourceEvents.length > 0) {
       sourceEvents.forEach((event, index) => {
         if (event.type === "weekly") {
           let current = visibleStart;
@@ -257,6 +236,43 @@ export function MonthCalendar({
           current = current.add(1, "day");
         }
       });
+    } else if (sourceEntries.length > 0) {
+      sourceEntries.forEach((entry) => {
+        if (isTimeOffDateEntry(entry)) {
+          const date = dayjs(entry.date);
+          if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
+            return;
+          }
+          addEvent(date, { entry });
+          return;
+        }
+
+        if (isTimeOffRangeEntry(entry)) {
+          let current = dayjs(entry.start).startOf("day");
+          const end = dayjs(entry.end).startOf("day");
+          if (!current.isValid() || !end.isValid() || end.isBefore(current, "day")) {
+            return;
+          }
+
+          while (current.isSameOrBefore(end, "day")) {
+            if (!current.isBefore(visibleStart, "day") && !current.isAfter(visibleEnd, "day")) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
+          return;
+        }
+
+        if (isTimeOffWeeklyEntry(entry)) {
+          let current = visibleStart;
+          while (current.isSameOrBefore(visibleEnd, "day")) {
+            if (current.isoWeekday() === entry.weekday) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
+        }
+      });
     }
 
     return map;
@@ -278,7 +294,7 @@ export function MonthCalendar({
   );
 
   const handleEventContextMenu = useCallback(
-    (id: string, x: number, y: number, el: HTMLElement | null) => {
+    (id: string | number, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
@@ -301,7 +317,7 @@ export function MonthCalendar({
   );
 
   const handleViewEventWrapper = useCallback(
-    (id: string) => {
+    (id: string | number) => {
       handleCloseContextMenu();
       onViewEvent(id);
     },
@@ -309,7 +325,7 @@ export function MonthCalendar({
   );
 
   const handleEditEventWrapper = useCallback(
-    (id: string) => {
+    (id: string | number) => {
       handleCloseContextMenu();
       onEditEvent(id);
     },

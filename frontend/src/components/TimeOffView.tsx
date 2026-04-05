@@ -3,6 +3,12 @@ import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
+import {
+  buildTimeOffEntryForRange,
+  createWeeklyTimeOffEntry,
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+} from "@/lib/timeOff/codecs";
 import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -16,7 +22,7 @@ import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
-  serializeEventFormStateFromEvent,
+  serializeEventFormStateFromEntry,
 } from "../utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
@@ -69,11 +75,10 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const {
     rawText,
     entries,
-    events,
-    addEvent,
-    updateEvent,
-    deleteEvent,
-    deleteEvents,
+    addEntries,
+    updateEntry,
+    deleteEntry,
+    deleteEntries,
     importHday,
     canUndo,
     canRedo,
@@ -111,14 +116,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setEventTitle,
     resetForm,
     validateForm,
-    prefillFormFromEvent,
+    prefillFormFromEntry,
     handleTypeFlagChange,
     handleTimeFlagChange,
   } = useEventForm();
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
-  const [editEventIndex, setEditEventIndex] = useState<number | null>(null);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [initialFormState, setInitialFormState] = useState("");
@@ -127,6 +132,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   // The canonical runtime data remains `entries`; this text is just the editable codec surface.
   const [rawEditorText, setRawEditorText] = useState(rawText);
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
+  const [rawEditorError, setRawEditorError] = useState<string | undefined>(undefined);
   const rawEditorTextRef = useRef(rawText);
 
   // Update ref whenever rawEditorText changes
@@ -136,9 +142,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteEventIndex, setDeleteEventIndex] = useState<number | null>(null);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Refs
   const formRef = useRef<HTMLDivElement>(null);
@@ -161,25 +167,25 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
         flags: [],
       }),
     );
-    setEditEventIndex(null);
+    setEditEntryId(null);
     setModalMode("add");
     setShowEventModal(true);
   }, [resetForm]);
 
-  const loadEventIntoForm = useCallback(
-    (eventIndex: number, mode: "view" | "edit") => {
-      const event = events[eventIndex];
-      if (!event) return;
-      prefillFormFromEvent(event);
-      setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+  const loadEntryIntoForm = useCallback(
+    (entryId: string, mode: "view" | "edit") => {
+      const entry = entries.find((currentEntry) => currentEntry.id === entryId);
+      if (!entry) return;
+      prefillFormFromEntry(entry);
+      setInitialFormState(serializeEventFormStateFromEntry(entry, DEFAULT_WEEKDAY));
       setModalMode(mode);
     },
-    [events, prefillFormFromEvent],
+    [entries, prefillFormFromEntry],
   );
 
-  const handleOpenEditModal = (eventIndex: number) => {
-    setEditEventIndex(eventIndex);
-    loadEventIntoForm(eventIndex, "edit");
+  const handleOpenEditModal = (entryId: string) => {
+    setEditEntryId(entryId);
+    loadEntryIntoForm(entryId, "edit");
     setShowEventModal(true);
   };
 
@@ -193,11 +199,11 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleCancelEditMode = useCallback(() => {
-    if (editEventIndex === null) {
+    if (!editEntryId) {
       return;
     }
-    loadEventIntoForm(editEventIndex, "view");
-  }, [editEventIndex, loadEventIntoForm]);
+    loadEntryIntoForm(editEntryId, "view");
+  }, [editEntryId, loadEntryIntoForm]);
 
   const handleResetForm = () => {
     if (isFormDirty) {
@@ -220,27 +226,27 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     const normalizedFlags = normalizeEventFlags(eventFlags);
 
-    const nextEvent =
+    const nextEntry =
       eventType === "weekly"
-        ? {
-            type: "weekly" as const,
+        ? createWeeklyTimeOffEntry({
             weekday: eventWeekday,
-            title: eventTitle,
-            flags: normalizedFlags,
-          }
-        : {
-            type: "range" as const,
-            start: eventStart,
-            end: eventEnd || eventStart,
-            title: eventTitle,
-            flags: normalizedFlags,
-          };
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          })
+        : buildTimeOffEntryForRange({
+            start: eventStart.replace(/\//g, "-"),
+            end: (eventEnd || eventStart).replace(/\//g, "-"),
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          });
 
-    if (editEventIndex !== null) {
-      updateEvent(editEventIndex, nextEvent);
+    if (editEntryId) {
+      updateEntry(editEntryId, nextEntry);
       toast.showSuccess(m.timeoff_event_updated(), "bi-pencil-fill");
     } else {
-      addEvent(nextEvent);
+      addEntries([nextEntry]);
       toast.showSuccess(m.timeoff_event_added());
     }
 
@@ -249,22 +255,22 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     resetForm();
   };
 
-  const handleDeleteClick = (eventIndex: number) => {
-    setDeleteEventIndex(eventIndex);
+  const handleDeleteClick = (entryId: string) => {
+    setDeleteEntryId(entryId);
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
-    if (deleteEventIndex !== null) {
-      deleteEvent(deleteEventIndex);
+    if (deleteEntryId) {
+      deleteEntry(deleteEntryId);
       setSelectedIds(new Set());
       toast.showSuccess(m.timeoff_event_deleted(), "bi-trash");
     }
     setShowDeleteConfirm(false);
-    setDeleteEventIndex(null);
+    setDeleteEntryId(null);
   };
 
-  const handleToggleSelection = (id: number) => {
+  const handleToggleSelection = (id: string) => {
     setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -277,7 +283,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   };
 
   const handleSelectAll = () => {
-    setSelectedIds(new Set(events.map((_, index) => index)));
+    setSelectedIds(new Set(entries.map((entry) => entry.id)));
   };
 
   const handleClearSelection = () => {
@@ -286,7 +292,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   const handleBulkDeleteConfirm = () => {
     if (selectedIds.size > 0) {
-      deleteEvents(Array.from(selectedIds));
+      deleteEntries(Array.from(selectedIds));
       toast.showSuccess(m.timeoff_events_deleted({ count: selectedIds.size }), "bi-trash");
     }
     setSelectedIds(new Set());
@@ -295,8 +301,8 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
   useEffect(() => {
     setSelectedIds((prev) => {
-      const newSet = new Set<number>();
-      const existingIds = new Set(events.map((_, index) => index));
+      const newSet = new Set<string>();
+      const existingIds = new Set(entries.map((entry) => entry.id));
       let changed = false;
       prev.forEach((id) => {
         if (existingIds.has(id)) {
@@ -307,11 +313,12 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       });
       return changed ? newSet : prev;
     });
-  }, [events]);
+  }, [entries]);
 
   useEffect(() => {
     if (!isRawEditorDirty) {
       setRawEditorText(rawText);
+      setRawEditorError(undefined);
     }
   }, [isRawEditorDirty, rawText]);
 
@@ -319,6 +326,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     (value: string) => {
       setRawEditorText(value);
       setIsRawEditorDirty(value !== rawText);
+      setRawEditorError(undefined);
     },
     [rawText],
   );
@@ -326,12 +334,25 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleParseRawEditor = useCallback(() => {
     try {
       // Use the ref to get the current value without adding to dependencies
-      importHday(rawEditorTextRef.current);
+      const result = importHday(rawEditorTextRef.current);
       setIsRawEditorDirty(false);
+      setRawEditorError(
+        result.skippedUnknownCount > 0
+          ? `${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`
+          : undefined,
+      );
       setSelectedIds(new Set());
-      toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
+      if (result.skippedUnknownCount > 0) {
+        toast.showWarning(
+          `${m.timeoff_hday_applied()} ${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`,
+          "bi-exclamation-triangle",
+        );
+      } else {
+        toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
+      }
     } catch (error) {
       console.error("Failed to parse raw .hday content:", error);
+      setRawEditorError(m.timeoff_parse_failed());
       toast.showError(m.timeoff_parse_failed());
     }
   }, [importHday, toast]);
@@ -339,6 +360,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const handleResetRawEditor = useCallback(() => {
     setRawEditorText(rawText);
     setIsRawEditorDirty(false);
+    setRawEditorError(undefined);
   }, [rawText]);
 
   const handleImport = useCallback(() => {
@@ -351,12 +373,26 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
     try {
       const text = await file.text();
-      importHday(text);
+      const result = importHday(text);
+      setRawEditorText(text);
       setSelectedIds(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
-      toast.showSuccess(m.timeoff_imported({ name: file.name }), "bi-download");
+      setRawEditorError(
+        result.skippedUnknownCount > 0
+          ? `${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`
+          : undefined,
+      );
+      if (result.skippedUnknownCount > 0) {
+        toast.showWarning(
+          `${m.timeoff_imported({ name: file.name })} ${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`,
+          "bi-exclamation-triangle",
+        );
+      } else {
+        toast.showSuccess(m.timeoff_imported({ name: file.name }), "bi-download");
+      }
     } catch (error) {
       console.error("Failed to import .hday file:", error);
+      setRawEditorError(m.timeoff_import_failed());
       toast.showError(m.timeoff_import_failed());
     }
 
@@ -411,7 +447,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       isActive,
       showEventModal,
       modalMode,
-      editIndex: editEventIndex !== null ? editEventIndex : -1,
+      editIndex: editEntryId ? 0 : -1,
       viewMode,
       selectedIndicesCount: selectedIds.size,
     },
@@ -476,7 +512,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           canRedo={canRedo}
           onUndo={handleUndo}
           onRedo={handleRedo}
-          eventCount={events.length}
+          eventCount={entries.length}
           selectedCount={selectedIds.size}
           onSelectAll={handleSelectAll}
           onClearSelection={handleClearSelection}
@@ -485,13 +521,13 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onExport={handleExport}
           onAddEvent={handleOpenAddModal}
           viewMode={viewMode}
-          events={events}
+          entries={entries}
           selectedIds={selectedIds}
           onToggleSelection={handleToggleSelection}
           onEditEvent={handleOpenEditModal}
           onDeleteEvent={handleDeleteClick}
           rawEditorText={rawEditorText}
-          rawEditorError={undefined}
+          rawEditorError={rawEditorError}
           isRawEditorDirty={isRawEditorDirty}
           onChangeRawEditorText={handleRawEditorChange}
           onApplyRawEditor={handleParseRawEditor}

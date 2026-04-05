@@ -32,7 +32,7 @@ import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "../timeOff/codecs";
 import type { TimeOffEntry } from "../timeOff/types";
-import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -179,6 +179,17 @@ export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[
         type: "holiday",
         start: entry.date,
         end: entry.date,
+        label: entry.note || typeLabel,
+        meta,
+      };
+    }
+
+    if (isTimeOffRangeEntry(entry)) {
+      return {
+        id: entry.id,
+        type: "holiday",
+        start: entry.start,
+        end: entry.end,
         label: entry.note || typeLabel,
         meta,
       };

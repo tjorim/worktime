@@ -66,6 +66,20 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
       continue;
     }
 
+    if (candidate.kind === "range") {
+      if (!isValidDateKey(candidate.start) || !isValidDateKey(candidate.end)) continue;
+      entries.push({
+        id: candidate.id,
+        kind: "range",
+        start: candidate.start,
+        end: candidate.end,
+        entryType: candidate.entryType,
+        flags,
+        note,
+      });
+      continue;
+    }
+
     if (!isValidDateKey(candidate.date)) continue;
     entries.push({
       id: candidate.id,

@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
 import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
 import type { TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
@@ -133,8 +133,20 @@ export function useEventForm() {
   const prefillFormFromEntry = useCallback((entry: TimeOffEntry) => {
     setEventType(isTimeOffWeeklyEntry(entry) ? "weekly" : "range");
     setEventWeekday(isTimeOffWeeklyEntry(entry) ? entry.weekday : DEFAULT_WEEKDAY);
-    setEventStart(isTimeOffDateEntry(entry) ? entry.date.replace(/-/g, "/") : "");
-    setEventEnd(isTimeOffDateEntry(entry) ? entry.date.replace(/-/g, "/") : "");
+    setEventStart(
+      isTimeOffDateEntry(entry)
+        ? entry.date.replace(/-/g, "/")
+        : isTimeOffRangeEntry(entry)
+          ? entry.start.replace(/-/g, "/")
+          : "",
+    );
+    setEventEnd(
+      isTimeOffDateEntry(entry)
+        ? entry.date.replace(/-/g, "/")
+        : isTimeOffRangeEntry(entry)
+          ? entry.end.replace(/-/g, "/")
+          : "",
+    );
     setEventTitle(entry.note || "");
     setEventFlags(getEntryFlagsForDisplay(entry));
     setStartDateError("");

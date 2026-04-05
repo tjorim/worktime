@@ -4,6 +4,12 @@ import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
+import {
+  buildTimeOffEntryForRange,
+  createWeeklyTimeOffEntry,
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+} from "@/lib/timeOff/codecs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -40,14 +46,6 @@ import {
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
 import type { WorkLocation } from "../types/workLocation";
-import {
-  buildTimeOffEntriesForDateRange,
-  createWeeklyTimeOffEntry,
-  getEntryTimeFlagsFromDisplayFlags,
-  getEntryTypeFromDisplayFlags,
-} from "../lib/timeOff/codecs";
-import { getTimeOffEntryIdentityKey } from "../lib/timeOff/types";
-
 interface CalendarViewProps {
   myTeam: number | null;
   onChangeSchedule?: () => void;
@@ -83,7 +81,7 @@ export function CalendarView({
   onOpenScheduleTab,
 }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
-  const { entries, addEntries, replaceEntries, updateEntry, deleteEntry } = useEventStore();
+  const { entries, addEntries, updateEntry, deleteEntry } = useEventStore();
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
@@ -165,25 +163,27 @@ export function CalendarView({
     setShowEventModal(true);
   };
 
-  const loadEventIntoForm = (entryId: string, mode: "view" | "edit") => {
-    const entry = entries.find((item) => item.id === entryId);
+  const loadEntryIntoForm = (entryId: string, mode: "view" | "edit") => {
+    const entry = entries.find((currentEntry) => currentEntry.id === entryId);
     if (!entry) return;
     prefillFormFromEntry(entry);
     setInitialFormState(serializeEventFormStateFromEntry(entry, DEFAULT_WEEKDAY));
     setModalMode(mode);
   };
 
-  const handleOpenViewModal = (entryId: string) => {
+  const handleOpenViewModal = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    setEditEntryId(entryId);
-    loadEventIntoForm(entryId, "view");
+    if (typeof eventId !== "string") return;
+    setEditEntryId(eventId);
+    loadEntryIntoForm(eventId, "view");
     setShowEventModal(true);
   };
 
-  const handleOpenEditModal = (entryId: string) => {
+  const handleOpenEditModal = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    setEditEntryId(entryId);
-    loadEventIntoForm(entryId, "edit");
+    if (typeof eventId !== "string") return;
+    setEditEntryId(eventId);
+    loadEntryIntoForm(eventId, "edit");
     setShowEventModal(true);
   };
 
@@ -199,7 +199,7 @@ export function CalendarView({
 
   const handleCancelEditMode = () => {
     if (!timeOffEnabled || !editEntryId) return;
-    loadEventIntoForm(editEntryId, "view");
+    loadEntryIntoForm(editEntryId, "view");
   };
 
   const handleResetForm = () => {
@@ -224,17 +224,15 @@ export function CalendarView({
 
     const normalizedFlags = normalizeEventFlags(eventFlags);
 
-    const nextEntries =
+    const nextEntry =
       eventType === "weekly"
-        ? [
-            createWeeklyTimeOffEntry({
-              weekday: eventWeekday,
-              note: eventTitle,
-              entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-              flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
-            }),
-          ]
-        : buildTimeOffEntriesForDateRange({
+        ? createWeeklyTimeOffEntry({
+            weekday: eventWeekday,
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          })
+        : buildTimeOffEntryForRange({
             start: eventStart.replace(/\//g, "-"),
             end: (eventEnd || eventStart).replace(/\//g, "-"),
             note: eventTitle,
@@ -243,21 +241,10 @@ export function CalendarView({
           });
 
     if (modalMode === "edit" && editEntryId) {
-      if (nextEntries.length === 1) {
-        updateEntry(editEntryId, nextEntries[0]!);
-      } else {
-        const nextKeys = new Set(nextEntries.map((entry) => getTimeOffEntryIdentityKey(entry)));
-        replaceEntries([
-          ...entries.filter(
-            (entry) =>
-              entry.id !== editEntryId && !nextKeys.has(getTimeOffEntryIdentityKey(entry)),
-          ),
-          ...nextEntries,
-        ]);
-      }
+      updateEntry(editEntryId, nextEntry);
       toast.showSuccess(m.calendar_event_updated(), "bi-pencil-fill");
     } else {
-      addEntries(nextEntries);
+      addEntries([nextEntry]);
       toast.showSuccess(m.calendar_event_added());
     }
 
@@ -266,9 +253,10 @@ export function CalendarView({
     resetForm();
   };
 
-  const handleDeleteClick = (entryId: string) => {
+  const handleDeleteClick = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    setDeleteEntryId(entryId);
+    if (typeof eventId !== "string") return;
+    setDeleteEntryId(eventId);
     setShowDeleteConfirm(true);
   };
 

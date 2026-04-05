@@ -29,7 +29,7 @@ import {
   saveTimeOffEntries,
 } from "../lib/timeOff/storage";
 import type { TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry } from "../lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -158,6 +158,47 @@ export interface TimeOffEntrySyncRead {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+function expandTimeOffEntryToSyncItems(
+  entry: TimeOffEntry,
+  clientUpdatedAt: string,
+): TimeOffEntrySyncItem[] {
+  if (isTimeOffDateEntry(entry)) {
+    return [
+      {
+        date: entry.date,
+        action: "create",
+        client_updated_at: clientUpdatedAt,
+        entry_type: entry.entryType,
+        flags: entry.flags,
+        note: entry.note,
+      },
+    ];
+  }
+
+  if (!isTimeOffRangeEntry(entry)) {
+    return [];
+  }
+
+  const start = dayjs(entry.start).startOf("day");
+  const end = dayjs(entry.end).startOf("day");
+  if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) return [];
+
+  const items: TimeOffEntrySyncItem[] = [];
+  let current = start;
+  while (current.isSameOrBefore(end, "day")) {
+    items.push({
+      date: current.format("YYYY-MM-DD"),
+      action: "create",
+      client_updated_at: clientUpdatedAt,
+      entry_type: entry.entryType,
+      flags: entry.flags,
+      note: entry.note,
+    });
+    current = current.add(1, "day");
+  }
+  return items;
 }
 
 export interface SyncPullResponse {
@@ -514,16 +555,9 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
         ? hdayToTimeOffEntries(legacyRawTimeOff).entries
         : [];
 
-  const timeOffEntries = localTimeOffEntries
-    .filter(isTimeOffDateEntry)
-    .map((entry) => ({
-      date: entry.date,
-      action: "create" as const,
-      client_updated_at: now,
-      entry_type: entry.entryType,
-      flags: entry.flags,
-      note: entry.note,
-    }));
+  const timeOffEntries = localTimeOffEntries.flatMap((entry) =>
+    expandTimeOffEntryToSyncItems(entry, now),
+  );
 
   return { labels, tasks, templates, work_locations: workLocations, time_off_entries: timeOffEntries };
 }
@@ -662,17 +696,84 @@ export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
 }
 
 function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
-  return items
+  const activeItems = items
     .filter((item) => item.deleted_at === null)
-    .map((item) =>
-      createTimeOffEntry({
-        kind: "date",
-        date: item.date,
-        entryType: (item.entry_type === "vacation" ? "vacation" : item.entry_type) as TimeOffEntry["entryType"],
-        flags: item.flags as TimeOffEntry["flags"],
-        note: item.note,
-      }),
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const entries: TimeOffEntry[] = [];
+  let currentGroup:
+    | {
+        start: string;
+        end: string;
+        entryType: TimeOffEntry["entryType"];
+        flags: TimeOffEntry["flags"];
+        note: string | null;
+      }
+    | null = null;
+
+  const flushCurrentGroup = () => {
+    if (!currentGroup) return;
+    entries.push(
+      createTimeOffEntry(
+        currentGroup.start === currentGroup.end
+          ? {
+              kind: "date",
+              date: currentGroup.start,
+              entryType: currentGroup.entryType,
+              flags: currentGroup.flags,
+              note: currentGroup.note,
+            }
+          : {
+              kind: "range",
+              start: currentGroup.start,
+              end: currentGroup.end,
+              entryType: currentGroup.entryType,
+              flags: currentGroup.flags,
+              note: currentGroup.note,
+            },
+      ),
     );
+    currentGroup = null;
+  };
+
+  for (const item of activeItems) {
+    const normalizedEntryType = (item.entry_type === "vacation" ? "vacation" : item.entry_type) as TimeOffEntry["entryType"];
+    const normalizedFlags = item.flags as TimeOffEntry["flags"];
+    if (!currentGroup) {
+      currentGroup = {
+        start: item.date,
+        end: item.date,
+        entryType: normalizedEntryType,
+        flags: normalizedFlags,
+        note: item.note,
+      };
+      continue;
+    }
+
+    const nextExpectedDate = dayjs(currentGroup.end).add(1, "day").format("YYYY-MM-DD");
+    const sameMetadata =
+      currentGroup.entryType === normalizedEntryType &&
+      currentGroup.note === item.note &&
+      currentGroup.flags.join("|") === normalizedFlags.join("|");
+
+    if (sameMetadata && item.date === nextExpectedDate) {
+      currentGroup.end = item.date;
+      continue;
+    }
+
+    flushCurrentGroup();
+    currentGroup = {
+      start: item.date,
+      end: item.date,
+      entryType: normalizedEntryType,
+      flags: normalizedFlags,
+      note: item.note,
+    };
+  }
+
+  flushCurrentGroup();
+  return entries;
 }
 
 /**

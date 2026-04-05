@@ -27,7 +27,7 @@ import type { HdayEvent } from "../lib/hday/types";
 import type { ScheduleOption } from "../data/rosters";
 import type { PublicHolidayInfo } from "../types/publicHolidays";
 import type { TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
 import { calculateShift } from "./shiftCalculations";
 import { dayjs, formatHdayDate } from "./dateTimeUtils";
 
@@ -61,6 +61,9 @@ export function hasTimeOffEvent(date: Dayjs, entries: TimeOffEntry[] | HdayEvent
     return entries.some((entry) =>
       isTimeOffDateEntry(entry)
         ? entry.date === targetDate
+        : isTimeOffRangeEntry(entry)
+          ? date.isSameOrAfter(dayjs(entry.start).startOf("day"), "day") &&
+            date.isSameOrBefore(dayjs(entry.end).startOf("day"), "day")
         : isTimeOffWeeklyEntry(entry)
           ? date.isoWeekday() === entry.weekday
           : false,

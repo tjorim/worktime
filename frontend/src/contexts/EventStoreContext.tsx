@@ -12,7 +12,7 @@ import { entriesToCalendarEvents, filterEventsInRange } from "../lib/events/conv
 import { parseHday } from "../lib/hday/parser";
 import type { HdayEvent } from "../lib/hday/types";
 import {
-  buildTimeOffEntriesForDateRange,
+  buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
   getEntryTimeFlagsFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
@@ -25,6 +25,7 @@ import {
   saveTimeOffEntries,
 } from "../lib/timeOff/storage";
 import type { TimeOffEntry } from "../lib/timeOff/types";
+import type { TimeOffImportResult } from "../lib/timeOff/types";
 import {
   getTimeOffEntryIdentityKey,
   getTimeOffEntrySortKey,
@@ -64,7 +65,7 @@ interface EventStoreContextType {
   deleteEntry: (id: string | number) => void;
   deleteEntries: (ids: string[] | number[]) => void;
   deleteEvents: (ids: string[] | number[]) => void;
-  importHday: (text: string) => void;
+  importHday: (text: string) => TimeOffImportResult;
   clearAll: () => void;
   canUndo: boolean;
   canRedo: boolean;
@@ -103,13 +104,15 @@ function eventToEntries(event: HdayEvent): TimeOffEntry[] {
     return [];
   }
 
-  return buildTimeOffEntriesForDateRange({
-    start: event.start.replace(/\//g, "-"),
-    end: (event.end ?? event.start).replace(/\//g, "-"),
-    note: event.title,
-    entryType,
-    flags,
-  });
+  return [
+    buildTimeOffEntryForRange({
+      start: event.start.replace(/\//g, "-"),
+      end: (event.end ?? event.start).replace(/\//g, "-"),
+      note: event.title,
+      entryType,
+      flags,
+    }),
+  ];
 }
 
 function getMatchingEntryIds(entries: TimeOffEntry[], event: HdayEvent): string[] {
@@ -389,7 +392,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   );
 
   const importHday = useCallback((text: string) => {
+    const result = hdayToTimeOffEntries(text);
     dispatch({ type: "IMPORT_HDAY", payload: text });
+    return result;
   }, []);
 
   const clearAll = useCallback(() => {
