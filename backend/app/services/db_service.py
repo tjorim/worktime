@@ -669,6 +669,14 @@ async def create_or_update_time_off_entry(
         entry = result.scalar_one_or_none()
         if entry is None:
             raise
+        # A concurrent request won the INSERT race; apply our payload to that row.
+        entry.entry_type = payload.entry_type
+        entry.flags = payload.flags
+        entry.note = payload.note
+        entry.deleted_at = None
+        entry.updated_at = datetime.now(UTC)
+        session.add(entry)
+        await session.commit()
         created = False
     await session.refresh(entry)
     return entry, created
