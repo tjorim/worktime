@@ -679,6 +679,10 @@ async def update_time_off_entry(
 ) -> TimeOffEntry:
     entry = await get_time_off_entry(session, user_id, entry_date)
     data = payload.model_dump(exclude_unset=True)
+    non_nullable_fields = _get_non_nullable_model_fields(TimeOffEntry)
+    for field, value in data.items():
+        if field in non_nullable_fields and value is None:
+            raise ValidationError(f"{field} cannot be null")
     for field, value in data.items():
         setattr(entry, field, value)
     entry.updated_at = datetime.now(UTC)

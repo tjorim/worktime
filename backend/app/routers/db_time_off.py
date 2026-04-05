@@ -18,6 +18,7 @@ from app.schemas import (
 )
 from app.services.db_service import (
     NotFoundError,
+    ValidationError,
     create_or_update_time_off_entry,
     delete_time_off_entry,
     get_time_off_entry,
@@ -111,6 +112,8 @@ async def update_time_off_entry_endpoint(
             entry = await update_time_off_entry(session, user_id, entry_date, payload)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except ValidationError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
