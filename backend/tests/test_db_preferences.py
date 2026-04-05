@@ -160,6 +160,14 @@ class TestPutPreferences:
         # Should return the stored value unchanged (server wins)
         assert resp.json()["data"] == {"theme": "dark"}
 
+        resp_equal = db_client.put(
+            "/db/preferences",
+            json={"data": {"theme": "light"}, "client_updated_at": ts_new},
+            headers=headers,
+        )
+        assert resp_equal.status_code == 200
+        assert resp_equal.json()["data"] == {"theme": "dark"}
+
     def test_users_cannot_read_others_preferences(
         self,
         db_client: TestClient,

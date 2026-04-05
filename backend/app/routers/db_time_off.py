@@ -35,10 +35,14 @@ async def create_or_update_time_off_endpoint(
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
-) -> TimeOffEntryRead:
+) -> JSONResponse:
     require_user_match(user_id, authenticated_user_id)
-    entry = await create_or_update_time_off_entry(session, user_id, payload)
-    return TimeOffEntryRead.model_validate(entry, from_attributes=True)
+    entry, created = await create_or_update_time_off_entry(session, user_id, payload)
+    response = TimeOffEntryRead.model_validate(entry, from_attributes=True)
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        content=response.model_dump(mode="json"),
+    )
 
 
 @router.get("/", response_model=TimeOffEntryListResponse)

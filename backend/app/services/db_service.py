@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy import func as sql_func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
@@ -547,30 +548,37 @@ async def upsert_user_preferences(
 
     Last-write-wins: if a row already exists, the payload is accepted only when
     ``payload.client_updated_at`` is strictly newer than the stored
-    ``client_updated_at``.  Returns the current stored row (possibly unchanged)
-    and a flag indicating whether the update was applied.
+    ``client_updated_at``. Returns the current stored row (possibly unchanged).
     """
-    prefs = await session.get(UserPreferences, user_id)
-    if prefs is None:
-        prefs = UserPreferences(
-            user_id=user_id,
-            data=payload.data,
-            client_updated_at=as_utc(payload.client_updated_at),
-        )
-        session.add(prefs)
-        await session.commit()
-        await session.refresh(prefs)
-        return prefs
+    candidate_client_updated_at = as_utc(payload.client_updated_at)
 
-    if as_utc(payload.client_updated_at) <= as_utc(prefs.client_updated_at):
-        # Server version is same age or newer — return without modification.
-        return prefs
+    while True:
+        try:
+            async with session.begin():
+                result = await session.execute(
+                    select(UserPreferences)
+                    .where(UserPreferences.user_id == user_id)
+                    .with_for_update()
+                )
+                prefs = result.scalar_one_or_none()
 
-    prefs.data = payload.data
-    prefs.client_updated_at = as_utc(payload.client_updated_at)
-    prefs.updated_at = datetime.now(UTC)
-    session.add(prefs)
-    await session.commit()
+                if prefs is None:
+                    prefs = UserPreferences(
+                        user_id=user_id,
+                        data=payload.data,
+                        client_updated_at=candidate_client_updated_at,
+                    )
+                    session.add(prefs)
+                elif candidate_client_updated_at > as_utc(prefs.client_updated_at):
+                    prefs.data = payload.data
+                    prefs.client_updated_at = candidate_client_updated_at
+                    prefs.updated_at = datetime.now(UTC)
+                    session.add(prefs)
+            break
+        except IntegrityError:
+            await session.rollback()
+            continue
+
     await session.refresh(prefs)
     return prefs
 
@@ -614,12 +622,15 @@ async def list_time_off_entries(
 
 async def create_or_update_time_off_entry(
     session: AsyncSession, user_id: int, payload: TimeOffEntryCreate
-) -> TimeOffEntry:
+) -> tuple[TimeOffEntry, bool]:
     """Upsert a time-off entry for (user_id, date).
 
     If an active row exists for the date, its fields are updated.
     If a soft-deleted row exists, it is restored with the new payload.
     If no row exists, a new one is created.
+
+    Returns ``(entry, created)`` where ``created`` indicates whether this call
+    inserted a new row.
     """
     result = await session.execute(
         select(TimeOffEntry).where(
@@ -629,7 +640,9 @@ async def create_or_update_time_off_entry(
     )
     entry = result.scalar_one_or_none()
 
-    if entry is None:
+    created = entry is None
+
+    if created:
         entry = TimeOffEntry(
             user_id=user_id,
             date=payload.date,
@@ -645,9 +658,22 @@ async def create_or_update_time_off_entry(
         entry.updated_at = datetime.now(UTC)
 
     session.add(entry)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        result = await session.execute(
+            select(TimeOffEntry).where(
+                TimeOffEntry.user_id == user_id,
+                TimeOffEntry.date == payload.date,
+            )
+        )
+        entry = result.scalar_one_or_none()
+        if entry is None:
+            raise
+        created = False
     await session.refresh(entry)
-    return entry
+    return entry, created
 
 
 async def update_time_off_entry(
