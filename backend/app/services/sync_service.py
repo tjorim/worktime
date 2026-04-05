@@ -378,6 +378,8 @@ async def _push_time_off_entry(
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if entry is None:
+        # validate_shape ensures kind is not None for non-delete actions
+        assert item.kind is not None
         entry = TimeOffEntry(
             entry_id=item.id,
             user_id=user_id,
@@ -387,7 +389,7 @@ async def _push_time_off_entry(
         )
         _apply_time_off_shape(
             entry,
-            kind=item.kind or "date",
+            kind=item.kind,
             value_date=item.date,
             start_date=item.start_date,
             end_date=item.end_date,

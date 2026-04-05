@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
+import { getWeekdayName } from "../utils/dateTimeUtils";
 import * as m from "../paraglide/messages.js";
 
 type FlagCheckboxProps = {
@@ -289,11 +290,15 @@ export function EventModal({
                     <div className="small text-uppercase text-muted">{m.event_modal_preview_label()}</div>
                     <div className="fw-semibold">
                       {getEventTypeLabel(eventFlags)}{" "}
-                      {eventStart
-                        ? eventEnd && eventEnd !== eventStart
-                          ? `· ${eventStart} → ${eventEnd}`
-                          : `· ${eventStart}`
-                        : m.event_modal_select_date()}
+                      {eventType === "weekly"
+                        ? eventWeekday
+                          ? "· " + getWeekdayName(eventWeekday)
+                          : ""
+                        : eventStart
+                          ? eventEnd && eventEnd !== eventStart
+                            ? "· " + eventStart + " → " + eventEnd
+                            : "· " + eventStart
+                          : m.event_modal_select_date()}
                     </div>
                     {eventTitle && <div className="text-muted">{eventTitle}</div>}
                     {eventFlags.length > 0 && (
@@ -321,7 +326,7 @@ export function EventModal({
                   disabled={mode === "view"}
                 >
                   <option value="range">{m.event_modal_type_range()}</option>
-                  <option value="weekly">Weekly</option>
+                  <option value="weekly">{m.event_modal_type_weekly()}</option>
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -388,20 +393,20 @@ export function EventModal({
             ) : (
               <Col md={6}>
                 <Form.Group controlId="eventWeekday">
-                  <Form.Label>Weekday</Form.Label>
+                  <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
                   <Form.Select
-                    aria-label="Weekday"
+                    aria-label={m.event_modal_weekday_label()}
                     value={String(eventWeekday)}
                     onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
                     disabled={mode === "view"}
                   >
-                    <option value="1">Monday</option>
-                    <option value="2">Tuesday</option>
-                    <option value="3">Wednesday</option>
-                    <option value="4">Thursday</option>
-                    <option value="5">Friday</option>
-                    <option value="6">Saturday</option>
-                    <option value="7">Sunday</option>
+                    <option value="1">{m.weekday_mon()}</option>
+                    <option value="2">{m.weekday_tue()}</option>
+                    <option value="3">{m.weekday_wed()}</option>
+                    <option value="4">{m.weekday_thu()}</option>
+                    <option value="5">{m.weekday_fri()}</option>
+                    <option value="6">{m.weekday_sat()}</option>
+                    <option value="7">{m.weekday_sun()}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>

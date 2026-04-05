@@ -331,21 +331,18 @@ class TimeOffEntryCreate(BaseModel):
                 raise ValueError("date is required for date entries")
             if self.start_date is not None or self.end_date is not None or self.weekday is not None:
                 raise ValueError("date entries cannot include range or weekday fields")
-            return self
-
-        if self.kind == "range":
+        elif self.kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required for range entries")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
             if self.date is not None or self.weekday is not None:
                 raise ValueError("range entries cannot include date or weekday fields")
-            return self
-
-        if self.weekday is None or self.weekday < 1 or self.weekday > 7:
-            raise ValueError("weekday must be between 1 and 7 for weekly entries")
-        if self.date is not None or self.start_date is not None or self.end_date is not None:
-            raise ValueError("weekly entries cannot include date or range fields")
+        elif self.kind == "weekly":
+            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+                raise ValueError("weekday must be between 1 and 7 for weekly entries")
+            if self.date is not None or self.start_date is not None or self.end_date is not None:
+                raise ValueError("weekly entries cannot include date or range fields")
         return self
 
 
@@ -388,16 +385,12 @@ class TimeOffEntryUpdate(BaseModel):
         if self.kind == "date":
             if self.date is None:
                 raise ValueError("date is required when kind is date")
-            return self
-
-        if self.kind == "range":
+        elif self.kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required when kind is range")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
-            return self
-
-        if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+        elif self.kind == "weekly" and (self.weekday is None or self.weekday < 1 or self.weekday > 7):
             raise ValueError("weekday must be between 1 and 7 when kind is weekly")
         return self
 
