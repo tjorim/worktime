@@ -743,18 +743,9 @@ class TestSyncPush:
 class TestSyncTimeOffEntries:
     """Sync push/pull for time-off entries."""
 
-    def _create_user(self, client: TestClient, admin_headers: dict, username: str) -> int:
-        resp = client.post(
-            "/db/users/",
-            json={"username": username, "display_name": username, "settings": {}, "password": "test-password-1"},
-            headers=admin_headers,
-        )
-        assert resp.status_code == 201, resp.text
-        return resp.json()["id"]
-
     def test_push_create_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-to-create")
+        user_id = _create_user(db_client, admin_h, "sync-to-create")
         headers = auth_headers(user_id)
 
         resp = db_client.post(
@@ -779,7 +770,7 @@ class TestSyncTimeOffEntries:
 
     def test_push_delete_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-to-delete")
+        user_id = _create_user(db_client, admin_h, "sync-to-delete")
         headers = auth_headers(user_id)
 
         db_client.post(
@@ -829,7 +820,7 @@ class TestSyncTimeOffEntries:
         self, db_client: TestClient, auth_headers
     ) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-to-delete-repeat")
+        user_id = _create_user(db_client, admin_h, "sync-to-delete-repeat")
         headers = auth_headers(user_id)
 
         db_client.post(
@@ -890,7 +881,7 @@ class TestSyncTimeOffEntries:
 
     def test_pull_includes_time_off_entries(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-to-pull")
+        user_id = _create_user(db_client, admin_h, "sync-to-pull")
         headers = auth_headers(user_id)
 
         db_client.post(
@@ -917,7 +908,7 @@ class TestSyncTimeOffEntries:
         self, db_client: TestClient, auth_headers
     ) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-status-new-fields")
+        user_id = _create_user(db_client, admin_h, "sync-status-new-fields")
         headers = auth_headers(user_id)
 
         resp = db_client.get("/db/sync/status", headers=headers)
@@ -930,7 +921,7 @@ class TestSyncTimeOffEntries:
 
     def test_time_off_conflict_detection(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
-        user_id = self._create_user(db_client, admin_h, "sync-to-conflict")
+        user_id = _create_user(db_client, admin_h, "sync-to-conflict")
         headers = auth_headers(user_id)
 
         # Push with a newer timestamp first

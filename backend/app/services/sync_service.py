@@ -376,14 +376,6 @@ async def _push_time_off_entry(
         session.add(entry)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
-    if not provided_fields:
-        return SyncRecordResult(
-            id=date_key,
-            status="conflict",
-            server_updated_at=entry.updated_at if entry is not None else now,
-            conflict_reason="no business fields were provided",
-        )
-
     if entry is None:
         entry = TimeOffEntry(
             user_id=user_id,

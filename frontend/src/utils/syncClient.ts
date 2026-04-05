@@ -248,8 +248,8 @@ function safeParseJsonObject(key: string): Record<string, unknown> {
  * Returns null if the string cannot be parsed as a valid date.
  */
 function localTimeToUtcIso(localTime: string): string | null {
-  const parsed = new Date(localTime);
-  if (Number.isNaN(parsed.getTime())) return null;
+  const parsed = dayjs(localTime);
+  if (!parsed.isValid()) return null;
   return parsed.toISOString();
 }
 
@@ -433,13 +433,7 @@ export function buildKeepLocalReplacePayload(
  * "YYYY-MM-DDTHH:mm", matching the format used by the task storage layer.
  */
 function utcIsoToLocalTime(utcIso: string): string {
-  const d = new Date(utcIso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  return dayjs(utcIso).format("YYYY-MM-DDTHH:mm");
 }
 
 /**

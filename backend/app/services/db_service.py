@@ -669,6 +669,14 @@ async def create_or_update_time_off_entry(
         entry = result.scalar_one_or_none()
         if entry is None:
             raise
+        # A concurrent request won the INSERT race; apply our payload to that row.
+        entry.entry_type = payload.entry_type
+        entry.flags = payload.flags
+        entry.note = payload.note
+        entry.deleted_at = None
+        entry.updated_at = datetime.now(UTC)
+        session.add(entry)
+        await session.commit()
         created = False
     await session.refresh(entry)
     return entry, created
@@ -679,6 +687,10 @@ async def update_time_off_entry(
 ) -> TimeOffEntry:
     entry = await get_time_off_entry(session, user_id, entry_date)
     data = payload.model_dump(exclude_unset=True)
+    non_nullable_fields = _get_non_nullable_model_fields(TimeOffEntry)
+    for field, value in data.items():
+        if field in non_nullable_fields and value is None:
+            raise ValidationError(f"{field} cannot be None")
     for field, value in data.items():
         setattr(entry, field, value)
     entry.updated_at = datetime.now(UTC)
