@@ -1,15 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applySyncPullResponse,
+  applyPreferencesPull,
   buildKeepLocalReplacePayload,
+  buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  fetchPreferences,
   fetchSyncStatus,
+  hdayEventsToSyncItems,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
+  syncItemsToHdayRaw,
   syncStatusHasData,
 } from "../../src/utils/syncClient";
 import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
-import { WORK_LOCATIONS_STORAGE_PREFIX } from "../../src/constants/storageKeys";
+import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
+import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
 
 const mockFetch = vi.fn();
 
@@ -32,6 +39,8 @@ describe("syncClient", () => {
           tasks_updated_at: null,
           templates_updated_at: null,
           work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: null,
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(false);
@@ -44,6 +53,36 @@ describe("syncClient", () => {
           tasks_updated_at: null,
           templates_updated_at: null,
           work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: null,
+          server_timestamp: "2026-01-01T00:00:00Z",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns true when time_off_entries_updated_at is non-null", () => {
+      expect(
+        syncStatusHasData({
+          labels_updated_at: null,
+          tasks_updated_at: null,
+          templates_updated_at: null,
+          work_locations_updated_at: null,
+          time_off_entries_updated_at: "2026-01-01T00:00:00Z",
+          preferences_updated_at: null,
+          server_timestamp: "2026-01-01T00:00:00Z",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns true when preferences_updated_at is non-null", () => {
+      expect(
+        syncStatusHasData({
+          labels_updated_at: null,
+          tasks_updated_at: null,
+          templates_updated_at: null,
+          work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: "2026-01-01T00:00:00Z",
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(true);
@@ -320,6 +359,7 @@ describe("syncClient", () => {
       tasks: [],
       templates: [],
       work_locations: [],
+      time_off_entries: [],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -458,6 +498,7 @@ describe("syncClient", () => {
       tasks: [] as never[],
       templates: [] as never[],
       work_locations: [] as never[],
+      time_off_entries: [] as never[],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -625,6 +666,352 @@ describe("syncClient", () => {
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
       expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // hdayEventsToSyncItems
+  // ---------------------------------------------------------------------------
+
+  describe("hdayEventsToSyncItems", () => {
+    const ts = "2026-01-01T00:00:00.000Z";
+
+    it("converts a single-date range event to one sync item", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "range", start: "2026/07/14", end: "2026/07/14", flags: ["holiday"], title: "Bastille Day" }],
+        ts,
+      );
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        date: "2026-07-14",
+        action: "create",
+        entry_type: "vacation",
+        flags: [],
+        note: "Bastille Day",
+      });
+    });
+
+    it("expands a multi-day range into one item per day", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "range", start: "2026/12/24", end: "2026/12/26", flags: ["holiday"] }],
+        ts,
+      );
+      expect(items).toHaveLength(3);
+      expect(items.map((i) => i.date)).toEqual(["2026-12-24", "2026-12-25", "2026-12-26"]);
+    });
+
+    it("maps type flags to entry_type correctly", () => {
+      const events = [
+        { type: "range" as const, start: "2026/01/01", flags: ["business"] as ["business"] },
+        { type: "range" as const, start: "2026/01/02", flags: ["ill"] as ["ill"] },
+        { type: "range" as const, start: "2026/01/03", flags: ["in"] as ["in"] },
+      ];
+      const items = hdayEventsToSyncItems(events, ts);
+      expect(items[0]?.entry_type).toBe("business");
+      expect(items[1]?.entry_type).toBe("ill");
+      expect(items[2]?.entry_type).toBe("in");
+    });
+
+    it("preserves time/location flags in the flags array", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "range", start: "2026/06/01", flags: ["holiday", "half_am"] }],
+        ts,
+      );
+      expect(items[0]?.flags).toEqual(["half_am"]);
+      expect(items[0]?.entry_type).toBe("vacation");
+    });
+
+    it("skips weekly events", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "weekly", weekday: 1, flags: ["in"] }],
+        ts,
+      );
+      expect(items).toHaveLength(0);
+    });
+
+    it("skips unknown events", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "unknown", raw: "some garbage" }],
+        ts,
+      );
+      expect(items).toHaveLength(0);
+    });
+
+    it("skips events with invalid date ranges", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "range", start: "invalid/date", end: "also/bad", flags: [] }],
+        ts,
+      );
+      expect(items).toHaveLength(0);
+    });
+
+    it("sets note to null when event has no title", () => {
+      const items = hdayEventsToSyncItems(
+        [{ type: "range", start: "2026/05/01", flags: ["holiday"] }],
+        ts,
+      );
+      expect(items[0]?.note).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // syncItemsToHdayRaw
+  // ---------------------------------------------------------------------------
+
+  describe("syncItemsToHdayRaw", () => {
+    const makeEntry = (
+      date: string,
+      entry_type: string,
+      flags: string[] = [],
+      note: string | null = null,
+      deleted_at: string | null = null,
+    ) => ({
+      id: 1,
+      user_id: 1,
+      date,
+      entry_type,
+      flags,
+      note,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at,
+    });
+
+    it("converts a vacation entry to an un-prefixed .hday line", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation")]);
+      expect(raw).toBe("2026/07/14");
+    });
+
+    it("converts a business entry to a b-prefixed .hday line", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "business")]);
+      expect(raw).toBe("b2026/07/14");
+    });
+
+    it("includes a note as a comment", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation", [], "Bastille Day")]);
+      expect(raw).toBe("2026/07/14 # Bastille Day");
+    });
+
+    it("includes time/location flags in the prefix", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation", ["half_am"])]);
+      expect(raw).toBe("a2026/07/14");
+    });
+
+    it("skips soft-deleted entries", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("2026-07-14", "vacation", [], null, "2026-01-02T00:00:00Z"),
+      ]);
+      expect(raw).toBe("");
+    });
+
+    it("produces multiple lines for multiple entries", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("2026-07-14", "vacation"),
+        makeEntry("2026-08-01", "ill"),
+      ]);
+      const lines = raw.split("\n");
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toBe("2026/07/14");
+      expect(lines[1]).toBe("i2026/08/01");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // time-off entries in buildLocalSyncPushPayload
+  // ---------------------------------------------------------------------------
+
+  describe("buildLocalSyncPushPayload — time_off_entries", () => {
+    it("includes time-off entries from .hday raw text", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14 # Vacation");
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        date: "2026-07-14",
+        action: "create",
+        entry_type: "vacation",
+        note: "Vacation",
+      });
+    });
+
+    it("expands multi-day range events in .hday to individual entries", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/12/24-2026/12/26");
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(3);
+      expect(payload.time_off_entries.map((e) => e.date)).toEqual([
+        "2026-12-24",
+        "2026-12-25",
+        "2026-12-26",
+      ]);
+    });
+
+    it("skips weekly events in .hday", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "d1 # Every Monday");
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(0);
+    });
+
+    it("returns empty time_off_entries when no .hday data", () => {
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // time-off entries in applySyncPullResponse
+  // ---------------------------------------------------------------------------
+
+  describe("applySyncPullResponse — time_off_entries", () => {
+    const makeBaseResponse = () => ({
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      server_timestamp: "2026-01-01T00:00:00Z",
+    });
+
+    const makeTimeOffEntry = (
+      date: string,
+      entry_type = "vacation",
+      flags: string[] = [],
+      note: string | null = null,
+      deleted_at: string | null = null,
+    ) => ({
+      id: 1,
+      user_id: 1,
+      date,
+      entry_type,
+      flags,
+      note,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at,
+    });
+
+    it("writes .hday raw text for pulled time-off entries", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [makeTimeOffEntry("2026-07-14", "vacation", [], "Bastille Day")],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).toContain("2026/07/14");
+      expect(stored).toContain("Bastille Day");
+    });
+
+    it("removes .hday key when all entries are soft-deleted", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14");
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [makeTimeOffEntry("2026-07-14", "vacation", [], null, "2026-07-15T00:00:00Z")],
+      });
+
+      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
+    });
+
+    it("removes .hday key when time_off_entries is empty", () => {
+      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14");
+      applySyncPullResponse(makeBaseResponse());
+
+      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Preferences sync helpers
+  // ---------------------------------------------------------------------------
+
+  describe("fetchPreferences", () => {
+    it("returns parsed preferences on success", async () => {
+      const prefs = {
+        user_id: 1,
+        data: { theme: "dark" },
+        client_updated_at: "2026-01-01T00:00:00Z",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      };
+      mockFetch.mockResolvedValue({ ok: true, json: async () => prefs });
+      const result = await fetchPreferences(mockFetch);
+      expect(result).toEqual(prefs);
+      expect(mockFetch).toHaveBeenCalledWith("/db/preferences");
+    });
+
+    it("returns null when response is not ok", async () => {
+      mockFetch.mockResolvedValue({ ok: false });
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+
+    it("returns null when server returns JSON null", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => null });
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+
+    it("returns null when fetch throws", async () => {
+      mockFetch.mockRejectedValue(new Error("network error"));
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+  });
+
+  describe("pushPreferences", () => {
+    it("PUTs the preferences payload and returns true on success", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const result = await pushPreferences(
+        mockFetch,
+        { theme: "dark" },
+        "2026-01-01T00:00:00Z",
+      );
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/db/preferences",
+        expect.objectContaining({ method: "PUT" }),
+      );
+    });
+
+    it("returns false when response is not ok", async () => {
+      mockFetch.mockResolvedValue({ ok: false });
+      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+    });
+
+    it("returns false when fetch throws", async () => {
+      mockFetch.mockRejectedValue(new Error("network error"));
+      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+    });
+  });
+
+  describe("buildLocalPreferencesPayload", () => {
+    it("returns null when worktime_user_state is not in localStorage", () => {
+      expect(buildLocalPreferencesPayload()).toBeNull();
+    });
+
+    it("returns the parsed user state when present", () => {
+      const userState = { hasCompletedOnboarding: true, scheduleType: "9-5" };
+      localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
+      const result = buildLocalPreferencesPayload();
+      expect(result).not.toBeNull();
+      expect(result?.data).toEqual(userState);
+      expect(result?.clientUpdatedAt).toBeTruthy();
+    });
+
+    it("returns null for invalid JSON in localStorage", () => {
+      localStorage.setItem(USER_STATE_STORAGE_KEY, "not-valid-json{");
+      expect(buildLocalPreferencesPayload()).toBeNull();
+    });
+  });
+
+  describe("applyPreferencesPull", () => {
+    it("writes pulled preferences data to worktime_user_state", () => {
+      const data = { hasCompletedOnboarding: true, scheduleType: "9-5" };
+      applyPreferencesPull(data);
+      const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored!)).toEqual(data);
+    });
+
+    it("overwrites existing worktime_user_state", () => {
+      localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ hasCompletedOnboarding: false }));
+      applyPreferencesPull({ hasCompletedOnboarding: true });
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored.hasCompletedOnboarding).toBe(true);
     });
   });
 });

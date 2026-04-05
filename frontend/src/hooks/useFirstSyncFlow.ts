@@ -28,10 +28,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applySyncPullResponse,
+  applyPreferencesPull,
   buildKeepLocalReplacePayload,
+  buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  fetchPreferences,
   fetchSyncStatus,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
   syncStatusHasData,
   type SyncPushPayload,
@@ -144,7 +148,7 @@ export function useFirstSyncFlow(
         return;
       }
 
-      // Branch A — server empty, local has data → push
+      // Branch A — server empty, local has data → push entities + preferences
       if (localHasData && !serverHasData) {
         setPhase("pushing");
         const result = await pushSyncPayload(fetch, localPayload);
@@ -152,6 +156,12 @@ export function useFirstSyncFlow(
         if (!result) {
           setPhase("error");
           return;
+        }
+        // Also push local preferences (user state) to the server.
+        const prefsPayload = buildLocalPreferencesPayload();
+        if (prefsPayload) {
+          await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
         }
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
@@ -163,7 +173,7 @@ export function useFirstSyncFlow(
         return;
       }
 
-      // Branch B — server has data, local is empty → pull automatically
+      // Branch B — server has data, local is empty → pull entities + preferences
       if (!localHasData && serverHasData) {
         setPhase("pulling");
         const pullResult = await pullSyncData(fetch);
@@ -173,6 +183,12 @@ export function useFirstSyncFlow(
           return;
         }
         applySyncPullResponse(pullResult);
+        // Also pull preferences from the server and apply to localStorage.
+        const serverPrefs = await fetchPreferences(fetch);
+        if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+        if (serverPrefs) {
+          applyPreferencesPull(serverPrefs.data);
+        }
         storeSyncCursor(uid, pullResult.server_timestamp);
         setPhase("done");
         return;
@@ -220,6 +236,12 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
+            // Push local preferences to the server (keep-local means local wins).
+            const prefsPayload = buildLocalPreferencesPayload();
+            if (prefsPayload) {
+              await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
+              if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            }
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             const cursor = postStatus?.server_timestamp ?? serverData.server_timestamp;
@@ -239,6 +261,12 @@ export function useFirstSyncFlow(
               return;
             }
             applySyncPullResponse(pullResult);
+            // Pull preferences from the server (use-server means server wins).
+            const serverPrefs = await fetchPreferences(fetch);
+            if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+            if (serverPrefs) {
+              applyPreferencesPull(serverPrefs.data);
+            }
             storeSyncCursor(uid, pullResult.server_timestamp);
             setPhase("done");
           }

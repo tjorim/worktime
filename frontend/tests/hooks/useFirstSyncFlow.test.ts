@@ -11,6 +11,8 @@ const emptyStatus = {
   tasks_updated_at: null,
   templates_updated_at: null,
   work_locations_updated_at: null,
+  time_off_entries_updated_at: null,
+  preferences_updated_at: null,
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
 
@@ -19,6 +21,8 @@ const populatedStatus = {
   tasks_updated_at: null,
   templates_updated_at: null,
   work_locations_updated_at: null,
+  time_off_entries_updated_at: null,
+  preferences_updated_at: null,
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
 
@@ -27,6 +31,7 @@ const emptyPullResponse = {
   tasks: [],
   templates: [],
   work_locations: [],
+  time_off_entries: [],
   server_timestamp: "2026-01-02T00:00:00.000Z",
 };
 
@@ -122,7 +127,8 @@ describe("useFirstSyncFlow", () => {
   it("Branch B: pulls server data when local is empty", async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }); // pull
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
+      .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
 
     const { result } = renderHook(() =>
       useFirstSyncFlow(true, "user-1", mockFetch),
@@ -191,7 +197,8 @@ describe("useFirstSyncFlow", () => {
 
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status
-      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }); // pull
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
+      .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
 
     const { result } = renderHook(() =>
       useFirstSyncFlow(true, "user-1", mockFetch),
@@ -244,5 +251,59 @@ describe("useFirstSyncFlow", () => {
     });
 
     expect(result.current.phase).toBe("idle");
+  });
+
+  it("Branch A: pushes preferences after entity sync when local prefs exist", async () => {
+    seedTasks();
+    // Seed a local user state so buildLocalPreferencesPayload() returns non-null
+    localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus })    // status check
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
+      .mockResolvedValueOnce({ ok: true })                                    // PUT /db/preferences
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus });   // re-fetch status
+
+    const { result } = renderHook(() =>
+      useFirstSyncFlow(true, "user-1", mockFetch),
+    );
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("done");
+    });
+
+    const prefsPushCall = mockFetch.mock.calls.find(
+      ([url, init]: [string, RequestInit | undefined]) =>
+        url === "/db/preferences" && init?.method === "PUT",
+    );
+    expect(prefsPushCall).toBeDefined();
+  });
+
+  it("Branch B: pulls preferences after entity pull when server has prefs", async () => {
+    const serverPrefs = {
+      user_id: 1,
+      data: { hasCompletedOnboarding: true },
+      client_updated_at: "2026-01-01T00:00:00Z",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus })  // status
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull entities
+      .mockResolvedValueOnce({ ok: true, json: async () => serverPrefs });      // GET /db/preferences
+
+    const { result } = renderHook(() =>
+      useFirstSyncFlow(true, "user-1", mockFetch),
+    );
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("done");
+    });
+
+    // Preferences should have been applied to localStorage
+    const stored = localStorage.getItem("worktime_user_state");
+    expect(stored).not.toBeNull();
+    expect(JSON.parse(stored!)).toEqual(serverPrefs.data);
   });
 });
