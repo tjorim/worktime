@@ -813,6 +813,81 @@ class TestSyncTimeOffEntries:
         assert resp.status_code == 200
         assert resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
 
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        deleted_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["date"] == "2026-08-01"
+        ]
+        assert len(deleted_entries) == 1
+        assert deleted_entries[0]["deleted_at"] is not None
+
+        status_resp = db_client.get("/db/sync/status", headers=headers)
+        assert status_resp.status_code == 200
+        assert status_resp.json()["time_off_entries_updated_at"] is not None
+
+    def test_push_delete_time_off_entry_is_idempotent_and_visible_in_pull(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = self._create_user(db_client, admin_h, "sync-to-delete-repeat")
+        headers = auth_headers(user_id)
+
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-08-02",
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "entry_type": "sick",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-08-02",
+                        "action": "delete",
+                        "client_updated_at": _ts(),
+                    }
+                ]
+            },
+            headers=headers,
+        )
+
+        second_delete = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "date": "2026-08-02",
+                        "action": "delete",
+                        "client_updated_at": _ts(1),
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert second_delete.status_code == 200
+        assert second_delete.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        deleted_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["date"] == "2026-08-02"
+        ]
+        assert len(deleted_entries) == 1
+        assert deleted_entries[0]["deleted_at"] is not None
+
+        status_resp = db_client.get("/db/sync/status", headers=headers)
+        assert status_resp.status_code == 200
+        assert status_resp.json()["time_off_entries_updated_at"] is not None
+
     def test_pull_includes_time_off_entries(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = self._create_user(db_client, admin_h, "sync-to-pull")

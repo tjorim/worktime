@@ -199,7 +199,7 @@ async def _push_task(
             server_updated_at=task.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = _get_provided_fields(item)
+    provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
     if "text" in provided_fields and item.text is not None:
         task.text = item.text
     if "label_id" in provided_fields:
@@ -351,6 +351,7 @@ async def _push_time_off_entry(
     """Time-off entries use (user_id, date) as their natural key."""
     now = _now()
     date_key = item.date.isoformat()
+    provided_fields = _get_provided_fields(item) - {"date", "action", "client_updated_at"}
 
     result = await session.execute(
         select(TimeOffEntry).where(
@@ -375,6 +376,14 @@ async def _push_time_off_entry(
         session.add(entry)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
+    if not provided_fields:
+        return SyncRecordResult(
+            id=date_key,
+            status="conflict",
+            server_updated_at=entry.updated_at if entry is not None else now,
+            conflict_reason="no business fields were provided",
+        )
+
     if entry is None:
         entry = TimeOffEntry(
             user_id=user_id,
@@ -393,7 +402,6 @@ async def _push_time_off_entry(
             server_updated_at=entry.updated_at,
             conflict_reason="server version is newer",
         )
-    provided_fields = _get_provided_fields(item)
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
     if "flags" in provided_fields and item.flags is not None:

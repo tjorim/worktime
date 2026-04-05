@@ -29,6 +29,81 @@ class TestTimeOffAuth:
         resp = db_client.delete("/db/time-off/2026-06-01?user_id=1")
         assert resp.status_code == 401
 
+    def test_get_single_requires_auth(self, db_client: TestClient) -> None:
+        resp = db_client.get("/db/time-off/2026-06-01?user_id=1")
+        assert resp.status_code == 401
+
+    def test_patch_single_requires_auth(self, db_client: TestClient) -> None:
+        resp = db_client.patch("/db/time-off/2026-06-01?user_id=1", json={"note": "unauthorized"})
+        assert resp.status_code == 401
+
+    def test_get_single_forbidden_for_other_user(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-auth-single-get-a")
+        user_b = create_user_factory(db_client, admin_h, "to-auth-single-get-b")
+        headers_a = auth_headers(user_a)
+        headers_b = auth_headers(user_b)
+
+        db_client.post(
+            f"/db/time-off/?user_id={user_a}",
+            json={"date": "2026-06-01", "entry_type": "vacation"},
+            headers=headers_a,
+        )
+
+        resp = db_client.get(f"/db/time-off/2026-06-01?user_id={user_a}", headers=headers_b)
+        assert resp.status_code == 403
+
+    def test_patch_single_forbidden_for_other_user(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-auth-single-patch-a")
+        user_b = create_user_factory(db_client, admin_h, "to-auth-single-patch-b")
+        headers_a = auth_headers(user_a)
+        headers_b = auth_headers(user_b)
+
+        db_client.post(
+            f"/db/time-off/?user_id={user_a}",
+            json={"date": "2026-06-02", "entry_type": "vacation"},
+            headers=headers_a,
+        )
+
+        resp = db_client.patch(
+            f"/db/time-off/2026-06-02?user_id={user_a}",
+            json={"note": "forbidden"},
+            headers=headers_b,
+        )
+        assert resp.status_code == 403
+
+    def test_delete_single_forbidden_for_other_user(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "to-auth-single-delete-a")
+        user_b = create_user_factory(db_client, admin_h, "to-auth-single-delete-b")
+        headers_a = auth_headers(user_a)
+        headers_b = auth_headers(user_b)
+
+        db_client.post(
+            f"/db/time-off/?user_id={user_a}",
+            json={"date": "2026-06-03", "entry_type": "vacation"},
+            headers=headers_a,
+        )
+
+        resp = db_client.delete(f"/db/time-off/2026-06-03?user_id={user_a}", headers=headers_b)
+        assert resp.status_code == 403
+
 
 # ---------------------------------------------------------------------------
 # POST /db/time-off/  — create / upsert
@@ -86,7 +161,7 @@ class TestCreateTimeOff:
             json={"date": "2026-08-01", "entry_type": "sick", "flags": ["ill"], "note": "updated"},
             headers=headers,
         )
-        assert second.status_code == 201
+        assert second.status_code == 200
         assert second.json()["id"] == first.json()["id"]
         assert second.json()["entry_type"] == "sick"
         assert second.json()["note"] == "updated"
@@ -362,7 +437,7 @@ class TestDeleteTimeOff:
             json={"date": "2026-11-11", "entry_type": "sick"},
             headers=headers,
         )
-        assert resp.status_code == 201
+        assert resp.status_code == 200
         assert resp.json()["entry_type"] == "sick"
 
         list_resp = db_client.get(f"/db/time-off/?user_id={user_id}", headers=headers)
