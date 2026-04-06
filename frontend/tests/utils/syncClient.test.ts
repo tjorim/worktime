@@ -16,7 +16,7 @@ import {
 } from "../../src/utils/syncClient";
 import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
 import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
-import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import { TIME_OFF_ENTRIES_STORAGE_KEY } from "../../src/lib/timeOff/storage";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "../../src/lib/timeOff/codecs";
 
 const mockFetch = vi.fn();
@@ -892,8 +892,9 @@ describe("syncClient", () => {
   // ---------------------------------------------------------------------------
 
   describe("buildLocalSyncPushPayload — time_off_entries", () => {
-    it("includes time-off entries from .hday raw text", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14 # Vacation");
+    it("includes time-off entries from canonical storage", () => {
+      const entry = { id: "e1", kind: "date", date: "2026-07-14", entryType: "vacation", flags: [], note: "Vacation" };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -903,11 +904,12 @@ describe("syncClient", () => {
         entry_type: "vacation",
         note: "Vacation",
       });
-      expect(payload.time_off_entries[0]?.id).toBeTypeOf("string");
+      expect(payload.time_off_entries[0]?.id).toBe("e1");
     });
 
-    it("preserves multi-day range events from .hday as single entries", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/12/24-2026/12/26");
+    it("preserves multi-day range entries as single entries", () => {
+      const entry = { id: "e2", kind: "range", start: "2026-12-24", end: "2026-12-26", entryType: "vacation", flags: [], note: null };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -917,8 +919,9 @@ describe("syncClient", () => {
       });
     });
 
-    it("includes weekly events from .hday", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "d1 # Every Monday");
+    it("includes weekly entries", () => {
+      const entry = { id: "e3", kind: "weekly", weekday: 1, entryType: "vacation", flags: [], note: "Every Monday" };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -972,7 +975,7 @@ describe("syncClient", () => {
       deleted_at,
     });
 
-    it("writes .hday raw text for pulled time-off entries", () => {
+    it("writes canonical time-off entries for pulled sync data", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
@@ -980,13 +983,14 @@ describe("syncClient", () => {
         ],
       });
 
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toContain("2026/07/14");
-      expect(stored).toContain("Bastille Day");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ kind: "date", date: "2026-07-14", note: "Bastille Day" });
     });
 
-    it("removes .hday key when all entries are soft-deleted", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14");
+    it("clears time-off storage when all entries are soft-deleted", () => {
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([{ id: "e1", kind: "date", date: "2026-07-14", entryType: "vacation", flags: [], note: null }]));
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
@@ -1001,17 +1005,17 @@ describe("syncClient", () => {
         ],
       });
 
-      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
     });
 
-    it("removes .hday key when time_off_entries is empty", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14");
+    it("clears time-off storage when time_off_entries is empty", () => {
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([{ id: "e1", kind: "date", date: "2026-07-14", entryType: "vacation", flags: [], note: null }]));
       applySyncPullResponse(makeBaseResponse());
 
-      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
+      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
     });
 
-    it("restores weekly and range entries without expanding them", () => {
+    it("restores weekly and range entries as canonical entries without expanding them", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
@@ -1020,9 +1024,11 @@ describe("syncClient", () => {
         ],
       });
 
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toContain("d1k # Every Monday");
-      expect(stored).toContain("2026/12/24-2026/12/26");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!) as Array<Record<string, unknown>>;
+      expect(entries).toHaveLength(2);
+      expect(entries.some(e => e.kind === "weekly" && e.weekday === 1 && e.note === "Every Monday")).toBe(true);
+      expect(entries.some(e => e.kind === "range" && e.start === "2026-12-24" && e.end === "2026-12-26")).toBe(true);
     });
   });
 

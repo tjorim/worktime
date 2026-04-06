@@ -219,16 +219,20 @@ export function MonthCalendar({
         }
 
         if (isTimeOffRangeEntry(entry)) {
-          let current = dayjs(entry.start).startOf("day");
-          const end = dayjs(entry.end).startOf("day");
-          if (!current.isValid() || !end.isValid() || end.isBefore(current, "day")) {
+          const rangeStart = dayjs(entry.start).startOf("day");
+          const rangeEnd = dayjs(entry.end).startOf("day");
+          if (!rangeStart.isValid() || !rangeEnd.isValid() || rangeEnd.isBefore(rangeStart, "day")) {
+            return;
+          }
+
+          let current = rangeStart.isBefore(visibleStart, "day") ? visibleStart : rangeStart;
+          const end = rangeEnd.isAfter(visibleEnd, "day") ? visibleEnd : rangeEnd;
+          if (end.isBefore(current, "day")) {
             return;
           }
 
           while (current.isSameOrBefore(end, "day")) {
-            if (!current.isBefore(visibleStart, "day") && !current.isAfter(visibleEnd, "day")) {
-              addEvent(current, { entry });
-            }
+            addEvent(current, { entry });
             current = current.add(1, "day");
           }
           return;

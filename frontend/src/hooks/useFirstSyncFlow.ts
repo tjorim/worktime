@@ -38,13 +38,10 @@ import {
   pushPreferences,
   pushSyncPayload,
   syncStatusHasData,
-  timeOffEntriesToSyncItems,
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "../utils/syncClient";
 import { getSyncCursorKey } from "../constants/storageKeys";
-import { LEGACY_TIME_OFF_STORAGE_KEY } from "../lib/timeOff/storage";
-import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
 import { dayjs } from "../utils/dateTimeUtils";
 import { useEventStore } from "../contexts/EventStoreContext";
 
@@ -102,18 +99,7 @@ function buildSafeLocalSyncPushPayload(): SyncPushPayload {
   try {
     return buildLocalSyncPushPayload();
   } catch {
-    const legacyRaw = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
-    const legacyTimeOffEntries = legacyRaw
-      ? timeOffEntriesToSyncItems(hdayToTimeOffEntries(legacyRaw).entries, dayjs().toISOString())
-      : [];
-
-    return {
-      labels: [],
-      tasks: [],
-      templates: [],
-      work_locations: [],
-      time_off_entries: legacyTimeOffEntries,
-    };
+    return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
   }
 }
 

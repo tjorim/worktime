@@ -1,4 +1,3 @@
-import { hdayToTimeOffEntries } from "./codecs";
 import type { TimeOffEntry, TimeOffEntryFlag, TimeOffEntryType } from "./types";
 import {
   getTimeOffEntryIdentityKey,
@@ -7,7 +6,6 @@ import {
 } from "./types";
 
 export const TIME_OFF_ENTRIES_STORAGE_KEY = "worktime_time_off_entries";
-export const LEGACY_TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
 
 function isValidDateKey(value: unknown): value is string {
   return (
@@ -105,13 +103,8 @@ export function loadTimeOffEntries(): TimeOffEntry[] {
 
   try {
     const raw = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-    if (raw) {
-      return normalizeTimeOffEntries(JSON.parse(raw));
-    }
-
-    const legacyRaw = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
-    if (!legacyRaw) return [];
-    return hdayToTimeOffEntries(legacyRaw).entries;
+    if (!raw) return [];
+    return normalizeTimeOffEntries(JSON.parse(raw));
   } catch {
     return [];
   }
@@ -122,7 +115,6 @@ export function saveTimeOffEntries(entries: TimeOffEntry[]): void {
 
   if (entries.length === 0) {
     localStorage.removeItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_TIME_OFF_STORAGE_KEY);
     return;
   }
 

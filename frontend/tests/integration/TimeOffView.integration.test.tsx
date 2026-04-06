@@ -7,7 +7,8 @@ import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsCon
 import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import { ToastProvider } from "../../src/contexts/ToastContext";
-import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import { TIME_OFF_ENTRIES_STORAGE_KEY, loadTimeOffEntries } from "../../src/lib/timeOff/storage";
+import { hdayToTimeOffEntries } from "../../src/lib/timeOff/codecs";
 import {
   SIMPLE_HDAY,
   MULTI_TYPE_HDAY,
@@ -237,9 +238,9 @@ describe("TimeOffView Integration Tests", () => {
       expect(within(screen.getByRole("table")).getByText("2025/06/15")).toBeInTheDocument();
 
       // Verify localStorage persistence
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toContain("Summer vacation");
-      expect(stored).toContain("2025/06/15");
+      const entries = loadTimeOffEntries();
+      expect(entries.some(e => e.note === "Summer vacation")).toBe(true);
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-06-15")).toBe(true);
 
       // === UPDATE ===
       // Find and click edit button using accessible name
@@ -259,9 +260,9 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.queryByText("Summer vacation")).not.toBeInTheDocument();
 
       // Verify updated localStorage
-      const updatedStored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(updatedStored).toContain("Updated summer vacation");
-      expect(updatedStored).not.toContain("# Summer vacation");
+      const updatedEntries = loadTimeOffEntries();
+      expect(updatedEntries.some(e => e.note === "Updated summer vacation")).toBe(true);
+      expect(updatedEntries.every(e => e.note !== "Summer vacation")).toBe(true);
 
       // === DELETE ===
       // Click delete button
@@ -280,10 +281,8 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
 
       // Verify localStorage is updated (should be empty or not contain the event)
-      const finalStored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      if (finalStored) {
-        expect(finalStored).not.toContain("Updated summer vacation");
-      }
+      const finalEntries = loadTimeOffEntries();
+      expect(finalEntries.every(e => e.note !== "Updated summer vacation")).toBe(true);
     }, 15000);
 
     it("creates event with flags and persists them correctly", async () => {
@@ -315,11 +314,16 @@ describe("TimeOffView Integration Tests", () => {
       // Verify event in table
       expect(screen.getByText("Conference")).toBeInTheDocument();
 
-      // Verify localStorage has correctly persisted flags in .hday format
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toBeTruthy();
-      // The event should be serialized as: bw2025/07/20-2025/07/25 # Conference
-      expect(stored).toMatch(/bw2025\/07\/20-2025\/07\/25 # Conference/);
+      // Verify canonical entry has correct fields
+      const entries = loadTimeOffEntries();
+      const conference = entries.find(e => e.note === "Conference");
+      expect(conference).toBeTruthy();
+      expect(conference).toMatchObject({
+        kind: "range",
+        start: "2025-07-20",
+        end: "2025-07-25",
+        flags: expect.arrayContaining(["onsite"]),
+      });
 
       // Verify the Business type badge appears in the table
       const badges = screen.getAllByText(/Business/i);
@@ -349,16 +353,10 @@ describe("TimeOffView Integration Tests", () => {
       await user.type(titleInput, "Second event");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      // Verify localStorage has both events in correct .hday format
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).toContain("2025/08/10");
-      expect(stored).toContain("First event");
-      expect(stored).toContain("2025/08/15");
-      expect(stored).toContain("Second event");
-
-      // Verify .hday format structure (date # comment)
-      expect(stored).toMatch(/2025\/08\/10 # First event/);
-      expect(stored).toMatch(/2025\/08\/15 # Second event/);
+      // Verify canonical entries have correct fields
+      const entries = loadTimeOffEntries();
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-08-10" && e.note === "First event")).toBe(true);
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-08-15" && e.note === "Second event")).toBe(true);
     }, 15000);
 
     it("serializes complex events with correct .hday format", async () => {
@@ -370,25 +368,23 @@ describe("TimeOffView Integration Tests", () => {
       const file = new File([COMPLEX_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
 
-      // Verify localStorage contains all event types in correct format
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      // Verify canonical entries contain all event types
+      const entries = loadTimeOffEntries();
 
-      // Check range events
-      expect(stored).toContain("2025/01/15");
-      expect(stored).toContain("New Year vacation");
+      // Check date event
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation")).toBe(true);
 
       // Check business trip with date range
-      expect(stored).toContain("b2025/02/10-2025/02/14");
-      expect(stored).toContain("Conference trip");
+      expect(entries.some(e => e.kind === "range" && e.start === "2025-02-10" && e.end === "2025-02-14" && e.note === "Conference trip")).toBe(true);
 
       // Check weekly events
-      expect(stored).toContain("d1k"); // Monday in office
-      expect(stored).toContain("d5"); // Friday
+      expect(entries.some(e => e.kind === "weekly" && e.weekday === 1)).toBe(true); // Monday
+      expect(entries.some(e => e.kind === "weekly" && e.weekday === 5)).toBe(true); // Friday
 
       // Check events with flags
-      expect(stored).toContain("a2025/03/20"); // Half day AM
-      expect(stored).toContain("p2025/05/10"); // Half day PM
-      expect(stored).toContain("s2025/04/05-2025/04/07"); // Training
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-03-20" && e.flags.includes("half_am"))).toBe(true);
+      expect(entries.some(e => e.kind === "date" && e.date === "2025-05-10" && e.flags.includes("half_pm"))).toBe(true);
+      expect(entries.some(e => e.kind === "range" && e.start === "2025-04-05" && e.end === "2025-04-07")).toBe(true);
     });
   });
 
@@ -418,8 +414,9 @@ describe("TimeOffView Integration Tests", () => {
     });
 
     it("loads events from localStorage on initial render", () => {
-      // Pre-populate localStorage
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, SIMPLE_HDAY);
+      // Pre-populate localStorage with canonical entries parsed from the fixture
+      const { entries } = hdayToTimeOffEntries(SIMPLE_HDAY);
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
 
       renderWithProviders();
 
@@ -560,11 +557,11 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.queryByText("Event 2")).not.toBeInTheDocument();
       expect(screen.getByText("Event 3")).toBeInTheDocument();
 
-      // Verify localStorage updated correctly
-      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-      expect(stored).not.toContain("Event 1");
-      expect(stored).not.toContain("Event 2");
-      expect(stored).toContain("Event 3");
+      // Verify canonical entries updated correctly
+      const entries = loadTimeOffEntries();
+      expect(entries.every(e => e.note !== "Event 1")).toBe(true);
+      expect(entries.every(e => e.note !== "Event 2")).toBe(true);
+      expect(entries.some(e => e.note === "Event 3")).toBe(true);
     }, 15000);
   });
 });

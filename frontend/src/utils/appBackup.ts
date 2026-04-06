@@ -18,7 +18,6 @@ import {
   WORK_LOCATIONS_STORAGE_PREFIX,
 } from "../constants/storageKeys";
 import {
-  LEGACY_TIME_OFF_STORAGE_KEY,
   loadTimeOffEntries,
   normalizeTimeOffEntries,
   saveTimeOffEntries,
@@ -29,7 +28,7 @@ export type AppBackupPayload = {
   exportedAt: string;
   version: 1;
   userState?: unknown;
-  timeOff?: unknown[] | string;
+  timeOff?: unknown[];
   workLocations?: Record<string, unknown>;
   tasks?: unknown[];
   templates?: unknown[];
@@ -305,12 +304,7 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     }
   }
 
-  if (
-    "timeOff" in p &&
-    p.timeOff !== undefined &&
-    !Array.isArray(p.timeOff) &&
-    typeof p.timeOff !== "string"
-  ) {
+  if ("timeOff" in p && p.timeOff !== undefined && !Array.isArray(p.timeOff)) {
     return false;
   }
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
@@ -333,9 +327,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
   }
 
-  if (typeof payload.timeOff === "string") {
-    localStorage.setItem(LEGACY_TIME_OFF_STORAGE_KEY, payload.timeOff);
-  } else if (Array.isArray(payload.timeOff)) {
+  if (Array.isArray(payload.timeOff)) {
     saveTimeOffEntries(normalizeTimeOffEntries(payload.timeOff));
   }
 
