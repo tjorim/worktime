@@ -559,15 +559,21 @@ export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
 
 function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
   return items
-    .filter((item) => item.deleted_at === null)
+    .filter((item) => {
+      if (item.deleted_at !== null) return false;
+      if (item.kind === "date") return item.date != null;
+      if (item.kind === "range") return item.start_date != null && item.end_date != null;
+      if (item.kind === "weekly") return item.weekday != null;
+      return false;
+    })
     .map((item) =>
       createTimeOffEntry({
         id: item.entry_id,
         kind: item.kind,
-        date: item.kind === "date" ? item.date ?? "" : undefined,
-        start: item.kind === "range" ? item.start_date ?? "" : undefined,
-        end: item.kind === "range" ? item.end_date ?? "" : undefined,
-        weekday: item.kind === "weekly" ? item.weekday ?? 1 : undefined,
+        date: item.kind === "date" ? item.date! : undefined,
+        start: item.kind === "range" ? item.start_date! : undefined,
+        end: item.kind === "range" ? item.end_date! : undefined,
+        weekday: item.kind === "weekly" ? item.weekday! : undefined,
         entryType: item.entry_type as TimeOffEntry["entryType"],
         flags: item.flags as TimeOffEntry["flags"],
         note: item.note,

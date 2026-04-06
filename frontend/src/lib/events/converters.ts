@@ -157,7 +157,11 @@ export function hdayToCalendarEvents(
   return [];
 }
 
-export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[] {
+export function entriesToCalendarEvents(
+  entries: TimeOffEntry[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): CalendarEvent[] {
   return entries.flatMap((entry) => {
     const flags = getEntryFlagsForDisplay(entry);
     const color = getEventColor(flags);
@@ -203,8 +207,8 @@ export function entriesToCalendarEvents(entries: TimeOffEntry[]): CalendarEvent[
           title: entry.note ?? "",
           flags,
         },
-        new Date("2000-01-01"),
-        new Date("2100-12-31"),
+        rangeStart,
+        rangeEnd,
       ).map((event) => ({ ...event, id: `${entry.id}:${event.start}` }));
     }
 

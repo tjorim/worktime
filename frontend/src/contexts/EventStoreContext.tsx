@@ -14,7 +14,6 @@ import {
   timeOffEntriesToHday,
 } from "../lib/timeOff/codecs";
 import {
-  LEGACY_TIME_OFF_STORAGE_KEY,
   loadTimeOffEntries,
   saveTimeOffEntries,
 } from "../lib/timeOff/storage";
@@ -26,15 +25,13 @@ import {
 } from "../lib/timeOff/types";
 import { dayjs } from "../utils/dateTimeUtils";
 
-export const TIME_OFF_STORAGE_KEY = LEGACY_TIME_OFF_STORAGE_KEY;
-
 type EventStoreAction =
   | { type: "ADD_ENTRIES"; payload: TimeOffEntry[] }
   | { type: "REPLACE_ENTRIES"; payload: TimeOffEntry[] }
   | { type: "UPDATE_ENTRY"; payload: { id: string; entry: TimeOffEntry } }
   | { type: "DELETE_ENTRY"; payload: string }
   | { type: "DELETE_ENTRIES"; payload: string[] }
-  | { type: "IMPORT_HDAY"; payload: string }
+  | { type: "IMPORT_HDAY"; payload: TimeOffEntry[] }
   | { type: "CLEAR_ALL" }
   | { type: "UNDO" }
   | { type: "REDO" };
@@ -143,10 +140,8 @@ function entriesReducer(state: EventStoreState, action: EventStoreAction): Event
       return applyWithHistory(state, filteredEntries);
     }
 
-    case "IMPORT_HDAY": {
-      const result = hdayToTimeOffEntries(action.payload);
-      return applyWithHistory(state, sortEntries(result.entries));
-    }
+    case "IMPORT_HDAY":
+      return applyWithHistory(state, sortEntries(action.payload));
 
     case "CLEAR_ALL":
       if (state.entries.length === 0) return state;
@@ -214,9 +209,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   const getEventsInRange = useCallback(
     (startDate: Date, endDate: Date): CalendarEvent[] => {
-      const calendarEvents = entriesToCalendarEvents(state.entries);
       const startStr = dayjs(startDate).format("YYYY-MM-DD");
       const endStr = dayjs(endDate).format("YYYY-MM-DD");
+      const calendarEvents = entriesToCalendarEvents(state.entries, startDate, endDate);
       return filterEventsInRange(calendarEvents, startStr, endStr);
     },
     [state.entries],
@@ -251,7 +246,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   const importHday = useCallback((text: string) => {
     const result = hdayToTimeOffEntries(text);
-    dispatch({ type: "IMPORT_HDAY", payload: text });
+    dispatch({ type: "IMPORT_HDAY", payload: result.entries });
     return result;
   }, []);
 

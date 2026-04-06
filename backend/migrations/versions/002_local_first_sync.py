@@ -45,7 +45,6 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_time_off_entries_user_id", "time_off_entries", ["user_id"])
-    op.create_index("ix_time_off_entries_entry_id", "time_off_entries", ["entry_id"])
     op.create_index("ix_time_off_entries_date", "time_off_entries", ["date"])
     op.create_index("ix_time_off_entries_start_date", "time_off_entries", ["start_date"])
     op.create_index("ix_time_off_entries_end_date", "time_off_entries", ["end_date"])
@@ -58,9 +57,21 @@ def upgrade() -> None:
         ["user_id", "entry_id"],
         unique=True,
     )
+    op.create_check_constraint("ck_time_off_kind", "time_off_entries", "kind IN ('date', 'range', 'weekly')")
+    op.create_check_constraint("ck_time_off_weekday_range", "time_off_entries", "weekday BETWEEN 1 AND 7 OR weekday IS NULL")
+    op.create_check_constraint(
+        "ck_time_off_shape",
+        "time_off_entries",
+        "kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL"
+        " OR kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= end_date AND date IS NULL AND weekday IS NULL"
+        " OR kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL",
+    )
 
 
 def downgrade() -> None:
+    op.drop_constraint("ck_time_off_shape", "time_off_entries", type_="check")
+    op.drop_constraint("ck_time_off_weekday_range", "time_off_entries", type_="check")
+    op.drop_constraint("ck_time_off_kind", "time_off_entries", type_="check")
     op.drop_index("uq_time_off_user_entry_id", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_deleted_at", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_updated_at", table_name="time_off_entries")
@@ -68,7 +79,6 @@ def downgrade() -> None:
     op.drop_index("ix_time_off_entries_end_date", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_start_date", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_date", table_name="time_off_entries")
-    op.drop_index("ix_time_off_entries_entry_id", table_name="time_off_entries")
     op.drop_index("ix_time_off_entries_user_id", table_name="time_off_entries")
     op.drop_table("time_off_entries")
     op.drop_index("ix_user_preferences_updated_at", table_name="user_preferences")

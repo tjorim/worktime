@@ -186,13 +186,8 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.timeOff) {
-    const rawTimeOff = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
-    if (rawTimeOff) {
-      payload.timeOff = rawTimeOff;
-    } else {
-      const timeOff = loadTimeOffEntries();
-      if (timeOff.length > 0) payload.timeOff = timeOff;
-    }
+    const timeOff = loadTimeOffEntries();
+    if (timeOff.length > 0) payload.timeOff = timeOff;
   }
 
   if (include.workLocations) {

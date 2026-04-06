@@ -7,7 +7,7 @@ from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
+from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
 from sqlalchemy import false as sa_false
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -240,5 +240,13 @@ class TimeOffEntry(Base):
             "user_id",
             "entry_id",
             unique=True,
+        ),
+        CheckConstraint("kind IN ('date', 'range', 'weekly')", name="ck_time_off_kind"),
+        CheckConstraint("weekday BETWEEN 1 AND 7 OR weekday IS NULL", name="ck_time_off_weekday_range"),
+        CheckConstraint(
+            "kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL"
+            " OR kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= end_date AND date IS NULL AND weekday IS NULL"
+            " OR kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL",
+            name="ck_time_off_shape",
         ),
     )

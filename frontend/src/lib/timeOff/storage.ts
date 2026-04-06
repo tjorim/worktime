@@ -1,4 +1,4 @@
-import { hdayToTimeOffEntries, timeOffEntriesToHday } from "./codecs";
+import { hdayToTimeOffEntries } from "./codecs";
 import type { TimeOffEntry, TimeOffEntryFlag, TimeOffEntryType } from "./types";
 import {
   getTimeOffEntryIdentityKey,
@@ -127,5 +127,4 @@ export function saveTimeOffEntries(entries: TimeOffEntry[]): void {
   }
 
   localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
-  localStorage.setItem(LEGACY_TIME_OFF_STORAGE_KEY, `${timeOffEntriesToHday(entries)}\n`);
 }

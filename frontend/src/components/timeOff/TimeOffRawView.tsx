@@ -70,14 +70,12 @@ export function TimeOffRawView({
             )}
             {skippedLines && skippedLines.length > 0 && (
               <div id={skippedId} className="mt-2 text-warning-emphasis" role="alert">
-                <small>
-                  <strong>{m.timeoff_hday_skipped_lines_heading()}</strong>
-                  <ul className="mb-0 font-monospace">
-                    {skippedLines.map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ul>
-                </small>
+                <small><strong>{m.timeoff_hday_skipped_lines_heading()}</strong></small>
+                <ul className="mb-0 font-monospace small">
+                  {skippedLines.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
               </div>
             )}
           </Form.Group>
