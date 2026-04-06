@@ -1,9 +1,9 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import type { ScheduleOption } from "../data/rosters";
-import { formatYYWWD } from "../utils/dateTimeUtils";
+import type { ScheduleOption } from "@/data/rosters";
+import { formatYYWWD } from "@/utils/dateTimeUtils";
 import { useLiveTime } from "./useLiveTime";
-import type { OffDayProgress, ShiftResult, UpcomingShiftResult } from "../utils/shiftCalculations";
+import type { OffDayProgress, ShiftResult, UpcomingShiftResult } from "@/utils/shiftCalculations";
 import {
   calculateShift,
   getCurrentShiftDay,
@@ -11,7 +11,7 @@ import {
   getOffDayProgress,
   getShiftCode,
   isCurrentlyWorking,
-} from "../utils/shiftCalculations";
+} from "@/utils/shiftCalculations";
 
 export interface LiveShiftStatus {
   today: Dayjs;

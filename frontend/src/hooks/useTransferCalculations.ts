@@ -1,9 +1,9 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSettings } from "../contexts/SettingsContext";
-import { dayjs } from "../utils/dateTimeUtils";
-import { getEffectiveTeam, getTeamCountForOption } from "../utils/scheduleUtils";
-import { calculateShift, type ShiftType } from "../utils/shiftCalculations";
+import { useSettings } from "@/contexts/SettingsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { getEffectiveTeam, getTeamCountForOption } from "@/utils/scheduleUtils";
+import { calculateShift, type ShiftType } from "@/utils/shiftCalculations";
 
 export type TransferType = "handover" | "takeover";
 

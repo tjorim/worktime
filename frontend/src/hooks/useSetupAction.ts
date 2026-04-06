@@ -1,5 +1,5 @@
-import { useSettings } from "../contexts/SettingsContext";
-import { getScheduleConfig } from "../utils/scheduleUtils";
+import { useSettings } from "@/contexts/SettingsContext";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
 
 interface UseSetupActionOptions {
   /**

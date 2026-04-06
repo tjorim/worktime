@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { describe, expect, it } from "vitest";
-import { ScheduleDetailModal } from "../../src/components/schedule/ScheduleDetailModal";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 function renderWithSettings(ui: React.ReactElement) {
   return render(

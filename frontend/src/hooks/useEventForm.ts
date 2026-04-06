@@ -1,17 +1,17 @@
 import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
-import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
-import type { TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
-import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
-import { isValidDate } from "../lib/hday/validation";
-import { dayjs } from "../utils/dateTimeUtils";
-import { serializeEventFormState } from "../utils/eventFormState";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
+import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
+import { isValidDate } from "@/lib/hday/validation";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { serializeEventFormState } from "@/utils/eventFormState";
 import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
-} from "../data/timeoffConstants";
+} from "@/data/timeoffConstants";
 
 /**
  * Custom hook for managing event form state and validation.

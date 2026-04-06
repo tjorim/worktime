@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TimeOffStatsView } from "../../../src/components/timeOff/TimeOffStatsView";
-import {
-  buildTimeOffEntryForRange,
-  createWeeklyTimeOffEntry,
-} from "../../../src/lib/timeOff/codecs";
-import type { VacationAllowanceSettings } from "../../../src/utils/vacationCalculations";
+import { TimeOffStatsView } from "@/components/timeOff/TimeOffStatsView";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import type { VacationAllowanceSettings } from "@/utils/vacationCalculations";
 
 describe("TimeOffStatsView", () => {
   const currentYear = new Date().getFullYear();
@@ -41,7 +38,18 @@ describe("TimeOffStatsView", () => {
       flags,
     });
 
-  const weeklyEntry = (weekday: number, entryType: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other" = "in") =>
+  const weeklyEntry = (
+    weekday: number,
+    entryType:
+      | "vacation"
+      | "business"
+      | "course"
+      | "in"
+      | "weekend"
+      | "birthday"
+      | "ill"
+      | "other" = "in",
+  ) =>
     createWeeklyTimeOffEntry({
       weekday,
       note: null,
@@ -252,7 +260,9 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should handle half-day events in calculations", () => {
-      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", ["half_am"])];
+      const entries = [
+        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", ["half_am"]),
+      ];
       render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       expect(screen.getByText(/0\.5 \/ 25 days/)).toBeInTheDocument();
@@ -309,7 +319,9 @@ describe("TimeOffStatsView", () => {
         dateEntry(`${currentYear - 1}-01-15`, `${currentYear - 1}-01-17`),
         dateEntry(`${currentYear}-01-10`, `${currentYear}-01-12`),
       ];
-      render(<TimeOffStatsView {...defaultProps} entries={entries} allowance={multiYearAllowance} />);
+      render(
+        <TimeOffStatsView {...defaultProps} entries={entries} allowance={multiYearAllowance} />,
+      );
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       await user.selectOptions(yearSelect, (currentYear - 1).toString());

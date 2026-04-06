@@ -1,18 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DayCell, type DayEvent } from "../../../src/components/calendar/DayCell";
-import { createTimeOffEntry } from "../../../src/lib/timeOff/codecs";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
+import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
+import { createTimeOffEntry } from "@/lib/timeOff/codecs";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
   let entryCounter = 0;
-  const createEntryEvent = (overrides: {
-    note?: string | null;
-    flags?: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly">;
-    entryType?: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other";
-  } = {}): DayEvent => ({
+  const createEntryEvent = (
+    overrides: {
+      note?: string | null;
+      flags?: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly">;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): DayEvent => ({
     entry: createTimeOffEntry({
       id: `entry-${entryCounter++}`,
       kind: "date",
@@ -200,9 +210,7 @@ describe("DayCell", () => {
     });
 
     it("should display event type label when no title", () => {
-      const events: DayEvent[] = [
-        createEntryEvent({ note: null, entryType: "vacation" }),
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: null, entryType: "vacation" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 
@@ -210,9 +218,7 @@ describe("DayCell", () => {
     });
 
     it("should display time/location symbols", () => {
-      const events: DayEvent[] = [
-        createEntryEvent({ note: "Event", flags: ["half_am"] }),
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: "Event", flags: ["half_am"] })];
 
       const { container } = render(<DayCell {...defaultProps} events={events} />);
 
@@ -272,9 +278,7 @@ describe("DayCell", () => {
 
   describe("Visual Indicators", () => {
     it("should show course indicator emoji for course events", () => {
-      const events: DayEvent[] = [
-        createEntryEvent({ note: "Training", entryType: "course" }),
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: "Training", entryType: "course" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 

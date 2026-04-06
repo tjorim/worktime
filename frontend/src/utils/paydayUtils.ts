@@ -1,8 +1,8 @@
 import type { Dayjs } from "dayjs";
-import type { PublicHolidayInfo } from "../types/publicHolidays";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import { dayjs, formatHdayDate, getISOWeekday, pad2 } from "./dateTimeUtils";
 
-import type { PaydayInfo } from "../types/paydays";
+import type { PaydayInfo } from "@/types/paydays";
 
 const PAYDAY_LABEL = "Payday";
 const PAYDAY_DAY_OF_MONTH = 25;

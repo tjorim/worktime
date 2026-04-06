@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
-import { useLocalStorage } from "../hooks/useLocalStorage";
-import type { CountryCode } from "../types/countries";
-import { isValidCountryCode } from "../types/countries";
-import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
-import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
-import { USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import type { CountryCode } from "@/types/countries";
+import { isValidCountryCode } from "@/types/countries";
+import type { VacationAllowanceSettings } from "@/utils/vacationCalculations";
+import { sanitizeVacationAllowance } from "@/utils/vacationCalculations";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";

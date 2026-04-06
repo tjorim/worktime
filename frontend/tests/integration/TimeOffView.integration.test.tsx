@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { TimeOffView } from "../../src/components/TimeOffView";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { TIME_OFF_ENTRIES_STORAGE_KEY, loadTimeOffEntries } from "../../src/lib/timeOff/storage";
-import { hdayToTimeOffEntries } from "../../src/lib/timeOff/codecs";
+import { TimeOffView } from "@/components/TimeOffView";
+import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
+import { loadTimeOffEntries } from "@/lib/timeOff/storage";
+import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
 import {
   SIMPLE_HDAY,
   MULTI_TYPE_HDAY,
@@ -239,8 +240,8 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify localStorage persistence
       const entries = loadTimeOffEntries();
-      expect(entries.some(e => e.note === "Summer vacation")).toBe(true);
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-06-15")).toBe(true);
+      expect(entries.some((e) => e.note === "Summer vacation")).toBe(true);
+      expect(entries.some((e) => e.kind === "date" && e.date === "2025-06-15")).toBe(true);
 
       // === UPDATE ===
       // Find and click edit button using accessible name
@@ -261,8 +262,8 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify updated localStorage
       const updatedEntries = loadTimeOffEntries();
-      expect(updatedEntries.some(e => e.note === "Updated summer vacation")).toBe(true);
-      expect(updatedEntries.every(e => e.note !== "Summer vacation")).toBe(true);
+      expect(updatedEntries.some((e) => e.note === "Updated summer vacation")).toBe(true);
+      expect(updatedEntries.every((e) => e.note !== "Summer vacation")).toBe(true);
 
       // === DELETE ===
       // Click delete button
@@ -282,7 +283,7 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify localStorage is updated (should be empty or not contain the event)
       const finalEntries = loadTimeOffEntries();
-      expect(finalEntries.every(e => e.note !== "Updated summer vacation")).toBe(true);
+      expect(finalEntries.every((e) => e.note !== "Updated summer vacation")).toBe(true);
     }, 15000);
 
     it("creates event with flags and persists them correctly", async () => {
@@ -316,7 +317,7 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify canonical entry has correct fields
       const entries = loadTimeOffEntries();
-      const conference = entries.find(e => e.note === "Conference");
+      const conference = entries.find((e) => e.note === "Conference");
       expect(conference).toBeTruthy();
       expect(conference).toMatchObject({
         kind: "range",
@@ -355,8 +356,16 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify canonical entries have correct fields
       const entries = loadTimeOffEntries();
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-08-10" && e.note === "First event")).toBe(true);
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-08-15" && e.note === "Second event")).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "date" && e.date === "2025-08-10" && e.note === "First event",
+        ),
+      ).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "date" && e.date === "2025-08-15" && e.note === "Second event",
+        ),
+      ).toBe(true);
     }, 15000);
 
     it("serializes complex events with correct .hday format", async () => {
@@ -372,19 +381,43 @@ describe("TimeOffView Integration Tests", () => {
       const entries = loadTimeOffEntries();
 
       // Check date event
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation")).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation",
+        ),
+      ).toBe(true);
 
       // Check business trip with date range
-      expect(entries.some(e => e.kind === "range" && e.start === "2025-02-10" && e.end === "2025-02-14" && e.note === "Conference trip")).toBe(true);
+      expect(
+        entries.some(
+          (e) =>
+            e.kind === "range" &&
+            e.start === "2025-02-10" &&
+            e.end === "2025-02-14" &&
+            e.note === "Conference trip",
+        ),
+      ).toBe(true);
 
       // Check weekly events
-      expect(entries.some(e => e.kind === "weekly" && e.weekday === 1)).toBe(true); // Monday
-      expect(entries.some(e => e.kind === "weekly" && e.weekday === 5)).toBe(true); // Friday
+      expect(entries.some((e) => e.kind === "weekly" && e.weekday === 1)).toBe(true); // Monday
+      expect(entries.some((e) => e.kind === "weekly" && e.weekday === 5)).toBe(true); // Friday
 
       // Check events with flags
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-03-20" && e.flags.includes("half_am"))).toBe(true);
-      expect(entries.some(e => e.kind === "date" && e.date === "2025-05-10" && e.flags.includes("half_pm"))).toBe(true);
-      expect(entries.some(e => e.kind === "range" && e.start === "2025-04-05" && e.end === "2025-04-07")).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "date" && e.date === "2025-03-20" && e.flags.includes("half_am"),
+        ),
+      ).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "date" && e.date === "2025-05-10" && e.flags.includes("half_pm"),
+        ),
+      ).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.kind === "range" && e.start === "2025-04-05" && e.end === "2025-04-07",
+        ),
+      ).toBe(true);
     });
   });
 
@@ -559,9 +592,9 @@ describe("TimeOffView Integration Tests", () => {
 
       // Verify canonical entries updated correctly
       const entries = loadTimeOffEntries();
-      expect(entries.every(e => e.note !== "Event 1")).toBe(true);
-      expect(entries.every(e => e.note !== "Event 2")).toBe(true);
-      expect(entries.some(e => e.note === "Event 3")).toBe(true);
+      expect(entries.every((e) => e.note !== "Event 1")).toBe(true);
+      expect(entries.every((e) => e.note !== "Event 2")).toBe(true);
+      expect(entries.some((e) => e.note === "Event 3")).toBe(true);
     }, 15000);
   });
 });

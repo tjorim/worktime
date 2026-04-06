@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "../../src/lib/timeOff/codecs";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { PublicHolidayInfo } from "../../src/types/publicHolidays";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import {
   getNonWorkingReason,
   hasTimeOffEvent,
   isPublicHolidayForShift,
   isWorkingDay,
-} from "../../src/utils/workingDayUtils";
+} from "@/utils/workingDayUtils";
 
 const dateEntry = (date: string) =>
   buildTimeOffEntryForRange({
@@ -75,18 +75,53 @@ describe("workingDayUtils", () => {
     };
 
     it("returns false when teamNumber is null or holidays are empty", () => {
-      expect(isPublicHolidayForShift(dayjs("2026-05-01"), null, "5-shift", createHolidayMap(["2026/05/01"]))).toBe(false);
+      expect(
+        isPublicHolidayForShift(
+          dayjs("2026-05-01"),
+          null,
+          "5-shift",
+          createHolidayMap(["2026/05/01"]),
+        ),
+      ).toBe(false);
       expect(isPublicHolidayForShift(dayjs("2026-05-01"), 1, "5-shift", new Map())).toBe(false);
     });
 
     it("checks same day for non-night shifts", () => {
-      expect(isPublicHolidayForShift(dayjs("2025-07-16"), 1, "5-shift", createHolidayMap(["2025/07/16"]))).toBe(true);
-      expect(isPublicHolidayForShift(dayjs("2025-07-16"), 1, "5-shift", createHolidayMap(["2025/07/17"]))).toBe(false);
+      expect(
+        isPublicHolidayForShift(
+          dayjs("2025-07-16"),
+          1,
+          "5-shift",
+          createHolidayMap(["2025/07/16"]),
+        ),
+      ).toBe(true);
+      expect(
+        isPublicHolidayForShift(
+          dayjs("2025-07-16"),
+          1,
+          "5-shift",
+          createHolidayMap(["2025/07/17"]),
+        ),
+      ).toBe(false);
     });
 
     it("checks next day for night shifts", () => {
-      expect(isPublicHolidayForShift(dayjs("2025-07-20"), 1, "5-shift", createHolidayMap(["2025/07/21"]))).toBe(true);
-      expect(isPublicHolidayForShift(dayjs("2025-07-20"), 1, "5-shift", createHolidayMap(["2025/07/20"]))).toBe(false);
+      expect(
+        isPublicHolidayForShift(
+          dayjs("2025-07-20"),
+          1,
+          "5-shift",
+          createHolidayMap(["2025/07/21"]),
+        ),
+      ).toBe(true);
+      expect(
+        isPublicHolidayForShift(
+          dayjs("2025-07-20"),
+          1,
+          "5-shift",
+          createHolidayMap(["2025/07/20"]),
+        ),
+      ).toBe(false);
     });
   });
 
@@ -95,13 +130,21 @@ describe("workingDayUtils", () => {
     const emptyEntries = [] as ReturnType<typeof dateEntry>[];
 
     it("returns false when no team is selected", () => {
-      expect(isWorkingDay(dayjs("2026-01-26"), null, "5-shift", emptyEntries, emptyHolidays)).toBe(false);
+      expect(isWorkingDay(dayjs("2026-01-26"), null, "5-shift", emptyEntries, emptyHolidays)).toBe(
+        false,
+      );
     });
 
     it("respects shift schedule, entries, and holidays", () => {
-      expect(isWorkingDay(dayjs("2025-07-22"), 1, "5-shift", emptyEntries, emptyHolidays)).toBe(false);
-      expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, emptyHolidays)).toBe(true);
-      expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", [dateEntry("2025-07-16")], emptyHolidays)).toBe(false);
+      expect(isWorkingDay(dayjs("2025-07-22"), 1, "5-shift", emptyEntries, emptyHolidays)).toBe(
+        false,
+      );
+      expect(isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, emptyHolidays)).toBe(
+        true,
+      );
+      expect(
+        isWorkingDay(dayjs("2025-07-16"), 1, "5-shift", [dateEntry("2025-07-16")], emptyHolidays),
+      ).toBe(false);
 
       const holidays = new Map<string, PublicHolidayInfo>();
       holidays.set("2025/07/16", { name: "Test Holiday", localName: "Test Holiday" });
@@ -120,15 +163,33 @@ describe("workingDayUtils", () => {
     const emptyEntries = [] as ReturnType<typeof dateEntry>[];
 
     it("returns the expected precedence across non-working reasons", () => {
-      expect(getNonWorkingReason(dayjs("2026-01-26"), null, "5-shift", emptyEntries, emptyHolidays)).toBe("No team selected");
-      expect(getNonWorkingReason(dayjs("2025-07-22"), 1, "5-shift", emptyEntries, emptyHolidays)).toBe("Scheduled off day");
-      expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", [dateEntry("2025-07-16")], emptyHolidays)).toBe("Time off");
+      expect(
+        getNonWorkingReason(dayjs("2026-01-26"), null, "5-shift", emptyEntries, emptyHolidays),
+      ).toBe("No team selected");
+      expect(
+        getNonWorkingReason(dayjs("2025-07-22"), 1, "5-shift", emptyEntries, emptyHolidays),
+      ).toBe("Scheduled off day");
+      expect(
+        getNonWorkingReason(
+          dayjs("2025-07-16"),
+          1,
+          "5-shift",
+          [dateEntry("2025-07-16")],
+          emptyHolidays,
+        ),
+      ).toBe("Time off");
 
       const holidays = new Map<string, PublicHolidayInfo>();
       holidays.set("2025/07/16", { name: "National Day", localName: "National Day" });
-      expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, holidays)).toBe("Public holiday: National Day");
-      expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", [dateEntry("2025-07-16")], holidays)).toBe("Time off");
-      expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, emptyHolidays)).toBeNull();
+      expect(getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, holidays)).toBe(
+        "Public holiday: National Day",
+      );
+      expect(
+        getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", [dateEntry("2025-07-16")], holidays),
+      ).toBe("Time off");
+      expect(
+        getNonWorkingReason(dayjs("2025-07-16"), 1, "5-shift", emptyEntries, emptyHolidays),
+      ).toBeNull();
     });
 
     it("uses the next day holiday name for night shifts", () => {

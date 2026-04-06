@@ -73,19 +73,25 @@ export function normalizeEventFlags(flags: EventFlag[]): EventFlag[] {
   if (foundTimeLocation.length > 1) {
     normalized = normalized.filter(
       (flag) =>
-        !TIME_LOCATION_FLAGS.includes(flag as TimeLocationFlag) || flag === firstTimeLocationInInput,
+        !TIME_LOCATION_FLAGS.includes(flag as TimeLocationFlag) ||
+        flag === firstTimeLocationInInput,
     );
     console.warn(
       `Multiple time/location flags found (${foundTimeLocation.join(", ")}). Keeping first from input: ${firstTimeLocationInInput}`,
     );
   }
 
-  const firstTypeInInput = normalized.find((flag) => TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">));
-  const foundTypes = normalized.filter((flag) => TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">));
+  const firstTypeInInput = normalized.find((flag) =>
+    TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">),
+  );
+  const foundTypes = normalized.filter((flag) =>
+    TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">),
+  );
 
   if (foundTypes.length > 1) {
     normalized = normalized.filter(
-      (flag) => !TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">) || flag === firstTypeInInput,
+      (flag) =>
+        !TYPE_FLAGS.includes(flag as Exclude<TypeFlag, "holiday">) || flag === firstTypeInInput,
     );
     console.warn(
       `Multiple type flags found (${foundTypes.join(", ")}). Keeping first from input: ${firstTypeInInput}`,

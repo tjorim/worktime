@@ -26,13 +26,13 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { ShiftResult } from "../../utils/shiftCalculations";
-import { dayjs, splitFractionalHour, pad2 } from "../../utils/dateTimeUtils";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import { dayjs, splitFractionalHour, pad2 } from "@/utils/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
-import { getEntryFlagsForDisplay } from "../timeOff/codecs";
-import type { TimeOffEntry } from "../timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../timeOff/types";
+import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**

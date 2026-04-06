@@ -2,10 +2,10 @@ import type { Dayjs } from "dayjs";
 import { useRef, useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import type { PublicHolidayInfo } from "../../types/publicHolidays";
-import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
-import type { PaydayInfo } from "../../types/paydays";
-import type { WorkLocationInfo } from "../../types/workLocation";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
+import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import type { PaydayInfo } from "@/types/paydays";
+import type { WorkLocationInfo } from "@/types/workLocation";
 import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import {
   getEventColorClass,
@@ -13,8 +13,8 @@ import {
   getTimeLocationSymbol,
 } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
-import * as m from "../../paraglide/messages.js";
-import { getLocale } from "../../paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 export interface DayEvent {
   entry: TimeOffEntry;

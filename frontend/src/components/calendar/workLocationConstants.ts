@@ -1,4 +1,4 @@
-import type { WorkLocation } from "../../types/workLocation";
+import type { WorkLocation } from "@/types/workLocation";
 
 export const WORK_LOCATION_ICON_CLASS: Record<WorkLocation, string> = {
   home: "bi-house",

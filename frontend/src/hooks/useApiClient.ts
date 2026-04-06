@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import { useToast } from "../contexts/ToastContext";
-import { apiFetch } from "../utils/apiClient";
-import * as m from "../paraglide/messages.js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useToast } from "@/contexts/ToastContext";
+import { apiFetch } from "@/utils/apiClient";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Hook that returns a `apiFetch` function with standard error handling.

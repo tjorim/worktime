@@ -2,13 +2,13 @@ import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import { dayjs } from "../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import {
   checkBackupDataPresence,
   downloadAppBackup,
   type BackupDataPresence,
-} from "../utils/appBackup";
-import * as m from "../paraglide/messages.js";
+} from "@/utils/appBackup";
+import * as m from "@/paraglide/messages.js";
 
 interface BackupDialogProps {
   show: boolean;

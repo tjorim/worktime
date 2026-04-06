@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import { useToast } from "../../contexts/ToastContext";
+import { useToast } from "@/contexts/ToastContext";
 import ListGroup from "react-bootstrap/ListGroup";
-import { EmptyState } from "../shared/EmptyState";
-import { ConfirmationDialog } from "../ConfirmationDialog";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { buildLabelNameMap, type TimeTrackingLabel } from "./constants";
 import { TemplateModal } from "./TemplateModal";
 import { isValidRange, isValidTimeString } from "./timeUtils";
 import type { TimeTrackingTemplate } from "./types";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 type TemplateFormState = {
   text: string;

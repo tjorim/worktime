@@ -4,7 +4,7 @@ import {
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEntry,
-} from "../../src/utils/eventFormState";
+} from "@/utils/eventFormState";
 
 describe("eventFormState", () => {
   it("builds event form state from primitive fields", () => {

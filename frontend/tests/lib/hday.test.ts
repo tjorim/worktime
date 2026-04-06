@@ -13,7 +13,7 @@ import {
   parseHday,
   sortEvents,
   toLine,
-} from "../../src/lib/hday";
+} from "@/lib/hday";
 
 describe("getEventColor", () => {
   describe("default vacation/holiday colors", () => {

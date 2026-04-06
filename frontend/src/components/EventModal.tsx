@@ -2,8 +2,8 @@ import type { RefObject } from "react";
 import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
-import { getWeekdayName } from "../utils/dateTimeUtils";
-import * as m from "../paraglide/messages.js";
+import { getWeekdayName } from "@/utils/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
 
 type FlagCheckboxProps = {
   id: string;
@@ -287,7 +287,9 @@ export function EventModal({
               <Col xs={12}>
                 <Card className="preview-card border-0 bg-body-secondary">
                   <Card.Body className="py-2">
-                    <div className="small text-uppercase text-muted">{m.event_modal_preview_label()}</div>
+                    <div className="small text-uppercase text-muted">
+                      {m.event_modal_preview_label()}
+                    </div>
                     <div className="fw-semibold">
                       {getEventTypeLabel(eventFlags)}{" "}
                       {eventType === "weekly"
@@ -303,11 +305,15 @@ export function EventModal({
                     {eventTitle && <div className="text-muted">{eventTitle}</div>}
                     {eventFlags.length > 0 && (
                       <div className="text-muted small">
-                        {m.event_modal_flags_label({ flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", ") })}
+                        {m.event_modal_flags_label({
+                          flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
+                        })}
                       </div>
                     )}
                     <div className="mt-2">
-                      <div className="small text-uppercase text-muted">{m.event_modal_raw_line_label()}</div>
+                      <div className="small text-uppercase text-muted">
+                        {m.event_modal_raw_line_label()}
+                      </div>
                       <div className="font-monospace">
                         {previewLine || m.event_modal_fill_required()}
                       </div>
@@ -355,7 +361,9 @@ export function EventModal({
                       type="date"
                       value={eventStart ? eventStart.replace(/\//g, "-") : ""}
                       onChange={(event) =>
-                        onStartDateChange(event.target.value ? event.target.value.replace(/-/g, "/") : "")
+                        onStartDateChange(
+                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
+                        )
                       }
                       isInvalid={!!startDateError}
                       aria-required="true"
@@ -376,7 +384,9 @@ export function EventModal({
                       type="date"
                       value={eventEnd ? eventEnd.replace(/\//g, "-") : ""}
                       onChange={(event) =>
-                        onEndDateChange(event.target.value ? event.target.value.replace(/-/g, "/") : "")
+                        onEndDateChange(
+                          event.target.value ? event.target.value.replace(/-/g, "/") : "",
+                        )
                       }
                       isInvalid={!!endDateError}
                       aria-describedby={endDateError ? "eventEnd-error" : undefined}

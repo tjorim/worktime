@@ -1,8 +1,8 @@
 import { memo } from "react";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import type { TimeOffViewMode } from "../../data/timeoffConstants";
-import * as m from "../../paraglide/messages.js";
+import type { TimeOffViewMode } from "@/data/timeoffConstants";
+import * as m from "@/paraglide/messages.js";
 
 type TimeOffToolbarProps = {
   // Undo/Redo

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { SCHEDULE_OPTIONS } from "../../src/data/rosters";
-import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
+import { SCHEDULE_OPTIONS } from "@/data/rosters";
+import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
 import {
   calculateShift,
   getAllTeamsShifts,
@@ -12,7 +12,7 @@ import {
   isCurrentlyWorking,
   SHIFTS,
   calculateWeeklyShiftTarget,
-} from "../../src/utils/shiftCalculations";
+} from "@/utils/shiftCalculations";
 
 describe("Shift Calculations", () => {
   describe("Core Business Logic", () => {

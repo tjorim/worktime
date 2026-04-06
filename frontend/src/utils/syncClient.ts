@@ -11,20 +11,18 @@
  */
 
 import dayjs from "dayjs";
-import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "../components/timeTracking/types";
-import type { TimeTrackingLabel } from "../components/timeTracking/constants";
-import type { WorkLocationInfo } from "../types/workLocation";
-import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { WorkLocationInfo } from "@/types/workLocation";
 import {
-  createTimeOffEntry,
-  timeOffEntriesToHday,
-} from "../lib/timeOff/codecs";
-import {
-  loadTimeOffEntries,
-  saveTimeOffEntries,
-} from "../lib/timeOff/storage";
-import type { TimeOffEntry } from "../lib/timeOff/types";
+  TIME_TRACKING_STORAGE_KEYS,
+  WORK_LOCATIONS_STORAGE_PREFIX,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
+import { createTimeOffEntry, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
+import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
+import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -419,9 +417,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }));
 
   // Tasks
-  const rawTasks = safeParseJsonArray(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-  ) as StoredTimeTrackingTask[];
+  const rawTasks = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.tasks) as StoredTimeTrackingTask[];
   const tasks: TaskSyncItem[] = rawTasks
     .filter((t) => {
       if (!t || typeof t.id !== "string" || typeof t.startTime !== "string") return false;
@@ -515,7 +511,13 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 
-  return { labels, tasks, templates, work_locations: workLocations, time_off_entries: timeOffEntries };
+  return {
+    labels,
+    tasks,
+    templates,
+    work_locations: workLocations,
+    time_off_entries: timeOffEntries,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -574,8 +576,8 @@ function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[
         start: item.kind === "range" ? item.start_date! : undefined,
         end: item.kind === "range" ? item.end_date! : undefined,
         weekday: item.kind === "weekly" ? item.weekday! : undefined,
-        entryType: item.entry_type as TimeOffEntry["entryType"],
-        flags: item.flags as TimeOffEntry["flags"],
+        entryType: isValidEntryType(item.entry_type) ? item.entry_type : "other",
+        flags: item.flags.filter(isValidFlag),
         note: item.note,
       } as Parameters<typeof createTimeOffEntry>[0]),
     );

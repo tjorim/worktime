@@ -40,10 +40,10 @@ import {
   syncStatusHasData,
   type SyncPushPayload,
   type SyncStatusResponse,
-} from "../utils/syncClient";
-import { getSyncCursorKey } from "../constants/storageKeys";
-import { dayjs } from "../utils/dateTimeUtils";
-import { useEventStore } from "../contexts/EventStoreContext";
+} from "@/utils/syncClient";
+import { getSyncCursorKey } from "@/constants/storageKeys";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { useEventStore } from "@/contexts/EventStoreContext";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */

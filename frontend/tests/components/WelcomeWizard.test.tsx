@@ -3,11 +3,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../../src/App";
-import { WelcomeWizard } from "../../src/components/WelcomeWizard";
-import { AuthProvider } from "../../src/contexts/AuthContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import App from "@/App";
+import { WelcomeWizard } from "@/components/WelcomeWizard";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
@@ -539,24 +539,18 @@ describe("WelcomeWizard", () => {
       );
 
       await waitFor(() => {
-        expect(
-          screen.getByRole("heading", { name: /Connect Your Account/i }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /Connect Your Account/i })).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole("button", { name: /Skip/i }));
 
-      expect(mockOnHide).toHaveBeenCalledWith(
-        expect.objectContaining({ accountConnected: false }),
-      );
+      expect(mockOnHide).toHaveBeenCalledWith(expect.objectContaining({ accountConnected: false }));
     });
 
     it("persists wizard state and triggers signup redirect when clicking Connect Account", async () => {
       const user = userEvent.setup();
       const mockOnHide = vi.fn();
-      const mockRedirectToAuth = vi.mocked(
-        (await import("supertokens-auth-react")).redirectToAuth,
-      );
+      const mockRedirectToAuth = vi.mocked((await import("supertokens-auth-react")).redirectToAuth);
 
       renderWithProviders(
         <WelcomeWizard
@@ -568,9 +562,7 @@ describe("WelcomeWizard", () => {
       );
 
       await waitFor(() => {
-        expect(
-          screen.getByRole("heading", { name: /Connect Your Account/i }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /Connect Your Account/i })).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole("button", { name: /Connect Account/i }));

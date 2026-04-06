@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { ProgressBar } from "../../../src/components/timeTracking/ProgressBar";
+import { ProgressBar } from "@/components/timeTracking/ProgressBar";
 
 describe("ProgressBar Component", () => {
   describe("Visual Representation", () => {

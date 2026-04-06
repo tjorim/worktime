@@ -63,7 +63,14 @@ export function useOpenHolidays<T>({
   const { data, isLoading, error } = useQuery<T[], Error>({
     queryKey: ["openHolidays", endpoint, stableParamsKey],
     queryFn: ({ signal }) =>
-      fetchOpenHolidays<T>(endpoint, params, responseErrorPrefix, timeoutError, networkError, signal),
+      fetchOpenHolidays<T>(
+        endpoint,
+        params,
+        responseErrorPrefix,
+        timeoutError,
+        networkError,
+        signal,
+      ),
     enabled,
     staleTime: 1000 * 60 * 60 * 24, // holiday data doesn't change intra-day
     retry: 1,

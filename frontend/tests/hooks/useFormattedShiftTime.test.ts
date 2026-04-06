@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSettings } from "../../src/contexts/SettingsContext";
-import { useFormattedShiftTime } from "../../src/hooks/useFormattedShiftTime";
-import { getFormattedShiftTime } from "../../src/utils/shiftCalculations";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { getFormattedShiftTime } from "@/utils/shiftCalculations";
 
-vi.mock("../../src/contexts/SettingsContext", () => ({
+vi.mock("@/contexts/SettingsContext", () => ({
   useSettings: vi.fn(),
 }));
 

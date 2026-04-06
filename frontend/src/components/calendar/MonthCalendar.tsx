@@ -1,13 +1,13 @@
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
-import { dayjs, getWeekdayName } from "../../utils/dateTimeUtils";
-import type { PublicHolidayInfo } from "../../types/publicHolidays";
-import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
-import type { PaydayInfo } from "../../types/paydays";
-import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
-import type { TimeOffEntry } from "../../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
+import { dayjs, getWeekdayName } from "@/utils/dateTimeUtils";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
+import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import type { PaydayInfo } from "@/types/paydays";
+import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
@@ -211,7 +211,11 @@ export function MonthCalendar({
       sourceEntries.forEach((entry) => {
         if (isTimeOffDateEntry(entry)) {
           const date = dayjs(entry.date);
-          if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
+          if (
+            !date.isValid() ||
+            date.isBefore(visibleStart, "day") ||
+            date.isAfter(visibleEnd, "day")
+          ) {
             return;
           }
           addEvent(date, { entry });
@@ -221,7 +225,11 @@ export function MonthCalendar({
         if (isTimeOffRangeEntry(entry)) {
           const rangeStart = dayjs(entry.start).startOf("day");
           const rangeEnd = dayjs(entry.end).startOf("day");
-          if (!rangeStart.isValid() || !rangeEnd.isValid() || rangeEnd.isBefore(rangeStart, "day")) {
+          if (
+            !rangeStart.isValid() ||
+            !rangeEnd.isValid() ||
+            rangeEnd.isBefore(rangeStart, "day")
+          ) {
             return;
           }
 

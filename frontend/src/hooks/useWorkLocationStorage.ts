@@ -1,12 +1,12 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 
-import { useSettings } from "../contexts/SettingsContext";
-import { dayjs } from "../utils/dateTimeUtils";
+import { useSettings } from "@/contexts/SettingsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
-import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
-import { toCountryCode } from "../types/workLocation";
-import { getWorkLocationsStorageKey } from "../constants/storageKeys";
+import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
+import { toCountryCode } from "@/types/workLocation";
+import { getWorkLocationsStorageKey } from "@/constants/storageKeys";
 
 /**
  * Raw storage shape persisted to localStorage.

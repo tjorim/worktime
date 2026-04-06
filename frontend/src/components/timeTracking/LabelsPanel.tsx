@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import { useToast } from "../../contexts/ToastContext";
+import { useToast } from "@/contexts/ToastContext";
 import ListGroup from "react-bootstrap/ListGroup";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import { EmptyState } from "../shared/EmptyState";
-import { ConfirmationDialog } from "../ConfirmationDialog";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RawJsonEditor } from "./RawJsonEditor";
 import {
   getContrastingTextColor,
@@ -17,8 +17,8 @@ import {
 } from "./constants";
 import { LabelModal } from "./LabelModal";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "./types";
-import * as m from "../../paraglide/messages.js";
-import { getLocale } from "../../paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 type LabelFormState = {
   name: string;

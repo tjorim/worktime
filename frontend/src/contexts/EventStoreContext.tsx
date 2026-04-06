@@ -7,23 +7,14 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
-import type { CalendarEvent } from "../lib/events/types";
-import { entriesToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
-import {
-  hdayToTimeOffEntries,
-  timeOffEntriesToHday,
-} from "../lib/timeOff/codecs";
-import {
-  loadTimeOffEntries,
-  saveTimeOffEntries,
-} from "../lib/timeOff/storage";
-import type { TimeOffEntry } from "../lib/timeOff/types";
-import type { TimeOffImportResult } from "../lib/timeOff/types";
-import {
-  getTimeOffEntryIdentityKey,
-  getTimeOffEntrySortKey,
-} from "../lib/timeOff/types";
-import { dayjs } from "../utils/dateTimeUtils";
+import type { CalendarEvent } from "@/lib/events/types";
+import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
+import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
+import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffImportResult } from "@/lib/timeOff/types";
+import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 type EventStoreAction =
   | { type: "ADD_ENTRIES"; payload: TimeOffEntry[] }
@@ -179,15 +170,11 @@ function entriesReducer(state: EventStoreState, action: EventStoreAction): Event
 }
 
 export function EventStoreProvider({ children }: EventStoreProviderProps) {
-  const [state, dispatch] = useReducer(
-    entriesReducer,
-    undefined,
-    () => ({
-      entries: loadTimeOffEntries(),
-      history: [],
-      future: [],
-    }),
-  );
+  const [state, dispatch] = useReducer(entriesReducer, undefined, () => ({
+    entries: loadTimeOffEntries(),
+    history: [],
+    future: [],
+  }));
 
   const rawText = useMemo(() => {
     if (state.entries.length === 0) return "";
@@ -229,20 +216,14 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     dispatch({ type: "UPDATE_ENTRY", payload: { id, entry } });
   }, []);
 
-  const deleteEntry = useCallback(
-    (id: string) => {
-      dispatch({ type: "DELETE_ENTRY", payload: id });
-    },
-    [],
-  );
+  const deleteEntry = useCallback((id: string) => {
+    dispatch({ type: "DELETE_ENTRY", payload: id });
+  }, []);
 
-  const deleteEntries = useCallback(
-    (ids: string[]) => {
-      const resolvedIds = ids.filter((id, index, allIds) => allIds.indexOf(id) === index);
-      dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
-    },
-    [],
-  );
+  const deleteEntries = useCallback((ids: string[]) => {
+    const resolvedIds = ids.filter((id, index, allIds) => allIds.indexOf(id) === index);
+    dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
+  }, []);
 
   const importHday = useCallback((text: string) => {
     const result = hdayToTimeOffEntries(text);

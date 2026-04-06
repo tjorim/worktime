@@ -1,4 +1,4 @@
-import type { TimeLocationFlag } from "../hday/types";
+import type { TimeLocationFlag } from "@/lib/hday/types";
 
 export const TIME_OFF_ENTRY_TYPES = [
   "vacation",
@@ -43,6 +43,20 @@ export type TimeOffEntry = TimeOffDateEntry | TimeOffRangeEntry | TimeOffWeeklyE
 export interface TimeOffImportResult {
   entries: TimeOffEntry[];
   skippedLines: string[];
+}
+
+export function isValidEntryType(value: unknown): value is TimeOffEntryType {
+  return typeof value === "string" && TIME_OFF_ENTRY_TYPES.includes(value as TimeOffEntryType);
+}
+
+export function isValidFlag(value: unknown): value is TimeOffEntryFlag {
+  return (
+    value === "half_am" ||
+    value === "half_pm" ||
+    value === "onsite" ||
+    value === "no_fly" ||
+    value === "can_fly"
+  );
 }
 
 export function isTimeOffDateEntry(entry: TimeOffEntry): entry is TimeOffDateEntry {

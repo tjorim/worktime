@@ -9,12 +9,12 @@ import {
   getEntryTimeFlagsFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import { useEventStore } from "../contexts/EventStoreContext";
-import { useSettings } from "../contexts/SettingsContext";
-import { useToast } from "../contexts/ToastContext";
-import { useEventForm } from "../hooks/useEventForm";
-import { useTimeOffKeyboardShortcuts } from "../hooks/useTimeOffKeyboardShortcuts";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { useEventStore } from "@/contexts/EventStoreContext";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/contexts/ToastContext";
+import { useEventForm } from "@/hooks/useEventForm";
+import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
@@ -23,7 +23,7 @@ import {
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEntry,
-} from "../utils/eventFormState";
+} from "@/utils/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -34,8 +34,8 @@ import {
   getViewModeHelpText,
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
-} from "../data/timeoffConstants";
-import * as m from "../paraglide/messages.js";
+} from "@/data/timeoffConstants";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.

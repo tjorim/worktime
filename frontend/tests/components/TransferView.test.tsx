@@ -2,14 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TransferView } from "../../src/components/TransferView";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { useTransferCalculations, TransferType } from "../../src/hooks/useTransferCalculations";
-import { dayjs } from "../../src/utils/dateTimeUtils";
+import { TransferView } from "@/components/TransferView";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { useTransferCalculations, TransferType } from "@/hooks/useTransferCalculations";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
-vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({
@@ -39,13 +39,13 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 // Mock the useTransferCalculations hook
-vi.mock("../../src/hooks/useTransferCalculations", () => ({
+vi.mock("@/hooks/useTransferCalculations", () => ({
   useTransferCalculations: vi.fn(),
 }));
 
 const mockUseTransferCalculations = vi.mocked(useTransferCalculations);
 
-vi.mock("../../src/utils/shiftCalculations", () => ({
+vi.mock("@/utils/shiftCalculations", () => ({
   getShift: vi.fn((code) => {
     const shifts: Record<
       string,
@@ -96,8 +96,8 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
 }));
 
-vi.mock("../../src/utils/config", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/utils/config")>();
+vi.mock("@/utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/config")>();
 
   return {
     ...actual,

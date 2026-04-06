@@ -1,14 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import App from "../../src/App";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { ShiftResult } from "../../src/utils/shiftCalculations";
+import App from "@/App";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { ShiftResult } from "@/utils/shiftCalculations";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
-vi.mock("../../src/utils/dateTimeUtils", () => {
+vi.mock("@/utils/dateTimeUtils", () => {
   const mockDayjs = vi.fn(() => ({
     format: vi.fn(() => "2025-01-15"),
     startOf: vi.fn(() => mockDayjs()),
@@ -18,29 +18,29 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
 });
 
 // Mock all the child components to focus on App structure
-vi.mock("../../src/components/Header", () => ({
+vi.mock("@/components/Header", () => ({
   Header: () => <div data-testid="header">Header</div>,
 }));
 
-vi.mock("../../src/components/CurrentStatus", () => ({
+vi.mock("@/components/CurrentStatus", () => ({
   CurrentStatus: () => <div data-testid="current-status">CurrentStatus</div>,
 }));
 
-vi.mock("../../src/components/MainTabs", () => ({
+vi.mock("@/components/MainTabs", () => ({
   MainTabs: () => <div data-testid="main-tabs">MainTabs</div>,
 }));
 
-vi.mock("../../src/components/WelcomeWizard", () => ({
+vi.mock("@/components/WelcomeWizard", () => ({
   WelcomeWizard: () => <div data-testid="welcome-wizard">WelcomeWizard</div>,
 }));
 
-vi.mock("../../src/components/ErrorBoundary", () => ({
+vi.mock("@/components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),
 }));
 
-vi.mock("../../src/components/AboutModal", () => ({
+vi.mock("@/components/AboutModal", () => ({
   AboutModal: () => <div data-testid="about-modal">AboutModal</div>,
 }));
 
@@ -90,7 +90,7 @@ const mockTodayShifts: ShiftResult[] = [
 ];
 
 // Mock the shift calculation hook with realistic data
-vi.mock("../../src/hooks/useShiftCalculation", () => ({
+vi.mock("@/hooks/useShiftCalculation", () => ({
   useShiftCalculation: () => ({
     myTeam: 1,
     setMyTeam: vi.fn(),

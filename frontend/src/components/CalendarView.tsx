@@ -10,30 +10,30 @@ import {
   getEntryTimeFlagsFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useEventStore } from "../contexts/EventStoreContext";
-import { useSettings } from "../contexts/SettingsContext";
-import { useToast } from "../contexts/ToastContext";
-import { dayjs } from "../utils/dateTimeUtils";
-import { usePublicHolidays } from "../hooks/usePublicHolidays";
-import { useSchoolHolidays } from "../hooks/useSchoolHolidays";
-import { useWorkLocationStorage } from "../hooks/useWorkLocationStorage";
-import { getMonthlyPaydayMap } from "../utils/paydayUtils";
-import { calculateShift } from "../utils/shiftCalculations";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
-import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "../utils/workingDayUtils";
-import { getEffectiveTeam } from "../utils/scheduleUtils";
+import { useEventStore } from "@/contexts/EventStoreContext";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/contexts/ToastContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { usePublicHolidays } from "@/hooks/usePublicHolidays";
+import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
+import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
+import { getMonthlyPaydayMap } from "@/utils/paydayUtils";
+import { calculateShift } from "@/utils/shiftCalculations";
+import { SCHEDULE_OPTIONS } from "@/data/rosters";
+import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
+import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEntry,
-} from "../utils/eventFormState";
-import { useEventForm } from "../hooks/useEventForm";
+} from "@/utils/eventFormState";
+import { useEventForm } from "@/hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
 import { LocationYearSummary } from "./calendar/LocationYearSummary";
 import { OtherLocationModal } from "./calendar/OtherLocationModal";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 import { EventModal } from "./EventModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { EmptyState } from "./shared/EmptyState";
@@ -44,8 +44,8 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
-} from "../data/timeoffConstants";
-import type { WorkLocation } from "../types/workLocation";
+} from "@/data/timeoffConstants";
+import type { WorkLocation } from "@/types/workLocation";
 interface CalendarViewProps {
   myTeam: number | null;
   onChangeSchedule?: () => void;

@@ -8,17 +8,17 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Accordion from "react-bootstrap/Accordion";
-import type { ScheduleOption } from "../data/rosters";
-import { useSettings } from "../contexts/SettingsContext";
-import { useTransferCalculations, type TransferInfo } from "../hooks/useTransferCalculations";
-import { dayjs, formatDisplayDate, formatYYWWD } from "../utils/dateTimeUtils";
-import { getShift } from "../utils/shiftCalculations";
+import type { ScheduleOption } from "@/data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
+import { dayjs, formatDisplayDate, formatYYWWD } from "@/utils/dateTimeUtils";
+import { getShift } from "@/utils/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";
 import { ErrorBoundary } from "./ErrorBoundary";
-import * as m from "../paraglide/messages.js";
-import { getLocale } from "../paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 interface TransferViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -58,7 +58,9 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
                 <small className="text-muted">{formatDisplayDate(transfer.date.toDate())}</small>
               </Col>
               <Col xs={8} md={4}>
-                <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_teams_column()}</small>
+                <small className="text-muted text-uppercase mb-1 d-none d-md-block">
+                  {m.transfer_teams_column()}
+                </small>
                 <div className="d-flex align-items-center gap-1 flex-nowrap">
                   <Badge
                     bg={transfer.fromTeam === myTeam ? "primary" : "secondary"}
@@ -93,7 +95,9 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
               </Col>
               <Col xs={4} md={2}>
                 <div className="d-flex flex-column align-items-start align-items-md-center">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_type_column()}</small>
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
+                    {m.transfer_type_column()}
+                  </small>
                   <Badge bg={transfer.type === "handover" ? "success" : "info"} pill>
                     {transfer.type === "handover" ? m.transfer_handover() : m.transfer_takeover()}
                   </Badge>
@@ -101,7 +105,9 @@ function TransferItemsList({ transfers, scheduleType, myTeam }: TransferItemsLis
               </Col>
               <Col xs={8} md={3}>
                 <div className="d-flex flex-column align-items-start align-items-md-end">
-                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">{m.transfer_shift_column()}</small>
+                  <small className="text-muted text-uppercase mb-1 d-none d-md-block">
+                    {m.transfer_shift_column()}
+                  </small>
                   <div className="d-flex align-items-center gap-2 flex-nowrap justify-content-md-end">
                     <ShiftBadge
                       shift={fromShift}
@@ -343,9 +349,7 @@ export function TransferView({
         {!scheduleType ? (
           <div className="text-center py-4">
             <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <p className="text-muted mb-3">
-              {m.transfer_select_schedule_prompt()}
-            </p>
+            <p className="text-muted mb-3">{m.transfer_select_schedule_prompt()}</p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </div>
         ) : !myTeam ? (
@@ -387,7 +391,9 @@ export function TransferView({
                 </Form.Select>
                 {transferStats && (
                   <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span className="text-muted small text-uppercase">{m.transfer_flow_label()}</span>
+                    <span className="text-muted small text-uppercase">
+                      {m.transfer_flow_label()}
+                    </span>
                     <Badge bg="success" pill className="d-inline-flex align-items-center gap-1">
                       <i className="bi bi-arrow-right-circle" aria-hidden="true"></i>
                       {m.transfer_handovers_count({ count: String(transferStats.handovers) })}
@@ -402,7 +408,9 @@ export function TransferView({
               <Col md={8}>
                 <Card className="h-100">
                   <Card.Body>
-                    <div className="text-muted small text-uppercase mb-1">{m.transfer_displayed_date_range()}</div>
+                    <div className="text-muted small text-uppercase mb-1">
+                      {m.transfer_displayed_date_range()}
+                    </div>
                     <div className="fw-semibold">{displayedDateRangeValue}</div>
                     <div className="text-muted" style={{ fontSize: "0.75em" }}>
                       {m.transfer_displayed_range_help()}

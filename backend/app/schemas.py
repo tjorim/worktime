@@ -310,6 +310,19 @@ class UserPreferencesWrite(BaseModel):
 # Time-off entry schemas
 # ---------------------------------------------------------------------------
 
+EntryType = Literal[
+    "vacation",
+    "business",
+    "course",
+    "in",
+    "weekend",
+    "birthday",
+    "ill",
+    "other",
+]
+
+TimeOffEntryFlag = Literal["half_am", "half_pm", "onsite", "no_fly", "can_fly"]
+
 
 class TimeOffEntryCreate(BaseModel):
     """Request schema for creating or upserting a time-off entry."""
@@ -320,8 +333,8 @@ class TimeOffEntryCreate(BaseModel):
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
-    entry_type: str = "vacation"
-    flags: list[str] = Field(default_factory=list)
+    entry_type: EntryType = "vacation"
+    flags: list[TimeOffEntryFlag] = Field(default_factory=list)
     note: str | None = None
 
     @model_validator(mode="after")
@@ -357,8 +370,8 @@ class TimeOffEntryRead(BaseModel):
     start_date: dt_date | None
     end_date: dt_date | None
     weekday: int | None
-    entry_type: str
-    flags: list[str]
+    entry_type: EntryType
+    flags: list[TimeOffEntryFlag]
     note: str | None
     created_at: dt_datetime
     updated_at: dt_datetime
@@ -370,8 +383,8 @@ class TimeOffEntryUpdate(BaseModel):
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
-    entry_type: str | None = None
-    flags: list[str] | None = None
+    entry_type: EntryType | None = None
+    flags: list[TimeOffEntryFlag] | None = None
     note: str | None = None
 
     @model_validator(mode="after")
@@ -473,8 +486,8 @@ class TimeOffEntrySyncRead(BaseModel):
     start_date: dt_date | None
     end_date: dt_date | None
     weekday: int | None
-    entry_type: str
-    flags: list[str]
+    entry_type: EntryType
+    flags: list[TimeOffEntryFlag]
     note: str | None
     created_at: dt_datetime
     updated_at: dt_datetime
@@ -536,8 +549,8 @@ class TimeOffEntrySyncItem(BaseModel):
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
-    entry_type: str | None = None
-    flags: list[str] | None = None
+    entry_type: EntryType | None = None
+    flags: list[TimeOffEntryFlag] | None = None
     note: str | None = None
 
     @model_validator(mode="after")

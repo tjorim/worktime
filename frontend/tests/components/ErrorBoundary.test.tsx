@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ErrorBoundary } from "../../src/components/ErrorBoundary";
-import * as m from "../../src/paraglide/messages.js";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import * as m from "@/paraglide/messages.js";
 
 // Mock console.error to avoid noise in test output
 const originalError = console.error;
@@ -47,7 +47,9 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
 
-      expect(screen.getByRole("button", { name: m.error_boundary_try_again() })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: m.error_boundary_try_again() }),
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: m.error_boundary_reload() })).toBeInTheDocument();
     });
 
@@ -64,7 +66,9 @@ describe("ErrorBoundary", () => {
       await user.click(tryAgainButton);
 
       // After reset, should show error UI again since component still throws
-      expect(screen.getByRole("button", { name: m.error_boundary_try_again() })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: m.error_boundary_try_again() }),
+      ).toBeInTheDocument();
     });
 
     it("renders custom fallback when provided", () => {
@@ -77,7 +81,9 @@ describe("ErrorBoundary", () => {
       );
 
       expect(screen.getByTestId("custom-fallback")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: m.error_boundary_try_again() })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: m.error_boundary_try_again() }),
+      ).not.toBeInTheDocument();
     });
   });
 });

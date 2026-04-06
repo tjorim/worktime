@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // Mock supertokens-auth-react modules
 const mockRedirectToAuth = vi.fn().mockResolvedValue(undefined);
@@ -46,7 +46,11 @@ function AuthActions() {
 }
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<ToastProvider><AuthProvider>{ui}</AuthProvider></ToastProvider>);
+  return render(
+    <ToastProvider>
+      <AuthProvider>{ui}</AuthProvider>
+    </ToastProvider>,
+  );
 }
 
 describe("AuthContext", () => {

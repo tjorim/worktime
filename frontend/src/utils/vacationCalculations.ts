@@ -1,5 +1,5 @@
-import type { TimeOffEntryFlag, TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { dayjs } from "./dateTimeUtils";
 
 export type VacationAllowanceUnit = "days" | "hours";

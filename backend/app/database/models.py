@@ -242,6 +242,10 @@ class TimeOffEntry(Base):
             unique=True,
         ),
         CheckConstraint("kind IN ('date', 'range', 'weekly')", name="ck_time_off_kind"),
+        CheckConstraint(
+            "entry_type IN ('vacation','business','course','in','weekend','birthday','ill','other')",
+            name="ck_time_off_entry_type",
+        ),
         CheckConstraint("weekday BETWEEN 1 AND 7 OR weekday IS NULL", name="ck_time_off_weekday_range"),
         CheckConstraint(
             "kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL"

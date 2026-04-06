@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { aggregateLocationCounts } from "../../src/utils/workLocationUtils";
-import { toCountryCode } from "../../src/types/workLocation";
-import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
+import { aggregateLocationCounts } from "@/utils/workLocationUtils";
+import { toCountryCode } from "@/types/workLocation";
+import type { WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 
 const cc = (value: string) => toCountryCode(value)!;
 const HOME: WorkLocationInfo = { location: "home", countryCode: cc("NL") };

@@ -1,4 +1,4 @@
-import { dayjs } from "../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const GANTT_DATE_FORMAT = "YYYY-MM-DD";
 

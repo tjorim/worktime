@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { GanttTaskModal } from "../../../src/components/gantt/GanttTaskModal";
+import { GanttTaskModal } from "@/components/gantt/GanttTaskModal";
 
 describe("GanttTaskModal", () => {
   it("shows validation feedback for required fields", async () => {

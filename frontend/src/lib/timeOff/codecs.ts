@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
-import { normalizeEventFlags } from "../hday/flags";
-import { parseHday } from "../hday/parser";
-import { toLine } from "../hday/serializer";
-import type { EventFlag, HdayEvent } from "../hday/types";
+import { normalizeEventFlags } from "@/lib/hday/flags";
+import { parseHday } from "@/lib/hday/parser";
+import { toLine } from "@/lib/hday/serializer";
+import type { EventFlag, HdayEvent } from "@/lib/hday/types";
 import type {
   TimeOffDateEntry,
   TimeOffEntry,

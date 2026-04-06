@@ -5,12 +5,12 @@ import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
-import type { TimeOffEntry } from "../../lib/timeOff/types";
-import { dayjs } from "../../utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { dayjs } from "@/utils/dateTimeUtils";
 import type {
   VacationAllowanceSettings,
   VacationAllowanceUnit,
-} from "../../utils/vacationCalculations";
+} from "@/utils/vacationCalculations";
 import {
   calculateVacationStats,
   formatVacationValue,
@@ -18,8 +18,8 @@ import {
   getAllowanceHours,
   getAvailableYears,
   getEffectiveAmount,
-} from "../../utils/vacationCalculations";
-import * as m from "../../paraglide/messages.js";
+} from "@/utils/vacationCalculations";
+import * as m from "@/paraglide/messages.js";
 
 /** Default hours per day for vacation allowance calculations */
 export const DEFAULT_HOURS_PER_DAY = 8;

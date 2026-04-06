@@ -1,6 +1,6 @@
 import ReactSelect from "react-select";
-import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "../../types/countries";
-import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
+import { type CountryCode, isValidCountryCode, SUPPORTED_COUNTRIES } from "@/types/countries";
+import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
 
 type CountryOption = { value: string; label: string };
 

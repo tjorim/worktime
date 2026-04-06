@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { CalendarView } from "../../src/components/CalendarView";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import type { HdayEvent } from "../../src/lib/hday/types";
-import type { PublicHolidayInfo } from "../../src/types/publicHolidays";
-import type { SchoolHolidayInfo } from "../../src/types/schoolHolidays";
-import type { PaydayInfo } from "../../src/types/paydays";
+import { CalendarView } from "@/components/CalendarView";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import type { HdayEvent } from "@/lib/hday/types";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
+import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import type { PaydayInfo } from "@/types/paydays";
 
 // Mock the hooks that fetch external holiday data
-vi.mock("../../src/hooks/usePublicHolidays");
-vi.mock("../../src/hooks/useSchoolHolidays");
+vi.mock("@/hooks/usePublicHolidays");
+vi.mock("@/hooks/useSchoolHolidays");
 
 // Import after mocking to get the mocked versions
-import { usePublicHolidays } from "../../src/hooks/usePublicHolidays";
-import { useSchoolHolidays } from "../../src/hooks/useSchoolHolidays";
+import { usePublicHolidays } from "@/hooks/usePublicHolidays";
+import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 
 // Cast to mocked functions for type safety
 const mockedUsePublicHolidays = vi.mocked(usePublicHolidays);

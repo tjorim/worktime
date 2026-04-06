@@ -2,7 +2,7 @@ import { useId } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 type TimeOffRawViewProps = {
   rawText: string;
@@ -57,10 +57,10 @@ export function TimeOffRawView({
               placeholder={m.timeoff_raw_placeholder()}
               className="textarea-mono"
               aria-describedby={
-              [error ? errorId : null, skippedLines?.length ? skippedId : null]
-                .filter(Boolean)
-                .join(" ") || undefined
-            }
+                [error ? errorId : null, skippedLines?.length ? skippedId : null]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
               isInvalid={!!error}
             />
             {error && (
@@ -70,7 +70,9 @@ export function TimeOffRawView({
             )}
             {skippedLines && skippedLines.length > 0 && (
               <div id={skippedId} className="mt-2 text-warning-emphasis" role="alert">
-                <small><strong>{m.timeoff_hday_skipped_lines_heading()}</strong></small>
+                <small>
+                  <strong>{m.timeoff_hday_skipped_lines_heading()}</strong>
+                </small>
                 <ul className="mb-0 font-monospace small">
                   {skippedLines.map((line, i) => (
                     <li key={i}>{line}</li>

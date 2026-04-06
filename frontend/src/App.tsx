@@ -12,11 +12,7 @@ import { FirstSyncConflictDialog } from "./components/FirstSyncConflictDialog";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
-import {
-  SettingsProvider,
-  type TabKey,
-  useSettings,
-} from "./contexts/SettingsContext";
+import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "./data/rosters";
@@ -65,11 +61,11 @@ function AppContent() {
   const apiFetch = useApiClient();
   const fetchFnOrNull = isAuthenticated ? apiFetch : null;
 
-  const { phase: syncPhase, resolveConflict, dismiss: dismissSync } = useFirstSyncFlow(
-    isAuthenticated,
-    userId,
-    fetchFnOrNull,
-  );
+  const {
+    phase: syncPhase,
+    resolveConflict,
+    dismiss: dismissSync,
+  } = useFirstSyncFlow(isAuthenticated, userId, fetchFnOrNull);
 
   // Show a toast for each phase of the first-sync flow.
   useEffect(() => {
@@ -107,13 +103,28 @@ function AppContent() {
   const featureAnnouncements = hasCompletedOnboarding
     ? [
         ...(ganttAnnouncementSeen === undefined
-          ? [{ name: m.feature_announcement_gantt_name(), detail: m.feature_announcement_gantt_detail() }]
+          ? [
+              {
+                name: m.feature_announcement_gantt_name(),
+                detail: m.feature_announcement_gantt_detail(),
+              },
+            ]
           : []),
         ...(crossBorderAnnouncementSeen === undefined
-          ? [{ name: m.feature_announcement_cross_border_name(), detail: m.feature_announcement_cross_border_detail() }]
+          ? [
+              {
+                name: m.feature_announcement_cross_border_name(),
+                detail: m.feature_announcement_cross_border_detail(),
+              },
+            ]
           : []),
         ...(accountSyncAnnouncementSeen === undefined
-          ? [{ name: m.feature_announcement_account_sync_name(), detail: m.feature_announcement_account_sync_detail() }]
+          ? [
+              {
+                name: m.feature_announcement_account_sync_name(),
+                detail: m.feature_announcement_account_sync_detail(),
+              },
+            ]
           : []),
       ]
     : [];
@@ -276,8 +287,10 @@ function AppContent() {
               features={featureAnnouncements}
               onDismiss={() => {
                 if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
-                if (crossBorderAnnouncementSeen === undefined) setCrossBorderAnnouncementSeen(false);
-                if (accountSyncAnnouncementSeen === undefined) setAccountSyncAnnouncementSeen(false);
+                if (crossBorderAnnouncementSeen === undefined)
+                  setCrossBorderAnnouncementSeen(false);
+                if (accountSyncAnnouncementSeen === undefined)
+                  setAccountSyncAnnouncementSeen(false);
               }}
             />
           )}

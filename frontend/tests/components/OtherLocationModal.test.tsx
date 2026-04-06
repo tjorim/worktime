@@ -2,9 +2,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import { OtherLocationModal } from "../../src/components/calendar/OtherLocationModal";
-import { toCountryCode } from "../../src/types/workLocation";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
+import { toCountryCode } from "@/types/workLocation";
 
 const DATE = dayjs("2026-02-18");
 const cc = (value: string) => toCountryCode(value)!;

@@ -1,7 +1,7 @@
 import Button from "react-bootstrap/Button";
 import clsx from "clsx";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../../data/rosters";
-import * as m from "../../paraglide/messages.js";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import * as m from "@/paraglide/messages.js";
 
 interface Step3ScheduleSelectionProps {
   selectedSchedule: ScheduleOption | null;

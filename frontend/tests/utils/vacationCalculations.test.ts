@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTimeOffEntryForRange,
-  createWeeklyTimeOffEntry,
-} from "../../src/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import {
   calculateVacationStats,
   formatVacationValue,
@@ -13,11 +10,19 @@ import {
   getHalfDayLabel,
   sanitizeVacationAllowance,
   type VacationAllowanceSettings,
-} from "../../src/utils/vacationCalculations";
+} from "@/utils/vacationCalculations";
 
 const dateEntry = (
   date: string,
-  entryType: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other" = "vacation",
+  entryType:
+    | "vacation"
+    | "business"
+    | "course"
+    | "in"
+    | "weekend"
+    | "birthday"
+    | "ill"
+    | "other" = "vacation",
   flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
 ) =>
   buildTimeOffEntryForRange({
@@ -31,7 +36,15 @@ const dateEntry = (
 const rangeEntry = (
   start: string,
   end: string,
-  entryType: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other" = "vacation",
+  entryType:
+    | "vacation"
+    | "business"
+    | "course"
+    | "in"
+    | "weekend"
+    | "birthday"
+    | "ill"
+    | "other" = "vacation",
   flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
 ) =>
   buildTimeOffEntryForRange({
@@ -44,7 +57,15 @@ const rangeEntry = (
 
 const weeklyEntry = (
   weekday: number,
-  entryType: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other" = "in",
+  entryType:
+    | "vacation"
+    | "business"
+    | "course"
+    | "in"
+    | "weekend"
+    | "birthday"
+    | "ill"
+    | "other" = "in",
   flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
 ) =>
   createWeeklyTimeOffEntry({
@@ -86,7 +107,11 @@ describe("vacationCalculations", () => {
     });
 
     it("handles half-day flags", () => {
-      const halfStats = calculateVacationStats([dateEntry("2025-01-15", "vacation", ["half_am"])], 2025, 8);
+      const halfStats = calculateVacationStats(
+        [dateEntry("2025-01-15", "vacation", ["half_am"])],
+        2025,
+        8,
+      );
       expect(halfStats.holidayDays).toBe(0.5);
       expect(halfStats.holidayHours).toBe(4);
 
@@ -131,11 +156,7 @@ describe("vacationCalculations", () => {
 
     it("extracts years from date and range entries", () => {
       const years = getAvailableYears(
-        [
-          dateEntry("2024-06-15"),
-          rangeEntry("2023-12-28", "2024-01-05"),
-          weeklyEntry(1),
-        ],
+        [dateEntry("2024-06-15"), rangeEntry("2023-12-28", "2024-01-05"), weeklyEntry(1)],
         2025,
       );
       expect(years).toEqual([2025, 2024, 2023]);

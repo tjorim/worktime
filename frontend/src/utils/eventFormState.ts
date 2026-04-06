@@ -1,7 +1,7 @@
-import type { EventFlag } from "../lib/hday/types";
-import type { TimeOffEntry } from "../lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
-import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
+import type { EventFlag } from "@/lib/hday/types";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
+import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 
 export type EventFormState = {
   type: "range" | "weekly";
@@ -37,7 +37,10 @@ export function serializeEventFormState(state: EventFormState): string {
   });
 }
 
-export function serializeEventFormStateFromEntry(entry: TimeOffEntry, defaultWeekday: number): string {
+export function serializeEventFormStateFromEntry(
+  entry: TimeOffEntry,
+  defaultWeekday: number,
+): string {
   return serializeEventFormState({
     type: isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
     weekday: isTimeOffWeeklyEntry(entry) ? entry.weekday : defaultWeekday,

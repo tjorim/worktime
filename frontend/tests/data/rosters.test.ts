@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCHEDULE_OPTIONS, SHIFT_CODES } from "../../src/data/rosters";
+import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/data/rosters";
 
 describe("Schedule pattern validation", () => {
   it("should pass validation for all existing schedules", () => {

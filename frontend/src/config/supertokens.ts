@@ -19,10 +19,8 @@ import Session from "supertokens-auth-react/recipe/session";
  * Session cookies are managed automatically by the session recipe.
  */
 
-const API_DOMAIN =
-  import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im";
-const WEBSITE_DOMAIN =
-  import.meta.env.VITE_WEBSITE_DOMAIN ?? "https://worktime.tjor.im";
+const API_DOMAIN = import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im";
+const WEBSITE_DOMAIN = import.meta.env.VITE_WEBSITE_DOMAIN ?? "https://worktime.tjor.im";
 const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH ?? "/auth";
 const WEBSITE_BASE_PATH = import.meta.env.VITE_WEBSITE_BASE_PATH ?? "/auth";
 

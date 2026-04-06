@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChangelogModal } from "../../src/components/ChangelogModal";
-import { changelogData, futurePlans } from "../../src/data/changelog";
+import { ChangelogModal } from "@/components/ChangelogModal";
+import { changelogData, futurePlans } from "@/data/changelog";
 
 describe("ChangelogModal", () => {
   const defaultProps = {

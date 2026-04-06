@@ -2,19 +2,17 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsPanel } from "../../src/components/SettingsPanel";
-import { AuthProvider } from "../../src/contexts/AuthContext";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import { SettingsPanel } from "@/components/SettingsPanel";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // Global SuperTokens mocks come from tests/setup.ts (no-session default).
 // Override for authenticated state tests using vi.mocked().
 
-const mockRedirectToAuth = vi.mocked(
-  (await import("supertokens-auth-react")).redirectToAuth,
-);
+const mockRedirectToAuth = vi.mocked((await import("supertokens-auth-react")).redirectToAuth);
 const mockSignOut = vi.mocked(
   (await import("supertokens-auth-react/recipe/session")).default.signOut,
 );
@@ -46,9 +44,7 @@ describe("SettingsPanel Account Section", () => {
 
   it("shows sync benefits description when not authenticated", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    expect(
-      screen.getByText(/Your data stays local by default/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Your data stays local by default/i)).toBeInTheDocument();
   });
 
   it("calls redirectToAuth with signin when Sign In is clicked", async () => {
@@ -68,16 +64,14 @@ describe("SettingsPanel Account Section", () => {
   it("calls signOut when Sign Out is clicked (authenticated state)", async () => {
     // Override the session mock for this test to simulate an authenticated user
     const sessionMod = await import("supertokens-auth-react/recipe/session");
-    const useSessionContextSpy = vi
-      .spyOn(sessionMod, "useSessionContext")
-      .mockReturnValue({
-        loading: false,
-        doesSessionExist: true,
-        userId: "u1",
-        accessTokenPayload: { displayName: "Alice" },
-        invalidClaims: [],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+    const useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
+      loading: false,
+      doesSessionExist: true,
+      userId: "u1",
+      accessTokenPayload: { displayName: "Alice" },
+      invalidClaims: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
 
     const user = userEvent.setup();
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
@@ -98,5 +92,4 @@ describe("SettingsPanel Account Section", () => {
     expect(screen.getByText("Automatic backup")).toBeInTheDocument();
     expect(screen.getByText("Cross-device access")).toBeInTheDocument();
   });
-
 });

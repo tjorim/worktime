@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MonthCalendar } from "../../../src/components/calendar/MonthCalendar";
-import { createTimeOffEntry } from "../../../src/lib/timeOff/codecs";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
-import type { TimeOffEntry } from "../../../src/lib/timeOff/types";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { createTimeOffEntry } from "@/lib/timeOff/codecs";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 describe("MonthCalendar", () => {
   const mockOnMonthChange = vi.fn();
@@ -12,11 +12,21 @@ describe("MonthCalendar", () => {
   const mockOnViewEvent = vi.fn();
   const mockOnEditEvent = vi.fn();
   let entryCounter = 0;
-  const createDateEntry = (overrides: {
-    date?: string;
-    note?: string | null;
-    entryType?: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other";
-  } = {}): TimeOffEntry =>
+  const createDateEntry = (
+    overrides: {
+      date?: string;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
       kind: "date",
@@ -25,12 +35,22 @@ describe("MonthCalendar", () => {
       flags: [],
       entryType: overrides.entryType ?? "vacation",
     });
-  const createRangeEntry = (overrides: {
-    start?: string;
-    end?: string;
-    note?: string | null;
-    entryType?: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other";
-  } = {}): TimeOffEntry =>
+  const createRangeEntry = (
+    overrides: {
+      start?: string;
+      end?: string;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
       kind: "range",
@@ -40,11 +60,21 @@ describe("MonthCalendar", () => {
       flags: [],
       entryType: overrides.entryType ?? "vacation",
     });
-  const createWeeklyEntry = (overrides: {
-    weekday?: number;
-    note?: string | null;
-    entryType?: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other";
-  } = {}): TimeOffEntry =>
+  const createWeeklyEntry = (
+    overrides: {
+      weekday?: number;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
       kind: "weekly",

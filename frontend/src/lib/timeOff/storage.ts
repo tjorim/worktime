@@ -1,31 +1,17 @@
-import type { TimeOffEntry, TimeOffEntryFlag, TimeOffEntryType } from "./types";
+import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
+import type { TimeOffEntry, TimeOffEntryType } from "./types";
 import {
   getTimeOffEntryIdentityKey,
   getTimeOffEntrySortKey,
-  TIME_OFF_ENTRY_TYPES,
+  isValidEntryType,
+  isValidFlag,
 } from "./types";
-
-export const TIME_OFF_ENTRIES_STORAGE_KEY = "worktime_time_off_entries";
 
 function isValidDateKey(value: unknown): value is string {
   return (
     typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
     !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime())
-  );
-}
-
-function isValidEntryType(value: unknown): value is TimeOffEntryType {
-  return typeof value === "string" && TIME_OFF_ENTRY_TYPES.includes(value as TimeOffEntryType);
-}
-
-function isValidFlag(value: unknown): value is TimeOffEntryFlag {
-  return (
-    value === "half_am" ||
-    value === "half_pm" ||
-    value === "onsite" ||
-    value === "no_fly" ||
-    value === "can_fly"
   );
 }
 
@@ -40,9 +26,7 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
     if (typeof candidate.id !== "string" || candidate.id.length === 0) continue;
     if (!isValidEntryType(candidate.entryType)) continue;
 
-    const flags = Array.isArray(candidate.flags)
-      ? candidate.flags.filter(isValidFlag)
-      : [];
+    const flags = Array.isArray(candidate.flags) ? candidate.flags.filter(isValidFlag) : [];
 
     const note =
       typeof candidate.note === "string" && candidate.note.trim().length > 0

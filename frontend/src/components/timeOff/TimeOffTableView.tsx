@@ -4,14 +4,18 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { EmptyState } from "../shared/EmptyState";
-import { getEventColorClass, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
+import { EmptyState } from "@/components/shared/EmptyState";
+import {
+  getEventColorClass,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { TimeOffToolbar } from "./TimeOffToolbar";
 import { TimeOffRawView } from "./TimeOffRawView";
-import type { TimeOffViewMode } from "../../data/timeoffConstants";
-import * as m from "../../paraglide/messages.js";
+import type { TimeOffViewMode } from "@/data/timeoffConstants";
+import * as m from "@/paraglide/messages.js";
 
 type TimeOffTableViewProps = {
   canUndo: boolean;
@@ -211,7 +215,15 @@ function toDisplayDate(value: string): string {
   return value.replace(/-/g, "/");
 }
 
-const WEEKDAY_MESSAGES = [m.weekday_mon, m.weekday_tue, m.weekday_wed, m.weekday_thu, m.weekday_fri, m.weekday_sat, m.weekday_sun] as const;
+const WEEKDAY_MESSAGES = [
+  m.weekday_mon,
+  m.weekday_tue,
+  m.weekday_wed,
+  m.weekday_thu,
+  m.weekday_fri,
+  m.weekday_sat,
+  m.weekday_sun,
+] as const;
 
 function renderEntryDisplayDate(entry: TimeOffEntry) {
   if (isTimeOffWeeklyEntry(entry)) {

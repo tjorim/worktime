@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
-import { EventStoreProvider, useEventStore } from "../../src/contexts/EventStoreContext";
+import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
 import {
   buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
   entriesToHdayEvents,
-} from "../../src/lib/timeOff/codecs";
-import type { TimeOffEntry } from "../../src/lib/timeOff/types";
+} from "@/lib/timeOff/codecs";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <EventStoreProvider>{children}</EventStoreProvider>
@@ -17,7 +17,11 @@ function getEvents(entries: TimeOffEntry[]) {
   return entriesToHdayEvents(entries);
 }
 
-function createDateEntry(date: string, note: string, entryType: TimeOffEntry["entryType"] = "vacation") {
+function createDateEntry(
+  date: string,
+  note: string,
+  entryType: TimeOffEntry["entryType"] = "vacation",
+) {
   return buildTimeOffEntryForRange({
     start: date,
     end: date,
@@ -42,7 +46,11 @@ function createRangeEntry(
   });
 }
 
-function createWeeklyEntry(weekday: number, note: string, entryType: TimeOffEntry["entryType"] = "in") {
+function createWeeklyEntry(
+  weekday: number,
+  note: string,
+  entryType: TimeOffEntry["entryType"] = "in",
+) {
   return createWeeklyTimeOffEntry({
     weekday,
     note,
@@ -129,10 +137,7 @@ describe("EventStoreContext", () => {
       expect(entryId).toBeTruthy();
 
       act(() => {
-        result.current.updateEntry(
-          entryId!,
-          createDateEntry("2025-01-15", "Updated", "business"),
-        );
+        result.current.updateEntry(entryId!, createDateEntry("2025-01-15", "Updated", "business"));
       });
 
       const events = getEvents(result.current.entries);
@@ -152,10 +157,7 @@ describe("EventStoreContext", () => {
       expect(entryId).toBeTruthy();
 
       act(() => {
-        result.current.updateEntry(
-          entryId!,
-          createDateEntry("2025-01-20", "Updated", "business"),
-        );
+        result.current.updateEntry(entryId!, createDateEntry("2025-01-20", "Updated", "business"));
       });
 
       const stored = localStorage.getItem("worktime_hday_raw");
@@ -462,10 +464,7 @@ d1 # Every Monday`;
       expect(entryId).toBeTruthy();
 
       act(() => {
-        result.current.updateEntry(
-          entryId!,
-          createDateEntry("2025-03-11", "Updated", "business"),
-        );
+        result.current.updateEntry(entryId!, createDateEntry("2025-03-11", "Updated", "business"));
       });
 
       expect(getEvents(result.current.entries)[0]?.title).toBe("Updated");

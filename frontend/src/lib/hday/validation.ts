@@ -2,7 +2,7 @@
  * Date validation utilities for the .hday format (YYYY/MM/DD)
  */
 
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const DATE_FORMAT_REGEX = /^\d{4}\/\d{2}\/\d{2}$/;
 

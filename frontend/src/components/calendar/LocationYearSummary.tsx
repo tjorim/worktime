@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
-import { useToast } from "../../contexts/ToastContext";
-import { aggregateLocationCounts } from "../../utils/workLocationUtils";
-import type { WorkLocationMap } from "../../types/workLocation";
+import { useToast } from "@/contexts/ToastContext";
+import { aggregateLocationCounts } from "@/utils/workLocationUtils";
+import type { WorkLocationMap } from "@/types/workLocation";
 import { WORK_LOCATION_ICON_CLASS, WORK_LOCATION_LABEL } from "./workLocationConstants";
-import * as m from "../../paraglide/messages.js";
-import { getLocale } from "../../paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 interface LocationYearSummaryProps {
   year: number;

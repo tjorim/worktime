@@ -1,8 +1,8 @@
 import { useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
-import type { ConflictChoice } from "../hooks/useFirstSyncFlow";
-import * as m from "../paraglide/messages.js";
+import type { ConflictChoice } from "@/hooks/useFirstSyncFlow";
+import * as m from "@/paraglide/messages.js";
 
 interface FirstSyncConflictDialogProps {
   show: boolean;
@@ -69,7 +69,10 @@ export function FirstSyncConflictDialog({
                 <div className="text-muted small">{m.first_sync_conflict_keep_local_desc()}</div>
               </div>
               {selected === "keep-local" && (
-                <i className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1" aria-hidden="true"></i>
+                <i
+                  className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                  aria-hidden="true"
+                ></i>
               )}
             </div>
           </button>
@@ -91,7 +94,10 @@ export function FirstSyncConflictDialog({
                 <div className="text-muted small">{m.first_sync_conflict_use_server_desc()}</div>
               </div>
               {selected === "use-server" && (
-                <i className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1" aria-hidden="true"></i>
+                <i
+                  className="bi bi-check-circle-fill text-primary ms-auto flex-shrink-0 mt-1"
+                  aria-hidden="true"
+                ></i>
               )}
             </div>
           </button>
