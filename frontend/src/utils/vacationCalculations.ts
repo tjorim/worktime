@@ -123,13 +123,15 @@ const isDateInYear = (date: string, year: number): boolean => {
 
 function countWeeklyOccurrencesInYear(year: number, weekday: number): number {
   if (weekday < 1 || weekday > 7) return 0;
-  let current = dayjs(`${year}-01-01`).startOf("day");
+  const jan1 = dayjs(`${year}-01-01`).startOf("day");
+  let current = jan1.isoWeekday(weekday);
+  if (current.isBefore(jan1, "day")) current = current.add(7, "day");
   const end = dayjs(`${year}-12-31`).startOf("day");
   let count = 0;
 
   while (current.isSameOrBefore(end, "day")) {
-    if (current.isoWeekday() === weekday) count += 1;
-    current = current.add(1, "day");
+    count += 1;
+    current = current.add(7, "day");
   }
 
   return count;

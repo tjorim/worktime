@@ -133,6 +133,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const [rawEditorText, setRawEditorText] = useState(rawText);
   const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
   const [rawEditorError, setRawEditorError] = useState<string | undefined>(undefined);
+  const [rawEditorSkippedLines, setRawEditorSkippedLines] = useState<string[]>([]);
   const rawEditorTextRef = useRef(rawText);
 
   // Update ref whenever rawEditorText changes
@@ -336,17 +337,15 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       // Use the ref to get the current value without adding to dependencies
       const result = importHday(rawEditorTextRef.current);
       setIsRawEditorDirty(false);
-      setRawEditorError(
-        result.skippedUnknownCount > 0
-          ? `${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`
-          : undefined,
-      );
+      setRawEditorError(undefined);
+      setRawEditorSkippedLines(result.skippedLines);
       setSelectedIds(new Set());
-      if (result.skippedUnknownCount > 0) {
-        toast.showWarning(
-          `${m.timeoff_hday_applied()} ${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`,
-          "bi-exclamation-triangle",
-        );
+      if (result.skippedLines.length > 0) {
+        const skippedMsg =
+          result.skippedLines.length === 1
+            ? m.timeoff_hday_skipped_one()
+            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
+        toast.showWarning(`${m.timeoff_hday_applied()} ${skippedMsg}`, "bi-exclamation-triangle");
       } else {
         toast.showSuccess(m.timeoff_hday_applied(), "bi-check-circle");
       }
@@ -361,6 +360,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     setRawEditorText(rawText);
     setIsRawEditorDirty(false);
     setRawEditorError(undefined);
+    setRawEditorSkippedLines([]);
   }, [rawText]);
 
   const handleImport = useCallback(() => {
@@ -377,14 +377,15 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
       setRawEditorText(text);
       setSelectedIds(new Set()); // Clear selection after import
       setIsRawEditorDirty(false); // Reset raw editor dirty state
-      setRawEditorError(
-        result.skippedUnknownCount > 0
-          ? `${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`
-          : undefined,
-      );
-      if (result.skippedUnknownCount > 0) {
+      setRawEditorError(undefined);
+      setRawEditorSkippedLines(result.skippedLines);
+      if (result.skippedLines.length > 0) {
+        const skippedMsg =
+          result.skippedLines.length === 1
+            ? m.timeoff_hday_skipped_one()
+            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
         toast.showWarning(
-          `${m.timeoff_imported({ name: file.name })} ${result.skippedUnknownCount} invalid or unsupported line${result.skippedUnknownCount === 1 ? "" : "s"} were skipped.`,
+          `${m.timeoff_imported({ name: file.name })} ${skippedMsg}`,
           "bi-exclamation-triangle",
         );
       } else {
@@ -528,6 +529,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
           onDeleteEvent={handleDeleteClick}
           rawEditorText={rawEditorText}
           rawEditorError={rawEditorError}
+          rawEditorSkippedLines={rawEditorSkippedLines}
           isRawEditorDirty={isRawEditorDirty}
           onChangeRawEditorText={handleRawEditorChange}
           onApplyRawEditor={handleParseRawEditor}

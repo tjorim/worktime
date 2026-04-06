@@ -115,12 +115,11 @@ export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
 export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
   const parsed = text.trim() ? parseHday(text) : [];
   const entries: TimeOffEntry[] = [];
-  let skippedWeeklyCount = 0;
-  let skippedUnknownCount = 0;
+  const skippedLines: string[] = [];
 
   for (const event of parsed) {
     if (event.type === "unknown") {
-      skippedUnknownCount += 1;
+      skippedLines.push(event.raw ?? "");
       continue;
     }
 
@@ -128,7 +127,7 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
 
     if (event.type === "weekly") {
       if (!event.weekday || event.weekday < 1 || event.weekday > 7) {
-        skippedWeeklyCount += 1;
+        skippedLines.push(event.raw ?? "");
         continue;
       }
 
@@ -145,14 +144,14 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
     }
 
     if (!event.start) {
-      skippedUnknownCount += 1;
+      skippedLines.push(event.raw ?? "");
       continue;
     }
 
     const start = toIsoDate(event.start);
     const end = toIsoDate(event.end ?? event.start);
     if (!isValidRange(start, end)) {
-      skippedUnknownCount += 1;
+      skippedLines.push(event.raw ?? "");
       continue;
     }
 
@@ -176,7 +175,7 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
     );
   }
 
-  return { entries, skippedWeeklyCount, skippedUnknownCount };
+  return { entries, skippedLines };
 }
 
 export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {

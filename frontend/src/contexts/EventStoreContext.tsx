@@ -81,13 +81,11 @@ function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
 }
 
 function mergeEntries(currentEntries: TimeOffEntry[], nextEntries: TimeOffEntry[]): TimeOffEntry[] {
-  const byKey = new Map(currentEntries.map((entry) => [getTimeOffEntryIdentityKey(entry), entry]));
+  const byId = new Map(currentEntries.map((entry) => [entry.id, entry]));
   for (const entry of nextEntries) {
-    const identityKey = getTimeOffEntryIdentityKey(entry);
-    const previous = byKey.get(identityKey);
-    byKey.set(identityKey, previous ? { ...entry, id: previous.id } : entry);
+    byId.set(entry.id, entry);
   }
-  return sortEntries(Array.from(byKey.values()));
+  return sortEntries(Array.from(byId.values()));
 }
 
 function applyWithHistory(state: EventStoreState, nextEntries: TimeOffEntry[]): EventStoreState {
@@ -117,11 +115,7 @@ function entriesReducer(state: EventStoreState, action: EventStoreAction): Event
         return state;
       }
 
-      const filteredEntries = state.entries.filter(
-        (currentEntry) =>
-          currentEntry.id !== id &&
-          getTimeOffEntryIdentityKey(currentEntry) !== getTimeOffEntryIdentityKey(entry),
-      );
+      const filteredEntries = state.entries.filter((currentEntry) => currentEntry.id !== id);
       return applyWithHistory(state, sortEntries([...filteredEntries, { ...entry, id }]));
     }
 

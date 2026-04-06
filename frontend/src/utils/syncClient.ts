@@ -18,11 +18,9 @@ import type { WorkLocationInfo } from "../types/workLocation";
 import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
 import {
   createTimeOffEntry,
-  hdayToTimeOffEntries,
   timeOffEntriesToHday,
 } from "../lib/timeOff/codecs";
 import {
-  LEGACY_TIME_OFF_STORAGE_KEY,
   loadTimeOffEntries,
   saveTimeOffEntries,
 } from "../lib/timeOff/storage";
@@ -513,13 +511,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }
   }
 
-  const legacyRawTimeOff = localStorage.getItem(LEGACY_TIME_OFF_STORAGE_KEY);
-  const localTimeOffEntries: TimeOffEntry[] =
-    loadTimeOffEntries().length > 0
-      ? loadTimeOffEntries()
-      : legacyRawTimeOff
-        ? hdayToTimeOffEntries(legacyRawTimeOff).entries
-        : [];
+  const localTimeOffEntries: TimeOffEntry[] = loadTimeOffEntries();
 
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 

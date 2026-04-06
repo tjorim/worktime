@@ -7,6 +7,7 @@ import * as m from "../../paraglide/messages.js";
 type TimeOffRawViewProps = {
   rawText: string;
   error?: string;
+  skippedLines?: string[];
   isDirty: boolean;
   onChangeRawText: (value: string) => void;
   onApply: () => void;
@@ -16,15 +17,20 @@ type TimeOffRawViewProps = {
 export function TimeOffRawView({
   rawText,
   error,
+  skippedLines,
   isDirty,
   onChangeRawText,
   onApply,
   onReset,
 }: TimeOffRawViewProps) {
   const errorId = useId();
+  const skippedId = useId();
   const handleCopy = async () => {
-    if (!navigator?.clipboard) return;
-    await navigator.clipboard.writeText(rawText);
+    try {
+      await navigator.clipboard.writeText(rawText);
+    } catch {
+      alert(m.timeoff_copy_raw_failed());
+    }
   };
 
   return (
@@ -50,13 +56,29 @@ export function TimeOffRawView({
               onChange={(event) => onChangeRawText(event.target.value)}
               placeholder={m.timeoff_raw_placeholder()}
               className="textarea-mono"
-              aria-describedby={error ? errorId : undefined}
+              aria-describedby={
+              [error ? errorId : null, skippedLines?.length ? skippedId : null]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
               isInvalid={!!error}
             />
             {error && (
               <Form.Control.Feedback type="invalid" id={errorId} role="alert">
                 {error}
               </Form.Control.Feedback>
+            )}
+            {skippedLines && skippedLines.length > 0 && (
+              <div id={skippedId} className="mt-2 text-warning-emphasis" role="alert">
+                <small>
+                  <strong>{m.timeoff_hday_skipped_lines_heading()}</strong>
+                  <ul className="mb-0 font-monospace">
+                    {skippedLines.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </small>
+              </div>
             )}
           </Form.Group>
           <div className="d-flex flex-wrap gap-2">
@@ -66,11 +88,11 @@ export function TimeOffRawView({
                 void handleCopy();
               }}
               disabled={!rawText}
-              aria-label="Copy raw .hday text"
-              title="Copy raw .hday text"
+              aria-label={m.timeoff_copy_raw_aria()}
+              title={m.timeoff_copy_raw_aria()}
             >
               <i className="bi bi-clipboard me-1" aria-hidden="true"></i>
-              Copy
+              {m.timeoff_copy_raw()}
             </Button>
             <Button variant="primary" onClick={onApply}>
               <i className="bi bi-check-circle me-1" aria-hidden="true"></i>

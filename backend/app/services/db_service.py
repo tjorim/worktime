@@ -644,7 +644,7 @@ async def list_time_off_entries(
 
     result = await session.execute(
         statement.order_by(
-            sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date),
+            sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date).nulls_last(),
             TimeOffEntry.weekday,
             TimeOffEntry.entry_id,
         )

@@ -42,8 +42,7 @@ export type TimeOffEntry = TimeOffDateEntry | TimeOffRangeEntry | TimeOffWeeklyE
 
 export interface TimeOffImportResult {
   entries: TimeOffEntry[];
-  skippedWeeklyCount: number;
-  skippedUnknownCount: number;
+  skippedLines: string[];
 }
 
 export function isTimeOffDateEntry(entry: TimeOffEntry): entry is TimeOffDateEntry {

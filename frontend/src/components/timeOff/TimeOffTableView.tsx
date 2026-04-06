@@ -34,6 +34,7 @@ type TimeOffTableViewProps = {
   onDeleteEvent: (id: string) => void;
   rawEditorText: string;
   rawEditorError?: string;
+  rawEditorSkippedLines?: string[];
   isRawEditorDirty: boolean;
   onChangeRawEditorText: (value: string) => void;
   onApplyRawEditor: () => void;
@@ -61,6 +62,7 @@ export function TimeOffTableView({
   onDeleteEvent,
   rawEditorText,
   rawEditorError,
+  rawEditorSkippedLines,
   isRawEditorDirty,
   onChangeRawEditorText,
   onApplyRawEditor,
@@ -195,6 +197,7 @@ export function TimeOffTableView({
       <TimeOffRawView
         rawText={rawEditorText}
         error={rawEditorError}
+        skippedLines={rawEditorSkippedLines}
         isDirty={isRawEditorDirty}
         onChangeRawText={onChangeRawEditorText}
         onApply={onApplyRawEditor}
@@ -208,9 +211,12 @@ function toDisplayDate(value: string): string {
   return value.replace(/-/g, "/");
 }
 
+const WEEKDAY_MESSAGES = [m.weekday_mon, m.weekday_tue, m.weekday_wed, m.weekday_thu, m.weekday_fri, m.weekday_sat, m.weekday_sun] as const;
+
 function renderEntryDisplayDate(entry: TimeOffEntry) {
   if (isTimeOffWeeklyEntry(entry)) {
-    return `Every ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][entry.weekday - 1]}`;
+    const weekdayMsg = WEEKDAY_MESSAGES[entry.weekday - 1];
+    return weekdayMsg ? m.timeoff_every_weekday({ day: weekdayMsg() }) : "↻ —";
   }
 
   if (isTimeOffRangeEntry(entry)) {
