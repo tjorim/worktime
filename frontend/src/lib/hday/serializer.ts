@@ -44,6 +44,9 @@ function serializeFlags(flags?: ReadonlyArray<EventFlag>): string {
 function serializeRangeEvent(event: HdayRangeEvent): string {
   const prefix = serializeFlags(event.flags);
   const title = event.title ? ` # ${event.title}` : "";
+  if (!event.end || event.end === event.start) {
+    return `${prefix}${event.start}${title}`;
+  }
   return `${prefix}${event.start}-${event.end}${title}`;
 }
 

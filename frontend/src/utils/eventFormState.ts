@@ -1,4 +1,7 @@
-import type { EventFlag, HdayEvent } from "../lib/hday/types";
+import type { EventFlag } from "../lib/hday/types";
+import type { TimeOffEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
 
 export type EventFormState = {
   type: "range" | "weekly";
@@ -27,20 +30,6 @@ export function buildEventFormState(
   };
 }
 
-export function toEventFormStateFromEvent(
-  event: HdayEvent,
-  defaultWeekday: number,
-): EventFormState {
-  return {
-    type: event.type === "weekly" ? "weekly" : "range",
-    weekday: event.weekday || defaultWeekday,
-    start: event.start || "",
-    end: event.end || "",
-    title: event.title || "",
-    flags: event.flags || [],
-  };
-}
-
 export function serializeEventFormState(state: EventFormState): string {
   return JSON.stringify({
     ...state,
@@ -48,8 +37,23 @@ export function serializeEventFormState(state: EventFormState): string {
   });
 }
 
-export function serializeEventFormStateFromEvent(event: HdayEvent, defaultWeekday: number): string {
-  return serializeEventFormState(toEventFormStateFromEvent(event, defaultWeekday));
+export function serializeEventFormStateFromEntry(entry: TimeOffEntry, defaultWeekday: number): string {
+  return serializeEventFormState({
+    type: isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+    weekday: isTimeOffWeeklyEntry(entry) ? entry.weekday : defaultWeekday,
+    start: isTimeOffDateEntry(entry)
+      ? entry.date.replace(/-/g, "/")
+      : isTimeOffRangeEntry(entry)
+        ? entry.start.replace(/-/g, "/")
+        : "",
+    end: isTimeOffDateEntry(entry)
+      ? entry.date.replace(/-/g, "/")
+      : isTimeOffRangeEntry(entry)
+        ? entry.end.replace(/-/g, "/")
+        : "",
+    title: entry.note || "",
+    flags: getEntryFlagsForDisplay(entry),
+  });
 }
 
 export function isEventFormDirty(currentState: EventFormState, initialState: string): boolean {

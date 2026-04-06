@@ -181,6 +181,36 @@ describe("TimeOffView Integration Tests", () => {
       expect(within(table).getByText(/◐/)).toBeInTheDocument(); // Half day AM symbol
       expect(within(table).getByText(/◑/)).toBeInTheDocument(); // Half day PM symbol
     });
+
+    it("keeps the raw editor synced with imported content", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      const fileInput = screen.getByLabelText(/Import \.hday file/i);
+      const file = new File([SIMPLE_HDAY], "test.hday", { type: "text/plain" });
+      await user.upload(fileInput, file);
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday Editor/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      expect((textarea as HTMLTextAreaElement).value.trim()).toBe(SIMPLE_HDAY.trim());
+    });
+
+    it("applies pasted raw .hday text through the explicit raw editor", async () => {
+      const user = userEvent.setup();
+      renderWithProviders();
+
+      await user.click(screen.getByRole("button", { name: /Raw \.hday Editor/i }));
+
+      const textarea = screen.getByLabelText(/Raw \.hday content/i);
+      await user.clear(textarea);
+      await user.type(textarea, "2025/12/24 # Christmas Eve");
+
+      await user.click(screen.getByRole("button", { name: /Apply raw content/i }));
+
+      expect(screen.getByText("Christmas Eve")).toBeInTheDocument();
+      expect(within(screen.getByRole("table")).getByText("2025/12/24")).toBeInTheDocument();
+    });
   });
 
   describe("Full CRUD Workflow", () => {

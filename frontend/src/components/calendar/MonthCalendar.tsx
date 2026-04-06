@@ -2,16 +2,17 @@ import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import { dayjs, getWeekdayName } from "../../utils/dateTimeUtils";
-import type { HdayEvent } from "../../lib/hday/types";
 import type { PublicHolidayInfo } from "../../types/publicHolidays";
 import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
 import type { PaydayInfo } from "../../types/paydays";
 import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
+import type { TimeOffEntry } from "../../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../../lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 
 interface MonthCalendarProps {
-  events: HdayEvent[];
+  entries?: TimeOffEntry[];
   month: Dayjs;
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
@@ -19,9 +20,9 @@ interface MonthCalendarProps {
   workLocationMap?: WorkLocationMap;
   onMonthChange: (month: Dayjs) => void;
   onAddEvent: (date: Dayjs) => void;
-  onViewEvent: (index: number) => void;
-  onEditEvent: (index: number) => void;
-  onDeleteEvent?: (index: number) => void;
+  onViewEvent: (id: string) => void;
+  onEditEvent: (id: string) => void;
+  onDeleteEvent?: (id: string) => void;
   onSetWorkLocation?: (date: Dayjs, location: WorkLocation | null) => void;
   onSetOtherLocation?: (date: Dayjs) => void;
   allowEventActions?: boolean;
@@ -35,18 +36,6 @@ interface MonthCalendarProps {
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";
-
-/**
- * Parses an .hday date string (YYYY/MM/DD) to a dayjs object.
- * Converts slashes to hyphens for compatibility with dayjs.
- * @param value - The date string in YYYY/MM/DD format
- * @returns A dayjs object, or null if the input is undefined
- */
-const parseHdayDate = (value?: string) => {
-  if (!value) return null;
-  const parsed = dayjs(value.replace(/\//g, "-"));
-  return parsed.isValid() ? parsed : null;
-};
 
 /**
  * Builds a complete calendar grid for the given month.
@@ -87,7 +76,7 @@ const buildCalendarDays = (month: Dayjs) => {
  * - Focus return to trigger element after context menu dismissal
  */
 export function MonthCalendar({
-  events,
+  entries,
   month,
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
@@ -106,6 +95,7 @@ export function MonthCalendar({
   showOtherLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
+  const sourceEntries = entries ?? [];
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
 
@@ -191,7 +181,7 @@ export function MonthCalendar({
     x: number;
     y: number;
     date?: Dayjs;
-    eventIndex?: number;
+    eventId?: string;
   } | null>(null);
 
   // Track which element triggered the context menu for focus return
@@ -217,46 +207,47 @@ export function MonthCalendar({
       map.set(key, list);
     };
 
-    events.forEach((event, index) => {
-      if (event.type === "range") {
-        const start = parseHdayDate(event.start);
-        const end = parseHdayDate(event.end ?? event.start);
-        if (!start || !end) return;
-
-        // Clamp the event range to the currently visible calendar window
-        // This prevents performance issues with very long-range events
-        const rangeStart = start.isBefore(visibleStart) ? visibleStart : start;
-        const rangeEnd = end.isAfter(visibleEnd) ? visibleEnd : end;
-
-        if (rangeStart.isAfter(rangeEnd)) {
-          // Event does not intersect the visible range
+    if (sourceEntries.length > 0) {
+      sourceEntries.forEach((entry) => {
+        if (isTimeOffDateEntry(entry)) {
+          const date = dayjs(entry.date);
+          if (!date.isValid() || date.isBefore(visibleStart, "day") || date.isAfter(visibleEnd, "day")) {
+            return;
+          }
+          addEvent(date, { entry });
           return;
         }
 
-        let current: Dayjs = rangeStart;
-        while (current.isSameOrBefore(rangeEnd, "day")) {
-          addEvent(current, { event, index });
-          current = current.add(1, "day");
+        if (isTimeOffRangeEntry(entry)) {
+          let current = dayjs(entry.start).startOf("day");
+          const end = dayjs(entry.end).startOf("day");
+          if (!current.isValid() || !end.isValid() || end.isBefore(current, "day")) {
+            return;
+          }
+
+          while (current.isSameOrBefore(end, "day")) {
+            if (!current.isBefore(visibleStart, "day") && !current.isAfter(visibleEnd, "day")) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
+          return;
         }
-      } else if (
-        event.type === "weekly" &&
-        event.weekday &&
-        event.weekday >= 1 &&
-        event.weekday <= 7
-      ) {
-        const firstOccurrence = days.find((day) => day.isoWeekday() === event.weekday);
-        if (!firstOccurrence) return;
-        let current = firstOccurrence;
-        const lastDay = days[days.length - 1]!;
-        while (current.isSameOrBefore(lastDay, "day")) {
-          addEvent(current, { event, index });
-          current = current.add(7, "day");
+
+        if (isTimeOffWeeklyEntry(entry)) {
+          let current = visibleStart;
+          while (current.isSameOrBefore(visibleEnd, "day")) {
+            if (current.isoWeekday() === entry.weekday) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
         }
-      }
-    });
+      });
+    }
 
     return map;
-  }, [days, events]);
+  }, [days, sourceEntries]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
@@ -274,11 +265,11 @@ export function MonthCalendar({
   );
 
   const handleEventContextMenu = useCallback(
-    (index: number, x: number, y: number, el: HTMLElement | null) => {
+    (id: string, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
-      setContextMenu({ type: "event", x, y, eventIndex: index });
+      setContextMenu({ type: "event", x, y, eventId: id });
     },
     [allowEventActions],
   );
@@ -297,17 +288,17 @@ export function MonthCalendar({
   );
 
   const handleViewEventWrapper = useCallback(
-    (index: number) => {
+    (id: string) => {
       handleCloseContextMenu();
-      onViewEvent(index);
+      onViewEvent(id);
     },
     [handleCloseContextMenu, onViewEvent],
   );
 
   const handleEditEventWrapper = useCallback(
-    (index: number) => {
+    (id: string) => {
       handleCloseContextMenu();
-      onEditEvent(index);
+      onEditEvent(id);
     },
     [handleCloseContextMenu, onEditEvent],
   );
@@ -377,12 +368,12 @@ export function MonthCalendar({
       }
       return items;
     }
-    if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
+    if (contextMenu?.type === "event" && contextMenu.eventId !== undefined) {
       const items: ContextMenuItem[] = [
         {
           label: "Edit event",
           icon: "bi-pencil",
-          onClick: () => handleEditEventWrapper(contextMenu.eventIndex!),
+          onClick: () => handleEditEventWrapper(contextMenu.eventId!),
         },
       ];
       if (onDeleteEvent) {
@@ -392,7 +383,7 @@ export function MonthCalendar({
           variant: "danger" as const,
           onClick: () => {
             handleCloseContextMenu();
-            onDeleteEvent(contextMenu.eventIndex!);
+            onDeleteEvent(contextMenu.eventId!);
           },
         });
       }

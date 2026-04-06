@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeOffStatsView } from "../../../src/components/timeOff/TimeOffStatsView";
-import type { HdayEvent } from "../../../src/lib/hday/types";
+import {
+  buildTimeOffEntryForRange,
+  createWeeklyTimeOffEntry,
+} from "../../../src/lib/timeOff/codecs";
 import type { VacationAllowanceSettings } from "../../../src/utils/vacationCalculations";
 
 describe("TimeOffStatsView", () => {
@@ -16,8 +19,38 @@ describe("TimeOffStatsView", () => {
 
   const mockOnUpdateAllowance = vi.fn();
 
+  const dateEntry = (
+    start: string,
+    end = start,
+    entryType:
+      | "vacation"
+      | "business"
+      | "course"
+      | "in"
+      | "weekend"
+      | "birthday"
+      | "ill"
+      | "other" = "vacation",
+    flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
+  ) =>
+    buildTimeOffEntryForRange({
+      start,
+      end,
+      note: null,
+      entryType,
+      flags,
+    });
+
+  const weeklyEntry = (weekday: number, entryType: "vacation" | "business" | "course" | "in" | "weekend" | "birthday" | "ill" | "other" = "in") =>
+    createWeeklyTimeOffEntry({
+      weekday,
+      note: null,
+      entryType,
+      flags: [],
+    });
+
   const defaultProps = {
-    events: [] as HdayEvent[],
+    entries: [],
     allowance: defaultAllowance,
     onUpdateAllowance: mockOnUpdateAllowance,
   };
@@ -165,28 +198,14 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should calculate and display vacation days used", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/17`,
-          flags: ["holiday"],
-        },
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
     });
 
     it("should display remaining vacation days", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/17`,
-          flags: ["holiday"],
-        },
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
       // Check for Remaining section with proper value
       const remainingText = screen.getByText("Remaining");
       const remainingSection = remainingText.closest(".col-6");
@@ -204,42 +223,20 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should render progress bar with correct percentage", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/19`,
-          flags: ["holiday"],
-        }, // 5 days
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-19`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuenow", "20"); // 5/25 = 20%
     });
 
     it("should show breakdown by event type", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/17`,
-          flags: ["holiday"],
-        },
-        {
-          type: "range",
-          start: `${currentYear}/02/10`,
-          end: `${currentYear}/02/12`,
-          flags: ["business"],
-        },
-        {
-          type: "range",
-          start: `${currentYear}/03/05`,
-          end: `${currentYear}/03/05`,
-          flags: ["ill"],
-        },
+      const entries = [
+        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`),
+        dateEntry(`${currentYear}-02-10`, `${currentYear}-02-12`, "business"),
+        dateEntry(`${currentYear}-03-05`, `${currentYear}-03-05`, "ill"),
       ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       expect(screen.getByText("Holiday")).toBeInTheDocument();
       expect(screen.getByText("Business trip")).toBeInTheDocument();
@@ -247,50 +244,29 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should display total days and hours", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/17`,
-          flags: ["holiday"],
-        },
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       expect(screen.getByText("Total time off")).toBeInTheDocument();
       expect(screen.getByText(/days \(24 h\)/)).toBeInTheDocument();
     });
 
     it("should handle half-day events in calculations", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/15`,
-          flags: ["holiday", "half_am"],
-        },
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", ["half_am"])];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       expect(screen.getByText(/0\.5 \/ 25 days/)).toBeInTheDocument();
     });
 
     it("should update when hoursPerDay changes", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/15`,
-          flags: ["holiday"],
-        },
-      ];
+      const entries = [dateEntry(`${currentYear}-01-15`)];
       const customAllowance: VacationAllowanceSettings = {
         yearlyAmounts: { [String(currentYear)]: 25 },
         unit: "days",
         hoursPerDay: 7,
       };
 
-      render(<TimeOffStatsView {...defaultProps} events={events} allowance={customAllowance} />);
+      render(<TimeOffStatsView {...defaultProps} entries={entries} allowance={customAllowance} />);
       expect(screen.getByText(/days \(7 h\)/)).toBeInTheDocument();
     });
   });
@@ -304,11 +280,11 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should include years from events", () => {
-      const events: HdayEvent[] = [
-        { type: "range", start: `${currentYear - 1}/06/15`, end: `${currentYear - 1}/06/20` },
-        { type: "range", start: `${currentYear}/01/10`, end: `${currentYear}/01/15` },
+      const entries = [
+        dateEntry(`${currentYear - 1}-06-15`, `${currentYear - 1}-06-20`),
+        dateEntry(`${currentYear}-01-10`, `${currentYear}-01-15`),
       ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       const options = within(yearSelect).getAllByRole("option");
@@ -329,21 +305,11 @@ describe("TimeOffStatsView", () => {
         unit: "days",
         hoursPerDay: 8,
       };
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear - 1}/01/15`,
-          end: `${currentYear - 1}/01/17`,
-          flags: ["holiday"],
-        },
-        {
-          type: "range",
-          start: `${currentYear}/01/10`,
-          end: `${currentYear}/01/12`,
-          flags: ["holiday"],
-        },
+      const entries = [
+        dateEntry(`${currentYear - 1}-01-15`, `${currentYear - 1}-01-17`),
+        dateEntry(`${currentYear}-01-10`, `${currentYear}-01-12`),
       ];
-      render(<TimeOffStatsView {...defaultProps} events={events} allowance={multiYearAllowance} />);
+      render(<TimeOffStatsView {...defaultProps} entries={entries} allowance={multiYearAllowance} />);
 
       const yearSelect = screen.getByRole("combobox", { name: /select year/i });
       await user.selectOptions(yearSelect, (currentYear - 1).toString());
@@ -371,15 +337,8 @@ describe("TimeOffStatsView", () => {
         unit: "days",
         hoursPerDay: 8,
       };
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/20`,
-          flags: ["holiday"],
-        }, // 6 days
-      ];
-      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-20`)];
+      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} entries={entries} />);
 
       // Check for Remaining section with 0
       expect(screen.getByText("Remaining")).toBeInTheDocument();
@@ -393,45 +352,26 @@ describe("TimeOffStatsView", () => {
         unit: "days",
         hoursPerDay: 8,
       };
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/20`,
-          flags: ["holiday"],
-        }, // 6 days
-      ];
-      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-20`)];
+      render(<TimeOffStatsView {...defaultProps} allowance={smallAllowance} entries={entries} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuenow", "100");
     });
 
     it("should handle events with no flags as holiday", () => {
-      const events: HdayEvent[] = [
-        { type: "range", start: `${currentYear}/01/15`, end: `${currentYear}/01/17` },
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
     });
 
     it("should filter out non-holiday events from usage", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/17`,
-          flags: ["holiday"],
-        },
-        {
-          type: "range",
-          start: `${currentYear}/02/10`,
-          end: `${currentYear}/02/12`,
-          flags: ["business"],
-        },
+      const entries = [
+        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-17`),
+        dateEntry(`${currentYear}-02-10`, `${currentYear}-02-12`, "business"),
       ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       // Only holiday days count toward allowance
       expect(screen.getByText(/3 \/ 25 days/)).toBeInTheDocument();
@@ -460,15 +400,8 @@ describe("TimeOffStatsView", () => {
     });
 
     it("should have progress bar with aria attributes", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: `${currentYear}/01/15`,
-          end: `${currentYear}/01/19`,
-          flags: ["holiday"],
-        }, // 5 days
-      ];
-      render(<TimeOffStatsView {...defaultProps} events={events} />);
+      const entries = [dateEntry(`${currentYear}-01-15`, `${currentYear}-01-19`)];
+      render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 
       const progressBar = screen.getByRole("progressbar");
       expect(progressBar).toHaveAttribute("aria-valuemin", "0");

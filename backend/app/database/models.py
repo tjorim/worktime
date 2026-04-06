@@ -7,7 +7,7 @@ from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
+from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
 from sqlalchemy import false as sa_false
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -203,22 +203,24 @@ class UserPreferences(Base):
 
 
 class TimeOffEntry(Base):
-    """Per-day structured time-off record for account-backed sync.
+    """Structured time-off entry for account-backed sync.
 
-    Uses (user_id, date) as the natural key (similar to WorkLocation).
-    ``entry_type`` is a free-form string (e.g. ``"vacation"``, ``"sick"``,
-    ``"holiday"``); ``flags`` stores additional hday flag tokens as a JSON
-    array; ``note`` is an optional human-readable label.
-
-    Soft-deleted rows (``deleted_at IS NOT NULL``) are propagated to other
-    devices during pull so that deletions sync correctly.
+    ``entry_id`` is the client-generated stable identity for a logical
+    time-off entry. ``kind`` determines which scheduling shape is active:
+    ``date`` uses ``date``; ``range`` uses ``start_date`` + ``end_date``;
+    ``weekly`` uses ``weekday``.
     """
 
     __tablename__ = "time_off_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    entry_id: Mapped[str] = mapped_column(String, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    date: Mapped[dt_date] = mapped_column(Date, index=True)
+    kind: Mapped[str] = mapped_column(String, default="date")
+    date: Mapped[dt_date | None] = mapped_column(Date, nullable=True, index=True)
+    start_date: Mapped[dt_date | None] = mapped_column(Date, nullable=True, index=True)
+    end_date: Mapped[dt_date | None] = mapped_column(Date, nullable=True, index=True)
+    weekday: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     entry_type: Mapped[str] = mapped_column(String, default="vacation")
     flags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     note: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -234,10 +236,17 @@ class TimeOffEntry(Base):
 
     __table_args__ = (
         Index(
-            "uq_active_time_off_user_date",
+            "uq_time_off_user_entry_id",
             "user_id",
-            "date",
+            "entry_id",
             unique=True,
-            postgresql_where=sql_text("deleted_at IS NULL"),
+        ),
+        CheckConstraint("kind IN ('date', 'range', 'weekly')", name="ck_time_off_kind"),
+        CheckConstraint("weekday BETWEEN 1 AND 7 OR weekday IS NULL", name="ck_time_off_weekday_range"),
+        CheckConstraint(
+            "kind = 'date' AND date IS NOT NULL AND start_date IS NULL AND end_date IS NULL AND weekday IS NULL"
+            " OR kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= end_date AND date IS NULL AND weekday IS NULL"
+            " OR kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL",
+            name="ck_time_off_shape",
         ),
     )

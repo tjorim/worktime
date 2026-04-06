@@ -16,9 +16,15 @@ import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "../components
 import type { TimeTrackingLabel } from "../components/timeTracking/constants";
 import type { WorkLocationInfo } from "../types/workLocation";
 import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
-import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
-import { parseHday } from "../lib/hday/parser";
-import type { HdayEvent } from "../lib/hday/types";
+import {
+  createTimeOffEntry,
+  timeOffEntriesToHday,
+} from "../lib/timeOff/codecs";
+import {
+  loadTimeOffEntries,
+  saveTimeOffEntries,
+} from "../lib/timeOff/storage";
+import type { TimeOffEntry } from "../lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -64,9 +70,14 @@ export interface WorkLocationSyncItem {
 }
 
 export interface TimeOffEntrySyncItem {
-  date: string;
+  id: string;
   action: SyncAction;
   client_updated_at: string;
+  kind?: "date" | "range" | "weekly" | null;
+  date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  weekday?: number | null;
   entry_type?: string | null;
   flags?: string[] | null;
   note?: string | null;
@@ -139,8 +150,13 @@ export interface WorkLocationSyncRead {
 
 export interface TimeOffEntrySyncRead {
   id: number;
+  entry_id: string;
   user_id: number;
-  date: string;
+  kind: "date" | "range" | "weekly";
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  weekday: number | null;
   entry_type: string;
   flags: string[];
   note: string | null;
@@ -495,12 +511,9 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }
   }
 
-  // Time-off entries — parse .hday raw text from localStorage and convert each
-  // range event into individual per-date entries. Weekly recurring events are
-  // skipped since the backend uses a per-date natural key.
-  const hdayRaw = localStorage.getItem(TIME_OFF_STORAGE_KEY) ?? "";
-  const parsedEvents = hdayRaw.trim() ? parseHday(hdayRaw) : [];
-  const timeOffEntries = hdayEventsToSyncItems(parsedEvents, now);
+  const localTimeOffEntries: TimeOffEntry[] = loadTimeOffEntries();
+
+  const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 
   return { labels, tasks, templates, work_locations: workLocations, time_off_entries: timeOffEntries };
 }
@@ -510,107 +523,25 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 // ---------------------------------------------------------------------------
 
 /**
- * Type flags in the .hday format that map to a specific entry_type.
- * All other type flags (including the default 'holiday') map to "vacation".
+ * Convert canonical time-off entries into the backend's structured sync payload.
  */
-const TYPE_FLAG_TO_ENTRY_TYPE: Record<string, string> = {
-  business: "business",
-  ill: "ill",
-  in: "in",
-  course: "course",
-  other: "other",
-  weekend: "weekend",
-  birthday: "birthday",
-};
-
-/** The set of type flags — mutually exclusive in .hday events */
-const TYPE_FLAGS = new Set([
-  "holiday",
-  "business",
-  "ill",
-  "in",
-  "course",
-  "other",
-  "weekend",
-  "birthday",
-]);
-
-/**
- * Expand a .hday range event into individual date strings (YYYY-MM-DD).
- * Dates in .hday are YYYY/MM/DD; the backend uses YYYY-MM-DD.
- * Returns an empty array if the dates are invalid or end is before start.
- */
-function expandHdayRange(start: string, end: string): string[] {
-  // .hday uses YYYY/MM/DD; dayjs/ISO-8601 uses YYYY-MM-DD.
-  const toIso = (d: string) => d.replace(/\//g, "-");
-  const startDay = dayjs(toIso(start));
-  const endDay = dayjs(toIso(end));
-  if (!startDay.isValid() || !endDay.isValid() || endDay.isBefore(startDay)) return [];
-  const dates: string[] = [];
-  let current = startDay;
-  // Limit to 3 years of individual dates to prevent accidental generation of
-  // thousands of entries from a malformed or very long range in the .hday file.
-  const maxDays = 365 * 3;
-  while (!current.isAfter(endDay) && dates.length <= maxDays) {
-    dates.push(current.format("YYYY-MM-DD"));
-    current = current.add(1, "day");
-  }
-  return dates;
-}
-
-/** Convert a backend ISO date string (YYYY-MM-DD) to the .hday date format (YYYY/MM/DD). */
-function isoToHdayDate(isoDate: string): string {
-  return isoDate.replace(/-/g, "/");
-}
-
-/**
- * Convert an array of .hday HdayEvent objects to TimeOffEntrySyncItem records.
- *
- * - Only "range" type events are converted (weekly events are skipped — they
- *   cannot be represented as individual date-keyed backend entries).
- * - Date ranges are expanded to one entry per calendar day.
- * - The entry_type is derived from the event's type flags; defaults to "vacation".
- * - Time/location flags (e.g. half_am, half_pm, onsite) are preserved in `flags`.
- * - The event title becomes the `note` field.
- */
-export function hdayEventsToSyncItems(
-  events: HdayEvent[],
+export function timeOffEntriesToSyncItems(
+  entries: TimeOffEntry[],
   clientUpdatedAt: string,
 ): TimeOffEntrySyncItem[] {
-  const items: TimeOffEntrySyncItem[] = [];
-  for (const event of events) {
-    if (event.type !== "range" || !event.start) continue;
-    const end = event.end ?? event.start;
-    const dates = expandHdayRange(event.start, end);
-    if (dates.length === 0) continue;
-
-    // Determine entry_type from the type flag (first one found; .hday normalizer
-    // ensures mutual exclusivity so at most one type flag per event).
-    let entryType = "vacation";
-    const nonTypeFlags: string[] = [];
-    for (const flag of event.flags ?? []) {
-      if (TYPE_FLAGS.has(flag)) {
-        if (flag !== "holiday") {
-          entryType = TYPE_FLAG_TO_ENTRY_TYPE[flag] ?? "vacation";
-        }
-      } else {
-        nonTypeFlags.push(flag);
-      }
-    }
-
-    const note = event.title?.trim() || null;
-    for (const date of dates) {
-      items.push({
-        date,
-        action: "create",
-        client_updated_at: clientUpdatedAt,
-        entry_type: entryType,
-        flags: nonTypeFlags.length > 0 ? nonTypeFlags : [],
-        note,
-      });
-    }
-  }
-  return items;
+  return entries.map((entry) => ({
+    id: entry.id,
+    action: "create",
+    client_updated_at: clientUpdatedAt,
+    kind: entry.kind,
+    date: entry.kind === "date" ? entry.date : null,
+    start_date: entry.kind === "range" ? entry.start : null,
+    end_date: entry.kind === "range" ? entry.end : null,
+    weekday: entry.kind === "weekly" ? entry.weekday : null,
+    entry_type: entry.entryType,
+    flags: entry.flags,
+    note: entry.note,
+  }));
 }
 
 /**
@@ -622,42 +553,32 @@ export function hdayEventsToSyncItems(
  * The note becomes the event title.
  */
 export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
-  const ENTRY_TYPE_TO_FLAG: Record<string, string | null> = {
-    vacation: null, // holiday is the .hday default (no explicit flag)
-    business: "b",
-    ill: "i",
-    in: "k",
-    course: "s",
-    other: "u",
-    weekend: "e",
-    birthday: "h",
-  };
-  const FLAG_CHAR: Record<string, string> = {
-    half_am: "a",
-    half_pm: "p",
-    onsite: "w",
-    no_fly: "n",
-    can_fly: "f",
-  };
+  const entries = syncItemsToTimeOffEntries(items);
+  return entries.length > 0 ? timeOffEntriesToHday(entries) : "";
+}
 
-  const lines: string[] = [];
-  for (const item of items) {
-    if (item.deleted_at !== null) continue;
-    // Convert YYYY-MM-DD to YYYY/MM/DD for .hday format
-    const hdayDate = isoToHdayDate(item.date);
-    if (!hdayDate.includes("/")) continue; // guard against non-date strings
-
-    const typeChar = ENTRY_TYPE_TO_FLAG[item.entry_type] ?? null;
-    const locChars = (item.flags ?? [])
-      .map((f) => FLAG_CHAR[f] ?? "")
-      .filter((c) => c.length > 0)
-      .join("");
-
-    const prefix = `${typeChar ?? ""}${locChars}`;
-    const titleSuffix = item.note ? ` # ${item.note}` : "";
-    lines.push(`${prefix}${hdayDate}${titleSuffix}`);
-  }
-  return lines.join("\n");
+function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
+  return items
+    .filter((item) => {
+      if (item.deleted_at !== null) return false;
+      if (item.kind === "date") return item.date != null;
+      if (item.kind === "range") return item.start_date != null && item.end_date != null;
+      if (item.kind === "weekly") return item.weekday != null;
+      return false;
+    })
+    .map((item) =>
+      createTimeOffEntry({
+        id: item.entry_id,
+        kind: item.kind,
+        date: item.kind === "date" ? item.date! : undefined,
+        start: item.kind === "range" ? item.start_date! : undefined,
+        end: item.kind === "range" ? item.end_date! : undefined,
+        weekday: item.kind === "weekly" ? item.weekday! : undefined,
+        entryType: item.entry_type as TimeOffEntry["entryType"],
+        flags: item.flags as TimeOffEntry["flags"],
+        note: item.note,
+      } as Parameters<typeof createTimeOffEntry>[0]),
+    );
 }
 
 /**
@@ -677,7 +598,7 @@ export function buildKeepLocalReplacePayload(
   const localTaskIds = new Set(localPayload.tasks.map((t) => t.id));
   const localTemplateIds = new Set(localPayload.templates.map((t) => t.id));
   const localWorkLocationDates = new Set(localPayload.work_locations.map((wl) => wl.date));
-  const localTimeOffDates = new Set((localPayload.time_off_entries ?? []).map((e) => e.date));
+  const localTimeOffIds = new Set((localPayload.time_off_entries ?? []).map((e) => e.id));
 
   const deleteLabels: LabelSyncItem[] = serverData.labels
     .filter((l) => !localLabelIds.has(l.id) && l.deleted_at === null)
@@ -696,8 +617,8 @@ export function buildKeepLocalReplacePayload(
     .map((wl) => ({ date: wl.date, action: "delete", client_updated_at: now }));
 
   const deleteTimeOffEntries: TimeOffEntrySyncItem[] = (serverData.time_off_entries ?? [])
-    .filter((e) => !localTimeOffDates.has(e.date) && e.deleted_at === null)
-    .map((e) => ({ date: e.date, action: "delete", client_updated_at: now }));
+    .filter((e) => !localTimeOffIds.has(e.entry_id) && e.deleted_at === null)
+    .map((e) => ({ id: e.entry_id, action: "delete", client_updated_at: now }));
 
   return {
     labels: [...localPayload.labels, ...deleteLabels],
@@ -797,13 +718,5 @@ export function applySyncPullResponse(data: SyncPullResponse): void {
     localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(yearData));
   }
 
-  // Time-off entries — convert pulled entries back to .hday raw text.
-  // Replaces the existing raw .hday text in localStorage. If there are no
-  // non-deleted entries, the key is removed to avoid storing an empty string.
-  const hdayRaw = syncItemsToHdayRaw(data.time_off_entries ?? []);
-  if (hdayRaw.trim()) {
-    localStorage.setItem(TIME_OFF_STORAGE_KEY, hdayRaw);
-  } else {
-    localStorage.removeItem(TIME_OFF_STORAGE_KEY);
-  }
+  saveTimeOffEntries(syncItemsToTimeOffEntries(data.time_off_entries ?? []));
 }

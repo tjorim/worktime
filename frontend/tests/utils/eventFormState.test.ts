@@ -3,8 +3,7 @@ import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
-  serializeEventFormStateFromEvent,
-  toEventFormStateFromEvent,
+  serializeEventFormStateFromEntry,
 } from "../../src/utils/eventFormState";
 
 describe("eventFormState", () => {
@@ -33,35 +32,15 @@ describe("eventFormState", () => {
     expect(serialized).toContain('"flags":["business","onsite"]');
   });
 
-  it("normalizes unknown event types as range when building state from event", () => {
-    const formState = toEventFormStateFromEvent(
+  it("serializes existing entry state via helper", () => {
+    const serialized = serializeEventFormStateFromEntry(
       {
-        type: "unknown",
-        start: "2026/03/01",
-        end: "2026/03/02",
-        title: "Imported",
-        flags: ["onsite"],
-      },
-      1,
-    );
-
-    expect(formState).toEqual({
-      type: "range",
-      weekday: 1,
-      start: "2026/03/01",
-      end: "2026/03/02",
-      title: "Imported",
-      flags: ["onsite"],
-    });
-  });
-
-  it("serializes existing event state via helper", () => {
-    const serialized = serializeEventFormStateFromEvent(
-      {
-        type: "weekly",
+        id: "weekly-entry",
+        kind: "weekly",
         weekday: 5,
-        title: "Office",
-        flags: ["business", "onsite"],
+        entryType: "business",
+        flags: ["onsite"],
+        note: "Office",
       },
       1,
     );

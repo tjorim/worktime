@@ -151,6 +151,8 @@ describe("useFirstSyncFlow", () => {
     expect(pushCall).toBeDefined();
     const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
     expect(body.time_off_entries).toHaveLength(1);
+    expect(body.time_off_entries[0].id).toBeTypeOf("string");
+    expect(body.time_off_entries[0].kind).toBe("date");
     expect(body.time_off_entries[0].date).toBe("2026-07-14");
   });
 

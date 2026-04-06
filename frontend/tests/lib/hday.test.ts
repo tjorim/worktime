@@ -266,7 +266,7 @@ describe("buildPreviewLine", () => {
         title: "Trip",
         flags: ["business"],
       }),
-    ).toBe("b2025/01/02-2025/01/02 # Trip");
+    ).toBe("b2025/01/02 # Trip");
   });
 
   it("builds a weekly line with flags", () => {
@@ -987,7 +987,7 @@ describe("toLine", () => {
       flags: ["holiday"],
       title: "",
     };
-    expect(toLine(event)).toBe("2024/12/25-2024/12/25");
+    expect(toLine(event)).toBe("2024/12/25");
   });
 
   it("serializes multi-day range event", () => {
@@ -1009,7 +1009,7 @@ describe("toLine", () => {
       flags: ["holiday"],
       title: "Christmas",
     };
-    expect(toLine(event)).toBe("2024/12/25-2024/12/25 # Christmas");
+    expect(toLine(event)).toBe("2024/12/25 # Christmas");
   });
 
   it("serializes range event with business flag", () => {
@@ -1019,7 +1019,7 @@ describe("toLine", () => {
       end: "2024/12/25",
       flags: ["business"],
     };
-    expect(toLine(event)).toBe("b2024/12/25-2024/12/25");
+    expect(toLine(event)).toBe("b2024/12/25");
   });
 
   it("serializes range event with half_am flag", () => {
@@ -1029,7 +1029,7 @@ describe("toLine", () => {
       end: "2024/12/25",
       flags: ["half_am", "holiday"],
     };
-    expect(toLine(event)).toBe("a2024/12/25-2024/12/25");
+    expect(toLine(event)).toBe("a2024/12/25");
   });
 
   it("serializes range event with multiple flags", () => {
@@ -1040,7 +1040,7 @@ describe("toLine", () => {
       flags: ["half_am", "business"],
       title: "Business AM",
     };
-    expect(toLine(event)).toBe("ba2024/12/25-2024/12/25 # Business AM");
+    expect(toLine(event)).toBe("ba2024/12/25 # Business AM");
   });
 
   it("serializes weekly event", () => {
@@ -1071,8 +1071,8 @@ describe("toLine", () => {
   });
 
   it("roundtrips parse and serialize correctly", () => {
-    const input = `2024/12/25-2024/12/25 # Christmas
-ba2024/12/26-2024/12/26 # Business AM
+    const input = `2024/12/25 # Christmas
+ba2024/12/26 # Business AM
 d1k # Office`;
 
     const events = parseHday(input);
@@ -1088,7 +1088,7 @@ d1k # Office`;
       flags: ["holiday"],
       title: "Test",
     };
-    expect(toLine(event)).toBe("2024/12/25-2024/12/25 # Test");
+    expect(toLine(event)).toBe("2024/12/25 # Test");
     expect(toLine(event)).not.toContain("h");
   });
 
@@ -1098,7 +1098,7 @@ d1k # Office`;
       start: "2024/12/25",
       end: "2024/12/25",
     };
-    expect(toLine(event)).toBe("2024/12/25-2024/12/25");
+    expect(toLine(event)).toBe("2024/12/25");
   });
 
   it("handles weekly events without title", () => {

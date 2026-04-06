@@ -7,16 +7,17 @@ import {
   buildLocalSyncPushPayload,
   fetchPreferences,
   fetchSyncStatus,
-  hdayEventsToSyncItems,
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
   syncItemsToHdayRaw,
   syncStatusHasData,
+  timeOffEntriesToSyncItems,
 } from "../../src/utils/syncClient";
 import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
 import { WORK_LOCATIONS_STORAGE_PREFIX, USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
 import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "../../src/lib/timeOff/codecs";
 
 const mockFetch = vi.fn();
 
@@ -670,19 +671,27 @@ describe("syncClient", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // hdayEventsToSyncItems
+  // timeOffEntriesToSyncItems
   // ---------------------------------------------------------------------------
 
-  describe("hdayEventsToSyncItems", () => {
+  describe("timeOffEntriesToSyncItems", () => {
     const ts = "2026-01-01T00:00:00.000Z";
 
-    it("converts a single-date range event to one sync item", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "range", start: "2026/07/14", end: "2026/07/14", flags: ["holiday"], title: "Bastille Day" }],
-        ts,
-      );
+    it("converts a single-date entry to one sync item", () => {
+      const [entry] = [
+        buildTimeOffEntryForRange({
+          start: "2026-07-14",
+          end: "2026-07-14",
+          note: "Bastille Day",
+          entryType: "vacation",
+          flags: [],
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems([entry], ts);
       expect(items).toHaveLength(1);
       expect(items[0]).toMatchObject({
+        id: entry.id,
+        kind: "date",
         date: "2026-07-14",
         action: "create",
         entry_type: "vacation",
@@ -691,63 +700,108 @@ describe("syncClient", () => {
       });
     });
 
-    it("expands a multi-day range into one item per day", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "range", start: "2026/12/24", end: "2026/12/26", flags: ["holiday"] }],
-        ts,
-      );
-      expect(items).toHaveLength(3);
-      expect(items.map((i) => i.date)).toEqual(["2026-12-24", "2026-12-25", "2026-12-26"]);
+    it("preserves range entries as single sync items", () => {
+      const [entry] = [
+        buildTimeOffEntryForRange({
+          start: "2026-12-24",
+          end: "2026-12-26",
+          note: null,
+          entryType: "vacation",
+          flags: [],
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems([entry], ts);
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        id: entry.id,
+        kind: "range",
+        start_date: "2026-12-24",
+        end_date: "2026-12-26",
+        date: null,
+      });
     });
 
-    it("maps type flags to entry_type correctly", () => {
-      const events = [
-        { type: "range" as const, start: "2026/01/01", flags: ["business"] as ["business"] },
-        { type: "range" as const, start: "2026/01/02", flags: ["ill"] as ["ill"] },
-        { type: "range" as const, start: "2026/01/03", flags: ["in"] as ["in"] },
+    it("maps entry types correctly", () => {
+      const entries = [
+        buildTimeOffEntryForRange({
+          start: "2026-01-01",
+          end: "2026-01-01",
+          note: null,
+          entryType: "business",
+          flags: [],
+        }),
+        buildTimeOffEntryForRange({
+          start: "2026-01-02",
+          end: "2026-01-02",
+          note: null,
+          entryType: "ill",
+          flags: [],
+        }),
+        buildTimeOffEntryForRange({
+          start: "2026-01-03",
+          end: "2026-01-03",
+          note: null,
+          entryType: "in",
+          flags: [],
+        }),
       ];
-      const items = hdayEventsToSyncItems(events, ts);
+      const items = timeOffEntriesToSyncItems(entries, ts);
       expect(items[0]?.entry_type).toBe("business");
       expect(items[1]?.entry_type).toBe("ill");
       expect(items[2]?.entry_type).toBe("in");
     });
 
-    it("preserves time/location flags in the flags array", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "range", start: "2026/06/01", flags: ["holiday", "half_am"] }],
+    it("preserves entry flags in the flags array", () => {
+      const items = timeOffEntriesToSyncItems(
+        [
+          buildTimeOffEntryForRange({
+            start: "2026-06-01",
+            end: "2026-06-01",
+            note: null,
+            entryType: "vacation",
+            flags: ["half_am"],
+          }),
+        ],
         ts,
       );
       expect(items[0]?.flags).toEqual(["half_am"]);
       expect(items[0]?.entry_type).toBe("vacation");
     });
 
-    it("skips weekly events", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "weekly", weekday: 1, flags: ["in"] }],
+    it("includes weekly entries directly", () => {
+      const [entry] = [createWeeklyTimeOffEntry({ weekday: 1, note: null, entryType: "in", flags: [] })];
+      const items = timeOffEntriesToSyncItems(
+        [entry],
         ts,
       );
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        id: entry.id,
+        kind: "weekly",
+        weekday: 1,
+        date: null,
+        start_date: null,
+        end_date: null,
+        entry_type: "in",
+      });
+    });
+
+    it("returns empty array for empty entries", () => {
+      const items = timeOffEntriesToSyncItems([], ts);
       expect(items).toHaveLength(0);
     });
 
-    it("skips unknown events", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "unknown", raw: "some garbage" }],
-        ts,
-      );
-      expect(items).toHaveLength(0);
-    });
-
-    it("skips events with invalid date ranges", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "range", start: "invalid/date", end: "also/bad", flags: [] }],
-        ts,
-      );
-      expect(items).toHaveLength(0);
-    });
-
-    it("sets note to null when event has no title", () => {
-      const items = hdayEventsToSyncItems(
-        [{ type: "range", start: "2026/05/01", flags: ["holiday"] }],
+    it("sets note to null when entry has no note", () => {
+      const items = timeOffEntriesToSyncItems(
+        [
+          buildTimeOffEntryForRange({
+            start: "2026-05-01",
+            end: "2026-05-01",
+            note: null,
+            entryType: "vacation",
+            flags: [],
+          }),
+        ],
         ts,
       );
       expect(items[0]?.note).toBeNull();
@@ -760,15 +814,21 @@ describe("syncClient", () => {
 
   describe("syncItemsToHdayRaw", () => {
     const makeEntry = (
-      date: string,
+      kind: "date" | "range" | "weekly",
+      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
       entry_type: string,
       flags: string[] = [],
       note: string | null = null,
       deleted_at: string | null = null,
     ) => ({
       id: 1,
+      entry_id: `entry-${Math.random()}`,
       user_id: 1,
-      date,
+      kind,
+      date: shape.date ?? null,
+      start_date: shape.start_date ?? null,
+      end_date: shape.end_date ?? null,
+      weekday: shape.weekday ?? null,
       entry_type,
       flags,
       note,
@@ -778,41 +838,52 @@ describe("syncClient", () => {
     });
 
     it("converts a vacation entry to an un-prefixed .hday line", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation")]);
+      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "vacation")]);
       expect(raw).toBe("2026/07/14");
     });
 
     it("converts a business entry to a b-prefixed .hday line", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "business")]);
+      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "business")]);
       expect(raw).toBe("b2026/07/14");
     });
 
     it("includes a note as a comment", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation", [], "Bastille Day")]);
+      const raw = syncItemsToHdayRaw([
+        makeEntry("date", { date: "2026-07-14" }, "vacation", [], "Bastille Day"),
+      ]);
       expect(raw).toBe("2026/07/14 # Bastille Day");
     });
 
     it("includes time/location flags in the prefix", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("2026-07-14", "vacation", ["half_am"])]);
+      const raw = syncItemsToHdayRaw([
+        makeEntry("date", { date: "2026-07-14" }, "vacation", ["half_am"]),
+      ]);
       expect(raw).toBe("a2026/07/14");
     });
 
     it("skips soft-deleted entries", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("2026-07-14", "vacation", [], null, "2026-01-02T00:00:00Z"),
+        makeEntry("date", { date: "2026-07-14" }, "vacation", [], null, "2026-01-02T00:00:00Z"),
       ]);
       expect(raw).toBe("");
     });
 
     it("produces multiple lines for multiple entries", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("2026-07-14", "vacation"),
-        makeEntry("2026-08-01", "ill"),
+        makeEntry("date", { date: "2026-07-14" }, "vacation"),
+        makeEntry("weekly", { weekday: 1 }, "in"),
       ]);
       const lines = raw.split("\n");
       expect(lines).toHaveLength(2);
       expect(lines[0]).toBe("2026/07/14");
-      expect(lines[1]).toBe("i2026/08/01");
+      expect(lines[1]).toBe("d1k");
+    });
+
+    it("serializes range entries as a single range line", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("range", { start_date: "2026-12-24", end_date: "2026-12-26" }, "vacation"),
+      ]);
+      expect(raw).toBe("2026/12/24-2026/12/26");
     });
   });
 
@@ -826,28 +897,35 @@ describe("syncClient", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
+        kind: "date",
         date: "2026-07-14",
         action: "create",
         entry_type: "vacation",
         note: "Vacation",
       });
+      expect(payload.time_off_entries[0]?.id).toBeTypeOf("string");
     });
 
-    it("expands multi-day range events in .hday to individual entries", () => {
+    it("preserves multi-day range events from .hday as single entries", () => {
       localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/12/24-2026/12/26");
       const payload = buildLocalSyncPushPayload();
-      expect(payload.time_off_entries).toHaveLength(3);
-      expect(payload.time_off_entries.map((e) => e.date)).toEqual([
-        "2026-12-24",
-        "2026-12-25",
-        "2026-12-26",
-      ]);
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        kind: "range",
+        start_date: "2026-12-24",
+        end_date: "2026-12-26",
+      });
     });
 
-    it("skips weekly events in .hday", () => {
+    it("includes weekly events from .hday", () => {
       localStorage.setItem(TIME_OFF_STORAGE_KEY, "d1 # Every Monday");
       const payload = buildLocalSyncPushPayload();
-      expect(payload.time_off_entries).toHaveLength(0);
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        kind: "weekly",
+        weekday: 1,
+        note: "Every Monday",
+      });
     });
 
     it("returns empty time_off_entries when no .hday data", () => {
@@ -871,15 +949,21 @@ describe("syncClient", () => {
     });
 
     const makeTimeOffEntry = (
-      date: string,
+      kind: "date" | "range" | "weekly",
+      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
       entry_type = "vacation",
       flags: string[] = [],
       note: string | null = null,
       deleted_at: string | null = null,
     ) => ({
       id: 1,
+      entry_id: `entry-${Math.random()}`,
       user_id: 1,
-      date,
+      kind,
+      date: shape.date ?? null,
+      start_date: shape.start_date ?? null,
+      end_date: shape.end_date ?? null,
+      weekday: shape.weekday ?? null,
       entry_type,
       flags,
       note,
@@ -891,7 +975,9 @@ describe("syncClient", () => {
     it("writes .hday raw text for pulled time-off entries", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
-        time_off_entries: [makeTimeOffEntry("2026-07-14", "vacation", [], "Bastille Day")],
+        time_off_entries: [
+          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", [], "Bastille Day"),
+        ],
       });
 
       const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
@@ -903,7 +989,16 @@ describe("syncClient", () => {
       localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/07/14");
       applySyncPullResponse({
         ...makeBaseResponse(),
-        time_off_entries: [makeTimeOffEntry("2026-07-14", "vacation", [], null, "2026-07-15T00:00:00Z")],
+        time_off_entries: [
+          makeTimeOffEntry(
+            "date",
+            { date: "2026-07-14" },
+            "vacation",
+            [],
+            null,
+            "2026-07-15T00:00:00Z",
+          ),
+        ],
       });
 
       expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
@@ -914,6 +1009,20 @@ describe("syncClient", () => {
       applySyncPullResponse(makeBaseResponse());
 
       expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBeNull();
+    });
+
+    it("restores weekly and range entries without expanding them", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [
+          makeTimeOffEntry("weekly", { weekday: 1 }, "in", [], "Every Monday"),
+          makeTimeOffEntry("range", { start_date: "2026-12-24", end_date: "2026-12-26" }, "vacation"),
+        ],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY);
+      expect(stored).toContain("d1k # Every Monday");
+      expect(stored).toContain("2026/12/24-2026/12/26");
     });
   });
 

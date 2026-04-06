@@ -2,10 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import type { Dayjs } from "dayjs";
-import type { HdayEvent } from "@/lib/hday/types";
-import type { WorkLocation } from "../types/workLocation";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { buildPreviewLine } from "@/lib/hday/serializer";
+import {
+  buildTimeOffEntryForRange,
+  createWeeklyTimeOffEntry,
+  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+} from "@/lib/timeOff/codecs";
 import { useEventStore } from "../contexts/EventStoreContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useToast } from "../contexts/ToastContext";
@@ -22,7 +26,7 @@ import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
-  serializeEventFormStateFromEvent,
+  serializeEventFormStateFromEntry,
 } from "../utils/eventFormState";
 import { useEventForm } from "../hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
@@ -41,7 +45,7 @@ import {
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
 } from "../data/timeoffConstants";
-
+import type { WorkLocation } from "../types/workLocation";
 interface CalendarViewProps {
   myTeam: number | null;
   onChangeSchedule?: () => void;
@@ -77,11 +81,11 @@ export function CalendarView({
   onOpenScheduleTab,
 }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
-  const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
+  const { entries, addEntries, updateEntry, deleteEntry } = useEventStore();
   const { scheduleType, settings } = useSettings();
   const toast = useToast();
   const timeOffEnabled = settings.enableTimeOff;
-  const calendarEvents = useMemo(() => (timeOffEnabled ? events : []), [timeOffEnabled, events]);
+  const calendarEntries = useMemo(() => (timeOffEnabled ? entries : []), [timeOffEnabled, entries]);
 
   // Fetch holidays for the current month's year
   const currentYear = currentMonth.year();
@@ -98,7 +102,7 @@ export function CalendarView({
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
-  const [editIndex, setEditIndex] = useState(-1);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
 
   // Other location modal state
@@ -124,14 +128,14 @@ export function CalendarView({
     resetForm,
     validateForm,
     initFormForDate,
-    prefillFormFromEvent,
+    prefillFormFromEntry,
     handleTypeFlagChange,
     handleTimeFlagChange,
   } = useEventForm();
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(-1);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [initialFormState, setInitialFormState] = useState("");
 
@@ -153,35 +157,33 @@ export function CalendarView({
   const handleAddEventForDate = (date: Dayjs) => {
     if (!timeOffEnabled) return;
     resetForm();
-    setEditIndex(-1);
+    setEditEntryId(null);
     setModalMode("add");
     setInitialFormState(initFormForDate(date));
     setShowEventModal(true);
   };
 
-  const loadEventIntoForm = (event: HdayEvent, mode: "view" | "edit") => {
-    prefillFormFromEvent(event);
-    setInitialFormState(serializeEventFormStateFromEvent(event, DEFAULT_WEEKDAY));
+  const loadEntryIntoForm = (entryId: string, mode: "view" | "edit") => {
+    const entry = entries.find((currentEntry) => currentEntry.id === entryId);
+    if (!entry) return;
+    prefillFormFromEntry(entry);
+    setInitialFormState(serializeEventFormStateFromEntry(entry, DEFAULT_WEEKDAY));
     setModalMode(mode);
   };
 
-  const handleOpenViewModal = (index: number) => {
+  const handleOpenViewModal = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    const event = events[index];
-    if (!event) return;
-
-    setEditIndex(index);
-    loadEventIntoForm(event, "view");
+    if (typeof eventId !== "string") return;
+    setEditEntryId(eventId);
+    loadEntryIntoForm(eventId, "view");
     setShowEventModal(true);
   };
 
-  const handleOpenEditModal = (index: number) => {
+  const handleOpenEditModal = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    const event = events[index];
-    if (!event) return;
-
-    setEditIndex(index);
-    loadEventIntoForm(event, "edit");
+    if (typeof eventId !== "string") return;
+    setEditEntryId(eventId);
+    loadEntryIntoForm(eventId, "edit");
     setShowEventModal(true);
   };
 
@@ -196,12 +198,8 @@ export function CalendarView({
   };
 
   const handleCancelEditMode = () => {
-    if (!timeOffEnabled || editIndex < 0) return;
-
-    const event = events[editIndex];
-    if (!event) return;
-
-    loadEventIntoForm(event, "view");
+    if (!timeOffEnabled || !editEntryId) return;
+    loadEntryIntoForm(editEntryId, "view");
   };
 
   const handleResetForm = () => {
@@ -226,43 +224,27 @@ export function CalendarView({
 
     const normalizedFlags = normalizeEventFlags(eventFlags);
 
-    const newEvent: HdayEvent =
-      eventType === "range"
-        ? {
-            type: "range",
-            start: eventStart,
-            end: eventEnd || eventStart,
-            title: eventTitle || undefined,
-            flags: normalizedFlags.length > 0 ? normalizedFlags : undefined,
-            raw: buildPreviewLine({
-              eventType,
-              start: eventStart,
-              end: eventEnd,
-              title: eventTitle,
-              flags: normalizedFlags,
-              weekday: eventWeekday,
-            }),
-          }
-        : {
-            type: "weekly",
+    const nextEntry =
+      eventType === "weekly"
+        ? createWeeklyTimeOffEntry({
             weekday: eventWeekday,
-            title: eventTitle || undefined,
-            flags: normalizedFlags.length > 0 ? normalizedFlags : undefined,
-            raw: buildPreviewLine({
-              eventType,
-              start: eventStart,
-              end: eventEnd,
-              title: eventTitle,
-              flags: normalizedFlags,
-              weekday: eventWeekday,
-            }),
-          };
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          })
+        : buildTimeOffEntryForRange({
+            start: eventStart.replace(/\//g, "-"),
+            end: (eventEnd || eventStart).replace(/\//g, "-"),
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+          });
 
-    if (modalMode === "edit" && editIndex >= 0) {
-      updateEvent(editIndex, newEvent);
+    if (modalMode === "edit" && editEntryId) {
+      updateEntry(editEntryId, nextEntry);
       toast.showSuccess(m.calendar_event_updated(), "bi-pencil-fill");
     } else {
-      addEvent(newEvent);
+      addEntries([nextEntry]);
       toast.showSuccess(m.calendar_event_added());
     }
 
@@ -271,20 +253,21 @@ export function CalendarView({
     resetForm();
   };
 
-  const handleDeleteClick = (index: number) => {
+  const handleDeleteClick = (eventId: string | number) => {
     if (!timeOffEnabled) return;
-    setDeleteIndex(index);
+    if (typeof eventId !== "string") return;
+    setDeleteEntryId(eventId);
     setShowDeleteConfirm(true);
   };
 
   const handleConfirmDelete = () => {
     if (!timeOffEnabled) return;
-    if (deleteIndex >= 0) {
-      deleteEvent(deleteIndex);
+    if (deleteEntryId) {
+      deleteEntry(deleteEntryId);
       toast.showSuccess(m.calendar_event_deleted(), "bi-trash");
     }
     setShowDeleteConfirm(false);
-    setDeleteIndex(-1);
+    setDeleteEntryId(null);
   };
 
   // Get shift calculation function for the user's team and schedule
@@ -307,14 +290,14 @@ export function CalendarView({
         date,
         effectiveTeam,
         scheduleType,
-        calendarEvents,
+        calendarEntries,
         publicHolidayMap,
       );
 
       // Additional context for display
       let displayLabel = shift.name;
       if (!actuallyWorking && shift.code !== "O") {
-        if (hasTimeOffEvent(date, calendarEvents)) {
+        if (hasTimeOffEvent(date, calendarEntries)) {
           displayLabel = m.calendar_time_off();
         } else if (isPublicHolidayForShift(date, effectiveTeam, scheduleType, publicHolidayMap)) {
           displayLabel = m.calendar_public_holiday();
@@ -327,7 +310,7 @@ export function CalendarView({
         isWorking: actuallyWorking,
       };
     };
-  }, [myTeam, scheduleType, calendarEvents, publicHolidayMap]);
+  }, [myTeam, scheduleType, calendarEntries, publicHolidayMap]);
 
   // Cross-border tracking feature flag
   const crossBorderEnabled = settings.enableCrossBorderTracking;
@@ -451,7 +434,7 @@ export function CalendarView({
                 </div>
               )}
               <MonthCalendar
-                events={calendarEvents}
+                entries={calendarEntries}
                 month={currentMonth}
                 publicHolidays={publicHolidayMap}
                 schoolHolidays={schoolHolidayMap}

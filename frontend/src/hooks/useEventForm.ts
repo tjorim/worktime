@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
-import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
+import type { TimeOffEntry } from "../lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "../lib/timeOff/types";
+import { getEntryFlagsForDisplay } from "../lib/timeOff/codecs";
 import { isValidDate } from "../lib/hday/validation";
 import { dayjs } from "../utils/dateTimeUtils";
 import { serializeEventFormState } from "../utils/eventFormState";
@@ -48,41 +51,41 @@ export function useEventForm() {
   const validateForm = useCallback((): boolean => {
     let valid = true;
 
-    if (eventType === "range") {
-      // Validate start date
-      if (!eventStart) {
-        setStartDateError("Start date is required");
-        valid = false;
-      } else if (!isValidDate(eventStart)) {
-        setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else {
-        setStartDateError("");
-      }
-
-      // Validate end date
-      if (eventEnd && !isValidDate(eventEnd)) {
-        setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
-        valid = false;
-      } else if (
-        eventEnd &&
-        eventStart &&
-        isValidDate(eventStart) &&
-        dayjs(eventEnd).isBefore(dayjs(eventStart))
-      ) {
-        setEndDateError("End date must be after start date");
-        valid = false;
-      } else {
-        setEndDateError("");
-      }
-    } else {
-      // Clear stale errors for non-range event types (e.g., weekly)
+    if (eventType === "weekly") {
       setStartDateError("");
+      setEndDateError("");
+      return true;
+    }
+
+    // Validate start date
+    if (!eventStart) {
+      setStartDateError("Start date is required");
+      valid = false;
+    } else if (!isValidDate(eventStart)) {
+      setStartDateError("Invalid date (e.g., Feb 30 or April 31)");
+      valid = false;
+    } else {
+      setStartDateError("");
+    }
+
+    // Validate end date
+    if (eventEnd && !isValidDate(eventEnd)) {
+      setEndDateError("Invalid date (e.g., Feb 30 or April 31)");
+      valid = false;
+    } else if (
+      eventEnd &&
+      eventStart &&
+      isValidDate(eventStart) &&
+      dayjs(eventEnd).isBefore(dayjs(eventStart))
+    ) {
+      setEndDateError("End date must be after start date");
+      valid = false;
+    } else {
       setEndDateError("");
     }
 
     return valid;
-  }, [eventType, eventStart, eventEnd]);
+  }, [eventEnd, eventStart, eventType]);
 
   /**
    * Initialize form state for creating a range event on a specific date.
@@ -111,25 +114,25 @@ export function useEventForm() {
     });
   }, []);
 
-  /**
-   * Prefill form fields from an existing event.
-   * @param event - The event to load into the form
-   */
-  const prefillFormFromEvent = useCallback((event: HdayEvent) => {
-    if (event.type === "range") {
-      setEventType("range");
-      setEventStart(event.start || "");
-      setEventEnd(event.end || "");
-      setEventWeekday(DEFAULT_WEEKDAY);
-    } else if (event.type === "weekly") {
-      setEventType("weekly");
-      setEventWeekday(event.weekday || DEFAULT_WEEKDAY);
-      setEventStart("");
-      setEventEnd("");
-    }
-
-    setEventTitle(event.title || "");
-    setEventFlags(event.flags || []);
+  const prefillFormFromEntry = useCallback((entry: TimeOffEntry) => {
+    setEventType(isTimeOffWeeklyEntry(entry) ? "weekly" : "range");
+    setEventWeekday(isTimeOffWeeklyEntry(entry) ? entry.weekday : DEFAULT_WEEKDAY);
+    setEventStart(
+      isTimeOffDateEntry(entry)
+        ? entry.date.replace(/-/g, "/")
+        : isTimeOffRangeEntry(entry)
+          ? entry.start.replace(/-/g, "/")
+          : "",
+    );
+    setEventEnd(
+      isTimeOffDateEntry(entry)
+        ? entry.date.replace(/-/g, "/")
+        : isTimeOffRangeEntry(entry)
+          ? entry.end.replace(/-/g, "/")
+          : "",
+    );
+    setEventTitle(entry.note || "");
+    setEventFlags(getEntryFlagsForDisplay(entry));
     setStartDateError("");
     setEndDateError("");
   }, []);
@@ -187,7 +190,7 @@ export function useEventForm() {
     resetForm,
     validateForm,
     initFormForDate,
-    prefillFormFromEvent,
+    prefillFormFromEntry,
     handleTypeFlagChange,
     handleTimeFlagChange,
   };
