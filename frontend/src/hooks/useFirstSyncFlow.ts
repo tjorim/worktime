@@ -46,6 +46,7 @@ import { getSyncCursorKey } from "../constants/storageKeys";
 import { LEGACY_TIME_OFF_STORAGE_KEY } from "../lib/timeOff/storage";
 import { hdayToTimeOffEntries } from "../lib/timeOff/codecs";
 import { dayjs } from "../utils/dateTimeUtils";
+import { useEventStore } from "../contexts/EventStoreContext";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -154,6 +155,7 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
+  const { replaceEntries } = useEventStore();
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -239,7 +241,7 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        applySyncPullResponse(pullResult);
+        replaceEntries(applySyncPullResponse(pullResult));
         // Also pull preferences from the server and apply to localStorage.
         const stillMounted = await pullAndApplyServerPreferencesIfPresent(
           fetch,
@@ -317,7 +319,7 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
-            applySyncPullResponse(pullResult);
+            replaceEntries(applySyncPullResponse(pullResult));
             // Pull preferences from the server (use-server means server wins).
             const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
               fetch,

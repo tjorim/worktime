@@ -647,7 +647,7 @@ function utcIsoToLocalTime(utcIso: string): string {
  *
  * Soft-deleted records (deleted_at !== null) are excluded from the local store.
  */
-export function applySyncPullResponse(data: SyncPullResponse): void {
+export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
   // Labels
   const localLabels = data.labels
     .filter((l) => l.deleted_at === null)
@@ -718,5 +718,7 @@ export function applySyncPullResponse(data: SyncPullResponse): void {
     localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(yearData));
   }
 
-  saveTimeOffEntries(syncItemsToTimeOffEntries(data.time_off_entries ?? []));
+  const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
+  saveTimeOffEntries(entries);
+  return entries;
 }
