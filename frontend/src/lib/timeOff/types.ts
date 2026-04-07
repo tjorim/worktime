@@ -1,5 +1,3 @@
-import type { TimeLocationFlag } from "@/lib/hday/types";
-
 export const TIME_OFF_ENTRY_TYPES = [
   "vacation",
   "business",
@@ -13,28 +11,31 @@ export const TIME_OFF_ENTRY_TYPES = [
 
 export type TimeOffEntryType = (typeof TIME_OFF_ENTRY_TYPES)[number];
 
-export type TimeOffEntryFlag = TimeLocationFlag;
+export type TimeOffEntryKind = "date" | "range" | "weekly";
+
+/** Storage-level flag on a time-off entry. "full_day" is the explicit default (no hday letter). */
+export type TimeOffEntryFlag = "full_day" | "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly";
 
 interface TimeOffEntryBase {
   id: string;
   entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
+  entryFlag: TimeOffEntryFlag;
   note: string | null;
 }
 
 export interface TimeOffDateEntry extends TimeOffEntryBase {
-  kind: "date";
+  entryKind: "date";
   date: string;
 }
 
 export interface TimeOffRangeEntry extends TimeOffEntryBase {
-  kind: "range";
+  entryKind: "range";
   start: string;
   end: string;
 }
 
 export interface TimeOffWeeklyEntry extends TimeOffEntryBase {
-  kind: "weekly";
+  entryKind: "weekly";
   weekday: number;
 }
 
@@ -51,6 +52,7 @@ export function isValidEntryType(value: unknown): value is TimeOffEntryType {
 
 export function isValidFlag(value: unknown): value is TimeOffEntryFlag {
   return (
+    value === "full_day" ||
     value === "half_am" ||
     value === "half_pm" ||
     value === "onsite" ||
@@ -60,19 +62,19 @@ export function isValidFlag(value: unknown): value is TimeOffEntryFlag {
 }
 
 export function isTimeOffDateEntry(entry: TimeOffEntry): entry is TimeOffDateEntry {
-  return entry.kind === "date";
+  return entry.entryKind === "date";
 }
 
 export function isTimeOffRangeEntry(entry: TimeOffEntry): entry is TimeOffRangeEntry {
-  return entry.kind === "range";
+  return entry.entryKind === "range";
 }
 
 export function isTimeOffWeeklyEntry(entry: TimeOffEntry): entry is TimeOffWeeklyEntry {
-  return entry.kind === "weekly";
+  return entry.entryKind === "weekly";
 }
 
 export function getTimeOffEntrySortKey(entry: TimeOffEntry): string {
-  switch (entry.kind) {
+  switch (entry.entryKind) {
     case "date":
       return `0:${entry.date}`;
     case "range":
@@ -83,7 +85,7 @@ export function getTimeOffEntrySortKey(entry: TimeOffEntry): string {
 }
 
 export function getTimeOffEntryIdentityKey(entry: TimeOffEntry): string {
-  switch (entry.kind) {
+  switch (entry.entryKind) {
     case "date":
       return `date:${entry.date}`;
     case "range":

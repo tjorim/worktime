@@ -98,16 +98,10 @@ export interface VacationYearStats {
   byType: VacationTypeTotals[];
 }
 
-const HALF_DAY_FLAGS: TimeOffEntryFlag[] = ["half_am", "half_pm"];
+const isHalfDay = (flag?: TimeOffEntryFlag | null): boolean =>
+  flag === "half_am" || flag === "half_pm";
 
-const isHalfDay = (flags?: TimeOffEntryFlag[]): boolean => {
-  if (!flags) return false;
-  const hasAm = flags.includes("half_am");
-  const hasPm = flags.includes("half_pm");
-  return hasAm !== hasPm;
-};
-
-const getDayWeight = (flags?: TimeOffEntryFlag[]): number => (isHalfDay(flags) ? 0.5 : 1);
+const getDayWeight = (flag?: TimeOffEntryFlag | null): number => (isHalfDay(flag) ? 0.5 : 1);
 
 const getEventTypeKey = (entryType: TimeOffEntry["entryType"]): EventTypeKey => {
   return entryType === "vacation" ? "holiday" : entryType;
@@ -221,7 +215,7 @@ export const calculateVacationStats = (
 
   entries.forEach((entry) => {
     const typeKey = getEventTypeKey(entry.entryType);
-    const dayValue = getDayWeight(entry.flags);
+    const dayValue = getDayWeight(entry.entryFlag);
     if (isTimeOffWeeklyEntry(entry)) {
       const occurrences = countWeeklyOccurrencesInYear(year, entry.weekday);
       const totalForEntry = occurrences * dayValue;
@@ -326,9 +320,5 @@ export const formatVacationValue = (value: number): string => {
   return value.toFixed(1);
 };
 
-export const getHalfDayLabel = (flags?: TimeOffEntryFlag[]): string | null => {
-  if (!flags) return null;
-  const hasHalfFlag = flags.some((flag) => HALF_DAY_FLAGS.includes(flag));
-  if (!hasHalfFlag) return null;
-  return isHalfDay(flags) ? "Half day" : null;
-};
+export const getHalfDayLabel = (flag?: TimeOffEntryFlag | null): string | null =>
+  isHalfDay(flag) ? "Half day" : null;

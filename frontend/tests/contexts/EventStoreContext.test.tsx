@@ -8,6 +8,7 @@ import {
   entriesToHdayEvents,
 } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <EventStoreProvider>{children}</EventStoreProvider>
@@ -27,7 +28,7 @@ function createDateEntry(
     end: date,
     note,
     entryType,
-    flags: [],
+    entryFlag: "full_day",
   });
 }
 
@@ -42,7 +43,7 @@ function createRangeEntry(
     end,
     note,
     entryType,
-    flags: [],
+    entryFlag: "full_day",
   });
 }
 
@@ -55,7 +56,7 @@ function createWeeklyEntry(
     weekday,
     note,
     entryType,
-    flags: [],
+    entryFlag: "full_day",
   });
 }
 
@@ -73,12 +74,17 @@ describe("EventStoreContext", () => {
     });
 
     it("should load entries from localStorage if present", () => {
-      const testHday = "2025/01/15 # Test event\n";
-      localStorage.setItem("worktime_hday_raw", testHday);
+      const entry = buildTimeOffEntryForRange({
+        start: "2025-01-15",
+        end: "2025-01-15",
+        note: "Test event",
+        entryType: "vacation",
+        entryFlag: "full_day",
+      });
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
 
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
-      expect(result.current.rawText).toBe(testHday);
       const events = getEvents(result.current.entries);
       expect(events).toHaveLength(1);
       expect(events[0]?.title).toBe("Test event");
@@ -105,9 +111,11 @@ describe("EventStoreContext", () => {
         result.current.addEntries([createDateEntry("2025-01-15", "Persisted event")]);
       });
 
-      const stored = localStorage.getItem("worktime_hday_raw");
-      expect(stored).toContain("Persisted event");
-      expect(stored).toContain("2025/01/15");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!) as TimeOffEntry[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.note).toBe("Persisted event");
+      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-15");
     });
 
     it("should add weekly entry", () => {
@@ -118,8 +126,8 @@ describe("EventStoreContext", () => {
       });
 
       expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.kind).toBe("weekly");
-      if (result.current.entries[0]?.kind === "weekly") {
+      expect(result.current.entries[0]?.entryKind).toBe("weekly");
+      if (result.current.entries[0]?.entryKind === "weekly") {
         expect(result.current.entries[0].weekday).toBe(1);
       }
     });
@@ -160,10 +168,11 @@ describe("EventStoreContext", () => {
         result.current.updateEntry(entryId!, createDateEntry("2025-01-20", "Updated", "business"));
       });
 
-      const stored = localStorage.getItem("worktime_hday_raw");
-      expect(stored).toContain("Updated");
-      expect(stored).toContain("2025/01/20");
-      expect(stored).not.toContain("Original");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!) as TimeOffEntry[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.note).toBe("Updated");
+      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-20");
     });
   });
 
@@ -206,7 +215,7 @@ describe("EventStoreContext", () => {
         result.current.deleteEntry(entryId!);
       });
 
-      const stored = localStorage.getItem("worktime_hday_raw");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       expect(stored).toBeNull();
     });
   });
@@ -335,8 +344,11 @@ d1 # Every Monday`;
         result.current.importHday(hdayContent);
       });
 
-      const stored = localStorage.getItem("worktime_hday_raw");
-      expect(stored).toBe(hdayContent);
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!) as TimeOffEntry[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.note).toBe("Imported event");
+      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-15");
     });
   });
 
@@ -369,7 +381,7 @@ d1 # Every Monday`;
         result.current.clearAll();
       });
 
-      const stored = localStorage.getItem("worktime_hday_raw");
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       expect(stored).toBeNull();
     });
   });
@@ -594,7 +606,7 @@ d1 # Every Monday`;
       });
 
       expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.kind).toBe("range");
+      expect(result.current.entries[0]?.entryKind).toBe("range");
       const events = getEvents(result.current.entries);
       expect(events[0]?.start).toBe("2025/05/01");
       expect(events[0]?.end).toBe("2025/05/03");

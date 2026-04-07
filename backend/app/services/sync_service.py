@@ -379,17 +379,17 @@ async def _push_time_off_entry(
 
     if entry is None:
         # validate_shape ensures kind is not None for non-delete actions
-        assert item.kind is not None
+        assert item.entry_kind is not None
         entry = TimeOffEntry(
             entry_id=item.id,
             user_id=user_id,
             entry_type=item.entry_type or "vacation",
-            flags=item.flags or [],
+            entry_flag=item.entry_flag,
             note=item.note,
         )
         _apply_time_off_shape(
             entry,
-            kind=item.kind,
+            kind=item.entry_kind,
             value_date=item.date,
             start_date=item.start_date,
             end_date=item.end_date,
@@ -405,10 +405,10 @@ async def _push_time_off_entry(
             server_updated_at=entry.updated_at,
             conflict_reason="server version is newer",
         )
-    if "kind" in provided_fields and item.kind is not None:
+    if "entry_kind" in provided_fields and item.entry_kind is not None:
         _apply_time_off_shape(
             entry,
-            kind=item.kind,
+            kind=item.entry_kind,
             value_date=item.date,
             start_date=item.start_date,
             end_date=item.end_date,
@@ -416,8 +416,8 @@ async def _push_time_off_entry(
         )
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
-    if "flags" in provided_fields and item.flags is not None:
-        entry.flags = item.flags
+    if "entry_flag" in provided_fields:
+        entry.entry_flag = item.entry_flag
     if "note" in provided_fields:
         entry.note = item.note
     if entry.deleted_at is not None:

@@ -7,7 +7,7 @@ import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
   buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
-  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
 import { useEventStore } from "@/contexts/EventStoreContext";
@@ -230,14 +230,14 @@ export function CalendarView({
             weekday: eventWeekday,
             note: eventTitle,
             entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
           })
         : buildTimeOffEntryForRange({
             start: eventStart.replace(/\//g, "-"),
             end: (eventEnd || eventStart).replace(/\//g, "-"),
             note: eventTitle,
             entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
           });
 
     if (modalMode === "edit" && editEntryId) {

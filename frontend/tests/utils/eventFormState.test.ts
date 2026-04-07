@@ -36,10 +36,10 @@ describe("eventFormState", () => {
     const serialized = serializeEventFormStateFromEntry(
       {
         id: "weekly-entry",
-        kind: "weekly",
+        entryKind: "weekly",
         weekday: 5,
         entryType: "business",
-        flags: ["onsite"],
+        entryFlag: "onsite" as const,
         note: "Office",
       },
       1,

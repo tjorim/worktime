@@ -42,7 +42,6 @@ import {
   type SyncStatusResponse,
 } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
-import { dayjs } from "@/utils/dateTimeUtils";
 import { useEventStore } from "@/contexts/EventStoreContext";
 
 export type FirstSyncPhase =

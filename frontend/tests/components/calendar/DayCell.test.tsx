@@ -11,7 +11,7 @@ describe("DayCell", () => {
   const createEntryEvent = (
     overrides: {
       note?: string | null;
-      flags?: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly">;
+      flag?: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly";
       entryType?:
         | "vacation"
         | "business"
@@ -25,10 +25,10 @@ describe("DayCell", () => {
   ): DayEvent => ({
     entry: createTimeOffEntry({
       id: `entry-${entryCounter++}`,
-      kind: "date",
+      entryKind: "date",
       date: "2025-01-15",
       note: overrides.note ?? null,
-      flags: overrides.flags ?? [],
+      entryFlag: overrides.flag ?? "full_day",
       entryType: overrides.entryType ?? "vacation",
     }),
   });
@@ -218,7 +218,7 @@ describe("DayCell", () => {
     });
 
     it("should display time/location symbols", () => {
-      const events: DayEvent[] = [createEntryEvent({ note: "Event", flags: ["half_am"] })];
+      const events: DayEvent[] = [createEntryEvent({ note: "Event", flag: "half_am" })];
 
       const { container } = render(<DayCell {...defaultProps} events={events} />);
 

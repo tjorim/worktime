@@ -241,7 +241,7 @@ describe("TimeOffView Integration Tests", () => {
       // Verify localStorage persistence
       const entries = loadTimeOffEntries();
       expect(entries.some((e) => e.note === "Summer vacation")).toBe(true);
-      expect(entries.some((e) => e.kind === "date" && e.date === "2025-06-15")).toBe(true);
+      expect(entries.some((e) => e.entryKind === "date" && e.date === "2025-06-15")).toBe(true);
 
       // === UPDATE ===
       // Find and click edit button using accessible name
@@ -320,10 +320,10 @@ describe("TimeOffView Integration Tests", () => {
       const conference = entries.find((e) => e.note === "Conference");
       expect(conference).toBeTruthy();
       expect(conference).toMatchObject({
-        kind: "range",
+        entryKind: "range",
         start: "2025-07-20",
         end: "2025-07-25",
-        flags: expect.arrayContaining(["onsite"]),
+        entryFlag: "onsite",
       });
 
       // Verify the Business type badge appears in the table
@@ -358,12 +358,12 @@ describe("TimeOffView Integration Tests", () => {
       const entries = loadTimeOffEntries();
       expect(
         entries.some(
-          (e) => e.kind === "date" && e.date === "2025-08-10" && e.note === "First event",
+          (e) => e.entryKind === "date" && e.date === "2025-08-10" && e.note === "First event",
         ),
       ).toBe(true);
       expect(
         entries.some(
-          (e) => e.kind === "date" && e.date === "2025-08-15" && e.note === "Second event",
+          (e) => e.entryKind === "date" && e.date === "2025-08-15" && e.note === "Second event",
         ),
       ).toBe(true);
     }, 15000);
@@ -383,7 +383,7 @@ describe("TimeOffView Integration Tests", () => {
       // Check date event
       expect(
         entries.some(
-          (e) => e.kind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation",
+          (e) => e.entryKind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation",
         ),
       ).toBe(true);
 
@@ -391,7 +391,7 @@ describe("TimeOffView Integration Tests", () => {
       expect(
         entries.some(
           (e) =>
-            e.kind === "range" &&
+            e.entryKind === "range" &&
             e.start === "2025-02-10" &&
             e.end === "2025-02-14" &&
             e.note === "Conference trip",
@@ -399,23 +399,23 @@ describe("TimeOffView Integration Tests", () => {
       ).toBe(true);
 
       // Check weekly events
-      expect(entries.some((e) => e.kind === "weekly" && e.weekday === 1)).toBe(true); // Monday
-      expect(entries.some((e) => e.kind === "weekly" && e.weekday === 5)).toBe(true); // Friday
+      expect(entries.some((e) => e.entryKind === "weekly" && e.weekday === 1)).toBe(true); // Monday
+      expect(entries.some((e) => e.entryKind === "weekly" && e.weekday === 5)).toBe(true); // Friday
 
       // Check events with flags
       expect(
         entries.some(
-          (e) => e.kind === "date" && e.date === "2025-03-20" && e.flags.includes("half_am"),
+          (e) => e.entryKind === "date" && e.date === "2025-03-20" && e.entryFlag === "half_am",
         ),
       ).toBe(true);
       expect(
         entries.some(
-          (e) => e.kind === "date" && e.date === "2025-05-10" && e.flags.includes("half_pm"),
+          (e) => e.entryKind === "date" && e.date === "2025-05-10" && e.entryFlag === "half_pm",
         ),
       ).toBe(true);
       expect(
         entries.some(
-          (e) => e.kind === "range" && e.start === "2025-04-05" && e.end === "2025-04-07",
+          (e) => e.entryKind === "range" && e.start === "2025-04-05" && e.end === "2025-04-07",
         ),
       ).toBe(true);
     });

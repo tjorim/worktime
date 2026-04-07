@@ -594,7 +594,7 @@ def _apply_time_off_shape(
     end_date: date | None,
     weekday: int | None,
 ) -> None:
-    entry.kind = kind
+    entry.entry_kind = kind
     entry.date = value_date if kind == "date" else None
     entry.start_date = start_date if kind == "range" else None
     entry.end_date = end_date if kind == "range" else None
@@ -630,14 +630,14 @@ async def list_time_off_entries(
         # Weekly entries (all date fields NULL) are always included — they recur every week.
         statement = statement.where(
             or_(
-                TimeOffEntry.kind == "weekly",
+                TimeOffEntry.entry_kind == "weekly",
                 sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.end_date) >= start_date,
             )
         )
     if end_date is not None:
         statement = statement.where(
             or_(
-                TimeOffEntry.kind == "weekly",
+                TimeOffEntry.entry_kind == "weekly",
                 sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date) <= end_date,
             )
         )
@@ -672,12 +672,12 @@ async def create_or_update_time_off_entry(
             entry_id=entry_id,
             user_id=user_id,
             entry_type=payload.entry_type,
-            flags=payload.flags,
+            entry_flag=payload.entry_flag,
             note=payload.note,
         )
         _apply_time_off_shape(
             new_entry,
-            kind=payload.kind,
+            kind=payload.entry_kind,
             value_date=payload.date,
             start_date=payload.start_date,
             end_date=payload.end_date,
@@ -688,14 +688,14 @@ async def create_or_update_time_off_entry(
         assert entry is not None
         _apply_time_off_shape(
             entry,
-            kind=payload.kind,
+            kind=payload.entry_kind,
             value_date=payload.date,
             start_date=payload.start_date,
             end_date=payload.end_date,
             weekday=payload.weekday,
         )
         entry.entry_type = payload.entry_type
-        entry.flags = payload.flags
+        entry.entry_flag = payload.entry_flag
         entry.note = payload.note
         entry.deleted_at = None
         entry.updated_at = datetime.now(UTC)
@@ -718,14 +718,14 @@ async def create_or_update_time_off_entry(
         assert entry is not None
         _apply_time_off_shape(
             entry,
-            kind=payload.kind,
+            kind=payload.entry_kind,
             value_date=payload.date,
             start_date=payload.start_date,
             end_date=payload.end_date,
             weekday=payload.weekday,
         )
         entry.entry_type = payload.entry_type
-        entry.flags = payload.flags
+        entry.entry_flag = payload.entry_flag
         entry.note = payload.note
         entry.deleted_at = None
         entry.updated_at = datetime.now(UTC)
@@ -746,10 +746,10 @@ async def update_time_off_entry(
     for field, value in data.items():
         if field in non_nullable_fields and value is None:
             raise ValidationError(f"{field} cannot be None")
-    if "kind" in data:
+    if "entry_kind" in data:
         _apply_time_off_shape(
             entry,
-            kind=data["kind"],
+            kind=data["entry_kind"],
             value_date=data.get("date"),
             start_date=data.get("start_date"),
             end_date=data.get("end_date"),
@@ -758,7 +758,7 @@ async def update_time_off_entry(
         data = {
             field: value
             for field, value in data.items()
-            if field not in {"kind", "date", "start_date", "end_date", "weekday"}
+            if field not in {"entry_kind", "date", "start_date", "end_date", "weekday"}
         }
     for field, value in data.items():
         setattr(entry, field, value)

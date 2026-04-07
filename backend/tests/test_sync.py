@@ -757,10 +757,10 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
-                        "kind": "date",
+                        "entry_kind": "date",
                         "date": "2026-07-01",
                         "entry_type": "vacation",
-                        "flags": [],
+                        "entry_flag": "full_day",
                     }
                 ]
             },
@@ -786,9 +786,9 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
-                        "kind": "date",
+                        "entry_kind": "date",
                         "date": "2026-08-01",
-                        "entry_type": "sick",
+                        "entry_type": "ill",
                     }
                 ]
             },
@@ -839,9 +839,9 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
-                        "kind": "date",
+                        "entry_kind": "date",
                         "date": "2026-08-02",
-                        "entry_type": "sick",
+                        "entry_type": "ill",
                     }
                 ]
             },
@@ -903,7 +903,7 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
-                        "kind": "range",
+                        "entry_kind": "range",
                         "start_date": "2026-09-01",
                         "end_date": "2026-09-03",
                         "entry_type": "vacation",
@@ -917,7 +917,7 @@ class TestSyncTimeOffEntries:
         assert pull_resp.status_code == 200
         assert len(pull_resp.json()["time_off_entries"]) == 1
         assert pull_resp.json()["time_off_entries"][0]["entry_id"] == entry_id
-        assert pull_resp.json()["time_off_entries"][0]["kind"] == "range"
+        assert pull_resp.json()["time_off_entries"][0]["entry_kind"] == "range"
         assert pull_resp.json()["time_off_entries"][0]["start_date"] == "2026-09-01"
         assert pull_resp.json()["time_off_entries"][0]["end_date"] == "2026-09-03"
 
@@ -951,7 +951,7 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
-                        "kind": "weekly",
+                        "entry_kind": "weekly",
                         "weekday": 1,
                         "entry_type": "vacation",
                     }
@@ -969,9 +969,9 @@ class TestSyncTimeOffEntries:
                         "id": entry_id,
                         "action": "update",
                         "client_updated_at": _ts(-100),
-                        "kind": "date",
+                        "entry_kind": "date",
                         "date": "2026-10-01",
-                        "entry_type": "sick",
+                        "entry_type": "ill",
                     }
                 ]
             },

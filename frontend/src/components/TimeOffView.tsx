@@ -6,7 +6,7 @@ import { buildPreviewLine } from "@/lib/hday/serializer";
 import {
   buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
-  getEntryTimeFlagsFromDisplayFlags,
+  getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
@@ -233,14 +233,14 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
             weekday: eventWeekday,
             note: eventTitle,
             entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
           })
         : buildTimeOffEntryForRange({
             start: eventStart.replace(/\//g, "-"),
             end: (eventEnd || eventStart).replace(/\//g, "-"),
             note: eventTitle,
             entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
-            flags: getEntryTimeFlagsFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
           });
 
     if (editEntryId) {

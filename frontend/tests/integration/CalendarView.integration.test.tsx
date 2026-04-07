@@ -5,7 +5,9 @@ import { CalendarView } from "@/components/CalendarView";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import type { HdayEvent } from "@/lib/hday/types";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
@@ -48,22 +50,20 @@ const createTestFixtures = () => {
   ]);
 
   // Time-off events fixture
-  const timeOffEvents: HdayEvent[] = [
-    {
-      type: "range",
-      start: "2025/01/15",
-      end: "2025/01/17",
-      title: "Vacation",
-      flags: undefined,
-      raw: "2025/01/15-2025/01/17 # Vacation",
-    },
-    {
-      type: "weekly",
-      weekday: 5, // Friday
-      title: "Remote Work",
-      flags: ["in"],
-      raw: "d5k # Remote Work",
-    },
+  const timeOffEvents: TimeOffEntry[] = [
+    buildTimeOffEntryForRange({
+      start: "2025-01-15",
+      end: "2025-01-17",
+      note: "Vacation",
+      entryType: "vacation",
+      entryFlag: "full_day",
+    }),
+    createWeeklyTimeOffEntry({
+      weekday: 5,
+      note: "Remote Work",
+      entryType: "in",
+      entryFlag: "full_day",
+    }),
   ];
 
   return {
@@ -117,11 +117,10 @@ const setupUserState = (
 };
 
 /**
- * Stores time-off events in localStorage for EventStoreProvider.
+ * Stores time-off entries in localStorage for EventStoreProvider.
  */
-const setupTimeOffEvents = (events: HdayEvent[]) => {
-  const rawContent = events.map((e) => e.raw).join("\n");
-  localStorage.setItem("worktime_hday_raw", rawContent);
+const setupTimeOffEvents = (events: TimeOffEntry[]) => {
+  localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(events));
 };
 
 /**
@@ -249,15 +248,14 @@ describe("CalendarView Integration Tests", () => {
     it("displays all data sources on a single day when overlapping", () => {
       // Create overlapping data on Jan 6 (shift + school holiday + time-off)
       const fixtures = createTestFixtures();
-      const overlappingEvents: HdayEvent[] = [
-        {
-          type: "range",
-          start: "2025/01/06",
-          end: "2025/01/06",
-          title: "Personal Day",
-          flags: undefined,
-          raw: "2025/01/06 # Personal Day",
-        },
+      const overlappingEvents: TimeOffEntry[] = [
+        buildTimeOffEntryForRange({
+          start: "2025-01-06",
+          end: "2025-01-06",
+          note: "Personal Day",
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
       ];
 
       setupUserState({ myTeam: 1, scheduleType: "5-shift", enableTimeOff: true });

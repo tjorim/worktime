@@ -95,19 +95,19 @@ class TestCreateTimeOff:
 
         resp = db_client.post(
             f"/db/time-off/?user_id={user_id}",
-            json={"date": "2026-07-14", "entry_type": "vacation", "flags": ["half_am"], "note": "summer"},
+            json={"date": "2026-07-14", "entry_type": "vacation", "entry_flag": "half_am", "note": "summer"},
             headers=headers,
         )
         assert resp.status_code == 201
         body = resp.json()
         assert body["entry_id"]
-        assert body["kind"] == "date"
+        assert body["entry_kind"] == "date"
         assert body["date"] == "2026-07-14"
         assert body["start_date"] is None
         assert body["end_date"] is None
         assert body["weekday"] is None
         assert body["entry_type"] == "vacation"
-        assert body["flags"] == ["half_am"]
+        assert body["entry_flag"] == "half_am"
         assert body["note"] == "summer"
 
     def test_upserts_existing_entry_by_entry_id(
@@ -123,7 +123,7 @@ class TestCreateTimeOff:
 
         first = db_client.post(
             f"/db/time-off/?user_id={user_id}",
-            json={"entry_id": entry_id, "date": "2026-08-01", "entry_type": "vacation", "flags": []},
+            json={"entry_id": entry_id, "date": "2026-08-01", "entry_type": "vacation"},
             headers=headers,
         )
         assert first.status_code == 201
@@ -132,11 +132,11 @@ class TestCreateTimeOff:
             f"/db/time-off/?user_id={user_id}",
             json={
                 "entry_id": entry_id,
-                "kind": "range",
+                "entry_kind": "range",
                 "start_date": "2026-08-01",
                 "end_date": "2026-08-03",
                 "entry_type": "ill",
-                "flags": ["half_pm"],
+                "entry_flag": "half_pm",
                 "note": "updated",
             },
             headers=headers,
@@ -145,13 +145,49 @@ class TestCreateTimeOff:
         body = second.json()
         assert body["id"] == first.json()["id"]
         assert body["entry_id"] == entry_id
-        assert body["kind"] == "range"
+        assert body["entry_kind"] == "range"
         assert body["date"] is None
         assert body["start_date"] == "2026-08-01"
         assert body["end_date"] == "2026-08-03"
         assert body["entry_type"] == "ill"
-        assert body["flags"] == ["half_pm"]
+        assert body["entry_flag"] == "half_pm"
         assert body["note"] == "updated"
+
+
+class TestTimeOffValidation:
+    def test_rejects_unknown_entry_type(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = create_user_factory(db_client, admin_h, "to-validate-type")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            f"/db/time-off/?user_id={user_id}",
+            json={"date": "2026-07-14", "entry_type": "sick"},
+            headers=headers,
+        )
+        assert resp.status_code == 422
+
+    def test_rejects_unknown_flag(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = create_user_factory(db_client, admin_h, "to-validate-flag")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            f"/db/time-off/?user_id={user_id}",
+            json={"date": "2026-07-14", "entry_type": "vacation", "entry_flag": "unknown_flag"},
+            headers=headers,
+        )
+        assert resp.status_code == 422
 
 
 class TestListTimeOff:
@@ -185,13 +221,13 @@ class TestListTimeOff:
             db_client,
             user_id,
             headers,
-            {"kind": "range", "start_date": "2026-06-10", "end_date": "2026-06-12", "entry_type": "vacation"},
+            {"entry_kind": "range", "start_date": "2026-06-10", "end_date": "2026-06-12", "entry_type": "vacation"},
         )
         _create_entry(
             db_client,
             user_id,
             headers,
-            {"kind": "weekly", "weekday": 1, "entry_type": "in", "note": "Mondays"},
+            {"entry_kind": "weekly", "weekday": 1, "entry_type": "in", "note": "Mondays"},
         )
 
         resp = db_client.get(f"/db/time-off/?user_id={user_id}", headers=headers)
@@ -214,7 +250,7 @@ class TestListTimeOff:
             db_client,
             user_id,
             headers,
-            {"kind": "range", "start_date": "2026-06-12", "end_date": "2026-06-15", "entry_type": "vacation"},
+            {"entry_kind": "range", "start_date": "2026-06-12", "end_date": "2026-06-15", "entry_type": "vacation"},
         )
         _create_entry(db_client, user_id, headers, {"date": "2026-06-20", "entry_type": "vacation"})
 
@@ -224,7 +260,7 @@ class TestListTimeOff:
         )
         assert resp.status_code == 200
         assert resp.json()["total"] == 2
-        assert {item["kind"] for item in resp.json()["items"]} == {"date", "range"}
+        assert {item["entry_kind"] for item in resp.json()["items"]} == {"date", "range"}
 
     def test_does_not_return_other_users_entries(
         self,
@@ -274,22 +310,22 @@ class TestGetPatchDeleteTimeOff:
             db_client,
             user_id,
             headers,
-            {"kind": "weekly", "weekday": 5, "entry_type": "in", "note": "Fridays"},
+            {"entry_kind": "weekly", "weekday": 5, "entry_type": "in", "note": "Fridays"},
         )
         entry_id = created["entry_id"]
 
         get_resp = db_client.get(f"/db/time-off/{entry_id}?user_id={user_id}", headers=headers)
         assert get_resp.status_code == 200
-        assert get_resp.json()["kind"] == "weekly"
+        assert get_resp.json()["entry_kind"] == "weekly"
         assert get_resp.json()["weekday"] == 5
 
         patch_resp = db_client.patch(
             f"/db/time-off/{entry_id}?user_id={user_id}",
-            json={"kind": "date", "date": "2026-09-10", "note": "updated note"},
+            json={"entry_kind": "date", "date": "2026-09-10", "note": "updated note"},
             headers=headers,
         )
         assert patch_resp.status_code == 200
-        assert patch_resp.json()["kind"] == "date"
+        assert patch_resp.json()["entry_kind"] == "date"
         assert patch_resp.json()["date"] == "2026-09-10"
         assert patch_resp.json()["note"] == "updated note"
 

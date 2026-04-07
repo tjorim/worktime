@@ -1,5 +1,5 @@
 import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
-import type { TimeOffEntry, TimeOffEntryType } from "./types";
+import type { TimeOffEntry, TimeOffEntryFlag } from "./types";
 import {
   getTimeOffEntryIdentityKey,
   getTimeOffEntrySortKey,
@@ -26,37 +26,38 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
     if (typeof candidate.id !== "string" || candidate.id.length === 0) continue;
     if (!isValidEntryType(candidate.entryType)) continue;
 
-    const flags = Array.isArray(candidate.flags) ? candidate.flags.filter(isValidFlag) : [];
+    const flagRaw = candidate.entryFlag;
+    const flag: TimeOffEntryFlag = isValidFlag(flagRaw) ? flagRaw : "full_day";
 
     const note =
       typeof candidate.note === "string" && candidate.note.trim().length > 0
         ? candidate.note.trim()
         : null;
 
-    if (candidate.kind === "weekly") {
+    if (candidate.entryKind === "weekly") {
       if (typeof candidate.weekday !== "number" || candidate.weekday < 1 || candidate.weekday > 7) {
         continue;
       }
       entries.push({
         id: candidate.id,
-        kind: "weekly",
+        entryKind: "weekly",
         weekday: candidate.weekday,
         entryType: candidate.entryType,
-        flags,
+        entryFlag: flag,
         note,
       });
       continue;
     }
 
-    if (candidate.kind === "range") {
+    if (candidate.entryKind === "range") {
       if (!isValidDateKey(candidate.start) || !isValidDateKey(candidate.end)) continue;
       entries.push({
         id: candidate.id,
-        kind: "range",
+        entryKind: "range",
         start: candidate.start,
         end: candidate.end,
         entryType: candidate.entryType,
-        flags,
+        entryFlag: flag,
         note,
       });
       continue;
@@ -65,10 +66,10 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
     if (!isValidDateKey(candidate.date)) continue;
     entries.push({
       id: candidate.id,
-      kind: "date",
+      entryKind: "date",
       date: candidate.date,
       entryType: candidate.entryType,
-      flags,
+      entryFlag: flag,
       note,
     });
   }

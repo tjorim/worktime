@@ -45,26 +45,25 @@ function toHdayDate(value: string): string {
   return value.replace(/-/g, "/");
 }
 
-function getEntryFlags(entryType: TimeOffEntryType, flags: TimeOffEntryFlag[]): EventFlag[] {
-  return normalizeEventFlags([ENTRY_TYPE_TO_EVENT_FLAG[entryType], ...flags]);
+function getEntryFlags(entryType: TimeOffEntryType, entryFlag: TimeOffEntryFlag): EventFlag[] {
+  const typeFlag = ENTRY_TYPE_TO_EVENT_FLAG[entryType];
+  return normalizeEventFlags(
+    entryFlag !== "full_day" ? [typeFlag, entryFlag] : [typeFlag],
+  );
 }
 
 function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
   entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
+  entryFlag: TimeOffEntryFlag;
 } {
   const normalizedFlags = normalizeEventFlags(flags ?? ["holiday"]);
-  const typeFlag = normalizedFlags.find((flag) => flag in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
+  const typeFlag = normalizedFlags.find((f) => f in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
   const entryType = TYPE_FLAG_TO_ENTRY_TYPE[typeFlag] ?? "vacation";
-  const timeFlags = normalizedFlags.filter(
-    (flag): flag is TimeOffEntryFlag =>
-      flag === "half_am" ||
-      flag === "half_pm" ||
-      flag === "onsite" ||
-      flag === "no_fly" ||
-      flag === "can_fly",
+  const matchedTimeFlag = normalizedFlags.find(
+    (f) => f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
   );
-  return { entryType, flags: timeFlags };
+  const timeFlag: TimeOffEntryFlag = matchedTimeFlag != null ? (matchedTimeFlag as TimeOffEntryFlag) : "full_day";
+  return { entryType, entryFlag: timeFlag };
 }
 
 function isValidRange(start: string, end: string): boolean {
@@ -79,35 +78,35 @@ type TimeOffEntryInput =
   | (Omit<TimeOffWeeklyEntry, "id"> & { id?: string });
 
 export function createTimeOffEntry(data: TimeOffEntryInput): TimeOffEntry {
-  if (data.kind === "weekly") {
+  if (data.entryKind === "weekly") {
     return {
       id: data.id ?? uuidv4(),
-      kind: "weekly",
+      entryKind: "weekly",
       weekday: data.weekday,
       entryType: data.entryType,
-      flags: [...data.flags],
+      entryFlag: data.entryFlag,
       note: data.note?.trim() || null,
     };
   }
 
-  if (data.kind === "range") {
+  if (data.entryKind === "range") {
     return {
       id: data.id ?? uuidv4(),
-      kind: "range",
+      entryKind: "range",
       start: data.start,
       end: data.end,
       entryType: data.entryType,
-      flags: [...data.flags],
+      entryFlag: data.entryFlag,
       note: data.note?.trim() || null,
     };
   }
 
   return {
     id: data.id ?? uuidv4(),
-    kind: "date",
+    entryKind: "date",
     date: data.date,
     entryType: data.entryType,
-    flags: [...data.flags],
+    entryFlag: data.entryFlag,
     note: data.note?.trim() || null,
   };
 }
@@ -133,10 +132,10 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
 
       entries.push(
         createTimeOffEntry({
-          kind: "weekly",
+          entryKind: "weekly",
           weekday: event.weekday,
           entryType: metadata.entryType,
-          flags: metadata.flags,
+          entryFlag: metadata.entryFlag,
           note: event.title?.trim() || null,
         }),
       );
@@ -158,18 +157,18 @@ export function hdayToTimeOffEntries(text: string): TimeOffImportResult {
     entries.push(
       start === end
         ? createTimeOffEntry({
-            kind: "date",
+            entryKind: "date",
             date: start,
             entryType: metadata.entryType,
-            flags: metadata.flags,
+            entryFlag: metadata.entryFlag,
             note: event.title?.trim() || null,
           })
         : createTimeOffEntry({
-            kind: "range",
+            entryKind: "range",
             start,
             end,
             entryType: metadata.entryType,
-            flags: metadata.flags,
+            entryFlag: metadata.entryFlag,
             note: event.title?.trim() || null,
           }),
     );
@@ -199,7 +198,7 @@ export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
           type: "weekly",
           weekday: entry.weekday,
           title: entry.note ?? "",
-          flags: getEntryFlags(entry.entryType, entry.flags),
+          flags: getEntryFlags(entry.entryType, entry.entryFlag),
         });
       }
 
@@ -211,7 +210,7 @@ export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
         start: toHdayDate(start),
         end: end ? toHdayDate(end) : undefined,
         title: entry.note ?? "",
-        flags: getEntryFlags(entry.entryType, entry.flags),
+        flags: getEntryFlags(entry.entryType, entry.entryFlag),
       });
     })
     .join("\n");
@@ -224,7 +223,7 @@ export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
         type: "weekly",
         weekday: entry.weekday,
         title: entry.note ?? "",
-        flags: getEntryFlags(entry.entryType, entry.flags),
+        flags: getEntryFlags(entry.entryType, entry.entryFlag),
       };
     }
 
@@ -236,7 +235,7 @@ export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
       start: toHdayDate(start),
       end: end ? toHdayDate(end) : undefined,
       title: entry.note ?? "",
-      flags: getEntryFlags(entry.entryType, entry.flags),
+      flags: getEntryFlags(entry.entryType, entry.entryFlag),
     };
   });
 }
@@ -245,13 +244,13 @@ export function buildTimeOffEntryForDate(input: {
   date: string;
   note?: string;
   entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
+  entryFlag: TimeOffEntryFlag;
 }): TimeOffEntry {
   return createTimeOffEntry({
-    kind: "date",
+    entryKind: "date",
     date: input.date,
     entryType: input.entryType,
-    flags: input.flags,
+    entryFlag: input.entryFlag,
     note: input.note?.trim() || null,
   });
 }
@@ -261,7 +260,7 @@ export function buildTimeOffEntryForRange(input: {
   end?: string;
   note?: string;
   entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
+  entryFlag: TimeOffEntryFlag;
 }): TimeOffEntry {
   const start = input.start.replace(/-/g, "/");
   const end = (input.end ?? input.start).replace(/-/g, "/");
@@ -273,16 +272,16 @@ export function buildTimeOffEntryForRange(input: {
       date: startIso,
       note: input.note,
       entryType: input.entryType,
-      flags: input.flags,
+      entryFlag: input.entryFlag,
     });
   }
 
   return createTimeOffEntry({
-    kind: "range",
+    entryKind: "range",
     start: startIso,
     end: endIso,
     entryType: input.entryType,
-    flags: input.flags,
+    entryFlag: input.entryFlag,
     note: input.note?.trim() || null,
   });
 }
@@ -291,34 +290,30 @@ export function createWeeklyTimeOffEntry(input: {
   weekday: number;
   note?: string;
   entryType: TimeOffEntryType;
-  flags: TimeOffEntryFlag[];
+  entryFlag: TimeOffEntryFlag;
 }): TimeOffEntry {
   return createTimeOffEntry({
-    kind: "weekly",
+    entryKind: "weekly",
     weekday: input.weekday,
     entryType: input.entryType,
-    flags: input.flags,
+    entryFlag: input.entryFlag,
     note: input.note?.trim() || null,
   });
 }
 
 export function getEntryFlagsForDisplay(entry: TimeOffEntry): EventFlag[] {
-  return getEntryFlags(entry.entryType, entry.flags);
+  return getEntryFlags(entry.entryType, entry.entryFlag);
 }
 
 export function getEntryTypeFromDisplayFlags(flags: EventFlag[]): TimeOffEntryType {
   const normalizedFlags = normalizeEventFlags(flags);
-  const typeFlag = normalizedFlags.find((flag) => flag in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
+  const typeFlag = normalizedFlags.find((f) => f in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
   return TYPE_FLAG_TO_ENTRY_TYPE[typeFlag] ?? "vacation";
 }
 
-export function getEntryTimeFlagsFromDisplayFlags(flags: EventFlag[]): TimeOffEntryFlag[] {
-  return normalizeEventFlags(flags).filter(
-    (flag): flag is TimeOffEntryFlag =>
-      flag === "half_am" ||
-      flag === "half_pm" ||
-      flag === "onsite" ||
-      flag === "no_fly" ||
-      flag === "can_fly",
+export function getEntryTimeFlagFromDisplayFlags(flags: EventFlag[]): TimeOffEntryFlag {
+  const match = normalizeEventFlags(flags).find(
+    (f) => f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
   );
+  return match != null ? (match as TimeOffEntryFlag) : "full_day";
 }

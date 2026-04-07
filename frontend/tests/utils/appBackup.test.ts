@@ -51,10 +51,10 @@ describe("appBackup", () => {
     it("includes timeOff canonical entries when present", () => {
       const entry: TimeOffEntry = {
         id: "e1",
-        kind: "date",
+        entryKind: "date",
         date: "2026-01-15",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: "Vacation",
       };
       localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
@@ -62,7 +62,7 @@ describe("appBackup", () => {
       expect(Array.isArray(payload.timeOff)).toBe(true);
       expect(payload.timeOff).toHaveLength(1);
       expect((payload.timeOff as TimeOffEntry[])[0]).toMatchObject({
-        kind: "date",
+        entryKind: "date",
         date: "2026-01-15",
         note: "Vacation",
       });
@@ -103,10 +103,10 @@ describe("appBackup", () => {
     it("excludes sections when include flags are false", () => {
       const entry: TimeOffEntry = {
         id: "e1",
-        kind: "date",
+        entryKind: "date",
         date: "2026-01-15",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: "Vacation",
       };
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 1 }));
@@ -163,10 +163,10 @@ describe("appBackup", () => {
     it("detects time off data", () => {
       const entry: TimeOffEntry = {
         id: "e1",
-        kind: "date",
+        entryKind: "date",
         date: "2026-01-15",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: null,
       };
       localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
@@ -290,10 +290,10 @@ describe("appBackup", () => {
     it("writes timeOff canonical entries to storage", () => {
       const entry: TimeOffEntry = {
         id: "e1",
-        kind: "date",
+        entryKind: "date",
         date: "2026-01-15",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: "Vacation",
       };
       restoreAppBackup({ exportedAt: "", version: 1, timeOff: [entry] });
@@ -301,7 +301,7 @@ describe("appBackup", () => {
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
       expect(parsed).toHaveLength(1);
-      expect(parsed[0]).toMatchObject({ kind: "date", date: "2026-01-15", note: "Vacation" });
+      expect(parsed[0]).toMatchObject({ entryKind: "date", date: "2026-01-15", note: "Vacation" });
     });
 
     it("writes work locations for each year", () => {

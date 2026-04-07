@@ -29,10 +29,10 @@ describe("MonthCalendar", () => {
   ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
-      kind: "date",
+      entryKind: "date",
       date: overrides.date ?? "2025-01-15",
       note: overrides.note ?? null,
-      flags: [],
+      entryFlag: "full_day",
       entryType: overrides.entryType ?? "vacation",
     });
   const createRangeEntry = (
@@ -53,11 +53,11 @@ describe("MonthCalendar", () => {
   ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
-      kind: "range",
+      entryKind: "range",
       start: overrides.start ?? "2025-01-15",
       end: overrides.end ?? "2025-01-17",
       note: overrides.note ?? null,
-      flags: [],
+      entryFlag: "full_day",
       entryType: overrides.entryType ?? "vacation",
     });
   const createWeeklyEntry = (
@@ -77,10 +77,10 @@ describe("MonthCalendar", () => {
   ): TimeOffEntry =>
     createTimeOffEntry({
       id: `entry-${entryCounter++}`,
-      kind: "weekly",
+      entryKind: "weekly",
       weekday: overrides.weekday ?? 1,
       note: overrides.note ?? null,
-      flags: [],
+      entryFlag: "full_day",
       entryType: overrides.entryType ?? "vacation",
     });
 

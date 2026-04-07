@@ -15,7 +15,7 @@ const dateEntry = (date: string) =>
     end: date,
     note: null,
     entryType: "vacation",
-    flags: [],
+    entryFlag: "full_day",
   });
 
 const rangeEntry = (start: string, end: string) =>
@@ -24,7 +24,7 @@ const rangeEntry = (start: string, end: string) =>
     end,
     note: null,
     entryType: "vacation",
-    flags: [],
+    entryFlag: "full_day",
   });
 
 const weeklyEntry = (weekday: number) =>
@@ -32,7 +32,7 @@ const weeklyEntry = (weekday: number) =>
     weekday,
     note: null,
     entryType: "in",
-    flags: [],
+    entryFlag: "full_day",
   });
 
 describe("workingDayUtils", () => {

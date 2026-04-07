@@ -1,8 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { TIME_TRACKING_STORAGE_KEYS, TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 import { getSyncCursorKey } from "@/constants/storageKeys";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+
+const wrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(EventStoreProvider, null, children);
 
 const mockFetch = vi.fn();
 
@@ -45,7 +50,19 @@ function seedTasks() {
 }
 
 function seedTimeOff() {
-  localStorage.setItem("worktime_hday_raw", "2026/07/14 # Bastille Day");
+  localStorage.setItem(
+    TIME_OFF_ENTRIES_STORAGE_KEY,
+    JSON.stringify([
+      {
+        id: "t1",
+        entryKind: "date",
+        date: "2026-07-14",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Bastille Day",
+      },
+    ]),
+  );
 }
 
 describe("useFirstSyncFlow", () => {
@@ -58,19 +75,19 @@ describe("useFirstSyncFlow", () => {
   });
 
   it("starts in idle phase when not authenticated", () => {
-    const { result } = renderHook(() => useFirstSyncFlow(false, null, null));
+    const { result } = renderHook(() => useFirstSyncFlow(false, null, null), { wrapper });
     expect(result.current.phase).toBe("idle");
   });
 
   it("starts in idle phase when authenticated but fetch is null", () => {
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", null));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", null), { wrapper });
     expect(result.current.phase).toBe("idle");
   });
 
   it("skips the flow when a sync cursor already exists", async () => {
     localStorage.setItem(getSyncCursorKey("user-1"), "2026-01-01T00:00:00.000Z");
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     // Should stay idle since cursor already exists
     await waitFor(() => {
@@ -82,7 +99,7 @@ describe("useFirstSyncFlow", () => {
   it("Branch D: completes immediately when neither side has data", async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => emptyStatus });
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");
@@ -100,7 +117,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");
@@ -120,7 +137,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");
@@ -132,7 +149,7 @@ describe("useFirstSyncFlow", () => {
     const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
     expect(body.time_off_entries).toHaveLength(1);
     expect(body.time_off_entries[0].id).toBeTypeOf("string");
-    expect(body.time_off_entries[0].kind).toBe("date");
+    expect(body.time_off_entries[0].entry_kind).toBe("date");
     expect(body.time_off_entries[0].date).toBe("2026-07-14");
   });
 
@@ -142,7 +159,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
       .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");
@@ -160,7 +177,7 @@ describe("useFirstSyncFlow", () => {
 
     mockFetch.mockResolvedValue({ ok: true, json: async () => populatedStatus });
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("conflict");
@@ -176,7 +193,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push replace payload
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // post-push status
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("conflict");
@@ -202,7 +219,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
       .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("conflict");
@@ -223,7 +240,7 @@ describe("useFirstSyncFlow", () => {
   it("enters error phase when status fetch fails", async () => {
     mockFetch.mockResolvedValue({ ok: false });
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("error");
@@ -234,7 +251,7 @@ describe("useFirstSyncFlow", () => {
     seedTasks();
     mockFetch.mockResolvedValue({ ok: true, json: async () => populatedStatus });
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("conflict");
@@ -258,7 +275,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true }) // PUT /db/preferences
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");
@@ -285,7 +302,7 @@ describe("useFirstSyncFlow", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull entities
       .mockResolvedValueOnce({ ok: true, json: async () => serverPrefs }); // GET /db/preferences
 
-    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch));
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
     await waitFor(() => {
       expect(result.current.phase).toBe("done");

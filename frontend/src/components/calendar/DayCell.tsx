@@ -309,7 +309,7 @@ export function DayCell({
       const entryFlags = getEntryFlagsForDisplay(dayEvent.entry);
       const colorClass = getEventColorClass(
         entryFlags,
-        dayEvent.entry.kind === "weekly" ? "weekly" : "range",
+        dayEvent.entry.entryKind === "weekly" ? "weekly" : "range",
       );
       const label = dayEvent.entry.note || getEventTypeLabel(entryFlags);
       const symbol = getTimeLocationSymbol(entryFlags);

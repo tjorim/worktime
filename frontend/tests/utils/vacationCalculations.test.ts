@@ -23,14 +23,14 @@ const dateEntry = (
     | "birthday"
     | "ill"
     | "other" = "vacation",
-  flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
+  entryFlag: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly" | "full_day" = "full_day",
 ) =>
   buildTimeOffEntryForRange({
     start: date,
     end: date,
     note: null,
     entryType,
-    flags,
+    entryFlag,
   });
 
 const rangeEntry = (
@@ -45,14 +45,14 @@ const rangeEntry = (
     | "birthday"
     | "ill"
     | "other" = "vacation",
-  flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
+  entryFlag: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly" | "full_day" = "full_day",
 ) =>
   buildTimeOffEntryForRange({
     start,
     end,
     note: null,
     entryType,
-    flags,
+    entryFlag,
   });
 
 const weeklyEntry = (
@@ -66,13 +66,13 @@ const weeklyEntry = (
     | "birthday"
     | "ill"
     | "other" = "in",
-  flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
+  entryFlag: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly" | "full_day" = "full_day",
 ) =>
   createWeeklyTimeOffEntry({
     weekday,
     note: null,
     entryType,
-    flags,
+    entryFlag,
   });
 
 describe("vacationCalculations", () => {
@@ -108,7 +108,7 @@ describe("vacationCalculations", () => {
 
     it("handles half-day flags", () => {
       const halfStats = calculateVacationStats(
-        [dateEntry("2025-01-15", "vacation", ["half_am"])],
+        [dateEntry("2025-01-15", "vacation", "half_am")],
         2025,
         8,
       );
@@ -116,7 +116,7 @@ describe("vacationCalculations", () => {
       expect(halfStats.holidayHours).toBe(4);
 
       const fullStats = calculateVacationStats(
-        [dateEntry("2025-01-15", "vacation", ["half_am", "half_pm"])],
+        [dateEntry("2025-01-15", "vacation")],
         2025,
         8,
       );
@@ -217,12 +217,12 @@ describe("vacationCalculations", () => {
   });
 
   describe("getHalfDayLabel", () => {
-    it("returns Half day only when exactly one half-day flag is present", () => {
+    it("returns Half day when a half-day flag is set", () => {
       expect(getHalfDayLabel(undefined)).toBeNull();
-      expect(getHalfDayLabel([])).toBeNull();
-      expect(getHalfDayLabel(["half_am"])).toBe("Half day");
-      expect(getHalfDayLabel(["half_pm"])).toBe("Half day");
-      expect(getHalfDayLabel(["half_am", "half_pm"])).toBeNull();
+      expect(getHalfDayLabel(null)).toBeNull();
+      expect(getHalfDayLabel("half_am")).toBe("Half day");
+      expect(getHalfDayLabel("half_pm")).toBe("Half day");
+      expect(getHalfDayLabel("onsite")).toBeNull();
     });
   });
 });

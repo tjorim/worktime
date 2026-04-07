@@ -28,14 +28,14 @@ describe("TimeOffStatsView", () => {
       | "birthday"
       | "ill"
       | "other" = "vacation",
-    flags: Array<"half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly"> = [],
+    entryFlag: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly" | "full_day" = "full_day",
   ) =>
     buildTimeOffEntryForRange({
       start,
       end,
       note: null,
       entryType,
-      flags,
+      entryFlag,
     });
 
   const weeklyEntry = (
@@ -54,7 +54,7 @@ describe("TimeOffStatsView", () => {
       weekday,
       note: null,
       entryType,
-      flags: [],
+      entryFlag: "full_day",
     });
 
   const defaultProps = {
@@ -261,7 +261,7 @@ describe("TimeOffStatsView", () => {
 
     it("should handle half-day events in calculations", () => {
       const entries = [
-        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", ["half_am"]),
+        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", "half_am"),
       ];
       render(<TimeOffStatsView {...defaultProps} entries={entries} />);
 

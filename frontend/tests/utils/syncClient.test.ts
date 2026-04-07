@@ -681,18 +681,18 @@ describe("syncClient", () => {
           end: "2026-07-14",
           note: "Bastille Day",
           entryType: "vacation",
-          flags: [],
+          entryFlag: "full_day",
         }),
       ];
       const items = timeOffEntriesToSyncItems([entry], ts);
       expect(items).toHaveLength(1);
       expect(items[0]).toMatchObject({
         id: entry.id,
-        kind: "date",
+        entry_kind: "date",
         date: "2026-07-14",
         action: "create",
         entry_type: "vacation",
-        flags: [],
+        entry_flag: "full_day",
         note: "Bastille Day",
       });
     });
@@ -704,14 +704,14 @@ describe("syncClient", () => {
           end: "2026-12-26",
           note: null,
           entryType: "vacation",
-          flags: [],
+          entryFlag: "full_day",
         }),
       ];
       const items = timeOffEntriesToSyncItems([entry], ts);
       expect(items).toHaveLength(1);
       expect(items[0]).toMatchObject({
         id: entry.id,
-        kind: "range",
+        entry_kind: "range",
         start_date: "2026-12-24",
         end_date: "2026-12-26",
         date: null,
@@ -725,21 +725,21 @@ describe("syncClient", () => {
           end: "2026-01-01",
           note: null,
           entryType: "business",
-          flags: [],
+          entryFlag: "full_day",
         }),
         buildTimeOffEntryForRange({
           start: "2026-01-02",
           end: "2026-01-02",
           note: null,
           entryType: "ill",
-          flags: [],
+          entryFlag: "full_day",
         }),
         buildTimeOffEntryForRange({
           start: "2026-01-03",
           end: "2026-01-03",
           note: null,
           entryType: "in",
-          flags: [],
+          entryFlag: "full_day",
         }),
       ];
       const items = timeOffEntriesToSyncItems(entries, ts);
@@ -748,7 +748,7 @@ describe("syncClient", () => {
       expect(items[2]?.entry_type).toBe("in");
     });
 
-    it("preserves entry flags in the flags array", () => {
+    it("preserves entry flag", () => {
       const items = timeOffEntriesToSyncItems(
         [
           buildTimeOffEntryForRange({
@@ -756,24 +756,24 @@ describe("syncClient", () => {
             end: "2026-06-01",
             note: null,
             entryType: "vacation",
-            flags: ["half_am"],
+            entryFlag: "half_am",
           }),
         ],
         ts,
       );
-      expect(items[0]?.flags).toEqual(["half_am"]);
+      expect(items[0]?.entry_flag).toBe("half_am");
       expect(items[0]?.entry_type).toBe("vacation");
     });
 
     it("includes weekly entries directly", () => {
       const [entry] = [
-        createWeeklyTimeOffEntry({ weekday: 1, note: null, entryType: "in", flags: [] }),
+        createWeeklyTimeOffEntry({ weekday: 1, note: null, entryType: "in", entryFlag: "full_day" }),
       ];
       const items = timeOffEntriesToSyncItems([entry], ts);
       expect(items).toHaveLength(1);
       expect(items[0]).toMatchObject({
         id: entry.id,
-        kind: "weekly",
+        entry_kind: "weekly",
         weekday: 1,
         date: null,
         start_date: null,
@@ -795,7 +795,7 @@ describe("syncClient", () => {
             end: "2026-05-01",
             note: null,
             entryType: "vacation",
-            flags: [],
+            entryFlag: "full_day",
           }),
         ],
         ts,
@@ -810,23 +810,23 @@ describe("syncClient", () => {
 
   describe("syncItemsToHdayRaw", () => {
     const makeEntry = (
-      kind: "date" | "range" | "weekly",
+      entry_kind: "date" | "range" | "weekly",
       shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
       entry_type: string,
-      flags: string[] = [],
+      entry_flag: string = "full_day",
       note: string | null = null,
       deleted_at: string | null = null,
     ) => ({
       id: 1,
       entry_id: `entry-${Math.random()}`,
       user_id: 1,
-      kind,
+      entry_kind,
       date: shape.date ?? null,
       start_date: shape.start_date ?? null,
       end_date: shape.end_date ?? null,
       weekday: shape.weekday ?? null,
       entry_type,
-      flags,
+      entry_flag,
       note,
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
@@ -845,21 +845,21 @@ describe("syncClient", () => {
 
     it("includes a note as a comment", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", [], "Bastille Day"),
+        makeEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
       ]);
       expect(raw).toBe("2026/07/14 # Bastille Day");
     });
 
     it("includes time/location flags in the prefix", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", ["half_am"]),
+        makeEntry("date", { date: "2026-07-14" }, "vacation", "half_am"),
       ]);
       expect(raw).toBe("a2026/07/14");
     });
 
     it("skips soft-deleted entries", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", [], null, "2026-01-02T00:00:00Z"),
+        makeEntry("date", { date: "2026-07-14" }, "vacation", "full_day", null, "2026-01-02T00:00:00Z"),
       ]);
       expect(raw).toBe("");
     });
@@ -891,17 +891,17 @@ describe("syncClient", () => {
     it("includes time-off entries from canonical storage", () => {
       const entry = {
         id: "e1",
-        kind: "date",
+        entryKind: "date",
         date: "2026-07-14",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: "Vacation",
       };
       localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
-        kind: "date",
+        entry_kind: "date",
         date: "2026-07-14",
         action: "create",
         entry_type: "vacation",
@@ -913,18 +913,18 @@ describe("syncClient", () => {
     it("preserves multi-day range entries as single entries", () => {
       const entry = {
         id: "e2",
-        kind: "range",
+        entryKind: "range",
         start: "2026-12-24",
         end: "2026-12-26",
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: null,
       };
       localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
-        kind: "range",
+        entry_kind: "range",
         start_date: "2026-12-24",
         end_date: "2026-12-26",
       });
@@ -933,17 +933,17 @@ describe("syncClient", () => {
     it("includes weekly entries", () => {
       const entry = {
         id: "e3",
-        kind: "weekly",
+        entryKind: "weekly",
         weekday: 1,
         entryType: "vacation",
-        flags: [],
+        entryFlag: "full_day",
         note: "Every Monday",
       };
       localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
-        kind: "weekly",
+        entry_kind: "weekly",
         weekday: 1,
         note: "Every Monday",
       });
@@ -970,23 +970,23 @@ describe("syncClient", () => {
     });
 
     const makeTimeOffEntry = (
-      kind: "date" | "range" | "weekly",
+      entry_kind: "date" | "range" | "weekly",
       shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
       entry_type = "vacation",
-      flags: string[] = [],
+      entry_flag: string = "full_day",
       note: string | null = null,
       deleted_at: string | null = null,
     ) => ({
       id: 1,
       entry_id: `entry-${Math.random()}`,
       user_id: 1,
-      kind,
+      entry_kind,
       date: shape.date ?? null,
       start_date: shape.start_date ?? null,
       end_date: shape.end_date ?? null,
       weekday: shape.weekday ?? null,
       entry_type,
-      flags,
+      entry_flag,
       note,
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
@@ -997,14 +997,14 @@ describe("syncClient", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
-          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", [], "Bastille Day"),
+          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
         ],
       });
 
       const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       const entries = JSON.parse(stored!);
       expect(entries).toHaveLength(1);
-      expect(entries[0]).toMatchObject({ kind: "date", date: "2026-07-14", note: "Bastille Day" });
+      expect(entries[0]).toMatchObject({ entryKind: "date", date: "2026-07-14", note: "Bastille Day" });
     });
 
     it("clears time-off storage when all entries are soft-deleted", () => {
@@ -1013,10 +1013,10 @@ describe("syncClient", () => {
         JSON.stringify([
           {
             id: "e1",
-            kind: "date",
+            entryKind: "date",
             date: "2026-07-14",
             entryType: "vacation",
-            flags: [],
+            entryFlag: "full_day",
             note: null,
           },
         ]),
@@ -1028,7 +1028,7 @@ describe("syncClient", () => {
             "date",
             { date: "2026-07-14" },
             "vacation",
-            [],
+            "full_day",
             null,
             "2026-07-15T00:00:00Z",
           ),
@@ -1044,10 +1044,10 @@ describe("syncClient", () => {
         JSON.stringify([
           {
             id: "e1",
-            kind: "date",
+            entryKind: "date",
             date: "2026-07-14",
             entryType: "vacation",
-            flags: [],
+            entryFlag: "full_day",
             note: null,
           },
         ]),
@@ -1061,7 +1061,7 @@ describe("syncClient", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
-          makeTimeOffEntry("weekly", { weekday: 1 }, "in", [], "Every Monday"),
+          makeTimeOffEntry("weekly", { weekday: 1 }, "in", "full_day", "Every Monday"),
           makeTimeOffEntry(
             "range",
             { start_date: "2026-12-24", end_date: "2026-12-26" },
@@ -1074,11 +1074,11 @@ describe("syncClient", () => {
       const entries = JSON.parse(stored!) as Array<Record<string, unknown>>;
       expect(entries).toHaveLength(2);
       expect(
-        entries.some((e) => e.kind === "weekly" && e.weekday === 1 && e.note === "Every Monday"),
+        entries.some((e) => e.entryKind === "weekly" && e.weekday === 1 && e.note === "Every Monday"),
       ).toBe(true);
       expect(
         entries.some(
-          (e) => e.kind === "range" && e.start === "2026-12-24" && e.end === "2026-12-26",
+          (e) => e.entryKind === "range" && e.start === "2026-12-24" && e.end === "2026-12-26",
         ),
       ).toBe(true);
     });
@@ -1091,20 +1091,20 @@ describe("syncClient", () => {
 
       const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       const entries = JSON.parse(stored!);
-      expect(entries[0]).toMatchObject({ kind: "date", date: "2026-07-14", entryType: "other" });
+      expect(entries[0]).toMatchObject({ entryKind: "date", date: "2026-07-14", entryType: "other" });
     });
 
-    it("filters unknown flags", () => {
+    it("maps unknown flag to null", () => {
       applySyncPullResponse({
         ...makeBaseResponse(),
         time_off_entries: [
-          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", ["onsite", "unknown_flag"]),
+          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "unknown_flag"),
         ],
       });
 
       const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       const entries = JSON.parse(stored!);
-      expect(entries[0].flags).toEqual(["onsite"]);
+      expect(entries[0].entryFlag).toBe("full_day");
     });
   });
 

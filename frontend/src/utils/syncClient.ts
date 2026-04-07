@@ -71,13 +71,13 @@ export interface TimeOffEntrySyncItem {
   id: string;
   action: SyncAction;
   client_updated_at: string;
-  kind?: "date" | "range" | "weekly" | null;
+  entry_kind?: "date" | "range" | "weekly" | null;
   date?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   weekday?: number | null;
   entry_type?: string | null;
-  flags?: string[] | null;
+  entry_flag?: string | null;
   note?: string | null;
 }
 
@@ -150,13 +150,13 @@ export interface TimeOffEntrySyncRead {
   id: number;
   entry_id: string;
   user_id: number;
-  kind: "date" | "range" | "weekly";
+  entry_kind: "date" | "range" | "weekly";
   date: string | null;
   start_date: string | null;
   end_date: string | null;
   weekday: number | null;
   entry_type: string;
-  flags: string[];
+  entry_flag: string;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -535,13 +535,13 @@ export function timeOffEntriesToSyncItems(
     id: entry.id,
     action: "create",
     client_updated_at: clientUpdatedAt,
-    kind: entry.kind,
-    date: entry.kind === "date" ? entry.date : null,
-    start_date: entry.kind === "range" ? entry.start : null,
-    end_date: entry.kind === "range" ? entry.end : null,
-    weekday: entry.kind === "weekly" ? entry.weekday : null,
+    entry_kind: entry.entryKind,
+    date: entry.entryKind === "date" ? entry.date : null,
+    start_date: entry.entryKind === "range" ? entry.start : null,
+    end_date: entry.entryKind === "range" ? entry.end : null,
+    weekday: entry.entryKind === "weekly" ? entry.weekday : null,
     entry_type: entry.entryType,
-    flags: entry.flags,
+    entry_flag: entry.entryFlag,
     note: entry.note,
   }));
 }
@@ -563,21 +563,21 @@ function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[
   return items
     .filter((item) => {
       if (item.deleted_at !== null) return false;
-      if (item.kind === "date") return item.date != null;
-      if (item.kind === "range") return item.start_date != null && item.end_date != null;
-      if (item.kind === "weekly") return item.weekday != null;
+      if (item.entry_kind === "date") return item.date != null;
+      if (item.entry_kind === "range") return item.start_date != null && item.end_date != null;
+      if (item.entry_kind === "weekly") return item.weekday != null;
       return false;
     })
     .map((item) =>
       createTimeOffEntry({
         id: item.entry_id,
-        kind: item.kind,
-        date: item.kind === "date" ? item.date! : undefined,
-        start: item.kind === "range" ? item.start_date! : undefined,
-        end: item.kind === "range" ? item.end_date! : undefined,
-        weekday: item.kind === "weekly" ? item.weekday! : undefined,
+        entryKind: item.entry_kind,
+        date: item.entry_kind === "date" ? item.date! : undefined,
+        start: item.entry_kind === "range" ? item.start_date! : undefined,
+        end: item.entry_kind === "range" ? item.end_date! : undefined,
+        weekday: item.entry_kind === "weekly" ? item.weekday! : undefined,
         entryType: isValidEntryType(item.entry_type) ? item.entry_type : "other",
-        flags: item.flags.filter(isValidFlag),
+        entryFlag: isValidFlag(item.entry_flag) ? item.entry_flag : "full_day",
         note: item.note,
       } as Parameters<typeof createTimeOffEntry>[0]),
     );

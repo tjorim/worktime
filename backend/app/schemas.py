@@ -321,37 +321,38 @@ EntryType = Literal[
     "other",
 ]
 
-TimeOffEntryFlag = Literal["half_am", "half_pm", "onsite", "no_fly", "can_fly"]
+EntryKind = Literal["date", "range", "weekly"]
+EntryFlag = Literal["full_day", "half_am", "half_pm", "onsite", "no_fly", "can_fly"]
 
 
 class TimeOffEntryCreate(BaseModel):
     """Request schema for creating or upserting a time-off entry."""
 
     entry_id: str | None = Field(default=None, min_length=1)
-    kind: Literal["date", "range", "weekly"] = "date"
+    entry_kind: EntryKind = "date"
     date: dt_date | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
     entry_type: EntryType = "vacation"
-    flags: list[TimeOffEntryFlag] = Field(default_factory=list)
+    entry_flag: EntryFlag = "full_day"
     note: str | None = None
 
     @model_validator(mode="after")
     def validate_shape(self) -> TimeOffEntryCreate:
-        if self.kind == "date":
+        if self.entry_kind == "date":
             if self.date is None:
                 raise ValueError("date is required for date entries")
             if self.start_date is not None or self.end_date is not None or self.weekday is not None:
                 raise ValueError("date entries cannot include range or weekday fields")
-        elif self.kind == "range":
+        elif self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required for range entries")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
             if self.date is not None or self.weekday is not None:
                 raise ValueError("range entries cannot include date or weekday fields")
-        elif self.kind == "weekly":
+        elif self.entry_kind == "weekly":
             if self.weekday is None or self.weekday < 1 or self.weekday > 7:
                 raise ValueError("weekday must be between 1 and 7 for weekly entries")
             if self.date is not None or self.start_date is not None or self.end_date is not None:
@@ -365,46 +366,46 @@ class TimeOffEntryRead(BaseModel):
     id: int
     entry_id: str
     user_id: int
-    kind: Literal["date", "range", "weekly"]
+    entry_kind: EntryKind
     date: dt_date | None
     start_date: dt_date | None
     end_date: dt_date | None
     weekday: int | None
     entry_type: EntryType
-    flags: list[TimeOffEntryFlag]
+    entry_flag: EntryFlag
     note: str | None
     created_at: dt_datetime
     updated_at: dt_datetime
 
 
 class TimeOffEntryUpdate(BaseModel):
-    kind: Literal["date", "range", "weekly"] | None = None
+    entry_kind: EntryKind | None = None
     date: dt_date | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
     entry_type: EntryType | None = None
-    flags: list[TimeOffEntryFlag] | None = None
+    entry_flag: EntryFlag | None = None
     note: str | None = None
 
     @model_validator(mode="after")
     def validate_shape(self) -> TimeOffEntryUpdate:
         shape_fields_set = self.model_fields_set & {"date", "start_date", "end_date", "weekday"}
-        if shape_fields_set and self.kind is None:
-            raise ValueError("kind must be provided when updating date, start_date, end_date, or weekday fields")
-        if self.kind is None:
+        if shape_fields_set and self.entry_kind is None:
+            raise ValueError("entry_kind must be provided when updating date, start_date, end_date, or weekday fields")
+        if self.entry_kind is None:
             return self
 
-        if self.kind == "date":
+        if self.entry_kind == "date":
             if self.date is None:
-                raise ValueError("date is required when kind is date")
-        elif self.kind == "range":
+                raise ValueError("date is required when entry_kind is date")
+        elif self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
-                raise ValueError("start_date and end_date are required when kind is range")
+                raise ValueError("start_date and end_date are required when entry_kind is range")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
-        elif self.kind == "weekly" and (self.weekday is None or self.weekday < 1 or self.weekday > 7):
-            raise ValueError("weekday must be between 1 and 7 when kind is weekly")
+        elif self.entry_kind == "weekly" and (self.weekday is None or self.weekday < 1 or self.weekday > 7):
+            raise ValueError("weekday must be provided when entry_kind is weekly")
         return self
 
 
@@ -481,13 +482,13 @@ class TimeOffEntrySyncRead(BaseModel):
     id: int
     entry_id: str
     user_id: int
-    kind: Literal["date", "range", "weekly"]
+    entry_kind: EntryKind
     date: dt_date | None
     start_date: dt_date | None
     end_date: dt_date | None
     weekday: int | None
     entry_type: EntryType
-    flags: list[TimeOffEntryFlag]
+    entry_flag: EntryFlag
     note: str | None
     created_at: dt_datetime
     updated_at: dt_datetime
@@ -544,13 +545,13 @@ class TimeOffEntrySyncItem(BaseModel):
     id: str = Field(min_length=1)
     action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
-    kind: Literal["date", "range", "weekly"] | None = None
+    entry_kind: EntryKind | None = None
     date: dt_date | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
     entry_type: EntryType | None = None
-    flags: list[TimeOffEntryFlag] | None = None
+    entry_flag: EntryFlag | None = None
     note: str | None = None
 
     @model_validator(mode="after")
@@ -558,24 +559,24 @@ class TimeOffEntrySyncItem(BaseModel):
         if self.action == "delete":
             return self
 
-        if self.kind == "date":
+        if self.entry_kind == "date":
             if self.date is None:
                 raise ValueError("date is required for date entries")
             return self
 
-        if self.kind == "range":
+        if self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required for range entries")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
             return self
 
-        if self.kind == "weekly":
+        if self.entry_kind == "weekly":
             if self.weekday is None or self.weekday < 1 or self.weekday > 7:
                 raise ValueError("weekday must be between 1 and 7 for weekly entries")
             return self
 
-        raise ValueError("kind is required for non-delete time_off_entries")
+        raise ValueError("entry_kind is required for non-delete time_off_entries")
 
 
 class SyncPushRequest(BaseModel):
