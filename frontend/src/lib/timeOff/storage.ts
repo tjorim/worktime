@@ -51,7 +51,8 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
 
     if (candidate.entryKind === "range") {
       if (!isValidDateKey(candidate.start) || !isValidDateKey(candidate.end)) continue;
-      // Discard range entries where end is before start (invalid/corrupted data).
+      // isValidDateKey guarantees YYYY-MM-DD format, so lexicographic comparison
+      // is equivalent to chronological order for ISO date strings.
       if (candidate.end < candidate.start) continue;
       entries.push({
         id: candidate.id,
