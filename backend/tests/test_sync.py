@@ -772,6 +772,123 @@ class TestSyncTimeOffEntries:
         assert results[0]["status"] == "ok"
         assert results[0]["id"] == entry_id
 
+    def test_push_create_time_off_entry_applies_schema_defaults(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-create-defaults")
+        headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-defaults"
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "entry_kind": "date",
+                        "date": "2026-07-02",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        created_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
+        ]
+        assert len(created_entries) == 1
+        assert created_entries[0]["entry_type"] == "vacation"
+        assert created_entries[0]["entry_flag"] == "full_day"
+
+    def test_push_update_time_off_entry_allows_patch_without_kind(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-patch")
+        headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-patch"
+
+        create_resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "entry_kind": "date",
+                        "date": "2026-07-03",
+                        "entry_type": "vacation",
+                        "entry_flag": "half_am",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "update",
+                        "client_updated_at": _ts(),
+                        "note": "patched note",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        updated_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
+        ]
+        assert len(updated_entries) == 1
+        assert updated_entries[0]["entry_kind"] == "date"
+        assert updated_entries[0]["date"] == "2026-07-03"
+        assert updated_entries[0]["entry_type"] == "vacation"
+        assert updated_entries[0]["entry_flag"] == "half_am"
+        assert updated_entries[0]["note"] == "patched note"
+
+    def test_push_update_time_off_entry_missing_record_requires_full_shape(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-missing")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": "sync-timeoff-missing",
+                        "action": "update",
+                        "client_updated_at": _ts(),
+                        "note": "patch only",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["time_off_entries"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "record does not exist for patch update"
+
     def test_push_delete_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-delete")

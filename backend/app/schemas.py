@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from datetime import time as dt_time
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import pycountry
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -539,44 +539,98 @@ class WorkLocationSyncItem(BaseModel):
     label: str | None = None
 
 
-class TimeOffEntrySyncItem(BaseModel):
+class TimeOffEntrySyncItemBase(BaseModel):
     """Time-off entries are identified by a stable client-generated entry id."""
 
     id: str = Field(min_length=1)
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
-    entry_kind: EntryKind | None = None
+
+
+class TimeOffEntrySyncPayloadBase(TimeOffEntrySyncItemBase):
     date: dt_date | None = None
     start_date: dt_date | None = None
     end_date: dt_date | None = None
     weekday: int | None = None
-    entry_type: EntryType | None = None
-    entry_flag: EntryFlag = "full_day"
     note: str | None = None
 
-    @model_validator(mode="after")
-    def validate_shape(self) -> TimeOffEntrySyncItem:
-        if self.action == "delete":
-            return self
 
-        if self.entry_kind == "date":
-            if self.date is None:
-                raise ValueError("date is required for date entries")
-            return self
+def _validate_time_off_shape(
+    entry_kind: EntryKind | None,
+    date: dt_date | None,
+    start_date: dt_date | None,
+    end_date: dt_date | None,
+    weekday: int | None,
+    *,
+    require_kind: bool,
+) -> None:
+    if entry_kind == "date":
+        if date is None:
+            raise ValueError("date is required for date entries")
+        return
 
-        if self.entry_kind == "range":
-            if self.start_date is None or self.end_date is None:
-                raise ValueError("start_date and end_date are required for range entries")
-            if self.end_date < self.start_date:
-                raise ValueError("end_date cannot be earlier than start_date")
-            return self
+    if entry_kind == "range":
+        if start_date is None or end_date is None:
+            raise ValueError("start_date and end_date are required for range entries")
+        if end_date < start_date:
+            raise ValueError("end_date cannot be earlier than start_date")
+        return
 
-        if self.entry_kind == "weekly":
-            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
-                raise ValueError("weekday must be between 1 and 7 for weekly entries")
-            return self
+    if entry_kind == "weekly":
+        if weekday is None or weekday < 1 or weekday > 7:
+            raise ValueError("weekday must be between 1 and 7 for weekly entries")
+        return
 
+    shape_fields = {date, start_date, end_date, weekday}
+    if require_kind or any(value is not None for value in shape_fields):
         raise ValueError("entry_kind is required for non-delete time_off_entries")
+
+
+class TimeOffEntrySyncCreateItem(TimeOffEntrySyncPayloadBase):
+    action: Literal["create"]
+    entry_kind: EntryKind
+    entry_type: EntryType = "vacation"
+    entry_flag: EntryFlag = "full_day"
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntrySyncCreateItem:
+        _validate_time_off_shape(
+            self.entry_kind,
+            self.date,
+            self.start_date,
+            self.end_date,
+            self.weekday,
+            require_kind=True,
+        )
+        return self
+
+
+class TimeOffEntrySyncUpdateItem(TimeOffEntrySyncPayloadBase):
+    action: Literal["update"]
+    entry_kind: EntryKind | None = None
+    entry_type: EntryType | None = None
+    entry_flag: EntryFlag | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntrySyncUpdateItem:
+        _validate_time_off_shape(
+            self.entry_kind,
+            self.date,
+            self.start_date,
+            self.end_date,
+            self.weekday,
+            require_kind=False,
+        )
+        return self
+
+
+class TimeOffEntrySyncDeleteItem(TimeOffEntrySyncItemBase):
+    action: Literal["delete"]
+
+
+type TimeOffEntrySyncItem = Annotated[
+    TimeOffEntrySyncCreateItem | TimeOffEntrySyncUpdateItem | TimeOffEntrySyncDeleteItem,
+    Field(discriminator="action"),
+]
 
 
 class SyncPushRequest(BaseModel):

@@ -378,13 +378,20 @@ async def _push_time_off_entry(
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if entry is None:
-        # validate_shape ensures kind is not None for non-delete actions
+        if item.action == "update" and item.entry_kind is None:
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                conflict_reason="record does not exist for patch update",
+            )
+
+        # Create items always provide a full shape; update items can upsert when they do.
         assert item.entry_kind is not None
         entry = TimeOffEntry(
             entry_id=item.id,
             user_id=user_id,
             entry_type=item.entry_type or "vacation",
-            entry_flag=item.entry_flag,
+            entry_flag=item.entry_flag or "full_day",
             note=item.note,
         )
         _apply_time_off_shape(
