@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import time
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,7 +25,7 @@ def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
 
 def _ts(offset_seconds: float = 0.0) -> str:
     """Return an ISO timestamp offset from now."""
-    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
+    return (datetime.now(UTC) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +121,7 @@ class TestSyncPull:
             json={"name": "Before", "color": "#001122"},
             headers=headers,
         )
-        since = datetime.now(timezone.utc).isoformat()
+        since = datetime.now(UTC).isoformat()
         time.sleep(0.01)
         db_client.post(
             f"/db/time-tracking/labels?user_id={user_id}",
@@ -160,7 +158,7 @@ class TestSyncPull:
             headers=headers,
         )
 
-        since = datetime.now(timezone.utc).isoformat()
+        since = datetime.now(UTC).isoformat()
 
         db_client.post(
             "/db/sync/push",
@@ -888,6 +886,30 @@ class TestSyncTimeOffEntries:
         result = resp.json()["results"]["time_off_entries"][0]
         assert result["status"] == "conflict"
         assert result["conflict_reason"] == "record does not exist for patch update"
+
+    def test_push_update_time_off_entry_rejects_explicit_null_non_nullable_fields(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-null-fields")
+        headers = auth_headers(user_id)
+
+        for field_name in ("entry_kind", "entry_type", "entry_flag"):
+            resp = db_client.post(
+                "/db/sync/push",
+                json={
+                    "time_off_entries": [
+                        {
+                            "id": f"sync-timeoff-null-{field_name}",
+                            "action": "update",
+                            "client_updated_at": _ts(),
+                            field_name: None,
+                        }
+                    ]
+                },
+                headers=headers,
+            )
+            assert resp.status_code == 422
 
     def test_push_delete_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)

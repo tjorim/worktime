@@ -612,6 +612,12 @@ class TimeOffEntrySyncUpdateItem(TimeOffEntrySyncPayloadBase):
 
     @model_validator(mode="after")
     def validate_shape(self) -> TimeOffEntrySyncUpdateItem:
+        if "entry_kind" in self.model_fields_set and self.entry_kind is None:
+            raise ValueError("entry_kind cannot be null for update time_off_entries")
+        if "entry_type" in self.model_fields_set and self.entry_type is None:
+            raise ValueError("entry_type cannot be null for update time_off_entries")
+        if "entry_flag" in self.model_fields_set and self.entry_flag is None:
+            raise ValueError("entry_flag cannot be null for update time_off_entries")
         _validate_time_off_shape(
             self.entry_kind,
             self.date,

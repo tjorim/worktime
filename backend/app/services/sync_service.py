@@ -423,7 +423,7 @@ async def _push_time_off_entry(
         )
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
-    if "entry_flag" in provided_fields:
+    if "entry_flag" in provided_fields and item.entry_flag is not None:
         entry.entry_flag = item.entry_flag
     if "note" in provided_fields:
         entry.note = item.note
