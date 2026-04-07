@@ -10,6 +10,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import * as m from "@/paraglide/messages.js";
 
 interface MonthCalendarProps {
   entries?: TimeOffEntry[];
@@ -325,7 +326,7 @@ export function MonthCalendar({
       const hasStoredLocation = !!stored;
       if (allowEventActions) {
         items.push({
-          label: "Add new event",
+          label: m.calendar_context_add_event(),
           icon: "bi-plus-circle",
           onClick: () => handleAddEventWrapper(date),
         });
@@ -334,7 +335,7 @@ export function MonthCalendar({
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         if (showHomeLocationAction) {
           items.push({
-            label: "Work from Home",
+            label: m.calendar_context_work_from_home(),
             icon: "bi-house",
             disabled: currentLocation === "home",
             onClick: () => {
@@ -345,7 +346,7 @@ export function MonthCalendar({
         }
         if (showOfficeLocationAction) {
           items.push({
-            label: "Work from Office",
+            label: m.calendar_context_work_from_office(),
             icon: "bi-building",
             disabled: currentLocation === "office",
             onClick: () => {
@@ -359,7 +360,7 @@ export function MonthCalendar({
       if (showOtherLocationAction && onSetOtherLocation) {
         if (items.length) items.push({ separator: true });
         items.push({
-          label: "Other Location…",
+          label: m.calendar_context_other_location(),
           icon: "bi-geo-alt",
           onClick: () => {
             handleCloseContextMenu();
@@ -370,7 +371,7 @@ export function MonthCalendar({
       // Clear Work Location action
       if (hasStoredLocation && onSetWorkLocation) {
         items.push({
-          label: "Clear Work Location",
+          label: m.calendar_context_clear_work_location(),
           icon: "bi-x-circle",
           onClick: () => {
             handleCloseContextMenu();
@@ -383,14 +384,14 @@ export function MonthCalendar({
     if (contextMenu?.type === "event" && contextMenu.eventId !== undefined) {
       const items: ContextMenuItem[] = [
         {
-          label: "Edit event",
+          label: m.calendar_context_edit_event(),
           icon: "bi-pencil",
           onClick: () => handleEditEventWrapper(contextMenu.eventId!),
         },
       ];
       if (onDeleteEvent) {
         items.push({
-          label: "Delete event",
+          label: m.calendar_context_delete_event(),
           icon: "bi-trash",
           variant: "danger" as const,
           onClick: () => {
@@ -430,7 +431,7 @@ export function MonthCalendar({
             variant="outline-secondary"
             size="sm"
             onClick={() => onMonthChange(month.subtract(1, "month"))}
-            aria-label="Previous month"
+            aria-label={m.calendar_nav_previous_month()}
           >
             <i className="bi bi-chevron-left" aria-hidden="true"></i>
           </Button>
@@ -439,16 +440,16 @@ export function MonthCalendar({
             size="sm"
             onClick={() => onMonthChange(today.startOf("month"))}
             disabled={isCurrentMonth}
-            aria-label="Jump to current month"
+            aria-label={m.calendar_nav_current_month_label()}
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
-            This Month
+            {m.calendar_nav_current_month_text()}
           </Button>
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={() => onMonthChange(month.add(1, "month"))}
-            aria-label="Next month"
+            aria-label={m.calendar_nav_next_month()}
           >
             <i className="bi bi-chevron-right" aria-hidden="true"></i>
           </Button>

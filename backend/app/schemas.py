@@ -551,7 +551,7 @@ class TimeOffEntrySyncItem(BaseModel):
     end_date: dt_date | None = None
     weekday: int | None = None
     entry_type: EntryType | None = None
-    entry_flag: EntryFlag | None = None
+    entry_flag: EntryFlag = "full_day"
     note: str | None = None
 
     @model_validator(mode="after")
