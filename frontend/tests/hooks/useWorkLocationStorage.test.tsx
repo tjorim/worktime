@@ -6,7 +6,9 @@ import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { USER_STATE_STORAGE_KEY, getWorkLocationsStorageKey } from "@/constants/storageKeys";
 import type { SyncPushPayload } from "@/utils/syncClient";
 
-// Spy on enqueueChange so tests can assert sync payloads without a full provider.
+// Defined at module scope because vi.mock factories are hoisted before describe
+// blocks, so the spy must be accessible at module level. It is reset in afterEach
+// to prevent cross-test pollution.
 const mockEnqueueChange = vi.fn<[SyncPushPayload], void>();
 
 vi.mock("@/contexts/OngoingSyncContext", async (importOriginal) => {
