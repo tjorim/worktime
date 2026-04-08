@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -25,11 +26,12 @@ export function TimeOffRawView({
 }: TimeOffRawViewProps) {
   const errorId = useId();
   const skippedId = useId();
+  const toast = useToast();
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(rawText);
     } catch {
-      alert(m.timeoff_copy_raw_failed());
+      toast.showError(m.timeoff_copy_raw_failed());
     }
   };
 
