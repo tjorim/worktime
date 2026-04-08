@@ -2,13 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { LabelsPanel } from "../../../src/components/timeTracking/LabelsPanel";
-import { ToastProvider } from "../../../src/contexts/ToastContext";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
-import type {
-  StoredTimeTrackingTask,
-  TimeTrackingTemplate,
-} from "../../../src/components/timeTracking/types";
+import { LabelsPanel } from "@/components/timeTracking/LabelsPanel";
+import { ToastProvider } from "@/contexts/ToastContext";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 
 const TEST_LABELS: TimeTrackingLabel[] = [
   { id: "lbl-1", name: "Support", color: "#3B82F6" },

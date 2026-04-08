@@ -3,11 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  SettingsProvider,
-  defaultLastUsed,
-  defaultSettings,
-} from "../../../src/contexts/SettingsContext";
+import { SettingsProvider, defaultLastUsed, defaultSettings } from "@/contexts/SettingsContext";
 
 vi.mock(
   "frappe-gantt",
@@ -20,7 +16,7 @@ vi.mock(
   { virtual: true },
 );
 
-vi.mock("../../../src/hooks/usePublicHolidays", () => ({
+vi.mock("@/hooks/usePublicHolidays", () => ({
   usePublicHolidays: () => ({
     publicHolidayMap: new Map([
       ["2026-01-01", { name: "New Year's Day", localName: "Nieuwjaarsdag" }],
@@ -31,7 +27,7 @@ vi.mock("../../../src/hooks/usePublicHolidays", () => ({
   }),
 }));
 
-vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
+vi.mock("@/components/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
     tasks,
     initialViewMode,
@@ -68,7 +64,7 @@ vi.mock("../../../src/components/gantt/GanttChart.tsx", () => ({
   ),
 }));
 
-import { GanttView } from "../../../src/components/gantt/GanttView";
+import { GanttView } from "@/components/gantt/GanttView";
 
 type MockUserState = {
   hasCompletedOnboarding: boolean;

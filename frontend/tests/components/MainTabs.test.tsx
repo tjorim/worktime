@@ -2,12 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { MainTabs } from "../../src/components/MainTabs";
-import { dayjs } from "../../src/utils/dateTimeUtils";
+import { MainTabs } from "@/components/MainTabs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { TestProviders } from "../utils/testProviders";
 
 // Mock the child components
-vi.mock("../../src/components/ScheduleTabView", () => ({
+vi.mock("@/components/ScheduleTabView", () => ({
   ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => (
     <div data-testid="schedule-tab-view">ScheduleTabView - Team {myTeam}</div>
   ),

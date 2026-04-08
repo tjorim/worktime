@@ -179,10 +179,7 @@ export const splitFractionalHour = (hourValue: number): { hours: number; minutes
  * setTimeFromFractionalHour(dayjs(), 14.5) // Sets time to 14:30:00
  * setTimeFromFractionalHour(dayjs(), 7)    // Sets time to 07:00:00
  */
-export const setTimeFromFractionalHour = (
-  date: Dayjs,
-  fractionalHour: number,
-): Dayjs => {
+export const setTimeFromFractionalHour = (date: Dayjs, fractionalHour: number): Dayjs => {
   const { hours, minutes } = splitFractionalHour(fractionalHour);
   return date.hour(hours).minute(minutes).second(0);
 };

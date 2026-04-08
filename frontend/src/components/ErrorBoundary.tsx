@@ -3,7 +3,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Container from "react-bootstrap/Container";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface Props {
   children: ReactNode;
@@ -65,8 +65,8 @@ export class ErrorBoundary extends Component<Props, State> {
               {m.error_boundary_heading()}
             </Card.Header>
             <Card.Body>
-                <Alert variant="danger">
-                  <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
+              <Alert variant="danger">
+                <Alert.Heading>{m.error_boundary_heading()}</Alert.Heading>
                 <p>{m.error_boundary_fallback_message()}</p>
                 <hr />
                 <div className="d-flex gap-2">

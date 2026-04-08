@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator, Callable, Generator
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -30,6 +31,11 @@ _TEST_DATABASE_URL = os.environ.get(
     # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://worktime:worktime@localhost/worktime_test",
 )
+
+
+def utc_timestamp_offset(offset_seconds: float = 0.0) -> str:
+    """Return an ISO-8601 UTC timestamp offset from now by *offset_seconds*."""
+    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 def _assert_test_database_url(url: str) -> None:

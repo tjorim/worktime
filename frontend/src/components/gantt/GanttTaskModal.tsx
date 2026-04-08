@@ -3,10 +3,10 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-import { dayjs } from "../../utils/dateTimeUtils";
-import type { GanttTask, RawGanttTask } from "../../types/gantt";
-import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-import * as m from "../../paraglide/messages.js";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { GanttTask, RawGanttTask } from "@/types/gantt";
+import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import * as m from "@/paraglide/messages.js";
 
 type DepOption = { value: string; label: string };
 
@@ -149,7 +149,9 @@ export function GanttTaskModal({
               isInvalid={hasNameError}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
             />
-            <Form.Control.Feedback type="invalid">{m.gantt_task_name_required()}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">
+              {m.gantt_task_name_required()}
+            </Form.Control.Feedback>
           </Form.Group>
 
           <div className="d-flex gap-3 mb-3">

@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../data/rosters";
-import { useLocalStorage } from "../hooks/useLocalStorage";
-import type { CountryCode } from "../types/countries";
-import { isValidCountryCode } from "../types/countries";
-import type { VacationAllowanceSettings } from "../utils/vacationCalculations";
-import { sanitizeVacationAllowance } from "../utils/vacationCalculations";
-import { USER_STATE_STORAGE_KEY } from "../constants/storageKeys";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import type { CountryCode } from "@/types/countries";
+import { isValidCountryCode } from "@/types/countries";
+import type { VacationAllowanceSettings } from "@/utils/vacationCalculations";
+import { sanitizeVacationAllowance } from "@/utils/vacationCalculations";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
@@ -357,10 +357,23 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
  * All settings are persisted to localStorage for the internal user base.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  // Unified user state in a single localStorage key
-  const [rawUserState, setUserState] = useLocalStorage<WorktimeUserState>(
+  // Unified user state in a single localStorage key.
+  // _setRawUserState is the raw setter; setUserState wraps it to inject _updatedAt
+  // so that buildLocalPreferencesPayload in syncClient.ts can use the actual
+  // modification time rather than always defaulting to "now".
+  const [rawUserState, _setRawUserState] = useLocalStorage<WorktimeUserState>(
     USER_STATE_STORAGE_KEY,
     defaultUserState,
+  );
+
+  const setUserState = useCallback(
+    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
+      _setRawUserState((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        return { ...next, _updatedAt: new Date().toISOString() };
+      });
+    },
+    [_setRawUserState],
   );
 
   const userState: WorktimeUserState = normalizeUserState(rawUserState);

@@ -2,16 +2,16 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ScheduleTabView } from "../../src/components/ScheduleTabView";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { ScheduleOption } from "../../src/data/rosters";
+import { ScheduleTabView } from "@/components/ScheduleTabView";
+import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { ScheduleOption } from "@/data/rosters";
 
 // Mock the child components with schedule type support
-vi.mock("../../src/components/schedule/TodayView", () => ({
+vi.mock("@/components/schedule/TodayView", () => ({
   TodayView: ({
     myTeam,
     viewingScheduleType,
@@ -25,7 +25,7 @@ vi.mock("../../src/components/schedule/TodayView", () => ({
   ),
 }));
 
-vi.mock("../../src/components/schedule/WeekView", () => ({
+vi.mock("@/components/schedule/WeekView", () => ({
   WeekView: ({
     myTeam,
     viewingScheduleType,
@@ -39,7 +39,7 @@ vi.mock("../../src/components/schedule/WeekView", () => ({
   ),
 }));
 
-vi.mock("../../src/components/TransferView", () => ({
+vi.mock("@/components/TransferView", () => ({
   TransferView: ({ myTeam }: { myTeam: number | null }) => (
     <div data-testid="transfer-view">TransferView - Team {myTeam}</div>
   ),

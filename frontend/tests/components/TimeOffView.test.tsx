@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { TimeOffView } from "../../src/components/TimeOffView";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import { TimeOffView } from "@/components/TimeOffView";
+import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // Wrapper with all necessary providers
 const AllProviders = ({ children }: { children: React.ReactNode }) => (

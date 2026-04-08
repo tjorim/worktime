@@ -96,7 +96,7 @@ async def register_user(
                 st_user_id,
                 rollback_error,
             )
-        logger.error("Unexpected error during registration for username %r: %s", payload.username, exc)
+        logger.error("Unexpected error during registration (st_user=%s): %s", st_user_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed unexpectedly",

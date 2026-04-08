@@ -2,13 +2,13 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { TodayView } from "../../src/components/schedule/TodayView";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { ShiftResult } from "../../src/utils/shiftCalculations";
-import { getAllTeamsShifts } from "../../src/utils/shiftCalculations";
+import { TodayView } from "@/components/schedule/TodayView";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import { getAllTeamsShifts } from "@/utils/shiftCalculations";
 
 // Mock today shifts data
 const mockTodayShiftsData: ShiftResult[] = [
@@ -60,7 +60,7 @@ const mockTodayShiftsData: ShiftResult[] = [
 ];
 
 // Mock shift calculation utilities
-vi.mock("../../src/utils/shiftCalculations", () => ({
+vi.mock("@/utils/shiftCalculations", () => ({
   getAllTeamsShifts: vi.fn(() => mockTodayShiftsData),
   getShift: vi.fn(() => ({
     code: "M",

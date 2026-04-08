@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from uuid import uuid4
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy import func as sql_func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
     Base,
     GanttTask,
+    TimeOffEntry,
     TimeTrackingLabel,
     TimeTrackingTask,
     TimeTrackingTemplate,
     User,
+    UserPreferences,
     WorkLocation,
 )
 from app.schemas import (
@@ -26,7 +31,10 @@ from app.schemas import (
     TaskUpdate,
     TemplateCreate,
     TemplateUpdate,
+    TimeOffEntryCreate,
+    TimeOffEntryUpdate,
     UserCreate,
+    UserPreferencesWrite,
     UserUpdate,
     WorkLocationCreate,
     WorkLocationUpdate,
@@ -490,14 +498,16 @@ async def create_gantt_task(
 
 async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> GanttTask:
     task = await session.get(GanttTask, task_id)
-    if task is None or task.user_id != user_id:
+    if task is None or task.user_id != user_id or task.deleted_at is not None:
         raise NotFoundError("gantt task not found")
     return task
 
 
 async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]:
     result = await session.execute(
-        select(GanttTask).where(GanttTask.user_id == user_id).order_by(GanttTask.start_date)
+        select(GanttTask)
+        .where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None))
+        .order_by(GanttTask.start_date)
     )
     return list(result.scalars().all())
 
@@ -524,4 +534,262 @@ async def update_gantt_task(
 async def delete_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> None:
     task = await get_gantt_task(session, user_id, task_id)
     await session.delete(task)
+    await session.commit()
+
+
+# User preferences operations
+
+
+async def get_user_preferences(session: AsyncSession, user_id: int) -> UserPreferences | None:
+    """Return the user's preferences row, or None if not yet set."""
+    return await session.get(UserPreferences, user_id)
+
+
+async def upsert_user_preferences(
+    session: AsyncSession, user_id: int, payload: UserPreferencesWrite
+) -> UserPreferences:
+    """Create or update the user's preferences row.
+
+    Last-write-wins: if a row already exists, the payload is accepted only when
+    ``payload.client_updated_at`` is strictly newer than the stored
+    ``client_updated_at``. Returns the current stored row (possibly unchanged).
+    """
+    candidate_client_updated_at = as_utc(payload.client_updated_at)
+    now = datetime.now(UTC)
+
+    statement = pg_insert(UserPreferences).values(
+        user_id=user_id,
+        data=payload.data,
+        client_updated_at=candidate_client_updated_at,
+        updated_at=now,
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=["user_id"],
+        set_={
+            "data": statement.excluded.data,
+            "client_updated_at": statement.excluded.client_updated_at,
+            "updated_at": statement.excluded.updated_at,
+        },
+        where=statement.excluded.client_updated_at > UserPreferences.client_updated_at,
+    ).returning(UserPreferences)
+
+    result = await session.execute(statement)
+    prefs = result.scalar_one_or_none()
+    if prefs is None:
+        prefs = await session.get(UserPreferences, user_id)
+        if prefs is None:
+            raise RuntimeError("user preferences upsert failed to return or load a row")
+
+    await session.commit()
+    return prefs
+
+
+# Time-off entry operations
+
+
+def apply_time_off_shape(
+    entry: TimeOffEntry,
+    *,
+    kind: str,
+    value_date: date | None,
+    start_date: date | None,
+    end_date: date | None,
+    weekday: int | None,
+) -> None:
+    entry.entry_kind = kind
+    entry.date = value_date if kind == "date" else None
+    entry.start_date = start_date if kind == "range" else None
+    entry.end_date = end_date if kind == "range" else None
+    entry.weekday = weekday if kind == "weekly" else None
+
+
+async def get_time_off_entry(session: AsyncSession, user_id: int, entry_id: str) -> TimeOffEntry:
+    result = await session.execute(
+        select(TimeOffEntry).where(
+            TimeOffEntry.user_id == user_id,
+            TimeOffEntry.entry_id == entry_id,
+            TimeOffEntry.deleted_at.is_(None),
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if entry is None:
+        raise NotFoundError("time off entry not found")
+    return entry
+
+
+async def list_time_off_entries(
+    session: AsyncSession,
+    *,
+    user_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[TimeOffEntry]:
+    statement = select(TimeOffEntry).where(
+        TimeOffEntry.user_id == user_id,
+        TimeOffEntry.deleted_at.is_(None),
+    )
+    if start_date is not None:
+        # Weekly entries (all date fields NULL) are always included — they recur every week.
+        # For date entries: COALESCE(date, end_date) = date → include if date >= start_date.
+        # For range entries: COALESCE(date, end_date) = end_date → include if the range ends
+        # on or after the filter start (catches ranges that started before the window).
+        statement = statement.where(
+            or_(
+                TimeOffEntry.entry_kind == "weekly",
+                sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.end_date) >= start_date,
+            )
+        )
+    if end_date is not None:
+        # For date entries: COALESCE(date, start_date) = date → include if date <= end_date.
+        # For range entries: COALESCE(date, start_date) = start_date → include if the range
+        # starts on or before the filter end (catches ranges that end after the window).
+        statement = statement.where(
+            or_(
+                TimeOffEntry.entry_kind == "weekly",
+                sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date) <= end_date,
+            )
+        )
+
+    result = await session.execute(
+        statement.order_by(
+            sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date).nulls_last(),
+            TimeOffEntry.weekday,
+            TimeOffEntry.entry_id,
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def create_or_update_time_off_entry(
+    session: AsyncSession, user_id: int, payload: TimeOffEntryCreate
+) -> tuple[TimeOffEntry, bool]:
+    """Upsert a time-off entry for (user_id, entry_id).
+
+    The unique index on (user_id, entry_id) has no partial filter, so a
+    soft-deleted row with the same entry_id blocks re-insertion of a fresh row.
+    This function always *restores* an existing row (including soft-deleted ones)
+    rather than inserting a new one, which keeps the constraint satisfied and
+    ensures deletion history is preserved.
+
+    Returns ``(entry, created)`` where ``created`` is True only when a brand-new
+    row was inserted (i.e. no prior row — active or soft-deleted — existed for
+    this entry_id).
+    """
+    entry_id = payload.entry_id or str(uuid4())
+    result = await session.execute(
+        select(TimeOffEntry).where(
+            TimeOffEntry.user_id == user_id,
+            TimeOffEntry.entry_id == entry_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+
+    created = entry is None
+
+    if created:
+        new_entry = TimeOffEntry(
+            entry_id=entry_id,
+            user_id=user_id,
+            entry_type=payload.entry_type,
+            entry_flag=payload.entry_flag,
+            note=payload.note,
+        )
+        apply_time_off_shape(
+            new_entry,
+            kind=payload.entry_kind,
+            value_date=payload.date,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            weekday=payload.weekday,
+        )
+        entry = new_entry
+    else:
+        apply_time_off_shape(
+            entry,
+            kind=payload.entry_kind,
+            value_date=payload.date,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            weekday=payload.weekday,
+        )
+        entry.entry_type = payload.entry_type
+        entry.entry_flag = payload.entry_flag
+        entry.note = payload.note
+        entry.deleted_at = None
+        entry.updated_at = datetime.now(UTC)
+
+    session.add(entry)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        result = await session.execute(
+            select(TimeOffEntry).where(
+                TimeOffEntry.user_id == user_id,
+                TimeOffEntry.entry_id == entry_id,
+            )
+        )
+        entry = result.scalar_one_or_none()
+        if entry is None:
+            raise
+        # A concurrent request won the INSERT race; apply our payload to that row.
+        apply_time_off_shape(
+            entry,
+            kind=payload.entry_kind,
+            value_date=payload.date,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            weekday=payload.weekday,
+        )
+        entry.entry_type = payload.entry_type
+        entry.entry_flag = payload.entry_flag
+        entry.note = payload.note
+        entry.deleted_at = None
+        entry.updated_at = datetime.now(UTC)
+        session.add(entry)
+        await session.commit()
+        created = False
+    await session.refresh(entry)
+    return entry, created
+
+
+async def update_time_off_entry(
+    session: AsyncSession, user_id: int, entry_id: str, payload: TimeOffEntryUpdate
+) -> TimeOffEntry:
+    entry = await get_time_off_entry(session, user_id, entry_id)
+    data = payload.model_dump(exclude_unset=True)
+    non_nullable_fields = _get_non_nullable_model_fields(TimeOffEntry)
+    for field, value in data.items():
+        if field in non_nullable_fields and value is None:
+            raise ValidationError(f"{field} cannot be None")
+    if "entry_kind" in data:
+        apply_time_off_shape(
+            entry,
+            kind=data["entry_kind"],
+            value_date=data.get("date"),
+            start_date=data.get("start_date"),
+            end_date=data.get("end_date"),
+            weekday=data.get("weekday"),
+        )
+        data = {
+            field: value
+            for field, value in data.items()
+            if field not in {"entry_kind", "date", "start_date", "end_date", "weekday"}
+        }
+    for field, value in data.items():
+        setattr(entry, field, value)
+    entry.updated_at = datetime.now(UTC)
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+
+async def delete_time_off_entry(session: AsyncSession, user_id: int, entry_id: str) -> None:
+    """Soft-delete a time-off entry so deletions sync to other devices."""
+    entry = await get_time_off_entry(session, user_id, entry_id)
+    now = datetime.now(UTC)
+    entry.deleted_at = now
+    entry.updated_at = now
+    session.add(entry)
     await session.commit()

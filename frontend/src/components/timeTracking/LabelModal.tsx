@@ -1,7 +1,7 @@
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 type LabelForm = {
   name: string;

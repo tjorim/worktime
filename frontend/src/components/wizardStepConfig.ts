@@ -5,7 +5,7 @@
  * step visibility and navigation logic across different modes.
  */
 
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 export type WizardStep =
   | "welcome"

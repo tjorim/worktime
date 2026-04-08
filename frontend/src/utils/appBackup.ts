@@ -3,7 +3,7 @@
  *
  * Covers all meaningful user data stored in localStorage:
  * - User settings & preferences (worktime_user_state)
- * - Time-off events (.hday raw text)
+ * - Time-off entries
  * - Work location entries (per-year keys)
  * - Time tracking tasks, templates and labels
  *
@@ -11,20 +11,24 @@
  */
 
 import dayjs from "dayjs";
-import { TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
-import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
 import {
   GANTT_STORAGE_KEY,
+  TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
   WORK_LOCATIONS_STORAGE_PREFIX,
-} from "../constants/storageKeys";
+} from "@/constants/storageKeys";
+import {
+  loadTimeOffEntries,
+  normalizeTimeOffEntries,
+  saveTimeOffEntries,
+} from "@/lib/timeOff/storage";
 import { isValidScheduleType } from "./scheduleUtils";
 
 export type AppBackupPayload = {
   exportedAt: string;
   version: 1;
   userState?: unknown;
-  timeOff?: string;
+  timeOff?: unknown[];
   workLocations?: Record<string, unknown>;
   tasks?: unknown[];
   templates?: unknown[];
@@ -108,7 +112,7 @@ function getTaskYear(task: unknown): number | null {
  */
 export function checkBackupDataPresence(): BackupDataPresence {
   const hasUserState = localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
-  const hasTimeOff = !!localStorage.getItem(TIME_OFF_STORAGE_KEY);
+  const hasTimeOff = loadTimeOffEntries().length > 0;
 
   const taskYears = new Set<number>();
   const tasksData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
@@ -181,8 +185,8 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.timeOff) {
-    const timeOff = localStorage.getItem(TIME_OFF_STORAGE_KEY);
-    if (timeOff) payload.timeOff = timeOff;
+    const timeOff = loadTimeOffEntries();
+    if (timeOff.length > 0) payload.timeOff = timeOff;
   }
 
   if (include.workLocations) {
@@ -300,7 +304,9 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
     }
   }
 
-  if ("timeOff" in p && p.timeOff !== undefined && typeof p.timeOff !== "string") return false;
+  if ("timeOff" in p && p.timeOff !== undefined && !Array.isArray(p.timeOff)) {
+    return false;
+  }
   if ("tasks" in p && p.tasks !== undefined && !Array.isArray(p.tasks)) return false;
   if ("templates" in p && p.templates !== undefined && !Array.isArray(p.templates)) return false;
   if ("labels" in p && p.labels !== undefined && !Array.isArray(p.labels)) return false;
@@ -321,8 +327,8 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(payload.userState));
   }
 
-  if (typeof payload.timeOff === "string") {
-    localStorage.setItem(TIME_OFF_STORAGE_KEY, payload.timeOff);
+  if (Array.isArray(payload.timeOff)) {
+    saveTimeOffEntries(normalizeTimeOffEntries(payload.timeOff));
   }
 
   if (payload.workLocations && typeof payload.workLocations === "object") {

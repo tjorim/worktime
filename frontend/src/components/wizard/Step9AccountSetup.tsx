@@ -2,7 +2,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
 import type { RefObject } from "react";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface Step9AccountSetupProps {
   isAuthenticated: boolean;
@@ -64,12 +64,7 @@ export function Step9AccountSetup({
                     {m.wizard_account_local_con_2()}
                   </li>
                 </ul>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  className="w-100"
-                  onClick={onSkip}
-                >
+                <Button variant="outline-secondary" size="sm" className="w-100" onClick={onSkip}>
                   {m.skip()}
                 </Button>
               </Card.Body>
@@ -101,12 +96,7 @@ export function Step9AccountSetup({
                     {m.wizard_account_connected_pro_3()}
                   </li>
                 </ul>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="w-100"
-                  onClick={onConnectAccount}
-                >
+                <Button variant="primary" size="sm" className="w-100" onClick={onConnectAccount}>
                   <i className="bi bi-person-plus me-1"></i>
                   {m.account_connect_btn()}
                 </Button>
@@ -117,12 +107,7 @@ export function Step9AccountSetup({
       )}
 
       <div className="d-flex justify-content-between mt-2">
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          onClick={onPrev}
-          ref={firstButtonRef}
-        >
+        <Button variant="outline-secondary" size="sm" onClick={onPrev} ref={firstButtonRef}>
           <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         {isAuthenticated && (

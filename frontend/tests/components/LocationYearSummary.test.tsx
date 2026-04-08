@@ -2,11 +2,11 @@ import userEvent from "@testing-library/user-event";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { LocationYearSummary } from "../../src/components/calendar/LocationYearSummary";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { toCountryCode } from "../../src/types/workLocation";
-import type { WorkLocationInfo, WorkLocationMap } from "../../src/types/workLocation";
-import { getLocale, setLocale } from "../../src/paraglide/runtime.js";
+import { LocationYearSummary } from "@/components/calendar/LocationYearSummary";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { toCountryCode } from "@/types/workLocation";
+import type { WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
+import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 function renderSummary(year: number, workLocationMap: WorkLocationMap) {
   return render(

@@ -3,15 +3,15 @@ import { render, screen } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ShiftTimeline } from "../../src/components/ShiftTimeline";
-import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
-import type { ShiftResult } from "../../src/utils/shiftCalculations";
-import * as shiftCalculations from "../../src/utils/shiftCalculations";
+import { ShiftTimeline } from "@/components/ShiftTimeline";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import * as shiftCalculations from "@/utils/shiftCalculations";
 
 // Mock useSettings to provide scheduleType
-vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({

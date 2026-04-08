@@ -1,5 +1,5 @@
-import { useSettings } from "../contexts/SettingsContext";
-import { getFormattedShiftTime } from "../utils/shiftCalculations";
+import { useSettings } from "@/contexts/SettingsContext";
+import { getFormattedShiftTime } from "@/utils/shiftCalculations";
 
 /**
  * Hook to format shift time using the user's time format preference.

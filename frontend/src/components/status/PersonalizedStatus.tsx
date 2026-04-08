@@ -5,18 +5,18 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Tooltip from "react-bootstrap/Tooltip";
-import type { ScheduleOption } from "../../data/rosters";
-import { getScheduleConfig, isValidScheduleType } from "../../utils/scheduleUtils";
-import { useCountdown } from "../../hooks/useCountdown";
-import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
-import { useLiveShiftStatus } from "../../hooks/useLiveShiftStatus";
-import { setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
-import { getLocale } from "../../paraglide/runtime.js";
-import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
-import { CountdownBadge } from "../shared/CountdownBadge";
-import { ShiftBadge } from "../shared/ShiftBadge";
-import { EmptyState } from "../shared/EmptyState";
-import * as m from "../../paraglide/messages.js";
+import type { ScheduleOption } from "@/data/rosters";
+import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
+import { useCountdown } from "@/hooks/useCountdown";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
+import { setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { getLocale } from "@/paraglide/runtime.js";
+import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
+import { CountdownBadge } from "@/components/shared/CountdownBadge";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
+import * as m from "@/paraglide/messages.js";
 
 interface PersonalizedStatusContentProps {
   myTeam: number;
@@ -118,7 +118,9 @@ export function PersonalizedStatusContent({
             </Card.Title>
             <div className="flex-grow-1">
               {hasTeams && (
-                <span className="fw-semibold me-1">{m.personalized_status_team({ team: String(myTeam) })}</span>
+                <span className="fw-semibold me-1">
+                  {m.personalized_status_team({ team: String(myTeam) })}
+                </span>
               )}
               <OverlayTrigger
                 placement="bottom"
@@ -126,7 +128,8 @@ export function PersonalizedStatusContent({
                   <Tooltip id={teamTooltipId}>
                     <strong>{m.personalized_status_your_team_today()}</strong>
                     <br />
-                    {m.personalized_status_code_label()} <strong>{currentShift.shift.displayCode}</strong>
+                    {m.personalized_status_code_label()}{" "}
+                    <strong>{currentShift.shift.displayCode}</strong>
                     <br />
                     {shiftTooltipDetails}
                     <br />
@@ -236,8 +239,10 @@ export function PersonalizedStatusContent({
                       ? m.today()
                       : nextShift.date.isSame(today.add(1, "day"), "day")
                         ? m.personalized_status_tomorrow()
-                                                : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
-                          ? weekdayDateFormatter.format((nextShift.date as { toDate: () => Date }).toDate())
+                        : typeof (nextShift.date as { toDate?: () => Date }).toDate === "function"
+                          ? weekdayDateFormatter.format(
+                              (nextShift.date as { toDate: () => Date }).toDate(),
+                            )
                           : nextShift.date.format("ddd, MMM D")}{" "}
                     - {nextShift.shift.name}
                   </div>

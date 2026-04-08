@@ -1,4 +1,4 @@
-import type { WorkLocation, WorkLocationMap } from "../types/workLocation";
+import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
 
 /**
  * Aggregates all stored entries in workLocationMap into a grouped summary

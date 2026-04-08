@@ -2,7 +2,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface Step6TimeTrackingSetupProps {
   isEnabled: boolean;

@@ -1,11 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DayCell, type DayEvent } from "../../../src/components/calendar/DayCell";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
+import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
+import { createTimeOffEntry } from "@/lib/timeOff/codecs";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 describe("DayCell", () => {
   const mockOnViewEvent = vi.fn();
+  let entryCounter = 0;
+  const createEntryEvent = (
+    overrides: {
+      note?: string | null;
+      flag?: "half_am" | "half_pm" | "onsite" | "no_fly" | "can_fly";
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): DayEvent => ({
+    entry: createTimeOffEntry({
+      id: `entry-${entryCounter++}`,
+      entryKind: "date",
+      date: "2025-01-15",
+      note: overrides.note ?? null,
+      entryFlag: overrides.flag ?? "full_day",
+      entryType: overrides.entryType ?? "vacation",
+    }),
+  });
 
   const defaultProps = {
     date: dayjs("2025-01-15"),
@@ -18,6 +44,7 @@ describe("DayCell", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    entryCounter = 0;
   });
 
   describe("Rendering", () => {
@@ -60,9 +87,9 @@ describe("DayCell", () => {
   describe("Event Display", () => {
     it("should render up to 3 event chips", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -74,11 +101,11 @@ describe("DayCell", () => {
 
     it("should show a clickable overflow toggle when more than 3 events", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 5", flags: [] }, index: 4 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
+        createEntryEvent({ note: "Event 5" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -91,10 +118,10 @@ describe("DayCell", () => {
 
     it("should use singular label when exactly 1 event is hidden", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -107,10 +134,10 @@ describe("DayCell", () => {
     it("should reveal hidden events when clicking the overflow toggle", async () => {
       const user = userEvent.setup();
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -124,10 +151,10 @@ describe("DayCell", () => {
     it("should collapse hidden events when clicking the overflow toggle again", async () => {
       const user = userEvent.setup();
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -143,10 +170,10 @@ describe("DayCell", () => {
     it("should reveal hidden events when activating overflow toggle with keyboard", async () => {
       const user = userEvent.setup();
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -162,10 +189,10 @@ describe("DayCell", () => {
     it("should collapse hidden events when activating overflow toggle with keyboard", async () => {
       const user = userEvent.setup();
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Event 1", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 2", flags: [] }, index: 1 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 3", flags: [] }, index: 2 },
-        { event: { type: "range", start: "2025/01/15", title: "Event 4", flags: [] }, index: 3 },
+        createEntryEvent({ note: "Event 1" }),
+        createEntryEvent({ note: "Event 2" }),
+        createEntryEvent({ note: "Event 3" }),
+        createEntryEvent({ note: "Event 4" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -183,9 +210,7 @@ describe("DayCell", () => {
     });
 
     it("should display event type label when no title", () => {
-      const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", flags: ["holiday"] }, index: 0 },
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: null, entryType: "vacation" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 
@@ -193,12 +218,7 @@ describe("DayCell", () => {
     });
 
     it("should display time/location symbols", () => {
-      const events: DayEvent[] = [
-        {
-          event: { type: "range", start: "2025/01/15", title: "Event", flags: ["half_am"] },
-          index: 0,
-        },
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: "Event", flag: "half_am" })];
 
       const { container } = render(<DayCell {...defaultProps} events={events} />);
 
@@ -210,8 +230,8 @@ describe("DayCell", () => {
 
     it("should render multiple events with the same title", () => {
       const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Same Event", flags: [] }, index: 0 },
-        { event: { type: "range", start: "2025/01/15", title: "Same Event", flags: [] }, index: 1 },
+        createEntryEvent({ note: "Same Event" }),
+        createEntryEvent({ note: "Same Event" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);
@@ -230,9 +250,8 @@ describe("DayCell", () => {
   describe("Interaction", () => {
     it("should call onViewEvent when clicking event chip", async () => {
       const user = userEvent.setup();
-      const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Test Event", flags: [] }, index: 5 },
-      ];
+      const event = createEntryEvent({ note: "Test Event" });
+      const events: DayEvent[] = [event];
 
       render(<DayCell {...defaultProps} events={events} />);
 
@@ -240,14 +259,12 @@ describe("DayCell", () => {
       await user.click(eventButton);
 
       expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
-      expect(mockOnViewEvent).toHaveBeenCalledWith(5); // Should use the event's index
+      expect(mockOnViewEvent).toHaveBeenCalledWith(event.entry.id);
     });
 
     it("should stop propagation when clicking event chip", async () => {
       const user = userEvent.setup();
-      const events: DayEvent[] = [
-        { event: { type: "range", start: "2025/01/15", title: "Test Event", flags: [] }, index: 0 },
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: "Test Event" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 
@@ -261,12 +278,7 @@ describe("DayCell", () => {
 
   describe("Visual Indicators", () => {
     it("should show course indicator emoji for course events", () => {
-      const events: DayEvent[] = [
-        {
-          event: { type: "range", start: "2025/01/15", title: "Training", flags: ["course"] },
-          index: 0,
-        },
-      ];
+      const events: DayEvent[] = [createEntryEvent({ note: "Training", entryType: "course" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 
@@ -336,14 +348,8 @@ describe("DayCell", () => {
 
     it("should not duplicate indicators", () => {
       const events: DayEvent[] = [
-        {
-          event: { type: "range", start: "2025/01/15", title: "Course 1", flags: ["course"] },
-          index: 0,
-        },
-        {
-          event: { type: "range", start: "2025/01/15", title: "Course 2", flags: ["course"] },
-          index: 1,
-        },
+        createEntryEvent({ note: "Course 1", entryType: "course" }),
+        createEntryEvent({ note: "Course 2", entryType: "course" }),
       ];
 
       render(<DayCell {...defaultProps} events={events} />);

@@ -5,8 +5,8 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Modal from "react-bootstrap/Modal";
 import clsx from "clsx";
-import { type ChangelogVersion, changelogData, futurePlans } from "../data/changelog";
-import * as m from "../paraglide/messages.js";
+import { type ChangelogVersion, changelogData, futurePlans } from "@/data/changelog";
+import * as m from "@/paraglide/messages.js";
 
 interface ChangelogModalProps {
   show: boolean;
@@ -116,11 +116,31 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                 </div>
               </Accordion.Header>
               <Accordion.Body>
-                {renderChangeSection("added", m.changelog_section_added(), version.added, "text-success")}
-                {renderChangeSection("changed", m.changelog_section_changed(), version.changed, "text-info")}
-                {renderChangeSection("fixed", m.changelog_section_fixed(), version.fixed, "text-warning")}
+                {renderChangeSection(
+                  "added",
+                  m.changelog_section_added(),
+                  version.added,
+                  "text-success",
+                )}
+                {renderChangeSection(
+                  "changed",
+                  m.changelog_section_changed(),
+                  version.changed,
+                  "text-info",
+                )}
+                {renderChangeSection(
+                  "fixed",
+                  m.changelog_section_fixed(),
+                  version.fixed,
+                  "text-warning",
+                )}
                 {version.planned &&
-                  renderChangeSection("planned", m.changelog_section_planned(), version.planned, "text-secondary")}
+                  renderChangeSection(
+                    "planned",
+                    m.changelog_section_planned(),
+                    version.planned,
+                    "text-secondary",
+                  )}
 
                 {version.technicalDetails && (
                   <Card className="mt-3 border-0 bg-body-secondary">

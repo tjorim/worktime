@@ -1,5 +1,5 @@
-import type { ShiftResult } from "../../utils/shiftCalculations";
-import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 
 interface ShiftTimeDisplayProps {
   shift: ShiftResult["shift"];

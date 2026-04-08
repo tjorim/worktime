@@ -3,15 +3,15 @@ import { useEffect, useId, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
-import type { ScheduleOption } from "../data/rosters";
-import { SCHEDULE_OPTIONS } from "../data/rosters";
-import { useSettings } from "../contexts/SettingsContext";
-import { dayjs } from "../utils/dateTimeUtils";
-import { isValidScheduleType } from "../utils/scheduleUtils";
+import type { ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS } from "@/data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { isValidScheduleType } from "@/utils/scheduleUtils";
 import { TransferView } from "./TransferView";
 import { WeekView } from "./schedule/WeekView";
 import { TodayView } from "./schedule/TodayView";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 // Pre-compute available schedules since SCHEDULE_OPTIONS is static
 const availableSchedules = SCHEDULE_OPTIONS.filter((s) => s.isAvailable);

@@ -4,10 +4,10 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import type { Dayjs } from "dayjs";
-import { hasIsoAlpha2Format } from "../../types/countries";
-import type { WorkLocationInfo } from "../../types/workLocation";
-import { getLocale } from "../../paraglide/runtime.js";
-import * as m from "../../paraglide/messages.js";
+import { hasIsoAlpha2Format } from "@/types/countries";
+import type { WorkLocationInfo } from "@/types/workLocation";
+import { getLocale } from "@/paraglide/runtime.js";
+import * as m from "@/paraglide/messages.js";
 
 // Helper to get initial values for countryCode and label
 const getInitialOtherLocation = (existing?: WorkLocationInfo) => {

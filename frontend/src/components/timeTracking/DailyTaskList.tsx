@@ -2,11 +2,11 @@ import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { EmptyState } from "../shared/EmptyState";
-import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
-import { ConfirmationDialog } from "../ConfirmationDialog";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import {
   buildLabelNameMap,
   getContrastingTextColor,
@@ -16,7 +16,7 @@ import {
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 export type EditRequest = {
   task: StoredTimeTrackingTask;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { hdayToCalendarEvents, filterEventsInRange } from "../../../src/lib/events/converters";
-import type { HdayEvent } from "../../../src/lib/hday/types";
+import { hdayToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
+import type { HdayEvent } from "@/lib/hday/types";
 
 describe("Event Converters", () => {
   describe("hdayToCalendarEvents", () => {

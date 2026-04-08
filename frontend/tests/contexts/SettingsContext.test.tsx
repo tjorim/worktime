@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsProvider, useSettings } from "../../src/contexts/SettingsContext";
-import { USER_STATE_STORAGE_KEY } from "../../src/constants/storageKeys";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {

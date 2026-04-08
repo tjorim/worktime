@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { DailyTaskList } from "../../../src/components/timeTracking/DailyTaskList";
-import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
+import { DailyTaskList } from "@/components/timeTracking/DailyTaskList";
+import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [
   { id: "Support", name: "Support", color: "#c82333" },

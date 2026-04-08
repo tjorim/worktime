@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from datetime import time as dt_time
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import pycountry
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -280,6 +280,152 @@ class GanttTaskListResponse(ListResponse[GanttTaskRead]):
 
 
 # ---------------------------------------------------------------------------
+# User Preferences schemas
+# ---------------------------------------------------------------------------
+
+
+class UserPreferencesRead(BaseModel):
+    """Response schema for the authenticated user's preferences blob."""
+
+    user_id: int
+    data: dict[str, Any]
+    client_updated_at: dt_datetime
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+
+class UserPreferencesWrite(BaseModel):
+    """Request schema for writing the authenticated user's preferences blob.
+
+    ``client_updated_at`` is the client-side timestamp of the local state being
+    pushed, used for last-write-wins conflict detection.
+    ``data`` is the full preferences JSON object (opaque to the server).
+    """
+
+    data: dict[str, Any]
+    client_updated_at: dt_datetime
+
+
+# ---------------------------------------------------------------------------
+# Time-off entry schemas
+# ---------------------------------------------------------------------------
+
+EntryType = Literal[
+    "vacation",
+    "business",
+    "course",
+    "in",
+    "weekend",
+    "birthday",
+    "ill",
+    "other",
+]
+
+EntryKind = Literal["date", "range", "weekly"]
+EntryFlag = Literal["full_day", "half_am", "half_pm", "onsite", "no_fly", "can_fly"]
+
+
+class TimeOffEntryCreate(BaseModel):
+    """Request schema for creating or upserting a time-off entry."""
+
+    entry_id: str | None = Field(default=None, min_length=1)
+    entry_kind: EntryKind = "date"
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
+    entry_type: EntryType = "vacation"
+    entry_flag: EntryFlag = "full_day"
+    note: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntryCreate:
+        if self.entry_kind == "date":
+            if self.date is None:
+                raise ValueError("date is required for date entries")
+            if self.start_date is not None or self.end_date is not None or self.weekday is not None:
+                raise ValueError("date entries cannot include range or weekday fields")
+        elif self.entry_kind == "range":
+            if self.start_date is None or self.end_date is None:
+                raise ValueError("start_date and end_date are required for range entries")
+            if self.end_date <= self.start_date:
+                raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
+            if self.date is not None or self.weekday is not None:
+                raise ValueError("range entries cannot include date or weekday fields")
+        elif self.entry_kind == "weekly":
+            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+                raise ValueError("weekday must be between 1 and 7 for weekly entries")
+            if self.date is not None or self.start_date is not None or self.end_date is not None:
+                raise ValueError("weekly entries cannot include date or range fields")
+        return self
+
+
+class TimeOffEntryRead(BaseModel):
+    """Response schema for a single time-off entry (REST endpoints).
+
+    ``client_updated_at`` is intentionally excluded here — it is only surfaced
+    via ``TimeOffEntrySyncRead`` on the sync endpoints, which is the intended
+    access path for conflict-resolution metadata.
+    """
+
+    id: int
+    entry_id: str
+    user_id: int
+    entry_kind: EntryKind
+    date: dt_date | None
+    start_date: dt_date | None
+    end_date: dt_date | None
+    weekday: int | None
+    entry_type: EntryType
+    entry_flag: EntryFlag
+    note: str | None
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+
+class TimeOffEntryUpdate(BaseModel):
+    entry_kind: EntryKind | None = None
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
+    entry_type: EntryType | None = None
+    entry_flag: EntryFlag | None = None
+    note: str | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntryUpdate:
+        shape_fields_set = self.model_fields_set & {"date", "start_date", "end_date", "weekday"}
+        if shape_fields_set and self.entry_kind is None:
+            raise ValueError("entry_kind must be provided when updating date, start_date, end_date, or weekday fields")
+        if self.entry_kind is None:
+            return self
+
+        if self.entry_kind == "date":
+            if self.date is None:
+                raise ValueError("date is required when entry_kind is date")
+            if self.model_fields_set & {"start_date", "end_date", "weekday"}:
+                raise ValueError("start_date, end_date, and weekday are not allowed when entry_kind is date")
+        elif self.entry_kind == "range":
+            if self.start_date is None or self.end_date is None:
+                raise ValueError("start_date and end_date are required when entry_kind is range")
+            if self.end_date <= self.start_date:
+                raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
+            if self.model_fields_set & {"date", "weekday"}:
+                raise ValueError("date and weekday are not allowed when entry_kind is range")
+        elif self.entry_kind == "weekly":
+            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+                raise ValueError("weekday must be provided when entry_kind is weekly")
+            if self.model_fields_set & {"date", "start_date", "end_date"}:
+                raise ValueError("date, start_date, and end_date are not allowed when entry_kind is weekly")
+        return self
+
+
+class TimeOffEntryListResponse(ListResponse[TimeOffEntryRead]):
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Sync schemas
 # ---------------------------------------------------------------------------
 
@@ -301,6 +447,7 @@ class LabelSyncRead(BaseModel):
     user_id: int
     name: str
     color: str
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -314,6 +461,7 @@ class TaskSyncRead(BaseModel):
     start_time: dt_datetime
     stop_time: dt_datetime | None
     includes_break: bool
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -326,6 +474,7 @@ class TemplateSyncRead(BaseModel):
     text: str
     start_time: dt_time
     stop_time: dt_time
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -337,6 +486,27 @@ class WorkLocationSyncRead(BaseModel):
     date: dt_date
     country_code: str
     label: str | None
+    client_updated_at: dt_datetime
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
+class TimeOffEntrySyncRead(BaseModel):
+    """Sync read shape for a time-off entry (includes soft-delete fields)."""
+
+    id: int
+    entry_id: str
+    user_id: int
+    entry_kind: EntryKind
+    date: dt_date | None
+    start_date: dt_date | None
+    end_date: dt_date | None
+    weekday: int | None
+    entry_type: EntryType
+    entry_flag: EntryFlag
+    note: str | None
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -386,6 +556,141 @@ class WorkLocationSyncItem(BaseModel):
     label: str | None = None
 
 
+class TimeOffEntrySyncItemBase(BaseModel):
+    """Time-off entries are identified by a stable client-generated entry id."""
+
+    id: str = Field(min_length=1)
+    client_updated_at: dt_datetime
+
+
+class TimeOffEntrySyncPayloadBase(TimeOffEntrySyncItemBase):
+    date: dt_date | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    weekday: int | None = None
+    note: str | None = None
+
+
+def _validate_time_off_shape(
+    entry_kind: EntryKind | None,
+    date: dt_date | None,
+    start_date: dt_date | None,
+    end_date: dt_date | None,
+    weekday: int | None,
+    *,
+    require_kind: bool,
+) -> None:
+    if entry_kind == "date":
+        if date is None:
+            raise ValueError("date is required for date entries")
+        return
+
+    if entry_kind == "range":
+        if start_date is None or end_date is None:
+            raise ValueError("start_date and end_date are required for range entries")
+        if end_date <= start_date:
+            raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
+        return
+
+    if entry_kind == "weekly":
+        if weekday is None or weekday < 1 or weekday > 7:
+            raise ValueError("weekday must be between 1 and 7 for weekly entries")
+        return
+
+    shape_fields = {date, start_date, end_date, weekday}
+    if require_kind or any(value is not None for value in shape_fields):
+        raise ValueError("entry_kind is required for non-delete time_off_entries")
+
+
+class TimeOffEntrySyncCreateItem(TimeOffEntrySyncPayloadBase):
+    action: Literal["create"]
+    entry_kind: EntryKind
+    entry_type: EntryType = "vacation"
+    entry_flag: EntryFlag = "full_day"
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntrySyncCreateItem:
+        _validate_time_off_shape(
+            self.entry_kind,
+            self.date,
+            self.start_date,
+            self.end_date,
+            self.weekday,
+            require_kind=True,
+        )
+        return self
+
+
+class TimeOffEntrySyncUpdateItem(TimeOffEntrySyncPayloadBase):
+    action: Literal["update"]
+    entry_kind: EntryKind | None = None
+    entry_type: EntryType | None = None
+    entry_flag: EntryFlag | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> TimeOffEntrySyncUpdateItem:
+        if "entry_kind" in self.model_fields_set and self.entry_kind is None:
+            raise ValueError("entry_kind cannot be null for update time_off_entries")
+        if "entry_type" in self.model_fields_set and self.entry_type is None:
+            raise ValueError("entry_type cannot be null for update time_off_entries")
+        if "entry_flag" in self.model_fields_set and self.entry_flag is None:
+            raise ValueError("entry_flag cannot be null for update time_off_entries")
+        _validate_time_off_shape(
+            self.entry_kind,
+            self.date,
+            self.start_date,
+            self.end_date,
+            self.weekday,
+            require_kind=False,
+        )
+        return self
+
+
+class TimeOffEntrySyncDeleteItem(TimeOffEntrySyncItemBase):
+    action: Literal["delete"]
+
+
+type TimeOffEntrySyncItem = Annotated[
+    TimeOffEntrySyncCreateItem | TimeOffEntrySyncUpdateItem | TimeOffEntrySyncDeleteItem,
+    Field(discriminator="action"),
+]
+
+
+class GanttTaskSyncItem(BaseModel):
+    id: str
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    name: str | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_create_fields(self) -> GanttTaskSyncItem:
+        if self.action == "create":
+            missing = [f for f in ("name", "start_date", "end_date") if getattr(self, f) is None]
+            if missing:
+                raise ValueError(f"Fields required for action 'create': {', '.join(missing)}")
+        return self
+
+
+class GanttTaskSyncRead(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int
+    dependencies: str | None
+    notes: str | None
+    client_updated_at: dt_datetime
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
@@ -393,6 +698,8 @@ class SyncPushRequest(BaseModel):
     tasks: list[TaskSyncItem] = []
     templates: list[TemplateSyncItem] = []
     work_locations: list[WorkLocationSyncItem] = []
+    time_off_entries: list[TimeOffEntrySyncItem] = []
+    gantt_tasks: list[GanttTaskSyncItem] = []
 
 
 class SyncPushResponse(BaseModel):
@@ -408,6 +715,8 @@ class SyncPullResponse(BaseModel):
     tasks: list[TaskSyncRead]
     templates: list[TemplateSyncRead]
     work_locations: list[WorkLocationSyncRead]
+    time_off_entries: list[TimeOffEntrySyncRead]
+    gantt_tasks: list[GanttTaskSyncRead]
     server_timestamp: dt_datetime
 
 
@@ -418,4 +727,7 @@ class SyncStatusResponse(BaseModel):
     tasks_updated_at: dt_datetime | None
     templates_updated_at: dt_datetime | None
     work_locations_updated_at: dt_datetime | None
+    time_off_entries_updated_at: dt_datetime | None
+    gantt_tasks_updated_at: dt_datetime | None
+    preferences_updated_at: dt_datetime | None
     server_timestamp: dt_datetime
