@@ -490,6 +490,7 @@ class TimeOffEntrySyncRead(BaseModel):
     entry_type: EntryType
     entry_flag: EntryFlag
     note: str | None
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None

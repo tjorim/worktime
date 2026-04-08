@@ -224,6 +224,9 @@ class TimeOffEntry(Base):
     entry_type: Mapped[str] = mapped_column(String, nullable=False, default="vacation")
     entry_flag: Mapped[str] = mapped_column(String, nullable=False, default="full_day")
     note: Mapped[str | None] = mapped_column(String, nullable=True)
+    client_updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

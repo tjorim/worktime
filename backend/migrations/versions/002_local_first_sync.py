@@ -40,6 +40,7 @@ def upgrade() -> None:
         sa.Column("entry_type", sa.String(), nullable=False, server_default=sa.text("'vacation'")),
         sa.Column("entry_flag", sa.String(), nullable=False, server_default=sa.text("'full_day'")),
         sa.Column("note", sa.String(), nullable=True),
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),

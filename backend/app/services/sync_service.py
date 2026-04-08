@@ -54,6 +54,7 @@ from app.schemas import (
     TaskSyncRead,
     TemplateSyncItem,
     TemplateSyncRead,
+    TimeOffEntrySyncDeleteItem,
     TimeOffEntrySyncItem,
     TimeOffEntrySyncRead,
     WorkLocationSyncItem,
@@ -361,16 +362,17 @@ async def _push_time_off_entry(
     )
     entry: TimeOffEntry | None = result.scalar_one_or_none()
 
-    if item.action == "delete":
+    if isinstance(item, TimeOffEntrySyncDeleteItem):
         if entry is None or entry.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(entry.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=entry.updated_at,
                 conflict_reason="server version is newer",
             )
+        entry.client_updated_at = as_utc(item.client_updated_at)
         entry.deleted_at = now
         entry.updated_at = now
         session.add(entry)
@@ -401,10 +403,11 @@ async def _push_time_off_entry(
             end_date=item.end_date,
             weekday=item.weekday,
         )
+        entry.client_updated_at = as_utc(item.client_updated_at)
         session.add(entry)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
-    if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(entry.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -428,6 +431,7 @@ async def _push_time_off_entry(
         entry.note = item.note
     if entry.deleted_at is not None:
         entry.deleted_at = None
+    entry.client_updated_at = as_utc(item.client_updated_at)
     entry.updated_at = now
     session.add(entry)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
