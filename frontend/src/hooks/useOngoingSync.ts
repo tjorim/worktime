@@ -36,6 +36,7 @@ import {
   storeSyncCursor,
   type SyncPullResponse,
   type SyncPushPayload,
+  type SyncPushResponse,
 } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 
@@ -110,12 +111,13 @@ export function useOngoingSync(
       const dequeued = dequeueAndMergeSyncOutbox(userId);
       if (dequeued) {
         const { merged, commit } = dequeued;
-        let pushResult: boolean;
+        let pushResult: SyncPushResponse | null;
         try {
           pushResult = await pushSyncPayload(fetchFn, merged);
         } catch (err) {
           // Push threw (e.g. network error) — outbox stays intact for next retry.
           console.error("useOngoingSync: outbox push threw:", err);
+          if (!mountedRef.current) return;
           setOutboxCount(getSyncOutboxSize(userId));
           return;
         }

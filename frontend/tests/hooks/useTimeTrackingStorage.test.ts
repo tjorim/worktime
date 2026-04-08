@@ -2,10 +2,28 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import type { SyncPushPayload } from "@/utils/syncClient";
+
+// Spy on enqueueChange so tests can assert sync payloads without a full provider.
+const mockEnqueueChange = vi.fn<[SyncPushPayload], void>();
+
+vi.mock("@/contexts/OngoingSyncContext", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/contexts/OngoingSyncContext")>();
+  return {
+    ...original,
+    useOngoingSyncContext: () => ({
+      isSyncing: false,
+      lastSyncedAt: null,
+      outboxCount: 0,
+      enqueueChange: mockEnqueueChange,
+    }),
+  };
+});
 
 describe("useTimeTrackingStorage", () => {
   afterEach(() => {
     window.localStorage.clear();
+    mockEnqueueChange.mockReset();
   });
 
   describe("addTask", () => {
@@ -579,6 +597,119 @@ describe("useTimeTrackingStorage", () => {
 
       expect(result.current.templates).toHaveLength(1);
       expect(result.current.templates[0].id).toBe("new");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sync enqueue assertions
+  // ---------------------------------------------------------------------------
+
+  describe("sync payload enqueue", () => {
+    it("enqueues a create task payload when addTask succeeds", async () => {
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      await act(async () => {
+        await result.current.addTask({
+          id: "sync-task-1",
+          text: "Sync me",
+          label: "Dev",
+          startTime: "2026-03-01T09:00",
+          stopTime: "2026-03-01T10:00",
+        });
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.tasks).toHaveLength(1);
+      expect(payload.tasks[0]).toMatchObject({
+        id: "sync-task-1",
+        action: "create",
+        text: "Sync me",
+        label_id: "Dev",
+      });
+    });
+
+    it("does not enqueue when addTask is blocked (duplicate running task)", async () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "running", text: "Running", label: "Dev", startTime: "2026-03-01T08:00", stopTime: null },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      await act(async () => {
+        await result.current.addTask({
+          id: "blocked-task",
+          text: "Should be blocked",
+          label: "Dev",
+          startTime: "2026-03-01T09:00",
+        });
+      });
+
+      expect(mockEnqueueChange).not.toHaveBeenCalled();
+    });
+
+    it("enqueues an update task payload when updateTaskTimes is called", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "t1", text: "Original", label: "Dev", startTime: "2026-03-01T09:00", stopTime: "2026-03-01T10:00" },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.updateTaskTimes({
+          id: "t1",
+          newStartTime: "2026-03-01T09:30",
+          newStopTime: "2026-03-01T10:30",
+        });
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.tasks[0]).toMatchObject({ id: "t1", action: "update" });
+    });
+
+    it("enqueues a delete task payload when removeTask is called", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "del-task", text: "Delete me", label: "Dev", startTime: "2026-03-01T09:00", stopTime: "2026-03-01T10:00" },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.removeTask("del-task");
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.tasks[0]).toMatchObject({ id: "del-task", action: "delete" });
+    });
+
+    it("enqueues an update task payload with correct includes_break when toggleBreak is called", () => {
+      window.localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([
+          { id: "break-task", text: "Break task", label: "Dev", startTime: "2026-03-01T09:00", stopTime: "2026-03-01T17:00" },
+        ]),
+      );
+
+      const { result } = renderHook(() => useTimeTrackingStorage());
+
+      act(() => {
+        result.current.toggleBreak("break-task", true);
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.tasks[0]).toMatchObject({ id: "break-task", action: "update", includes_break: true });
     });
   });
 });
