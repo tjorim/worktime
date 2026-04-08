@@ -34,14 +34,15 @@ import {
   buildLocalSyncPushPayload,
   fetchPreferences,
   fetchSyncStatus,
+  hasSyncCursor,
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
+  storeSyncCursor,
   syncStatusHasData,
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { getSyncCursorKey } from "@/constants/storageKeys";
 import { useEventStore } from "@/contexts/EventStoreContext";
 
 export type FirstSyncPhase =
@@ -65,22 +66,16 @@ export type ConflictChoice = "keep-local" | "use-server";
 export interface UseFirstSyncFlowResult {
   /** Current phase of the first-sync flow. */
   phase: FirstSyncPhase;
+  /**
+   * True when the sync cursor for this user exists in localStorage,
+   * meaning the first-sync flow has been completed on this device.
+   * Use this flag to activate ongoing sync in the caller.
+   */
+  isSyncEstablished: boolean;
   /** When `phase === "conflict"`, call this with the user's choice to proceed. */
   resolveConflict: (choice: ConflictChoice) => void;
   /** Dismiss the flow (valid in "conflict" or "error" phases). Sets phase back to "idle". */
   dismiss: () => void;
-}
-
-/**
- * Returns true if the given userId already has a sync cursor stored locally,
- * meaning the first-sync flow has already been completed on this device.
- */
-function hasSyncCursor(userId: string): boolean {
-  return localStorage.getItem(getSyncCursorKey(userId)) !== null;
-}
-
-function storeSyncCursor(userId: string, serverTimestamp: string): void {
-  localStorage.setItem(getSyncCursorKey(userId), serverTimestamp);
 }
 
 /** Returns true when the push payload contains at least one syncable record. */
@@ -365,5 +360,11 @@ export function useFirstSyncFlow(
     });
   }, [isAuthenticated, userId, fetchFn, runFlow]);
 
-  return { phase, resolveConflict, dismiss };
+  // isSyncEstablished is true when:
+  //  a) The first-sync flow just finished (phase === "done"), OR
+  //  b) A cursor already existed when the component mounted (phase === "idle" with cursor present)
+  const isSyncEstablished =
+    phase === "done" || (phase === "idle" && userId !== null && hasSyncCursor(userId));
+
+  return { phase, isSyncEstablished, resolveConflict, dismiss };
 }

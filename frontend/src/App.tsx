@@ -12,6 +12,7 @@ import { FirstSyncConflictDialog } from "./components/FirstSyncConflictDialog";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
+import { OngoingSyncProvider } from "./contexts/OngoingSyncContext";
 import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
@@ -63,6 +64,7 @@ function AppContent() {
 
   const {
     phase: syncPhase,
+    isSyncEstablished,
     resolveConflict,
     dismiss: dismissSync,
   } = useFirstSyncFlow(isAuthenticated, userId, fetchFnOrNull);
@@ -274,73 +276,75 @@ function AppContent() {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="min-vh-100">
-        <Container fluid>
-          <Header
-            onShowAbout={() => setShowAbout(true)}
-            onChangeSchedule={handleChangeSchedule}
-            onChangeTeam={handleChangeTeam}
-          />
-          {featureAnnouncements.length > 0 && (
-            <FeatureIntroAlert
-              features={featureAnnouncements}
-              onDismiss={() => {
-                if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
-                if (crossBorderAnnouncementSeen === undefined)
-                  setCrossBorderAnnouncementSeen(false);
-                if (accountSyncAnnouncementSeen === undefined)
-                  setAccountSyncAnnouncementSeen(false);
+    <OngoingSyncProvider isSyncEstablished={isSyncEstablished}>
+      <ErrorBoundary>
+        <div className="min-vh-100">
+          <Container fluid>
+            <Header
+              onShowAbout={() => setShowAbout(true)}
+              onChangeSchedule={handleChangeSchedule}
+              onChangeTeam={handleChangeTeam}
+            />
+            {featureAnnouncements.length > 0 && (
+              <FeatureIntroAlert
+                features={featureAnnouncements}
+                onDismiss={() => {
+                  if (ganttAnnouncementSeen === undefined) setGanttAnnouncementSeen(false);
+                  if (crossBorderAnnouncementSeen === undefined)
+                    setCrossBorderAnnouncementSeen(false);
+                  if (accountSyncAnnouncementSeen === undefined)
+                    setAccountSyncAnnouncementSeen(false);
+                }}
+              />
+            )}
+            <ErrorBoundary>
+              <CurrentStatus
+                myTeam={myTeam}
+                onChangeTeam={handleChangeTeam}
+                onChangeSchedule={handleChangeSchedule}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <MainTabs
+                myTeam={myTeam}
+                currentDate={currentDate}
+                setCurrentDate={setCurrentDate}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                onChangeSchedule={handleChangeSchedule}
+                onChangeTeam={handleChangeTeam}
+              />
+            </ErrorBoundary>
+            <WelcomeWizard
+              show={showTeamModal}
+              onTeamSelect={handleTeamSelect}
+              onScheduleSelect={handleScheduleSelect}
+              onSkip={() => {
+                // User chose to browse all teams - clear team selection
+                setMyTeam(null);
+                // Continue to vacation step, don't close modal yet
               }}
+              onHide={handleTeamModalHide}
+              onDefer={handleWizardDefer}
+              mode={teamModalMode}
+              startStep={
+                teamModalMode === "onboarding"
+                  ? "welcome"
+                  : teamModalMode === "change-schedule"
+                    ? "schedule-selection"
+                    : "team-selection"
+              }
             />
-          )}
-          <ErrorBoundary>
-            <CurrentStatus
-              myTeam={myTeam}
-              onChangeTeam={handleChangeTeam}
-              onChangeSchedule={handleChangeSchedule}
+            <FirstSyncConflictDialog
+              show={syncPhase === "conflict"}
+              onResolve={resolveConflict}
+              onDismiss={dismissSync}
             />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <MainTabs
-              myTeam={myTeam}
-              currentDate={currentDate}
-              setCurrentDate={setCurrentDate}
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              onChangeSchedule={handleChangeSchedule}
-              onChangeTeam={handleChangeTeam}
-            />
-          </ErrorBoundary>
-          <WelcomeWizard
-            show={showTeamModal}
-            onTeamSelect={handleTeamSelect}
-            onScheduleSelect={handleScheduleSelect}
-            onSkip={() => {
-              // User chose to browse all teams - clear team selection
-              setMyTeam(null);
-              // Continue to vacation step, don't close modal yet
-            }}
-            onHide={handleTeamModalHide}
-            onDefer={handleWizardDefer}
-            mode={teamModalMode}
-            startStep={
-              teamModalMode === "onboarding"
-                ? "welcome"
-                : teamModalMode === "change-schedule"
-                  ? "schedule-selection"
-                  : "team-selection"
-            }
-          />
-          <FirstSyncConflictDialog
-            show={syncPhase === "conflict"}
-            onResolve={resolveConflict}
-            onDismiss={dismissSync}
-          />
-          <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
-        </Container>
-      </div>
-    </ErrorBoundary>
+            <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
+          </Container>
+        </div>
+      </ErrorBoundary>
+    </OngoingSyncProvider>
   );
 }
 

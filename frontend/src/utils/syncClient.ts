@@ -18,6 +18,8 @@ import {
   TIME_TRACKING_STORAGE_KEYS,
   WORK_LOCATIONS_STORAGE_PREFIX,
   USER_STATE_STORAGE_KEY,
+  getSyncCursorKey,
+  getSyncOutboxKey,
 } from "@/constants/storageKeys";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { loadTimeOffEntries } from "@/lib/timeOff/storage";
@@ -713,4 +715,252 @@ export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
 
   const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
   return entries;
+}
+
+// ---------------------------------------------------------------------------
+// Sync cursor helpers (shared between useFirstSyncFlow and useOngoingSync)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the given userId already has a sync cursor stored locally,
+ * meaning the first-sync flow has already been completed on this device.
+ */
+export function hasSyncCursor(userId: string): boolean {
+  return localStorage.getItem(getSyncCursorKey(userId)) !== null;
+}
+
+/**
+ * Persist the server_timestamp returned by a successful push or pull as the
+ * sync cursor for the given user.
+ */
+export function storeSyncCursor(userId: string, serverTimestamp: string): void {
+  localStorage.setItem(getSyncCursorKey(userId), serverTimestamp);
+}
+
+// ---------------------------------------------------------------------------
+// Outbox management (offline write queue)
+// ---------------------------------------------------------------------------
+
+function readSyncOutbox(userId: string): SyncPushPayload[] {
+  try {
+    const raw = localStorage.getItem(getSyncOutboxKey(userId));
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as SyncPushPayload[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Append a single change payload to the outbox queue stored in localStorage.
+ * Called when an immediate push fails (e.g. offline).
+ */
+export function appendToSyncOutbox(userId: string, change: SyncPushPayload): void {
+  try {
+    const outbox = readSyncOutbox(userId);
+    outbox.push(change);
+    localStorage.setItem(getSyncOutboxKey(userId), JSON.stringify(outbox));
+  } catch {
+    // Ignore storage errors (e.g., quota exceeded in private browsing)
+  }
+}
+
+/**
+ * Clear the outbox queue for the given user. Call after a successful flush.
+ */
+export function clearSyncOutbox(userId: string): void {
+  localStorage.removeItem(getSyncOutboxKey(userId));
+}
+
+/**
+ * Return the number of pending entries in the outbox queue.
+ */
+export function getSyncOutboxSize(userId: string): number {
+  return readSyncOutbox(userId).length;
+}
+
+/**
+ * Merge all pending outbox payloads into a single SyncPushPayload ready to
+ * send via pushSyncPayload(), then clear the outbox.  Returns null when the
+ * outbox is empty (nothing to flush).
+ */
+export function dequeueAndMergeSyncOutbox(userId: string): SyncPushPayload | null {
+  const outbox = readSyncOutbox(userId);
+  if (outbox.length === 0) return null;
+
+  const merged: SyncPushPayload = {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+  };
+  for (const payload of outbox) {
+    merged.labels.push(...payload.labels);
+    merged.tasks.push(...payload.tasks);
+    merged.templates.push(...payload.templates);
+    merged.work_locations.push(...payload.work_locations);
+    merged.time_off_entries.push(...(payload.time_off_entries ?? []));
+  }
+  clearSyncOutbox(userId);
+  return merged;
+}
+
+// ---------------------------------------------------------------------------
+// Incremental pull — merge server changes into existing localStorage data
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispatch a synthetic StorageEvent on `window` so that same-tab
+ * `useLocalStorage` instances watching the given key pick up the new value.
+ */
+function notifyLocalStorageChange(key: string, newValue: string, oldValue: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key,
+        newValue,
+        oldValue,
+        storageArea: window.localStorage,
+      }),
+    );
+  } catch {
+    // Ignore dispatch errors (e.g., in environments without StorageEvent)
+  }
+}
+
+/**
+ * Write `value` to `localStorage[key]` and notify same-tab `useLocalStorage`
+ * instances via a synthetic storage event.
+ */
+function setItemWithNotify(key: string, value: string): void {
+  const oldValue = localStorage.getItem(key);
+  localStorage.setItem(key, value);
+  notifyLocalStorageChange(key, value, oldValue);
+}
+
+/**
+ * Apply an incremental SyncPullResponse (i.e. a pull with `since=<cursor>`)
+ * to localStorage, merging with existing data rather than replacing it.
+ *
+ * - Records present in the pull with `deleted_at === null` are upserted.
+ * - Records with `deleted_at !== null` are removed from localStorage.
+ * - Synthetic StorageEvents are dispatched so that same-tab `useLocalStorage`
+ *   instances update their React state immediately.
+ *
+ * @returns The merged time-off entries (for the caller to pass to
+ *   EventStoreContext's `replaceEntries`).
+ */
+export function applyIncrementalSyncPullResponse(
+  data: SyncPullResponse,
+  currentTimeOffEntries: TimeOffEntry[],
+): TimeOffEntry[] {
+  // --- Labels ---
+  const existingLabels = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.labels) as Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
+  const labelMap = new Map(existingLabels.map((l) => [l.id, l]));
+  for (const l of data.labels) {
+    if (l.deleted_at === null) {
+      labelMap.set(l.id, { id: l.id, name: l.name, color: l.color });
+    } else {
+      labelMap.delete(l.id);
+    }
+  }
+  const mergedLabels = JSON.stringify(Array.from(labelMap.values()));
+  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.labels, mergedLabels);
+
+  // --- Tasks ---
+  type StoredTask = {
+    id: string;
+    text: string;
+    label: string;
+    startTime: string;
+    stopTime?: string | null;
+    includesBreak?: boolean;
+  };
+  const existingTasks = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.tasks) as StoredTask[];
+  const taskMap = new Map(existingTasks.map((t) => [t.id, t]));
+  for (const t of data.tasks) {
+    if (t.deleted_at === null) {
+      taskMap.set(t.id, {
+        id: t.id,
+        text: t.text,
+        label: t.label_id ?? "",
+        startTime: utcIsoToLocalTime(t.start_time),
+        stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
+        ...(t.includes_break ? { includesBreak: true } : {}),
+      });
+    } else {
+      taskMap.delete(t.id);
+    }
+  }
+  const mergedTasks = JSON.stringify(Array.from(taskMap.values()));
+  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.tasks, mergedTasks);
+
+  // --- Templates ---
+  type StoredTemplate = { id: string; text: string; label: string; start: string; stop: string };
+  const existingTemplates = safeParseJsonArray(
+    TIME_TRACKING_STORAGE_KEYS.templates,
+  ) as StoredTemplate[];
+  const templateMap = new Map(existingTemplates.map((t) => [t.id, t]));
+  for (const t of data.templates) {
+    if (t.deleted_at === null) {
+      templateMap.set(t.id, {
+        id: t.id,
+        text: t.text,
+        label: t.label_id ?? "",
+        start: t.start_time.slice(0, 5),
+        stop: t.stop_time.slice(0, 5),
+      });
+    } else {
+      templateMap.delete(t.id);
+    }
+  }
+  const mergedTemplates = JSON.stringify(Array.from(templateMap.values()));
+  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.templates, mergedTemplates);
+
+  // --- Work locations: collect keys to update ---
+  const affectedYears = new Set<string>();
+  for (const wl of data.work_locations) {
+    affectedYears.add(wl.date.slice(0, 4));
+  }
+  for (const year of affectedYears) {
+    const key = `${WORK_LOCATIONS_STORAGE_PREFIX}${year}`;
+    const existing = safeParseJsonObject(key) as Record<string, unknown>;
+    for (const wl of data.work_locations) {
+      if (wl.date.slice(0, 4) !== year) continue;
+      if (wl.deleted_at === null) {
+        existing[wl.date] = {
+          location: "other" as const,
+          countryCode: wl.country_code,
+          ...(wl.label ? { label: wl.label } : {}),
+        };
+      } else {
+        delete existing[wl.date];
+      }
+    }
+    const mergedWl = JSON.stringify(existing);
+    setItemWithNotify(key, mergedWl);
+  }
+
+  // --- Time-off: merge into current EventStore entries ---
+  const deletedIds = new Set(
+    (data.time_off_entries ?? [])
+      .filter((e) => e.deleted_at !== null)
+      .map((e) => e.entry_id),
+  );
+  const newEntries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
+
+  const byId = new Map(
+    currentTimeOffEntries.filter((e) => !deletedIds.has(e.id)).map((e) => [e.id, e]),
+  );
+  for (const entry of newEntries) {
+    byId.set(entry.id, entry);
+  }
+  return Array.from(byId.values());
 }
