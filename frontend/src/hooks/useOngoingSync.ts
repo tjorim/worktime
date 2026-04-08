@@ -119,6 +119,7 @@ export function useOngoingSync(
     setIsSyncing(true);
     try {
       // --- Flush outbox ---
+      let flushConflicts = 0;
       const dequeued = dequeueAndMergeSyncOutbox(userId);
       if (dequeued) {
         const { merged, commit } = dequeued;
@@ -144,7 +145,7 @@ export function useOngoingSync(
         commit();
         setOutboxCount(getSyncOutboxSize(userId));
         // Surface any conflicts from the outbox flush.
-        const flushConflicts = countPushConflicts(pushResult);
+        flushConflicts = countPushConflicts(pushResult);
         if (flushConflicts > 0) {
           setConflictCount(flushConflicts);
         }
@@ -159,8 +160,10 @@ export function useOngoingSync(
         storeSyncCursor(userId, pullResult.server_timestamp);
         setLastSyncedAt(pullResult.server_timestamp);
         setHasSyncError(false);
-        // Reset conflict count only when a successful pull brings no new conflicts.
-        setConflictCount((prev) => (prev > 0 ? prev : 0));
+        // Clear conflict count when a clean flush-and-pull cycle completes.
+        if (flushConflicts === 0) {
+          setConflictCount(0);
+        }
       } else {
         setHasSyncError(true);
       }

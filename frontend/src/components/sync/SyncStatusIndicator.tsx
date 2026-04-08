@@ -81,6 +81,9 @@ export function SyncStatusIndicator() {
 
   if (!isVisible) return null;
 
+  // Spin only when actively syncing with no error, conflict, or pending items.
+  const shouldSpin = isSyncing && !hasSyncError && conflictCount === 0 && outboxCount === 0;
+
   const indicator = (
     <span
       className={`d-flex align-items-center gap-1 text-${variant} small`}
@@ -89,7 +92,7 @@ export function SyncStatusIndicator() {
       aria-atomic="true"
     >
       <i
-        className={`bi ${icon}${isSyncing && !hasSyncError && !conflictCount && !outboxCount ? " sync-spin" : ""}`}
+        className={`bi ${icon}${shouldSpin ? " sync-spin" : ""}`}
         aria-hidden="true"
       />
       <span className="d-none d-sm-inline">{label}</span>
