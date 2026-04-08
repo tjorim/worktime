@@ -630,6 +630,9 @@ async def list_time_off_entries(
     )
     if start_date is not None:
         # Weekly entries (all date fields NULL) are always included — they recur every week.
+        # For date entries: COALESCE(date, end_date) = date → include if date >= start_date.
+        # For range entries: COALESCE(date, end_date) = end_date → include if the range ends
+        # on or after the filter start (catches ranges that started before the window).
         statement = statement.where(
             or_(
                 TimeOffEntry.entry_kind == "weekly",
@@ -637,6 +640,9 @@ async def list_time_off_entries(
             )
         )
     if end_date is not None:
+        # For date entries: COALESCE(date, start_date) = date → include if date <= end_date.
+        # For range entries: COALESCE(date, start_date) = start_date → include if the range
+        # starts on or before the filter end (catches ranges that end after the window).
         statement = statement.where(
             or_(
                 TimeOffEntry.entry_kind == "weekly",
@@ -698,7 +704,6 @@ async def create_or_update_time_off_entry(
         )
         entry = new_entry
     else:
-        assert entry is not None
         apply_time_off_shape(
             entry,
             kind=payload.entry_kind,
@@ -744,7 +749,6 @@ async def create_or_update_time_off_entry(
         session.add(entry)
         await session.commit()
         created = False
-    assert entry is not None
     await session.refresh(entry)
     return entry, created
 

@@ -20,7 +20,7 @@ import {
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
 import { createTimeOffEntry, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
-import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
+import { loadTimeOffEntries } from "@/lib/timeOff/storage";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 
@@ -158,6 +158,7 @@ export interface TimeOffEntrySyncRead {
   entry_type: string;
   entry_flag: string;
   note: string | null;
+  client_updated_at: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -324,9 +325,12 @@ export function buildLocalPreferencesPayload(): {
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
+    const stored = parsed as Record<string, unknown>;
+    const storedTimestamp =
+      typeof stored._updatedAt === "string" ? stored._updatedAt : dayjs().toISOString();
     return {
-      data: parsed as Record<string, unknown>,
-      clientUpdatedAt: dayjs().toISOString(),
+      data: stored,
+      clientUpdatedAt: storedTimestamp,
     };
   } catch {
     return null;
@@ -721,6 +725,5 @@ export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
   }
 
   const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
-  saveTimeOffEntries(entries);
   return entries;
 }

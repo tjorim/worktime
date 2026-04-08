@@ -76,6 +76,10 @@ function mergeEntries(currentEntries: TimeOffEntry[], nextEntries: TimeOffEntry[
   return sortEntries(Array.from(byId.values()));
 }
 
+// Every mutation goes through applyWithHistory, which snapshots the current entries
+// onto the undo stack (capped at HISTORY_LIMIT) and clears the redo stack.
+// Returning the existing state object unchanged when entries are the same prevents
+// unnecessary re-renders.
 function applyWithHistory(state: EventStoreState, nextEntries: TimeOffEntry[]): EventStoreState {
   if (nextEntries === state.entries) {
     return state;

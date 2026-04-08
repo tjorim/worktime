@@ -361,7 +361,12 @@ class TimeOffEntryCreate(BaseModel):
 
 
 class TimeOffEntryRead(BaseModel):
-    """Response schema for a single time-off entry."""
+    """Response schema for a single time-off entry (REST endpoints).
+
+    ``client_updated_at`` is intentionally excluded here — it is only surfaced
+    via ``TimeOffEntrySyncRead`` on the sync endpoints, which is the intended
+    access path for conflict-resolution metadata.
+    """
 
     id: int
     entry_id: str
@@ -399,13 +404,20 @@ class TimeOffEntryUpdate(BaseModel):
         if self.entry_kind == "date":
             if self.date is None:
                 raise ValueError("date is required when entry_kind is date")
+            if self.model_fields_set & {"start_date", "end_date", "weekday"}:
+                raise ValueError("start_date, end_date, and weekday are not allowed when entry_kind is date")
         elif self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required when entry_kind is range")
             if self.end_date < self.start_date:
                 raise ValueError("end_date cannot be earlier than start_date")
-        elif self.entry_kind == "weekly" and (self.weekday is None or self.weekday < 1 or self.weekday > 7):
-            raise ValueError("weekday must be provided when entry_kind is weekly")
+            if self.model_fields_set & {"date", "weekday"}:
+                raise ValueError("date and weekday are not allowed when entry_kind is range")
+        elif self.entry_kind == "weekly":
+            if self.weekday is None or self.weekday < 1 or self.weekday > 7:
+                raise ValueError("weekday must be provided when entry_kind is weekly")
+            if self.model_fields_set & {"date", "start_date", "end_date"}:
+                raise ValueError("date, start_date, and end_date are not allowed when entry_kind is weekly")
         return self
 
 
@@ -654,6 +666,14 @@ class GanttTaskSyncItem(BaseModel):
     progress: int | None = Field(default=None, ge=0, le=100)
     dependencies: str | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_create_fields(self) -> GanttTaskSyncItem:
+        if self.action == "create":
+            missing = [f for f in ("name", "start_date", "end_date") if getattr(self, f) is None]
+            if missing:
+                raise ValueError(f"Fields required for action 'create': {', '.join(missing)}")
+        return self
 
 
 class GanttTaskSyncRead(BaseModel):
