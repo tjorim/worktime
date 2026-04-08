@@ -783,10 +783,16 @@ export function getSyncOutboxSize(userId: string): number {
 
 /**
  * Merge all pending outbox payloads into a single SyncPushPayload ready to
- * send via pushSyncPayload(), then clear the outbox.  Returns null when the
- * outbox is empty (nothing to flush).
+ * send via pushSyncPayload().  Returns null when the outbox is empty.
+ *
+ * The outbox is **not** cleared by this call.  After a successful push the
+ * caller must invoke the returned `commit` function to clear the outbox.  If
+ * the push fails the outbox is left intact and will be retried on the next
+ * flush cycle.
  */
-export function dequeueAndMergeSyncOutbox(userId: string): SyncPushPayload | null {
+export function dequeueAndMergeSyncOutbox(
+  userId: string,
+): { merged: SyncPushPayload; commit: () => void } | null {
   const outbox = readSyncOutbox(userId);
   if (outbox.length === 0) return null;
 
@@ -804,8 +810,7 @@ export function dequeueAndMergeSyncOutbox(userId: string): SyncPushPayload | nul
     merged.work_locations.push(...payload.work_locations);
     merged.time_off_entries.push(...(payload.time_off_entries ?? []));
   }
-  clearSyncOutbox(userId);
-  return merged;
+  return { merged, commit: () => clearSyncOutbox(userId) };
 }
 
 // ---------------------------------------------------------------------------

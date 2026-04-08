@@ -4,7 +4,7 @@
  * Manages the ongoing sync cycle that runs after the first-sync flow has
  * established a cursor for this device (see useFirstSyncFlow).
  *
- * Behaviour (per docs/local-first-sync-flow.md §3):
+ * Behavior (per docs/local-first-sync-flow.md §3):
  *
  * - **Sync on write**: callers invoke `enqueueChange(payload)` after each
  *   local mutation.  The hook immediately attempts to push the change to
@@ -107,14 +107,26 @@ export function useOngoingSync(
     setIsSyncing(true);
     try {
       // --- Flush outbox ---
-      const merged = dequeueAndMergeSyncOutbox(userId);
-      if (merged) {
-        const pushResult = await pushSyncPayload(fetchFn, merged);
+      const dequeued = dequeueAndMergeSyncOutbox(userId);
+      if (dequeued) {
+        const { merged, commit } = dequeued;
+        let pushResult: boolean;
+        try {
+          pushResult = await pushSyncPayload(fetchFn, merged);
+        } catch (err) {
+          // Push threw (e.g. network error) — outbox stays intact for next retry.
+          console.error("useOngoingSync: outbox push threw:", err);
+          setOutboxCount(getSyncOutboxSize(userId));
+          return;
+        }
         if (!mountedRef.current) return;
         if (!pushResult) {
-          // Re-enqueue all items as a single payload so nothing is lost.
-          appendToSyncOutbox(userId, merged);
+          // Push returned falsy — outbox stays intact for next retry.
+          setOutboxCount(getSyncOutboxSize(userId));
+          return;
         }
+        // Push succeeded — commit (clear) the outbox and continue to pull.
+        commit();
         setOutboxCount(getSyncOutboxSize(userId));
       }
 
@@ -165,6 +177,17 @@ export function useOngoingSync(
   // When sync becomes established for the first time in this session, do an
   // initial flush + pull to pick up any changes from other devices.
   const hasRunInitialFlushRef = useRef(false);
+
+  // Reset per-user state when the signed-in user changes (e.g. sign-out /
+  // sign-in to a different account).  The lazy useState initializers only run
+  // once on mount, so without this effect they would serve stale data for the
+  // new user.
+  useEffect(() => {
+    setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
+    setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
+    hasRunInitialFlushRef.current = false;
+  }, [userId]);
+
   useEffect(() => {
     if (!isActive) return;
     if (hasRunInitialFlushRef.current) return;
