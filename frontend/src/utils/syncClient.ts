@@ -19,7 +19,7 @@ import {
   WORK_LOCATIONS_STORAGE_PREFIX,
   USER_STATE_STORAGE_KEY,
 } from "@/constants/storageKeys";
-import { createTimeOffEntry, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
+import { createTimeOffEntry } from "@/lib/timeOff/codecs";
 import { loadTimeOffEntries } from "@/lib/timeOff/storage";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
@@ -548,19 +548,6 @@ export function timeOffEntriesToSyncItems(
     entry_flag: entry.entryFlag,
     note: entry.note,
   }));
-}
-
-/**
- * Convert an array of TimeOffEntrySyncRead items (from a pull response) to a
- * raw .hday text string that can be stored in localStorage.
- *
- * Each entry becomes a single-date range event. The entry_type is mapped back
- * to a type flag (or "holiday" for "vacation"). Non-type flags are preserved.
- * The note becomes the event title.
- */
-export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
-  const entries = syncItemsToTimeOffEntries(items);
-  return entries.length > 0 ? timeOffEntriesToHday(entries) : "";
 }
 
 function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {

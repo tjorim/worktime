@@ -171,17 +171,15 @@ export function CalendarView({
     setModalMode(mode);
   };
 
-  const handleOpenViewModal = (eventId: string | number) => {
+  const handleOpenViewModal = (eventId: string) => {
     if (!timeOffEnabled) return;
-    if (typeof eventId !== "string") return;
     setEditEntryId(eventId);
     loadEntryIntoForm(eventId, "view");
     setShowEventModal(true);
   };
 
-  const handleOpenEditModal = (eventId: string | number) => {
+  const handleOpenEditModal = (eventId: string) => {
     if (!timeOffEnabled) return;
-    if (typeof eventId !== "string") return;
     setEditEntryId(eventId);
     loadEntryIntoForm(eventId, "edit");
     setShowEventModal(true);
@@ -253,9 +251,8 @@ export function CalendarView({
     resetForm();
   };
 
-  const handleDeleteClick = (eventId: string | number) => {
+  const handleDeleteClick = (eventId: string) => {
     if (!timeOffEnabled) return;
-    if (typeof eventId !== "string") return;
     setDeleteEntryId(eventId);
     setShowDeleteConfirm(true);
   };

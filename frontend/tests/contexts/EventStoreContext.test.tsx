@@ -5,7 +5,6 @@ import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext"
 import {
   buildTimeOffEntryForRange,
   createWeeklyTimeOffEntry,
-  entriesToHdayEvents,
 } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
@@ -13,10 +12,6 @@ import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <EventStoreProvider>{children}</EventStoreProvider>
 );
-
-function getEvents(entries: TimeOffEntry[]) {
-  return entriesToHdayEvents(entries);
-}
 
 function createDateEntry(
   date: string,
@@ -85,9 +80,8 @@ describe("EventStoreContext", () => {
 
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("Test event");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Test event");
     });
   });
 
@@ -99,9 +93,8 @@ describe("EventStoreContext", () => {
         result.current.addEntries([createDateEntry("2025-01-15", "New event")]);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("New event");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("New event");
     });
 
     it("should persist entry to localStorage", () => {
@@ -148,10 +141,9 @@ describe("EventStoreContext", () => {
         result.current.updateEntry(entryId!, createDateEntry("2025-01-15", "Updated", "business"));
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("Updated");
-      expect(events[0]?.flags).toEqual(["business"]);
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Updated");
+      expect(result.current.entries[0]?.entryType).toBe("business");
     });
 
     it("should persist update to localStorage", () => {
@@ -196,9 +188,8 @@ describe("EventStoreContext", () => {
         result.current.deleteEntry(firstId!);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("Event 2");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Event 2");
     });
 
     it("should persist deletion to localStorage", () => {
@@ -240,9 +231,8 @@ describe("EventStoreContext", () => {
         result.current.deleteEntries(idsToDelete);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("Event 2");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Event 2");
     });
   });
 
@@ -312,11 +302,10 @@ d1 # Every Monday`;
         result.current.importHday(hdayContent);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(3);
-      expect(events[0]?.title).toBe("Event 1");
-      expect(events[1]?.title).toBe("Event 2");
-      expect(events[2]?.type).toBe("weekly");
+      expect(result.current.entries).toHaveLength(3);
+      expect(result.current.entries[0]?.note).toBe("Event 1");
+      expect(result.current.entries[1]?.note).toBe("Event 2");
+      expect(result.current.entries[2]?.entryKind).toBe("weekly");
     });
 
     it("should replace existing entries on import", () => {
@@ -330,9 +319,8 @@ d1 # Every Monday`;
         result.current.importHday("2025/01/15 # New event\n");
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(1);
-      expect(events[0]?.title).toBe("New event");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("New event");
     });
 
     it("should persist imported content to localStorage", () => {
@@ -411,7 +399,7 @@ d1 # Every Monday`;
       });
 
       expect(result.current.entries).toHaveLength(1);
-      expect(getEvents(result.current.entries)[0]?.title).toBe("First");
+      expect(result.current.entries[0]?.note).toBe("First");
       expect(result.current.canUndo).toBe(true);
       expect(result.current.canRedo).toBe(false);
     });
@@ -479,7 +467,7 @@ d1 # Every Monday`;
         result.current.updateEntry(entryId!, createDateEntry("2025-03-11", "Updated", "business"));
       });
 
-      expect(getEvents(result.current.entries)[0]?.title).toBe("Updated");
+      expect(result.current.entries[0]?.note).toBe("Updated");
 
       act(() => {
         result.current.deleteEntry(entryId!);
@@ -492,14 +480,14 @@ d1 # Every Monday`;
       });
 
       expect(result.current.entries).toHaveLength(1);
-      expect(getEvents(result.current.entries)[0]?.title).toBe("Updated");
+      expect(result.current.entries[0]?.note).toBe("Updated");
 
       act(() => {
         result.current.undo();
       });
 
       expect(result.current.entries).toHaveLength(1);
-      expect(getEvents(result.current.entries)[0]?.title).toBe("Original");
+      expect(result.current.entries[0]?.note).toBe("Original");
     });
 
     it("should support multiple consecutive undos and redos", () => {
@@ -525,7 +513,7 @@ d1 # Every Monday`;
       });
 
       expect(result.current.entries).toHaveLength(3);
-      expect(getEvents(result.current.entries)[1]?.title).toBe("Event 2");
+      expect(result.current.entries[1]?.note).toBe("Event 2");
     });
   });
 
@@ -545,11 +533,10 @@ d1 # Every Monday`;
         result.current.addEntries([createDateEntry("2025-06-10", "June event")]);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(3);
-      expect(events[0]?.title).toBe("January event");
-      expect(events[1]?.title).toBe("June event");
-      expect(events[2]?.title).toBe("Christmas");
+      expect(result.current.entries).toHaveLength(3);
+      expect(result.current.entries[0]?.note).toBe("January event");
+      expect(result.current.entries[1]?.note).toBe("June event");
+      expect(result.current.entries[2]?.note).toBe("Christmas");
     });
 
     it("should maintain sort order after importing raw .hday content", () => {
@@ -564,11 +551,10 @@ d1 # Every Monday`;
         result.current.importHday(unsortedHday);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(3);
-      expect(events[0]?.title).toBe("January event");
-      expect(events[1]?.title).toBe("June event");
-      expect(events[2]?.title).toBe("Christmas");
+      expect(result.current.entries).toHaveLength(3);
+      expect(result.current.entries[0]?.note).toBe("January event");
+      expect(result.current.entries[1]?.note).toBe("June event");
+      expect(result.current.entries[2]?.note).toBe("Christmas");
 
       expect(result.current.rawText).toContain("2025/01/15");
       expect(result.current.rawText.indexOf("2025/01/15")).toBeLessThan(
@@ -590,12 +576,11 @@ d1 # Every Monday`;
         result.current.addEntries([createDateEntry("2025-12-25", "Christmas")]);
       });
 
-      const events = getEvents(result.current.entries);
-      expect(events).toHaveLength(2);
-      expect(events[0]?.type).toBe("range");
-      expect(events[0]?.title).toBe("Christmas");
-      expect(events[1]?.type).toBe("weekly");
-      expect(events[1]?.title).toBe("Monday in office");
+      expect(result.current.entries).toHaveLength(2);
+      expect(result.current.entries[0]?.entryKind).toBe("date");
+      expect(result.current.entries[0]?.note).toBe("Christmas");
+      expect(result.current.entries[1]?.entryKind).toBe("weekly");
+      expect(result.current.entries[1]?.note).toBe("Monday in office");
     });
 
     it("should keep range entries as a single canonical entry", () => {
@@ -607,9 +592,11 @@ d1 # Every Monday`;
 
       expect(result.current.entries).toHaveLength(1);
       expect(result.current.entries[0]?.entryKind).toBe("range");
-      const events = getEvents(result.current.entries);
-      expect(events[0]?.start).toBe("2025/05/01");
-      expect(events[0]?.end).toBe("2025/05/03");
+      const entry = result.current.entries[0];
+      if (entry?.entryKind === "range") {
+        expect(entry.start).toBe("2025-05-01");
+        expect(entry.end).toBe("2025-05-03");
+      }
     });
   });
 });

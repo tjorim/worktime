@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { parseHday } from "@/lib/hday/parser";
 import { toLine } from "@/lib/hday/serializer";
-import type { EventFlag, HdayEvent } from "@/lib/hday/types";
+import type { EventFlag } from "@/lib/hday/types";
 import type {
   TimeOffDateEntry,
   TimeOffEntry,
@@ -214,30 +214,6 @@ export function timeOffEntriesToHday(entries: TimeOffEntry[]): string {
       });
     })
     .join("\n");
-}
-
-export function entriesToHdayEvents(entries: TimeOffEntry[]): HdayEvent[] {
-  return entries.map((entry) => {
-    if (isTimeOffWeeklyEntry(entry)) {
-      return {
-        type: "weekly",
-        weekday: entry.weekday,
-        title: entry.note ?? "",
-        flags: getEntryFlags(entry.entryType, entry.entryFlag),
-      };
-    }
-
-    const isDateEntry = isTimeOffDateEntry(entry);
-    const start = isDateEntry ? entry.date : entry.start;
-    const end = isDateEntry ? undefined : entry.end;
-    return {
-      type: "range",
-      start: toHdayDate(start),
-      end: end ? toHdayDate(end) : undefined,
-      title: entry.note ?? "",
-      flags: getEntryFlags(entry.entryType, entry.entryFlag),
-    };
-  });
 }
 
 export function buildTimeOffEntryForDate(input: {

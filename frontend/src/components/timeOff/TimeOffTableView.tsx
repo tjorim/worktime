@@ -232,6 +232,9 @@ function renderEntryDisplayDate(entry: TimeOffEntry) {
   }
 
   if (isTimeOffRangeEntry(entry)) {
+    if (entry.start === entry.end) {
+      return <span>{toDisplayDate(entry.start)}</span>;
+    }
     return (
       <>
         <span>{toDisplayDate(entry.start)}</span>

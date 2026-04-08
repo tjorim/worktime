@@ -348,8 +348,8 @@ class TimeOffEntryCreate(BaseModel):
         elif self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required for range entries")
-            if self.end_date < self.start_date:
-                raise ValueError("end_date cannot be earlier than start_date")
+            if self.end_date <= self.start_date:
+                raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
             if self.date is not None or self.weekday is not None:
                 raise ValueError("range entries cannot include date or weekday fields")
         elif self.entry_kind == "weekly":
@@ -409,8 +409,8 @@ class TimeOffEntryUpdate(BaseModel):
         elif self.entry_kind == "range":
             if self.start_date is None or self.end_date is None:
                 raise ValueError("start_date and end_date are required when entry_kind is range")
-            if self.end_date < self.start_date:
-                raise ValueError("end_date cannot be earlier than start_date")
+            if self.end_date <= self.start_date:
+                raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
             if self.model_fields_set & {"date", "weekday"}:
                 raise ValueError("date and weekday are not allowed when entry_kind is range")
         elif self.entry_kind == "weekly":
@@ -588,8 +588,8 @@ def _validate_time_off_shape(
     if entry_kind == "range":
         if start_date is None or end_date is None:
             raise ValueError("start_date and end_date are required for range entries")
-        if end_date < start_date:
-            raise ValueError("end_date cannot be earlier than start_date")
+        if end_date <= start_date:
+            raise ValueError("end_date must be after start_date; use entry_kind='date' for single-day entries")
         return
 
     if entry_kind == "weekly":

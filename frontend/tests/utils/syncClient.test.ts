@@ -10,7 +10,6 @@ import {
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
-  syncItemsToHdayRaw,
   syncStatusHasData,
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
@@ -806,92 +805,6 @@ describe("syncClient", () => {
         ts,
       );
       expect(items[0]?.note).toBeNull();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // syncItemsToHdayRaw
-  // ---------------------------------------------------------------------------
-
-  describe("syncItemsToHdayRaw", () => {
-    const makeEntry = (
-      entry_kind: "date" | "range" | "weekly",
-      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
-      entry_type: string,
-      entry_flag: string = "full_day",
-      note: string | null = null,
-      deleted_at: string | null = null,
-    ) => ({
-      id: 1,
-      entry_id: `entry-${Math.random()}`,
-      user_id: 1,
-      entry_kind,
-      date: shape.date ?? null,
-      start_date: shape.start_date ?? null,
-      end_date: shape.end_date ?? null,
-      weekday: shape.weekday ?? null,
-      entry_type,
-      entry_flag,
-      note,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at,
-    });
-
-    it("converts a vacation entry to an un-prefixed .hday line", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "vacation")]);
-      expect(raw).toBe("2026/07/14");
-    });
-
-    it("converts a business entry to a b-prefixed .hday line", () => {
-      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "business")]);
-      expect(raw).toBe("b2026/07/14");
-    });
-
-    it("includes a note as a comment", () => {
-      const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
-      ]);
-      expect(raw).toBe("2026/07/14 # Bastille Day");
-    });
-
-    it("includes time/location flags in the prefix", () => {
-      const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", "half_am"),
-      ]);
-      expect(raw).toBe("a2026/07/14");
-    });
-
-    it("skips soft-deleted entries", () => {
-      const raw = syncItemsToHdayRaw([
-        makeEntry(
-          "date",
-          { date: "2026-07-14" },
-          "vacation",
-          "full_day",
-          null,
-          "2026-01-02T00:00:00Z",
-        ),
-      ]);
-      expect(raw).toBe("");
-    });
-
-    it("produces multiple lines for multiple entries", () => {
-      const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation"),
-        makeEntry("weekly", { weekday: 1 }, "in"),
-      ]);
-      const lines = raw.split("\n");
-      expect(lines).toHaveLength(2);
-      expect(lines[0]).toBe("2026/07/14");
-      expect(lines[1]).toBe("d1k");
-    });
-
-    it("serializes range entries as a single range line", () => {
-      const raw = syncItemsToHdayRaw([
-        makeEntry("range", { start_date: "2026-12-24", end_date: "2026-12-26" }, "vacation"),
-      ]);
-      expect(raw).toBe("2026/12/24-2026/12/26");
     });
   });
 
