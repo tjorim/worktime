@@ -95,8 +95,10 @@ export interface HolidayMetadata {
   /** Time/location symbol (e.g., "◐" for half_am, "◑" for half_pm) */
   symbol?: string;
 
-  /** Original HdayEvent index for CRUD operations */
-  sourceIndex?: number;
+  /** The originating TimeOffEntry.id. Lets consumers of CalendarEvent[]
+   *  (e.g. getEventsInRange) map an event back to its stored entry without
+   *  coupling to CalendarEvent.id, which is an opaque render key. */
+  entryId?: string;
 }
 
 /**

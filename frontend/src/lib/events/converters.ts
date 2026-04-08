@@ -112,7 +112,6 @@ export function shiftToCalendarEvent(shift: ShiftResult): CalendarEvent {
  * @param event - The .hday event to convert
  * @param startDate - Start of date range (for weekly event generation)
  * @param endDate - End of date range (for weekly event generation)
- * @param sourceIndex - Original index in the .hday events array (for CRUD operations)
  * @returns Array of CalendarEvent(s)
  *
  * @example
@@ -143,14 +142,13 @@ export function hdayToCalendarEvents(
   event: HdayEvent,
   startDate: Date,
   endDate: Date,
-  sourceIndex?: number,
 ): CalendarEvent[] {
   if (event.type === "range") {
-    return [hdayRangeToCalendarEvent(event, sourceIndex)];
+    return [hdayRangeToCalendarEvent(event)];
   }
 
   if (event.type === "weekly") {
-    return hdayWeeklyToCalendarEvents(event, startDate, endDate, sourceIndex);
+    return hdayWeeklyToCalendarEvents(event, startDate, endDate);
   }
 
   // Unknown events are not rendered as calendar events
@@ -174,7 +172,7 @@ export function entriesToCalendarEvents(
       flags,
       typeLabel,
       symbol,
-      sourceIndex: undefined,
+      entryId: entry.id,
     };
 
     if (isTimeOffDateEntry(entry)) {
@@ -209,7 +207,10 @@ export function entriesToCalendarEvents(
         },
         rangeStart,
         rangeEnd,
-      ).map((event) => ({ ...event, id: `${entry.id}:${event.start}` }));
+      ).map((event) => ({
+        ...event,
+        meta: { ...event.meta, entryId: entry.id },
+      }));
     }
 
     return [];
@@ -223,7 +224,6 @@ export function entriesToCalendarEvents(
  * attaches derived holiday metadata.
  *
  * @param event - The range HdayEvent; must include `start` and `end` date strings.
- * @param sourceIndex - Optional index mapping this event back to its source (used for CRUD/source tracking).
  * @returns A CalendarEvent that covers the event's start–end range with holiday metadata.
  * @throws {Error} If `event.start` or `event.end` is missing.
  *
@@ -236,17 +236,17 @@ export function entriesToCalendarEvents(
  *   flags: ['business', 'half_am'],
  *   title: 'Conference'
  * };
- * hdayRangeToCalendarEvent(event, 0)
+ * hdayRangeToCalendarEvent(event)
  * // Returns: {
  * //   id: '...uuid...',
  * //   type: 'holiday',
  * //   start: '2025-03-10',
  * //   end: '2025-03-14',
  * //   label: 'Conference',
- * //   meta: { type: 'holiday', color: '#FFC04D', flags: ['business', 'half_am'], typeLabel: 'Business', symbol: 'a', sourceIndex: 0 }
+ * //   meta: { type: 'holiday', color: '#FFC04D', flags: ['business', 'half_am'], typeLabel: 'Business', symbol: 'a' }
  * // }
  */
-function hdayRangeToCalendarEvent(event: HdayEvent, sourceIndex?: number): CalendarEvent {
+function hdayRangeToCalendarEvent(event: HdayEvent): CalendarEvent {
   if (!event.start || !event.end) {
     throw new Error("Range event missing start or end date");
   }
@@ -266,7 +266,6 @@ function hdayRangeToCalendarEvent(event: HdayEvent, sourceIndex?: number): Calen
     flags,
     typeLabel,
     symbol,
-    sourceIndex,
   };
 
   return {
@@ -285,7 +284,6 @@ function hdayRangeToCalendarEvent(event: HdayEvent, sourceIndex?: number): Calen
  * @param event - The weekly HdayEvent; its `weekday` determines which weekday to generate events for
  * @param startDate - Start of the inclusive date range to search for occurrences
  * @param endDate - End of the inclusive date range to search for occurrences
- * @param sourceIndex - Optional source index to include in each event's metadata for reverse mapping
  * @returns An array of calendar events, one for each occurrence of the event's weekday between `startDate` and `endDate` (inclusive)
  * @throws {Error} If `event.weekday` is undefined
  *
@@ -297,7 +295,7 @@ function hdayRangeToCalendarEvent(event: HdayEvent, sourceIndex?: number): Calen
  *   flags: ['in', 'half_am'],
  *   title: 'Office Friday AM'
  * };
- * hdayWeeklyToCalendarEvents(event, new Date('2025-01-01'), new Date('2025-01-31'), 2)
+ * hdayWeeklyToCalendarEvents(event, new Date('2025-01-01'), new Date('2025-01-31'))
  * // Returns: [
  * //   { id: '...', type: 'holiday', start: '2025-01-03', end: '2025-01-03', label: 'Office Friday AM', meta: {...} },
  * //   { id: '...', type: 'holiday', start: '2025-01-10', end: '2025-01-10', label: 'Office Friday AM', meta: {...} },
@@ -310,7 +308,6 @@ function hdayWeeklyToCalendarEvents(
   event: HdayEvent,
   startDate: Date,
   endDate: Date,
-  sourceIndex?: number,
 ): CalendarEvent[] {
   if (event.weekday === undefined) {
     throw new Error("Weekly event missing weekday");
@@ -339,7 +336,6 @@ function hdayWeeklyToCalendarEvents(
       flags,
       typeLabel,
       symbol,
-      sourceIndex,
     };
 
     events.push({
