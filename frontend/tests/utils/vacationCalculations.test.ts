@@ -115,11 +115,7 @@ describe("vacationCalculations", () => {
       expect(halfStats.holidayDays).toBe(0.5);
       expect(halfStats.holidayHours).toBe(4);
 
-      const fullStats = calculateVacationStats(
-        [dateEntry("2025-01-15", "vacation")],
-        2025,
-        8,
-      );
+      const fullStats = calculateVacationStats([dateEntry("2025-01-15", "vacation")], 2025, 8);
       expect(fullStats.holidayDays).toBe(1);
     });
 

@@ -47,9 +47,7 @@ function toHdayDate(value: string): string {
 
 function getEntryFlags(entryType: TimeOffEntryType, entryFlag: TimeOffEntryFlag): EventFlag[] {
   const typeFlag = ENTRY_TYPE_TO_EVENT_FLAG[entryType];
-  return normalizeEventFlags(
-    entryFlag !== "full_day" ? [typeFlag, entryFlag] : [typeFlag],
-  );
+  return normalizeEventFlags(entryFlag !== "full_day" ? [typeFlag, entryFlag] : [typeFlag]);
 }
 
 function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
@@ -60,9 +58,11 @@ function getEntryMetadataFromFlags(flags: EventFlag[] | undefined): {
   const typeFlag = normalizedFlags.find((f) => f in TYPE_FLAG_TO_ENTRY_TYPE) ?? "holiday";
   const entryType = TYPE_FLAG_TO_ENTRY_TYPE[typeFlag] ?? "vacation";
   const matchedTimeFlag = normalizedFlags.find(
-    (f) => f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
+    (f) =>
+      f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
   );
-  const timeFlag: TimeOffEntryFlag = matchedTimeFlag != null ? (matchedTimeFlag as TimeOffEntryFlag) : "full_day";
+  const timeFlag: TimeOffEntryFlag =
+    matchedTimeFlag != null ? (matchedTimeFlag as TimeOffEntryFlag) : "full_day";
   return { entryType, entryFlag: timeFlag };
 }
 
@@ -313,7 +313,8 @@ export function getEntryTypeFromDisplayFlags(flags: EventFlag[]): TimeOffEntryTy
 
 export function getEntryTimeFlagFromDisplayFlags(flags: EventFlag[]): TimeOffEntryFlag {
   const match = normalizeEventFlags(flags).find(
-    (f) => f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
+    (f) =>
+      f === "half_am" || f === "half_pm" || f === "onsite" || f === "no_fly" || f === "can_fly",
   );
   return match != null ? (match as TimeOffEntryFlag) : "full_day";
 }

@@ -383,7 +383,8 @@ describe("TimeOffView Integration Tests", () => {
       // Check date event
       expect(
         entries.some(
-          (e) => e.entryKind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation",
+          (e) =>
+            e.entryKind === "date" && e.date === "2025-01-15" && e.note === "New Year vacation",
         ),
       ).toBe(true);
 

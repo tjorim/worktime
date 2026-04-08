@@ -96,7 +96,7 @@ export function MonthCalendar({
   showOtherLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
-  const sourceEntries = entries ?? [];
+  const sourceEntries = useMemo(() => entries ?? [], [entries]);
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
 

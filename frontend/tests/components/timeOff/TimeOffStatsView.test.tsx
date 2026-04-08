@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeOffStatsView } from "@/components/timeOff/TimeOffStatsView";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange } from "@/lib/timeOff/codecs";
 import type { VacationAllowanceSettings } from "@/utils/vacationCalculations";
 
 describe("TimeOffStatsView", () => {
@@ -36,25 +36,6 @@ describe("TimeOffStatsView", () => {
       note: null,
       entryType,
       entryFlag,
-    });
-
-  const weeklyEntry = (
-    weekday: number,
-    entryType:
-      | "vacation"
-      | "business"
-      | "course"
-      | "in"
-      | "weekend"
-      | "birthday"
-      | "ill"
-      | "other" = "in",
-  ) =>
-    createWeeklyTimeOffEntry({
-      weekday,
-      note: null,
-      entryType,
-      entryFlag: "full_day",
     });
 
   const defaultProps = {

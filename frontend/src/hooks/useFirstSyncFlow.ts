@@ -244,7 +244,7 @@ export function useFirstSyncFlow(
       capturedStatusRef.current = status;
       setPhase("conflict");
     },
-    [],
+    [replaceEntries],
   );
 
   const resolveConflict = useCallback(
@@ -324,7 +324,7 @@ export function useFirstSyncFlow(
         if (mountedRef.current) setPhase("error");
       });
     },
-    [phase, userId, fetchFn],
+    [phase, userId, fetchFn, replaceEntries],
   );
 
   const dismiss = useCallback(() => {

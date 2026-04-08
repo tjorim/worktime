@@ -767,7 +767,12 @@ describe("syncClient", () => {
 
     it("includes weekly entries directly", () => {
       const [entry] = [
-        createWeeklyTimeOffEntry({ weekday: 1, note: null, entryType: "in", entryFlag: "full_day" }),
+        createWeeklyTimeOffEntry({
+          weekday: 1,
+          note: null,
+          entryType: "in",
+          entryFlag: "full_day",
+        }),
       ];
       const items = timeOffEntriesToSyncItems([entry], ts);
       expect(items).toHaveLength(1);
@@ -859,7 +864,14 @@ describe("syncClient", () => {
 
     it("skips soft-deleted entries", () => {
       const raw = syncItemsToHdayRaw([
-        makeEntry("date", { date: "2026-07-14" }, "vacation", "full_day", null, "2026-01-02T00:00:00Z"),
+        makeEntry(
+          "date",
+          { date: "2026-07-14" },
+          "vacation",
+          "full_day",
+          null,
+          "2026-01-02T00:00:00Z",
+        ),
       ]);
       expect(raw).toBe("");
     });
@@ -1004,7 +1016,11 @@ describe("syncClient", () => {
       const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       const entries = JSON.parse(stored!);
       expect(entries).toHaveLength(1);
-      expect(entries[0]).toMatchObject({ entryKind: "date", date: "2026-07-14", note: "Bastille Day" });
+      expect(entries[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-07-14",
+        note: "Bastille Day",
+      });
     });
 
     it("clears time-off storage when all entries are soft-deleted", () => {
@@ -1074,7 +1090,9 @@ describe("syncClient", () => {
       const entries = JSON.parse(stored!) as Array<Record<string, unknown>>;
       expect(entries).toHaveLength(2);
       expect(
-        entries.some((e) => e.entryKind === "weekly" && e.weekday === 1 && e.note === "Every Monday"),
+        entries.some(
+          (e) => e.entryKind === "weekly" && e.weekday === 1 && e.note === "Every Monday",
+        ),
       ).toBe(true);
       expect(
         entries.some(
@@ -1091,7 +1109,11 @@ describe("syncClient", () => {
 
       const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
       const entries = JSON.parse(stored!);
-      expect(entries[0]).toMatchObject({ entryKind: "date", date: "2026-07-14", entryType: "other" });
+      expect(entries[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-07-14",
+        entryType: "other",
+      });
     });
 
     it("maps unknown flag to null", () => {
