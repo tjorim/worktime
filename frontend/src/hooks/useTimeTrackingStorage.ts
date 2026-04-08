@@ -96,12 +96,12 @@ export function useTimeTrackingStorage() {
   const { enqueueChange } = useOngoingSyncContext();
 
   const addTask = useCallback(
-    (payload: StoredTimeTrackingTask): Promise<boolean> => {
+    async (payload: StoredTimeTrackingTask): Promise<boolean> => {
       // We resolve the Promise inside the setState updater to atomically check
       // current state and signal success/failure. React calls the updater
       // synchronously, so resolve() fires before microtask handlers run.
       // The Promise resolves before the state update is committed to the DOM.
-      return new Promise((resolve) => {
+      const success = await new Promise<boolean>((resolve) => {
         setRawTasks((prev) => {
           // Check if a running task already exists in the current state
           const hasValidRunningTask = prev.some(
@@ -127,24 +127,24 @@ export function useTimeTrackingStorage() {
           }
           return [...prev, newTask];
         });
-      }).then((success) => {
-        if (success) {
-          const now = dayjs().toISOString();
-          const change = emptySyncPayload();
-          change.tasks.push({
-            id: payload.id,
-            action: "create",
-            client_updated_at: now,
-            label_id: payload.label || null,
-            text: payload.text,
-            start_time: dayjs(payload.startTime).toISOString(),
-            stop_time: payload.stopTime ? dayjs(payload.stopTime).toISOString() : null,
-            includes_break: payload.includesBreak ?? false,
-          });
-          enqueueChange(change);
-        }
-        return success;
       });
+
+      if (success) {
+        const now = dayjs().toISOString();
+        const change = emptySyncPayload();
+        change.tasks.push({
+          id: payload.id,
+          action: "create",
+          client_updated_at: now,
+          label_id: payload.label || null,
+          text: payload.text,
+          start_time: dayjs(payload.startTime).toISOString(),
+          stop_time: payload.stopTime ? dayjs(payload.stopTime).toISOString() : null,
+          includes_break: payload.includesBreak ?? false,
+        });
+        enqueueChange(change);
+      }
+      return success;
     },
     [setRawTasks, enqueueChange],
   );

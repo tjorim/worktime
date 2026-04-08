@@ -140,14 +140,16 @@ export function useOngoingSync(
     if (!isActive) return;
 
     const handleOnline = () => {
-      flushAndPull().catch(() => {
-        // Errors are silent; the outbox will be retried on the next trigger.
+      flushAndPull().catch((err: unknown) => {
+        console.error("useOngoingSync: flush on online event failed:", err);
       });
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        flushAndPull().catch(() => {});
+        flushAndPull().catch((err: unknown) => {
+          console.error("useOngoingSync: flush on visibility change failed:", err);
+        });
       }
     };
 
@@ -169,7 +171,9 @@ export function useOngoingSync(
     // Only run the initial flush if we are currently online.
     if (!navigator.onLine) return;
     hasRunInitialFlushRef.current = true;
-    flushAndPull().catch(() => {});
+    flushAndPull().catch((err: unknown) => {
+      console.error("useOngoingSync: initial flush on mount failed:", err);
+    });
   }, [isActive, flushAndPull]);
 
   /**

@@ -747,7 +747,8 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as SyncPushPayload[]) : [];
-  } catch {
+  } catch (err) {
+    console.error("Failed to read sync outbox from localStorage:", err);
     return [];
   }
 }
