@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidDate, parseHdayDate } from "../../../src/lib/hday/validation";
+import { isValidDate, parseHdayDate } from "@/lib/hday/validation";
 
 describe("hday validation", () => {
   it("accepts only real YYYY/MM/DD calendar dates", () => {

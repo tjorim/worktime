@@ -1,6 +1,6 @@
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface KeyboardShortcutsModalProps {
   show: boolean;

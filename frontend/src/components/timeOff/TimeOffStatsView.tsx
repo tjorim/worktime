@@ -5,12 +5,12 @@ import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
-import type { HdayEvent } from "../../lib/hday/types";
-import { dayjs } from "../../utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { dayjs } from "@/utils/dateTimeUtils";
 import type {
   VacationAllowanceSettings,
   VacationAllowanceUnit,
-} from "../../utils/vacationCalculations";
+} from "@/utils/vacationCalculations";
 import {
   calculateVacationStats,
   formatVacationValue,
@@ -18,19 +18,19 @@ import {
   getAllowanceHours,
   getAvailableYears,
   getEffectiveAmount,
-} from "../../utils/vacationCalculations";
-import * as m from "../../paraglide/messages.js";
+} from "@/utils/vacationCalculations";
+import * as m from "@/paraglide/messages.js";
 
 /** Default hours per day for vacation allowance calculations */
 export const DEFAULT_HOURS_PER_DAY = 8;
 
 interface TimeOffStatsViewProps {
-  events: HdayEvent[];
+  entries: TimeOffEntry[];
   allowance: VacationAllowanceSettings;
   onUpdateAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
 }
 
-export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
+export function TimeOffStatsView({ entries, allowance, onUpdateAllowance }: TimeOffStatsViewProps) {
   const getUnitLabel = (unit: VacationAllowanceUnit) => {
     switch (unit) {
       case "days":
@@ -43,7 +43,7 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
       }
     }
   };
-  const years = useMemo(() => getAvailableYears(events, dayjs().year()), [events]);
+  const years = useMemo(() => getAvailableYears(entries, dayjs().year()), [entries]);
   const [selectedYear, setSelectedYear] = useState(() => years[0] ?? dayjs().year());
 
   // Local state for input values to allow typing intermediate invalid values
@@ -67,8 +67,8 @@ export function TimeOffStatsView({ events, allowance, onUpdateAllowance }: TimeO
   }, [selectedYear, years]);
 
   const stats = useMemo(
-    () => calculateVacationStats(events, selectedYear, allowance.hoursPerDay),
-    [allowance.hoursPerDay, events, selectedYear],
+    () => calculateVacationStats(entries, selectedYear, allowance.hoursPerDay),
+    [allowance.hoursPerDay, entries, selectedYear],
   );
 
   // Memoize filtered types to avoid duplicate filtering

@@ -1,15 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applySyncPullResponse,
+  applyPreferencesPull,
   buildKeepLocalReplacePayload,
+  buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  fetchPreferences,
   fetchSyncStatus,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
+  syncItemsToHdayRaw,
   syncStatusHasData,
-} from "../../src/utils/syncClient";
-import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
-import { WORK_LOCATIONS_STORAGE_PREFIX } from "../../src/constants/storageKeys";
+  timeOffEntriesToSyncItems,
+} from "@/utils/syncClient";
+import {
+  TIME_OFF_ENTRIES_STORAGE_KEY,
+  TIME_TRACKING_STORAGE_KEYS,
+  USER_STATE_STORAGE_KEY,
+  WORK_LOCATIONS_STORAGE_PREFIX,
+} from "@/constants/storageKeys";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 
 const mockFetch = vi.fn();
 
@@ -32,6 +43,8 @@ describe("syncClient", () => {
           tasks_updated_at: null,
           templates_updated_at: null,
           work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: null,
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(false);
@@ -44,6 +57,36 @@ describe("syncClient", () => {
           tasks_updated_at: null,
           templates_updated_at: null,
           work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: null,
+          server_timestamp: "2026-01-01T00:00:00Z",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns true when time_off_entries_updated_at is non-null", () => {
+      expect(
+        syncStatusHasData({
+          labels_updated_at: null,
+          tasks_updated_at: null,
+          templates_updated_at: null,
+          work_locations_updated_at: null,
+          time_off_entries_updated_at: "2026-01-01T00:00:00Z",
+          preferences_updated_at: null,
+          server_timestamp: "2026-01-01T00:00:00Z",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns true when preferences_updated_at is non-null", () => {
+      expect(
+        syncStatusHasData({
+          labels_updated_at: null,
+          tasks_updated_at: null,
+          templates_updated_at: null,
+          work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          preferences_updated_at: "2026-01-01T00:00:00Z",
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(true);
@@ -143,9 +186,7 @@ describe("syncClient", () => {
       mockFetch.mockResolvedValue({ ok: true, json: async () => pullResp });
 
       await pullSyncData(mockFetch, "2026-01-01T00:00:00Z");
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("since="),
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("since="));
     });
   });
 
@@ -211,9 +252,7 @@ describe("syncClient", () => {
     it("handles tasks with no stopTime", () => {
       localStorage.setItem(
         TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([
-          { id: "task-2", text: "Open", label: "", startTime: "2026-01-01T09:00" },
-        ]),
+        JSON.stringify([{ id: "task-2", text: "Open", label: "", startTime: "2026-01-01T09:00" }]),
       );
 
       const payload = buildLocalSyncPushPayload();
@@ -320,6 +359,7 @@ describe("syncClient", () => {
       tasks: [],
       templates: [],
       work_locations: [],
+      time_off_entries: [],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -420,9 +460,7 @@ describe("syncClient", () => {
         ],
       });
 
-      const stored = JSON.parse(
-        localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!,
-      );
+      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
       expect(stored["2026-01-05"]).toMatchObject({ countryCode: "NL" });
       expect(stored["2026-01-06"]).toMatchObject({ countryCode: "DE", label: "Berlin" });
     });
@@ -458,6 +496,7 @@ describe("syncClient", () => {
       tasks: [] as never[],
       templates: [] as never[],
       work_locations: [] as never[],
+      time_off_entries: [] as never[],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -625,6 +664,566 @@ describe("syncClient", () => {
 
       const result = buildKeepLocalReplacePayload(localPayload, serverData);
       expect(result.work_locations.find((wl) => wl.date === "2026-01-10")).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // timeOffEntriesToSyncItems
+  // ---------------------------------------------------------------------------
+
+  describe("timeOffEntriesToSyncItems", () => {
+    const ts = "2026-01-01T00:00:00.000Z";
+
+    it("converts a single-date entry to one sync item", () => {
+      const [entry] = [
+        buildTimeOffEntryForRange({
+          start: "2026-07-14",
+          end: "2026-07-14",
+          note: "Bastille Day",
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems([entry], ts);
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        id: entry.id,
+        entry_kind: "date",
+        date: "2026-07-14",
+        action: "create",
+        entry_type: "vacation",
+        entry_flag: "full_day",
+        note: "Bastille Day",
+      });
+    });
+
+    it("preserves range entries as single sync items", () => {
+      const [entry] = [
+        buildTimeOffEntryForRange({
+          start: "2026-12-24",
+          end: "2026-12-26",
+          note: null,
+          entryType: "vacation",
+          entryFlag: "full_day",
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems([entry], ts);
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        id: entry.id,
+        entry_kind: "range",
+        start_date: "2026-12-24",
+        end_date: "2026-12-26",
+        date: null,
+      });
+    });
+
+    it("maps entry types correctly", () => {
+      const entries = [
+        buildTimeOffEntryForRange({
+          start: "2026-01-01",
+          end: "2026-01-01",
+          note: null,
+          entryType: "business",
+          entryFlag: "full_day",
+        }),
+        buildTimeOffEntryForRange({
+          start: "2026-01-02",
+          end: "2026-01-02",
+          note: null,
+          entryType: "ill",
+          entryFlag: "full_day",
+        }),
+        buildTimeOffEntryForRange({
+          start: "2026-01-03",
+          end: "2026-01-03",
+          note: null,
+          entryType: "in",
+          entryFlag: "full_day",
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems(entries, ts);
+      expect(items[0]?.entry_type).toBe("business");
+      expect(items[1]?.entry_type).toBe("ill");
+      expect(items[2]?.entry_type).toBe("in");
+    });
+
+    it("preserves entry flag", () => {
+      const items = timeOffEntriesToSyncItems(
+        [
+          buildTimeOffEntryForRange({
+            start: "2026-06-01",
+            end: "2026-06-01",
+            note: null,
+            entryType: "vacation",
+            entryFlag: "half_am",
+          }),
+        ],
+        ts,
+      );
+      expect(items[0]?.entry_flag).toBe("half_am");
+      expect(items[0]?.entry_type).toBe("vacation");
+    });
+
+    it("includes weekly entries directly", () => {
+      const [entry] = [
+        createWeeklyTimeOffEntry({
+          weekday: 1,
+          note: null,
+          entryType: "in",
+          entryFlag: "full_day",
+        }),
+      ];
+      const items = timeOffEntriesToSyncItems([entry], ts);
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        id: entry.id,
+        entry_kind: "weekly",
+        weekday: 1,
+        date: null,
+        start_date: null,
+        end_date: null,
+        entry_type: "in",
+      });
+    });
+
+    it("returns empty array for empty entries", () => {
+      const items = timeOffEntriesToSyncItems([], ts);
+      expect(items).toHaveLength(0);
+    });
+
+    it("sets note to null when entry has no note", () => {
+      const items = timeOffEntriesToSyncItems(
+        [
+          buildTimeOffEntryForRange({
+            start: "2026-05-01",
+            end: "2026-05-01",
+            note: null,
+            entryType: "vacation",
+            entryFlag: "full_day",
+          }),
+        ],
+        ts,
+      );
+      expect(items[0]?.note).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // syncItemsToHdayRaw
+  // ---------------------------------------------------------------------------
+
+  describe("syncItemsToHdayRaw", () => {
+    const makeEntry = (
+      entry_kind: "date" | "range" | "weekly",
+      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
+      entry_type: string,
+      entry_flag: string = "full_day",
+      note: string | null = null,
+      deleted_at: string | null = null,
+    ) => ({
+      id: 1,
+      entry_id: `entry-${Math.random()}`,
+      user_id: 1,
+      entry_kind,
+      date: shape.date ?? null,
+      start_date: shape.start_date ?? null,
+      end_date: shape.end_date ?? null,
+      weekday: shape.weekday ?? null,
+      entry_type,
+      entry_flag,
+      note,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at,
+    });
+
+    it("converts a vacation entry to an un-prefixed .hday line", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "vacation")]);
+      expect(raw).toBe("2026/07/14");
+    });
+
+    it("converts a business entry to a b-prefixed .hday line", () => {
+      const raw = syncItemsToHdayRaw([makeEntry("date", { date: "2026-07-14" }, "business")]);
+      expect(raw).toBe("b2026/07/14");
+    });
+
+    it("includes a note as a comment", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
+      ]);
+      expect(raw).toBe("2026/07/14 # Bastille Day");
+    });
+
+    it("includes time/location flags in the prefix", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("date", { date: "2026-07-14" }, "vacation", "half_am"),
+      ]);
+      expect(raw).toBe("a2026/07/14");
+    });
+
+    it("skips soft-deleted entries", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry(
+          "date",
+          { date: "2026-07-14" },
+          "vacation",
+          "full_day",
+          null,
+          "2026-01-02T00:00:00Z",
+        ),
+      ]);
+      expect(raw).toBe("");
+    });
+
+    it("produces multiple lines for multiple entries", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("date", { date: "2026-07-14" }, "vacation"),
+        makeEntry("weekly", { weekday: 1 }, "in"),
+      ]);
+      const lines = raw.split("\n");
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toBe("2026/07/14");
+      expect(lines[1]).toBe("d1k");
+    });
+
+    it("serializes range entries as a single range line", () => {
+      const raw = syncItemsToHdayRaw([
+        makeEntry("range", { start_date: "2026-12-24", end_date: "2026-12-26" }, "vacation"),
+      ]);
+      expect(raw).toBe("2026/12/24-2026/12/26");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // time-off entries in buildLocalSyncPushPayload
+  // ---------------------------------------------------------------------------
+
+  describe("buildLocalSyncPushPayload — time_off_entries", () => {
+    it("includes time-off entries from canonical storage", () => {
+      const entry = {
+        id: "e1",
+        entryKind: "date",
+        date: "2026-07-14",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Vacation",
+      };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        entry_kind: "date",
+        date: "2026-07-14",
+        action: "create",
+        entry_type: "vacation",
+        note: "Vacation",
+      });
+      expect(payload.time_off_entries[0]?.id).toBe("e1");
+    });
+
+    it("preserves multi-day range entries as single entries", () => {
+      const entry = {
+        id: "e2",
+        entryKind: "range",
+        start: "2026-12-24",
+        end: "2026-12-26",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: null,
+      };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        entry_kind: "range",
+        start_date: "2026-12-24",
+        end_date: "2026-12-26",
+      });
+    });
+
+    it("includes weekly entries", () => {
+      const entry = {
+        id: "e3",
+        entryKind: "weekly",
+        weekday: 1,
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Every Monday",
+      };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(1);
+      expect(payload.time_off_entries[0]).toMatchObject({
+        entry_kind: "weekly",
+        weekday: 1,
+        note: "Every Monday",
+      });
+    });
+
+    it("returns empty time_off_entries when no .hday data", () => {
+      const payload = buildLocalSyncPushPayload();
+      expect(payload.time_off_entries).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // time-off entries in applySyncPullResponse
+  // ---------------------------------------------------------------------------
+
+  describe("applySyncPullResponse — time_off_entries", () => {
+    const makeBaseResponse = () => ({
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      server_timestamp: "2026-01-01T00:00:00Z",
+    });
+
+    const makeTimeOffEntry = (
+      entry_kind: "date" | "range" | "weekly",
+      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
+      entry_type = "vacation",
+      entry_flag: string = "full_day",
+      note: string | null = null,
+      deleted_at: string | null = null,
+    ) => ({
+      id: 1,
+      entry_id: `entry-${Math.random()}`,
+      user_id: 1,
+      entry_kind,
+      date: shape.date ?? null,
+      start_date: shape.start_date ?? null,
+      end_date: shape.end_date ?? null,
+      weekday: shape.weekday ?? null,
+      entry_type,
+      entry_flag,
+      note,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at,
+    });
+
+    it("writes canonical time-off entries for pulled sync data", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [
+          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
+        ],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-07-14",
+        note: "Bastille Day",
+      });
+    });
+
+    it("clears time-off storage when all entries are soft-deleted", () => {
+      localStorage.setItem(
+        TIME_OFF_ENTRIES_STORAGE_KEY,
+        JSON.stringify([
+          {
+            id: "e1",
+            entryKind: "date",
+            date: "2026-07-14",
+            entryType: "vacation",
+            entryFlag: "full_day",
+            note: null,
+          },
+        ]),
+      );
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [
+          makeTimeOffEntry(
+            "date",
+            { date: "2026-07-14" },
+            "vacation",
+            "full_day",
+            null,
+            "2026-07-15T00:00:00Z",
+          ),
+        ],
+      });
+
+      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
+    });
+
+    it("clears time-off storage when time_off_entries is empty", () => {
+      localStorage.setItem(
+        TIME_OFF_ENTRIES_STORAGE_KEY,
+        JSON.stringify([
+          {
+            id: "e1",
+            entryKind: "date",
+            date: "2026-07-14",
+            entryType: "vacation",
+            entryFlag: "full_day",
+            note: null,
+          },
+        ]),
+      );
+      applySyncPullResponse(makeBaseResponse());
+
+      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
+    });
+
+    it("restores weekly and range entries as canonical entries without expanding them", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [
+          makeTimeOffEntry("weekly", { weekday: 1 }, "in", "full_day", "Every Monday"),
+          makeTimeOffEntry(
+            "range",
+            { start_date: "2026-12-24", end_date: "2026-12-26" },
+            "vacation",
+          ),
+        ],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!) as Array<Record<string, unknown>>;
+      expect(entries).toHaveLength(2);
+      expect(
+        entries.some(
+          (e) => e.entryKind === "weekly" && e.weekday === 1 && e.note === "Every Monday",
+        ),
+      ).toBe(true);
+      expect(
+        entries.some(
+          (e) => e.entryKind === "range" && e.start === "2026-12-24" && e.end === "2026-12-26",
+        ),
+      ).toBe(true);
+    });
+
+    it("maps unknown entry_type to 'other'", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [makeTimeOffEntry("date", { date: "2026-07-14" }, "sick")],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!);
+      expect(entries[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-07-14",
+        entryType: "other",
+      });
+    });
+
+    it("maps unknown flag to null", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        time_off_entries: [
+          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "unknown_flag"),
+        ],
+      });
+
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      const entries = JSON.parse(stored!);
+      expect(entries[0].entryFlag).toBe("full_day");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Preferences sync helpers
+  // ---------------------------------------------------------------------------
+
+  describe("fetchPreferences", () => {
+    it("returns parsed preferences on success", async () => {
+      const prefs = {
+        user_id: 1,
+        data: { theme: "dark" },
+        client_updated_at: "2026-01-01T00:00:00Z",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      };
+      mockFetch.mockResolvedValue({ ok: true, json: async () => prefs });
+      const result = await fetchPreferences(mockFetch);
+      expect(result).toEqual(prefs);
+      expect(mockFetch).toHaveBeenCalledWith("/db/preferences");
+    });
+
+    it("returns null when response is not ok", async () => {
+      mockFetch.mockResolvedValue({ ok: false });
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+
+    it("returns null when server returns JSON null", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: async () => null });
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+
+    it("returns null when fetch throws", async () => {
+      mockFetch.mockRejectedValue(new Error("network error"));
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+  });
+
+  describe("pushPreferences", () => {
+    it("PUTs the preferences payload and returns true on success", async () => {
+      mockFetch.mockResolvedValue({ ok: true });
+      const result = await pushPreferences(mockFetch, { theme: "dark" }, "2026-01-01T00:00:00Z");
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/db/preferences",
+        expect.objectContaining({ method: "PUT" }),
+      );
+    });
+
+    it("returns false when response is not ok", async () => {
+      mockFetch.mockResolvedValue({ ok: false });
+      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+    });
+
+    it("returns false when fetch throws", async () => {
+      mockFetch.mockRejectedValue(new Error("network error"));
+      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+    });
+  });
+
+  describe("buildLocalPreferencesPayload", () => {
+    it("returns null when worktime_user_state is not in localStorage", () => {
+      expect(buildLocalPreferencesPayload()).toBeNull();
+    });
+
+    it("returns the parsed user state when present", () => {
+      const userState = { hasCompletedOnboarding: true, scheduleType: "9-5" };
+      localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
+      const result = buildLocalPreferencesPayload();
+      expect(result).not.toBeNull();
+      expect(result?.data).toEqual(userState);
+      expect(result?.clientUpdatedAt).toBeTruthy();
+    });
+
+    it("returns null for invalid JSON in localStorage", () => {
+      localStorage.setItem(USER_STATE_STORAGE_KEY, "not-valid-json{");
+      expect(buildLocalPreferencesPayload()).toBeNull();
+    });
+  });
+
+  describe("applyPreferencesPull", () => {
+    it("writes pulled preferences data to worktime_user_state", () => {
+      const data = { hasCompletedOnboarding: true, scheduleType: "9-5" };
+      applyPreferencesPull(data);
+      const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored!)).toEqual(data);
+    });
+
+    it("overwrites existing worktime_user_state", () => {
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({ hasCompletedOnboarding: false }),
+      );
+      applyPreferencesPull({ hasCompletedOnboarding: true });
+      const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(stored.hasCompletedOnboarding).toBe(true);
     });
   });
 });

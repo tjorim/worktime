@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { redirectToAuth } from "supertokens-auth-react";
 import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
 
 export interface AuthContextType {
@@ -59,8 +59,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // It will be null when authenticated but the backend has not yet set this claim.
   const displayName =
     !session.loading && session.doesSessionExist
-      ? (((session.accessTokenPayload?.displayName as string | undefined) ??
-          (session.accessTokenPayload?.display_name as string | undefined)) ??
+      ? ((session.accessTokenPayload?.displayName as string | undefined) ??
+        (session.accessTokenPayload?.display_name as string | undefined) ??
         null)
       : null;
 

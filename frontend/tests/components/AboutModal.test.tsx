@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AboutModal } from "../../src/components/AboutModal";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import { AboutModal } from "@/components/AboutModal";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 function renderWithScheduleType(scheduleType: "5-shift" | "9-5") {
   // Seed localStorage with the schedule type

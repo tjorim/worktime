@@ -75,9 +75,9 @@ async def list_time_off_entries_endpoint(
     )
 
 
-@router.get("/{entry_date}", response_model=TimeOffEntryRead)
+@router.get("/{entry_id}", response_model=TimeOffEntryRead)
 async def get_time_off_entry_endpoint(
-    entry_date: date,
+    entry_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
@@ -86,7 +86,7 @@ async def get_time_off_entry_endpoint(
     timings: dict[str, float] = {}
     try:
         with time_operation("query", timings):
-            entry = await get_time_off_entry(session, user_id, entry_date)
+            entry = await get_time_off_entry(session, user_id, entry_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
@@ -97,9 +97,9 @@ async def get_time_off_entry_endpoint(
     )
 
 
-@router.patch("/{entry_date}", response_model=TimeOffEntryRead)
+@router.patch("/{entry_id}", response_model=TimeOffEntryRead)
 async def update_time_off_entry_endpoint(
-    entry_date: date,
+    entry_id: str,
     payload: TimeOffEntryUpdate,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
@@ -109,7 +109,7 @@ async def update_time_off_entry_endpoint(
     timings: dict[str, float] = {}
     try:
         with time_operation("query", timings):
-            entry = await update_time_off_entry(session, user_id, entry_date, payload)
+            entry = await update_time_off_entry(session, user_id, entry_id, payload)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except ValidationError as error:
@@ -122,16 +122,16 @@ async def update_time_off_entry_endpoint(
     )
 
 
-@router.delete("/{entry_date}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_time_off_entry_endpoint(
-    entry_date: date,
+    entry_id: str,
     user_id: int = Query(..., ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_match(user_id, authenticated_user_id)
     try:
-        await delete_time_off_entry(session, user_id, entry_date)
+        await delete_time_off_entry(session, user_id, entry_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

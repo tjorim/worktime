@@ -3,17 +3,17 @@ import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useSettings } from "../contexts/SettingsContext";
-import { useLiveTime } from "../hooks/useLiveTime";
-import { formatTimeByPreference, formatYYWWD } from "../utils/dateTimeUtils";
-import { getLocale } from "../paraglide/runtime.js";
-import { getEffectiveTeam } from "../utils/scheduleUtils";
-import { getCurrentShiftDay, getCurrentWorkingTeam } from "../utils/shiftCalculations";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useLiveTime } from "@/hooks/useLiveTime";
+import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
+import { getLocale } from "@/paraglide/runtime.js";
+import { getEffectiveTeam } from "@/utils/scheduleUtils";
+import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/utils/shiftCalculations";
 import { PersonalizedStatusContent } from "./status/PersonalizedStatus";
 import { GenericStatusContent } from "./status/GenericStatus";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftTimeline } from "./ShiftTimeline";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface CurrentStatusProps {
   myTeam: number | null;
@@ -47,7 +47,10 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
   }, [liveTime, scheduleType]);
 
   const localizedDateLabel = useMemo(() => {
-    const liveTimeWithDate = liveTime as { toDate?: () => Date; format: (pattern: string) => string };
+    const liveTimeWithDate = liveTime as {
+      toDate?: () => Date;
+      format: (pattern: string) => string;
+    };
     if (typeof liveTimeWithDate.toDate === "function") {
       return new Intl.DateTimeFormat(locale, {
         weekday: "long",
@@ -71,9 +74,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
         <Card>
           <Card.Body className="text-center py-4">
             <i className="bi bi-calendar-plus text-muted mb-3 icon-lg" aria-hidden="true"></i>
-            <p className="text-muted mb-3">
-              {m.current_status_select_schedule_prompt()}
-            </p>
+            <p className="text-muted mb-3">{m.current_status_select_schedule_prompt()}</p>
             <SetupActionButton onChangeSchedule={onChangeSchedule} onChangeTeam={onChangeTeam} />
           </Card.Body>
         </Card>
@@ -112,7 +113,7 @@ export function CurrentStatus({ myTeam, onChangeTeam, onChangeSchedule }: Curren
                 >
                   <small className="help-underline">
                     <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
-                    {formatYYWWD(currentShiftDay)} • {localizedDateLabel} • {" "}
+                    {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
                     {formatTimeByPreference(liveTime, settings.timeFormat)}
                   </small>
                 </OverlayTrigger>

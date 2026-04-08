@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { CalendarView } from "../../src/components/CalendarView";
+import { CalendarView } from "@/components/CalendarView";
 import { TestProviders } from "../utils/testProviders";
 
 describe("CalendarView", () => {

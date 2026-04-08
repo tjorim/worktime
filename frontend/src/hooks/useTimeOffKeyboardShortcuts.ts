@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { TimeOffViewMode } from "../data/timeoffConstants";
+import type { TimeOffViewMode } from "@/data/timeoffConstants";
 
 /**
  * Check if an event target is an editable element.

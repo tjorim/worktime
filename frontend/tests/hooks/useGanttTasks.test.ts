@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useGanttTasks } from "../../src/hooks/useGanttTasks";
-import { GANTT_STORAGE_KEY } from "../../src/constants/storageKeys";
+import { useGanttTasks } from "@/hooks/useGanttTasks";
+import { GANTT_STORAGE_KEY } from "@/constants/storageKeys";
 
 describe("useGanttTasks", () => {
   afterEach(() => {

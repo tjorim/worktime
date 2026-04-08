@@ -2,8 +2,8 @@ import type { RefObject } from "react";
 import { Badge, Button, Card, Col, Form, Modal, Row } from "react-bootstrap";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
-import { getWeekdayName } from "../utils/dateTimeUtils";
-import * as m from "../paraglide/messages.js";
+import { getWeekdayName } from "@/utils/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
 
 type FlagCheckboxProps = {
   id: string;
@@ -210,10 +210,10 @@ type EventModalProps = {
  * @param show - Whether the modal is visible
  * @param mode - Modal mode: `"add"` for new events, `"edit"` for editing, `"view"` for read-only viewing
  * @param formRef - Ref attached to the modal body for focus management
- * @param eventType - Either `"range"` (start/end date) or `"weekly"` (weekday)
- * @param eventWeekday - Weekday number (1–7) when `eventType` is `"weekly"`
- * @param eventStart - Start date string in `YYYY/MM/DD` format when `eventType` is `"range"`
- * @param eventEnd - Optional end date string in `YYYY/MM/DD` format when `eventType` is `"range"`
+ * @param eventType - `"range"` for dated entries or `"weekly"` for recurring weekly entries
+ * @param eventWeekday - ISO weekday (1-7) used for weekly recurring entries
+ * @param eventStart - Start date string in `YYYY/MM/DD` format
+ * @param eventEnd - Optional end date string in `YYYY/MM/DD` format
  * @param eventTitle - Optional comment/title for the event
  * @param eventFlags - List of currently selected event flags
  * @param startDateError - Validation message for the start date, if any
@@ -287,27 +287,33 @@ export function EventModal({
               <Col xs={12}>
                 <Card className="preview-card border-0 bg-body-secondary">
                   <Card.Body className="py-2">
-                    <div className="small text-uppercase text-muted">{m.event_modal_preview_label()}</div>
+                    <div className="small text-uppercase text-muted">
+                      {m.event_modal_preview_label()}
+                    </div>
                     <div className="fw-semibold">
                       {getEventTypeLabel(eventFlags)}{" "}
                       {eventType === "weekly"
                         ? eventWeekday
-                          ? `· ${getWeekdayName(eventWeekday)}`
+                          ? "· " + getWeekdayName(eventWeekday)
                           : ""
                         : eventStart
                           ? eventEnd && eventEnd !== eventStart
-                            ? `· ${eventStart} → ${eventEnd}`
-                            : `· ${eventStart}`
+                            ? "· " + eventStart + " → " + eventEnd
+                            : "· " + eventStart
                           : m.event_modal_select_date()}
                     </div>
                     {eventTitle && <div className="text-muted">{eventTitle}</div>}
                     {eventFlags.length > 0 && (
                       <div className="text-muted small">
-                        {m.event_modal_flags_label({ flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", ") })}
+                        {m.event_modal_flags_label({
+                          flags: eventFlags.map((flag) => getFlagLabel(flag)).join(", "),
+                        })}
                       </div>
                     )}
                     <div className="mt-2">
-                      <div className="small text-uppercase text-muted">{m.event_modal_raw_line_label()}</div>
+                      <div className="small text-uppercase text-muted">
+                        {m.event_modal_raw_line_label()}
+                      </div>
                       <div className="font-monospace">
                         {previewLine || m.event_modal_fill_required()}
                       </div>
@@ -320,6 +326,7 @@ export function EventModal({
               <Form.Group controlId="eventType">
                 <Form.Label>{m.event_modal_event_type_label()}</Form.Label>
                 <Form.Select
+                  aria-label={m.event_modal_event_type_label()}
                   value={eventType}
                   onChange={(event) => onEventTypeChange(event.target.value as "range" | "weekly")}
                   disabled={mode === "view"}
@@ -398,8 +405,9 @@ export function EventModal({
                 <Form.Group controlId="eventWeekday">
                   <Form.Label>{m.event_modal_weekday_label()}</Form.Label>
                   <Form.Select
-                    value={eventWeekday}
-                    onChange={(event) => onEventWeekdayChange(parseInt(event.target.value, 10))}
+                    aria-label={m.event_modal_weekday_label()}
+                    value={String(eventWeekday)}
+                    onChange={(event) => onEventWeekdayChange(Number(event.target.value))}
                     disabled={mode === "view"}
                   >
                     <option value="1">{m.weekday_mon()}</option>

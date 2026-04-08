@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  getEffectiveTeam,
-  getScheduleConfig,
-  getTeamCountForOption,
-} from "../../src/utils/scheduleUtils";
+import { getEffectiveTeam, getScheduleConfig, getTeamCountForOption } from "@/utils/scheduleUtils";
 
 describe("scheduleUtils", () => {
   describe("getScheduleConfig", () => {

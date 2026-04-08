@@ -5,9 +5,9 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import { useAuth } from "../contexts/AuthContext";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import * as m from "../paraglide/messages.js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import * as m from "@/paraglide/messages.js";
 
 interface DevOptionsPanelProps {
   show: boolean;

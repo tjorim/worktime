@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
-import { dayjs } from "../../utils/dateTimeUtils";
-import type { GanttTask } from "../../types/gantt";
-import { EmptyState } from "../shared/EmptyState";
-import type { GanttViewMode } from "../../contexts/SettingsContext";
-import { getLocale } from "../../paraglide/runtime.js";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { GanttTask } from "@/types/gantt";
+import { EmptyState } from "@/components/shared/EmptyState";
+import type { GanttViewMode } from "@/contexts/SettingsContext";
+import { getLocale } from "@/paraglide/runtime.js";
 
 const POPUP_DATE_FORMAT = "MMM D";
 

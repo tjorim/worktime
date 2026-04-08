@@ -3,17 +3,17 @@ import dayjs from "dayjs";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
-import { useSettings } from "../contexts/SettingsContext";
-import { useAuth } from "../contexts/AuthContext";
-import { useSyncedState } from "../hooks/useSyncedState";
-import type { ScheduleOption } from "../data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSyncedState } from "@/hooks/useSyncedState";
+import type { ScheduleOption } from "@/data/rosters";
 import {
   getTeamCountForOption,
   hasMultipleTeams,
   isValidScheduleType,
-} from "../utils/scheduleUtils";
-import { type CountryCode, isValidCountryCode } from "../types/countries";
-import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
+} from "@/utils/scheduleUtils";
+import { type CountryCode, isValidCountryCode } from "@/types/countries";
+import type { VacationAllowanceUnit } from "@/utils/vacationCalculations";
 import {
   type WizardStep,
   type WizardContext,
@@ -31,7 +31,7 @@ import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
-import * as m from "../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Validates vacation amount input.

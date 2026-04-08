@@ -3,8 +3,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import { useId } from "react";
 import clsx from "clsx";
-import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
-import type { ShiftResult } from "../../utils/shiftCalculations";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import type { ShiftResult } from "@/utils/shiftCalculations";
 
 // Helper: Determine size class
 const getSizeClass = (size: "sm" | "md" | "lg"): string => {

@@ -26,10 +26,13 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { ShiftResult } from "../../utils/shiftCalculations";
-import { dayjs, splitFractionalHour, pad2 } from "../../utils/dateTimeUtils";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import { dayjs, splitFractionalHour, pad2 } from "@/utils/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColor, getEventTypeLabel, getTimeLocationSymbol } from "@/lib/hday/presentation";
+import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**
@@ -152,6 +155,65 @@ export function hdayToCalendarEvents(
 
   // Unknown events are not rendered as calendar events
   return [];
+}
+
+export function entriesToCalendarEvents(
+  entries: TimeOffEntry[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): CalendarEvent[] {
+  return entries.flatMap((entry) => {
+    const flags = getEntryFlagsForDisplay(entry);
+    const color = getEventColor(flags);
+    const typeLabel = getEventTypeLabel(flags);
+    const symbol = getTimeLocationSymbol(flags);
+
+    const meta: HolidayMetadata = {
+      type: "holiday",
+      color,
+      flags,
+      typeLabel,
+      symbol,
+      sourceIndex: undefined,
+    };
+
+    if (isTimeOffDateEntry(entry)) {
+      return {
+        id: entry.id,
+        type: "holiday",
+        start: entry.date,
+        end: entry.date,
+        label: entry.note || typeLabel,
+        meta,
+      };
+    }
+
+    if (isTimeOffRangeEntry(entry)) {
+      return {
+        id: entry.id,
+        type: "holiday",
+        start: entry.start,
+        end: entry.end,
+        label: entry.note || typeLabel,
+        meta,
+      };
+    }
+
+    if (isTimeOffWeeklyEntry(entry)) {
+      return hdayWeeklyToCalendarEvents(
+        {
+          type: "weekly",
+          weekday: entry.weekday,
+          title: entry.note ?? "",
+          flags,
+        },
+        rangeStart,
+        rangeEnd,
+      ).map((event) => ({ ...event, id: `${entry.id}:${event.start}` }));
+    }
+
+    return [];
+  });
 }
 
 /**

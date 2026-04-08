@@ -187,9 +187,3 @@ export function buildLabelColorMap(labels: TimeTrackingLabel[]): Record<string, 
 export function normalizeLabelName(value: string): string {
   return value.trim();
 }
-
-export const TIME_TRACKING_STORAGE_KEYS = {
-  tasks: "worktime_time_tracking_tasks",
-  templates: "worktime_time_tracking_templates",
-  labels: "worktime_time_tracking_labels",
-};

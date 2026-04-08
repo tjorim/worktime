@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import time
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,7 +25,7 @@ def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
 
 def _ts(offset_seconds: float = 0.0) -> str:
     """Return an ISO timestamp offset from now."""
-    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
+    return (datetime.now(UTC) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +121,7 @@ class TestSyncPull:
             json={"name": "Before", "color": "#001122"},
             headers=headers,
         )
-        since = datetime.now(timezone.utc).isoformat()
+        since = datetime.now(UTC).isoformat()
         time.sleep(0.01)
         db_client.post(
             f"/db/time-tracking/labels?user_id={user_id}",
@@ -160,7 +158,7 @@ class TestSyncPull:
             headers=headers,
         )
 
-        since = datetime.now(timezone.utc).isoformat()
+        since = datetime.now(UTC).isoformat()
 
         db_client.post(
             "/db/sync/push",
@@ -747,17 +745,20 @@ class TestSyncTimeOffEntries:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-create")
         headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-1"
 
         resp = db_client.post(
             "/db/sync/push",
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-07-01",
+                        "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
+                        "entry_kind": "date",
+                        "date": "2026-07-01",
                         "entry_type": "vacation",
-                        "flags": [],
+                        "entry_flag": "full_day",
                     }
                 ]
             },
@@ -767,21 +768,166 @@ class TestSyncTimeOffEntries:
         results = resp.json()["results"]["time_off_entries"]
         assert len(results) == 1
         assert results[0]["status"] == "ok"
+        assert results[0]["id"] == entry_id
+
+    def test_push_create_time_off_entry_applies_schema_defaults(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-create-defaults")
+        headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-defaults"
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "create",
+                        "client_updated_at": _ts(),
+                        "entry_kind": "date",
+                        "date": "2026-07-02",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        created_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
+        ]
+        assert len(created_entries) == 1
+        assert created_entries[0]["entry_type"] == "vacation"
+        assert created_entries[0]["entry_flag"] == "full_day"
+
+    def test_push_update_time_off_entry_allows_patch_without_kind(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-patch")
+        headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-patch"
+
+        create_resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "entry_kind": "date",
+                        "date": "2026-07-03",
+                        "entry_type": "vacation",
+                        "entry_flag": "half_am",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert create_resp.status_code == 200
+
+        update_resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": entry_id,
+                        "action": "update",
+                        "client_updated_at": _ts(),
+                        "note": "patched note",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["results"]["time_off_entries"][0]["status"] == "ok"
+
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        updated_entries = [
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
+        ]
+        assert len(updated_entries) == 1
+        assert updated_entries[0]["entry_kind"] == "date"
+        assert updated_entries[0]["date"] == "2026-07-03"
+        assert updated_entries[0]["entry_type"] == "vacation"
+        assert updated_entries[0]["entry_flag"] == "half_am"
+        assert updated_entries[0]["note"] == "patched note"
+
+    def test_push_update_time_off_entry_missing_record_requires_full_shape(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-missing")
+        headers = auth_headers(user_id)
+
+        resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "time_off_entries": [
+                    {
+                        "id": "sync-timeoff-missing",
+                        "action": "update",
+                        "client_updated_at": _ts(),
+                        "note": "patch only",
+                    }
+                ]
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        result = resp.json()["results"]["time_off_entries"][0]
+        assert result["status"] == "conflict"
+        assert result["conflict_reason"] == "record does not exist for patch update"
+
+    def test_push_update_time_off_entry_rejects_explicit_null_non_nullable_fields(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "sync-to-update-null-fields")
+        headers = auth_headers(user_id)
+
+        for field_name in ("entry_kind", "entry_type", "entry_flag"):
+            resp = db_client.post(
+                "/db/sync/push",
+                json={
+                    "time_off_entries": [
+                        {
+                            "id": f"sync-timeoff-null-{field_name}",
+                            "action": "update",
+                            "client_updated_at": _ts(),
+                            field_name: None,
+                        }
+                    ]
+                },
+                headers=headers,
+            )
+            assert resp.status_code == 422
 
     def test_push_delete_time_off_entry(self, db_client: TestClient, auth_headers) -> None:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-delete")
         headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-delete"
 
         db_client.post(
             "/db/sync/push",
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-08-01",
+                        "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
-                        "entry_type": "sick",
+                        "entry_kind": "date",
+                        "date": "2026-08-01",
+                        "entry_type": "ill",
                     }
                 ]
             },
@@ -793,7 +939,7 @@ class TestSyncTimeOffEntries:
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-08-01",
+                        "id": entry_id,
                         "action": "delete",
                         "client_updated_at": _ts(),
                     }
@@ -807,7 +953,7 @@ class TestSyncTimeOffEntries:
         pull_resp = db_client.get("/db/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         deleted_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["date"] == "2026-08-01"
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
         ]
         assert len(deleted_entries) == 1
         assert deleted_entries[0]["deleted_at"] is not None
@@ -822,16 +968,19 @@ class TestSyncTimeOffEntries:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-delete-repeat")
         headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-delete-repeat"
 
         db_client.post(
             "/db/sync/push",
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-08-02",
+                        "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
-                        "entry_type": "sick",
+                        "entry_kind": "date",
+                        "date": "2026-08-02",
+                        "entry_type": "ill",
                     }
                 ]
             },
@@ -842,7 +991,7 @@ class TestSyncTimeOffEntries:
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-08-02",
+                        "id": entry_id,
                         "action": "delete",
                         "client_updated_at": _ts(),
                     }
@@ -856,7 +1005,7 @@ class TestSyncTimeOffEntries:
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-08-02",
+                        "id": entry_id,
                         "action": "delete",
                         "client_updated_at": _ts(1),
                     }
@@ -870,7 +1019,7 @@ class TestSyncTimeOffEntries:
         pull_resp = db_client.get("/db/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         deleted_entries = [
-            item for item in pull_resp.json()["time_off_entries"] if item["date"] == "2026-08-02"
+            item for item in pull_resp.json()["time_off_entries"] if item["entry_id"] == entry_id
         ]
         assert len(deleted_entries) == 1
         assert deleted_entries[0]["deleted_at"] is not None
@@ -883,15 +1032,19 @@ class TestSyncTimeOffEntries:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-pull")
         headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-pull"
 
         db_client.post(
             "/db/sync/push",
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-09-01",
+                        "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
+                        "entry_kind": "range",
+                        "start_date": "2026-09-01",
+                        "end_date": "2026-09-03",
                         "entry_type": "vacation",
                     }
                 ]
@@ -902,7 +1055,10 @@ class TestSyncTimeOffEntries:
         pull_resp = db_client.get("/db/sync/pull", headers=headers)
         assert pull_resp.status_code == 200
         assert len(pull_resp.json()["time_off_entries"]) == 1
-        assert pull_resp.json()["time_off_entries"][0]["date"] == "2026-09-01"
+        assert pull_resp.json()["time_off_entries"][0]["entry_id"] == entry_id
+        assert pull_resp.json()["time_off_entries"][0]["entry_kind"] == "range"
+        assert pull_resp.json()["time_off_entries"][0]["start_date"] == "2026-09-01"
+        assert pull_resp.json()["time_off_entries"][0]["end_date"] == "2026-09-03"
 
     def test_status_includes_time_off_and_preferences_fields(
         self, db_client: TestClient, auth_headers
@@ -923,6 +1079,7 @@ class TestSyncTimeOffEntries:
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "sync-to-conflict")
         headers = auth_headers(user_id)
+        entry_id = "sync-timeoff-conflict"
 
         # Push with a newer timestamp first
         db_client.post(
@@ -930,9 +1087,11 @@ class TestSyncTimeOffEntries:
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-10-01",
+                        "id": entry_id,
                         "action": "create",
                         "client_updated_at": _ts(),
+                        "entry_kind": "weekly",
+                        "weekday": 1,
                         "entry_type": "vacation",
                     }
                 ]
@@ -946,10 +1105,12 @@ class TestSyncTimeOffEntries:
             json={
                 "time_off_entries": [
                     {
-                        "date": "2026-10-01",
+                        "id": entry_id,
                         "action": "update",
                         "client_updated_at": _ts(-100),
-                        "entry_type": "sick",
+                        "entry_kind": "date",
+                        "date": "2026-10-01",
+                        "entry_type": "ill",
                     }
                 ]
             },

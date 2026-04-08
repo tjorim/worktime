@@ -59,6 +59,7 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
+from app.services.db_service import apply_time_off_shape
 from app.utils.datetime import as_utc
 
 
@@ -348,25 +349,24 @@ async def _push_work_location(
 async def _push_time_off_entry(
     session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
 ) -> SyncRecordResult:
-    """Time-off entries use (user_id, date) as their natural key."""
+    """Time-off entries use (user_id, entry_id) as their natural key."""
     now = _now()
-    date_key = item.date.isoformat()
-    provided_fields = _get_provided_fields(item) - {"date", "action", "client_updated_at"}
+    provided_fields = _get_provided_fields(item) - {"id", "action", "client_updated_at"}
 
     result = await session.execute(
         select(TimeOffEntry).where(
             TimeOffEntry.user_id == user_id,
-            TimeOffEntry.date == item.date,
+            TimeOffEntry.entry_id == item.id,
         )
     )
     entry: TimeOffEntry | None = result.scalar_one_or_none()
 
     if item.action == "delete":
         if entry is None or entry.deleted_at is not None:
-            return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+            return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
         if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
             return SyncRecordResult(
-                id=date_key,
+                id=item.id,
                 status="conflict",
                 server_updated_at=entry.updated_at,
                 conflict_reason="server version is newer",
@@ -374,37 +374,63 @@ async def _push_time_off_entry(
         entry.deleted_at = now
         entry.updated_at = now
         session.add(entry)
-        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if entry is None:
+        if item.action == "update" and item.entry_kind is None:
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                conflict_reason="record does not exist for patch update",
+            )
+
+        # Create items always provide a full shape; update items can upsert when they do.
+        assert item.entry_kind is not None
         entry = TimeOffEntry(
+            entry_id=item.id,
             user_id=user_id,
-            date=item.date,
             entry_type=item.entry_type or "vacation",
-            flags=item.flags or [],
+            entry_flag=item.entry_flag or "full_day",
             note=item.note,
         )
+        apply_time_off_shape(
+            entry,
+            kind=item.entry_kind,
+            value_date=item.date,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            weekday=item.weekday,
+        )
         session.add(entry)
-        return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if as_utc(item.client_updated_at) <= as_utc(entry.updated_at):
         return SyncRecordResult(
-            id=date_key,
+            id=item.id,
             status="conflict",
             server_updated_at=entry.updated_at,
             conflict_reason="server version is newer",
         )
+    if "entry_kind" in provided_fields and item.entry_kind is not None:
+        apply_time_off_shape(
+            entry,
+            kind=item.entry_kind,
+            value_date=item.date,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            weekday=item.weekday,
+        )
     if "entry_type" in provided_fields and item.entry_type is not None:
         entry.entry_type = item.entry_type
-    if "flags" in provided_fields and item.flags is not None:
-        entry.flags = item.flags
+    if "entry_flag" in provided_fields and item.entry_flag is not None:
+        entry.entry_flag = item.entry_flag
     if "note" in provided_fields:
         entry.note = item.note
     if entry.deleted_at is not None:
         entry.deleted_at = None
     entry.updated_at = now
     session.add(entry)
-    return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
+    return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
 type SyncEntityModel = (

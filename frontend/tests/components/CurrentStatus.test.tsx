@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CurrentStatus } from "../../src/components/CurrentStatus";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import * as useCountdownHook from "../../src/hooks/useCountdown";
-import { dayjs, formatYYWWD } from "../../src/utils/dateTimeUtils";
-import * as shiftCalculations from "../../src/utils/shiftCalculations";
+import { CurrentStatus } from "@/components/CurrentStatus";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import * as useCountdownHook from "@/hooks/useCountdown";
+import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
+import * as shiftCalculations from "@/utils/shiftCalculations";
 
 // Mock useSettings to provide scheduleType
-vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({
@@ -36,7 +36,7 @@ vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
 });
 
 // Mock dependencies
-vi.mock("../../src/utils/shiftCalculations", () => ({
+vi.mock("@/utils/shiftCalculations", () => ({
   calculateShift: vi.fn(),
   getAllTeamsShifts: vi.fn(),
   getCurrentShiftDay: vi.fn(),
@@ -58,11 +58,11 @@ vi.mock("../../src/utils/shiftCalculations", () => ({
 
 // getShiftClassName is now part of shiftCalculations mock
 
-vi.mock("../../src/hooks/useCountdown", () => ({
+vi.mock("@/hooks/useCountdown", () => ({
   useCountdown: vi.fn(),
 }));
 
-vi.mock("../../src/utils/dateTimeUtils", async (importOriginal) => {
+vi.mock("@/utils/dateTimeUtils", async (importOriginal) => {
   const actual = await importOriginal();
   const mockDayjsObj: Record<string, ReturnType<typeof vi.fn>> = {
     startOf: vi.fn(() => ({

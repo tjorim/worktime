@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidRawGanttTask } from "../../src/types/gantt";
+import { isValidRawGanttTask } from "@/types/gantt";
 
 describe("isValidRawGanttTask", () => {
   it("accepts a valid task", () => {

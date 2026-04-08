@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import React, { type ReactNode } from "react";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { useTransferCalculations } from "../../src/hooks/useTransferCalculations";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { useTransferCalculations } from "@/hooks/useTransferCalculations";
 
 const wrapper = ({ children }: { children: ReactNode }) =>
   React.createElement(SettingsProvider, null, children);

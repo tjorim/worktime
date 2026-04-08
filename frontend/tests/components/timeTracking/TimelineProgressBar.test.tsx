@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TimelineProgressBar } from "../../../src/components/timeTracking/TimelineProgressBar";
-import { BREAK_DURATION_MINUTES } from "../../../src/components/timeTracking/timeUtils";
-import type { StoredTimeTrackingTask } from "../../../src/components/timeTracking/types";
-import type { TimeTrackingLabel } from "../../../src/components/timeTracking/constants";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
+import { TimelineProgressBar } from "@/components/timeTracking/TimelineProgressBar";
+import { BREAK_DURATION_MINUTES } from "@/components/timeTracking/timeUtils";
+import type { StoredTimeTrackingTask } from "@/components/timeTracking/types";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const TEST_LABELS: TimeTrackingLabel[] = [{ id: "Support", name: "Support", color: "#c82333" }];
 

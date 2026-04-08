@@ -4,12 +4,12 @@ import Form from "react-bootstrap/Form";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import type { RefObject } from "react";
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import {
   isValidVacationAllowanceUnit,
   type VacationAllowanceUnit,
-} from "../../utils/vacationCalculations";
-import * as m from "../../paraglide/messages.js";
+} from "@/utils/vacationCalculations";
+import * as m from "@/paraglide/messages.js";
 
 interface Step5TimeOffSetupProps {
   isEnabled: boolean;
@@ -138,4 +138,3 @@ export function Step5TimeOffSetup({
     </>
   );
 }
-

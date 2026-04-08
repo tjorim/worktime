@@ -1,15 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import {
-  TIME_TRACKING_STORAGE_KEYS,
-  sanitizeLabels,
-  type TimeTrackingLabel,
-} from "../components/timeTracking/constants";
-import { isValidRange } from "../components/timeTracking/timeUtils";
-import type {
-  StoredTimeTrackingTask,
-  TimeTrackingTemplate,
-} from "../components/timeTracking/types";
+import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTracking/constants";
+import { isValidRange } from "@/components/timeTracking/timeUtils";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 
 type RawTask = {
   id: string;

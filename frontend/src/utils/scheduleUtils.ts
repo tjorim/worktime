@@ -1,4 +1,4 @@
-import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "../data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "@/data/rosters";
 
 const SCHEDULE_MAP = new Map<string, ScheduleRoster>(
   SCHEDULE_OPTIONS.map((option) => [option.value, option]),

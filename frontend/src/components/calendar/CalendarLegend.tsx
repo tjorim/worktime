@@ -2,7 +2,7 @@ import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 type CalendarLegendProps = {
   showEventTypes?: boolean;

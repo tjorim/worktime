@@ -7,24 +7,25 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
-import { useSettings } from "../contexts/SettingsContext";
-import { useToast } from "../contexts/ToastContext";
-import { useAuth } from "../contexts/AuthContext";
-import { type CountryCode } from "../types/countries";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { type CountryCode } from "@/types/countries";
 import { CountrySelect } from "./shared/CountrySelect";
-import { useEventStore, TIME_OFF_STORAGE_KEY } from "../contexts/EventStoreContext";
-import { validateAppBackupPayload, restoreAppBackup } from "../utils/appBackup";
+import { useEventStore } from "@/contexts/EventStoreContext";
+import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { BackupDialog } from "./BackupDialog";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import { CONFIG } from "../utils/config";
-import { hasMultipleTeams } from "../utils/scheduleUtils";
-import { shareApp } from "../utils/share";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { CONFIG } from "@/utils/config";
+import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
-import { TIME_TRACKING_STORAGE_KEYS } from "./timeTracking/constants";
-import * as m from "../paraglide/messages.js";
-import { getLocale, setLocale } from "../paraglide/runtime.js";
+import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { saveTimeOffEntries } from "@/lib/timeOff/storage";
+import * as m from "@/paraglide/messages.js";
+import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 interface CountrySelectItemProps {
   label: string;
@@ -211,7 +212,7 @@ export function SettingsPanel({
     if (clearTimeOffData) {
       try {
         clearTimeOffEvents();
-        localStorage.removeItem(TIME_OFF_STORAGE_KEY);
+        saveTimeOffEntries([]);
         timeOffCleared = true;
       } catch (error) {
         console.error("Failed to clear time off data:", error);
@@ -347,9 +348,7 @@ export function SettingsPanel({
                         <i className="bi bi-person-x me-2 text-muted"></i>
                         {m.account_not_signed_in()}
                       </div>
-                      <small className="text-muted d-block mb-2">
-                        {m.account_sync_benefits()}
-                      </small>
+                      <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
                       <div className="d-flex flex-wrap gap-2 mb-3">
                         <small className="text-muted">
                           <i className="bi bi-cloud-check text-success me-1"></i>

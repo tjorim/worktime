@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch } from "../../src/utils/apiClient";
+import { apiFetch } from "@/utils/apiClient";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -58,11 +58,15 @@ describe("apiFetch", () => {
     const onUnauthorized = vi.fn();
 
     await expect(
-      apiFetch("/data", {}, {
-        apiUrl: "http://localhost:8000",
-        onUnauthorized,
-        onForbidden: vi.fn(),
-      }),
+      apiFetch(
+        "/data",
+        {},
+        {
+          apiUrl: "http://localhost:8000",
+          onUnauthorized,
+          onForbidden: vi.fn(),
+        },
+      ),
     ).rejects.toThrow("Unauthorized");
 
     expect(onUnauthorized).toHaveBeenCalledOnce();
@@ -75,11 +79,15 @@ describe("apiFetch", () => {
     const onForbidden = vi.fn();
 
     await expect(
-      apiFetch("/data", {}, {
-        apiUrl: "http://localhost:8000",
-        onUnauthorized: vi.fn(),
-        onForbidden,
-      }),
+      apiFetch(
+        "/data",
+        {},
+        {
+          apiUrl: "http://localhost:8000",
+          onUnauthorized: vi.fn(),
+          onForbidden,
+        },
+      ),
     ).rejects.toThrow("Forbidden");
 
     expect(onForbidden).toHaveBeenCalledOnce();

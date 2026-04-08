@@ -1,18 +1,91 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MonthCalendar } from "../../../src/components/calendar/MonthCalendar";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
-import type { HdayEvent } from "../../../src/lib/hday/types";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { createTimeOffEntry } from "@/lib/timeOff/codecs";
+import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 describe("MonthCalendar", () => {
   const mockOnMonthChange = vi.fn();
   const mockOnAddEvent = vi.fn();
   const mockOnViewEvent = vi.fn();
   const mockOnEditEvent = vi.fn();
+  let entryCounter = 0;
+  const createDateEntry = (
+    overrides: {
+      date?: string;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
+    createTimeOffEntry({
+      id: `entry-${entryCounter++}`,
+      entryKind: "date",
+      date: overrides.date ?? "2025-01-15",
+      note: overrides.note ?? null,
+      entryFlag: "full_day",
+      entryType: overrides.entryType ?? "vacation",
+    });
+  const createRangeEntry = (
+    overrides: {
+      start?: string;
+      end?: string;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
+    createTimeOffEntry({
+      id: `entry-${entryCounter++}`,
+      entryKind: "range",
+      start: overrides.start ?? "2025-01-15",
+      end: overrides.end ?? "2025-01-17",
+      note: overrides.note ?? null,
+      entryFlag: "full_day",
+      entryType: overrides.entryType ?? "vacation",
+    });
+  const createWeeklyEntry = (
+    overrides: {
+      weekday?: number;
+      note?: string | null;
+      entryType?:
+        | "vacation"
+        | "business"
+        | "course"
+        | "in"
+        | "weekend"
+        | "birthday"
+        | "ill"
+        | "other";
+    } = {},
+  ): TimeOffEntry =>
+    createTimeOffEntry({
+      id: `entry-${entryCounter++}`,
+      entryKind: "weekly",
+      weekday: overrides.weekday ?? 1,
+      note: overrides.note ?? null,
+      entryFlag: "full_day",
+      entryType: overrides.entryType ?? "vacation",
+    });
 
   const defaultProps = {
-    events: [] as HdayEvent[],
+    entries: [] as TimeOffEntry[],
     month: dayjs("2025-01-15"),
     onMonthChange: mockOnMonthChange,
     onAddEvent: mockOnAddEvent,
@@ -22,6 +95,7 @@ describe("MonthCalendar", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    entryCounter = 0;
   });
 
   describe("Rendering", () => {
@@ -99,17 +173,9 @@ describe("MonthCalendar", () => {
 
   describe("Event Rendering", () => {
     it("should render range events on correct days", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: "2025/01/15",
-          end: "2025/01/17",
-          title: "Test vacation",
-          flags: [],
-        },
-      ];
+      const entries = [createRangeEntry({ note: "Test vacation" })];
 
-      render(<MonthCalendar {...defaultProps} events={events} />);
+      render(<MonthCalendar {...defaultProps} entries={entries} />);
 
       // Event should appear on all three days (15, 16, 17)
       const eventButtons = screen.getAllByRole("button", { name: /View Test vacation/i });
@@ -117,16 +183,9 @@ describe("MonthCalendar", () => {
     });
 
     it("should render weekly recurring events", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "weekly",
-          weekday: 1, // Monday
-          title: "Weekly meeting",
-          flags: [],
-        },
-      ];
+      const entries = [createWeeklyEntry({ weekday: 1, note: "Weekly meeting" })];
 
-      render(<MonthCalendar {...defaultProps} events={events} />);
+      render(<MonthCalendar {...defaultProps} entries={entries} />);
 
       // Should appear on all Mondays in the visible calendar
       // Jan 2025 grid shows: Dec 30 (Mon), Jan 6, 13, 20, 27 (Mon) = 5 Mondays total
@@ -135,33 +194,21 @@ describe("MonthCalendar", () => {
     });
 
     it("should show event type label when no title provided", () => {
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: "2025/01/15",
-          flags: ["holiday"],
-        },
-      ];
+      const entries = [createDateEntry({ note: null, entryType: "vacation" })];
 
-      render(<MonthCalendar {...defaultProps} events={events} />);
+      render(<MonthCalendar {...defaultProps} entries={entries} />);
 
       expect(screen.getByRole("button", { name: /View Holiday/i })).toBeInTheDocument();
     });
 
     it("should handle long-range events efficiently (performance optimization)", () => {
       // Create an event spanning multiple years
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: "2020/01/01",
-          end: "2030/12/31",
-          title: "Long event",
-          flags: [],
-        },
+      const entries = [
+        createRangeEntry({ start: "2020-01-01", end: "2030-12-31", note: "Long event" }),
       ];
 
       // Should render without hanging or errors
-      render(<MonthCalendar {...defaultProps} events={events} />);
+      render(<MonthCalendar {...defaultProps} entries={entries} />);
 
       // Event should only appear on days visible in January 2025
       const eventButtons = screen.getAllByRole("button", { name: /View Long event/i });
@@ -175,22 +222,15 @@ describe("MonthCalendar", () => {
   describe("Event Interaction", () => {
     it("should call onViewEvent when clicking event chip", async () => {
       const user = userEvent.setup();
-      const events: HdayEvent[] = [
-        {
-          type: "range",
-          start: "2025/01/15",
-          title: "Test vacation",
-          flags: [],
-        },
-      ];
+      const entry = createDateEntry({ note: "Test vacation" });
 
-      render(<MonthCalendar {...defaultProps} events={events} />);
+      render(<MonthCalendar {...defaultProps} entries={[entry]} />);
 
       const eventButton = screen.getAllByRole("button", { name: /View Test vacation/i })[0];
       await user.click(eventButton);
 
       expect(mockOnViewEvent).toHaveBeenCalledTimes(1);
-      expect(mockOnViewEvent).toHaveBeenCalledWith(0); // First event, index 0
+      expect(mockOnViewEvent).toHaveBeenCalledWith(entry.id);
     });
   });
 

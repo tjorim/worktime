@@ -6,16 +6,23 @@
  * and helpers to convert between localStorage formats and the
  * sync API wire format.
  *
- * Only the entities currently synced by the backend are included:
- * tasks, templates, labels, and work locations.
+ * Entities synced: tasks, templates, labels, work locations,
+ * time-off entries, and user preferences.
  */
 
 import dayjs from "dayjs";
-import { TIME_TRACKING_STORAGE_KEYS } from "../components/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "../components/timeTracking/types";
-import type { TimeTrackingLabel } from "../components/timeTracking/constants";
-import type { WorkLocationInfo } from "../types/workLocation";
-import { WORK_LOCATIONS_STORAGE_PREFIX } from "../constants/storageKeys";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { WorkLocationInfo } from "@/types/workLocation";
+import {
+  TIME_TRACKING_STORAGE_KEYS,
+  WORK_LOCATIONS_STORAGE_PREFIX,
+  USER_STATE_STORAGE_KEY,
+} from "@/constants/storageKeys";
+import { createTimeOffEntry, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
+import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
+import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
 // TypeScript representations of the backend sync wire schemas
@@ -60,11 +67,26 @@ export interface WorkLocationSyncItem {
   label?: string | null;
 }
 
+export interface TimeOffEntrySyncItem {
+  id: string;
+  action: SyncAction;
+  client_updated_at: string;
+  entry_kind?: "date" | "range" | "weekly" | null;
+  date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  weekday?: number | null;
+  entry_type?: string | null;
+  entry_flag?: string | null;
+  note?: string | null;
+}
+
 export interface SyncPushPayload {
   labels: LabelSyncItem[];
   tasks: TaskSyncItem[];
   templates: TemplateSyncItem[];
   work_locations: WorkLocationSyncItem[];
+  time_off_entries: TimeOffEntrySyncItem[];
 }
 
 export interface SyncRecordResult {
@@ -124,11 +146,29 @@ export interface WorkLocationSyncRead {
   deleted_at: string | null;
 }
 
+export interface TimeOffEntrySyncRead {
+  id: number;
+  entry_id: string;
+  user_id: number;
+  entry_kind: "date" | "range" | "weekly";
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  weekday: number | null;
+  entry_type: string;
+  entry_flag: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 export interface SyncPullResponse {
   labels: LabelSyncRead[];
   tasks: TaskSyncRead[];
   templates: TemplateSyncRead[];
   work_locations: WorkLocationSyncRead[];
+  time_off_entries: TimeOffEntrySyncRead[];
   server_timestamp: string;
 }
 
@@ -137,6 +177,8 @@ export interface SyncStatusResponse {
   tasks_updated_at: string | null;
   templates_updated_at: string | null;
   work_locations_updated_at: string | null;
+  time_off_entries_updated_at: string | null;
+  preferences_updated_at: string | null;
   server_timestamp: string;
 }
 
@@ -167,10 +209,14 @@ export async function fetchSyncStatus(fetch: FetchFn): Promise<SyncStatusRespons
  */
 export function syncStatusHasData(status: SyncStatusResponse): boolean {
   return (
-    status.labels_updated_at !== null ||
-    status.tasks_updated_at !== null ||
-    status.templates_updated_at !== null ||
-    status.work_locations_updated_at !== null
+    // Use != null (loose equality) to treat both null and undefined as "no data".
+    // Tests and legacy callers may omit the newer fields from their mock objects.
+    status.labels_updated_at != null ||
+    status.tasks_updated_at != null ||
+    status.templates_updated_at != null ||
+    status.work_locations_updated_at != null ||
+    status.time_off_entries_updated_at != null ||
+    status.preferences_updated_at != null
   );
 }
 
@@ -210,6 +256,92 @@ export async function pullSyncData(
     return (await response.json()) as SyncPullResponse;
   } catch {
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Preferences sync helpers
+// ---------------------------------------------------------------------------
+
+/** Shape returned by GET /db/preferences */
+export interface PreferencesResponse {
+  user_id: number;
+  data: Record<string, unknown>;
+  client_updated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Call GET /db/preferences.
+ * Returns null if the request fails or returns 404 (no preferences stored yet).
+ */
+export async function fetchPreferences(fetch: FetchFn): Promise<PreferencesResponse | null> {
+  try {
+    const response = await fetch("/db/preferences");
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    // The endpoint returns null (JSON null) when no preferences exist yet.
+    if (body === null || typeof body !== "object") return null;
+    return body as PreferencesResponse;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Call PUT /db/preferences to push local user state to the server.
+ * Returns true on success, false on failure.
+ */
+export async function pushPreferences(
+  fetch: FetchFn,
+  data: Record<string, unknown>,
+  clientUpdatedAt: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch("/db/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data, client_updated_at: clientUpdatedAt }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read the current worktime_user_state from localStorage and return it as a
+ * preferences payload suitable for pushPreferences().
+ * Returns null if there is no local user state to push.
+ */
+export function buildLocalPreferencesPayload(): {
+  data: Record<string, unknown>;
+  clientUpdatedAt: string;
+} | null {
+  try {
+    const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    return {
+      data: parsed as Record<string, unknown>,
+      clientUpdatedAt: dayjs().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write pulled preferences data to worktime_user_state in localStorage,
+ * replacing any existing value.
+ */
+export function applyPreferencesPull(data: Record<string, unknown>): void {
+  try {
+    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage errors (e.g., private browsing with full storage quota)
   }
 }
 
@@ -256,12 +388,10 @@ function localTimeToUtcIso(localTime: string): string | null {
 /**
  * Build a SyncPushPayload from the current localStorage contents.
  *
- * Only entities currently supported by the sync API are included:
- * labels, tasks, templates, and work locations.
- *
- * All records are sent with `action: "create"` and a `client_updated_at`
- * of `now()` — this is correct for a first-ever push where there is
- * guaranteed to be no conflicting server state.
+ * Entities included: labels, tasks, templates, work locations, and time-off
+ * entries. All records are sent with `action: "create"` and a
+ * `client_updated_at` of `now()` — this is correct for a first-ever push
+ * where there is guaranteed to be no conflicting server state.
  */
 export function buildLocalSyncPushPayload(): SyncPushPayload {
   const now = dayjs().toISOString();
@@ -287,9 +417,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }));
 
   // Tasks
-  const rawTasks = safeParseJsonArray(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-  ) as StoredTimeTrackingTask[];
+  const rawTasks = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.tasks) as StoredTimeTrackingTask[];
   const tasks: TaskSyncItem[] = rawTasks
     .filter((t) => {
       if (!t || typeof t.id !== "string" || typeof t.startTime !== "string") return false;
@@ -379,7 +507,80 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }
   }
 
-  return { labels, tasks, templates, work_locations: workLocations };
+  const localTimeOffEntries: TimeOffEntry[] = loadTimeOffEntries();
+
+  const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
+
+  return {
+    labels,
+    tasks,
+    templates,
+    work_locations: workLocations,
+    time_off_entries: timeOffEntries,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Time-off conversion helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert canonical time-off entries into the backend's structured sync payload.
+ */
+export function timeOffEntriesToSyncItems(
+  entries: TimeOffEntry[],
+  clientUpdatedAt: string,
+): TimeOffEntrySyncItem[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    action: "create",
+    client_updated_at: clientUpdatedAt,
+    entry_kind: entry.entryKind,
+    date: entry.entryKind === "date" ? entry.date : null,
+    start_date: entry.entryKind === "range" ? entry.start : null,
+    end_date: entry.entryKind === "range" ? entry.end : null,
+    weekday: entry.entryKind === "weekly" ? entry.weekday : null,
+    entry_type: entry.entryType,
+    entry_flag: entry.entryFlag,
+    note: entry.note,
+  }));
+}
+
+/**
+ * Convert an array of TimeOffEntrySyncRead items (from a pull response) to a
+ * raw .hday text string that can be stored in localStorage.
+ *
+ * Each entry becomes a single-date range event. The entry_type is mapped back
+ * to a type flag (or "holiday" for "vacation"). Non-type flags are preserved.
+ * The note becomes the event title.
+ */
+export function syncItemsToHdayRaw(items: TimeOffEntrySyncRead[]): string {
+  const entries = syncItemsToTimeOffEntries(items);
+  return entries.length > 0 ? timeOffEntriesToHday(entries) : "";
+}
+
+function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
+  return items
+    .filter((item) => {
+      if (item.deleted_at !== null) return false;
+      if (item.entry_kind === "date") return item.date != null;
+      if (item.entry_kind === "range") return item.start_date != null && item.end_date != null;
+      if (item.entry_kind === "weekly") return item.weekday != null;
+      return false;
+    })
+    .map((item) =>
+      createTimeOffEntry({
+        id: item.entry_id,
+        entryKind: item.entry_kind,
+        date: item.entry_kind === "date" ? item.date! : undefined,
+        start: item.entry_kind === "range" ? item.start_date! : undefined,
+        end: item.entry_kind === "range" ? item.end_date! : undefined,
+        weekday: item.entry_kind === "weekly" ? item.weekday! : undefined,
+        entryType: isValidEntryType(item.entry_type) ? item.entry_type : "other",
+        entryFlag: isValidFlag(item.entry_flag) ? item.entry_flag : "full_day",
+        note: item.note,
+      } as Parameters<typeof createTimeOffEntry>[0]),
+    );
 }
 
 /**
@@ -399,6 +600,7 @@ export function buildKeepLocalReplacePayload(
   const localTaskIds = new Set(localPayload.tasks.map((t) => t.id));
   const localTemplateIds = new Set(localPayload.templates.map((t) => t.id));
   const localWorkLocationDates = new Set(localPayload.work_locations.map((wl) => wl.date));
+  const localTimeOffIds = new Set((localPayload.time_off_entries ?? []).map((e) => e.id));
 
   const deleteLabels: LabelSyncItem[] = serverData.labels
     .filter((l) => !localLabelIds.has(l.id) && l.deleted_at === null)
@@ -416,11 +618,16 @@ export function buildKeepLocalReplacePayload(
     .filter((wl) => !localWorkLocationDates.has(wl.date) && wl.deleted_at === null)
     .map((wl) => ({ date: wl.date, action: "delete", client_updated_at: now }));
 
+  const deleteTimeOffEntries: TimeOffEntrySyncItem[] = (serverData.time_off_entries ?? [])
+    .filter((e) => !localTimeOffIds.has(e.entry_id) && e.deleted_at === null)
+    .map((e) => ({ id: e.entry_id, action: "delete", client_updated_at: now }));
+
   return {
     labels: [...localPayload.labels, ...deleteLabels],
     tasks: [...localPayload.tasks, ...deleteTasks],
     templates: [...localPayload.templates, ...deleteTemplates],
     work_locations: [...localPayload.work_locations, ...deleteWorkLocations],
+    time_off_entries: [...localPayload.time_off_entries, ...deleteTimeOffEntries],
   };
 }
 
@@ -438,12 +645,11 @@ function utcIsoToLocalTime(utcIso: string): string {
 
 /**
  * Write a full SyncPullResponse into localStorage, replacing any existing
- * syncable data. Non-syncable data (user state, time-off, developer options,
- * Gantt tasks) is left untouched.
+ * syncable data. Developer options and Gantt tasks are left untouched.
  *
  * Soft-deleted records (deleted_at !== null) are excluded from the local store.
  */
-export function applySyncPullResponse(data: SyncPullResponse): void {
+export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
   // Labels
   const localLabels = data.labels
     .filter((l) => l.deleted_at === null)
@@ -513,4 +719,8 @@ export function applySyncPullResponse(data: SyncPullResponse): void {
   for (const [year, yearData] of Object.entries(byYear)) {
     localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(yearData));
   }
+
+  const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
+  saveTimeOffEntries(entries);
+  return entries;
 }

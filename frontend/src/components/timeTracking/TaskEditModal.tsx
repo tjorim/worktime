@@ -4,12 +4,12 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import ReactSelect from "react-select";
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import type { TimeTrackingLabel } from "./constants";
 import { BREAK_DURATION_MINUTES } from "./timeUtils";
-import { bootstrapSelectClassNames } from "../../utils/reactSelectStyles";
-import { useSelectedLabelOption, type LabelOption } from "../../hooks/useSelectedLabelOption";
-import * as m from "../../paraglide/messages.js";
+import { bootstrapSelectClassNames } from "@/utils/reactSelectStyles";
+import { useSelectedLabelOption, type LabelOption } from "@/hooks/useSelectedLabelOption";
+import * as m from "@/paraglide/messages.js";
 
 export type TaskEditForm = {
   text: string;

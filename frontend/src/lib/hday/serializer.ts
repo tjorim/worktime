@@ -44,6 +44,9 @@ function serializeFlags(flags?: ReadonlyArray<EventFlag>): string {
 function serializeRangeEvent(event: HdayRangeEvent): string {
   const prefix = serializeFlags(event.flags);
   const title = event.title ? ` # ${event.title}` : "";
+  if (!event.end || event.end === event.start) {
+    return `${prefix}${event.start}${title}`;
+  }
   return `${prefix}${event.start}-${event.end}${title}`;
 }
 
@@ -55,7 +58,9 @@ function serializeWeeklyEvent(event: HdayWeeklyEvent): string {
 
 function validateWeeklyWeekday(weekday: number | undefined): number {
   if (!Number.isInteger(weekday) || weekday === undefined || weekday < 1 || weekday > 7) {
-    throw new Error(`Weekly event missing or invalid weekday: ${weekday}. Expected an integer from 1 to 7.`);
+    throw new Error(
+      `Weekly event missing or invalid weekday: ${weekday}. Expected an integer from 1 to 7.`,
+    );
   }
 
   return weekday;

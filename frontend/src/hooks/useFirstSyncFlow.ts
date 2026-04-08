@@ -28,16 +28,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applySyncPullResponse,
+  applyPreferencesPull,
   buildKeepLocalReplacePayload,
+  buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  fetchPreferences,
   fetchSyncStatus,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
   syncStatusHasData,
   type SyncPushPayload,
   type SyncStatusResponse,
-} from "../utils/syncClient";
-import { getSyncCursorKey } from "../constants/storageKeys";
+} from "@/utils/syncClient";
+import { getSyncCursorKey } from "@/constants/storageKeys";
+import { useEventStore } from "@/contexts/EventStoreContext";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -84,8 +89,50 @@ function payloadHasData(payload: SyncPushPayload): boolean {
     payload.labels.length > 0 ||
     payload.tasks.length > 0 ||
     payload.templates.length > 0 ||
-    payload.work_locations.length > 0
+    payload.work_locations.length > 0 ||
+    payload.time_off_entries.length > 0
   );
+}
+
+function buildSafeLocalSyncPushPayload(): SyncPushPayload {
+  try {
+    return buildLocalSyncPushPayload();
+  } catch {
+    return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
+  }
+}
+
+type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+type MountedCheck = () => boolean;
+
+/**
+ * Push local user preferences to the server if they exist in localStorage.
+ * Returns false and does nothing if `mounted()` returns false (component unmounted).
+ */
+async function pushLocalPreferencesIfPresent(
+  fetch: FetchFn,
+  mounted: MountedCheck,
+): Promise<boolean> {
+  const prefsPayload = buildLocalPreferencesPayload();
+  if (!prefsPayload) return true; // nothing to push — not a failure
+  await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
+  return mounted();
+}
+
+/**
+ * Pull server preferences and apply them to localStorage if the server has any.
+ * Returns false if `mounted()` returns false after the fetch (component unmounted).
+ */
+async function pullAndApplyServerPreferencesIfPresent(
+  fetch: FetchFn,
+  mounted: MountedCheck,
+): Promise<boolean> {
+  const serverPrefs = await fetchPreferences(fetch);
+  if (!mounted()) return false;
+  if (serverPrefs) {
+    applyPreferencesPull(serverPrefs.data);
+  }
+  return true;
 }
 
 export function useFirstSyncFlow(
@@ -93,6 +140,7 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
+  const { replaceEntries } = useEventStore();
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -134,7 +182,7 @@ export function useFirstSyncFlow(
       const serverHasData = syncStatusHasData(status);
       // Build the push payload once so both the localHasData check and Branch A
       // use the same filtered dataset (malformed rows are excluded by the builder).
-      const localPayload = buildLocalSyncPushPayload();
+      const localPayload = buildSafeLocalSyncPushPayload();
       const localHasData = payloadHasData(localPayload);
 
       // Branch D — nothing anywhere
@@ -144,7 +192,7 @@ export function useFirstSyncFlow(
         return;
       }
 
-      // Branch A — server empty, local has data → push
+      // Branch A — server empty, local has data → push entities + preferences
       if (localHasData && !serverHasData) {
         setPhase("pushing");
         const result = await pushSyncPayload(fetch, localPayload);
@@ -153,6 +201,12 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
+        // Also push local preferences (user state) to the server.
+        const stillMounted = await pushLocalPreferencesIfPresent(
+          fetch,
+          () => mountedRef.current && flowStartedForUser.current === uid,
+        );
+        if (!stillMounted) return;
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
@@ -163,7 +217,7 @@ export function useFirstSyncFlow(
         return;
       }
 
-      // Branch B — server has data, local is empty → pull automatically
+      // Branch B — server has data, local is empty → pull entities + preferences
       if (!localHasData && serverHasData) {
         setPhase("pulling");
         const pullResult = await pullSyncData(fetch);
@@ -172,7 +226,13 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        applySyncPullResponse(pullResult);
+        replaceEntries(applySyncPullResponse(pullResult));
+        // Also pull preferences from the server and apply to localStorage.
+        const stillMounted = await pullAndApplyServerPreferencesIfPresent(
+          fetch,
+          () => mountedRef.current && flowStartedForUser.current === uid,
+        );
+        if (!stillMounted) return;
         storeSyncCursor(uid, pullResult.server_timestamp);
         setPhase("done");
         return;
@@ -184,7 +244,7 @@ export function useFirstSyncFlow(
       capturedStatusRef.current = status;
       setPhase("conflict");
     },
-    [],
+    [replaceEntries],
   );
 
   const resolveConflict = useCallback(
@@ -211,7 +271,7 @@ export function useFirstSyncFlow(
               return;
             }
             setPhase("pushing");
-            const localPayload = buildLocalSyncPushPayload();
+            const localPayload = buildSafeLocalSyncPushPayload();
             // Build a replace payload: local creates + delete entries for server-only rows.
             const replacePayload = buildKeepLocalReplacePayload(localPayload, serverData);
             const result = await pushSyncPayload(fetch, replacePayload);
@@ -220,6 +280,12 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
+            // Push local preferences to the server (keep-local means local wins).
+            const prefsMounted = await pushLocalPreferencesIfPresent(
+              fetch,
+              () => mountedRef.current && flowStartedForUser.current === uid,
+            );
+            if (!prefsMounted) return;
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             const cursor = postStatus?.server_timestamp ?? serverData.server_timestamp;
@@ -238,7 +304,13 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
-            applySyncPullResponse(pullResult);
+            replaceEntries(applySyncPullResponse(pullResult));
+            // Pull preferences from the server (use-server means server wins).
+            const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
+              fetch,
+              () => mountedRef.current && flowStartedForUser.current === uid,
+            );
+            if (!prefsMounted) return;
             storeSyncCursor(uid, pullResult.server_timestamp);
             setPhase("done");
           }
@@ -252,7 +324,7 @@ export function useFirstSyncFlow(
         if (mountedRef.current) setPhase("error");
       });
     },
-    [phase, userId, fetchFn],
+    [phase, userId, fetchFn, replaceEntries],
   );
 
   const dismiss = useCallback(() => {

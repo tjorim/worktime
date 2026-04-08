@@ -2,13 +2,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "../../src/App";
-import { Header } from "../../src/components/Header";
-import { AuthProvider } from "../../src/contexts/AuthContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
+import App from "@/App";
+import { Header } from "@/components/Header";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 

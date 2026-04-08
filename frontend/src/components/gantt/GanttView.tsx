@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
-import { dayjs } from "../../utils/dateTimeUtils";
-import { useGanttTasks } from "../../hooks/useGanttTasks";
-import { usePublicHolidays } from "../../hooks/usePublicHolidays";
-import type { GanttTask } from "../../types/gantt";
-import { useSettings } from "../../contexts/SettingsContext";
-import { ConfirmationDialog } from "../ConfirmationDialog";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { useGanttTasks } from "@/hooks/useGanttTasks";
+import { usePublicHolidays } from "@/hooks/usePublicHolidays";
+import type { GanttTask } from "@/types/gantt";
+import { useSettings } from "@/contexts/SettingsContext";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "./GanttChart";
 import { GanttTaskModal, type GanttTaskFormInput } from "./GanttTaskModal";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 export function GanttView() {
   const { tasks, addTask, updateTask, removeTask } = useGanttTasks();

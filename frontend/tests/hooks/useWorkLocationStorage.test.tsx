@@ -1,12 +1,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ReactNode } from "react";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { useWorkLocationStorage } from "../../src/hooks/useWorkLocationStorage";
-import {
-  USER_STATE_STORAGE_KEY,
-  getWorkLocationsStorageKey,
-} from "../../src/constants/storageKeys";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
+import { USER_STATE_STORAGE_KEY, getWorkLocationsStorageKey } from "@/constants/storageKeys";
 
 /**
  * Writes a v3 user-state to localStorage so that SettingsProvider initialises

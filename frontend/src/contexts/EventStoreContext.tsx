@@ -1,79 +1,52 @@
 /**
  * Event Store Context
  *
- * Manages time-off events from .hday files with CRUD operations and localStorage persistence.
- * Provides a centralized store for holiday/time-off events across the application.
+ * Manages canonical time-off entries with CRUD operations, import/export helpers,
+ * undo/redo history, and localStorage persistence.
  */
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
-import type { HdayEvent } from "@/lib/hday/types";
-import { hdayToCalendarEvents, filterEventsInRange } from "../lib/events/converters";
-import { parseHday } from "@/lib/hday/parser";
-import { toLine } from "@/lib/hday/serializer";
-import { sortEvents } from "@/lib/hday/sort";
-import type { CalendarEvent } from "../lib/events/types";
-import { dayjs } from "../utils/dateTimeUtils";
+import type { CalendarEvent } from "@/lib/events/types";
+import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
+import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
+import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffImportResult } from "@/lib/timeOff/types";
+import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
+import { dayjs } from "@/utils/dateTimeUtils";
 
-export const TIME_OFF_STORAGE_KEY = "worktime_hday_raw";
-
-/**
- * Action types for event store reducer
- */
 type EventStoreAction =
-  | { type: "ADD_EVENT"; payload: HdayEvent }
-  | { type: "UPDATE_EVENT"; payload: { index: number; event: HdayEvent } }
-  | { type: "DELETE_EVENT"; payload: number }
-  | { type: "DELETE_EVENTS"; payload: number[] }
-  | { type: "IMPORT_HDAY"; payload: string }
+  | { type: "ADD_ENTRIES"; payload: TimeOffEntry[] }
+  | { type: "REPLACE_ENTRIES"; payload: TimeOffEntry[] }
+  | { type: "UPDATE_ENTRY"; payload: { id: string; entry: TimeOffEntry } }
+  | { type: "DELETE_ENTRY"; payload: string }
+  | { type: "DELETE_ENTRIES"; payload: string[] }
+  | { type: "IMPORT_HDAY"; payload: TimeOffEntry[] }
   | { type: "CLEAR_ALL" }
   | { type: "UNDO" }
   | { type: "REDO" };
 
 interface EventStoreState {
-  events: HdayEvent[];
-  history: HdayEvent[][];
-  future: HdayEvent[][];
+  entries: TimeOffEntry[];
+  history: TimeOffEntry[][];
+  future: TimeOffEntry[][];
 }
 
 interface EventStoreContextType {
-  /** Raw .hday text content */
   rawText: string;
-
-  /** Parsed .hday events */
-  events: HdayEvent[];
-
-  /** Get calendar events within a date range */
+  entries: TimeOffEntry[];
   getEventsInRange: (startDate: Date, endDate: Date) => CalendarEvent[];
-
-  /** Add a new event */
-  addEvent: (event: HdayEvent) => void;
-
-  /** Update an existing event by index */
-  updateEvent: (index: number, event: HdayEvent) => void;
-
-  /** Delete an event by index */
-  deleteEvent: (index: number) => void;
-
-  /** Delete multiple events by index */
-  deleteEvents: (indices: number[]) => void;
-
-  /** Import .hday text (replaces all events) */
-  importHday: (text: string) => void;
-
-  /** Clear all events */
+  addEntries: (entries: TimeOffEntry[]) => void;
+  replaceEntries: (entries: TimeOffEntry[]) => void;
+  updateEntry: (id: string, entry: TimeOffEntry) => void;
+  deleteEntry: (id: string) => void;
+  deleteEntries: (ids: string[]) => void;
+  importHday: (text: string) => TimeOffImportResult;
   clearAll: () => void;
-
-  /** Whether there is history to undo */
   canUndo: boolean;
-
-  /** Whether there is history to redo */
   canRedo: boolean;
-
-  /** Undo the last event change */
   undo: () => void;
-
-  /** Redo the last undone change */
   redo: () => void;
 }
 
@@ -83,94 +56,98 @@ interface EventStoreProviderProps {
   children: ReactNode;
 }
 
-/**
- * Apply an EventStoreAction to the current events array and produce the updated events array.
- *
- * @param state - Current array of HdayEvent objects
- * @param action - Action describing the mutation to perform (ADD_EVENT, UPDATE_EVENT, DELETE_EVENT, IMPORT_HDAY, CLEAR_ALL)
- * @returns The updated HdayEvent array after applying the action; returns the original `state` for unknown actions or when an invalid index is provided
- */
 const HISTORY_LIMIT = 50;
 
-function applyWithHistory(state: EventStoreState, nextEvents: HdayEvent[]): EventStoreState {
-  if (nextEvents === state.events) {
+function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
+  return [...entries].sort((a, b) => {
+    const byKey = getTimeOffEntrySortKey(a).localeCompare(getTimeOffEntrySortKey(b));
+    if (byKey !== 0) return byKey;
+    const byIdentity = getTimeOffEntryIdentityKey(a).localeCompare(getTimeOffEntryIdentityKey(b));
+    if (byIdentity !== 0) return byIdentity;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function mergeEntries(currentEntries: TimeOffEntry[], nextEntries: TimeOffEntry[]): TimeOffEntry[] {
+  const byId = new Map(currentEntries.map((entry) => [entry.id, entry]));
+  for (const entry of nextEntries) {
+    byId.set(entry.id, entry);
+  }
+  return sortEntries(Array.from(byId.values()));
+}
+
+function applyWithHistory(state: EventStoreState, nextEntries: TimeOffEntry[]): EventStoreState {
+  if (nextEntries === state.entries) {
     return state;
   }
 
-  const nextHistory = [...state.history, state.events].slice(-HISTORY_LIMIT);
   return {
-    events: nextEvents,
-    history: nextHistory,
+    entries: nextEntries,
+    history: [...state.history, state.entries].slice(-HISTORY_LIMIT),
     future: [],
   };
 }
 
-function eventsReducer(state: EventStoreState, action: EventStoreAction): EventStoreState {
+function entriesReducer(state: EventStoreState, action: EventStoreAction): EventStoreState {
   switch (action.type) {
-    case "ADD_EVENT": {
-      const newEvents = sortEvents([...state.events, action.payload]);
-      return applyWithHistory(state, newEvents);
-    }
+    case "ADD_ENTRIES":
+      return applyWithHistory(state, mergeEntries(state.entries, action.payload));
 
-    case "UPDATE_EVENT": {
-      const { index, event } = action.payload;
-      if (index < 0 || index >= state.events.length) {
-        console.error(`Invalid event index: ${index}`);
+    case "REPLACE_ENTRIES":
+      return applyWithHistory(state, sortEntries(action.payload));
+
+    case "UPDATE_ENTRY": {
+      const { id, entry } = action.payload;
+      if (!state.entries.some((currentEntry) => currentEntry.id === id)) {
+        console.error(`Invalid entry id: ${id}`);
         return state;
       }
-      const newEvents = [...state.events];
-      newEvents[index] = event;
-      return applyWithHistory(state, sortEvents(newEvents));
+
+      const filteredEntries = state.entries.filter((currentEntry) => currentEntry.id !== id);
+      return applyWithHistory(state, sortEntries([...filteredEntries, { ...entry, id }]));
     }
 
-    case "DELETE_EVENT": {
-      if (action.payload < 0 || action.payload >= state.events.length) {
-        console.error(`Invalid event index: ${action.payload}`);
+    case "DELETE_ENTRY": {
+      if (!state.entries.some((entry) => entry.id === action.payload)) {
+        console.error(`Invalid entry id: ${action.payload}`);
         return state;
       }
-      const filtered = state.events.filter((_, i) => i !== action.payload);
-      return applyWithHistory(state, sortEvents(filtered));
+      return applyWithHistory(
+        state,
+        state.entries.filter((entry) => entry.id !== action.payload),
+      );
     }
 
-    case "DELETE_EVENTS": {
+    case "DELETE_ENTRIES": {
       if (action.payload.length === 0) {
         return state;
       }
-      const indices = new Set(
-        action.payload.filter((index) => index >= 0 && index < state.events.length),
-      );
-      if (indices.size === 0) {
-        console.error("Invalid event indices:", action.payload);
+      const ids = new Set(action.payload);
+      const filteredEntries = state.entries.filter((entry) => !ids.has(entry.id));
+      if (filteredEntries.length === state.entries.length) {
+        console.error("Invalid entry ids:", action.payload);
         return state;
       }
-      const filtered = state.events.filter((_, i) => !indices.has(i));
-      return applyWithHistory(state, sortEvents(filtered));
+      return applyWithHistory(state, filteredEntries);
     }
 
-    case "IMPORT_HDAY": {
-      const parsed = action.payload.trim() ? parseHday(action.payload) : [];
-      return applyWithHistory(state, sortEvents(parsed));
-    }
+    case "IMPORT_HDAY":
+      return applyWithHistory(state, sortEntries(action.payload));
 
-    case "CLEAR_ALL": {
-      if (state.events.length === 0) {
-        return state;
-      }
+    case "CLEAR_ALL":
+      if (state.entries.length === 0) return state;
       return applyWithHistory(state, []);
-    }
 
     case "UNDO": {
       if (state.history.length === 0) {
         return state;
       }
       const previous = state.history[state.history.length - 1];
-      if (!previous) {
-        return state;
-      }
+      if (!previous) return state;
       return {
-        events: previous,
+        entries: previous,
         history: state.history.slice(0, -1),
-        future: [state.events, ...state.future],
+        future: [state.entries, ...state.future],
       };
     }
 
@@ -179,12 +156,10 @@ function eventsReducer(state: EventStoreState, action: EventStoreAction): EventS
         return state;
       }
       const [next, ...remaining] = state.future;
-      if (!next) {
-        return state;
-      }
+      if (!next) return state;
       return {
-        events: next,
-        history: [...state.history, state.events].slice(-HISTORY_LIMIT),
+        entries: next,
+        history: [...state.history, state.entries].slice(-HISTORY_LIMIT),
         future: remaining,
       };
     }
@@ -194,118 +169,68 @@ function eventsReducer(state: EventStoreState, action: EventStoreAction): EventS
   }
 }
 
-/**
- * Provides a React context for storing and managing .hday time-off events with localStorage persistence.
- *
- * The provider initialises events from localStorage, keeps a serialised `.hday` representation in sync,
- * and exposes CRUD, import/export and range-query operations via the EventStoreContext.
- *
- * @param children - React children that will receive the event store context
- * @returns The provider element that supplies the event store context to its descendants
- */
 export function EventStoreProvider({ children }: EventStoreProviderProps) {
-  // Load and parse events from localStorage on mount (parse once, managed by reducer)
-  const [state, dispatch] = useReducer(
-    eventsReducer,
-    { events: [], history: [], future: [] },
-    () => {
-      if (typeof window === "undefined") {
-        return { events: [], history: [], future: [] };
-      }
-      try {
-        const stored = localStorage.getItem(TIME_OFF_STORAGE_KEY) || "";
-        return {
-          events: stored.trim() ? parseHday(stored) : [],
-          history: [],
-          future: [],
-        };
-      } catch (error) {
-        console.error("Failed to load .hday content from localStorage:", error);
-        return { events: [], history: [], future: [] };
-      }
-    },
-  );
+  const [state, dispatch] = useReducer(entriesReducer, undefined, () => ({
+    entries: loadTimeOffEntries(),
+    history: [],
+    future: [],
+  }));
 
-  // Derive raw text from events (for export and backward compatibility)
   const rawText = useMemo(() => {
-    if (state.events.length === 0) return "";
+    if (state.entries.length === 0) return "";
     try {
-      return state.events.map((e) => toLine(e)).join("\n") + "\n";
+      return `${timeOffEntriesToHday(state.entries)}\n`;
     } catch (error) {
-      console.error("Failed to serialize events:", error);
+      console.error("Failed to serialize time-off entries:", error);
       return "";
     }
-  }, [state.events]);
+  }, [state.entries]);
 
-  // Persist to localStorage whenever events change
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      if (rawText) {
-        localStorage.setItem(TIME_OFF_STORAGE_KEY, rawText);
-      } else {
-        localStorage.removeItem(TIME_OFF_STORAGE_KEY);
-      }
+      saveTimeOffEntries(state.entries);
     } catch (error) {
-      console.error("Failed to save .hday content to localStorage:", error);
+      console.error("Failed to save time-off entries to localStorage:", error);
     }
-  }, [rawText]);
+  }, [state.entries]);
 
-  /**
-   * Get calendar events within a date range
-   */
   const getEventsInRange = useCallback(
     (startDate: Date, endDate: Date): CalendarEvent[] => {
-      const calendarEvents: CalendarEvent[] = [];
-
-      state.events.forEach((event, index) => {
-        const converted = hdayToCalendarEvents(event, startDate, endDate, index);
-        calendarEvents.push(...converted);
-      });
-
-      // Filter to only include events that overlap with the date range
       const startStr = dayjs(startDate).format("YYYY-MM-DD");
       const endStr = dayjs(endDate).format("YYYY-MM-DD");
+      const calendarEvents = entriesToCalendarEvents(state.entries, startDate, endDate);
       return filterEventsInRange(calendarEvents, startStr, endStr);
     },
-    [state.events],
+    [state.entries],
   );
 
-  /**
-   * Add a new event
-   */
-  const addEvent = useCallback((event: HdayEvent) => {
-    dispatch({ type: "ADD_EVENT", payload: event });
+  const addEntries = useCallback((entries: TimeOffEntry[]) => {
+    dispatch({ type: "ADD_ENTRIES", payload: entries });
   }, []);
 
-  /**
-   * Update an existing event by index
-   */
-  const updateEvent = useCallback((index: number, event: HdayEvent) => {
-    dispatch({ type: "UPDATE_EVENT", payload: { index, event } });
+  const replaceEntries = useCallback((entries: TimeOffEntry[]) => {
+    dispatch({ type: "REPLACE_ENTRIES", payload: entries });
   }, []);
 
-  /**
-   * Delete an event by index
-   */
-  const deleteEvent = useCallback((index: number) => {
-    dispatch({ type: "DELETE_EVENT", payload: index });
+  const updateEntry = useCallback((id: string, entry: TimeOffEntry) => {
+    dispatch({ type: "UPDATE_ENTRY", payload: { id, entry } });
   }, []);
 
-  const deleteEvents = useCallback((indices: number[]) => {
-    dispatch({ type: "DELETE_EVENTS", payload: indices });
+  const deleteEntry = useCallback((id: string) => {
+    dispatch({ type: "DELETE_ENTRY", payload: id });
   }, []);
 
-  /**
-   * Import .hday text (replaces all events)
-   */
+  const deleteEntries = useCallback((ids: string[]) => {
+    const resolvedIds = ids.filter((id, index, allIds) => allIds.indexOf(id) === index);
+    dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
+  }, []);
+
   const importHday = useCallback((text: string) => {
-    dispatch({ type: "IMPORT_HDAY", payload: text });
+    const result = hdayToTimeOffEntries(text);
+    dispatch({ type: "IMPORT_HDAY", payload: result.entries });
+    return result;
   }, []);
 
-  /**
-   * Clear all events
-   */
   const clearAll = useCallback(() => {
     dispatch({ type: "CLEAR_ALL" });
   }, []);
@@ -321,12 +246,13 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   const contextValue: EventStoreContextType = useMemo(
     () => ({
       rawText,
-      events: state.events,
+      entries: state.entries,
       getEventsInRange,
-      addEvent,
-      updateEvent,
-      deleteEvent,
-      deleteEvents,
+      addEntries,
+      replaceEntries,
+      updateEntry,
+      deleteEntry,
+      deleteEntries,
       importHday,
       clearAll,
       canUndo: state.history.length > 0,
@@ -336,12 +262,13 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     }),
     [
       rawText,
-      state.events,
+      state.entries,
       getEventsInRange,
-      addEvent,
-      updateEvent,
-      deleteEvent,
-      deleteEvents,
+      addEntries,
+      replaceEntries,
+      updateEntry,
+      deleteEntry,
+      deleteEntries,
       importHday,
       clearAll,
       state.history.length,
@@ -354,13 +281,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   return <EventStoreContext.Provider value={contextValue}>{children}</EventStoreContext.Provider>;
 }
 
-/**
- * Hook to access event store context
- * Must be used within an EventStoreProvider
- *
- * @returns The EventStoreContextType with all event store operations
- * @throws {Error} If used outside of an EventStoreProvider
- */
 export function useEventStore(): EventStoreContextType {
   const context = useContext(EventStoreContext);
   if (context === undefined) {

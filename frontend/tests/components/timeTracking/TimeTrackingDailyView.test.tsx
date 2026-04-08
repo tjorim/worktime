@@ -2,14 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { TimeTrackingDailyView } from "../../../src/components/timeTracking/TimeTrackingDailyView";
-import { ToastProvider } from "../../../src/contexts/ToastContext";
-import { SettingsProvider } from "../../../src/contexts/SettingsContext";
-import type {
-  StoredTimeTrackingTask,
-  TimeTrackingTemplate,
-} from "../../../src/components/timeTracking/types";
-import { dayjs } from "../../../src/utils/dateTimeUtils";
+import { TimeTrackingDailyView } from "@/components/timeTracking/TimeTrackingDailyView";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const TEST_LABELS = [
   { id: "Development", name: "Development", color: "#198754" },
