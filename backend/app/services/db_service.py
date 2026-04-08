@@ -585,7 +585,7 @@ async def upsert_user_preferences(
 # Time-off entry operations
 
 
-def _apply_time_off_shape(
+def apply_time_off_shape(
     entry: TimeOffEntry,
     *,
     kind: str,
@@ -655,7 +655,18 @@ async def list_time_off_entries(
 async def create_or_update_time_off_entry(
     session: AsyncSession, user_id: int, payload: TimeOffEntryCreate
 ) -> tuple[TimeOffEntry, bool]:
-    """Upsert a time-off entry for (user_id, entry_id)."""
+    """Upsert a time-off entry for (user_id, entry_id).
+
+    The unique index on (user_id, entry_id) has no partial filter, so a
+    soft-deleted row with the same entry_id blocks re-insertion of a fresh row.
+    This function always *restores* an existing row (including soft-deleted ones)
+    rather than inserting a new one, which keeps the constraint satisfied and
+    ensures deletion history is preserved.
+
+    Returns ``(entry, created)`` where ``created`` is True only when a brand-new
+    row was inserted (i.e. no prior row — active or soft-deleted — existed for
+    this entry_id).
+    """
     entry_id = payload.entry_id or str(uuid4())
     result = await session.execute(
         select(TimeOffEntry).where(
@@ -675,7 +686,7 @@ async def create_or_update_time_off_entry(
             entry_flag=payload.entry_flag,
             note=payload.note,
         )
-        _apply_time_off_shape(
+        apply_time_off_shape(
             new_entry,
             kind=payload.entry_kind,
             value_date=payload.date,
@@ -685,8 +696,7 @@ async def create_or_update_time_off_entry(
         )
         entry = new_entry
     else:
-        assert entry is not None
-        _apply_time_off_shape(
+        apply_time_off_shape(
             entry,
             kind=payload.entry_kind,
             value_date=payload.date,
@@ -715,8 +725,7 @@ async def create_or_update_time_off_entry(
         if entry is None:
             raise
         # A concurrent request won the INSERT race; apply our payload to that row.
-        assert entry is not None
-        _apply_time_off_shape(
+        apply_time_off_shape(
             entry,
             kind=payload.entry_kind,
             value_date=payload.date,
@@ -747,7 +756,7 @@ async def update_time_off_entry(
         if field in non_nullable_fields and value is None:
             raise ValidationError(f"{field} cannot be None")
     if "entry_kind" in data:
-        _apply_time_off_shape(
+        apply_time_off_shape(
             entry,
             kind=data["entry_kind"],
             value_date=data.get("date"),

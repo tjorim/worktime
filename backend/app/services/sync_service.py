@@ -59,6 +59,7 @@ from app.schemas import (
     WorkLocationSyncItem,
     WorkLocationSyncRead,
 )
+from app.services.db_service import apply_time_off_shape
 from app.utils.datetime import as_utc
 
 
@@ -349,8 +350,6 @@ async def _push_time_off_entry(
     session: AsyncSession, user_id: int, item: TimeOffEntrySyncItem
 ) -> SyncRecordResult:
     """Time-off entries use (user_id, entry_id) as their natural key."""
-    from app.services.db_service import _apply_time_off_shape
-
     now = _now()
     provided_fields = _get_provided_fields(item) - {"id", "action", "client_updated_at"}
 
@@ -394,7 +393,7 @@ async def _push_time_off_entry(
             entry_flag=item.entry_flag or "full_day",
             note=item.note,
         )
-        _apply_time_off_shape(
+        apply_time_off_shape(
             entry,
             kind=item.entry_kind,
             value_date=item.date,
@@ -413,7 +412,7 @@ async def _push_time_off_entry(
             conflict_reason="server version is newer",
         )
     if "entry_kind" in provided_fields and item.entry_kind is not None:
-        _apply_time_off_shape(
+        apply_time_off_shape(
             entry,
             kind=item.entry_kind,
             value_date=item.date,
