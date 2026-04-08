@@ -109,6 +109,31 @@ describe("useFirstSyncFlow", () => {
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(emptyStatus.server_timestamp);
   });
 
+  it("treats local preferences-only state as local data and pushes preferences", async () => {
+    localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities (empty payload)
+      .mockResolvedValueOnce({ ok: true }) // PUT /db/preferences
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
+
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("done");
+    });
+
+    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/push");
+    expect(pushCall).toBeDefined();
+
+    const prefsPushCall = mockFetch.mock.calls.find(
+      ([url, init]: [string, RequestInit | undefined]) =>
+        url === "/db/preferences" && init?.method === "PUT",
+    );
+    expect(prefsPushCall).toBeDefined();
+  });
+
   it("Branch A: pushes local data when server is empty", async () => {
     seedTasks();
 
@@ -286,6 +311,24 @@ describe("useFirstSyncFlow", () => {
         url === "/db/preferences" && init?.method === "PUT",
     );
     expect(prefsPushCall).toBeDefined();
+  });
+
+  it("enters error and does not store cursor when preferences push fails", async () => {
+    seedTasks();
+    localStorage.setItem("worktime_user_state", JSON.stringify({ hasCompletedOnboarding: true }));
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
+      .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
+      .mockResolvedValueOnce({ ok: false }); // PUT /db/preferences fails
+
+    const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("error");
+    });
+
+    expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBeNull();
   });
 
   it("Branch B: pulls preferences after entity pull when server has prefs", async () => {

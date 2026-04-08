@@ -17,12 +17,26 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    _client_ts = sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now())
-    op.add_column("time_tracking_labels", _client_ts)
-    op.add_column("time_tracking_tasks", _client_ts)
-    op.add_column("time_tracking_templates", _client_ts)
-    op.add_column("work_locations", _client_ts)
-    op.add_column("gantt_tasks", _client_ts)
+    op.add_column(
+        "time_tracking_labels",
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.add_column(
+        "time_tracking_tasks",
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.add_column(
+        "time_tracking_templates",
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.add_column(
+        "work_locations",
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.add_column(
+        "gantt_tasks",
+        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
     op.add_column("gantt_tasks", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
     op.create_index("ix_gantt_tasks_deleted_at", "gantt_tasks", ["deleted_at"])
 

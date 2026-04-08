@@ -115,8 +115,9 @@ async function pushLocalPreferencesIfPresent(
 ): Promise<boolean> {
   const prefsPayload = buildLocalPreferencesPayload();
   if (!prefsPayload) return true; // nothing to push — not a failure
-  await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
-  return mounted();
+  const pushed = await pushPreferences(fetch, prefsPayload.data, prefsPayload.clientUpdatedAt);
+  if (!mounted()) return false;
+  return pushed;
 }
 
 /**
@@ -183,7 +184,8 @@ export function useFirstSyncFlow(
       // Build the push payload once so both the localHasData check and Branch A
       // use the same filtered dataset (malformed rows are excluded by the builder).
       const localPayload = buildSafeLocalSyncPushPayload();
-      const localHasData = payloadHasData(localPayload);
+      const localPrefsPayload = buildLocalPreferencesPayload();
+      const localHasData = payloadHasData(localPayload) || localPrefsPayload !== null;
 
       // Branch D — nothing anywhere
       if (!localHasData && !serverHasData) {
@@ -202,11 +204,15 @@ export function useFirstSyncFlow(
           return;
         }
         // Also push local preferences (user state) to the server.
-        const stillMounted = await pushLocalPreferencesIfPresent(
+        const prefsPushed = await pushLocalPreferencesIfPresent(
           fetch,
           () => mountedRef.current && flowStartedForUser.current === uid,
         );
-        if (!stillMounted) return;
+        if (!prefsPushed) {
+          if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+          setPhase("error");
+          return;
+        }
         // Fetch the updated server_timestamp after the push so the cursor
         // reflects the post-push server state. Fall back to the pre-push
         // timestamp (still a valid server timestamp) if the re-fetch fails.
@@ -281,11 +287,15 @@ export function useFirstSyncFlow(
               return;
             }
             // Push local preferences to the server (keep-local means local wins).
-            const prefsMounted = await pushLocalPreferencesIfPresent(
+            const prefsPushed = await pushLocalPreferencesIfPresent(
               fetch,
               () => mountedRef.current && flowStartedForUser.current === uid,
             );
-            if (!prefsMounted) return;
+            if (!prefsPushed) {
+              if (!mountedRef.current || flowStartedForUser.current !== uid) return;
+              setPhase("error");
+              return;
+            }
             const postStatus = await fetchSyncStatus(fetch);
             if (!mountedRef.current || flowStartedForUser.current !== uid) return;
             const cursor = postStatus?.server_timestamp ?? serverData.server_timestamp;
