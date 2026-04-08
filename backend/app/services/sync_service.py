@@ -35,6 +35,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import (
+    GanttTask,
     TimeOffEntry,
     TimeTrackingLabel,
     TimeTrackingTask,
@@ -43,6 +44,8 @@ from app.database.models import (
     WorkLocation,
 )
 from app.schemas import (
+    GanttTaskSyncItem,
+    GanttTaskSyncRead,
     LabelSyncItem,
     LabelSyncRead,
     SyncPullResponse,
@@ -104,13 +107,14 @@ async def _push_label(
     if item.action == "delete":
         if label is None or label.user_id != user_id or label.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(label.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=label.updated_at,
                 conflict_reason="server version is newer",
             )
+        label.client_updated_at = as_utc(item.client_updated_at)
         label.deleted_at = now
         label.updated_at = now
         session.add(label)
@@ -126,6 +130,7 @@ async def _push_label(
             user_id=user_id,
             name=item.name,
             color=item.color,
+            client_updated_at=as_utc(item.client_updated_at),
         )
         session.add(label)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -134,7 +139,7 @@ async def _push_label(
         from app.services.db_service import ValidationError
         raise ValidationError("label not found")
 
-    if as_utc(item.client_updated_at) <= as_utc(label.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(label.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -147,6 +152,7 @@ async def _push_label(
         label.color = item.color
     if label.deleted_at is not None:
         label.deleted_at = None
+    label.client_updated_at = as_utc(item.client_updated_at)
     label.updated_at = now
     session.add(label)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -161,13 +167,14 @@ async def _push_task(
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=task.updated_at,
                 conflict_reason="server version is newer",
             )
+        task.client_updated_at = as_utc(item.client_updated_at)
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
@@ -186,6 +193,7 @@ async def _push_task(
             start_time=item.start_time,
             stop_time=item.stop_time,
             includes_break=item.includes_break or False,
+            client_updated_at=as_utc(item.client_updated_at),
         )
         session.add(task)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -194,7 +202,7 @@ async def _push_task(
         from app.services.db_service import ValidationError
         raise ValidationError("task not found")
 
-    if as_utc(item.client_updated_at) <= as_utc(task.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -215,6 +223,7 @@ async def _push_task(
         task.includes_break = item.includes_break
     if task.deleted_at is not None:
         task.deleted_at = None
+    task.client_updated_at = as_utc(item.client_updated_at)
     task.updated_at = now
     session.add(task)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -229,13 +238,14 @@ async def _push_template(
     if item.action == "delete":
         if template is None or template.user_id != user_id or template.deleted_at is not None:
             return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(template.client_updated_at):
             return SyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=template.updated_at,
                 conflict_reason="server version is newer",
             )
+        template.client_updated_at = as_utc(item.client_updated_at)
         template.deleted_at = now
         template.updated_at = now
         session.add(template)
@@ -253,6 +263,7 @@ async def _push_template(
             text=item.text,
             start_time=item.start_time,
             stop_time=item.stop_time,
+            client_updated_at=as_utc(item.client_updated_at),
         )
         session.add(template)
         return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -261,7 +272,7 @@ async def _push_template(
         from app.services.db_service import ValidationError
         raise ValidationError("template not found")
 
-    if as_utc(item.client_updated_at) <= as_utc(template.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(template.client_updated_at):
         return SyncRecordResult(
             id=item.id,
             status="conflict",
@@ -280,6 +291,7 @@ async def _push_template(
         template.stop_time = item.stop_time
     if template.deleted_at is not None:
         template.deleted_at = None
+    template.client_updated_at = as_utc(item.client_updated_at)
     template.updated_at = now
     session.add(template)
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
@@ -303,13 +315,14 @@ async def _push_work_location(
     if item.action == "delete":
         if location is None or location.deleted_at is not None:
             return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
-        if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
+        if as_utc(item.client_updated_at) <= as_utc(location.client_updated_at):
             return SyncRecordResult(
                 id=date_key,
                 status="conflict",
                 server_updated_at=location.updated_at,
                 conflict_reason="server version is newer",
             )
+        location.client_updated_at = as_utc(item.client_updated_at)
         location.deleted_at = now
         location.updated_at = now
         session.add(location)
@@ -324,11 +337,12 @@ async def _push_work_location(
             date=item.date,
             country_code=item.country_code,
             label=item.label,
+            client_updated_at=as_utc(item.client_updated_at),
         )
         session.add(location)
         return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
 
-    if as_utc(item.client_updated_at) <= as_utc(location.updated_at):
+    if as_utc(item.client_updated_at) <= as_utc(location.client_updated_at):
         return SyncRecordResult(
             id=date_key,
             status="conflict",
@@ -342,6 +356,7 @@ async def _push_work_location(
         location.label = item.label
     if location.deleted_at is not None:
         location.deleted_at = None
+    location.client_updated_at = as_utc(item.client_updated_at)
     location.updated_at = now
     session.add(location)
     return SyncRecordResult(id=date_key, status="ok", server_updated_at=now)
@@ -437,8 +452,80 @@ async def _push_time_off_entry(
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
+async def _push_gantt_task(
+    session: AsyncSession, user_id: int, item: GanttTaskSyncItem
+) -> SyncRecordResult:
+    now = _now()
+    task: GanttTask | None = await session.get(GanttTask, item.id)
+
+    if item.action == "delete":
+        if task is None or task.user_id != user_id or task.deleted_at is not None:
+            return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+        if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+            return SyncRecordResult(
+                id=item.id,
+                status="conflict",
+                server_updated_at=task.updated_at,
+                conflict_reason="server version is newer",
+            )
+        task.client_updated_at = as_utc(item.client_updated_at)
+        task.deleted_at = now
+        task.updated_at = now
+        session.add(task)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+
+    if task is None:
+        if item.name is None or item.start_date is None or item.end_date is None:
+            from app.services.db_service import ValidationError
+            raise ValidationError("name, start_date and end_date are required for gantt task create")
+        task = GanttTask(
+            id=item.id,
+            user_id=user_id,
+            name=item.name,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            progress=item.progress or 0,
+            dependencies=item.dependencies,
+            notes=item.notes,
+            client_updated_at=as_utc(item.client_updated_at),
+        )
+        session.add(task)
+        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+
+    if task.user_id != user_id:
+        from app.services.db_service import ValidationError
+        raise ValidationError("gantt task not found")
+
+    if as_utc(item.client_updated_at) <= as_utc(task.client_updated_at):
+        return SyncRecordResult(
+            id=item.id,
+            status="conflict",
+            server_updated_at=task.updated_at,
+            conflict_reason="server version is newer",
+        )
+    provided_fields = _get_provided_fields(item) - {"action", "client_updated_at"}
+    if "name" in provided_fields and item.name is not None:
+        task.name = item.name
+    if "start_date" in provided_fields and item.start_date is not None:
+        task.start_date = item.start_date
+    if "end_date" in provided_fields and item.end_date is not None:
+        task.end_date = item.end_date
+    if "progress" in provided_fields and item.progress is not None:
+        task.progress = item.progress
+    if "dependencies" in provided_fields:
+        task.dependencies = item.dependencies
+    if "notes" in provided_fields:
+        task.notes = item.notes
+    if task.deleted_at is not None:
+        task.deleted_at = None
+    task.client_updated_at = as_utc(item.client_updated_at)
+    task.updated_at = now
+    session.add(task)
+    return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+
+
 type SyncEntityModel = (
-    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry
+    TimeTrackingLabel | TimeTrackingTask | TimeTrackingTemplate | WorkLocation | TimeOffEntry | GanttTask
 )
 
 
@@ -475,6 +562,7 @@ async def push_changes(
         "templates": [],
         "work_locations": [],
         "time_off_entries": [],
+        "gantt_tasks": [],
     }
 
     for item in changes.labels:
@@ -492,6 +580,9 @@ async def push_changes(
     for item in changes.time_off_entries:
         results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
 
+    for item in changes.gantt_tasks:
+        results["gantt_tasks"].append(await _push_gantt_task(session, user_id, item))
+
     await session.commit()
     return SyncPushResponse(results=results)
 
@@ -507,6 +598,7 @@ async def pull_changes(
     templates = await _get_synced_entities(session, TimeTrackingTemplate, user_id, since_utc)
     work_locations = await _get_synced_entities(session, WorkLocation, user_id, since_utc)
     time_off_entries = await _get_synced_entities(session, TimeOffEntry, user_id, since_utc)
+    gantt_tasks = await _get_synced_entities(session, GanttTask, user_id, since_utc)
 
     return SyncPullResponse(
         labels=[LabelSyncRead.model_validate(r, from_attributes=True) for r in labels],
@@ -514,6 +606,7 @@ async def pull_changes(
         templates=[TemplateSyncRead.model_validate(r, from_attributes=True) for r in templates],
         work_locations=[WorkLocationSyncRead.model_validate(r, from_attributes=True) for r in work_locations],
         time_off_entries=[TimeOffEntrySyncRead.model_validate(r, from_attributes=True) for r in time_off_entries],
+        gantt_tasks=[GanttTaskSyncRead.model_validate(r, from_attributes=True) for r in gantt_tasks],
         server_timestamp=_now(),
     )
 
@@ -539,6 +632,7 @@ async def get_sync_status(session: AsyncSession, user_id: int) -> SyncStatusResp
         templates_updated_at=await _max_ts(TimeTrackingTemplate, user_id),
         work_locations_updated_at=await _max_ts(WorkLocation, user_id),
         time_off_entries_updated_at=await _max_ts(TimeOffEntry, user_id),
+        gantt_tasks_updated_at=await _max_ts(GanttTask, user_id),
         preferences_updated_at=await _prefs_updated_at(user_id),
         server_timestamp=_now(),
     )

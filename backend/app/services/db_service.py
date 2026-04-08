@@ -498,14 +498,16 @@ async def create_gantt_task(
 
 async def get_gantt_task(session: AsyncSession, user_id: int, task_id: str) -> GanttTask:
     task = await session.get(GanttTask, task_id)
-    if task is None or task.user_id != user_id:
+    if task is None or task.user_id != user_id or task.deleted_at is not None:
         raise NotFoundError("gantt task not found")
     return task
 
 
 async def list_gantt_tasks(session: AsyncSession, *, user_id: int) -> list[GanttTask]:
     result = await session.execute(
-        select(GanttTask).where(GanttTask.user_id == user_id).order_by(GanttTask.start_date)
+        select(GanttTask)
+        .where(GanttTask.user_id == user_id, GanttTask.deleted_at.is_(None))
+        .order_by(GanttTask.start_date)
     )
     return list(result.scalars().all())
 
@@ -696,6 +698,7 @@ async def create_or_update_time_off_entry(
         )
         entry = new_entry
     else:
+        assert entry is not None
         apply_time_off_shape(
             entry,
             kind=payload.entry_kind,

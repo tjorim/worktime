@@ -21,6 +21,14 @@ class Base(DeclarativeBase):
     pass
 
 
+class ClientTimestampMixin:
+    """Mixin that adds a client_updated_at column for last-write-wins conflict detection."""
+
+    client_updated_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+
+
 class User(Base):
     """User account and preferences."""
 
@@ -42,7 +50,7 @@ class User(Base):
     )
 
 
-class TimeTrackingLabel(Base):
+class TimeTrackingLabel(ClientTimestampMixin, Base):
     """Time tracking label for categorizing tasks and templates."""
 
     __tablename__ = "time_tracking_labels"
@@ -72,7 +80,7 @@ class TimeTrackingLabel(Base):
     )
 
 
-class TimeTrackingTask(Base):
+class TimeTrackingTask(ClientTimestampMixin, Base):
     """Tracked work task entry."""
 
     __tablename__ = "time_tracking_tasks"
@@ -99,7 +107,7 @@ class TimeTrackingTask(Base):
     )
 
 
-class TimeTrackingTemplate(Base):
+class TimeTrackingTemplate(ClientTimestampMixin, Base):
     """Reusable time tracking template."""
 
     __tablename__ = "time_tracking_templates"
@@ -123,7 +131,7 @@ class TimeTrackingTemplate(Base):
     )
 
 
-class WorkLocation(Base):
+class WorkLocation(ClientTimestampMixin, Base):
     """Per-day country assignment for where a user worked."""
 
     __tablename__ = "work_locations"
@@ -154,7 +162,7 @@ class WorkLocation(Base):
     )
 
 
-class GanttTask(Base):
+class GanttTask(ClientTimestampMixin, Base):
     """Personal Gantt chart task."""
 
     __tablename__ = "gantt_tasks"
@@ -175,9 +183,12 @@ class GanttTask(Base):
     updated_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=_utc_now, default=_utc_now, index=True
     )
+    deleted_at: Mapped[dt_datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
 
-class UserPreferences(Base):
+class UserPreferences(ClientTimestampMixin, Base):
     """Account-backed storage for a user's local-first preferences/settings blob.
 
     One row per user.  The ``data`` column stores the full ``worktime_user_state``
@@ -191,9 +202,6 @@ class UserPreferences(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
-    client_updated_at: Mapped[dt_datetime] = mapped_column(
-        DateTime(timezone=True), default=_utc_now
-    )
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )
@@ -202,7 +210,7 @@ class UserPreferences(Base):
     )
 
 
-class TimeOffEntry(Base):
+class TimeOffEntry(ClientTimestampMixin, Base):
     """Structured time-off entry for account-backed sync.
 
     ``entry_id`` is the client-generated stable identity for a logical
@@ -224,9 +232,6 @@ class TimeOffEntry(Base):
     entry_type: Mapped[str] = mapped_column(String, nullable=False, default="vacation")
     entry_flag: Mapped[str] = mapped_column(String, nullable=False, default="full_day")
     note: Mapped[str | None] = mapped_column(String, nullable=True)
-    client_updated_at: Mapped[dt_datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), default=_utc_now
-    )
     created_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
     )

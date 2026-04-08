@@ -435,6 +435,7 @@ class LabelSyncRead(BaseModel):
     user_id: int
     name: str
     color: str
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -448,6 +449,7 @@ class TaskSyncRead(BaseModel):
     start_time: dt_datetime
     stop_time: dt_datetime | None
     includes_break: bool
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -460,6 +462,7 @@ class TemplateSyncRead(BaseModel):
     text: str
     start_time: dt_time
     stop_time: dt_time
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -471,6 +474,7 @@ class WorkLocationSyncRead(BaseModel):
     date: dt_date
     country_code: str
     label: str | None
+    client_updated_at: dt_datetime
     created_at: dt_datetime
     updated_at: dt_datetime
     deleted_at: dt_datetime | None
@@ -640,6 +644,33 @@ type TimeOffEntrySyncItem = Annotated[
 ]
 
 
+class GanttTaskSyncItem(BaseModel):
+    id: str
+    action: Literal["create", "update", "delete"]
+    client_updated_at: dt_datetime
+    name: str | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    dependencies: str | None = None
+    notes: str | None = None
+
+
+class GanttTaskSyncRead(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+    progress: int
+    dependencies: str | None
+    notes: str | None
+    client_updated_at: dt_datetime
+    created_at: dt_datetime
+    updated_at: dt_datetime
+    deleted_at: dt_datetime | None
+
+
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 
@@ -648,6 +679,7 @@ class SyncPushRequest(BaseModel):
     templates: list[TemplateSyncItem] = []
     work_locations: list[WorkLocationSyncItem] = []
     time_off_entries: list[TimeOffEntrySyncItem] = []
+    gantt_tasks: list[GanttTaskSyncItem] = []
 
 
 class SyncPushResponse(BaseModel):
@@ -664,6 +696,7 @@ class SyncPullResponse(BaseModel):
     templates: list[TemplateSyncRead]
     work_locations: list[WorkLocationSyncRead]
     time_off_entries: list[TimeOffEntrySyncRead]
+    gantt_tasks: list[GanttTaskSyncRead]
     server_timestamp: dt_datetime
 
 
@@ -675,5 +708,6 @@ class SyncStatusResponse(BaseModel):
     templates_updated_at: dt_datetime | None
     work_locations_updated_at: dt_datetime | None
     time_off_entries_updated_at: dt_datetime | None
+    gantt_tasks_updated_at: dt_datetime | None
     preferences_updated_at: dt_datetime | None
     server_timestamp: dt_datetime

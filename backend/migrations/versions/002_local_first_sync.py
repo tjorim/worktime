@@ -5,18 +5,27 @@ Revises: 001
 Create Date: 2026-04-05
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "002"
-down_revision: Union[str, None] = "001"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "001"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    _client_ts = sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    op.add_column("time_tracking_labels", _client_ts)
+    op.add_column("time_tracking_tasks", _client_ts)
+    op.add_column("time_tracking_templates", _client_ts)
+    op.add_column("work_locations", _client_ts)
+    op.add_column("gantt_tasks", _client_ts)
+    op.add_column("gantt_tasks", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
+    op.create_index("ix_gantt_tasks_deleted_at", "gantt_tasks", ["deleted_at"])
+
     op.create_table(
         "user_preferences",
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
@@ -80,6 +89,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_gantt_tasks_deleted_at", table_name="gantt_tasks")
+    op.drop_column("gantt_tasks", "deleted_at")
+    op.drop_column("gantt_tasks", "client_updated_at")
+    op.drop_column("work_locations", "client_updated_at")
+    op.drop_column("time_tracking_templates", "client_updated_at")
+    op.drop_column("time_tracking_tasks", "client_updated_at")
+    op.drop_column("time_tracking_labels", "client_updated_at")
+
     op.drop_constraint("ck_time_off_shape", "time_off_entries", type_="check")
     op.drop_constraint("ck_time_off_weekday_range", "time_off_entries", type_="check")
     op.drop_constraint("ck_time_off_entry_flag", "time_off_entries", type_="check")
