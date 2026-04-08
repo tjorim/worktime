@@ -209,8 +209,8 @@ export function entriesToCalendarEvents(
         rangeEnd,
       ).map((event) => ({
         ...event,
-        meta: { ...event.meta, entryId: entry.id },
-      }));
+        meta: { ...(event.meta as HolidayMetadata), entryId: entry.id },
+      })) as CalendarEvent[];
     }
 
     return [];
