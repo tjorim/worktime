@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   appendToSyncOutbox,
+  countPushConflicts,
   dequeueAndMergeSyncOutbox,
   fetchSyncStatus,
   getSyncOutboxSize,
@@ -49,6 +50,14 @@ export interface OngoingSyncState {
   lastSyncedAt: string | null;
   /** Number of changes waiting in the outbox queue. */
   outboxCount: number;
+  /** True when the last flush-and-pull cycle failed (server/network error). */
+  hasSyncError: boolean;
+  /**
+   * Number of records that had conflicts in the last push operation.
+   * Non-zero means the server version was kept for those records.
+   * Resets to 0 after the next successful conflict-free sync.
+   */
+  conflictCount: number;
 }
 
 export type EnqueueChangeFn = (change: SyncPushPayload) => void;
@@ -79,6 +88,8 @@ export function useOngoingSync(
     if (!userId) return 0;
     return getSyncOutboxSize(userId);
   });
+  const [hasSyncError, setHasSyncError] = useState(false);
+  const [conflictCount, setConflictCount] = useState(0);
 
   // Keep a stable ref to the latest pull callback so the flush closure does
   // not become stale when `onIncrementalPull` identity changes.
@@ -119,17 +130,24 @@ export function useOngoingSync(
           console.error("useOngoingSync: outbox push threw:", err);
           if (!mountedRef.current) return;
           setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
           return;
         }
         if (!mountedRef.current) return;
         if (!pushResult) {
           // Push returned falsy — outbox stays intact for next retry.
           setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
           return;
         }
         // Push succeeded — commit (clear) the outbox and continue to pull.
         commit();
         setOutboxCount(getSyncOutboxSize(userId));
+        // Surface any conflicts from the outbox flush.
+        const flushConflicts = countPushConflicts(pushResult);
+        if (flushConflicts > 0) {
+          setConflictCount(flushConflicts);
+        }
       }
 
       // --- Incremental pull ---
@@ -140,6 +158,11 @@ export function useOngoingSync(
         onIncrementalPullRef.current?.(pullResult);
         storeSyncCursor(userId, pullResult.server_timestamp);
         setLastSyncedAt(pullResult.server_timestamp);
+        setHasSyncError(false);
+        // Reset conflict count only when a successful pull brings no new conflicts.
+        setConflictCount((prev) => (prev > 0 ? prev : 0));
+      } else {
+        setHasSyncError(true);
       }
     } finally {
       if (mountedRef.current) {
@@ -187,6 +210,8 @@ export function useOngoingSync(
   useEffect(() => {
     setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
+    setHasSyncError(false);
+    setConflictCount(0);
     hasRunInitialFlushRef.current = false;
   }, [userId]);
 
@@ -214,13 +239,31 @@ export function useOngoingSync(
         const result = await pushSyncPayload(fetchFn, change);
         if (!mountedRef.current) return;
         if (result) {
-          // Refresh the cursor so incremental pulls stay accurate.
-          const newStatus = await fetchSyncStatus(fetchFn);
-          if (!mountedRef.current) return;
-          if (newStatus) {
-            storeSyncCursor(userId, newStatus.server_timestamp);
-            setLastSyncedAt(newStatus.server_timestamp);
+          // Detect conflicts — if any records were rejected, do a pull to get
+          // the server versions so local state stays consistent.
+          const conflicts = countPushConflicts(result);
+          if (conflicts > 0) {
+            setConflictCount(conflicts);
+            // Pull server state to reconcile conflicted records.
+            const cursor = localStorage.getItem(getSyncCursorKey(userId));
+            const pullResult = await pullSyncData(fetchFn, cursor ?? undefined);
+            if (!mountedRef.current) return;
+            if (pullResult) {
+              onIncrementalPullRef.current?.(pullResult);
+              storeSyncCursor(userId, pullResult.server_timestamp);
+              setLastSyncedAt(pullResult.server_timestamp);
+            }
+          } else {
+            setConflictCount(0);
+            // Refresh the cursor so incremental pulls stay accurate.
+            const newStatus = await fetchSyncStatus(fetchFn);
+            if (!mountedRef.current) return;
+            if (newStatus) {
+              storeSyncCursor(userId, newStatus.server_timestamp);
+              setLastSyncedAt(newStatus.server_timestamp);
+            }
           }
+          setHasSyncError(false);
         } else {
           // Push failed — queue for later flush.
           appendToSyncOutbox(userId, change);
@@ -244,9 +287,11 @@ export function useOngoingSync(
       isSyncing: false,
       lastSyncedAt: null,
       outboxCount: 0,
+      hasSyncError: false,
+      conflictCount: 0,
       enqueueChange: () => {},
     };
   }
 
-  return { isSyncing, lastSyncedAt, outboxCount, enqueueChange };
+  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, enqueueChange };
 }

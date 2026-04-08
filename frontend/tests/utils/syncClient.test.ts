@@ -18,6 +18,7 @@ import {
   pushSyncPayload,
   storeSyncCursor,
   syncStatusHasData,
+  countPushConflicts,
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
 import {
@@ -98,6 +99,46 @@ describe("syncClient", () => {
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // countPushConflicts
+  // ---------------------------------------------------------------------------
+
+  describe("countPushConflicts", () => {
+    it("returns 0 when results object is empty", () => {
+      expect(countPushConflicts({ results: {} })).toBe(0);
+    });
+
+    it("returns 0 when all records have status ok", () => {
+      expect(
+        countPushConflicts({
+          results: {
+            labels: [
+              { id: "l1", status: "ok" },
+              { id: "l2", status: "ok" },
+            ],
+          },
+        }),
+      ).toBe(0);
+    });
+
+    it("counts conflict records across all entity types", () => {
+      expect(
+        countPushConflicts({
+          results: {
+            labels: [
+              { id: "l1", status: "ok" },
+              { id: "l2", status: "conflict", conflict_reason: "server is newer" },
+            ],
+            tasks: [
+              { id: "t1", status: "conflict", conflict_reason: "server is newer" },
+            ],
+            templates: [],
+          },
+        }),
+      ).toBe(2);
     });
   });
 

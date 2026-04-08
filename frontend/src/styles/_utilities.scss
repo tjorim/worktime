@@ -146,3 +146,17 @@ body {
     margin: 0.5rem;
   }
 }
+
+/* ============================================================================
+   SYNC STATUS INDICATOR
+   ========================================================================= */
+
+@keyframes sync-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.sync-spin {
+  display: inline-block;
+  animation: sync-spin 1s linear infinite;
+}
