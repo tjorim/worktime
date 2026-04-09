@@ -152,10 +152,11 @@ export function useOngoingSync(
       }
 
       // --- Pull ---
-      // When conflicts occurred during push, skip the cursor so that conflicted
-      // records are always included regardless of their server `updated_at`.
+      // When conflicts occurred during push (or remain unresolved), skip the
+      // cursor so that conflicted records are always included regardless of their
+      // server `updated_at`.
       const cursor =
-        flushConflicts > 0
+        flushConflicts > 0 || conflictCount > 0
           ? undefined
           : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
       const pullResult = await pullSyncData(fetchFn, cursor);
@@ -165,10 +166,6 @@ export function useOngoingSync(
         storeSyncCursor(userId, pullResult.server_timestamp);
         setLastSyncedAt(pullResult.server_timestamp);
         setHasSyncError(false);
-        // Clear conflict count when a clean flush-and-pull cycle completes.
-        if (flushConflicts === 0) {
-          setConflictCount(0);
-        }
       } else {
         setHasSyncError(true);
       }
@@ -178,7 +175,7 @@ export function useOngoingSync(
       }
       isFlushingRef.current = false;
     }
-  }, [isActive, userId, fetchFn]);
+  }, [isActive, userId, fetchFn, conflictCount]);
 
   // Listen for reconnect and visibility-change events.
   useEffect(() => {
@@ -253,13 +250,32 @@ export function useOngoingSync(
           const conflicts = countPushConflicts(result);
           if (conflicts > 0) {
             setConflictCount(conflicts);
-            const pullResult = await pullSyncData(fetchFn);
+            let pullResult: SyncPullResponse | null = null;
+            try {
+              pullResult = await pullSyncData(fetchFn);
+            } catch (err) {
+              // Reconciliation pull threw — surface as a sync error but do NOT requeue.
+              console.error("useOngoingSync: reconciliation pull threw:", err);
+              if (mountedRef.current) {
+                setHasSyncError(true);
+              }
+              return;
+            }
             if (!mountedRef.current) return;
             if (pullResult) {
-              onIncrementalPullRef.current?.(pullResult);
-              storeSyncCursor(userId, pullResult.server_timestamp);
-              setLastSyncedAt(pullResult.server_timestamp);
-              setHasSyncError(false);
+              // Pull succeeded — now run post-success reconciliation.
+              try {
+                onIncrementalPullRef.current?.(pullResult);
+                storeSyncCursor(userId, pullResult.server_timestamp);
+                setLastSyncedAt(pullResult.server_timestamp);
+                setHasSyncError(false);
+              } catch (err) {
+                // Post-success callback threw — log but do NOT requeue the change.
+                console.error("useOngoingSync: post-reconciliation callback threw:", err);
+                if (mountedRef.current) {
+                  setHasSyncError(true);
+                }
+              }
             } else {
               // Reconciliation pull failed — surface as a sync error.
               setHasSyncError(true);
