@@ -954,5 +954,16 @@
   "first_sync_conflict_use_server": "Use server data",
   "first_sync_conflict_use_server_desc": "Server data will be downloaded to this device, replacing your local copy.",
   "first_sync_conflict_confirm": "Apply",
-  "first_sync_conflict_cancel": "Decide later"
+  "first_sync_conflict_cancel": "Decide later",
+
+  "sync_indicator_syncing": "Syncing\u2026",
+  "sync_indicator_synced": "Synced",
+  "sync_indicator_pending": "{count} pending",
+  "sync_indicator_error": "Sync failed",
+  "sync_indicator_conflicts": "{count} reverted",
+  "sync_indicator_aria_label": "Sync status",
+  "sync_indicator_tooltip_synced_at": "Last synced: {time}",
+  "sync_indicator_tooltip_pending": "{count} change(s) waiting to sync",
+  "sync_indicator_tooltip_error": "The last sync attempt failed. Changes will be retried automatically.",
+  "sync_indicator_tooltip_conflicts": "{count} record(s) had a conflict and were reverted to the server version."
 }

@@ -224,6 +224,17 @@ export function syncStatusHasData(status: SyncStatusResponse): boolean {
 }
 
 /**
+ * Count the total number of conflict records across all entity types in a
+ * push response.  Returns 0 when there are no conflicts.
+ */
+export function countPushConflicts(response: SyncPushResponse): number {
+  return Object.values(response.results).reduce(
+    (total, records) => total + records.filter((r) => r.status === "conflict").length,
+    0,
+  );
+}
+
+/**
  * Call POST /db/sync/push with a pre-built payload.
  * Returns the server response, or null on network/parse failure.
  */

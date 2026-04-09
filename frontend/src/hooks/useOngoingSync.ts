@@ -28,6 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   appendToSyncOutbox,
+  countPushConflicts,
   dequeueAndMergeSyncOutbox,
   fetchSyncStatus,
   getSyncOutboxSize,
@@ -49,6 +50,14 @@ export interface OngoingSyncState {
   lastSyncedAt: string | null;
   /** Number of changes waiting in the outbox queue. */
   outboxCount: number;
+  /** True when the last flush-and-pull cycle failed (server/network error). */
+  hasSyncError: boolean;
+  /**
+   * Number of records that had conflicts in the last push operation.
+   * Non-zero means the server version was kept for those records.
+   * Resets to 0 after the next successful conflict-free sync.
+   */
+  conflictCount: number;
 }
 
 export type EnqueueChangeFn = (change: SyncPushPayload) => void;
@@ -79,6 +88,8 @@ export function useOngoingSync(
     if (!userId) return 0;
     return getSyncOutboxSize(userId);
   });
+  const [hasSyncError, setHasSyncError] = useState(false);
+  const [conflictCount, setConflictCount] = useState(0);
 
   // Keep a stable ref to the latest pull callback so the flush closure does
   // not become stale when `onIncrementalPull` identity changes.
@@ -108,6 +119,7 @@ export function useOngoingSync(
     setIsSyncing(true);
     try {
       // --- Flush outbox ---
+      let flushConflicts = 0;
       const dequeued = dequeueAndMergeSyncOutbox(userId);
       if (dequeued) {
         const { merged, commit } = dequeued;
@@ -119,27 +131,43 @@ export function useOngoingSync(
           console.error("useOngoingSync: outbox push threw:", err);
           if (!mountedRef.current) return;
           setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
           return;
         }
         if (!mountedRef.current) return;
         if (!pushResult) {
           // Push returned falsy — outbox stays intact for next retry.
           setOutboxCount(getSyncOutboxSize(userId));
+          setHasSyncError(true);
           return;
         }
         // Push succeeded — commit (clear) the outbox and continue to pull.
         commit();
         setOutboxCount(getSyncOutboxSize(userId));
+        // Surface any conflicts from the outbox flush.
+        flushConflicts = countPushConflicts(pushResult);
+        if (flushConflicts > 0) {
+          setConflictCount(flushConflicts);
+        }
       }
 
-      // --- Incremental pull ---
-      const cursor = localStorage.getItem(getSyncCursorKey(userId));
-      const pullResult = await pullSyncData(fetchFn, cursor ?? undefined);
+      // --- Pull ---
+      // When conflicts occurred during push (or remain unresolved), skip the
+      // cursor so that conflicted records are always included regardless of their
+      // server `updated_at`.
+      const cursor =
+        flushConflicts > 0 || conflictCount > 0
+          ? undefined
+          : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
+      const pullResult = await pullSyncData(fetchFn, cursor);
       if (!mountedRef.current) return;
       if (pullResult) {
         onIncrementalPullRef.current?.(pullResult);
         storeSyncCursor(userId, pullResult.server_timestamp);
         setLastSyncedAt(pullResult.server_timestamp);
+        setHasSyncError(false);
+      } else {
+        setHasSyncError(true);
       }
     } finally {
       if (mountedRef.current) {
@@ -147,7 +175,7 @@ export function useOngoingSync(
       }
       isFlushingRef.current = false;
     }
-  }, [isActive, userId, fetchFn]);
+  }, [isActive, userId, fetchFn, conflictCount]);
 
   // Listen for reconnect and visibility-change events.
   useEffect(() => {
@@ -187,6 +215,8 @@ export function useOngoingSync(
   useEffect(() => {
     setLastSyncedAt(userId ? localStorage.getItem(getSyncCursorKey(userId)) : null);
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
+    setHasSyncError(false);
+    setConflictCount(0);
     hasRunInitialFlushRef.current = false;
   }, [userId]);
 
@@ -214,12 +244,52 @@ export function useOngoingSync(
         const result = await pushSyncPayload(fetchFn, change);
         if (!mountedRef.current) return;
         if (result) {
-          // Refresh the cursor so incremental pulls stay accurate.
-          const newStatus = await fetchSyncStatus(fetchFn);
-          if (!mountedRef.current) return;
-          if (newStatus) {
-            storeSyncCursor(userId, newStatus.server_timestamp);
-            setLastSyncedAt(newStatus.server_timestamp);
+          // Detect conflicts — if any records were rejected, do a full pull (no
+          // `since`) so that conflicted records are always included regardless of
+          // where the local cursor sits relative to the server's `updated_at`.
+          const conflicts = countPushConflicts(result);
+          if (conflicts > 0) {
+            setConflictCount(conflicts);
+            let pullResult: SyncPullResponse | null = null;
+            try {
+              pullResult = await pullSyncData(fetchFn);
+            } catch (err) {
+              // Reconciliation pull threw — surface as a sync error but do NOT requeue.
+              console.error("useOngoingSync: reconciliation pull threw:", err);
+              if (mountedRef.current) {
+                setHasSyncError(true);
+              }
+              return;
+            }
+            if (!mountedRef.current) return;
+            if (pullResult) {
+              // Pull succeeded — now run post-success reconciliation.
+              try {
+                onIncrementalPullRef.current?.(pullResult);
+                storeSyncCursor(userId, pullResult.server_timestamp);
+                setLastSyncedAt(pullResult.server_timestamp);
+                setHasSyncError(false);
+              } catch (err) {
+                // Post-success callback threw — log but do NOT requeue the change.
+                console.error("useOngoingSync: post-reconciliation callback threw:", err);
+                if (mountedRef.current) {
+                  setHasSyncError(true);
+                }
+              }
+            } else {
+              // Reconciliation pull failed — surface as a sync error.
+              setHasSyncError(true);
+            }
+          } else {
+            setConflictCount(0);
+            // Refresh the cursor so incremental pulls stay accurate.
+            const newStatus = await fetchSyncStatus(fetchFn);
+            if (!mountedRef.current) return;
+            if (newStatus) {
+              storeSyncCursor(userId, newStatus.server_timestamp);
+              setLastSyncedAt(newStatus.server_timestamp);
+            }
+            setHasSyncError(false);
           }
         } else {
           // Push failed — queue for later flush.
@@ -244,9 +314,11 @@ export function useOngoingSync(
       isSyncing: false,
       lastSyncedAt: null,
       outboxCount: 0,
+      hasSyncError: false,
+      conflictCount: 0,
       enqueueChange: () => {},
     };
   }
 
-  return { isSyncing, lastSyncedAt, outboxCount, enqueueChange };
+  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, enqueueChange };
 }

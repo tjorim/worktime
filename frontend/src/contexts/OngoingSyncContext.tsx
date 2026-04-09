@@ -39,6 +39,8 @@ const NO_OP_CONTEXT: OngoingSyncContextType = {
   isSyncing: false,
   lastSyncedAt: null,
   outboxCount: 0,
+  hasSyncError: false,
+  conflictCount: 0,
   enqueueChange: () => {},
 };
 
@@ -85,7 +87,7 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     [currentTimeOffEntries, replaceEntries],
   );
 
-  const { enqueueChange, isSyncing, lastSyncedAt, outboxCount } = useOngoingSync(
+  const { enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } = useOngoingSync(
     isSyncEstablished,
     userId,
     isAuthenticated ? fetchFn : null,
@@ -93,8 +95,8 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   );
 
   const value = useMemo<OngoingSyncContextType>(
-    () => ({ enqueueChange, isSyncing, lastSyncedAt, outboxCount }),
-    [enqueueChange, isSyncing, lastSyncedAt, outboxCount],
+    () => ({ enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount }),
+    [enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount],
   );
 
   return <OngoingSyncContext.Provider value={value}>{children}</OngoingSyncContext.Provider>;

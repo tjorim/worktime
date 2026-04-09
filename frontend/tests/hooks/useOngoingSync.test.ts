@@ -284,4 +284,210 @@ describe("useOngoingSync", () => {
       });
     });
   });
+
+  describe("hasSyncError and conflictCount", () => {
+    it("initialises hasSyncError as false and conflictCount as 0", () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      vi.stubGlobal("navigator", { ...navigator, onLine: false });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+      expect(result.current.hasSyncError).toBe(false);
+      expect(result.current.conflictCount).toBe(0);
+    });
+
+    it("returns hasSyncError false and conflictCount 0 in no-op state", () => {
+      const { result } = renderHook(() =>
+        useOngoingSync(false, "user-1", mockFetch),
+      );
+      expect(result.current.hasSyncError).toBe(false);
+      expect(result.current.conflictCount).toBe(0);
+    });
+
+    it("sets hasSyncError when outbox push fails during flushAndPull", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      mockFetch.mockResolvedValue({ ok: false });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+    });
+
+    it("sets conflictCount when a push response contains conflict records", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [
+            { id: "label-1", status: "conflict", conflict_reason: "server version is newer" },
+          ],
+        },
+      };
+      const serverLabel = {
+        id: "label-1",
+        user_id: 1,
+        name: "Server Label",
+        color: "#ff0000",
+        created_at: "2026-01-01T12:00:00.000Z",
+        updated_at: "2026-01-02T00:00:00.000Z",
+        deleted_at: null,
+      };
+      // Full pull response (no `since`) used to reconcile conflicted records.
+      const fullPullResponse = {
+        labels: [serverLabel],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+      const initialPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-01T12:00:00.000Z",
+      };
+
+      // Initial flush: outbox is empty so only a pull is made (no push).
+      // enqueueChange: push (conflict) then full pull to reconcile.
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push with conflict
+        .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }); // full pull after conflict
+
+      const pullCallback = vi.fn();
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch, pullCallback),
+      );
+
+      // Wait for initial flush to complete.
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-01T12:00:00.000Z");
+      });
+
+      // Trigger a change that will conflict.
+      act(() => {
+        result.current.enqueueChange(emptySyncPayload());
+      });
+
+      await waitFor(() => {
+        expect(result.current.conflictCount).toBe(1);
+      });
+      expect(result.current.hasSyncError).toBe(false);
+
+      // Verify the reconciliation pull was a full pull (no `since` param).
+      const pullCall = mockFetch.mock.calls.find(
+        ([url]: [string]) => url === "/db/sync/pull",
+      );
+      expect(pullCall).toBeDefined();
+
+      // Verify onIncrementalPull received the server version of the conflicted record.
+      expect(pullCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          labels: [serverLabel],
+        }),
+      );
+    });
+
+    it("sets hasSyncError when the reconciliation pull after a conflict fails", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [{ id: "label-1", status: "conflict", conflict_reason: "server version is newer" }],
+        },
+      };
+      const initialPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-01T12:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push with conflict
+        .mockResolvedValueOnce({ ok: false }); // reconciliation full pull fails
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-01T12:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.enqueueChange(emptySyncPayload());
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+      // conflictCount is set before the pull, so it should still reflect the conflict.
+      expect(result.current.conflictCount).toBe(1);
+    });
+
+    it("clears conflictCount and hasSyncError after a successful conflict-free sync", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      // First call fails (setting hasSyncError), second succeeds.
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/db/sync/push") {
+          if (callCount <= 1) return { ok: false };
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/db/sync/pull")) {
+          return {
+            ok: true,
+            json: async () => ({
+              labels: [],
+              tasks: [],
+              templates: [],
+              work_locations: [],
+              time_off_entries: [],
+              server_timestamp: "2026-01-02T00:00:00.000Z",
+            }),
+          };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Wait for the initial failed flush.
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+
+      // Trigger a successful flush via visibility change.
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        writable: true,
+      });
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(false);
+      });
+    });
+  });
 });
