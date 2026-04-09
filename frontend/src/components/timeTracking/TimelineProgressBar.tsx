@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
-import { dayjs } from "../../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import {
   buildLabelColorMap,
   getContrastingTextColor,
@@ -43,10 +43,7 @@ type TaskSegment = {
   afterBreakHours?: number;
 };
 
-function calculateElapsedVisualHours(
-  tasks: StoredTimeTrackingTask[],
-  liveTime: Dayjs,
-): number {
+function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: Dayjs): number {
   let elapsedVisualHours = 0;
 
   // Assumes tasks are already sorted by startTime in the parent view.

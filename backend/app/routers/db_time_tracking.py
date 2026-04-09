@@ -47,7 +47,7 @@ from app.services.db_service import (
 )
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/v1/db/time-tracking", tags=["Database Time Tracking"])
+router = APIRouter(prefix="/db/time-tracking", tags=["Database Time Tracking"])
 
 
 def _handle_error(error: Exception) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator, Callable, Generator
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -30,6 +31,11 @@ _TEST_DATABASE_URL = os.environ.get(
     # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://worktime:worktime@localhost/worktime_test",
 )
+
+
+def utc_timestamp_offset(offset_seconds: float = 0.0) -> str:
+    """Return an ISO-8601 UTC timestamp offset from now by *offset_seconds*."""
+    return (datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)).isoformat()
 
 
 def _assert_test_database_url(url: str) -> None:
@@ -70,8 +76,59 @@ def mock_supertokens_signup() -> Generator[None, None, None]:
         result.user.id = str(uuid4())
         return result
 
-    with patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up):
+    with (
+        patch("app.routers.db_users.st_sign_up", side_effect=_fake_sign_up),
+        patch("app.routers.registration.st_sign_up", side_effect=_fake_sign_up),
+        patch("app.routers.registration.st_delete_user", return_value=True),
+    ):
         yield
+
+
+@pytest.fixture()
+def supertokens_update_email_calls() -> Generator[list[dict[str, str | None]], None, None]:
+    """Capture SuperTokens email update calls without requiring a live core."""
+    from supertokens_python.recipe.emailpassword.interfaces import (
+        UpdateEmailOrPasswordOkResult as STUpdateEmailOrPasswordOkResult,
+    )
+
+    calls: list[dict[str, str | None]] = []
+
+    async def _fake_update_email_or_password(
+        recipe_user_id: object,
+        email: str | None = None,
+        password: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> MagicMock:
+        calls.append(
+            {
+                "recipe_user_id": str(recipe_user_id),
+                "email": email,
+                "password": password,
+            }
+        )
+        result = MagicMock()
+        result.__class__ = STUpdateEmailOrPasswordOkResult
+        return result
+
+    with patch(
+        "app.routers.db_users.st_update_email_or_password",
+        side_effect=_fake_update_email_or_password,
+    ):
+        yield calls
+
+
+@pytest.fixture()
+def supertokens_delete_calls() -> Generator[list[str], None, None]:
+    """Capture SuperTokens delete calls without requiring a live core."""
+    calls: list[str] = []
+
+    async def _fake_delete_user(user_id: str, *args: object, **kwargs: object) -> bool:
+        calls.append(user_id)
+        return True
+
+    with patch("app.routers.db_users.st_delete_user", side_effect=_fake_delete_user):
+        yield calls
 
 
 @pytest.fixture(autouse=True)
@@ -207,7 +264,7 @@ def create_user_factory() -> Callable[..., int]:
         settings_payload: dict | None = None,
     ) -> int:
         response = db_client.post(
-            "/v1/db/users/",
+            "/db/users/",
             json={
                 "username": username,
                 "display_name": display_name or username.title(),

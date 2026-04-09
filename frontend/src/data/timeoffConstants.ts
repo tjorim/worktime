@@ -1,5 +1,5 @@
-import type { EventFlag, TimeLocationFlag, TypeFlag } from "../lib/hday/types";
-import * as m from "../paraglide/messages.js";
+import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Weekday constants for ISO week numbering (Monday=1 through Sunday=7).

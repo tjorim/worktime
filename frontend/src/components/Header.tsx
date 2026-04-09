@@ -2,8 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import * as m from "../paraglide/messages.js";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
+import * as m from "@/paraglide/messages.js";
 import { SettingsPanel } from "./SettingsPanel";
 
 interface HeaderProps {
@@ -48,17 +49,20 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
             <i className="bi bi-clock-history me-2 header-icon"></i>
             <span className="fw-bold">Worktime</span>
           </Navbar.Brand>
-          <Button
-            variant="outline-light"
-            size="sm"
-            onClick={() => setShowSettings(true)}
-            aria-label={m.settings_title()}
-            title={isMac ? m.settings_cmd() : m.settings_ctrl()}
-            aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
-          >
-            <i className="bi bi-gear"></i>
-            <span className="d-none d-lg-inline ms-1">{m.settings_title()}</span>
-          </Button>
+          <div className="d-flex align-items-center gap-3 ms-auto">
+            <SyncStatusIndicator />
+            <Button
+              variant="outline-light"
+              size="sm"
+              onClick={() => setShowSettings(true)}
+              aria-label={m.settings_title()}
+              title={isMac ? m.settings_cmd() : m.settings_ctrl()}
+              aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
+            >
+              <i className="bi bi-gear"></i>
+              <span className="d-none d-lg-inline ms-1">{m.settings_title()}</span>
+            </Button>
+          </div>
         </Container>
       </Navbar>
 

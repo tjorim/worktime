@@ -1,8 +1,4 @@
-"""Health check endpoint with share directory accessibility verification.
-
-This module provides health check endpoints that actively verify system
-components including share directory accessibility.
-"""
+"""Health check endpoint with share directory accessibility verification."""
 
 import logging
 
@@ -16,7 +12,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Health"])
 
 
-@router.get("/v1/health")
+@router.get("/health")
 async def health_check() -> JSONResponse:
     """Health check endpoint with share directory accessibility verification.
     
@@ -69,14 +65,3 @@ async def health_check() -> JSONResponse:
             content={"status": "degraded", "share": "error", "error": "internal_error"}
         )
 
-
-@router.get("/health")
-async def health() -> JSONResponse:
-    """Simple health-check endpoint used by the reverse proxy."""
-    return await health_check()
-
-
-@router.get("/healthz")
-async def healthz() -> JSONResponse:
-    """Compatibility alias for legacy health checks and test expectations."""
-    return await health_check()

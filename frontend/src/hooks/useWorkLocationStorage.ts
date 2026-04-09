@@ -1,12 +1,13 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 
-import { useSettings } from "../contexts/SettingsContext";
-import { dayjs } from "../utils/dateTimeUtils";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useOngoingSyncContext, emptySyncPayload } from "@/contexts/OngoingSyncContext";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
-import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "../types/workLocation";
-import { toCountryCode } from "../types/workLocation";
-import { getWorkLocationsStorageKey } from "../constants/storageKeys";
+import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
+import { toCountryCode } from "@/types/workLocation";
+import { getWorkLocationsStorageKey } from "@/constants/storageKeys";
 
 /**
  * Raw storage shape persisted to localStorage.
@@ -37,6 +38,7 @@ type StoredWorkLocations = Record<string, WorkLocationInfo>;
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
   const { homeCountry, officeCountry } = settings;
+  const { enqueueChange } = useOngoingSyncContext();
 
   const storageKey = getWorkLocationsStorageKey(year);
   const prevStorageKey = getWorkLocationsStorageKey(year - 1);
@@ -145,6 +147,18 @@ export function useWorkLocationStorage(year: number) {
         console.warn(`Skipping work location update for out-of-range year: ${dateYear}`);
         return false;
       }
+
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.work_locations.push({
+        date: key,
+        action: "create",
+        client_updated_at: now,
+        country_code: parsedCountryCode,
+        label: extra?.label ?? null,
+      });
+      enqueueChange(change);
+
       return true;
     },
     [
@@ -154,6 +168,7 @@ export function useWorkLocationStorage(year: number) {
       setStoredLocations,
       setPrevYearLocations,
       setNextYearLocations,
+      enqueueChange,
     ],
   );
 
@@ -186,9 +201,15 @@ export function useWorkLocationStorage(year: number) {
         setNextYearLocations(removeKey);
       } else {
         console.warn(`Skipping work location clear for out-of-range year: ${dateYear}`);
+        return;
       }
+
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.work_locations.push({ date: key, action: "delete", client_updated_at: now });
+      enqueueChange(change);
     },
-    [year, setStoredLocations, setPrevYearLocations, setNextYearLocations],
+    [year, setStoredLocations, setPrevYearLocations, setNextYearLocations, enqueueChange],
   );
 
   return {

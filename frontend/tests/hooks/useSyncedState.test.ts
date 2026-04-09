@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useSyncedState } from "../../src/hooks/useSyncedState";
+import { useSyncedState } from "@/hooks/useSyncedState";
 
 describe("useSyncedState", () => {
   it("should initialize with the provided prop value", () => {

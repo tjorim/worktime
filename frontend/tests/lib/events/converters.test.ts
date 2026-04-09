@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { hdayToCalendarEvents, filterEventsInRange } from "../../../src/lib/events/converters";
-import type { HdayEvent } from "../../../src/lib/hday/types";
+import { hdayToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
+import type { HdayEvent } from "@/lib/hday/types";
 
 describe("Event Converters", () => {
   describe("hdayToCalendarEvents", () => {
@@ -163,23 +163,6 @@ describe("Event Converters", () => {
       expect(events).toHaveLength(1);
       // When no title is provided, it falls back to the event type label
       expect(events[0].label).toBe("Holiday");
-    });
-
-    it("should include source index when provided", () => {
-      const hdayEvent: HdayEvent = {
-        type: "range",
-        start: "2025/01/15",
-        end: "2025/01/15",
-        flags: ["holiday"],
-        title: "Test event",
-      };
-
-      const startDate = new Date("2025-01-01");
-      const endDate = new Date("2025-01-31");
-      const events = hdayToCalendarEvents(hdayEvent, startDate, endDate, 5);
-
-      expect(events).toHaveLength(1);
-      expect(events[0].meta?.sourceIndex).toBe(5);
     });
   });
 

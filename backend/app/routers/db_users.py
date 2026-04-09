@@ -7,13 +7,25 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from supertokens_python.asyncio import delete_user as st_delete_user
-from supertokens_python.recipe.emailpassword.asyncio import sign_up as st_sign_up
+from supertokens_python.recipe.emailpassword.asyncio import (
+    sign_up as st_sign_up,
+)
+from supertokens_python.recipe.emailpassword.asyncio import (
+    update_email_or_password as st_update_email_or_password,
+)
 from supertokens_python.recipe.emailpassword.interfaces import (
     EmailAlreadyExistsError as STEmailAlreadyExistsError,
 )
 from supertokens_python.recipe.emailpassword.interfaces import (
     SignUpOkResult as STSignUpOkResult,
 )
+from supertokens_python.recipe.emailpassword.interfaces import (
+    UnknownUserIdError as STUnknownUserIdError,
+)
+from supertokens_python.recipe.emailpassword.interfaces import (
+    UpdateEmailOrPasswordOkResult as STUpdateEmailOrPasswordOkResult,
+)
+from supertokens_python.types import RecipeUserId
 
 from app.database.engine import get_session
 from app.routers.auth import (
@@ -21,28 +33,34 @@ from app.routers.auth import (
     get_authenticated_principal,
     require_user_or_admin_match,
 )
-from app.schemas import UserCreate, UserListResponse, UserRead, UserUpdate
+from app.schemas import UserCreate, UserCreateWithPassword, UserListResponse, UserRead, UserUpdate
 from app.services.db_service import (
     MAX_USER_LIST_LIMIT,
     ConflictError,
     NotFoundError,
     ValidationError,
     create_user,
-    delete_user,
+    delete_user_uncommitted,
     get_user,
     get_user_by_username,
     list_users,
     update_user,
 )
+from app.utils.supertokens import username_to_st_email
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/db/users", tags=["Database Users"])
+router = APIRouter(prefix="/db/users", tags=["Database Users"])
+
+
+def _username_to_st_email(username: str) -> str:
+    """Map a local username to the SuperTokens email-password identifier."""
+    return username_to_st_email(username)
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(
-    payload: UserCreate,
+    payload: UserCreateWithPassword,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> UserRead:
@@ -51,11 +69,7 @@ async def create_user_endpoint(
 
     # Register the user in SuperTokens first. Uses username as the email
     # identifier, matching the convention used by the migration script.
-    st_email = (
-        payload.username
-        if "@" in payload.username
-        else f"{payload.username}@worktime.local"
-    )
+    st_email = _username_to_st_email(payload.username)
     st_result = await st_sign_up(tenant_id="public", email=st_email, password=payload.password)
     if isinstance(st_result, STEmailAlreadyExistsError):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
@@ -66,8 +80,13 @@ async def create_user_endpoint(
         )
 
     st_user_id = st_result.user.id
+    user_create = UserCreate(
+        username=payload.username,
+        display_name=payload.display_name,
+        settings=payload.settings,
+    )
     try:
-        user = await create_user(session, payload, supertokens_user_id=st_user_id)
+        user = await create_user(session, user_create, supertokens_user_id=st_user_id)
     except ConflictError as error:
         try:
             await st_delete_user(st_user_id)
@@ -151,11 +170,53 @@ async def update_user_endpoint(
 ) -> UserRead:
     require_user_or_admin_match(user_id, principal)
     try:
-        user = await update_user(session, user_id, payload)
+        current_user = await get_user(session, user_id)
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
-    except ValidationError as error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    previous_username = current_user.username
+    next_username = payload.username or previous_username
+    username_changed = next_username != previous_username
+
+    if username_changed:
+        st_result = await st_update_email_or_password(
+            recipe_user_id=RecipeUserId(current_user.supertokens_user_id),
+            email=_username_to_st_email(next_username),
+        )
+        if isinstance(st_result, STEmailAlreadyExistsError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
+        if isinstance(st_result, STUnknownUserIdError):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Authentication identity is missing for this user",
+            )
+        if not isinstance(st_result, STUpdateEmailOrPasswordOkResult):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="SuperTokens user update failed unexpectedly",
+            )
+
+    try:
+        user = await update_user(session, user_id, payload)
+    except Exception as error:
+        if username_changed:
+            try:
+                await st_update_email_or_password(
+                    recipe_user_id=RecipeUserId(current_user.supertokens_user_id),
+                    email=_username_to_st_email(previous_username),
+                )
+            except Exception as rollback_error:
+                logger.error(
+                    "Failed to roll back SuperTokens email for user %s after local update error: %s",
+                    current_user.supertokens_user_id,
+                    rollback_error,
+                )
+        if isinstance(error, NotFoundError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        if isinstance(error, ConflictError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        if isinstance(error, ValidationError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+        raise
 
     return UserRead.model_validate(user, from_attributes=True)
 
@@ -167,8 +228,17 @@ async def delete_user_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_or_admin_match(user_id, principal)
+
     try:
-        await delete_user(session, user_id)
+        async with session.begin():
+            user = await get_user(session, user_id)
+            await delete_user_uncommitted(session, user_id)
+            st_delete_result = await st_delete_user(user.supertokens_user_id)
+            if not st_delete_result:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Authentication identity could not be deleted",
+                )
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

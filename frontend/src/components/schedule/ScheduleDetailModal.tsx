@@ -9,14 +9,14 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 import Table from "react-bootstrap/Table";
 import clsx from "clsx";
-import { ShiftBadge } from "../shared/ShiftBadge";
-import type { ScheduleOption, ShiftCode } from "../../data/rosters";
-import { useSettings } from "../../contexts/SettingsContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
-import { dayjs, getLocalizedShiftTime } from "../../utils/dateTimeUtils";
-import * as m from "../../paraglide/messages.js";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import type { ScheduleOption, ShiftCode } from "@/data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { dayjs, getLocalizedShiftTime } from "@/utils/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
 
-import { calculateShift } from "../../utils/shiftCalculations";
+import { calculateShift } from "@/utils/shiftCalculations";
 
 // Icon size for small decorative icons (e.g., live indicator dot)
 const SMALL_ICON_SIZE = "0.5rem";

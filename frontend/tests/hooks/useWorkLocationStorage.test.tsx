@@ -1,12 +1,28 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { useWorkLocationStorage } from "../../src/hooks/useWorkLocationStorage";
-import {
-  USER_STATE_STORAGE_KEY,
-  getWorkLocationsStorageKey,
-} from "../../src/constants/storageKeys";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
+import { USER_STATE_STORAGE_KEY, getWorkLocationsStorageKey } from "@/constants/storageKeys";
+import type { SyncPushPayload } from "@/utils/syncClient";
+
+// Defined at module scope because vi.mock factories are hoisted before describe
+// blocks, so the spy must be accessible at module level. It is reset in afterEach
+// to prevent cross-test pollution.
+const mockEnqueueChange = vi.fn<[SyncPushPayload], void>();
+
+vi.mock("@/contexts/OngoingSyncContext", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/contexts/OngoingSyncContext")>();
+  return {
+    ...original,
+    useOngoingSyncContext: () => ({
+      isSyncing: false,
+      lastSyncedAt: null,
+      outboxCount: 0,
+      enqueueChange: mockEnqueueChange,
+    }),
+  };
+});
 
 /**
  * Writes a v3 user-state to localStorage so that SettingsProvider initialises
@@ -50,6 +66,7 @@ function makeWrapper(homeCountry: string | null = "NL", officeCountry: string | 
 describe("useWorkLocationStorage", () => {
   afterEach(() => {
     window.localStorage.clear();
+    mockEnqueueChange.mockReset();
   });
 
   it("starts with an empty workLocationMap", () => {
@@ -346,6 +363,107 @@ describe("useWorkLocationStorage", () => {
       });
 
       expect(result.current.workLocationMap.has("2024-01-01")).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sync enqueue assertions
+  // ---------------------------------------------------------------------------
+
+  describe("sync payload enqueue", () => {
+    it("enqueues a create work_location payload when setLocationForDate succeeds (home)", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("NL", "BE"),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026-04-07", "home");
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.work_locations).toHaveLength(1);
+      expect(payload.work_locations[0]).toMatchObject({
+        date: "2026-04-07",
+        action: "create",
+        country_code: "NL",
+        label: null,
+      });
+    });
+
+    it("enqueues a create work_location payload when setLocationForDate succeeds (office)", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("NL", "BE"),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026-04-07", "office");
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.work_locations[0]).toMatchObject({
+        date: "2026-04-07",
+        action: "create",
+        country_code: "BE",
+      });
+    });
+
+    it("enqueues a create work_location payload with label for 'other' location", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("NL", "BE"),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026-04-07", "other", {
+          countryCode: "DE",
+          label: "Berlin",
+        });
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.work_locations[0]).toMatchObject({
+        date: "2026-04-07",
+        action: "create",
+        country_code: "DE",
+        label: "Berlin",
+      });
+    });
+
+    it("does not enqueue when setLocationForDate fails (no country configured)", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper(null, "BE"),
+      });
+
+      act(() => {
+        result.current.setLocationForDate("2026-04-07", "home");
+      });
+
+      expect(mockEnqueueChange).not.toHaveBeenCalled();
+    });
+
+    it("enqueues a delete work_location payload when clearLocationForDate is called", () => {
+      const { result } = renderHook(() => useWorkLocationStorage(2026), {
+        wrapper: makeWrapper("NL", "BE"),
+      });
+
+      // First set a location, then reset the mock to isolate the clear call.
+      act(() => {
+        result.current.setLocationForDate("2026-04-07", "home");
+      });
+      mockEnqueueChange.mockReset();
+
+      act(() => {
+        result.current.clearLocationForDate("2026-04-07");
+      });
+
+      expect(mockEnqueueChange).toHaveBeenCalledOnce();
+      const payload = mockEnqueueChange.mock.calls[0]![0];
+      expect(payload.work_locations[0]).toMatchObject({
+        date: "2026-04-07",
+        action: "delete",
+      });
     });
   });
 });

@@ -7,17 +7,17 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import type { Dayjs } from "dayjs";
-import { ShiftBadge } from "../shared/ShiftBadge";
-import { DayNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import type { ScheduleOption } from "../../data/rosters";
-import { hasMultipleTeams } from "../../utils/scheduleUtils";
-import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { dayjs, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
-import { getLocale } from "../../paraglide/runtime.js";
-import type { ShiftResult } from "../../utils/shiftCalculations";
-import { getAllTeamsShifts, isCurrentlyWorking } from "../../utils/shiftCalculations";
-import { useFormattedShiftTime } from "../../hooks/useFormattedShiftTime";
-import * as m from "../../paraglide/messages.js";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { DayNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import type { ScheduleOption } from "@/data/rosters";
+import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { dayjs, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
+import { getLocale } from "@/paraglide/runtime.js";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import { getAllTeamsShifts, isCurrentlyWorking } from "@/utils/shiftCalculations";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import * as m from "@/paraglide/messages.js";
 
 interface TodayViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -83,7 +83,11 @@ function TeamCard({
       )}
       <div className="team-card-header d-flex justify-content-between align-items-center mb-2">
         <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">{hasTeams ? m.team_label({ team: String(shiftResult.teamNumber) }) : m.week_view_schedule_label()}</h6>
+          <h6 className="mb-0">
+            {hasTeams
+              ? m.team_label({ team: String(shiftResult.teamNumber) })
+              : m.week_view_schedule_label()}
+          </h6>
           {onTeamClick && (
             <i className="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
           )}
@@ -248,7 +252,12 @@ export function TodayView({
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <div className="text-muted small">
-              {new Intl.DateTimeFormat(getLocale(), { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(displayDate.toDate())}
+              {new Intl.DateTimeFormat(getLocale(), {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              }).format(displayDate.toDate())}
               {isToday && (
                 <Badge bg="success" className="ms-2" aria-label={m.today_view_current_day_aria()}>
                   {m.today()}

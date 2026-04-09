@@ -8,13 +8,13 @@ import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColorClass } from "@/lib/hday/presentation";
-import { dayjs } from "../utils/dateTimeUtils";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
-import { LAST_TEAM_ID_STORAGE_KEY } from "../constants/storageKeys";
-import * as m from "../paraglide/messages.js";
+import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
+import * as m from "@/paraglide/messages.js";
 
 interface TeamMember {
   username: string;
@@ -139,7 +139,7 @@ export function TeamScheduleView() {
     try {
       // Fetch team .hday data (includes team info)
       const response = await fetch(
-        `${apiUrl}/v1/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        `${apiUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
         {
           method: "GET",
           headers: {
@@ -251,9 +251,7 @@ export function TeamScheduleView() {
             <i className="bi bi-people me-2" aria-hidden="true"></i>
             {m.team_viewer_title()}
           </Card.Title>
-          <Card.Text className="text-muted small mb-3">
-            {m.team_viewer_desc()}
-          </Card.Text>
+          <Card.Text className="text-muted small mb-3">{m.team_viewer_desc()}</Card.Text>
 
           <Form onSubmit={handleSubmit}>
             <div className="d-flex gap-2 align-items-start">

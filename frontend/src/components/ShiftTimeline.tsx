@@ -3,13 +3,13 @@ import Badge from "react-bootstrap/Badge";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
-import { useSettings } from "../contexts/SettingsContext";
-import { useFormattedShiftTime } from "../hooks/useFormattedShiftTime";
-import type { ShiftResult } from "../utils/shiftCalculations";
-import type { ScheduleOption } from "../data/rosters";
-import { getAllTeamsShifts } from "../utils/shiftCalculations";
-import { getTeamCountForOption } from "../utils/scheduleUtils";
-import * as m from "../paraglide/messages.js";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import type { ShiftResult } from "@/utils/shiftCalculations";
+import type { ScheduleOption } from "@/data/rosters";
+import { getAllTeamsShifts } from "@/utils/shiftCalculations";
+import { getTeamCountForOption } from "@/utils/scheduleUtils";
+import * as m from "@/paraglide/messages.js";
 
 interface TimelineData {
   prevShift: ShiftResult | null;
@@ -172,7 +172,7 @@ export function ShiftTimeline({ currentWorkingTeam }: ShiftTimelineProps) {
     >
       <div className="timeline-header text-center" id={timelineHeaderId}>
         <i className="bi bi-clock me-2" aria-hidden="true"></i>
-{m.shift_timeline_title()}
+        {m.shift_timeline_title()}
       </div>
       <div className="d-flex timeline-flow flex-wrap">
         {prevShift && (

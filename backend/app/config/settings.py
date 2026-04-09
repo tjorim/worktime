@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 5
     DATABASE_POOL_MAX_OVERFLOW: int = 10
 
+    # Comma-separated list of usernames that are granted admin privileges.
+    # Example: ADMIN_USERNAMES=jorim,alice
+    ADMIN_USERNAMES: str = ""
+
     # SuperTokens authentication configuration
     SUPERTOKENS_CONNECTION_URI: str = "http://localhost:3567"
     SUPERTOKENS_API_KEY: str = ""

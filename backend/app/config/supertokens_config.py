@@ -78,8 +78,12 @@ def _override_session_functions(
             raise
 
         if local_user is not None:
+            admin_usernames = {
+                u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip()
+            }
             access_token_payload["local_user_id"] = local_user.id
-            access_token_payload["is_admin"] = local_user.is_admin
+            access_token_payload["is_admin"] = local_user.username in admin_usernames
+            access_token_payload["displayName"] = local_user.display_name
         else:
             logger.error(
                 "No local user found for SuperTokens user %s; "

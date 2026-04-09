@@ -1,17 +1,19 @@
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Button from "react-bootstrap/Button";
-import { dayjs, getWeekdayName } from "../../utils/dateTimeUtils";
-import type { HdayEvent } from "../../lib/hday/types";
-import type { PublicHolidayInfo } from "../../types/publicHolidays";
-import type { SchoolHolidayInfo } from "../../types/schoolHolidays";
-import type { PaydayInfo } from "../../types/paydays";
-import type { WorkLocation, WorkLocationMap } from "../../types/workLocation";
+import { dayjs, getWeekdayName } from "@/utils/dateTimeUtils";
+import type { PublicHolidayInfo } from "@/types/publicHolidays";
+import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
+import type { PaydayInfo } from "@/types/paydays";
+import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import * as m from "@/paraglide/messages.js";
 
 interface MonthCalendarProps {
-  events: HdayEvent[];
+  entries?: TimeOffEntry[];
   month: Dayjs;
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
@@ -19,9 +21,9 @@ interface MonthCalendarProps {
   workLocationMap?: WorkLocationMap;
   onMonthChange: (month: Dayjs) => void;
   onAddEvent: (date: Dayjs) => void;
-  onViewEvent: (index: number) => void;
-  onEditEvent: (index: number) => void;
-  onDeleteEvent?: (index: number) => void;
+  onViewEvent: (id: string) => void;
+  onEditEvent: (id: string) => void;
+  onDeleteEvent?: (id: string) => void;
   onSetWorkLocation?: (date: Dayjs, location: WorkLocation | null) => void;
   onSetOtherLocation?: (date: Dayjs) => void;
   allowEventActions?: boolean;
@@ -35,18 +37,6 @@ interface MonthCalendarProps {
 }
 
 const DAY_FORMAT = "YYYY-MM-DD";
-
-/**
- * Parses an .hday date string (YYYY/MM/DD) to a dayjs object.
- * Converts slashes to hyphens for compatibility with dayjs.
- * @param value - The date string in YYYY/MM/DD format
- * @returns A dayjs object, or null if the input is undefined
- */
-const parseHdayDate = (value?: string) => {
-  if (!value) return null;
-  const parsed = dayjs(value.replace(/\//g, "-"));
-  return parsed.isValid() ? parsed : null;
-};
 
 /**
  * Builds a complete calendar grid for the given month.
@@ -87,7 +77,7 @@ const buildCalendarDays = (month: Dayjs) => {
  * - Focus return to trigger element after context menu dismissal
  */
 export function MonthCalendar({
-  events,
+  entries,
   month,
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
@@ -106,6 +96,7 @@ export function MonthCalendar({
   showOtherLocationAction = false,
   getShiftForDate,
 }: MonthCalendarProps) {
+  const sourceEntries = useMemo(() => entries ?? [], [entries]);
   const days = useMemo(() => buildCalendarDays(month), [month]);
   const today = dayjs();
 
@@ -191,7 +182,7 @@ export function MonthCalendar({
     x: number;
     y: number;
     date?: Dayjs;
-    eventIndex?: number;
+    eventId?: string;
   } | null>(null);
 
   // Track which element triggered the context menu for focus return
@@ -217,46 +208,59 @@ export function MonthCalendar({
       map.set(key, list);
     };
 
-    events.forEach((event, index) => {
-      if (event.type === "range") {
-        const start = parseHdayDate(event.start);
-        const end = parseHdayDate(event.end ?? event.start);
-        if (!start || !end) return;
-
-        // Clamp the event range to the currently visible calendar window
-        // This prevents performance issues with very long-range events
-        const rangeStart = start.isBefore(visibleStart) ? visibleStart : start;
-        const rangeEnd = end.isAfter(visibleEnd) ? visibleEnd : end;
-
-        if (rangeStart.isAfter(rangeEnd)) {
-          // Event does not intersect the visible range
+    if (sourceEntries.length > 0) {
+      sourceEntries.forEach((entry) => {
+        if (isTimeOffDateEntry(entry)) {
+          const date = dayjs(entry.date);
+          if (
+            !date.isValid() ||
+            date.isBefore(visibleStart, "day") ||
+            date.isAfter(visibleEnd, "day")
+          ) {
+            return;
+          }
+          addEvent(date, { entry });
           return;
         }
 
-        let current: Dayjs = rangeStart;
-        while (current.isSameOrBefore(rangeEnd, "day")) {
-          addEvent(current, { event, index });
-          current = current.add(1, "day");
+        if (isTimeOffRangeEntry(entry)) {
+          const rangeStart = dayjs(entry.start).startOf("day");
+          const rangeEnd = dayjs(entry.end).startOf("day");
+          if (
+            !rangeStart.isValid() ||
+            !rangeEnd.isValid() ||
+            rangeEnd.isBefore(rangeStart, "day")
+          ) {
+            return;
+          }
+
+          let current = rangeStart.isBefore(visibleStart, "day") ? visibleStart : rangeStart;
+          const end = rangeEnd.isAfter(visibleEnd, "day") ? visibleEnd : rangeEnd;
+          if (end.isBefore(current, "day")) {
+            return;
+          }
+
+          while (current.isSameOrBefore(end, "day")) {
+            addEvent(current, { entry });
+            current = current.add(1, "day");
+          }
+          return;
         }
-      } else if (
-        event.type === "weekly" &&
-        event.weekday &&
-        event.weekday >= 1 &&
-        event.weekday <= 7
-      ) {
-        const firstOccurrence = days.find((day) => day.isoWeekday() === event.weekday);
-        if (!firstOccurrence) return;
-        let current = firstOccurrence;
-        const lastDay = days[days.length - 1]!;
-        while (current.isSameOrBefore(lastDay, "day")) {
-          addEvent(current, { event, index });
-          current = current.add(7, "day");
+
+        if (isTimeOffWeeklyEntry(entry)) {
+          let current = visibleStart;
+          while (current.isSameOrBefore(visibleEnd, "day")) {
+            if (current.isoWeekday() === entry.weekday) {
+              addEvent(current, { entry });
+            }
+            current = current.add(1, "day");
+          }
         }
-      }
-    });
+      });
+    }
 
     return map;
-  }, [days, events]);
+  }, [days, sourceEntries]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => getWeekdayName(index + 1)),
@@ -274,11 +278,11 @@ export function MonthCalendar({
   );
 
   const handleEventContextMenu = useCallback(
-    (index: number, x: number, y: number, el: HTMLElement | null) => {
+    (id: string, x: number, y: number, el: HTMLElement | null) => {
       if (!allowEventActions) return;
       // Use the actual triggering element for focus return
       triggerRef.current = el;
-      setContextMenu({ type: "event", x, y, eventIndex: index });
+      setContextMenu({ type: "event", x, y, eventId: id });
     },
     [allowEventActions],
   );
@@ -297,17 +301,17 @@ export function MonthCalendar({
   );
 
   const handleViewEventWrapper = useCallback(
-    (index: number) => {
+    (id: string) => {
       handleCloseContextMenu();
-      onViewEvent(index);
+      onViewEvent(id);
     },
     [handleCloseContextMenu, onViewEvent],
   );
 
   const handleEditEventWrapper = useCallback(
-    (index: number) => {
+    (id: string) => {
       handleCloseContextMenu();
-      onEditEvent(index);
+      onEditEvent(id);
     },
     [handleCloseContextMenu, onEditEvent],
   );
@@ -322,7 +326,7 @@ export function MonthCalendar({
       const hasStoredLocation = !!stored;
       if (allowEventActions) {
         items.push({
-          label: "Add new event",
+          label: m.calendar_context_add_event(),
           icon: "bi-plus-circle",
           onClick: () => handleAddEventWrapper(date),
         });
@@ -331,7 +335,7 @@ export function MonthCalendar({
       if (onSetWorkLocation && (showHomeLocationAction || showOfficeLocationAction)) {
         if (showHomeLocationAction) {
           items.push({
-            label: "Work from Home",
+            label: m.calendar_context_work_from_home(),
             icon: "bi-house",
             disabled: currentLocation === "home",
             onClick: () => {
@@ -342,7 +346,7 @@ export function MonthCalendar({
         }
         if (showOfficeLocationAction) {
           items.push({
-            label: "Work from Office",
+            label: m.calendar_context_work_from_office(),
             icon: "bi-building",
             disabled: currentLocation === "office",
             onClick: () => {
@@ -356,7 +360,7 @@ export function MonthCalendar({
       if (showOtherLocationAction && onSetOtherLocation) {
         if (items.length) items.push({ separator: true });
         items.push({
-          label: "Other Location…",
+          label: m.calendar_context_other_location(),
           icon: "bi-geo-alt",
           onClick: () => {
             handleCloseContextMenu();
@@ -367,7 +371,7 @@ export function MonthCalendar({
       // Clear Work Location action
       if (hasStoredLocation && onSetWorkLocation) {
         items.push({
-          label: "Clear Work Location",
+          label: m.calendar_context_clear_work_location(),
           icon: "bi-x-circle",
           onClick: () => {
             handleCloseContextMenu();
@@ -377,22 +381,22 @@ export function MonthCalendar({
       }
       return items;
     }
-    if (contextMenu?.type === "event" && contextMenu.eventIndex !== undefined) {
+    if (contextMenu?.type === "event" && contextMenu.eventId !== undefined) {
       const items: ContextMenuItem[] = [
         {
-          label: "Edit event",
+          label: m.calendar_context_edit_event(),
           icon: "bi-pencil",
-          onClick: () => handleEditEventWrapper(contextMenu.eventIndex!),
+          onClick: () => handleEditEventWrapper(contextMenu.eventId!),
         },
       ];
       if (onDeleteEvent) {
         items.push({
-          label: "Delete event",
+          label: m.calendar_context_delete_event(),
           icon: "bi-trash",
           variant: "danger" as const,
           onClick: () => {
             handleCloseContextMenu();
-            onDeleteEvent(contextMenu.eventIndex!);
+            onDeleteEvent(contextMenu.eventId!);
           },
         });
       }
@@ -427,7 +431,7 @@ export function MonthCalendar({
             variant="outline-secondary"
             size="sm"
             onClick={() => onMonthChange(month.subtract(1, "month"))}
-            aria-label="Previous month"
+            aria-label={m.calendar_nav_previous_month()}
           >
             <i className="bi bi-chevron-left" aria-hidden="true"></i>
           </Button>
@@ -436,16 +440,16 @@ export function MonthCalendar({
             size="sm"
             onClick={() => onMonthChange(today.startOf("month"))}
             disabled={isCurrentMonth}
-            aria-label="Jump to current month"
+            aria-label={m.calendar_nav_current_month_label()}
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
-            This Month
+            {m.calendar_nav_current_month_text()}
           </Button>
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={() => onMonthChange(month.add(1, "month"))}
-            aria-label="Next month"
+            aria-label={m.calendar_nav_next_month()}
           >
             <i className="bi bi-chevron-right" aria-hidden="true"></i>
           </Button>

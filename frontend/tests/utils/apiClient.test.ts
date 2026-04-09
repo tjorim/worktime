@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch } from "../../src/utils/apiClient";
+import { apiFetch } from "@/utils/apiClient";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -14,7 +14,7 @@ describe("apiFetch", () => {
     body.append("file", new Blob(["x"]), "x.txt");
 
     await apiFetch(
-      "/v1/upload",
+      "/upload",
       { method: "POST", body },
       {
         apiUrl: "http://localhost:8000",
@@ -35,7 +35,7 @@ describe("apiFetch", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch(
-      "/v1/data",
+      "/data",
       { method: "POST", body: JSON.stringify({ ok: true }) },
       {
         apiUrl: "http://localhost:8000",
@@ -58,11 +58,15 @@ describe("apiFetch", () => {
     const onUnauthorized = vi.fn();
 
     await expect(
-      apiFetch("/v1/data", {}, {
-        apiUrl: "http://localhost:8000",
-        onUnauthorized,
-        onForbidden: vi.fn(),
-      }),
+      apiFetch(
+        "/data",
+        {},
+        {
+          apiUrl: "http://localhost:8000",
+          onUnauthorized,
+          onForbidden: vi.fn(),
+        },
+      ),
     ).rejects.toThrow("Unauthorized");
 
     expect(onUnauthorized).toHaveBeenCalledOnce();
@@ -75,11 +79,15 @@ describe("apiFetch", () => {
     const onForbidden = vi.fn();
 
     await expect(
-      apiFetch("/v1/data", {}, {
-        apiUrl: "http://localhost:8000",
-        onUnauthorized: vi.fn(),
-        onForbidden,
-      }),
+      apiFetch(
+        "/data",
+        {},
+        {
+          apiUrl: "http://localhost:8000",
+          onUnauthorized: vi.fn(),
+          onForbidden,
+        },
+      ),
     ).rejects.toThrow("Forbidden");
 
     expect(onForbidden).toHaveBeenCalledOnce();
@@ -90,7 +98,7 @@ describe("apiFetch", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await apiFetch(
-      "/v1/data",
+      "/data",
       {
         headers: {
           "X-Custom": "value",

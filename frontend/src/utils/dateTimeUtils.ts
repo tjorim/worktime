@@ -5,6 +5,7 @@ import isoWeeksInYear from "dayjs/plugin/isoWeeksInYear";
 import isLeapYear from "dayjs/plugin/isLeapYear";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/en-gb";
 
 dayjs.extend(isoWeek);
@@ -13,6 +14,7 @@ dayjs.extend(isoWeeksInYear);
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(customParseFormat);
+dayjs.extend(relativeTime);
 dayjs.locale("en-gb");
 
 export { dayjs };
@@ -179,10 +181,7 @@ export const splitFractionalHour = (hourValue: number): { hours: number; minutes
  * setTimeFromFractionalHour(dayjs(), 14.5) // Sets time to 14:30:00
  * setTimeFromFractionalHour(dayjs(), 7)    // Sets time to 07:00:00
  */
-export const setTimeFromFractionalHour = (
-  date: Dayjs,
-  fractionalHour: number,
-): Dayjs => {
+export const setTimeFromFractionalHour = (date: Dayjs, fractionalHour: number): Dayjs => {
   const { hours, minutes } = splitFractionalHour(fractionalHour);
   return date.hour(hours).minute(minutes).second(0);
 };

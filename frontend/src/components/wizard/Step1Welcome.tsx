@@ -1,5 +1,5 @@
 import Button from "react-bootstrap/Button";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface Step1WelcomeProps {
   onDefer?: () => void;

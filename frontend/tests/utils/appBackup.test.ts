@@ -5,13 +5,14 @@ import {
   downloadAppBackup,
   restoreAppBackup,
   validateAppBackupPayload,
-} from "../../src/utils/appBackup";
-import { TIME_TRACKING_STORAGE_KEYS } from "../../src/components/timeTracking/constants";
-import { TIME_OFF_STORAGE_KEY } from "../../src/contexts/EventStoreContext";
+} from "@/utils/appBackup";
 import {
+  TIME_OFF_ENTRIES_STORAGE_KEY,
+  TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
   WORK_LOCATIONS_STORAGE_PREFIX,
-} from "../../src/constants/storageKeys";
+} from "@/constants/storageKeys";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 const WORK_LOCATIONS_PREFIX = WORK_LOCATIONS_STORAGE_PREFIX;
@@ -47,11 +48,24 @@ describe("appBackup", () => {
       expect(payload.userState).toEqual(state);
     });
 
-    it("includes timeOff raw text when present", () => {
-      const raw = "2026/01/15 # Vacation\n";
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, raw);
+    it("includes timeOff canonical entries when present", () => {
+      const entry: TimeOffEntry = {
+        id: "e1",
+        entryKind: "date",
+        date: "2026-01-15",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Vacation",
+      };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildBackupPayload();
-      expect(payload.timeOff).toBe(raw);
+      expect(Array.isArray(payload.timeOff)).toBe(true);
+      expect(payload.timeOff).toHaveLength(1);
+      expect((payload.timeOff as TimeOffEntry[])[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-01-15",
+        note: "Vacation",
+      });
     });
 
     it("includes work locations for all stored years", () => {
@@ -87,8 +101,16 @@ describe("appBackup", () => {
     });
 
     it("excludes sections when include flags are false", () => {
+      const entry: TimeOffEntry = {
+        id: "e1",
+        entryKind: "date",
+        date: "2026-01-15",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Vacation",
+      };
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 1 }));
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/01/15 # Vacation\n");
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       const payload = buildBackupPayload({ includeUserState: false, includeTimeOff: false });
       expect(payload.userState).toBeUndefined();
       expect(payload.timeOff).toBeUndefined();
@@ -139,7 +161,15 @@ describe("appBackup", () => {
     });
 
     it("detects time off data", () => {
-      localStorage.setItem(TIME_OFF_STORAGE_KEY, "2026/01/15 # Vacation\n");
+      const entry: TimeOffEntry = {
+        id: "e1",
+        entryKind: "date",
+        date: "2026-01-15",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: null,
+      };
+      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
       expect(checkBackupDataPresence().hasTimeOff).toBe(true);
     });
 
@@ -182,7 +212,7 @@ describe("appBackup", () => {
         exportedAt: new Date().toISOString(),
         version: 1,
         userState: {},
-        timeOff: "2026/01/01 # Vacation\n",
+        timeOff: [],
         workLocations: { "2026": {} },
         tasks: [],
         templates: [],
@@ -203,8 +233,9 @@ describe("appBackup", () => {
       expect(validateAppBackupPayload({})).toBe(false);
     });
 
-    it("rejects when timeOff is not a string", () => {
+    it("rejects when timeOff is not an array", () => {
       expect(validateAppBackupPayload({ timeOff: 42 })).toBe(false);
+      expect(validateAppBackupPayload({ timeOff: "2026/01/01 # Vacation\n" })).toBe(false);
     });
 
     it("rejects when tasks is not an array", () => {
@@ -256,10 +287,21 @@ describe("appBackup", () => {
       expect(window.location.reload).toHaveBeenCalledOnce();
     });
 
-    it("writes timeOff as a plain string", () => {
-      const raw = "2026/01/15 # Vacation\n";
-      restoreAppBackup({ exportedAt: "", version: 1, timeOff: raw });
-      expect(localStorage.getItem(TIME_OFF_STORAGE_KEY)).toBe(raw);
+    it("writes timeOff canonical entries to storage", () => {
+      const entry: TimeOffEntry = {
+        id: "e1",
+        entryKind: "date",
+        date: "2026-01-15",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: "Vacation",
+      };
+      restoreAppBackup({ exportedAt: "", version: 1, timeOff: [entry] });
+      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0]).toMatchObject({ entryKind: "date", date: "2026-01-15", note: "Vacation" });
     });
 
     it("writes work locations for each year", () => {

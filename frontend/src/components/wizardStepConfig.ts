@@ -5,6 +5,8 @@
  * step visibility and navigation logic across different modes.
  */
 
+import * as m from "@/paraglide/messages.js";
+
 export type WizardStep =
   | "welcome"
   | "features"
@@ -13,7 +15,8 @@ export type WizardStep =
   | "timeoff-setup"
   | "time-tracking-setup"
   | "gantt-setup"
-  | "work-location-setup";
+  | "work-location-setup"
+  | "account-setup";
 
 export type WizardMode = "onboarding" | "change-team" | "change-schedule";
 
@@ -25,7 +28,7 @@ export interface StepConfig {
   /** Step identifier */
   id: WizardStep;
   /** Title displayed in the modal header */
-  title: string;
+  title: () => string;
   /** Determines if this step should be included in the flow */
   isVisible: (context: WizardContext) => boolean;
   /** Determines the next step, or null to close the wizard */
@@ -57,21 +60,21 @@ export interface WizardContext {
 export const WIZARD_STEP_CONFIG: StepConfig[] = [
   {
     id: "welcome",
-    title: "Welcome to Worktime!",
+    title: m.wizard_welcome_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "features",
     getPrevStep: () => null,
   },
   {
     id: "features",
-    title: "What can Worktime do?",
+    title: m.wizard_features_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "schedule-selection",
     getPrevStep: () => "welcome",
   },
   {
     id: "schedule-selection",
-    title: "Pick Your Schedule",
+    title: m.wizard_schedule_title,
     isVisible: (ctx) => ctx.mode === "onboarding" || ctx.mode === "change-schedule",
     getNextStep: (ctx) => {
       if (ctx.shouldShowTeamSelection) {
@@ -94,7 +97,7 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "team-selection",
-    title: "Choose Your Experience",
+    title: m.wizard_team_title,
     isVisible: (ctx) => ctx.shouldShowTeamSelection || ctx.mode === "change-team",
     getNextStep: (ctx) => {
       // In change modes, close wizard after team selection
@@ -113,31 +116,38 @@ export const WIZARD_STEP_CONFIG: StepConfig[] = [
   },
   {
     id: "timeoff-setup",
-    title: "Time Off & Vacation",
+    title: m.wizard_timeoff_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "time-tracking-setup",
     getPrevStep: (ctx) => (ctx.shouldShowTeamSelection ? "team-selection" : "schedule-selection"),
   },
   {
     id: "time-tracking-setup",
-    title: "Time Tracking",
+    title: m.wizard_tracking_title,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "gantt-setup",
     getPrevStep: () => "timeoff-setup",
   },
   {
     id: "gantt-setup",
-    title: "Personal Gantt Chart",
+    title: m.wizard_gantt_heading,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => "work-location-setup",
     getPrevStep: () => "time-tracking-setup",
   },
   {
     id: "work-location-setup",
-    title: "Cross-Border Tracking",
+    title: m.wizard_location_title,
+    isVisible: (ctx) => ctx.mode === "onboarding",
+    getNextStep: () => "account-setup",
+    getPrevStep: () => "gantt-setup",
+  },
+  {
+    id: "account-setup",
+    title: m.wizard_account_heading,
     isVisible: (ctx) => ctx.mode === "onboarding",
     getNextStep: () => null,
-    getPrevStep: () => "gantt-setup",
+    getPrevStep: () => "work-location-setup",
   },
 ];
 

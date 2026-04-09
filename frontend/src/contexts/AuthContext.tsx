@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { redirectToAuth } from "supertokens-auth-react";
 import Session, { useSessionContext } from "supertokens-auth-react/recipe/session";
+import * as m from "@/paraglide/messages.js";
 import { useToast } from "./ToastContext";
 
 export interface AuthContextType {
@@ -15,6 +16,8 @@ export interface AuthContextType {
   displayName: string | null;
   /** Redirect to the SuperTokens login page. */
   triggerLogin: () => void;
+  /** Redirect to the SuperTokens sign-up page. */
+  triggerSignup: () => void;
   /** Sign out and end the SuperTokens session. */
   logout: () => void;
 }
@@ -56,14 +59,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // It will be null when authenticated but the backend has not yet set this claim.
   const displayName =
     !session.loading && session.doesSessionExist
-      ? ((session.accessTokenPayload?.displayName as string | undefined) ?? null)
+      ? ((session.accessTokenPayload?.displayName as string | undefined) ??
+        (session.accessTokenPayload?.display_name as string | undefined) ??
+        null)
       : null;
 
   const { showError } = useToast();
 
   const triggerLogin = useCallback(() => {
     redirectToAuth({ show: "signin" }).catch(() => {
-      showError("Failed to redirect to the login page. Please refresh and try again.");
+      showError(m.auth_error_redirect_signin());
+    });
+  }, [showError]);
+
+  const triggerSignup = useCallback(() => {
+    redirectToAuth({ show: "signup" }).catch(() => {
+      showError(m.auth_error_redirect_signup());
     });
   }, [showError]);
 
@@ -80,9 +91,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       userId,
       displayName,
       triggerLogin,
+      triggerSignup,
       logout,
     }),
-    [isAuthenticated, isValidating, userId, displayName, triggerLogin, logout],
+    [isAuthenticated, isValidating, userId, displayName, triggerLogin, triggerSignup, logout],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

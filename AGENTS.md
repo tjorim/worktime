@@ -49,3 +49,6 @@ uv run alembic upgrade head
 - Use American English in code, comments, and UI text
 - Prefer targeted tests first, then broader checks before handoff
 - Do not commit automatically unless explicitly asked
+- Always include screenshots in PR comments when making UI changes (all visible states)
+- Frontend imports: use the `@` alias (`@` → `src/`) instead of relative `../` paths, in both `src/` and `tests/`
+- All storage keys live in `frontend/src/constants/storageKeys.ts`

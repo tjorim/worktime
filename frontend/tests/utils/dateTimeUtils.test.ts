@@ -6,7 +6,7 @@ import {
   getISOWeekday,
   getISOWeekYear2Digit,
   getLocalizedShiftTime,
-} from "../../src/utils/dateTimeUtils";
+} from "@/utils/dateTimeUtils";
 
 describe("Date Time Utils", () => {
   describe("formatYYWWD Function", () => {

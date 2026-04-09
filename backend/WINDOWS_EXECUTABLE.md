@@ -169,7 +169,7 @@ Now your Worktime app can read and write .hday files through the backend!
 - **Firewall**: Windows Firewall might block the connection. Allow the executable through the firewall.
 - **Test with curl**: Open Command Prompt and run:
   ```cmd
-  curl http://localhost:8000/v1/health
+  curl http://localhost:8000/health
   ```
   Should return: `{"status": "ok", "share": "accessible"}`
 

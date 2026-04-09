@@ -6,16 +6,16 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Table from "react-bootstrap/Table";
 import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
-import type { ScheduleOption } from "../../data/rosters";
-import { useSettings } from "../../contexts/SettingsContext";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
-import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "../../utils/dateTimeUtils";
-import { calculateShift } from "../../utils/shiftCalculations";
-import { getLocale } from "../../paraglide/runtime.js";
-import { ShiftBadge } from "../shared/ShiftBadge";
-import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import * as m from "../../paraglide/messages.js";
+import type { ScheduleOption } from "@/data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
+import { calculateShift } from "@/utils/shiftCalculations";
+import { getLocale } from "@/paraglide/runtime.js";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import * as m from "@/paraglide/messages.js";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding
@@ -178,7 +178,9 @@ export function WeekView({
               <i className="bi bi-people me-1" aria-hidden="true"></i>
               {m.week_view_team_schedule_heading({ team: String(myTeam) })}
             </strong>
-            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
+            <div className="text-muted small">
+              {m.week_number({ week: String(selectedWeekNumber) })}
+            </div>
           </div>
         )}
 
@@ -188,7 +190,9 @@ export function WeekView({
               <i className="bi bi-calendar2 me-1" aria-hidden="true"></i>
               {m.week_view_your_schedule_heading()}
             </strong>
-            <div className="text-muted small">{m.week_number({ week: String(selectedWeekNumber) })}</div>
+            <div className="text-muted small">
+              {m.week_number({ week: String(selectedWeekNumber) })}
+            </div>
           </div>
         )}
 
@@ -261,7 +265,9 @@ export function WeekView({
                 >
                   <td className="team-header">
                     <strong>
-                      {hasTeams ? m.team_label({ team: String(teamNumber) }) : m.week_view_schedule_label()}
+                      {hasTeams
+                        ? m.team_label({ team: String(teamNumber) })
+                        : m.week_view_schedule_label()}
                     </strong>
                   </td>
                   {weekDays.map((day, dayIndex) => {

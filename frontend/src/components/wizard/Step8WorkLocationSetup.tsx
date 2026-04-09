@@ -2,9 +2,9 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
-import { type CountryCode } from "../../types/countries";
-import { CountrySelect } from "../shared/CountrySelect";
-import * as m from "../../paraglide/messages.js";
+import { type CountryCode } from "@/types/countries";
+import { CountrySelect } from "@/components/shared/CountrySelect";
+import * as m from "@/paraglide/messages.js";
 
 interface Step8WorkLocationSetupProps {
   isEnabled: boolean;
@@ -99,7 +99,7 @@ export function Step8WorkLocationSetup({
           <i className="bi bi-arrow-left me-1"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
-          {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1"></i>
+          {m.continue()} <i className="bi bi-arrow-right ms-1"></i>
         </Button>
       </div>
     </>

@@ -5,9 +5,9 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import { useAuth } from "../contexts/AuthContext";
-import { useDeveloperOptions } from "../contexts/DeveloperOptionsContext";
-import * as m from "../paraglide/messages.js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import * as m from "@/paraglide/messages.js";
 
 interface DevOptionsPanelProps {
   show: boolean;
@@ -260,11 +260,11 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           <div className="mb-4 mt-4">
             <h6 className="mb-3">{m.dev_auth_heading()}</h6>
             <div className="d-flex align-items-center gap-3">
-              {isAuthenticated && displayName ? (
+              {isAuthenticated ? (
                 <>
                   <span className="small text-success">
                     <i className="bi bi-person-check me-1"></i>
-                    {m.auth_logged_in_as({ displayName })}
+                    {displayName ? m.auth_logged_in_as({ displayName }) : m.account_signed_in()}
                   </span>
                   <Button variant="outline-secondary" size="sm" onClick={logout}>
                     <i className="bi bi-box-arrow-right me-1"></i>
@@ -292,19 +292,19 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           <h6 className="mb-2">{m.dev_endpoints_heading()}</h6>
           <ul className="small mb-0">
             <li>
-              <code>GET /v1/health</code> - {m.dev_endpoint_health()}
+              <code>GET /health</code> - {m.dev_endpoint_health()}
             </li>
             <li>
-              <code>GET /v1/hday/:username</code> - {m.dev_endpoint_read_hday()}
+              <code>GET /hday/:username</code> - {m.dev_endpoint_read_hday()}
             </li>
             <li>
-              <code>PUT /v1/hday/:username</code> - {m.dev_endpoint_write_hday()}
+              <code>PUT /hday/:username</code> - {m.dev_endpoint_write_hday()}
             </li>
             <li>
-              <code>GET /v1/team/:id</code> - {m.dev_endpoint_read_team()}
+              <code>GET /team/:id</code> - {m.dev_endpoint_read_team()}
             </li>
             <li>
-              <code>GET /v1/team/:id/hday</code> - {m.dev_endpoint_read_team_hdays()}
+              <code>GET /team/:id/hday</code> - {m.dev_endpoint_read_team_hdays()}
             </li>
           </ul>
         </div>

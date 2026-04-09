@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
-import { DEVELOPER_OPTIONS_STORAGE_KEY } from "../constants/storageKeys";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -119,7 +119,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         const controller = new AbortController();
         timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch(`${testUrl}/v1/health`, {
+        const response = await fetch(`${testUrl}/health`, {
           method: "GET",
           signal: controller.signal,
           headers: {

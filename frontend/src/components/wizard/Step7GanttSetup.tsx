@@ -2,7 +2,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import type { RefObject } from "react";
-import * as m from "../../paraglide/messages.js";
+import * as m from "@/paraglide/messages.js";
 
 interface Step7GanttSetupProps {
   isEnabled: boolean;
@@ -41,9 +41,7 @@ export function Step7GanttSetup({
         />
 
         {!isEnabled && (
-          <Form.Text className="text-muted d-block mt-2">
-            {m.wizard_gantt_disable_hint()}
-          </Form.Text>
+          <Form.Text className="text-muted d-block mt-2">{m.wizard_gantt_disable_hint()}</Form.Text>
         )}
       </Form>
 

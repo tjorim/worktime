@@ -66,7 +66,7 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption } from "../data/rosters";
+import type { ScheduleOption } from "@/data/rosters";
 import { dayjs, formatYYWWD, getLocalizedShiftTime } from "./dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
 

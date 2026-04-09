@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthProvider, useAuth } from "../../src/contexts/AuthContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // Mock supertokens-auth-react modules
 const mockRedirectToAuth = vi.fn().mockResolvedValue(undefined);
@@ -35,17 +35,22 @@ function AuthStatusDisplay() {
 }
 
 function AuthActions() {
-  const { triggerLogin, logout } = useAuth();
+  const { triggerLogin, triggerSignup, logout } = useAuth();
   return (
     <div>
       <button onClick={logout}>logout</button>
       <button onClick={triggerLogin}>triggerLogin</button>
+      <button onClick={triggerSignup}>triggerSignup</button>
     </div>
   );
 }
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<ToastProvider><AuthProvider>{ui}</AuthProvider></ToastProvider>);
+  return render(
+    <ToastProvider>
+      <AuthProvider>{ui}</AuthProvider>
+    </ToastProvider>,
+  );
 }
 
 describe("AuthContext", () => {
@@ -108,6 +113,19 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("user-id")).toHaveTextContent("7");
       expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
+
+    it("falls back to display_name in access token payload", () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: true,
+        userId: "9",
+        accessTokenPayload: { display_name: "Alice Fallback" },
+        invalidClaims: [],
+      };
+      renderWithProviders(<AuthStatusDisplay />);
+      expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("Alice Fallback");
+    });
   });
 
   describe("triggerLogin", () => {
@@ -123,6 +141,22 @@ describe("AuthContext", () => {
       renderWithProviders(<AuthActions />);
       await user.click(screen.getByText("triggerLogin"));
       expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
+    });
+  });
+
+  describe("triggerSignup", () => {
+    it("calls redirectToAuth with signup when triggerSignup is invoked", async () => {
+      mockSessionContext = {
+        loading: false,
+        doesSessionExist: false,
+        userId: "",
+        accessTokenPayload: {},
+        invalidClaims: [],
+      };
+      const user = userEvent.setup();
+      renderWithProviders(<AuthActions />);
+      await user.click(screen.getByText("triggerSignup"));
+      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
     });
   });
 

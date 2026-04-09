@@ -3,18 +3,18 @@ import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
-import { useSettings } from "../../contexts/SettingsContext";
-import { useLiveTime } from "../../hooks/useLiveTime";
-import { useWorkLocationStorage } from "../../hooks/useWorkLocationStorage";
-import { dayjs } from "../../utils/dateTimeUtils";
-import { WeekNavigationButtonGroup } from "../shared/NavigationButtonGroup";
-import { WORK_LOCATION_ICON_CLASS } from "../calendar/workLocationConstants";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useLiveTime } from "@/hooks/useLiveTime";
+import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
+import { WORK_LOCATION_ICON_CLASS } from "@/components/calendar/workLocationConstants";
 import { buildLabelNameMap, useDefaultLabelColor, type TimeTrackingLabel } from "./constants";
 import type { StoredTimeTrackingTask } from "./types";
 import { effectiveDurationHours } from "./timeUtils";
-import { EmptyState } from "../shared/EmptyState";
-import * as m from "../../paraglide/messages.js";
-import { getLocale } from "../../paraglide/runtime.js";
+import { EmptyState } from "@/components/shared/EmptyState";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 type OverviewRow = {
   label: string;

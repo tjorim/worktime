@@ -3,10 +3,10 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
-import { useSettings } from "../contexts/SettingsContext";
-import { CONFIG } from "../utils/config";
-import { getScheduleConfig } from "../utils/scheduleUtils";
-import * as m from "../paraglide/messages.js";
+import { useSettings } from "@/contexts/SettingsContext";
+import { CONFIG } from "@/utils/config";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
+import * as m from "@/paraglide/messages.js";
 
 interface AboutModalProps {
   show: boolean;
@@ -42,7 +42,8 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
           <h5 className="mb-2">{m.about_app_subtitle()}</h5>
           <div className="mb-2">
             <Badge bg="primary">
-              <i className="bi bi-tag me-1"></i>{m.about_version_badge({ version: CONFIG.VERSION })}
+              <i className="bi bi-tag me-1"></i>
+              {m.about_version_badge({ version: CONFIG.VERSION })}
             </Badge>
           </div>
         </div>
@@ -59,7 +60,8 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
             rel="noopener noreferrer"
             className="btn btn-outline-primary btn-sm"
           >
-            <i className="bi bi-github me-1"></i>{m.about_github_profile_btn()}
+            <i className="bi bi-github me-1"></i>
+            {m.about_github_profile_btn()}
           </a>
         </div>
 
@@ -68,7 +70,8 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
         {/* Features List with Icons */}
         <div className="mb-4">
           <h6 className="mb-3">
-            <i className="bi bi-star me-2 text-warning"></i>{m.about_key_features_heading()}
+            <i className="bi bi-star me-2 text-warning"></i>
+            {m.about_key_features_heading()}
           </h6>
           <Row className="g-2">
             <Col xs={6}>
@@ -81,7 +84,9 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                 ) : (
                   <>
                     <i className="bi bi-calendar2-week text-primary me-2"></i>
-                    <span>{m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}</span>
+                    <span>
+                      {m.about_feature_schedule_type({ scheduleTitle: scheduleConfig.title })}
+                    </span>
                   </>
                 )}
               </div>
@@ -160,7 +165,8 @@ export function AboutModal({ show, onHide }: AboutModalProps) {
                   rel="noopener noreferrer"
                   className="btn btn-outline-danger btn-sm w-100"
                 >
-                  <i className="bi bi-bug me-1"></i>{m.about_report_bug_btn()}
+                  <i className="bi bi-bug me-1"></i>
+                  {m.about_report_bug_btn()}
                 </a>
               </Col>
               <Col xs={6}>

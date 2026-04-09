@@ -4,18 +4,18 @@ import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
-import type { ScheduleOption } from "../../data/rosters";
-import { getScheduleConfig } from "../../utils/scheduleUtils";
-import { useCountdown } from "../../hooks/useCountdown";
-import { dayjs, setTimeFromFractionalHour } from "../../utils/dateTimeUtils";
-import { getLocale } from "../../paraglide/runtime.js";
-import type { UpcomingShiftResult, ShiftResult } from "../../utils/shiftCalculations";
-import { getAllTeamsShifts, getCurrentWorkingTeam } from "../../utils/shiftCalculations";
-import { ShiftTimeDisplay } from "../shared/ShiftTimeDisplay";
-import { CountdownBadge } from "../shared/CountdownBadge";
-import { ShiftBadge } from "../shared/ShiftBadge";
-import { EmptyState } from "../shared/EmptyState";
-import * as m from "../../paraglide/messages.js";
+import type { ScheduleOption } from "@/data/rosters";
+import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { useCountdown } from "@/hooks/useCountdown";
+import { dayjs, setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { getLocale } from "@/paraglide/runtime.js";
+import type { UpcomingShiftResult, ShiftResult } from "@/utils/shiftCalculations";
+import { getAllTeamsShifts, getCurrentWorkingTeam } from "@/utils/shiftCalculations";
+import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
+import { CountdownBadge } from "@/components/shared/CountdownBadge";
+import { ShiftBadge } from "@/components/shared/ShiftBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
+import * as m from "@/paraglide/messages.js";
 
 interface GenericStatusContentProps {
   scheduleType: ScheduleOption;
@@ -253,17 +253,17 @@ export function GenericStatusContent({ scheduleType }: GenericStatusContentProps
               {nextShiftAnyTeam ? (
                 <div>
                   <div className="fw-semibold">
-                    {hasTeams ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} ` : ""}
-                    {(
-                      typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate ===
-                      "function"
-                        ? new Intl.DateTimeFormat(locale, {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          }).format((nextShiftAnyTeam.date as { toDate: () => Date }).toDate())
-                        : nextShiftAnyTeam.date.format("ddd, MMM D")
-                    )} - {nextShiftAnyTeam.shift.name}
+                    {hasTeams
+                      ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} `
+                      : ""}
+                    {typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate === "function"
+                      ? new Intl.DateTimeFormat(locale, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        }).format((nextShiftAnyTeam.date as { toDate: () => Date }).toDate())
+                      : nextShiftAnyTeam.date.format("ddd, MMM D")}{" "}
+                    - {nextShiftAnyTeam.shift.name}
                   </div>
                   <ShiftTimeDisplay shift={nextShiftAnyTeam.shift} className="small text-muted" />
                   <CountdownBadge countdown={countdown} startTime={nextShiftStartTime} />

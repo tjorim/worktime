@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Team"])
 
 
-@router.get("/v1/team/{team_id}")
+@router.get("/team/{team_id}")
 def get_team_info(team_id: str) -> TeamInfoResponse:
     """Get team information including name, members, and optional section grouping.
     
@@ -79,7 +79,7 @@ def get_team_info(team_id: str) -> TeamInfoResponse:
         ) from e
 
 
-@router.get("/v1/team/{team_id}/hday", response_model=TeamHdayResponse)
+@router.get("/team/{team_id}/hday", response_model=TeamHdayResponse)
 def get_team_hday(
     team_id: str,
     format: Literal["raw", "parsed"] = Query("raw")

@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import dayjs from "dayjs";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
-import { useSettings } from "../contexts/SettingsContext";
-import { useSyncedState } from "../hooks/useSyncedState";
-import type { ScheduleOption } from "../data/rosters";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSyncedState } from "@/hooks/useSyncedState";
+import type { ScheduleOption } from "@/data/rosters";
 import {
   getTeamCountForOption,
   hasMultipleTeams,
   isValidScheduleType,
-} from "../utils/scheduleUtils";
-import { type CountryCode, isValidCountryCode } from "../types/countries";
-import type { VacationAllowanceUnit } from "../utils/vacationCalculations";
+} from "@/utils/scheduleUtils";
+import { type CountryCode, isValidCountryCode } from "@/types/countries";
+import type { VacationAllowanceUnit } from "@/utils/vacationCalculations";
 import {
   type WizardStep,
   type WizardContext,
@@ -28,7 +30,8 @@ import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
 import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
-import * as m from "../paraglide/messages.js";
+import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
+import * as m from "@/paraglide/messages.js";
 
 /**
  * Validates vacation amount input.
@@ -61,6 +64,8 @@ export type WizardCompletionPayload = {
   enableCrossBorderTracking?: boolean;
   homeCountry?: CountryCode | null;
   officeCountry?: CountryCode | null;
+  /** True when the user connected (or was already connected to) an account during the wizard. */
+  accountConnected?: boolean;
 };
 
 interface WelcomeWizardProps {
@@ -106,7 +111,8 @@ export function WelcomeWizard({
       : "welcome",
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
-  const currentYear = String(new Date().getFullYear());
+  const { isAuthenticated, displayName, triggerSignup } = useAuth();
+  const currentYear = dayjs().format("YYYY");
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
@@ -206,6 +212,10 @@ export function WelcomeWizard({
   };
 
   const handleWorkLocationComplete = () => {
+    nextStep();
+  };
+
+  const handleAccountSetupComplete = (accountConnected?: boolean) => {
     const vacationPayload =
       isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
         ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
@@ -218,6 +228,7 @@ export function WelcomeWizard({
       enableCrossBorderTracking: isCrossBorderEnabled,
       homeCountry: isCrossBorderEnabled ? homeCountry : undefined,
       officeCountry: isCrossBorderEnabled ? officeCountry : undefined,
+      accountConnected,
     });
   };
 
@@ -264,7 +275,7 @@ export function WelcomeWizard({
 
   const getStepTitle = () => {
     const config = getStepConfig(effectiveStep);
-    return config.title;
+    return config.title();
   };
 
   return (
@@ -388,6 +399,21 @@ export function WelcomeWizard({
                 onOfficeCountryChange={setOfficeCountry}
                 onPrev={prevStep}
                 onComplete={handleWorkLocationComplete}
+                firstButtonRef={firstButtonRef}
+              />
+            )}
+            {effectiveStep === "account-setup" && (
+              <Step9AccountSetup
+                isAuthenticated={isAuthenticated}
+                displayName={displayName}
+                onConnectAccount={() => {
+                  // Complete the wizard without marking the flag — the useEffect in App.tsx
+                  // sets accountSyncAnnouncementSeen: true when the user returns authenticated.
+                  handleAccountSetupComplete(undefined);
+                  triggerSignup();
+                }}
+                onSkip={() => handleAccountSetupComplete(isAuthenticated)}
+                onPrev={prevStep}
                 firstButtonRef={firstButtonRef}
               />
             )}

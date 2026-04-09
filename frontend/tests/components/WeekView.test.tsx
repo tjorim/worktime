@@ -2,15 +2,15 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { WeekView } from "../../src/components/schedule/WeekView";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
+import { WeekView } from "@/components/schedule/WeekView";
+import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
-vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/contexts/SettingsContext")>();
+vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({
@@ -36,11 +36,11 @@ vi.mock("../../src/contexts/SettingsContext", async (importOriginal) => {
 });
 
 // Mock the dependencies
-vi.mock("../../src/hooks/useKeyboardShortcuts", () => ({
+vi.mock("@/hooks/useKeyboardShortcuts", () => ({
   useKeyboardShortcuts: vi.fn(),
 }));
 
-vi.mock("../../src/utils/dateTimeUtils", () => {
+vi.mock("@/utils/dateTimeUtils", () => {
   return {
     dayjs: vi.fn(() => {
       return {
@@ -78,7 +78,7 @@ vi.mock("../../src/utils/dateTimeUtils", () => {
   };
 });
 
-vi.mock("../../src/utils/shiftCalculations", () => ({
+vi.mock("@/utils/shiftCalculations", () => ({
   calculateShift: vi.fn(() => ({
     code: "M",
     displayCode: "M",

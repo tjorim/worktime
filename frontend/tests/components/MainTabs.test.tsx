@@ -2,15 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { MainTabs } from "../../src/components/MainTabs";
-import { DeveloperOptionsProvider } from "../../src/contexts/DeveloperOptionsContext";
-import { EventStoreProvider } from "../../src/contexts/EventStoreContext";
-import { SettingsProvider } from "../../src/contexts/SettingsContext";
-import { ToastProvider } from "../../src/contexts/ToastContext";
-import { dayjs } from "../../src/utils/dateTimeUtils";
+import { MainTabs } from "@/components/MainTabs";
+import { dayjs } from "@/utils/dateTimeUtils";
+import { TestProviders } from "../utils/testProviders";
 
 // Mock the child components
-vi.mock("../../src/components/ScheduleTabView", () => ({
+vi.mock("@/components/ScheduleTabView", () => ({
   ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => (
     <div data-testid="schedule-tab-view">ScheduleTabView - Team {myTeam}</div>
   ),
@@ -53,19 +50,11 @@ function renderWithProviders(ui: React.ReactElement) {
       },
     }),
   );
-  return render(wrapWithProviders(ui));
+  return render(<TestProviders>{ui}</TestProviders>);
 }
 
-function wrapWithProviders(ui: React.ReactElement) {
-  return (
-    <ToastProvider>
-      <DeveloperOptionsProvider>
-        <SettingsProvider>
-          <EventStoreProvider>{ui}</EventStoreProvider>
-        </SettingsProvider>
-      </DeveloperOptionsProvider>
-    </ToastProvider>
-  );
+function wrapWithTestProviders(ui: React.ReactElement) {
+  return <TestProviders>{ui}</TestProviders>;
 }
 
 describe("MainTabs", () => {
@@ -108,7 +97,7 @@ describe("MainTabs", () => {
       const { rerender } = renderWithProviders(<MainTabs {...defaultProps} activeTab="schedule" />);
       expect(screen.getByTestId("schedule-tab-view")).toBeInTheDocument();
 
-      rerender(wrapWithProviders(<MainTabs {...defaultProps} activeTab="timeoff" />));
+      rerender(wrapWithTestProviders(<MainTabs {...defaultProps} activeTab="timeoff" />));
       expect(screen.getByRole("tab", { name: "Time Off" })).toHaveAttribute(
         "aria-selected",
         "true",
