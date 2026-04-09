@@ -159,4 +159,8 @@ body {
 .sync-spin {
   display: inline-block;
   animation: sync-spin 1s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }

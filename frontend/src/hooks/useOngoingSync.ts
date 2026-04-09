@@ -255,9 +255,10 @@ export function useOngoingSync(
               storeSyncCursor(userId, pullResult.server_timestamp);
               setLastSyncedAt(pullResult.server_timestamp);
               setHasSyncError(false);
+            } else {
+              // Reconciliation pull failed — surface as a sync error.
+              setHasSyncError(true);
             }
-            // If the reconciliation pull fails, leave hasSyncError as-is so the
-            // UI continues to show an error state rather than silently clearing it.
           } else {
             setConflictCount(0);
             // Refresh the cursor so incremental pulls stay accurate.

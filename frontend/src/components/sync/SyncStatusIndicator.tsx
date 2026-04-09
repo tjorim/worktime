@@ -90,6 +90,9 @@ export function SyncStatusIndicator() {
       aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
       aria-live="polite"
       aria-atomic="true"
+      tabIndex={tooltipText ? 0 : undefined}
+      role={tooltipText ? "button" : undefined}
+      aria-describedby={tooltipText ? tooltipId : undefined}
     >
       <i
         className={`bi ${icon}${shouldSpin ? " sync-spin" : ""}`}
@@ -104,6 +107,7 @@ export function SyncStatusIndicator() {
   return (
     <OverlayTrigger
       placement="bottom"
+      trigger={["hover", "focus", "click"]}
       overlay={<Tooltip id={tooltipId}>{tooltipText}</Tooltip>}
     >
       {indicator}

@@ -370,14 +370,13 @@ describe("useOngoingSync", () => {
       );
 
       // Wait for initial flush to complete.
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 100));
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-01T12:00:00.000Z");
       });
 
       // Trigger a change that will conflict.
-      await act(async () => {
+      act(() => {
         result.current.enqueueChange(emptySyncPayload());
-        await new Promise((r) => setTimeout(r, 100));
       });
 
       await waitFor(() => {
@@ -397,6 +396,47 @@ describe("useOngoingSync", () => {
           labels: [serverLabel],
         }),
       );
+    });
+
+    it("sets hasSyncError when the reconciliation pull after a conflict fails", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [{ id: "label-1", status: "conflict", conflict_reason: "server version is newer" }],
+        },
+      };
+      const initialPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-01T12:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push with conflict
+        .mockResolvedValueOnce({ ok: false }); // reconciliation full pull fails
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-01T12:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.enqueueChange(emptySyncPayload());
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+      // conflictCount is set before the pull, so it should still reflect the conflict.
+      expect(result.current.conflictCount).toBe(1);
     });
 
     it("clears conflictCount and hasSyncError after a successful conflict-free sync", async () => {
