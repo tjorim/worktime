@@ -192,13 +192,7 @@ async def update_user_endpoint(
 
     try:
         user = await update_user(session, user_id, payload)
-    except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
-    except ConflictError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
-    except ValidationError as error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
-    except Exception:
+    except Exception as error:
         if username_changed:
             try:
                 await st_update_email_or_password(
@@ -211,6 +205,12 @@ async def update_user_endpoint(
                     current_user.supertokens_user_id,
                     rollback_error,
                 )
+        if isinstance(error, NotFoundError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        if isinstance(error, ConflictError):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        if isinstance(error, ValidationError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
         raise
 
     return UserRead.model_validate(user, from_attributes=True)

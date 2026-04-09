@@ -402,7 +402,9 @@ async def _push_time_off_entry(
             )
 
         # Create items always provide a full shape; update items can upsert when they do.
-        assert item.entry_kind is not None
+        if item.entry_kind is None:
+            from app.services.db_service import ValidationError
+            raise ValidationError("entry_kind is required to create a time-off entry")
         entry = TimeOffEntry(
             entry_id=item.id,
             user_id=user_id,
