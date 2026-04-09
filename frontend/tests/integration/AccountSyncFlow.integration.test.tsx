@@ -27,8 +27,7 @@
  *  - The conflict dialog is shown exactly when both local and server have data.
  *  - Sync cursors are stored/absent as expected after each flow.
  */
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,8 +36,7 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey } from "@/constants/storageKeys";
-import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { getSyncCursorKey, TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
 
 // ---------------------------------------------------------------------------
 // SuperTokens session mock — mutable so individual tests can override it.
@@ -168,15 +166,11 @@ function renderSync(
   fetchFn: FetchFn,
 ) {
   return render(
-    React.createElement(
-      EventStoreProvider,
-      null,
-      React.createElement(
-        ToastProvider,
-        null,
-        React.createElement(SyncHarness, { isAuthenticated, userId, fetchFn }),
-      ),
-    ),
+    <EventStoreProvider>
+      <ToastProvider>
+        <SyncHarness isAuthenticated={isAuthenticated} userId={userId} fetchFn={fetchFn} />
+      </ToastProvider>
+    </EventStoreProvider>,
   );
 }
 
@@ -274,7 +268,7 @@ describe("§2 Branch D — both sides empty → cursor stored immediately", () =
 
   it("enters error phase when the status call fails", async () => {
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: false, status: 500 },
+      "/db/sync/status": { ok: false, status: 500, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -292,7 +286,10 @@ describe("§2 Branch D — both sides empty → cursor stored immediately", () =
     const mockFetch = vi.fn() as unknown as FetchFn;
     renderSync(true, TEST_USER_ID, mockFetch);
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Phase stays idle — the flow is skipped because a cursor already exists.
+    await waitFor(() => {
+      expect(screen.getByTestId("sync-phase")).toHaveTextContent("idle");
+    });
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
@@ -332,7 +329,7 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
 
     const mockFetch = buildFetchMock({
       "/db/sync/status": { ok: true, json: async () => emptyStatus },
-      "/db/sync/push": { ok: false, status: 500 },
+      "/db/sync/push": { ok: false, status: 500, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -378,7 +375,7 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     const mockFetch = buildFetchMock({
       "/db/sync/status": { ok: true, json: async () => populatedStatus },
       "/db/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/db/preferences": { ok: false, status: 404 },
+      "/db/preferences": { ok: false, status: 404, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -473,7 +470,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
       "/db/sync/status": { ok: true, json: async () => emptyStatus },
       "/db/sync/pull": { ok: true, json: async () => emptyPullResponse },
       "/db/sync/push": { ok: true, json: async () => emptyPushResponse },
-      "/db/preferences": { ok: false, status: 404 },
+      "/db/preferences": { ok: false, status: 404, json: async () => ({}) },
     });
 
     // First status call → conflict; subsequent calls → empty (post-resolution).
@@ -532,9 +529,9 @@ describe("§2 Branch C / §5 — conflict handling", () => {
         return { ok: true, json: async () => emptyPullResponse };
       }
       if (url.includes("/db/preferences")) {
-        return { ok: false, status: 404 };
+        return { ok: false, status: 404, json: async () => ({}) };
       }
-      return { ok: false };
+      return { ok: false, json: async () => ({}) };
     }) as unknown as FetchFn;
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -600,8 +597,8 @@ describe("Auth edge cases", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     render(<App />);
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Flush pending effects without relying on a fixed-duration delay.
+    await act(async () => {});
 
     const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
       url.includes("/db/sync"),

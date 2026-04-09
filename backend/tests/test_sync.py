@@ -1144,7 +1144,8 @@ class TestSyncMultiDeviceFlow:
         """
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "restore-user")
-        headers = auth_headers(user_id)
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
 
         label_id = str(uuid4())
 
@@ -1162,17 +1163,17 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_a_headers,
         )
         assert push_resp.status_code == 200
 
         # Device B — pre-flight check: status should show non-null labels_updated_at
-        status_resp = db_client.get("/db/sync/status", headers=headers)
+        status_resp = db_client.get("/db/sync/status", headers=device_b_headers)
         assert status_resp.status_code == 200
         assert status_resp.json()["labels_updated_at"] is not None
 
         # Device B — full pull (no `since` → restores everything)
-        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        pull_resp = db_client.get("/db/sync/pull", headers=device_b_headers)
         assert pull_resp.status_code == 200
         labels = pull_resp.json()["labels"]
         label_ids = [lbl["id"] for lbl in labels]
@@ -1197,7 +1198,8 @@ class TestSyncMultiDeviceFlow:
         """
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "incremental-user")
-        headers = auth_headers(user_id)
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
 
         label_id = str(uuid4())
 
@@ -1215,11 +1217,11 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_a_headers,
         )
 
         # Device B — full pull; record the cursor.
-        full_pull = db_client.get("/db/sync/pull", headers=headers)
+        full_pull = db_client.get("/db/sync/pull", headers=device_b_headers)
         assert full_pull.status_code == 200
         cursor = full_pull.json()["server_timestamp"]
         assert cursor is not None
@@ -1240,11 +1242,11 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_a_headers,
         )
 
         # Device B — incremental pull using the stored cursor.
-        incremental_pull = db_client.get(f"/db/sync/pull?since={cursor}", headers=headers)
+        incremental_pull = db_client.get(f"/db/sync/pull?since={cursor}", headers=device_b_headers)
         assert incremental_pull.status_code == 200
         delta_labels = incremental_pull.json()["labels"]
 
@@ -1317,7 +1319,8 @@ class TestSyncMultiDeviceFlow:
         """
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "concurrent-user")
-        headers = auth_headers(user_id)
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
 
         label_id = str(uuid4())
 
@@ -1335,7 +1338,7 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_a_headers,
         )
 
         # Device A pushes an edit at t+10 (newer).
@@ -1351,7 +1354,7 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_a_headers,
         )
         assert resp_a.status_code == 200
         assert resp_a.json()["results"]["labels"][0]["status"] == "ok"
@@ -1369,7 +1372,7 @@ class TestSyncMultiDeviceFlow:
                     }
                 ]
             },
-            headers=headers,
+            headers=device_b_headers,
         )
         assert resp_b.status_code == 200
         result_b = resp_b.json()["results"]["labels"][0]
@@ -1377,7 +1380,7 @@ class TestSyncMultiDeviceFlow:
         assert result_b["conflict_reason"] == "server version is newer"
 
         # Full pull must reflect Device A's winning edit.
-        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        pull_resp = db_client.get("/db/sync/pull", headers=device_b_headers)
         assert pull_resp.status_code == 200
         labels = [lbl for lbl in pull_resp.json()["labels"] if lbl["id"] == label_id]
         assert len(labels) == 1
@@ -1460,6 +1463,7 @@ class TestSyncMultiDeviceFlow:
         label_id = str(uuid4())
         task_id = str(uuid4())
         template_id = str(uuid4())
+        time_off_id = str(uuid4())
 
         db_client.post(
             "/db/sync/push",
@@ -1506,7 +1510,7 @@ class TestSyncMultiDeviceFlow:
                 ],
                 "time_off_entries": [
                     {
-                        "id": "status-all-timeoff",
+                        "id": time_off_id,
                         "action": "create",
                         "client_updated_at": _ts(-5),
                         "entry_kind": "date",
