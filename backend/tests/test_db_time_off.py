@@ -9,12 +9,11 @@ from fastapi.testclient import TestClient
 
 def _create_entry(
     client: TestClient,
-    user_id: int,
     headers: dict[str, str],
     payload: dict | None = None,
 ) -> dict:
     response = client.post(
-        f"/db/time-off/?user_id={user_id}",
+        "/db/time-off/",
         json=payload or {"date": "2026-06-01", "entry_type": "vacation"},
         headers=headers,
     )
@@ -24,24 +23,24 @@ def _create_entry(
 
 class TestTimeOffAuth:
     def test_list_requires_auth(self, db_client: TestClient) -> None:
-        assert db_client.get("/db/time-off/?user_id=1").status_code == 401
+        assert db_client.get("/db/time-off/").status_code == 401
 
     def test_create_requires_auth(self, db_client: TestClient) -> None:
         assert db_client.post(
-            "/db/time-off/?user_id=1",
+            "/db/time-off/",
             json={"date": "2026-06-01", "entry_type": "vacation"},
         ).status_code == 401
 
     def test_delete_requires_auth(self, db_client: TestClient) -> None:
-        assert db_client.delete("/db/time-off/entry-1?user_id=1").status_code == 401
+        assert db_client.delete("/db/time-off/entry-1").status_code == 401
 
     def test_get_single_requires_auth(self, db_client: TestClient) -> None:
-        assert db_client.get("/db/time-off/entry-1?user_id=1").status_code == 401
+        assert db_client.get("/db/time-off/entry-1").status_code == 401
 
     def test_patch_single_requires_auth(self, db_client: TestClient) -> None:
-        assert db_client.patch("/db/time-off/entry-1?user_id=1", json={"note": "unauthorized"}).status_code == 401
+        assert db_client.patch("/db/time-off/entry-1", json={"note": "unauthorized"}).status_code == 401
 
-    def test_single_entry_routes_are_forbidden_for_other_user(
+    def test_single_entry_routes_are_not_found_for_other_user(
         self,
         db_client: TestClient,
         auth_headers: Callable[..., dict[str, str]],
@@ -53,35 +52,18 @@ class TestTimeOffAuth:
         headers_a = auth_headers(user_a)
         headers_b = auth_headers(user_b)
 
-        entry = _create_entry(db_client, user_a, headers_a)
+        entry = _create_entry(db_client, headers_a)
 
-        assert db_client.get(f"/db/time-off/{entry['entry_id']}?user_id={user_a}", headers=headers_b).status_code == 403
+        assert db_client.get(f"/db/time-off/{entry['entry_id']}", headers=headers_b).status_code == 404
         assert db_client.patch(
-            f"/db/time-off/{entry['entry_id']}?user_id={user_a}",
+            f"/db/time-off/{entry['entry_id']}",
             json={"note": "forbidden"},
             headers=headers_b,
-        ).status_code == 403
-        assert db_client.delete(f"/db/time-off/{entry['entry_id']}?user_id={user_a}", headers=headers_b).status_code == 403
+        ).status_code == 404
+        assert db_client.delete(f"/db/time-off/{entry['entry_id']}", headers=headers_b).status_code == 404
 
 
 class TestCreateTimeOff:
-    def test_create_forbidden_for_other_user(
-        self,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-    ) -> None:
-        admin_h = auth_headers(1, is_admin=True)
-        user_a = create_user_factory(db_client, admin_h, "to-create-forbidden-a")
-        user_b = create_user_factory(db_client, admin_h, "to-create-forbidden-b")
-        headers_b = auth_headers(user_b)
-
-        resp = db_client.post(
-            f"/db/time-off/?user_id={user_a}",
-            json={"date": "2026-09-01", "entry_type": "vacation"},
-            headers=headers_b,
-        )
-        assert resp.status_code == 403
 
     def test_creates_date_entry(
         self,
@@ -94,7 +76,7 @@ class TestCreateTimeOff:
         headers = auth_headers(user_id)
 
         resp = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={"date": "2026-07-14", "entry_type": "vacation", "entry_flag": "half_am", "note": "summer"},
             headers=headers,
         )
@@ -122,14 +104,14 @@ class TestCreateTimeOff:
         entry_id = "timeoff-upsert-1"
 
         first = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={"entry_id": entry_id, "date": "2026-08-01", "entry_type": "vacation"},
             headers=headers,
         )
         assert first.status_code == 201
 
         second = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={
                 "entry_id": entry_id,
                 "entry_kind": "range",
@@ -166,7 +148,7 @@ class TestTimeOffValidation:
         headers = auth_headers(user_id)
 
         resp = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={"date": "2026-07-14", "entry_type": "sick"},
             headers=headers,
         )
@@ -183,7 +165,7 @@ class TestTimeOffValidation:
         headers = auth_headers(user_id)
 
         resp = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={"date": "2026-07-14", "entry_type": "vacation", "entry_flag": "unknown_flag"},
             headers=headers,
         )
@@ -201,7 +183,7 @@ class TestListTimeOff:
         user_id = create_user_factory(db_client, admin_h, "to-list-empty")
         headers = auth_headers(user_id)
 
-        resp = db_client.get(f"/db/time-off/?user_id={user_id}", headers=headers)
+        resp = db_client.get("/db/time-off/", headers=headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
         assert resp.json()["items"] == []
@@ -216,21 +198,19 @@ class TestListTimeOff:
         user_id = create_user_factory(db_client, admin_h, "to-list-full")
         headers = auth_headers(user_id)
 
-        _create_entry(db_client, user_id, headers, {"date": "2026-06-01", "entry_type": "vacation"})
+        _create_entry(db_client, headers, {"date": "2026-06-01", "entry_type": "vacation"})
         _create_entry(
             db_client,
-            user_id,
             headers,
             {"entry_kind": "range", "start_date": "2026-06-10", "end_date": "2026-06-12", "entry_type": "vacation"},
         )
         _create_entry(
             db_client,
-            user_id,
             headers,
             {"entry_kind": "weekly", "weekday": 1, "entry_type": "in", "note": "Mondays"},
         )
 
-        resp = db_client.get(f"/db/time-off/?user_id={user_id}", headers=headers)
+        resp = db_client.get("/db/time-off/", headers=headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 3
 
@@ -244,18 +224,17 @@ class TestListTimeOff:
         user_id = create_user_factory(db_client, admin_h, "to-list-range")
         headers = auth_headers(user_id)
 
-        _create_entry(db_client, user_id, headers, {"date": "2026-06-05", "entry_type": "vacation"})
-        _create_entry(db_client, user_id, headers, {"date": "2026-06-10", "entry_type": "vacation"})
+        _create_entry(db_client, headers, {"date": "2026-06-05", "entry_type": "vacation"})
+        _create_entry(db_client, headers, {"date": "2026-06-10", "entry_type": "vacation"})
         _create_entry(
             db_client,
-            user_id,
             headers,
             {"entry_kind": "range", "start_date": "2026-06-12", "end_date": "2026-06-15", "entry_type": "vacation"},
         )
-        _create_entry(db_client, user_id, headers, {"date": "2026-06-20", "entry_type": "vacation"})
+        _create_entry(db_client, headers, {"date": "2026-06-20", "entry_type": "vacation"})
 
         resp = db_client.get(
-            f"/db/time-off/?user_id={user_id}&start_date=2026-06-10&end_date=2026-06-15",
+            "/db/time-off/?start_date=2026-06-10&end_date=2026-06-15",
             headers=headers,
         )
         assert resp.status_code == 200
@@ -274,25 +253,11 @@ class TestListTimeOff:
         headers_a = auth_headers(user_a)
         headers_b = auth_headers(user_b)
 
-        _create_entry(db_client, user_a, headers_a, {"date": "2026-07-01", "entry_type": "vacation"})
+        _create_entry(db_client, headers_a, {"date": "2026-07-01", "entry_type": "vacation"})
 
-        resp = db_client.get(f"/db/time-off/?user_id={user_b}", headers=headers_b)
+        resp = db_client.get("/db/time-off/", headers=headers_b)
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
-
-    def test_list_forbidden_for_other_user(
-        self,
-        db_client: TestClient,
-        auth_headers: Callable[..., dict[str, str]],
-        create_user_factory: Callable[..., int],
-    ) -> None:
-        admin_h = auth_headers(1, is_admin=True)
-        user_a = create_user_factory(db_client, admin_h, "to-list-forbidden-a")
-        user_b = create_user_factory(db_client, admin_h, "to-list-forbidden-b")
-        headers_b = auth_headers(user_b)
-
-        resp = db_client.get(f"/db/time-off/?user_id={user_a}", headers=headers_b)
-        assert resp.status_code == 403
 
 
 class TestGetPatchDeleteTimeOff:
@@ -308,19 +273,18 @@ class TestGetPatchDeleteTimeOff:
 
         created = _create_entry(
             db_client,
-            user_id,
             headers,
             {"entry_kind": "weekly", "weekday": 5, "entry_type": "in", "note": "Fridays"},
         )
         entry_id = created["entry_id"]
 
-        get_resp = db_client.get(f"/db/time-off/{entry_id}?user_id={user_id}", headers=headers)
+        get_resp = db_client.get(f"/db/time-off/{entry_id}", headers=headers)
         assert get_resp.status_code == 200
         assert get_resp.json()["entry_kind"] == "weekly"
         assert get_resp.json()["weekday"] == 5
 
         patch_resp = db_client.patch(
-            f"/db/time-off/{entry_id}?user_id={user_id}",
+            f"/db/time-off/{entry_id}",
             json={"entry_kind": "date", "date": "2026-09-10", "note": "updated note"},
             headers=headers,
         )
@@ -329,10 +293,10 @@ class TestGetPatchDeleteTimeOff:
         assert patch_resp.json()["date"] == "2026-09-10"
         assert patch_resp.json()["note"] == "updated note"
 
-        delete_resp = db_client.delete(f"/db/time-off/{entry_id}?user_id={user_id}", headers=headers)
+        delete_resp = db_client.delete(f"/db/time-off/{entry_id}", headers=headers)
         assert delete_resp.status_code == 204
 
-        list_resp = db_client.get(f"/db/time-off/?user_id={user_id}", headers=headers)
+        list_resp = db_client.get("/db/time-off/", headers=headers)
         assert list_resp.json()["total"] == 0
 
     def test_returns_404_when_entry_is_missing(
@@ -345,13 +309,13 @@ class TestGetPatchDeleteTimeOff:
         user_id = create_user_factory(db_client, admin_h, "to-404")
         headers = auth_headers(user_id)
 
-        assert db_client.get(f"/db/time-off/not-found?user_id={user_id}", headers=headers).status_code == 404
+        assert db_client.get("/db/time-off/not-found", headers=headers).status_code == 404
         assert db_client.patch(
-            f"/db/time-off/not-found?user_id={user_id}",
+            "/db/time-off/not-found",
             json={"note": "updated"},
             headers=headers,
         ).status_code == 404
-        assert db_client.delete(f"/db/time-off/not-found?user_id={user_id}", headers=headers).status_code == 404
+        assert db_client.delete("/db/time-off/not-found", headers=headers).status_code == 404
 
     def test_deleted_entry_can_be_recreated_with_same_entry_id(
         self,
@@ -366,14 +330,13 @@ class TestGetPatchDeleteTimeOff:
 
         _create_entry(
             db_client,
-            user_id,
             headers,
             {"entry_id": entry_id, "date": "2026-11-11", "entry_type": "vacation"},
         )
-        assert db_client.delete(f"/db/time-off/{entry_id}?user_id={user_id}", headers=headers).status_code == 204
+        assert db_client.delete(f"/db/time-off/{entry_id}", headers=headers).status_code == 204
 
         recreate = db_client.post(
-            f"/db/time-off/?user_id={user_id}",
+            "/db/time-off/",
             json={"entry_id": entry_id, "date": "2026-11-11", "entry_type": "ill"},
             headers=headers,
         )
