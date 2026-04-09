@@ -1,7 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import { useId } from "react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
@@ -34,50 +33,34 @@ export function SyncStatusIndicator() {
     isAuthenticated &&
     (isSyncing || outboxCount > 0 || hasSyncError || conflictCount > 0 || lastSyncedAt !== null);
 
-  const { icon, label, variant, tooltipText } = useMemo(() => {
-    if (hasSyncError) {
-      return {
-        icon: "bi-cloud-slash",
-        label: m.sync_indicator_error(),
-        variant: "danger",
-        tooltipText: m.sync_indicator_tooltip_error(),
-      };
-    }
-    if (conflictCount > 0) {
-      return {
-        icon: "bi-exclamation-triangle",
-        label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
-        variant: "warning",
-        tooltipText: m.sync_indicator_tooltip_conflicts({ count: String(conflictCount) }),
-      };
-    }
-    if (isSyncing) {
-      return {
-        icon: "bi-arrow-repeat",
-        label: m.sync_indicator_syncing(),
-        variant: "info",
-        tooltipText: null,
-      };
-    }
-    if (outboxCount > 0) {
-      return {
-        icon: "bi-cloud-upload",
-        label: m.sync_indicator_pending({ count: String(outboxCount) }),
-        variant: "warning",
-        tooltipText: m.sync_indicator_tooltip_pending({ count: String(outboxCount) }),
-      };
-    }
-    if (lastSyncedAt) {
-      const timeAgo = dayjs(lastSyncedAt).fromNow();
-      return {
-        icon: "bi-cloud-check",
-        label: m.sync_indicator_synced(),
-        variant: "success",
-        tooltipText: m.sync_indicator_tooltip_synced_at({ time: timeAgo }),
-      };
-    }
-    return { icon: "bi-cloud", label: "", variant: "secondary", tooltipText: null };
+  // Tick every minute so the "last synced" relative time stays fresh.
+  const [, setMinuteTick] = useState(0);
+  useEffect(() => {
+    if (!lastSyncedAt) return;
+    const id = setInterval(() => setMinuteTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, [lastSyncedAt]);
+
+  // Icon, label, and variant are stable between minute ticks — memoize them.
+  const { icon, label, variant } = useMemo(() => {
+    if (hasSyncError) return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
+    if (conflictCount > 0) return { icon: "bi-exclamation-triangle", label: m.sync_indicator_conflicts({ count: String(conflictCount) }), variant: "warning" };
+    if (isSyncing) return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
+    if (outboxCount > 0) return { icon: "bi-cloud-upload", label: m.sync_indicator_pending({ count: String(outboxCount) }), variant: "warning" };
+    if (lastSyncedAt) return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
+    return { icon: "bi-cloud", label: "", variant: "secondary" };
   }, [hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
+
+  // Tooltip text is computed fresh every render so fromNow() stays accurate
+  // (the minute ticker above drives re-renders for the "synced" state).
+  const tooltipText = (() => {
+    if (hasSyncError) return m.sync_indicator_tooltip_error();
+    if (conflictCount > 0) return m.sync_indicator_tooltip_conflicts({ count: String(conflictCount) });
+    if (isSyncing) return null;
+    if (outboxCount > 0) return m.sync_indicator_tooltip_pending({ count: String(outboxCount) });
+    if (lastSyncedAt) return m.sync_indicator_tooltip_synced_at({ time: dayjs(lastSyncedAt).fromNow() });
+    return null;
+  })();
 
   if (!isVisible) return null;
 
@@ -91,7 +74,6 @@ export function SyncStatusIndicator() {
       aria-live="polite"
       aria-atomic="true"
       tabIndex={tooltipText ? 0 : undefined}
-      role={tooltipText ? "button" : undefined}
       aria-describedby={tooltipText ? tooltipId : undefined}
     >
       <i
