@@ -477,13 +477,12 @@ describe("useOngoingSync", () => {
       });
 
       // Trigger a successful flush via visibility change.
-      await act(async () => {
-        Object.defineProperty(document, "visibilityState", {
-          value: "visible",
-          writable: true,
-        });
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        writable: true,
+      });
+      act(() => {
         document.dispatchEvent(new Event("visibilitychange"));
-        await new Promise((r) => setTimeout(r, 150));
       });
 
       await waitFor(() => {

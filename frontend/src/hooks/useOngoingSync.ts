@@ -151,9 +151,14 @@ export function useOngoingSync(
         }
       }
 
-      // --- Incremental pull ---
-      const cursor = localStorage.getItem(getSyncCursorKey(userId));
-      const pullResult = await pullSyncData(fetchFn, cursor ?? undefined);
+      // --- Pull ---
+      // When conflicts occurred during push, skip the cursor so that conflicted
+      // records are always included regardless of their server `updated_at`.
+      const cursor =
+        flushConflicts > 0
+          ? undefined
+          : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
+      const pullResult = await pullSyncData(fetchFn, cursor);
       if (!mountedRef.current) return;
       if (pullResult) {
         onIncrementalPullRef.current?.(pullResult);
