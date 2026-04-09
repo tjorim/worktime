@@ -98,9 +98,10 @@ describe("useOngoingSync", () => {
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
       // Mocks are consumed in order:
-      // 1. Initial flush on mount: no outbox push, but pulls incremental changes
-      // 2. enqueueChange: push succeeds
-      // 3. enqueueChange: status refresh returns new cursor
+      // 1. Initial flush on mount: outbox empty → no push, only a pull
+      // 2. enqueueChange: immediate push succeeds (no conflicts)
+      // 3. enqueueChange: fetchSyncStatus refreshes the cursor (extra round-trip
+      //    because the push response does not include a server_timestamp)
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
@@ -254,11 +255,9 @@ describe("useOngoingSync", () => {
   describe("flush on online event", () => {
     it("triggers flush when the browser comes back online", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
-
+      // Outbox is empty for both flushes, so no push is made — only a pull each time.
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // initial flush push (empty)
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
-        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // online flush push
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // online pull
 
       const pullCallback = vi.fn();

@@ -175,24 +175,28 @@ export function useTimeTrackingStorage() {
             : raw,
         ),
       );
-      const now = dayjs().toISOString();
-      const change = emptySyncPayload();
-      // Find the current raw task to get text/label if not provided.
+      // Find the current raw task to get text/label if not provided in the payload.
+      // Guard: skip enqueue if the task is not found — the state update above is
+      // also a no-op in that case, so there is nothing to sync.
       const existing = rawTasks.find((t) => t.id === payload.id);
-      change.tasks.push({
-        id: payload.id,
-        action: "update",
-        client_updated_at: now,
-        label_id: (payload.newLabel ?? existing?.label) || null,
-        text: payload.newText ?? existing?.text ?? "",
-        start_time: dayjs(payload.newStartTime).toISOString(),
-        stop_time: payload.newStopTime ? dayjs(payload.newStopTime).toISOString() : null,
-        includes_break:
-          typeof payload.includesBreak === "boolean"
-            ? payload.includesBreak
-            : (existing?.includesBreak ?? false),
-      });
-      enqueueChange(change);
+      if (existing) {
+        const now = dayjs().toISOString();
+        const change = emptySyncPayload();
+        change.tasks.push({
+          id: payload.id,
+          action: "update",
+          client_updated_at: now,
+          label_id: (payload.newLabel ?? existing.label) || null,
+          text: payload.newText ?? existing.text,
+          start_time: dayjs(payload.newStartTime).toISOString(),
+          stop_time: payload.newStopTime ? dayjs(payload.newStopTime).toISOString() : null,
+          includes_break:
+            typeof payload.includesBreak === "boolean"
+              ? payload.includesBreak
+              : (existing.includesBreak ?? false),
+        });
+        enqueueChange(change);
+      }
     },
     [setRawTasks, rawTasks, enqueueChange],
   );
@@ -303,7 +307,8 @@ export function useTimeTrackingStorage() {
     (nextTemplates: TimeTrackingTemplate[]) => {
       const now = dayjs().toISOString();
       const change = emptySyncPayload();
-      // Upsert all templates in the new list.
+      // Use "create" for all templates in the list — the backend treats "create"
+      // as an upsert, so existing templates are updated rather than duplicated.
       for (const t of nextTemplates) {
         change.templates.push({
           id: t.id,
@@ -333,7 +338,8 @@ export function useTimeTrackingStorage() {
       const sanitized = sanitizeLabels(nextLabels);
       const now = dayjs().toISOString();
       const change = emptySyncPayload();
-      // Upsert all labels in the new list.
+      // Use "create" for all labels in the list — the backend treats "create"
+      // as an upsert, so existing labels are updated rather than duplicated.
       for (const l of sanitized) {
         change.labels.push({
           id: l.id,
