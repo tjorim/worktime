@@ -1320,6 +1320,21 @@ describe("syncClient", () => {
       expect(result!.merged.work_locations).toHaveLength(1);
       expect(result!.merged.templates).toHaveLength(1);
     });
+
+    it("skips corrupted/non-object outbox entries without throwing", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      // Corrupt the outbox by injecting a bad entry directly.
+      const key = getSyncOutboxKey("user-1");
+      const existing = JSON.parse(localStorage.getItem(key) ?? "[]");
+      // Push a primitive and a plain object missing all arrays.
+      localStorage.setItem(key, JSON.stringify([...existing, null, {}, 42]));
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      // The valid entry contributes 0 items; null/42/object-without-arrays are skipped.
+      expect(result!.merged.tasks).toHaveLength(0);
+      expect(result!.merged.labels).toHaveLength(0);
+    });
   });
 
   // ---------------------------------------------------------------------------

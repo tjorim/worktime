@@ -822,11 +822,12 @@ export function dequeueAndMergeSyncOutbox(
     time_off_entries: [],
   };
   for (const payload of outbox) {
-    merged.labels.push(...payload.labels);
-    merged.tasks.push(...payload.tasks);
-    merged.templates.push(...payload.templates);
-    merged.work_locations.push(...payload.work_locations);
-    merged.time_off_entries.push(...(payload.time_off_entries ?? []));
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
+    merged.labels.push(...(Array.isArray(payload.labels) ? payload.labels : []));
+    merged.tasks.push(...(Array.isArray(payload.tasks) ? payload.tasks : []));
+    merged.templates.push(...(Array.isArray(payload.templates) ? payload.templates : []));
+    merged.work_locations.push(...(Array.isArray(payload.work_locations) ? payload.work_locations : []));
+    merged.time_off_entries.push(...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []));
   }
   return { merged, commit: () => clearSyncOutbox(userId) };
 }
@@ -860,9 +861,15 @@ function notifyLocalStorageChange(key: string, newValue: string, oldValue: strin
  * instances via a synthetic storage event.
  */
 function setItemWithNotify(key: string, value: string): void {
-  const oldValue = localStorage.getItem(key);
-  localStorage.setItem(key, value);
-  notifyLocalStorageChange(key, value, oldValue);
+  try {
+    const oldValue = localStorage.getItem(key);
+    localStorage.setItem(key, value);
+    notifyLocalStorageChange(key, value, oldValue);
+  } catch (err) {
+    // Log and ignore storage write/read errors (e.g., quota exceeded, storage disabled)
+    // so incremental sync fails gracefully instead of crashing callers.
+    console.error("setItemWithNotify: failed to write localStorage key:", key, err);
+  }
 }
 
 /**

@@ -112,8 +112,8 @@ describe("useOngoingSync", () => {
       );
 
       // Wait for initial flush to complete.
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 50));
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(1);
       });
 
       const change = emptySyncPayload();
@@ -224,9 +224,9 @@ describe("useOngoingSync", () => {
         useOngoingSync(true, "user-1", mockFetch, pullCallback),
       );
 
-      // Wait for initial flush to complete.
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 50));
+      // Wait for initial flush to complete (push fails, no pull triggered).
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(1);
       });
 
       // Simulate tab becoming visible.
@@ -236,7 +236,6 @@ describe("useOngoingSync", () => {
           writable: true,
         });
         document.dispatchEvent(new Event("visibilitychange"));
-        await new Promise((r) => setTimeout(r, 100));
       });
 
       await waitFor(() => {
@@ -266,8 +265,8 @@ describe("useOngoingSync", () => {
       );
 
       // Let initial flush complete.
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 100));
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(1);
       });
 
       const initialCallCount = mockFetch.mock.calls.length;
@@ -275,7 +274,6 @@ describe("useOngoingSync", () => {
       // Simulate coming back online.
       await act(async () => {
         window.dispatchEvent(new Event("online"));
-        await new Promise((r) => setTimeout(r, 100));
       });
 
       await waitFor(() => {
@@ -487,6 +485,72 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         expect(result.current.hasSyncError).toBe(false);
       });
+    });
+
+    it("resets conflictCount to 0 after a subsequent successful conflict-free sync", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
+        },
+      };
+      const pullWithConflict = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+      const cleanPull = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-03T00:00:00.000Z",
+      };
+
+      // Initial pull → conflict push + full pull → clean pull (triggered by visibility).
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // initial pull (empty outbox)
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push (conflict)
+        .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // reconciliation full pull
+        .mockResolvedValueOnce({ ok: true, json: async () => cleanPull }); // visibility-change pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
+      });
+
+      // Enqueue a change that produces a conflict.
+      act(() => {
+        result.current.enqueueChange(emptySyncPayload());
+      });
+
+      await waitFor(() => {
+        expect(result.current.conflictCount).toBe(1);
+      });
+
+      // Now trigger a clean flush via visibility change.
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        writable: true,
+      });
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-03T00:00:00.000Z");
+      });
+
+      // conflictCount should be cleared after the conflict-free pull.
+      expect(result.current.conflictCount).toBe(0);
     });
   });
 });

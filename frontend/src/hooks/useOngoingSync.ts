@@ -169,6 +169,9 @@ export function useOngoingSync(
         storeSyncCursor(userId, pullResult.server_timestamp);
         setLastSyncedAt(pullResult.server_timestamp);
         setHasSyncError(false);
+        if (flushConflicts === 0) {
+          setConflictCount(0);
+        }
       } else {
         setHasSyncError(true);
       }
