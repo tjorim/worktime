@@ -1120,3 +1120,421 @@ class TestSyncTimeOffEntries:
         result = resp.json()["results"]["time_off_entries"][0]
         assert result["status"] == "conflict"
         assert result["conflict_reason"] == "server version is newer"
+
+
+class TestSyncMultiDeviceFlow:
+    """
+    End-to-end multi-device sync scenarios.
+
+    These tests simulate the user journeys described in
+    docs/local-first-sync-flow.md §2–§5 at the API level, using two
+    separate auth contexts (device_a_headers / device_b_headers) that
+    both represent the same user account.
+    """
+
+    # -------------------------------------------------------------------
+    # §4 — Second-device restore (Branch B of the first-sync flow)
+    # -------------------------------------------------------------------
+
+    def test_second_device_restore_pull(self, db_client: TestClient, auth_headers) -> None:
+        """
+        Device A pushes data; Device B signs in to an empty localStorage,
+        checks sync status (non-null timestamps), and pulls all records.
+        After the pull, Device B holds the same records as Device A.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "restore-user")
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+
+        # Device A — initial push (Branch A of first-sync flow)
+        push_resp = db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "DeviceA Label",
+                        "color": "#112233",
+                    }
+                ]
+            },
+            headers=device_a_headers,
+        )
+        assert push_resp.status_code == 200
+
+        # Device B — pre-flight check: status should show non-null labels_updated_at
+        status_resp = db_client.get("/db/sync/status", headers=device_b_headers)
+        assert status_resp.status_code == 200
+        assert status_resp.json()["labels_updated_at"] is not None
+
+        # Device B — full pull (no `since` → restores everything)
+        pull_resp = db_client.get("/db/sync/pull", headers=device_b_headers)
+        assert pull_resp.status_code == 200
+        labels = pull_resp.json()["labels"]
+        label_ids = [lbl["id"] for lbl in labels]
+        assert label_id in label_ids
+
+        # Device B now holds the same label that Device A pushed.
+        restored_label = next(lbl for lbl in labels if lbl["id"] == label_id)
+        assert restored_label["name"] == "DeviceA Label"
+
+    # -------------------------------------------------------------------
+    # §3 — Incremental pull across devices (ongoing sync)
+    # -------------------------------------------------------------------
+
+    def test_incremental_pull_with_since_across_devices(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """
+        Device A pushes an initial label. Device B performs a full pull and
+        stores the returned server_timestamp as its cursor. Device A later
+        pushes an update. Device B pulls only the delta using the `since`
+        cursor and receives only the updated record.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "incremental-user")
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+
+        # Initial push from Device A.
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-10),
+                        "name": "Initial Name",
+                        "color": "#AABBCC",
+                    }
+                ]
+            },
+            headers=device_a_headers,
+        )
+
+        # Device B — full pull; record the cursor.
+        full_pull = db_client.get("/db/sync/pull", headers=device_b_headers)
+        assert full_pull.status_code == 200
+        cursor = full_pull.json()["server_timestamp"]
+        assert cursor is not None
+
+        # Brief pause to ensure the server's next updated_at is strictly greater.
+        time.sleep(0.01)
+
+        # Device A — push an update.
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(5),
+                        "name": "Updated Name",
+                    }
+                ]
+            },
+            headers=device_a_headers,
+        )
+
+        # Device B — incremental pull using the stored cursor.
+        incremental_pull = db_client.get("/db/sync/pull", params={"since": cursor}, headers=device_b_headers)
+        assert incremental_pull.status_code == 200
+        delta_labels = incremental_pull.json()["labels"]
+
+        # Only the updated record should appear in the delta.
+        assert len(delta_labels) == 1
+        assert delta_labels[0]["id"] == label_id
+        assert delta_labels[0]["name"] == "Updated Name"
+
+    # -------------------------------------------------------------------
+    # §3 — User data isolation (cross-user invariant)
+    # -------------------------------------------------------------------
+
+    def test_user_data_is_isolated_between_accounts(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """
+        Records pushed by User A are never visible to User B's pull.
+        This validates the per-user data isolation invariant.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_a_id = _create_user(db_client, admin_h, "isolation-user-a")
+        user_b_id = _create_user(db_client, admin_h, "isolation-user-b")
+
+        headers_a = auth_headers(user_a_id)
+        headers_b = auth_headers(user_b_id)
+
+        label_id = str(uuid4())
+
+        # User A pushes a label.
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "User A Label",
+                        "color": "#FACADE",
+                    }
+                ]
+            },
+            headers=headers_a,
+        )
+
+        # User B's pull must NOT include User A's label.
+        pull_b = db_client.get("/db/sync/pull", headers=headers_b)
+        assert pull_b.status_code == 200
+        b_label_ids = [lbl["id"] for lbl in pull_b.json()["labels"]]
+        assert label_id not in b_label_ids
+
+        # User A's own pull must include the label.
+        pull_a = db_client.get("/db/sync/pull", headers=headers_a)
+        assert pull_a.status_code == 200
+        a_label_ids = [lbl["id"] for lbl in pull_a.json()["labels"]]
+        assert label_id in a_label_ids
+
+    # -------------------------------------------------------------------
+    # §5 — Concurrent edit conflict between devices
+    # -------------------------------------------------------------------
+
+    def test_concurrent_edit_conflict_between_devices(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """
+        Both Device A and Device B edit the same record while offline.
+        When both push, the later timestamp wins; the earlier push is
+        rejected with status='conflict'.  The winning device's value is
+        visible on the next full pull.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "concurrent-user")
+        device_a_headers = auth_headers(user_id)
+        device_b_headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+
+        # Both devices start from a common base: initial create.
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-20),
+                        "name": "Base Name",
+                        "color": "#000000",
+                    }
+                ]
+            },
+            headers=device_a_headers,
+        )
+
+        # Device A pushes an edit at t+10 (newer).
+        resp_a = db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(10),
+                        "name": "Device A Edit",
+                    }
+                ]
+            },
+            headers=device_a_headers,
+        )
+        assert resp_a.status_code == 200
+        assert resp_a.json()["results"]["labels"][0]["status"] == "ok"
+
+        # Device B pushes a conflicting edit at t-5 (older — conflict).
+        resp_b = db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "update",
+                        "client_updated_at": _ts(-5),
+                        "name": "Device B Stale Edit",
+                    }
+                ]
+            },
+            headers=device_b_headers,
+        )
+        assert resp_b.status_code == 200
+        result_b = resp_b.json()["results"]["labels"][0]
+        assert result_b["status"] == "conflict"
+        assert result_b["conflict_reason"] == "server version is newer"
+
+        # Full pull must reflect Device A's winning edit.
+        pull_resp = db_client.get("/db/sync/pull", headers=device_b_headers)
+        assert pull_resp.status_code == 200
+        labels = [lbl for lbl in pull_resp.json()["labels"] if lbl["id"] == label_id]
+        assert len(labels) == 1
+        assert labels[0]["name"] == "Device A Edit"
+
+    # -------------------------------------------------------------------
+    # §3 — Offline outbox scenario: push failure followed by reconnect
+    # -------------------------------------------------------------------
+
+    def test_outbox_flush_on_reconnect(self, db_client: TestClient, auth_headers) -> None:
+        """
+        Simulates an offline-then-reconnect scenario:
+        1. Device pushes a batch of queued (outbox) records in a single flush.
+        2. The server accepts all records.
+        3. A subsequent pull returns all flushed records.
+
+        The backend treats a large-batch push the same as individual writes,
+        so this test validates that the outbox flush call pattern works.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "outbox-user")
+        headers = auth_headers(user_id)
+
+        # Simulate multiple queued changes from the outbox (merged into one request).
+        task_ids = [str(uuid4()) for _ in range(3)]
+        outbox_payload = {
+            "tasks": [
+                {
+                    "id": task_id,
+                    "action": "create",
+                    "client_updated_at": _ts(-30 + i),
+                    "text": f"Queued task {i}",
+                    "label_id": None,
+                    "start_time": "2026-02-01T09:00:00+00:00",
+                    "stop_time": None,
+                    "includes_break": False,
+                }
+                for i, task_id in enumerate(task_ids)
+            ]
+        }
+
+        flush_resp = db_client.post("/db/sync/push", json=outbox_payload, headers=headers)
+        assert flush_resp.status_code == 200
+
+        results = flush_resp.json()["results"]["tasks"]
+        assert all(r["status"] == "ok" for r in results), results
+
+        # Reconnect pull: all flushed records must be present.
+        pull_resp = db_client.get("/db/sync/pull", headers=headers)
+        assert pull_resp.status_code == 200
+        pulled_task_ids = {task["id"] for task in pull_resp.json()["tasks"]}
+        for task_id in task_ids:
+            assert task_id in pulled_task_ids
+
+    # -------------------------------------------------------------------
+    # §2 — First-sync status endpoint reflects all entity types
+    # -------------------------------------------------------------------
+
+    def test_sync_status_reflects_all_entity_types(
+        self, db_client: TestClient, auth_headers
+    ) -> None:
+        """
+        After pushing data for every synced entity type, the status
+        endpoint must report a non-null timestamp for each entity.
+        This validates the Branch A / Branch B detection logic used by
+        useFirstSyncFlow on the frontend.
+        """
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "status-all-user")
+        headers = auth_headers(user_id)
+
+        # Initial status — all null.
+        status_before = db_client.get("/db/sync/status", headers=headers).json()
+        assert status_before["labels_updated_at"] is None
+        assert status_before["tasks_updated_at"] is None
+        assert status_before["templates_updated_at"] is None
+        assert status_before["work_locations_updated_at"] is None
+        assert status_before["time_off_entries_updated_at"] is None
+        assert status_before["preferences_updated_at"] is None
+
+        label_id = str(uuid4())
+        task_id = str(uuid4())
+        template_id = str(uuid4())
+        time_off_id = str(uuid4())
+
+        db_client.post(
+            "/db/sync/push",
+            json={
+                "labels": [
+                    {
+                        "id": label_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "name": "Status Label",
+                        "color": "#AABBCC",
+                    }
+                ],
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Status Task",
+                        "label_id": None,
+                        "start_time": "2026-03-01T08:00:00+00:00",
+                        "stop_time": None,
+                        "includes_break": False,
+                    }
+                ],
+                "templates": [
+                    {
+                        "id": template_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "text": "Status Template",
+                        "label_id": None,
+                        "start_time": "08:00:00",
+                        "stop_time": "12:00:00",
+                    }
+                ],
+                "work_locations": [
+                    {
+                        "date": "2026-03-01",
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "country_code": "NL",
+                    }
+                ],
+                "time_off_entries": [
+                    {
+                        "id": time_off_id,
+                        "action": "create",
+                        "client_updated_at": _ts(-5),
+                        "entry_kind": "date",
+                        "date": "2026-07-01",
+                        "entry_type": "vacation",
+                        "entry_flag": "full_day",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+
+        # Preferences are written via the dedicated endpoint, not /db/sync/push.
+        db_client.put(
+            "/db/preferences",
+            json={"data": {"hasCompletedOnboarding": True}, "client_updated_at": _ts(-5)},
+            headers=headers,
+        )
+
+        status_after = db_client.get("/db/sync/status", headers=headers).json()
+        assert status_after["labels_updated_at"] is not None
+        assert status_after["tasks_updated_at"] is not None
+        assert status_after["templates_updated_at"] is not None
+        assert status_after["work_locations_updated_at"] is not None
+        assert status_after["time_off_entries_updated_at"] is not None
+        assert status_after["preferences_updated_at"] is not None
