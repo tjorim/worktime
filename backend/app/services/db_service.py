@@ -141,6 +141,11 @@ async def update_user(session: AsyncSession, user_id: int, payload: UserUpdate) 
 
 
 async def delete_user(session: AsyncSession, user_id: int) -> None:
+    await delete_user_uncommitted(session, user_id)
+    await session.commit()
+
+
+async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
     user = await get_user(session, user_id)
 
     await session.execute(delete(TimeTrackingTask).where(TimeTrackingTask.user_id == user_id))
@@ -149,7 +154,6 @@ async def delete_user(session: AsyncSession, user_id: int) -> None:
     await session.execute(delete(WorkLocation).where(WorkLocation.user_id == user_id))
 
     await session.delete(user)
-    await session.commit()
 
 
 # Label operations

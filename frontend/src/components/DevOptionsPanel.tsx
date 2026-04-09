@@ -264,7 +264,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
                 <>
                   <span className="small text-success">
                     <i className="bi bi-person-check me-1"></i>
-                    {displayName ? m.auth_logged_in_as({ displayName }) : "Signed in"}
+                    {displayName ? m.auth_logged_in_as({ displayName }) : m.account_signed_in()}
                   </span>
                   <Button variant="outline-secondary" size="sm" onClick={logout}>
                     <i className="bi bi-box-arrow-right me-1"></i>

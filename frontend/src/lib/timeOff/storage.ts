@@ -1,4 +1,5 @@
 import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
+import { dayjs } from "@/utils/dateTimeUtils";
 import type { TimeOffEntry, TimeOffEntryFlag } from "./types";
 import {
   getTimeOffEntryIdentityKey,
@@ -11,7 +12,7 @@ function isValidDateKey(value: unknown): value is string {
   return (
     typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime())
+    dayjs(value, "YYYY-MM-DD", true).format("YYYY-MM-DD") === value
   );
 }
 

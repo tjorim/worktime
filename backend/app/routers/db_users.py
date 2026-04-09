@@ -40,7 +40,7 @@ from app.services.db_service import (
     NotFoundError,
     ValidationError,
     create_user,
-    delete_user,
+    delete_user_uncommitted,
     get_user,
     get_user_by_username,
     list_users,
@@ -228,19 +228,17 @@ async def delete_user_endpoint(
     session: AsyncSession = Depends(get_session),
 ) -> Response:
     require_user_or_admin_match(user_id, principal)
-    try:
-        user = await get_user(session, user_id)
-    except NotFoundError as error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
-    st_delete_result = await st_delete_user(user.supertokens_user_id)
-    if not st_delete_result:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Authentication identity could not be deleted",
-        )
 
     try:
-        await delete_user(session, user_id)
+        async with session.begin():
+            user = await get_user(session, user_id)
+            await delete_user_uncommitted(session, user_id)
+            st_delete_result = await st_delete_user(user.supertokens_user_id)
+            if not st_delete_result:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Authentication identity could not be deleted",
+                )
     except NotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

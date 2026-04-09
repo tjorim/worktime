@@ -5,6 +5,7 @@ import isoWeeksInYear from "dayjs/plugin/isoWeeksInYear";
 import isLeapYear from "dayjs/plugin/isLeapYear";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/en-gb";
 
 dayjs.extend(isoWeek);
@@ -13,6 +14,7 @@ dayjs.extend(isoWeeksInYear);
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(customParseFormat);
+dayjs.extend(relativeTime);
 dayjs.locale("en-gb");
 
 export { dayjs };

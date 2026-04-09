@@ -1,13 +1,10 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
-
-dayjs.extend(relativeTime);
+import { dayjs } from "@/utils/dateTimeUtils";
 
 /**
  * Compact sync status indicator shown in the application header.
