@@ -15,6 +15,7 @@ import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
 import type { WorkLocationInfo } from "@/types/workLocation";
 import {
+  TIME_OFF_ENTRIES_STORAGE_KEY,
   TIME_TRACKING_STORAGE_KEYS,
   WORK_LOCATIONS_STORAGE_PREFIX,
   USER_STATE_STORAGE_KEY,
@@ -725,6 +726,11 @@ export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
   }
 
   const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
+  if (entries.length > 0) {
+    localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
+  } else {
+    localStorage.removeItem(TIME_OFF_ENTRIES_STORAGE_KEY);
+  }
   return entries;
 }
 

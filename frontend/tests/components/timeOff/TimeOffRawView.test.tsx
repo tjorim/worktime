@@ -1,7 +1,13 @@
+import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
+import { ToastProvider } from "@/contexts/ToastContext";
+
+const toastWrapper = ({ children }: { children: React.ReactNode }) => (
+  <ToastProvider>{children}</ToastProvider>
+);
 
 describe("TimeOffRawView", () => {
   const defaultProps = {
@@ -18,14 +24,16 @@ describe("TimeOffRawView", () => {
   });
 
   it("should render the card with accordion header", () => {
-    render(<TimeOffRawView {...defaultProps} />);
+    render(<TimeOffRawView {...defaultProps} />, { wrapper: toastWrapper });
 
     const header = screen.getByRole("button", { name: /Raw \.hday Editor/i });
     expect(header).toBeInTheDocument();
   });
 
   it("should display textarea with correct value", () => {
-    const { rerender } = render(<TimeOffRawView {...defaultProps} rawText="2025/01/15 # Test" />);
+    const { rerender } = render(<TimeOffRawView {...defaultProps} rawText="2025/01/15 # Test" />, {
+      wrapper: toastWrapper,
+    });
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveValue("2025/01/15 # Test");
@@ -39,6 +47,7 @@ describe("TimeOffRawView", () => {
     const mockOnChange = vi.fn();
     const { rerender } = render(
       <TimeOffRawView {...defaultProps} onChangeRawText={mockOnChange} />,
+      { wrapper: toastWrapper },
     );
 
     const user = userEvent.setup();
@@ -63,7 +72,7 @@ describe("TimeOffRawView", () => {
 
   it("should call onApply when Apply button is clicked", async () => {
     const mockOnApply = vi.fn();
-    render(<TimeOffRawView {...defaultProps} onApply={mockOnApply} />);
+    render(<TimeOffRawView {...defaultProps} onApply={mockOnApply} />, { wrapper: toastWrapper });
 
     const user = userEvent.setup();
 
@@ -75,7 +84,9 @@ describe("TimeOffRawView", () => {
 
   it("should call onReset when Reset button is clicked", async () => {
     const mockOnReset = vi.fn();
-    render(<TimeOffRawView {...defaultProps} isDirty={true} onReset={mockOnReset} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={true} onReset={mockOnReset} />, {
+      wrapper: toastWrapper,
+    });
 
     const user = userEvent.setup();
 
@@ -86,34 +97,36 @@ describe("TimeOffRawView", () => {
   });
 
   it("should disable Reset button when not dirty", () => {
-    render(<TimeOffRawView {...defaultProps} isDirty={false} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={false} />, { wrapper: toastWrapper });
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeDisabled();
   });
 
   it("should enable Reset button when dirty", () => {
-    render(<TimeOffRawView {...defaultProps} isDirty={true} />);
+    render(<TimeOffRawView {...defaultProps} isDirty={true} />, { wrapper: toastWrapper });
 
     const resetButton = screen.getByRole("button", { name: /Reset/i });
     expect(resetButton).toBeEnabled();
   });
 
   it("should display error message when error prop is provided", () => {
-    render(<TimeOffRawView {...defaultProps} error="Invalid .hday format" />);
+    render(<TimeOffRawView {...defaultProps} error="Invalid .hday format" />, {
+      wrapper: toastWrapper,
+    });
 
     const errorMessage = screen.getByRole("alert");
     expect(errorMessage).toHaveTextContent("Invalid .hday format");
   });
 
   it("should not display error message when error prop is undefined", () => {
-    render(<TimeOffRawView {...defaultProps} error={undefined} />);
+    render(<TimeOffRawView {...defaultProps} error={undefined} />, { wrapper: toastWrapper });
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("should have proper accessibility attributes", () => {
-    render(<TimeOffRawView {...defaultProps} error="Parse error" />);
+    render(<TimeOffRawView {...defaultProps} error="Parse error" />, { wrapper: toastWrapper });
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     const errorMessage = screen.getByRole("alert");
@@ -124,7 +137,7 @@ describe("TimeOffRawView", () => {
   });
 
   it("should show placeholder text in textarea", () => {
-    render(<TimeOffRawView {...defaultProps} />);
+    render(<TimeOffRawView {...defaultProps} />, { wrapper: toastWrapper });
 
     const textarea = screen.getByLabelText(/Raw \.hday content/i);
     expect(textarea).toHaveAttribute("placeholder");
