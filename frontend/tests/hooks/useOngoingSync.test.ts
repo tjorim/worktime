@@ -330,24 +330,43 @@ describe("useOngoingSync", () => {
           ],
         },
       };
-      const pullResponse = {
-        labels: [],
+      const serverLabel = {
+        id: "label-1",
+        user_id: 1,
+        name: "Server Label",
+        color: "#ff0000",
+        created_at: "2026-01-01T12:00:00.000Z",
+        updated_at: "2026-01-02T00:00:00.000Z",
+        deleted_at: null,
+      };
+      // Full pull response (no `since`) used to reconcile conflicted records.
+      const fullPullResponse = {
+        labels: [serverLabel],
         tasks: [],
         templates: [],
         work_locations: [],
         time_off_entries: [],
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
+      const initialPullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        server_timestamp: "2026-01-01T12:00:00.000Z",
+      };
 
       // Initial flush: outbox is empty so only a pull is made (no push).
-      // enqueueChange: push (conflict) then pull to reconcile.
+      // enqueueChange: push (conflict) then full pull to reconcile.
       mockFetch
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push with conflict
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // pull after conflict
+        .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }); // full pull after conflict
 
+      const pullCallback = vi.fn();
       const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
+        useOngoingSync(true, "user-1", mockFetch, pullCallback),
       );
 
       // Wait for initial flush to complete.
@@ -365,6 +384,19 @@ describe("useOngoingSync", () => {
         expect(result.current.conflictCount).toBe(1);
       });
       expect(result.current.hasSyncError).toBe(false);
+
+      // Verify the reconciliation pull was a full pull (no `since` param).
+      const pullCall = mockFetch.mock.calls.find(
+        ([url]: [string]) => url === "/db/sync/pull",
+      );
+      expect(pullCall).toBeDefined();
+
+      // Verify onIncrementalPull received the server version of the conflicted record.
+      expect(pullCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          labels: [serverLabel],
+        }),
+      );
     });
 
     it("clears conflictCount and hasSyncError after a successful conflict-free sync", async () => {

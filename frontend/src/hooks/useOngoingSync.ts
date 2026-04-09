@@ -242,20 +242,22 @@ export function useOngoingSync(
         const result = await pushSyncPayload(fetchFn, change);
         if (!mountedRef.current) return;
         if (result) {
-          // Detect conflicts — if any records were rejected, do a pull to get
-          // the server versions so local state stays consistent.
+          // Detect conflicts — if any records were rejected, do a full pull (no
+          // `since`) so that conflicted records are always included regardless of
+          // where the local cursor sits relative to the server's `updated_at`.
           const conflicts = countPushConflicts(result);
           if (conflicts > 0) {
             setConflictCount(conflicts);
-            // Pull server state to reconcile conflicted records.
-            const cursor = localStorage.getItem(getSyncCursorKey(userId));
-            const pullResult = await pullSyncData(fetchFn, cursor ?? undefined);
+            const pullResult = await pullSyncData(fetchFn);
             if (!mountedRef.current) return;
             if (pullResult) {
               onIncrementalPullRef.current?.(pullResult);
               storeSyncCursor(userId, pullResult.server_timestamp);
               setLastSyncedAt(pullResult.server_timestamp);
+              setHasSyncError(false);
             }
+            // If the reconciliation pull fails, leave hasSyncError as-is so the
+            // UI continues to show an error state rather than silently clearing it.
           } else {
             setConflictCount(0);
             // Refresh the cursor so incremental pulls stay accurate.
@@ -265,8 +267,8 @@ export function useOngoingSync(
               storeSyncCursor(userId, newStatus.server_timestamp);
               setLastSyncedAt(newStatus.server_timestamp);
             }
+            setHasSyncError(false);
           }
-          setHasSyncError(false);
         } else {
           // Push failed — queue for later flush.
           appendToSyncOutbox(userId, change);
