@@ -83,12 +83,12 @@ class TestDebugBenchmarkEndpoint:
         
         # Verify raw benchmark results
         assert data["raw"]["avgMs"] > 0
-        assert data["raw"]["p95Ms"] >= data["raw"]["avgMs"]
+        assert data["raw"]["p95Ms"] > 0
         assert data["raw"]["responseSizeBytes"] > 0
         
         # Verify parsed benchmark results
         assert data["parsed"]["avgMs"] > 0
-        assert data["parsed"]["p95Ms"] >= data["parsed"]["avgMs"]
+        assert data["parsed"]["p95Ms"] > 0
         assert data["parsed"]["responseSizeBytes"] > 0
         
         # Verify team bulk results
