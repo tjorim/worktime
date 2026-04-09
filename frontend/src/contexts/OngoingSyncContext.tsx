@@ -5,9 +5,11 @@
  * outboxCount) to all descendant components after the first-sync flow has
  * completed.
  *
- * Rendering `<OngoingSyncProvider>` inside both `<AuthProvider>` and
- * `<EventStoreProvider>` is required because it calls `useAuth()`,
- * `useApiClient()`, and `useEventStore()` internally.
+ * Rendering `<OngoingSyncProvider>` inside `<AuthProvider>`,
+ * `<DeveloperOptionsProvider>`, `<ToastProvider>`, and `<EventStoreProvider>`
+ * is required because it calls `useAuth()`, `useApiClient()` (which depends on
+ * `<DeveloperOptionsProvider>` and `<ToastProvider>`), and `useEventStore()`
+ * internally.
  *
  * Write hooks (`useTimeTrackingStorage`, `useWorkLocationStorage`) call
  * `useOngoingSyncContext()` to obtain `enqueueChange`.  The hook returns a
@@ -105,6 +107,12 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
 /**
  * Build a full sync payload skeleton with all arrays initialised to empty.
  * Callers fill in the relevant entity arrays before calling `enqueueChange`.
+ *
+ * Note: `time_off_entries` is included in the skeleton because the backend
+ * push endpoint accepts them, but write hooks (`useTimeTrackingStorage`,
+ * `useWorkLocationStorage`) do not populate it — time-off entries are managed
+ * exclusively through the EventStore and are received via incremental pull
+ * (`applyIncrementalSyncPullResponse`) rather than pushed from write hooks.
  */
 export function emptySyncPayload(): SyncPushPayload {
   return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };

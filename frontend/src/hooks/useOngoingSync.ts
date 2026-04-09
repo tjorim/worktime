@@ -100,7 +100,10 @@ export function useOngoingSync(
 
   // Guard: prevent concurrent flushes.
   const isFlushingRef = useRef(false);
-  // Guard: prevent enqueueChange from overlapping with itself for the same op.
+  // Serialise concurrent enqueueChange calls so that two rapid mutations do
+  // not race to push simultaneously and produce a split-brain cursor state.
+  const enqueueQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // Guard: track component lifetime so async callbacks skip state updates after unmount.
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -282,7 +285,11 @@ export function useOngoingSync(
             }
           } else {
             setConflictCount(0);
-            // Refresh the cursor so incremental pulls stay accurate.
+            // Refresh the cursor so incremental pulls stay accurate.  A second
+            // network request is required here because the push response only
+            // contains per-record results (no server_timestamp).  The alternative
+            // would be to extend the backend push response with a timestamp, which
+            // would eliminate this extra round trip.
             const newStatus = await fetchSyncStatus(fetchFn);
             if (!mountedRef.current) return;
             if (newStatus) {
@@ -298,11 +305,17 @@ export function useOngoingSync(
         }
       };
 
-      doEnqueue().catch(() => {
-        // On unexpected error, queue the change so it is not lost.
-        if (mountedRef.current) {
-          appendToSyncOutbox(userId, change);
-          setOutboxCount(getSyncOutboxSize(userId));
+      // Chain onto the serialisation queue.  Each task handles its own errors
+      // so the chain never rejects and does not block later enqueue calls.
+      enqueueQueueRef.current = enqueueQueueRef.current.then(async () => {
+        try {
+          await doEnqueue();
+        } catch {
+          // On unexpected error, queue the change so it is not lost.
+          if (mountedRef.current) {
+            appendToSyncOutbox(userId, change);
+            setOutboxCount(getSyncOutboxSize(userId));
+          }
         }
       });
     },

@@ -767,6 +767,13 @@ function readSyncOutbox(userId: string): SyncPushPayload[] {
 /**
  * Append a single change payload to the outbox queue stored in localStorage.
  * Called when an immediate push fails (e.g. offline).
+ *
+ * Note: entries are not coalesced — each failed write is stored as a separate
+ * item.  Rapid offline mutations to the same record produce multiple entries,
+ * all of which are merged and sent together in the next flush.  The backend
+ * uses last-write-wins per record ID, so only the latest entry for a given ID
+ * takes effect.  If outbox size ever becomes a concern, coalescing by ID could
+ * be added here.
  */
 export function appendToSyncOutbox(userId: string, change: SyncPushPayload): void {
   try {
