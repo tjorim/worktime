@@ -681,12 +681,10 @@ async def create_or_update_time_off_entry(
             TimeOffEntry.entry_id == entry_id,
         )
     )
-    entry = result.scalar_one_or_none()
+    existing = result.scalar_one_or_none()
 
-    created = entry is None
-
-    if created:
-        new_entry = TimeOffEntry(
+    if existing is None:
+        entry = TimeOffEntry(
             entry_id=entry_id,
             user_id=user_id,
             entry_type=payload.entry_type,
@@ -694,15 +692,16 @@ async def create_or_update_time_off_entry(
             note=payload.note,
         )
         apply_time_off_shape(
-            new_entry,
+            entry,
             kind=payload.entry_kind,
             value_date=payload.date,
             start_date=payload.start_date,
             end_date=payload.end_date,
             weekday=payload.weekday,
         )
-        entry = new_entry
+        created = True
     else:
+        entry = existing
         apply_time_off_shape(
             entry,
             kind=payload.entry_kind,
@@ -716,6 +715,7 @@ async def create_or_update_time_off_entry(
         entry.note = payload.note
         entry.deleted_at = None
         entry.updated_at = datetime.now(UTC)
+        created = False
 
     session.add(entry)
     try:
