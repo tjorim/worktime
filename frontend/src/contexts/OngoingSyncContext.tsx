@@ -18,7 +18,7 @@
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { useEventStore } from "./EventStoreContext";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -79,14 +79,21 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   const fetchFn = useApiClient();
   const { entries: currentTimeOffEntries, replaceEntries } = useEventStore();
 
+  // Keep a ref to currentTimeOffEntries so that onIncrementalPull always reads
+  // the latest local entries without needing to be recreated on every change.
+  const currentTimeOffEntriesRef = useRef(currentTimeOffEntries);
+  useEffect(() => {
+    currentTimeOffEntriesRef.current = currentTimeOffEntries;
+  }, [currentTimeOffEntries]);
+
   // Build the incremental-pull callback.  When a pull returns data, merge it
   // into localStorage and the EventStore without resetting other state.
   const onIncrementalPull = useCallback(
     (data: SyncPullResponse) => {
-      const merged = applyIncrementalSyncPullResponse(data, currentTimeOffEntries);
+      const merged = applyIncrementalSyncPullResponse(data, currentTimeOffEntriesRef.current);
       replaceEntries(merged);
     },
-    [currentTimeOffEntries, replaceEntries],
+    [replaceEntries],
   );
 
   const { enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } = useOngoingSync(

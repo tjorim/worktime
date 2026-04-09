@@ -100,7 +100,7 @@ export function useOngoingSync(
 
   // Guard: prevent concurrent flushes.
   const isFlushingRef = useRef(false);
-  // Serialise concurrent enqueueChange calls so that two rapid mutations do
+  // Serialize concurrent enqueueChange calls so that two rapid mutations do
   // not race to push simultaneously and produce a split-brain cursor state.
   const enqueueQueueRef = useRef<Promise<void>>(Promise.resolve());
   // Guard: track component lifetime so async callbacks skip state updates after unmount.
@@ -308,12 +308,13 @@ export function useOngoingSync(
         }
       };
 
-      // Chain onto the serialisation queue.  Each task handles its own errors
+      // Chain onto the serialization queue.  Each task handles its own errors
       // so the chain never rejects and does not block later enqueue calls.
       enqueueQueueRef.current = enqueueQueueRef.current.then(async () => {
         try {
           await doEnqueue();
-        } catch {
+        } catch (err) {
+          console.error("useOngoingSync: enqueueChange threw unexpectedly:", { userId, change }, err);
           // On unexpected error, queue the change so it is not lost.
           if (mountedRef.current) {
             appendToSyncOutbox(userId, change);
