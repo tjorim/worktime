@@ -38,6 +38,14 @@ class UserCreate(BaseModel):
     username: str
     display_name: str
     settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class UserCreateWithPassword(UserCreate):
+    """Admin-only payload that extends UserCreate with a password field.
+
+    The password is passed to SuperTokens and never stored in the local DB.
+    """
+
     password: str = Field(min_length=8)
 
 

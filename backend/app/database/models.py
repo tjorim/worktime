@@ -39,7 +39,6 @@ class User(Base):
     supertokens_user_id: Mapped[str] = mapped_column(
         String, unique=True, index=True
     )
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[dt_datetime] = mapped_column(

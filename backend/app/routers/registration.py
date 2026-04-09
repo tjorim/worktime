@@ -70,7 +70,6 @@ async def register_user(
         username=payload.username,
         display_name=payload.display_name or payload.username,
         settings={},
-        password=payload.password,
     )
     try:
         user = await create_user(session, user_create, supertokens_user_id=st_user_id)

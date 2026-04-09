@@ -22,7 +22,6 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("username", sa.String(), nullable=False),
         sa.Column("supertokens_user_id", sa.String(), nullable=False),
-        sa.Column("is_admin", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("display_name", sa.String(), nullable=False),
         sa.Column("settings", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

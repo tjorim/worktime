@@ -38,17 +38,16 @@ def test_admin_me_returns_admin_flag(
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
 ) -> None:
-    """The is_admin field reflects the DB record, not the session token role."""
+    """The is_admin field reflects the session token claim, which is derived from ADMIN_USERNAMES."""
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "me-regular")
 
-    # The DB user has is_admin=False by default, regardless of the token role.
     response = db_client.get("/me", headers=auth_headers(user_id, is_admin=True))
 
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == user_id
-    assert data["is_admin"] is False
+    assert data["is_admin"] is True
     assert "capabilities" in data
 
 

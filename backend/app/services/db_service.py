@@ -75,7 +75,6 @@ async def create_user(
         raise ConflictError("username already exists")
 
     data = payload.model_dump()
-    data.pop("password")
     data["supertokens_user_id"] = supertokens_user_id
     user = User(**data)
     session.add(user)

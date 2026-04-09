@@ -33,7 +33,7 @@ from app.routers.auth import (
     get_authenticated_principal,
     require_user_or_admin_match,
 )
-from app.schemas import UserCreate, UserListResponse, UserRead, UserUpdate
+from app.schemas import UserCreate, UserCreateWithPassword, UserListResponse, UserRead, UserUpdate
 from app.services.db_service import (
     MAX_USER_LIST_LIMIT,
     ConflictError,
@@ -60,7 +60,7 @@ def _username_to_st_email(username: str) -> str:
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(
-    payload: UserCreate,
+    payload: UserCreateWithPassword,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> UserRead:
@@ -80,8 +80,13 @@ async def create_user_endpoint(
         )
 
     st_user_id = st_result.user.id
+    user_create = UserCreate(
+        username=payload.username,
+        display_name=payload.display_name,
+        settings=payload.settings,
+    )
     try:
-        user = await create_user(session, payload, supertokens_user_id=st_user_id)
+        user = await create_user(session, user_create, supertokens_user_id=st_user_id)
     except ConflictError as error:
         try:
             await st_delete_user(st_user_id)
