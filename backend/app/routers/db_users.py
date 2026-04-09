@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from supertokens_python.asyncio import delete_user as st_delete_user
 from supertokens_python.recipe.emailpassword.asyncio import (
     sign_up as st_sign_up,
+)
+from supertokens_python.recipe.emailpassword.asyncio import (
     update_email_or_password as st_update_email_or_password,
 )
 from supertokens_python.recipe.emailpassword.interfaces import (
