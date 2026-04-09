@@ -16,13 +16,13 @@
  *     state transitions.
  *
  *  2. Lightweight harness tests (§2–§5): render `useFirstSyncFlow` + `FirstSyncConflictDialog`
- *     inside minimal context providers.  This isolates the sync logic from App-level side
+ *     inside minimal context providers. This isolates the sync logic from App-level side
  *     effects (e.g. the accountSyncAnnouncementSeen useEffect that writes preferences to
  *     localStorage) that would cause all tests to think "local has data" regardless of
  *     the localStorage seed.
  *
  * Invariants verified:
- *  - The app is 100 % functional without sign-in (§1 invariant).
+ *  - The app is 100% functional without sign-in (§1 invariant).
  *  - Sync only activates when the user is authenticated.
  *  - The conflict dialog is shown exactly when both local and server have data.
  *  - Sync cursors are stored/absent as expected after each flow.
@@ -429,6 +429,14 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     const parsed = JSON.parse(stored!);
     expect(parsed.hasCompletedOnboarding).toBe(true);
     expect(parsed.myTeam).toBe(2);
+
+    // The pull call was made — entity stores are written by applySyncPullResponse.
+    // emptyPullResponse has empty arrays, so localStorage entity keys stay absent,
+    // which is verified separately in syncClient.test.ts applySyncPullResponse suite.
+    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+      ([url]: [string]) => url.includes("/db/sync/pull"),
+    );
+    expect(pullCalls.length).toBeGreaterThan(0);
   });
 });
 
