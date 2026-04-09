@@ -1246,7 +1246,7 @@ class TestSyncMultiDeviceFlow:
         )
 
         # Device B — incremental pull using the stored cursor.
-        incremental_pull = db_client.get(f"/db/sync/pull?since={cursor}", headers=device_b_headers)
+        incremental_pull = db_client.get("/db/sync/pull", params={"since": cursor}, headers=device_b_headers)
         assert incremental_pull.status_code == 200
         delta_labels = incremental_pull.json()["labels"]
 
@@ -1459,6 +1459,7 @@ class TestSyncMultiDeviceFlow:
         assert status_before["templates_updated_at"] is None
         assert status_before["work_locations_updated_at"] is None
         assert status_before["time_off_entries_updated_at"] is None
+        assert status_before["preferences_updated_at"] is None
 
         label_id = str(uuid4())
         task_id = str(uuid4())
@@ -1523,9 +1524,17 @@ class TestSyncMultiDeviceFlow:
             headers=headers,
         )
 
+        # Preferences are written via the dedicated endpoint, not /db/sync/push.
+        db_client.put(
+            "/db/preferences",
+            json={"data": {"hasCompletedOnboarding": True}, "client_updated_at": _ts(-5)},
+            headers=headers,
+        )
+
         status_after = db_client.get("/db/sync/status", headers=headers).json()
         assert status_after["labels_updated_at"] is not None
         assert status_after["tasks_updated_at"] is not None
         assert status_after["templates_updated_at"] is not None
         assert status_after["work_locations_updated_at"] is not None
         assert status_after["time_off_entries_updated_at"] is not None
+        assert status_after["preferences_updated_at"] is not None

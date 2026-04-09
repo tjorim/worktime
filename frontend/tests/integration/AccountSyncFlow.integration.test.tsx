@@ -193,6 +193,7 @@ afterEach(() => {
   document.body.className = "";
   document.documentElement.removeAttribute("data-bs-theme");
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 // ===========================================================================
@@ -227,7 +228,6 @@ describe("§1 Local-only usage", () => {
       url.includes("/db/sync"),
     );
     expect(syncCalls).toHaveLength(0);
-    vi.unstubAllGlobals();
   });
 });
 
@@ -604,7 +604,6 @@ describe("Auth edge cases", () => {
       url.includes("/db/sync"),
     );
     expect(syncCalls).toHaveLength(0);
-    vi.unstubAllGlobals();
   });
 
   it("is not authenticated when session does not exist", () => {
