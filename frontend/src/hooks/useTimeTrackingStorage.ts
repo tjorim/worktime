@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from "react";
+import dayjs from "dayjs";
 import { useLocalStorage } from "./useLocalStorage";
 import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
 import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTracking/constants";
 import { isValidRange } from "@/components/timeTracking/timeUtils";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import { useOngoingSyncContext, emptySyncPayload } from "@/contexts/OngoingSyncContext";
 
 type RawTask = {
   id: string;
@@ -91,13 +93,15 @@ export function useTimeTrackingStorage() {
 
   const tasks = useMemo(() => rawTasks.filter(isValidRawTask).map(convertToTask), [rawTasks]);
 
+  const { enqueueChange } = useOngoingSyncContext();
+
   const addTask = useCallback(
-    (payload: StoredTimeTrackingTask): Promise<boolean> => {
+    async (payload: StoredTimeTrackingTask): Promise<boolean> => {
       // We resolve the Promise inside the setState updater to atomically check
       // current state and signal success/failure. React calls the updater
       // synchronously, so resolve() fires before microtask handlers run.
       // The Promise resolves before the state update is committed to the DOM.
-      return new Promise((resolve) => {
+      const success = await new Promise<boolean>((resolve) => {
         setRawTasks((prev) => {
           // Check if a running task already exists in the current state
           const hasValidRunningTask = prev.some(
@@ -124,8 +128,25 @@ export function useTimeTrackingStorage() {
           return [...prev, newTask];
         });
       });
+
+      if (success) {
+        const now = dayjs().toISOString();
+        const change = emptySyncPayload();
+        change.tasks.push({
+          id: payload.id,
+          action: "create",
+          client_updated_at: now,
+          label_id: payload.label || null,
+          text: payload.text,
+          start_time: dayjs(payload.startTime).toISOString(),
+          stop_time: payload.stopTime ? dayjs(payload.stopTime).toISOString() : null,
+          includes_break: payload.includesBreak ?? false,
+        });
+        enqueueChange(change);
+      }
+      return success;
     },
-    [setRawTasks],
+    [setRawTasks, enqueueChange],
   );
 
   const updateTaskTimes = useCallback(
@@ -154,8 +175,30 @@ export function useTimeTrackingStorage() {
             : raw,
         ),
       );
+      // Find the current raw task to get text/label if not provided in the payload.
+      // Guard: skip enqueue if the task is not found — the state update above is
+      // also a no-op in that case, so there is nothing to sync.
+      const existing = rawTasks.find((t) => t.id === payload.id);
+      if (existing) {
+        const now = dayjs().toISOString();
+        const change = emptySyncPayload();
+        change.tasks.push({
+          id: payload.id,
+          action: "update",
+          client_updated_at: now,
+          label_id: (payload.newLabel ?? existing.label) || null,
+          text: payload.newText ?? existing.text,
+          start_time: dayjs(payload.newStartTime).toISOString(),
+          stop_time: payload.newStopTime ? dayjs(payload.newStopTime).toISOString() : null,
+          includes_break:
+            typeof payload.includesBreak === "boolean"
+              ? payload.includesBreak
+              : (existing.includesBreak ?? false),
+        });
+        enqueueChange(change);
+      }
     },
-    [setRawTasks],
+    [setRawTasks, rawTasks, enqueueChange],
   );
 
   /**
@@ -175,22 +218,55 @@ export function useTimeTrackingStorage() {
           raw.id === taskId ? { ...raw, includesBreak: includesBreak || undefined } : raw,
         ),
       );
+      const now = dayjs().toISOString();
+      const existing = rawTasks.find((t) => t.id === taskId);
+      if (existing) {
+        const change = emptySyncPayload();
+        change.tasks.push({
+          id: taskId,
+          action: "update",
+          client_updated_at: now,
+          label_id: existing.label || null,
+          text: existing.text,
+          start_time: dayjs(existing.startTime).toISOString(),
+          stop_time: existing.stopTime ? dayjs(existing.stopTime).toISOString() : null,
+          includes_break: includesBreak,
+        });
+        enqueueChange(change);
+      }
     },
-    [setRawTasks],
+    [setRawTasks, rawTasks, enqueueChange],
   );
 
   const removeTask = useCallback(
     (id: string) => {
       setRawTasks((prev) => prev.filter((raw) => raw.id !== id));
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.tasks.push({ id, action: "delete", client_updated_at: now });
+      enqueueChange(change);
     },
-    [setRawTasks],
+    [setRawTasks, enqueueChange],
   );
 
   const addTemplate = useCallback(
     (payload: Omit<TimeTrackingTemplate, "id">) => {
-      setTemplates((prev) => [...prev, { id: crypto.randomUUID(), ...payload }]);
+      const id = crypto.randomUUID();
+      setTemplates((prev) => [...prev, { id, ...payload }]);
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.templates.push({
+        id,
+        action: "create",
+        client_updated_at: now,
+        label_id: payload.label || null,
+        text: payload.text,
+        start_time: `${payload.start}:00`,
+        stop_time: `${payload.stop}:00`,
+      });
+      enqueueChange(change);
     },
-    [setTemplates],
+    [setTemplates, enqueueChange],
   );
 
   const updateTemplate = useCallback(
@@ -200,29 +276,90 @@ export function useTimeTrackingStorage() {
           template.id === payload.id ? { id: payload.id, ...payload.template } : template,
         ),
       );
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.templates.push({
+        id: payload.id,
+        action: "update",
+        client_updated_at: now,
+        label_id: payload.template.label || null,
+        text: payload.template.text,
+        start_time: `${payload.template.start}:00`,
+        stop_time: `${payload.template.stop}:00`,
+      });
+      enqueueChange(change);
     },
-    [setTemplates],
+    [setTemplates, enqueueChange],
   );
 
   const deleteTemplate = useCallback(
     (id: string) => {
       setTemplates((prev) => prev.filter((template) => template.id !== id));
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      change.templates.push({ id, action: "delete", client_updated_at: now });
+      enqueueChange(change);
     },
-    [setTemplates],
+    [setTemplates, enqueueChange],
   );
 
   const updateTemplates = useCallback(
     (nextTemplates: TimeTrackingTemplate[]) => {
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      // Use "create" for all templates in the list — the backend treats "create"
+      // as an upsert, so existing templates are updated rather than duplicated.
+      for (const t of nextTemplates) {
+        change.templates.push({
+          id: t.id,
+          action: "create",
+          client_updated_at: now,
+          label_id: t.label || null,
+          text: t.text,
+          start_time: `${t.start}:00`,
+          stop_time: `${t.stop}:00`,
+        });
+      }
+      // Delete templates that were removed.
+      const nextIds = new Set(nextTemplates.map((t) => t.id));
+      for (const t of templates) {
+        if (!nextIds.has(t.id)) {
+          change.templates.push({ id: t.id, action: "delete", client_updated_at: now });
+        }
+      }
       setTemplates(nextTemplates);
+      enqueueChange(change);
     },
-    [setTemplates],
+    [setTemplates, templates, enqueueChange],
   );
 
   const updateLabels = useCallback(
     (nextLabels: TimeTrackingLabel[]) => {
-      setRawLabels(sanitizeLabels(nextLabels));
+      const sanitized = sanitizeLabels(nextLabels);
+      const now = dayjs().toISOString();
+      const change = emptySyncPayload();
+      // Use "create" for all labels in the list — the backend treats "create"
+      // as an upsert, so existing labels are updated rather than duplicated.
+      for (const l of sanitized) {
+        change.labels.push({
+          id: l.id,
+          action: "create",
+          client_updated_at: now,
+          name: l.name,
+          color: l.color,
+        });
+      }
+      // Delete labels that were removed.
+      const nextIds = new Set(sanitized.map((l) => l.id));
+      for (const l of rawLabels) {
+        if (!nextIds.has(l.id)) {
+          change.labels.push({ id: l.id, action: "delete", client_updated_at: now });
+        }
+      }
+      setRawLabels(sanitized);
+      enqueueChange(change);
     },
-    [setRawLabels],
+    [setRawLabels, rawLabels, enqueueChange],
   );
 
   return {

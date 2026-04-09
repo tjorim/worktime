@@ -1,19 +1,29 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applySyncPullResponse,
+  applyIncrementalSyncPullResponse,
   applyPreferencesPull,
+  appendToSyncOutbox,
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
+  clearSyncOutbox,
+  dequeueAndMergeSyncOutbox,
   fetchPreferences,
   fetchSyncStatus,
+  getSyncOutboxSize,
+  hasSyncCursor,
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
+  storeSyncCursor,
   syncStatusHasData,
+  countPushConflicts,
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
 import {
+  getSyncCursorKey,
+  getSyncOutboxKey,
   TIME_OFF_ENTRIES_STORAGE_KEY,
   TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
@@ -89,6 +99,46 @@ describe("syncClient", () => {
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
       ).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // countPushConflicts
+  // ---------------------------------------------------------------------------
+
+  describe("countPushConflicts", () => {
+    it("returns 0 when results object is empty", () => {
+      expect(countPushConflicts({ results: {} })).toBe(0);
+    });
+
+    it("returns 0 when all records have status ok", () => {
+      expect(
+        countPushConflicts({
+          results: {
+            labels: [
+              { id: "l1", status: "ok" },
+              { id: "l2", status: "ok" },
+            ],
+          },
+        }),
+      ).toBe(0);
+    });
+
+    it("counts conflict records across all entity types", () => {
+      expect(
+        countPushConflicts({
+          results: {
+            labels: [
+              { id: "l1", status: "ok" },
+              { id: "l2", status: "conflict", conflict_reason: "server is newer" },
+            ],
+            tasks: [
+              { id: "t1", status: "conflict", conflict_reason: "server is newer" },
+            ],
+            templates: [],
+          },
+        }),
+      ).toBe(2);
     });
   });
 
@@ -1137,6 +1187,385 @@ describe("syncClient", () => {
       applyPreferencesPull({ hasCompletedOnboarding: true });
       const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
       expect(stored.hasCompletedOnboarding).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sync cursor helpers
+  // ---------------------------------------------------------------------------
+
+  describe("hasSyncCursor / storeSyncCursor", () => {
+    it("returns false when no cursor is stored for the user", () => {
+      expect(hasSyncCursor("user-42")).toBe(false);
+    });
+
+    it("returns true after storeSyncCursor is called", () => {
+      storeSyncCursor("user-42", "2026-03-01T00:00:00.000Z");
+      expect(hasSyncCursor("user-42")).toBe(true);
+    });
+
+    it("stores the cursor under the per-user key", () => {
+      storeSyncCursor("user-42", "2026-03-15T12:00:00.000Z");
+      expect(localStorage.getItem(getSyncCursorKey("user-42"))).toBe(
+        "2026-03-15T12:00:00.000Z",
+      );
+    });
+
+    it("isolates cursors between different users", () => {
+      storeSyncCursor("user-A", "2026-01-01T00:00:00.000Z");
+      expect(hasSyncCursor("user-B")).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Outbox management helpers
+  // ---------------------------------------------------------------------------
+
+  const emptyPayload = () => ({
+    labels: [] as never[],
+    tasks: [] as never[],
+    templates: [] as never[],
+    work_locations: [] as never[],
+    time_off_entries: [] as never[],
+  });
+
+  describe("appendToSyncOutbox / getSyncOutboxSize / clearSyncOutbox", () => {
+    it("starts with size 0 when no outbox key exists", () => {
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+    });
+
+    it("increments size for each appended payload", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+      appendToSyncOutbox("user-1", emptyPayload());
+      expect(getSyncOutboxSize("user-1")).toBe(2);
+    });
+
+    it("persists payloads under the per-user outbox key", () => {
+      const payload = { ...emptyPayload(), tasks: [{ id: "t1" }] };
+      appendToSyncOutbox("user-1", payload as never);
+      const raw = localStorage.getItem(getSyncOutboxKey("user-1"));
+      expect(raw).not.toBeNull();
+      const stored = JSON.parse(raw!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].tasks[0].id).toBe("t1");
+    });
+
+    it("clearSyncOutbox removes the outbox key", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      clearSyncOutbox("user-1");
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+      expect(localStorage.getItem(getSyncOutboxKey("user-1"))).toBeNull();
+    });
+
+    it("isolates outboxes between different users", () => {
+      appendToSyncOutbox("user-A", emptyPayload());
+      expect(getSyncOutboxSize("user-B")).toBe(0);
+    });
+  });
+
+  describe("dequeueAndMergeSyncOutbox", () => {
+    it("returns null when the outbox is empty", () => {
+      expect(dequeueAndMergeSyncOutbox("user-1")).toBeNull();
+    });
+
+    it("merges multiple payloads into a single SyncPushPayload", () => {
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-A" }],
+      } as never);
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        tasks: [{ id: "task-B" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.tasks).toHaveLength(2);
+      expect(result!.merged.tasks.map((t) => t.id)).toEqual(
+        expect.arrayContaining(["task-A", "task-B"]),
+      );
+    });
+
+    it("does NOT clear the outbox before commit() is called", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      // Outbox is still intact — commit not yet called
+      expect(getSyncOutboxSize("user-1")).toBe(1);
+    });
+
+    it("clears the outbox after commit() is called", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      result!.commit();
+      expect(getSyncOutboxSize("user-1")).toBe(0);
+    });
+
+    it("merges labels, templates, and work_locations in addition to tasks", () => {
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        labels: [{ id: "lbl-1" }],
+        work_locations: [{ date: "2026-01-01" }],
+      } as never);
+      appendToSyncOutbox("user-1", {
+        ...emptyPayload(),
+        templates: [{ id: "tmpl-1" }],
+      } as never);
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      expect(result!.merged.labels).toHaveLength(1);
+      expect(result!.merged.work_locations).toHaveLength(1);
+      expect(result!.merged.templates).toHaveLength(1);
+    });
+
+    it("skips corrupted/non-object outbox entries without throwing", () => {
+      appendToSyncOutbox("user-1", emptyPayload());
+      // Corrupt the outbox by injecting a bad entry directly.
+      const key = getSyncOutboxKey("user-1");
+      const existing = JSON.parse(localStorage.getItem(key) ?? "[]");
+      // Push a primitive and a plain object missing all arrays.
+      localStorage.setItem(key, JSON.stringify([...existing, null, {}, 42]));
+
+      const result = dequeueAndMergeSyncOutbox("user-1");
+      expect(result).not.toBeNull();
+      // The valid entry contributes 0 items; null/42/object-without-arrays are skipped.
+      expect(result!.merged.tasks).toHaveLength(0);
+      expect(result!.merged.labels).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // applyIncrementalSyncPullResponse
+  // ---------------------------------------------------------------------------
+
+  describe("applyIncrementalSyncPullResponse", () => {
+    const baseResponse = () => ({
+      labels: [] as never[],
+      tasks: [] as never[],
+      templates: [] as never[],
+      work_locations: [] as never[],
+      time_off_entries: [] as never[],
+      server_timestamp: "2026-02-01T00:00:00.000Z",
+    });
+
+    const makeLabel = (id: string, name: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      name,
+      color: "#AABBCC",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeTask = (id: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      label_id: null,
+      text: `Task ${id}`,
+      start_time: "2026-01-01T09:00:00Z",
+      stop_time: null,
+      includes_break: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeTemplate = (id: string, deletedAt: string | null = null) => ({
+      id,
+      user_id: 1,
+      label_id: null,
+      text: `Template ${id}`,
+      start_time: "09:00:00",
+      stop_time: "09:15:00",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    const makeWorkLocation = (date: string, countryCode = "NL", deletedAt: string | null = null) => ({
+      id: 1,
+      user_id: 1,
+      date,
+      country_code: countryCode,
+      label: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: deletedAt,
+    });
+
+    it("upserts a new label into localStorage", () => {
+      applyIncrementalSyncPullResponse({ ...baseResponse(), labels: [makeLabel("lbl-1", "Work")] }, []);
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ id: "lbl-1", name: "Work" });
+    });
+
+    it("merges a new label with existing labels", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.labels,
+        JSON.stringify([{ id: "lbl-existing", name: "Existing", color: "#FF0000" }]),
+      );
+      applyIncrementalSyncPullResponse({ ...baseResponse(), labels: [makeLabel("lbl-new", "New")] }, []);
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
+      expect(stored).toHaveLength(2);
+    });
+
+    it("removes a soft-deleted label", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.labels,
+        JSON.stringify([{ id: "lbl-del", name: "Gone", color: "#000" }]),
+      );
+      applyIncrementalSyncPullResponse(
+        { ...baseResponse(), labels: [makeLabel("lbl-del", "Gone", "2026-01-02T00:00:00Z")] },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
+      expect(stored).toHaveLength(0);
+    });
+
+    it("upserts a new task into localStorage", () => {
+      applyIncrementalSyncPullResponse({ ...baseResponse(), tasks: [makeTask("task-1")] }, []);
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].id).toBe("task-1");
+    });
+
+    it("removes a soft-deleted task", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.tasks,
+        JSON.stringify([{ id: "task-del", text: "Gone", label: "", startTime: "2026-01-01T09:00" }]),
+      );
+      applyIncrementalSyncPullResponse(
+        { ...baseResponse(), tasks: [makeTask("task-del", "2026-01-02T00:00:00Z")] },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!);
+      expect(stored).toHaveLength(0);
+    });
+
+    it("upserts a new template", () => {
+      applyIncrementalSyncPullResponse(
+        { ...baseResponse(), templates: [makeTemplate("tmpl-1")] },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].id).toBe("tmpl-1");
+    });
+
+    it("removes a soft-deleted template", () => {
+      localStorage.setItem(
+        TIME_TRACKING_STORAGE_KEYS.templates,
+        JSON.stringify([{ id: "tmpl-del", text: "Gone", label: "", start: "09:00", stop: "09:15" }]),
+      );
+      applyIncrementalSyncPullResponse(
+        { ...baseResponse(), templates: [makeTemplate("tmpl-del", "2026-01-02T00:00:00Z")] },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!);
+      expect(stored).toHaveLength(0);
+    });
+
+    it("upserts a work location entry", () => {
+      applyIncrementalSyncPullResponse(
+        { ...baseResponse(), work_locations: [makeWorkLocation("2026-03-10", "DE")] },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
+      expect(stored["2026-03-10"]).toMatchObject({ countryCode: "DE" });
+    });
+
+    it("removes a soft-deleted work location entry", () => {
+      localStorage.setItem(
+        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
+        JSON.stringify({ "2026-03-10": { location: "other", countryCode: "DE" } }),
+      );
+      applyIncrementalSyncPullResponse(
+        {
+          ...baseResponse(),
+          work_locations: [makeWorkLocation("2026-03-10", "DE", "2026-03-11T00:00:00Z")],
+        },
+        [],
+      );
+      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
+      expect(stored["2026-03-10"]).toBeUndefined();
+    });
+
+    it("does not touch work_locations key when response has no work_locations", () => {
+      localStorage.setItem(
+        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
+        JSON.stringify({ "2026-01-01": { location: "home", countryCode: "NL" } }),
+      );
+      applyIncrementalSyncPullResponse(baseResponse(), []);
+      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
+      expect(stored["2026-01-01"]).toBeDefined();
+    });
+
+    it("merges time_off_entries: new server entries are added to existing ones", () => {
+      const existingEntry = buildTimeOffEntryForRange({
+        start: "2026-06-01",
+        end: "2026-06-01",
+        note: null,
+        entryType: "vacation",
+        entryFlag: "full_day",
+      });
+      const newServerEntry = {
+        id: 99,
+        entry_id: "new-entry-id",
+        user_id: 1,
+        entry_kind: "date" as const,
+        date: "2026-07-14",
+        start_date: null,
+        end_date: null,
+        weekday: null,
+        entry_type: "vacation",
+        entry_flag: "full_day",
+        note: "Bastille Day",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        deleted_at: null,
+      };
+      const result = applyIncrementalSyncPullResponse(
+        { ...baseResponse(), time_off_entries: [newServerEntry] },
+        [existingEntry],
+      );
+      expect(result).toHaveLength(2);
+      expect(result.some((e) => e.id === "new-entry-id")).toBe(true);
+    });
+
+    it("merges time_off_entries: deleted server entries are removed from the result", () => {
+      const existingEntry = buildTimeOffEntryForRange({
+        start: "2026-07-14",
+        end: "2026-07-14",
+        note: null,
+        entryType: "vacation",
+        entryFlag: "full_day",
+      });
+      const deletedServerEntry = {
+        id: 99,
+        entry_id: existingEntry.id,
+        user_id: 1,
+        entry_kind: "date" as const,
+        date: "2026-07-14",
+        start_date: null,
+        end_date: null,
+        weekday: null,
+        entry_type: "vacation",
+        entry_flag: "full_day",
+        note: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-02T00:00:00Z",
+        deleted_at: "2026-01-02T00:00:00Z",
+      };
+      const result = applyIncrementalSyncPullResponse(
+        { ...baseResponse(), time_off_entries: [deletedServerEntry] },
+        [existingEntry],
+      );
+      expect(result).toHaveLength(0);
     });
   });
 });
