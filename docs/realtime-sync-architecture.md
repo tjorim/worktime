@@ -13,10 +13,10 @@ local-first sync: real-time freshness signaling. It defines the transport
 model, the ownership boundary between TanStack Query and TanStack DB, and
 the non-goals that must not creep into this phase.
 
-Read [docs/local-first-sync-flow.md](local-first-sync-flow.md) first for the
-current-state baseline (local-first storage, offline outbox, cursor-based REST
-sync, first-sync bootstrapping, and incremental pull). This document extends
-that baseline with the realtime layer.
+The current-state baseline (local-first storage, offline outbox, cursor-based
+REST sync, first-sync bootstrapping, and incremental pull) is captured in the
+**Current State** table below. This document extends that baseline with the
+realtime layer.
 
 ---
 
