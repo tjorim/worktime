@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
 
+const MS_PER_SECOND = 1_000;
+
 /**
  * Compact sync status indicator shown in the application header.
  *
@@ -42,7 +44,7 @@ export function SyncStatusIndicator() {
   const [, setSecondTick] = useState(0);
   useEffect(() => {
     if (!hasSyncError || retryAfter === null) return;
-    const id = setInterval(() => setSecondTick((t) => t + 1), 1_000);
+    const id = setInterval(() => setSecondTick((t) => t + 1), MS_PER_SECOND);
     return () => clearInterval(id);
   }, [hasSyncError, retryAfter]);
 
@@ -61,7 +63,7 @@ export function SyncStatusIndicator() {
   const tooltipText = (() => {
     if (hasSyncError) {
       if (retryAfter !== null) {
-        const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000));
+        const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / MS_PER_SECOND));
         if (seconds > 0) return m.sync_indicator_tooltip_retry_in({ seconds: String(seconds) });
       }
       return m.sync_indicator_tooltip_error();

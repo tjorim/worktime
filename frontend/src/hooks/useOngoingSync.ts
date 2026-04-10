@@ -114,6 +114,19 @@ export function useOngoingSync(
   const retryAfterRef = useRef<number | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
 
+  /**
+   * Advance the back-off delay and set the next retry window.
+   * Called on every failed flush attempt.  Refs and the state setter are all
+   * stable, so this callback never needs to be recreated.
+   */
+  const scheduleBackOff = useCallback(() => {
+    const nextDelay =
+      retryDelayMsRef.current === 0 ? 1_000 : Math.min(retryDelayMsRef.current * 2, 60_000);
+    retryDelayMsRef.current = nextDelay;
+    retryAfterRef.current = Date.now() + nextDelay;
+    setRetryAfter(retryAfterRef.current);
+  }, []); // Refs and state setters are stable — empty dependency array is correct.
+
   // Keep a stable ref to the latest pull callback so the flush closure does
   // not become stale when `onIncrementalPull` identity changes.
   const onIncrementalPullRef = useRef(onIncrementalPull);
@@ -167,10 +180,7 @@ export function useOngoingSync(
           if (!mountedRef.current) return;
           setOutboxCount(getSyncOutboxSize(userId));
           setHasSyncError(true);
-          const nextDelay = retryDelayMsRef.current === 0 ? 1_000 : Math.min(retryDelayMsRef.current * 2, 60_000);
-          retryDelayMsRef.current = nextDelay;
-          retryAfterRef.current = Date.now() + nextDelay;
-          setRetryAfter(retryAfterRef.current);
+          scheduleBackOff();
           return;
         }
         if (!mountedRef.current) return;
@@ -178,10 +188,7 @@ export function useOngoingSync(
           // Push returned falsy — outbox stays intact for next retry.
           setOutboxCount(getSyncOutboxSize(userId));
           setHasSyncError(true);
-          const nextDelay = retryDelayMsRef.current === 0 ? 1_000 : Math.min(retryDelayMsRef.current * 2, 60_000);
-          retryDelayMsRef.current = nextDelay;
-          retryAfterRef.current = Date.now() + nextDelay;
-          setRetryAfter(retryAfterRef.current);
+          scheduleBackOff();
           return;
         }
         // Push succeeded — commit (clear) the outbox and continue to pull.
@@ -218,10 +225,7 @@ export function useOngoingSync(
         }
       } else {
         setHasSyncError(true);
-        const nextDelay = retryDelayMsRef.current === 0 ? 1_000 : Math.min(retryDelayMsRef.current * 2, 60_000);
-        retryDelayMsRef.current = nextDelay;
-        retryAfterRef.current = Date.now() + nextDelay;
-        setRetryAfter(retryAfterRef.current);
+        scheduleBackOff();
       }
     } finally {
       if (mountedRef.current) {
@@ -229,7 +233,7 @@ export function useOngoingSync(
       }
       isFlushingRef.current = false;
     }
-  }, [isActive, userId, fetchFn, conflictCount]);
+  }, [isActive, userId, fetchFn, conflictCount, scheduleBackOff]);
 
   // Listen for reconnect and visibility-change events.
   useEffect(() => {
