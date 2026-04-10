@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import time
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+
+from app.utils.sse_manager import SyncEventManager
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1553,17 +1558,11 @@ class TestSyncEventManager:
     """Unit tests for SyncEventManager — subscribe, unsubscribe, broadcast."""
 
     async def test_broadcast_to_no_connections_returns_zero(self) -> None:
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         count = await manager.broadcast_sync_changed(user_id=99999)
         assert count == 0
 
     async def test_subscribe_and_broadcast_delivers_message(self) -> None:
-        import asyncio
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         queue: asyncio.Queue[str] = asyncio.Queue()
         manager.subscribe(user_id=1, queue=queue)
@@ -1578,11 +1577,6 @@ class TestSyncEventManager:
 
     async def test_broadcast_message_format_matches_sse_spec(self) -> None:
         """SSE frame must follow the wire format in realtime-sync-architecture.md."""
-        import asyncio
-        import json
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         queue: asyncio.Queue[str] = asyncio.Queue()
         manager.subscribe(user_id=1, queue=queue)
@@ -1597,15 +1591,9 @@ class TestSyncEventManager:
         assert payload["type"] == "sync_changed"
         assert "server_timestamp" in payload
         # server_timestamp must be parseable as ISO-8601
-        from datetime import datetime
-
         datetime.fromisoformat(payload["server_timestamp"])
 
     async def test_unsubscribe_stops_delivery(self) -> None:
-        import asyncio
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         queue: asyncio.Queue[str] = asyncio.Queue()
         manager.subscribe(user_id=1, queue=queue)
@@ -1616,10 +1604,6 @@ class TestSyncEventManager:
 
     async def test_broadcast_is_isolated_per_user(self) -> None:
         """Events for user A must not reach user B's queue."""
-        import asyncio
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         q_a: asyncio.Queue[str] = asyncio.Queue()
         q_b: asyncio.Queue[str] = asyncio.Queue()
@@ -1631,10 +1615,6 @@ class TestSyncEventManager:
         assert q_b.empty()
 
     async def test_multiple_connections_same_user_all_notified(self) -> None:
-        import asyncio
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         q1: asyncio.Queue[str] = asyncio.Queue()
         q2: asyncio.Queue[str] = asyncio.Queue()
@@ -1648,10 +1628,6 @@ class TestSyncEventManager:
 
     async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
         """A full maxsize=1 queue silently drops the second hint."""
-        import asyncio
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         # Use a bounded queue matching what the SSE endpoint creates.
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
@@ -1669,11 +1645,6 @@ class TestSyncEventManager:
 
     def test_pg_listener_callback_enqueues_locally(self) -> None:
         """_pg_listener_callback parses user_id and calls _enqueue_local."""
-        import asyncio
-        from unittest.mock import MagicMock, patch
-
-        from app.utils.sse_manager import SyncEventManager
-
         manager = SyncEventManager()
         queue: asyncio.Queue[str] = asyncio.Queue()
         manager.subscribe(user_id=7, queue=queue)
@@ -1691,8 +1662,6 @@ class TestSyncEventsEndpoint:
 
     async def test_events_endpoint_content_type(self) -> None:
         """events_endpoint returns a StreamingResponse with the correct SSE headers."""
-        from unittest.mock import MagicMock
-
         from fastapi import Request
 
         from app.routers.db_sync import events_endpoint
@@ -1714,8 +1683,6 @@ class TestSyncEventsEndpoint:
 
     def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
         """Push must succeed even if broadcast_sync_changed raises an exception."""
-        from unittest.mock import AsyncMock, patch
-
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "events-error-user")
         headers = auth_headers(user_id)
@@ -1747,8 +1714,6 @@ class TestSyncEventsEndpoint:
 
     def test_push_triggers_broadcast_to_connected_client(self, db_client: TestClient, auth_headers) -> None:
         """After a successful push, broadcast_sync_changed is called for the pushing user."""
-        from unittest.mock import AsyncMock, patch
-
         admin_h = auth_headers(1, is_admin=True)
         user_id = _create_user(db_client, admin_h, "events-push-user")
         headers = auth_headers(user_id)

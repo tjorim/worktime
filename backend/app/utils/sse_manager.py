@@ -130,7 +130,12 @@ class SyncEventManager:
         return self._enqueue_local(user_id)
 
     async def _pg_notify(self, user_id: int) -> None:
-        """Send ``NOTIFY worktime_sync_changed, '<user_id>'`` via asyncpg."""
+        """Send ``NOTIFY worktime_sync_changed, '<user_id>'`` via asyncpg.
+
+        PostgreSQL's bare ``NOTIFY`` statement does not support bind parameters
+        so we use the ``pg_notify(channel, payload)`` function via ``SELECT``
+        which accepts ``$1``/``$2`` placeholders safely.
+        """
         conn = self._notify_conn
         if conn is None or conn.is_closed():
             logger.debug("SSE: notify connection unavailable — skipping cross-process NOTIFY")
@@ -170,6 +175,13 @@ class SyncEventManager:
         within a single worker process without cross-process broadcast.
         """
         asyncpg_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        if asyncpg_url == db_url:
+            logger.warning(
+                "SSE: DATABASE_URL does not start with 'postgresql+asyncpg://' (%r); "
+                "LISTEN/NOTIFY will not be started",
+                db_url,
+            )
+            return
         try:
             self._listen_conn = await asyncpg.connect(asyncpg_url)
             await self._listen_conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
