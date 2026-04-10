@@ -15,16 +15,12 @@ def client():
 def test_health_check(client):
     """Test the health check endpoint."""
     response = client.get("/api/health")
-    
-    # Should return 200 or 503 depending on share directory state
+
+    # Should return 200 or 503 depending on external service state
     assert response.status_code in [200, 503]
-    
-    # Should be JSON response
+
     data = response.json()
     assert "status" in data
-    assert "share" in data
-    
-    # Status should be either "ok" or "degraded"
     assert data["status"] in ["ok", "degraded"]
 
 
