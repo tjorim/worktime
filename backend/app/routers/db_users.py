@@ -50,7 +50,7 @@ from app.utils.supertokens import username_to_st_email
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/db/users", tags=["Database Users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
 def _username_to_st_email(username: str) -> str:

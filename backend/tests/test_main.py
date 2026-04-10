@@ -14,17 +14,13 @@ def client():
 
 def test_health_check(client):
     """Test the health check endpoint."""
-    response = client.get("/health")
-    
-    # Should return 200 or 503 depending on share directory state
+    response = client.get("/api/health")
+
+    # Should return 200 or 503 depending on external service state
     assert response.status_code in [200, 503]
-    
-    # Should be JSON response
+
     data = response.json()
     assert "status" in data
-    assert "share" in data
-    
-    # Status should be either "ok" or "degraded"
     assert data["status"] in ["ok", "degraded"]
 
 
@@ -48,7 +44,7 @@ def test_openapi_docs(client):
     assert data["openapi"] == "3.1.0"
     assert data["info"]["title"] == "Worktime Backend API"
     assert data["info"]["version"] == "1.0.0"
-    assert "/health" in data["paths"]
+    assert "/api/health" in data["paths"]
     assert "/" in data["paths"]
 
 

@@ -17,12 +17,12 @@ class TestPreferencesAuth:
     """Preferences endpoints require authentication."""
 
     def test_get_requires_auth(self, db_client: TestClient) -> None:
-        resp = db_client.get("/db/preferences")
+        resp = db_client.get("/api/preferences")
         assert resp.status_code == 401
 
     def test_put_requires_auth(self, db_client: TestClient) -> None:
         resp = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "dark"}, "client_updated_at": _ts()},
         )
         assert resp.status_code == 401
@@ -46,7 +46,7 @@ class TestGetPreferences:
         user_id = create_user_factory(db_client, admin_h, "prefs-get-empty")
         headers = auth_headers(user_id)
 
-        resp = db_client.get("/db/preferences", headers=headers)
+        resp = db_client.get("/api/preferences", headers=headers)
         assert resp.status_code == 200
         assert resp.json() is None
 
@@ -62,12 +62,12 @@ class TestGetPreferences:
 
         ts = _ts()
         db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "dark", "language": "en"}, "client_updated_at": ts},
             headers=headers,
         )
 
-        resp = db_client.get("/db/preferences", headers=headers)
+        resp = db_client.get("/api/preferences", headers=headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body is not None
@@ -98,7 +98,7 @@ class TestPutPreferences:
 
         ts = _ts()
         resp = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"roster": "5x8", "schedule": "morning"}, "client_updated_at": ts},
             headers=headers,
         )
@@ -119,14 +119,14 @@ class TestPutPreferences:
 
         ts_old = _ts(-10)
         db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "light"}, "client_updated_at": ts_old},
             headers=headers,
         )
 
         ts_new = _ts()
         resp = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "dark"}, "client_updated_at": ts_new},
             headers=headers,
         )
@@ -145,14 +145,14 @@ class TestPutPreferences:
 
         ts_new = _ts()
         db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "dark"}, "client_updated_at": ts_new},
             headers=headers,
         )
 
         ts_old = _ts(-100)
         resp = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "light"}, "client_updated_at": ts_old},
             headers=headers,
         )
@@ -161,7 +161,7 @@ class TestPutPreferences:
         assert resp.json()["data"] == {"theme": "dark"}
 
         resp_equal = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"theme": "light"}, "client_updated_at": ts_new},
             headers=headers,
         )
@@ -184,13 +184,13 @@ class TestPutPreferences:
 
         ts = _ts()
         db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": {"secret": "a"}, "client_updated_at": ts},
             headers=headers_a,
         )
 
         # User B has no prefs → null
-        resp_b = db_client.get("/db/preferences", headers=headers_b)
+        resp_b = db_client.get("/api/preferences", headers=headers_b)
         assert resp_b.status_code == 200
         assert resp_b.json() is None
 
@@ -211,7 +211,7 @@ class TestPutPreferences:
             "nested": {"deep": {"value": [1, 2, 3]}},
         }
         resp = db_client.put(
-            "/db/preferences",
+            "/api/preferences",
             json={"data": complex_data, "client_updated_at": _ts()},
             headers=headers,
         )

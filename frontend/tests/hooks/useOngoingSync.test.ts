@@ -16,6 +16,7 @@ const emptySyncPayload = () => ({
   templates: [],
   work_locations: [],
   time_off_entries: [],
+  gantt_tasks: [],
 });
 
 const emptyPushResponse = { results: {} };
@@ -26,6 +27,7 @@ const incrementalPullResponse = {
   templates: [],
   work_locations: [],
   time_off_entries: [],
+  gantt_tasks: [],
   server_timestamp: "2026-02-01T00:00:00.000Z",
 };
 
@@ -137,7 +139,7 @@ describe("useOngoingSync", () => {
       });
 
       const pushCall = mockFetch.mock.calls.find(
-        ([url]: [string]) => url === "/db/sync/push",
+        ([url]: [string]) => url === "/api/sync/push",
       );
       expect(pushCall).toBeDefined();
       // Outbox should remain empty after successful push
@@ -205,7 +207,7 @@ describe("useOngoingSync", () => {
       let callCount = 0;
       mockFetch.mockImplementation(async (url: string) => {
         callCount++;
-        if (url === "/db/sync/push") {
+        if (url === "/api/sync/push") {
           if (callCount <= 1) {
             // First push attempt (initial flush on mount) — fail
             return { ok: false };
@@ -213,7 +215,7 @@ describe("useOngoingSync", () => {
           // Second push (visibility-change flush) — succeed
           return { ok: true, json: async () => emptyPushResponse };
         }
-        if (url.startsWith("/db/sync/pull")) {
+        if (url.startsWith("/api/sync/pull")) {
           return { ok: true, json: async () => incrementalPullResponse };
         }
         return { ok: false };
@@ -383,7 +385,7 @@ describe("useOngoingSync", () => {
 
       // Verify the reconciliation pull was a full pull (no `since` param).
       const pullCall = mockFetch.mock.calls.find(
-        ([url]: [string]) => url === "/db/sync/pull",
+        ([url]: [string]) => url === "/api/sync/pull",
       );
       expect(pullCall).toBeDefined();
 
@@ -444,11 +446,11 @@ describe("useOngoingSync", () => {
       let callCount = 0;
       mockFetch.mockImplementation(async (url: string) => {
         callCount++;
-        if (url === "/db/sync/push") {
+        if (url === "/api/sync/push") {
           if (callCount <= 1) return { ok: false };
           return { ok: true, json: async () => emptyPushResponse };
         }
-        if (url.startsWith("/db/sync/pull")) {
+        if (url.startsWith("/api/sync/pull")) {
           return {
             ok: true,
             json: async () => ({

@@ -22,6 +22,7 @@ import {
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
 import {
+  GANTT_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
   TIME_OFF_ENTRIES_STORAGE_KEY,
@@ -53,6 +54,7 @@ describe("syncClient", () => {
           templates_updated_at: null,
           work_locations_updated_at: null,
           time_off_entries_updated_at: null,
+          gantt_tasks_updated_at: null,
           preferences_updated_at: null,
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
@@ -67,6 +69,7 @@ describe("syncClient", () => {
           templates_updated_at: null,
           work_locations_updated_at: null,
           time_off_entries_updated_at: null,
+          gantt_tasks_updated_at: null,
           preferences_updated_at: null,
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
@@ -81,6 +84,22 @@ describe("syncClient", () => {
           templates_updated_at: null,
           work_locations_updated_at: null,
           time_off_entries_updated_at: "2026-01-01T00:00:00Z",
+          gantt_tasks_updated_at: null,
+          preferences_updated_at: null,
+          server_timestamp: "2026-01-01T00:00:00Z",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns true when gantt_tasks_updated_at is non-null", () => {
+      expect(
+        syncStatusHasData({
+          labels_updated_at: null,
+          tasks_updated_at: null,
+          templates_updated_at: null,
+          work_locations_updated_at: null,
+          time_off_entries_updated_at: null,
+          gantt_tasks_updated_at: "2026-01-01T00:00:00Z",
           preferences_updated_at: null,
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
@@ -95,6 +114,7 @@ describe("syncClient", () => {
           templates_updated_at: null,
           work_locations_updated_at: null,
           time_off_entries_updated_at: null,
+          gantt_tasks_updated_at: null,
           preferences_updated_at: "2026-01-01T00:00:00Z",
           server_timestamp: "2026-01-01T00:00:00Z",
         }),
@@ -159,7 +179,7 @@ describe("syncClient", () => {
 
       const result = await fetchSyncStatus(mockFetch);
       expect(result).toEqual(status);
-      expect(mockFetch).toHaveBeenCalledWith("/db/sync/status");
+      expect(mockFetch).toHaveBeenCalledWith("/api/sync/status");
     });
 
     it("returns null when response is not ok", async () => {
@@ -187,7 +207,7 @@ describe("syncClient", () => {
 
       expect(result).toEqual(response);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/db/sync/push",
+        "/api/sync/push",
         expect.objectContaining({ method: "POST" }),
       );
     });
@@ -221,7 +241,7 @@ describe("syncClient", () => {
 
       const result = await pullSyncData(mockFetch);
       expect(result).toEqual(pullResp);
-      expect(mockFetch).toHaveBeenCalledWith("/db/sync/pull");
+      expect(mockFetch).toHaveBeenCalledWith("/api/sync/pull");
     });
 
     it("includes since param when provided", async () => {
@@ -409,6 +429,7 @@ describe("syncClient", () => {
       templates: [],
       work_locations: [],
       time_off_entries: [],
+      gantt_tasks: [],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -533,6 +554,57 @@ describe("syncClient", () => {
 
       expect(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)).toBeNull();
     });
+
+    it("stores gantt tasks in localStorage", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        gantt_tasks: [
+          {
+            id: "gantt-1",
+            user_id: 1,
+            name: "Design phase",
+            start_date: "2026-03-01",
+            end_date: "2026-03-15",
+            progress: 50,
+            dependencies: null,
+            notes: null,
+            client_updated_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ],
+      });
+
+      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ id: "gantt-1", name: "Design phase", start: "2026-03-01", end: "2026-03-15", progress: 50 });
+    });
+
+    it("excludes soft-deleted gantt tasks", () => {
+      applySyncPullResponse({
+        ...makeBaseResponse(),
+        gantt_tasks: [
+          {
+            id: "gantt-del",
+            user_id: 1,
+            name: "Deleted task",
+            start_date: "2026-03-01",
+            end_date: "2026-03-10",
+            progress: 0,
+            dependencies: null,
+            notes: null,
+            client_updated_at: "2026-01-01T00:00:00Z",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-02T00:00:00Z",
+            deleted_at: "2026-01-02T00:00:00Z",
+          },
+        ],
+      });
+
+      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
+      expect(stored).toHaveLength(0);
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -546,6 +618,7 @@ describe("syncClient", () => {
       templates: [] as never[],
       work_locations: [] as never[],
       time_off_entries: [] as never[],
+      gantt_tasks: [] as never[],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -941,6 +1014,7 @@ describe("syncClient", () => {
       templates: [],
       work_locations: [],
       time_off_entries: [],
+      gantt_tasks: [],
       server_timestamp: "2026-01-01T00:00:00Z",
     });
 
@@ -1109,7 +1183,7 @@ describe("syncClient", () => {
       mockFetch.mockResolvedValue({ ok: true, json: async () => prefs });
       const result = await fetchPreferences(mockFetch);
       expect(result).toEqual(prefs);
-      expect(mockFetch).toHaveBeenCalledWith("/db/preferences");
+      expect(mockFetch).toHaveBeenCalledWith("/api/preferences");
     });
 
     it("returns null when response is not ok", async () => {
@@ -1134,7 +1208,7 @@ describe("syncClient", () => {
       const result = await pushPreferences(mockFetch, { theme: "dark" }, "2026-01-01T00:00:00Z");
       expect(result).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        "/db/preferences",
+        "/api/preferences",
         expect.objectContaining({ method: "PUT" }),
       );
     });
@@ -1227,6 +1301,7 @@ describe("syncClient", () => {
     templates: [] as never[],
     work_locations: [] as never[],
     time_off_entries: [] as never[],
+    gantt_tasks: [] as never[],
   });
 
   describe("appendToSyncOutbox / getSyncOutboxSize / clearSyncOutbox", () => {
@@ -1348,6 +1423,7 @@ describe("syncClient", () => {
       templates: [] as never[],
       work_locations: [] as never[],
       time_off_entries: [] as never[],
+      gantt_tasks: [] as never[],
       server_timestamp: "2026-02-01T00:00:00.000Z",
     });
 
@@ -1566,6 +1642,68 @@ describe("syncClient", () => {
         [existingEntry],
       );
       expect(result).toHaveLength(0);
+    });
+
+    it("upserts a new gantt task into localStorage", () => {
+      applyIncrementalSyncPullResponse(
+        {
+          ...baseResponse(),
+          gantt_tasks: [
+            {
+              id: "gantt-new",
+              user_id: 1,
+              name: "Build phase",
+              start_date: "2026-04-01",
+              end_date: "2026-04-30",
+              progress: 10,
+              dependencies: null,
+              notes: "Important",
+              client_updated_at: "2026-01-01T00:00:00Z",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              deleted_at: null,
+            },
+          ],
+        },
+        [],
+      );
+
+      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ id: "gantt-new", name: "Build phase", progress: 10, notes: "Important" });
+    });
+
+    it("removes a soft-deleted gantt task from localStorage", () => {
+      localStorage.setItem(
+        GANTT_STORAGE_KEY,
+        JSON.stringify([{ id: "gantt-del", name: "Old task", start: "2026-01-01", end: "2026-01-10", progress: 0 }]),
+      );
+
+      applyIncrementalSyncPullResponse(
+        {
+          ...baseResponse(),
+          gantt_tasks: [
+            {
+              id: "gantt-del",
+              user_id: 1,
+              name: "Old task",
+              start_date: "2026-01-01",
+              end_date: "2026-01-10",
+              progress: 0,
+              dependencies: null,
+              notes: null,
+              client_updated_at: "2026-01-01T00:00:00Z",
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-02T00:00:00Z",
+              deleted_at: "2026-01-02T00:00:00Z",
+            },
+          ],
+        },
+        [],
+      );
+
+      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
+      expect(stored).toHaveLength(0);
     });
   });
 });

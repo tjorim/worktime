@@ -10,7 +10,7 @@
  * Device-specific data (developer options) is intentionally excluded.
  */
 
-import dayjs from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import {
   GANTT_STORAGE_KEY,
   TIME_TRACKING_STORAGE_KEYS,

@@ -68,6 +68,7 @@ const emptyStatus = {
   templates_updated_at: null,
   work_locations_updated_at: null,
   time_off_entries_updated_at: null,
+  gantt_tasks_updated_at: null,
   preferences_updated_at: null,
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
@@ -85,6 +86,7 @@ const emptyPullResponse = {
   templates: [],
   work_locations: [],
   time_off_entries: [],
+  gantt_tasks: [],
   server_timestamp: "2026-01-02T00:00:00.000Z",
 };
 
@@ -225,7 +227,7 @@ describe("§1 Local-only usage", () => {
     );
 
     const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
-      url.includes("/db/sync"),
+      url.includes("/api/sync"),
     );
     expect(syncCalls).toHaveLength(0);
   });
@@ -238,7 +240,7 @@ describe("§1 Local-only usage", () => {
 describe("§2 Branch D — both sides empty → cursor stored immediately", () => {
   it("transitions to done and stores cursor when neither local nor server has data", async () => {
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/status": { ok: true, json: async () => emptyStatus },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -268,7 +270,7 @@ describe("§2 Branch D — both sides empty → cursor stored immediately", () =
 
   it("enters error phase when the status call fails", async () => {
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: false, status: 500, json: async () => ({}) },
+      "/api/sync/status": { ok: false, status: 500, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -303,8 +305,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => emptyStatus },
-      "/db/sync/push": { ok: true, json: async () => emptyPushResponse },
+      "/api/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -319,7 +321,7 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
     const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/db/sync/push"),
+      ([url]: [string]) => url.includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
   });
@@ -328,8 +330,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => emptyStatus },
-      "/db/sync/push": { ok: false, status: 500, json: async () => ({}) },
+      "/api/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/push": { ok: false, status: 500, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -345,8 +347,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => emptyStatus },
-      "/db/sync/push": { ok: true, json: async () => emptyPushResponse },
+      "/api/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -356,7 +358,7 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
     });
 
     const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url === "/db/sync/push",
+      ([url]: [string]) => url === "/api/sync/push",
     );
     expect(pushCalls.length).toBeGreaterThan(0);
     const body = JSON.parse((pushCalls[0] as [string, RequestInit])[1].body as string);
@@ -373,9 +375,9 @@ describe("§2 Branch B / §4 — second-device restore", () => {
   it("pulls server data when local is empty and stores cursor", async () => {
     // Local is empty (no seed)
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => populatedStatus },
-      "/db/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/db/preferences": { ok: false, status: 404, json: async () => ({}) },
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
+      "/api/preferences": { ok: false, status: 404, json: async () => ({}) },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -392,7 +394,7 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     );
 
     const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/db/sync/pull"),
+      ([url]: [string]) => url.includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -407,9 +409,9 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     };
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => populatedStatus },
-      "/db/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/db/preferences": { ok: true, json: async () => serverPrefs },
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
+      "/api/preferences": { ok: true, json: async () => serverPrefs },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -431,7 +433,7 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     // emptyPullResponse has empty arrays, so localStorage entity keys stay absent,
     // which is verified separately in syncClient.test.ts applySyncPullResponse suite.
     const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/db/sync/pull"),
+      ([url]: [string]) => url.includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -446,7 +448,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -467,16 +469,16 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => emptyStatus },
-      "/db/sync/pull": { ok: true, json: async () => emptyPullResponse },
-      "/db/sync/push": { ok: true, json: async () => emptyPushResponse },
-      "/db/preferences": { ok: false, status: 404, json: async () => ({}) },
+      "/api/sync/status": { ok: true, json: async () => emptyStatus },
+      "/api/sync/pull": { ok: true, json: async () => emptyPullResponse },
+      "/api/sync/push": { ok: true, json: async () => emptyPushResponse },
+      "/api/preferences": { ok: false, status: 404, json: async () => ({}) },
     });
 
     // First status call → conflict; subsequent calls → empty (post-resolution).
     let statusCalls = 0;
     const smartFetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes("/db/sync/status")) {
+      if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
           ? { ok: true, json: async () => populatedStatus }
@@ -508,7 +510,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
     const pushCalls = (smartFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/db/sync/push"),
+      ([url]: [string]) => url.includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
   });
@@ -519,16 +521,16 @@ describe("§2 Branch C / §5 — conflict handling", () => {
 
     let statusCalls = 0;
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes("/db/sync/status")) {
+      if (url.includes("/api/sync/status")) {
         statusCalls++;
         return statusCalls === 1
           ? { ok: true, json: async () => populatedStatus }
           : { ok: true, json: async () => emptyStatus };
       }
-      if (url.includes("/db/sync/pull")) {
+      if (url.includes("/api/sync/pull")) {
         return { ok: true, json: async () => emptyPullResponse };
       }
-      if (url.includes("/db/preferences")) {
+      if (url.includes("/api/preferences")) {
         return { ok: false, status: 404, json: async () => ({}) };
       }
       return { ok: false, json: async () => ({}) };
@@ -563,7 +565,7 @@ describe("§2 Branch C / §5 — conflict handling", () => {
     seedLocalTask();
 
     const mockFetch = buildFetchMock({
-      "/db/sync/status": { ok: true, json: async () => populatedStatus },
+      "/api/sync/status": { ok: true, json: async () => populatedStatus },
     });
 
     renderSync(true, TEST_USER_ID, mockFetch);
@@ -601,7 +603,7 @@ describe("Auth edge cases", () => {
     await act(async () => {});
 
     const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
-      url.includes("/db/sync"),
+      url.includes("/api/sync"),
     );
     expect(syncCalls).toHaveLength(0);
   });

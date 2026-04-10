@@ -2,6 +2,8 @@ import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "@/types/gantt";
 import { GANTT_STORAGE_KEY } from "@/constants/storageKeys";
+import { emptySyncPayload, useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
@@ -16,11 +18,13 @@ function toTask(raw: RawGanttTask): GanttTask {
 
 export function useGanttTasks() {
   const [rawTasks, setRawTasks] = useLocalStorage<RawGanttTask[]>(GANTT_STORAGE_KEY, []);
+  const { enqueueChange } = useOngoingSyncContext();
 
   const tasks = useMemo(() => rawTasks.filter(isValidRawGanttTask).map(toTask), [rawTasks]);
 
   const addTask = useCallback(
     (payload: NewGanttTaskInput) => {
+      const now = dayjs().toISOString();
       const createdTask: RawGanttTask = {
         id: crypto.randomUUID(),
         name: payload.name,
@@ -33,32 +37,74 @@ export function useGanttTasks() {
 
       setRawTasks((prev) => [...prev, createdTask]);
 
+      const change = emptySyncPayload();
+      change.gantt_tasks.push({
+        id: createdTask.id,
+        action: "create",
+        client_updated_at: now,
+        name: createdTask.name,
+        start_date: createdTask.start,
+        end_date: createdTask.end,
+        progress: createdTask.progress ?? 0,
+        dependencies: createdTask.dependencies ?? null,
+        notes: createdTask.notes ?? null,
+      });
+      enqueueChange(change);
+
       return toTask(createdTask);
     },
-    [setRawTasks],
+    [setRawTasks, enqueueChange],
   );
 
   const updateTask = useCallback(
     (id: string, changes: GanttTaskChanges) => {
+      const now = dayjs().toISOString();
       setRawTasks((prev) =>
         prev.map((raw) => {
-          if (raw.id !== id) {
-            return raw;
-          }
-
-          return {
-            ...raw,
-            ...changes,
-            progress: changes.progress ?? raw.progress ?? 0,
-          };
+          if (raw.id !== id) return raw;
+          return { ...raw, ...changes, progress: changes.progress ?? raw.progress ?? 0 };
         }),
       );
+
+      const change = emptySyncPayload();
+      change.gantt_tasks.push({
+        id,
+        action: "update",
+        client_updated_at: now,
+        ...(changes.name !== undefined ? { name: changes.name } : {}),
+        ...(changes.start !== undefined ? { start_date: changes.start } : {}),
+        ...(changes.end !== undefined ? { end_date: changes.end } : {}),
+        ...(changes.progress !== undefined ? { progress: changes.progress } : {}),
+        ...(changes.dependencies !== undefined ? { dependencies: changes.dependencies ?? null } : {}),
+        ...(changes.notes !== undefined ? { notes: changes.notes ?? null } : {}),
+      });
+      enqueueChange(change);
     },
-    [setRawTasks],
+    [setRawTasks, enqueueChange],
   );
 
   const removeTask = useCallback(
     (id: string) => {
+      const now = dayjs().toISOString();
+
+      const change = emptySyncPayload();
+      change.gantt_tasks.push({ id, action: "delete", client_updated_at: now });
+
+      // Also enqueue updates for any tasks whose dependencies referenced the deleted task.
+      for (const raw of rawTasks) {
+        if (!raw.dependencies || raw.id === id) continue;
+        const parts = raw.dependencies.split(",").map((d) => d.trim());
+        if (parts.includes(id)) {
+          const cleaned = parts.filter((d) => d && d !== id).join(", ");
+          change.gantt_tasks.push({
+            id: raw.id,
+            action: "update",
+            client_updated_at: now,
+            dependencies: cleaned || null,
+          });
+        }
+      }
+
       setRawTasks((prev) =>
         prev
           .filter((raw) => raw.id !== id)
@@ -72,8 +118,10 @@ export function useGanttTasks() {
             return { ...raw, dependencies: cleaned || undefined };
           }),
       );
+
+      enqueueChange(change);
     },
-    [setRawTasks],
+    [rawTasks, setRawTasks, enqueueChange],
   );
 
   return {
