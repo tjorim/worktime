@@ -86,6 +86,25 @@ export function useGanttTasks() {
   const removeTask = useCallback(
     (id: string) => {
       const now = dayjs().toISOString();
+
+      const change = emptySyncPayload();
+      change.gantt_tasks.push({ id, action: "delete", client_updated_at: now });
+
+      // Also enqueue updates for any tasks whose dependencies referenced the deleted task.
+      for (const raw of rawTasks) {
+        if (!raw.dependencies || raw.id === id) continue;
+        const parts = raw.dependencies.split(",").map((d) => d.trim());
+        if (parts.includes(id)) {
+          const cleaned = parts.filter((d) => d && d !== id).join(", ");
+          change.gantt_tasks.push({
+            id: raw.id,
+            action: "update",
+            client_updated_at: now,
+            dependencies: cleaned || null,
+          });
+        }
+      }
+
       setRawTasks((prev) =>
         prev
           .filter((raw) => raw.id !== id)
@@ -100,11 +119,9 @@ export function useGanttTasks() {
           }),
       );
 
-      const change = emptySyncPayload();
-      change.gantt_tasks.push({ id, action: "delete", client_updated_at: now });
       enqueueChange(change);
     },
-    [setRawTasks, enqueueChange],
+    [rawTasks, setRawTasks, enqueueChange],
   );
 
   return {

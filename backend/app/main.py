@@ -22,8 +22,8 @@ from .config.cors import get_cors_origins
 from .config.supertokens_config import init_supertokens
 from .database import init_db
 from .middleware.timing import TimingMiddleware
-from .routers.health import router as health_router
 from .routers.hday import router as hday_router
+from .routers.health import router as health_router
 from .routers.team import router as team_router
 
 # Configure logging

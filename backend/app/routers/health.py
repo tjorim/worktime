@@ -63,7 +63,7 @@ async def health_check() -> JSONResponse:
                 content["share"] = "not_found"
                 degraded = True
             else:
-                list(share_path.iterdir())
+                next(share_path.iterdir(), None)
                 content["share"] = "ok"
         except PermissionError:
             logger.error(f"Health check failed: permission denied for SHARE_DIR: {share_path}")

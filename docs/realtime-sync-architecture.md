@@ -75,7 +75,7 @@ The SSE endpoint will be added at `GET /api/sync/events` (authenticated, per-use
 stream). Each event is delivered as a `text/event-stream` frame; the `data:`
 field carries a serialized JSON object, e.g.:
 
-```
+```text
 event: sync_changed
 data: {"type":"sync_changed","server_timestamp":"<ISO-8601>"}
 ```
@@ -122,9 +122,8 @@ server-push of non-sync data (e.g., notifications) is needed.
 **TanStack Query remains appropriate for:**
 
 - Server-state that is **not** managed by the local-first sync pipeline: public
-  holiday data (`useOpenHolidays`), Gantt tasks fetched directly from the
-  backend, and any other read-heavy remote data that does not need offline
-  writes or cross-device merging.
+  holiday data (`useOpenHolidays`) and any other read-heavy remote data that
+  does not need offline writes or cross-device merging.
 - Ephemeral UI state derived from API calls that does not need to survive a
   page reload or be available offline.
 - Prefetching or cache-warming for pages that are not yet in the sync domain.
@@ -172,8 +171,8 @@ The following are **explicitly out of scope** for this phase:
   reconnects are handled by the browser; missed events cause a pull on
   reconnect, which is sufficient.
 - **No requirement to remove TanStack Query** from domains that are not
-  sync-managed. Existing `useQuery` usage for holidays, Gantt tasks, etc.
-  remains correct and should not be changed as part of this work.
+  sync-managed. Existing `useQuery` usage for holidays and similar read-only
+  remote data remains correct and should not be changed as part of this work.
 - **No new conflict resolution strategy.** Last-write-wins via
   `client_updated_at` is correct and unchanged.
 - **No WebSocket in v1.** SSE is sufficient for unidirectional freshness hints.

@@ -85,7 +85,8 @@ function payloadHasData(payload: SyncPushPayload): boolean {
     payload.tasks.length > 0 ||
     payload.templates.length > 0 ||
     payload.work_locations.length > 0 ||
-    payload.time_off_entries.length > 0
+    payload.time_off_entries.length > 0 ||
+    payload.gantt_tasks.length > 0
   );
 }
 
