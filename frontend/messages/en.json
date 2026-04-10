@@ -965,5 +965,6 @@
   "sync_indicator_tooltip_synced_at": "Last synced: {time}",
   "sync_indicator_tooltip_pending": "{count} change(s) waiting to sync",
   "sync_indicator_tooltip_error": "The last sync attempt failed. Changes will be retried automatically.",
+  "sync_indicator_tooltip_retry_in": "Retrying in {seconds}s\u2026",
   "sync_indicator_tooltip_conflicts": "{count} record(s) had a conflict and were reverted to the server version."
 }

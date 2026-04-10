@@ -23,7 +23,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 export function SyncStatusIndicator() {
   const tooltipId = useId();
   const { isAuthenticated } = useAuth();
-  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } =
+  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter } =
     useOngoingSyncContext();
 
   const isVisible =
@@ -38,6 +38,14 @@ export function SyncStatusIndicator() {
     return () => clearInterval(id);
   }, [lastSyncedAt]);
 
+  // Tick every second while a back-off window is active so the countdown stays accurate.
+  const [, setSecondTick] = useState(0);
+  useEffect(() => {
+    if (!hasSyncError || retryAfter === null) return;
+    const id = setInterval(() => setSecondTick((t) => t + 1), 1_000);
+    return () => clearInterval(id);
+  }, [hasSyncError, retryAfter]);
+
   // Icon, label, and variant are stable between minute ticks — memoize them.
   const { icon, label, variant } = useMemo(() => {
     if (hasSyncError) return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
@@ -51,7 +59,13 @@ export function SyncStatusIndicator() {
   // Tooltip text is computed fresh every render so fromNow() stays accurate
   // (the minute ticker above drives re-renders for the "synced" state).
   const tooltipText = (() => {
-    if (hasSyncError) return m.sync_indicator_tooltip_error();
+    if (hasSyncError) {
+      if (retryAfter !== null) {
+        const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000));
+        if (seconds > 0) return m.sync_indicator_tooltip_retry_in({ seconds: String(seconds) });
+      }
+      return m.sync_indicator_tooltip_error();
+    }
     if (conflictCount > 0) return m.sync_indicator_tooltip_conflicts({ count: String(conflictCount) });
     if (isSyncing) return null;
     if (outboxCount > 0) return m.sync_indicator_tooltip_pending({ count: String(outboxCount) });
