@@ -52,17 +52,22 @@ describe("useOngoingSync", () => {
     // enqueueChange should be a no-op (no fetch calls)
     result.current.enqueueChange(emptySyncPayload());
     expect(mockFetch).not.toHaveBeenCalled();
+    // triggerPull should also be a no-op
+    result.current.triggerPull();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns no-op state when userId is null", () => {
     const { result } = renderHook(() => useOngoingSync(true, null, mockFetch));
     result.current.enqueueChange(emptySyncPayload());
+    result.current.triggerPull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns no-op state when fetchFn is null", () => {
     const { result } = renderHook(() => useOngoingSync(true, "user-1", null));
     result.current.enqueueChange(emptySyncPayload());
+    result.current.triggerPull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -553,6 +558,117 @@ describe("useOngoingSync", () => {
 
       // conflictCount should be cleared after the conflict-free pull.
       expect(result.current.conflictCount).toBe(0);
+    });
+  });
+
+  describe("triggerPull", () => {
+    it("flushes outbox and pulls incremental data when called", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      // Initial mount flush (online): only pull (outbox is empty).
+      // triggerPull: only pull (outbox still empty).
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // triggerPull pull
+
+      const pullCallback = vi.fn();
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch, pullCallback),
+      );
+
+      // Wait for initial flush.
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+
+      // Call triggerPull directly (simulates an SSE signal).
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(pullCallback).toHaveBeenCalledTimes(2);
+      });
+
+      expect(pullCallback).toHaveBeenLastCalledWith(
+        expect.objectContaining({ server_timestamp: "2026-02-01T00:00:00.000Z" }),
+      );
+    });
+
+    it("updates lastSyncedAt after a successful triggerPull", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const laterPullResponse = {
+        ...incrementalPullResponse,
+        server_timestamp: "2026-03-01T00:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }); // triggerPull pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-03-01T00:00:00.000Z");
+      });
+    });
+
+    it("does not make network calls when sync is not established", () => {
+      const { result } = renderHook(() =>
+        useOngoingSync(false, "user-1", mockFetch),
+      );
+
+      result.current.triggerPull();
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("is transport-neutral — caller does not need to know cursor or outbox details", async () => {
+      // Set up cursor and a pending outbox entry.
+      storeSyncCursor("user-1", "2026-01-10T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+      // Device starts offline to prevent initial flush from clearing the outbox.
+      vi.stubGlobal("navigator", { ...navigator, onLine: false });
+
+      const pullResponse = {
+        ...incrementalPullResponse,
+        server_timestamp: "2026-01-11T00:00:00.000Z",
+      };
+      // triggerPull should flush outbox (push) then pull — caller just calls triggerPull().
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // outbox flush push
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // At this point outbox has 1 entry; no network calls yet (offline).
+      expect(result.current.outboxCount).toBe(1);
+
+      // triggerPull is all the external caller needs to invoke.
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(result.current.outboxCount).toBe(0);
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-11T00:00:00.000Z");
+      });
     });
   });
 });

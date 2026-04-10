@@ -63,6 +63,12 @@ export interface OngoingSyncState {
 export type EnqueueChangeFn = (change: SyncPushPayload) => void;
 
 /**
+ * Trigger an incremental pull (flush outbox + pull from server).  Transport-neutral
+ * entry point — callers do not need to know about cursor, outbox, or merge logic.
+ */
+export type TriggerPullFn = () => void;
+
+/**
  * Hook that manages ongoing write-through sync and incremental pulls after the
  * first-sync flow has completed.
  *
@@ -78,7 +84,7 @@ export function useOngoingSync(
   userId: string | null,
   fetchFn: FetchFn | null,
   onIncrementalPull?: (data: SyncPullResponse) => void,
-): OngoingSyncState & { enqueueChange: EnqueueChangeFn } {
+): OngoingSyncState & { enqueueChange: EnqueueChangeFn; triggerPull: TriggerPullFn } {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
     if (!userId) return null;
@@ -238,6 +244,17 @@ export function useOngoingSync(
   }, [isActive, flushAndPull]);
 
   /**
+   * Transport-neutral entry point for external callers (e.g. SSE listeners) to
+   * trigger an incremental pull without knowing about cursor, outbox, or merge
+   * logic.  Delegates to `flushAndPull`.
+   */
+  const triggerPull: TriggerPullFn = useCallback(() => {
+    flushAndPull().catch((err: unknown) => {
+      console.error("useOngoingSync: triggerPull failed:", err);
+    });
+  }, [flushAndPull]);
+
+  /**
    * Push a single change payload to the server immediately.  Falls back to the
    * outbox queue if the push fails (e.g. device is offline).
    */
@@ -334,8 +351,9 @@ export function useOngoingSync(
       hasSyncError: false,
       conflictCount: 0,
       enqueueChange: () => {},
+      triggerPull: () => {},
     };
   }
 
-  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, enqueueChange };
+  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, enqueueChange, triggerPull };
 }

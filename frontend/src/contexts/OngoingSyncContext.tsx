@@ -22,7 +22,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef } fr
 import { useAuth } from "./AuthContext";
 import { useEventStore } from "./EventStoreContext";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn } from "@/hooks/useOngoingSync";
+import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn, type TriggerPullFn } from "@/hooks/useOngoingSync";
 import {
   applyIncrementalSyncPullResponse,
   type SyncPullResponse,
@@ -35,6 +35,11 @@ export interface OngoingSyncContextType extends OngoingSyncState {
    * Call this after each local write so the server stays in sync.
    */
   enqueueChange: EnqueueChangeFn;
+  /**
+   * Trigger an incremental pull (flush outbox + pull from server).
+   * Transport-neutral entry point for external callers such as SSE listeners.
+   */
+  triggerPull: TriggerPullFn;
 }
 
 const NO_OP_CONTEXT: OngoingSyncContextType = {
@@ -44,6 +49,7 @@ const NO_OP_CONTEXT: OngoingSyncContextType = {
   hasSyncError: false,
   conflictCount: 0,
   enqueueChange: () => {},
+  triggerPull: () => {},
 };
 
 const OngoingSyncContext = createContext<OngoingSyncContextType | null>(null);
@@ -96,7 +102,7 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     [replaceEntries],
   );
 
-  const { enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } = useOngoingSync(
+  const { enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } = useOngoingSync(
     isSyncEstablished,
     userId,
     isAuthenticated ? fetchFn : null,
@@ -104,8 +110,8 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   );
 
   const value = useMemo<OngoingSyncContextType>(
-    () => ({ enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount }),
-    [enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount],
+    () => ({ enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount }),
+    [enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount],
   );
 
   return <OngoingSyncContext.Provider value={value}>{children}</OngoingSyncContext.Provider>;
