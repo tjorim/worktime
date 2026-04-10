@@ -1,22 +1,36 @@
 """Health check endpoint."""
 
 import logging
+from collections.abc import AsyncGenerator
+from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
-from ..database.engine import get_session_factory
+from ..database.engine import get_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Health"])
 
 
+async def _get_db_if_enabled() -> AsyncGenerator[AsyncSession | None, None]:
+    """Yield a DB session when DATABASE_ENABLED, otherwise yield None."""
+    if settings.DATABASE_ENABLED:
+        async for session in get_session():
+            yield session
+    else:
+        yield None
+
+
 @router.get("/health")
-async def health_check() -> JSONResponse:
+async def health_check(
+    db: Annotated[AsyncSession | None, Depends(_get_db_if_enabled)],
+) -> JSONResponse:
     """Health check endpoint.
 
     Checks database connectivity when DATABASE_ENABLED is true,
@@ -45,10 +59,9 @@ async def health_check() -> JSONResponse:
         content["auth"] = "unreachable"
         degraded = True
 
-    if settings.DATABASE_ENABLED:
+    if db is not None:
         try:
-            async with get_session_factory()() as session:
-                await session.execute(text("SELECT 1"))
+            await db.execute(text("SELECT 1"))
             content["database"] = "ok"
         except Exception as e:
             logger.error("Health check failed: database unreachable", exc_info=e)
@@ -72,6 +85,7 @@ async def health_check() -> JSONResponse:
         except Exception as e:
             logger.error("Health check failed: error accessing SHARE_DIR", exc_info=e)
             content["share"] = "error"
+            content["error"] = "internal_error"
             degraded = True
 
     content["status"] = "degraded" if degraded else "ok"

@@ -1,15 +1,14 @@
 """Tests for health check endpoint."""
 
-import os
-import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.config import settings
+from app.main import app
+from app.routers.health import _get_db_if_enabled
 
 
 @pytest.fixture
@@ -20,17 +19,20 @@ def client():
 
 def test_health_check_success(client, tmp_path, monkeypatch):
     """Test health check when share directory is accessible."""
-    # Create a temporary directory
     share_dir = tmp_path / "share"
     share_dir.mkdir()
-
-    # Create a test file to verify directory listing works
     (share_dir / "test.txt").write_text("test")
 
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
-    # Mock SuperTokens core and DB so they always succeed in unit tests.
+    # Override the DB dependency so the health check succeeds without a real DB.
+    async def mock_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[_get_db_if_enabled] = mock_db
+
+    # Mock SuperTokens core reachability.
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_http_client = AsyncMock()
@@ -39,21 +41,17 @@ def test_health_check_success(client, tmp_path, monkeypatch):
     mock_http_ctx.__aenter__ = AsyncMock(return_value=mock_http_client)
     mock_http_ctx.__aexit__ = AsyncMock(return_value=None)
 
-    mock_session = AsyncMock()
-    mock_session_ctx = MagicMock()
-    mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
-    mock_factory = MagicMock(return_value=mock_session_ctx)
-
-    with (
-        patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx),
-        patch("app.routers.health.get_session_factory", return_value=mock_factory),
-    ):
-        response = client.get("/api/health")
+    try:
+        with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
+            response = client.get("/api/health")
+    finally:
+        del app.dependency_overrides[_get_db_if_enabled]
 
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
+    assert data["auth"] == "ok"
+    assert data["database"] == "ok"
     assert data["share"] == "ok"
 
 
