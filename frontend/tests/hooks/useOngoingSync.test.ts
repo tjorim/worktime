@@ -669,6 +669,13 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-11T00:00:00.000Z");
       });
+
+      // Assert push-before-pull call order: first call is the outbox flush
+      // (push endpoint), second is the incremental pull (pull endpoint).
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [firstCall, secondCall] = mockFetch.mock.calls as [[string], [string]];
+      expect(firstCall[0]).toBe("/api/sync/push");
+      expect(secondCall[0]).toMatch(/^\/api\/sync\/pull/);
     });
   });
 });

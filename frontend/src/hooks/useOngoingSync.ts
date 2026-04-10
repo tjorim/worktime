@@ -68,6 +68,9 @@ export type EnqueueChangeFn = (change: SyncPushPayload) => void;
  */
 export type TriggerPullFn = () => void;
 
+/** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
+const NOOP = () => {};
+
 /**
  * Hook that manages ongoing write-through sync and incremental pulls after the
  * first-sync flow has completed.
@@ -350,8 +353,8 @@ export function useOngoingSync(
       outboxCount: 0,
       hasSyncError: false,
       conflictCount: 0,
-      enqueueChange: () => {},
-      triggerPull: () => {},
+      enqueueChange: NOOP,
+      triggerPull: NOOP,
     };
   }
 
