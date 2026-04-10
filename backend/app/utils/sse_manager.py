@@ -182,6 +182,9 @@ class SyncEventManager:
                 db_url,
             )
             return
+        # Note: further URL validation (host, port, credentials) is deferred to
+        # asyncpg.connect(); any connection error is caught in the try/except below
+        # and causes graceful degradation to single-process mode.
         try:
             self._listen_conn = await asyncpg.connect(asyncpg_url)
             await self._listen_conn.add_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)

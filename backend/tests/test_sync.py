@@ -1627,19 +1627,19 @@ class TestSyncEventManager:
         assert not q2.empty()
 
     async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
-        """A full maxsize=1 queue silently drops the second hint."""
+        """A full maxsize=1 queue silently drops the second hint (via public API)."""
         manager = SyncEventManager()
         # Use a bounded queue matching what the SSE endpoint creates.
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
         manager.subscribe(user_id=1, queue=queue)
 
-        # First hint fills the queue.
-        count1 = manager._enqueue_local(user_id=1)
+        # First call fills the queue (no Postgres connection → local fallback).
+        count1 = await manager.broadcast_sync_changed(user_id=1)
         assert count1 == 1
         assert queue.full()
 
-        # Second hint is dropped silently.
-        count2 = manager._enqueue_local(user_id=1)
+        # Second call: queue is already full so the duplicate hint is dropped.
+        count2 = await manager.broadcast_sync_changed(user_id=1)
         assert count2 == 0
         assert queue.qsize() == 1  # still exactly one pending message
 
@@ -1655,6 +1655,18 @@ class TestSyncEventManager:
             )
             spy.assert_called_once_with(7)
         assert not queue.empty()
+
+    def test_pg_listener_callback_ignores_invalid_payload(self) -> None:
+        """_pg_listener_callback logs a warning and does nothing for non-integer payloads."""
+        manager = SyncEventManager()
+        queue: asyncio.Queue[str] = asyncio.Queue()
+        manager.subscribe(user_id=1, queue=queue)
+
+        # Should not raise; queue must remain empty.
+        manager._pg_listener_callback(
+            conn=MagicMock(), pid=12345, channel="worktime_sync_changed", payload="not-an-int"
+        )
+        assert queue.empty()
 
 
 class TestSyncEventsEndpoint:
