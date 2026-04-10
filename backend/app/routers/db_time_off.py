@@ -27,7 +27,7 @@ from app.services.db_service import (
 )
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/db/time-off", tags=["Database Time Off"])
+router = APIRouter(prefix="/time-off", tags=["Time Off"])
 
 
 @router.post("/", response_model=TimeOffEntryRead, status_code=status.HTTP_201_CREATED)

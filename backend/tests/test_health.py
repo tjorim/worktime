@@ -29,7 +29,7 @@ def test_health_check_success(client, tmp_path, monkeypatch):
     # Mock the settings to use our temporary directory
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     
-    response = client.get("/health")
+    response = client.get("/api/health")
     
     assert response.status_code == 200
     data = response.json()
@@ -45,7 +45,7 @@ def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
     # Mock the settings to use our non-existent directory
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     
-    response = client.get("/health")
+    response = client.get("/api/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -62,7 +62,7 @@ def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
     # Mock the settings to use our file
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_file))
     
-    response = client.get("/health")
+    response = client.get("/api/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -89,7 +89,7 @@ def test_health_check_permission_denied(client, tmp_path, monkeypatch):
     
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
     
-    response = client.get("/health")
+    response = client.get("/api/health")
     
     assert response.status_code == 503
     data = response.json()
@@ -116,7 +116,7 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
     
-    response = client.get("/health")
+    response = client.get("/api/health")
     
     assert response.status_code == 503
     data = response.json()

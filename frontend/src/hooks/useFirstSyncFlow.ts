@@ -93,7 +93,7 @@ function buildSafeLocalSyncPushPayload(): SyncPushPayload {
   try {
     return buildLocalSyncPushPayload();
   } catch {
-    return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
+    return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [], gantt_tasks: [] };
   }
 }
 

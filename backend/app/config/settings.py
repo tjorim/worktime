@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         extra="allow"
     )
     
+    # Legacy file-share configuration — set to False when .hday file share is unavailable.
+    # Disables share directory checks, cache warming, and the hday/team endpoints.
+    LEGACY_FILESHARE_ENABLED: bool = False
+
     # File storage configuration
     SHARE_DIR: str = "./data/hday_files"
     

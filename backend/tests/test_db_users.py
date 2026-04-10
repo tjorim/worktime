@@ -16,7 +16,7 @@ def test_user_crud_and_settings_roundtrip(
     admin_headers = auth_headers(1, is_admin=True)
 
     create_response = db_client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=admin_headers,
     )
@@ -25,26 +25,26 @@ def test_user_crud_and_settings_roundtrip(
     user_id = user["id"]
     assert user["settings"] == {"theme": "dark"}
 
-    get_response = db_client.get(f"/db/users/{user_id}", headers=auth_headers(user_id))
+    get_response = db_client.get(f"/api/users/{user_id}", headers=auth_headers(user_id))
     assert get_response.status_code == 200
     assert get_response.json()["settings"] == {"theme": "dark"}
 
     by_username_response = db_client.get(
-        "/db/users/by-username/api-user",
+        "/api/users/by-username/api-user",
         headers=auth_headers(user_id),
     )
     assert by_username_response.status_code == 200
     assert by_username_response.json()["id"] == user_id
 
     list_response = db_client.get(
-        "/db/users/?offset=0&limit=10",
+        "/api/users/?offset=0&limit=10",
         headers=admin_headers,
     )
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 1
 
     update_response = db_client.put(
-        f"/db/users/{user_id}",
+        f"/api/users/{user_id}",
         json={"display_name": "Updated", "settings": {"theme": "light", "weekStartsOn": "monday"}},
         headers=auth_headers(user_id),
     )
@@ -52,10 +52,10 @@ def test_user_crud_and_settings_roundtrip(
     assert update_response.json()["display_name"] == "Updated"
     assert update_response.json()["settings"] == {"theme": "light", "weekStartsOn": "monday"}
 
-    delete_response = db_client.delete(f"/db/users/{user_id}", headers=auth_headers(user_id))
+    delete_response = db_client.delete(f"/api/users/{user_id}", headers=auth_headers(user_id))
     assert delete_response.status_code == 204
 
-    deleted_get_response = db_client.get(f"/db/users/{user_id}", headers=auth_headers(user_id))
+    deleted_get_response = db_client.get(f"/api/users/{user_id}", headers=auth_headers(user_id))
     assert deleted_get_response.status_code == 404
 
 
@@ -66,30 +66,30 @@ def test_user_duplicate_and_not_found(
     admin_headers = auth_headers(1, is_admin=True)
 
     first_create = db_client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "duplicate", "display_name": "First", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert first_create.status_code == 201
 
     duplicate_create = db_client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "duplicate", "display_name": "Second", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert duplicate_create.status_code == 409
 
-    missing_user_get = db_client.get("/db/users/99999", headers=auth_headers(99999, is_admin=True))
+    missing_user_get = db_client.get("/api/users/99999", headers=auth_headers(99999, is_admin=True))
     assert missing_user_get.status_code == 404
 
     missing_user_update = db_client.put(
-        "/db/users/99999",
+        "/api/users/99999",
         json={"display_name": "Missing"},
         headers=auth_headers(99999, is_admin=True),
     )
     assert missing_user_update.status_code == 404
 
-    missing_user_delete = db_client.delete("/db/users/99999", headers=auth_headers(99999, is_admin=True))
+    missing_user_delete = db_client.delete("/api/users/99999", headers=auth_headers(99999, is_admin=True))
     assert missing_user_delete.status_code == 404
 
 
@@ -102,9 +102,9 @@ def test_delete_user_preserves_local_user_when_supertokens_delete_fails(
     user_id = create_user_factory(db_client, admin_headers, "delete-st-fail")
 
     with patch("app.routers.db_users.st_delete_user", return_value=False):
-        delete_response = db_client.delete(f"/db/users/{user_id}", headers=admin_headers)
+        delete_response = db_client.delete(f"/api/users/{user_id}", headers=admin_headers)
 
     assert delete_response.status_code == 502
 
-    get_response = db_client.get(f"/db/users/{user_id}", headers=admin_headers)
+    get_response = db_client.get(f"/api/users/{user_id}", headers=admin_headers)
     assert get_response.status_code == 200

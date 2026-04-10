@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import dayjs from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { useLocalStorage } from "./useLocalStorage";
 import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
 import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTracking/constants";

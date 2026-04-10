@@ -22,20 +22,20 @@ def test_db_user_crud_endpoints(
     admin_headers = _auth_headers(1, is_admin=True)
 
     unauthenticated_create = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
     )
     assert unauthenticated_create.status_code == 401
 
     forbidden_create = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=_auth_headers(2),
     )
     assert forbidden_create.status_code == 403
 
     user_response = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
         headers=admin_headers,
     )
@@ -43,48 +43,48 @@ def test_db_user_crud_endpoints(
     user_id = user_response.json()["id"]
 
     duplicate_response = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user", "display_name": "API User 2", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert duplicate_response.status_code == 409
 
     other_user_response = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "api-user-other", "display_name": "Other", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     )
     assert other_user_response.status_code == 201
     other_user_id = other_user_response.json()["id"]
 
-    unauthenticated_by_id = client.get(f"/db/users/{user_id}")
+    unauthenticated_by_id = client.get(f"/api/users/{user_id}")
     assert unauthenticated_by_id.status_code == 401
 
     forbidden_by_id = client.get(
-        f"/db/users/{other_user_id}",
+        f"/api/users/{other_user_id}",
         headers=_auth_headers(user_id),
     )
     assert forbidden_by_id.status_code == 403
 
-    by_id_response = client.get(f"/db/users/{user_id}", headers=_auth_headers(user_id))
+    by_id_response = client.get(f"/api/users/{user_id}", headers=_auth_headers(user_id))
     assert by_id_response.status_code == 200
     assert by_id_response.json()["settings"]["theme"] == "dark"
 
     by_username_response = client.get(
-        "/db/users/by-username/api-user",
+        "/api/users/by-username/api-user",
         headers=_auth_headers(user_id),
     )
     assert by_username_response.status_code == 200
     assert by_username_response.json()["id"] == user_id
 
     forbidden_by_username = client.get(
-        "/db/users/by-username/api-user-other",
+        "/api/users/by-username/api-user-other",
         headers=_auth_headers(user_id),
     )
     assert forbidden_by_username.status_code == 403
 
     update_response = client.put(
-        f"/db/users/{user_id}",
+        f"/api/users/{user_id}",
         json={"username": "api-user-renamed", "display_name": "Renamed", "settings": {"theme": "light"}},
         headers=_auth_headers(user_id),
     )
@@ -96,24 +96,24 @@ def test_db_user_crud_endpoints(
     assert supertokens_update_email_calls[0]["password"] is None
 
     forbidden_update = client.put(
-        f"/db/users/{other_user_id}",
+        f"/api/users/{other_user_id}",
         json={"display_name": "Hack"},
         headers=_auth_headers(user_id),
     )
     assert forbidden_update.status_code == 403
 
     duplicate_username_update = client.put(
-        f"/db/users/{user_id}",
+        f"/api/users/{user_id}",
         json={"username": "api-user-other"},
         headers=_auth_headers(user_id),
     )
     assert duplicate_username_update.status_code == 409
 
-    forbidden_list = client.get("/db/users/?offset=0&limit=10", headers=_auth_headers(user_id))
+    forbidden_list = client.get("/api/users/?offset=0&limit=10", headers=_auth_headers(user_id))
     assert forbidden_list.status_code == 403
 
     admin_list_response = client.get(
-        "/db/users/?offset=0&limit=10",
+        "/api/users/?offset=0&limit=10",
         headers=_auth_headers(user_id, is_admin=True),
     )
     assert admin_list_response.status_code == 200
@@ -121,30 +121,30 @@ def test_db_user_crud_endpoints(
     assert len(admin_list_response.json()["items"]) == 2
 
     max_limit_list_response = client.get(
-        "/db/users/?offset=0&limit=1000",
+        "/api/users/?offset=0&limit=1000",
         headers=_auth_headers(user_id, is_admin=True),
     )
     assert max_limit_list_response.status_code == 200
 
     above_max_limit_list_response = client.get(
-        "/db/users/?offset=0&limit=1001",
+        "/api/users/?offset=0&limit=1001",
         headers=_auth_headers(user_id, is_admin=True),
     )
     assert above_max_limit_list_response.status_code == 422
 
     forbidden_delete = client.delete(
-        f"/db/users/{other_user_id}",
+        f"/api/users/{other_user_id}",
         headers=_auth_headers(user_id),
     )
     assert forbidden_delete.status_code == 403
 
     delete_calls_before = len(supertokens_delete_calls)
-    delete_response = client.delete(f"/db/users/{user_id}", headers=_auth_headers(user_id))
+    delete_response = client.delete(f"/api/users/{user_id}", headers=_auth_headers(user_id))
     assert delete_response.status_code == 204
     assert len(supertokens_delete_calls) == delete_calls_before + 1
 
     missing_response = client.get(
-        f"/db/users/{user_id}",
+        f"/api/users/{user_id}",
         headers=_auth_headers(other_user_id, is_admin=True),
     )
     assert missing_response.status_code == 404
@@ -155,21 +155,21 @@ def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: TestC
     admin_headers = _auth_headers(1, is_admin=True)
 
     owner_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "time-user", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "other-user", "display_name": "Other User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
 
-    unauthenticated = client.get(f"/db/time-tracking/labels?user_id={owner_id}")
+    unauthenticated = client.get(f"/api/time-tracking/labels?user_id={owner_id}")
     assert unauthenticated.status_code == 401
 
     forbidden = client.get(
-        f"/db/time-tracking/labels?user_id={owner_id}",
+        f"/api/time-tracking/labels?user_id={owner_id}",
         headers=_auth_headers(other_id),
     )
     assert forbidden.status_code == 403
@@ -180,14 +180,14 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     admin_headers = _auth_headers(1, is_admin=True)
 
     user_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "time-user-2", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)
 
     label_response = client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         json={"name": "Focus", "color": "#112233"},
         headers=headers,
     )
@@ -195,21 +195,21 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     label_id = label_response.json()["id"]
 
     labels_list_response = client.get(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         headers=headers,
     )
     assert labels_list_response.status_code == 200
     assert "X-Db-Query-Ms" in labels_list_response.headers
 
     running_empty_response = client.get(
-        f"/db/time-tracking/tasks/running?user_id={user_id}",
+        f"/api/time-tracking/tasks/running?user_id={user_id}",
         headers=headers,
     )
     assert running_empty_response.status_code == 204
     assert "X-Db-Query-Ms" in running_empty_response.headers
 
     task_response = client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Implement endpoint",
             "label_id": label_id,
@@ -223,7 +223,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     task_id = task_response.json()["id"]
 
     second_running_task_response = client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Second running task",
             "label_id": label_id,
@@ -236,7 +236,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     assert second_running_task_response.status_code == 409
 
     running_response = client.get(
-        f"/db/time-tracking/tasks/running?user_id={user_id}",
+        f"/api/time-tracking/tasks/running?user_id={user_id}",
         headers=headers,
     )
     assert running_response.status_code == 200
@@ -244,14 +244,14 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     assert "X-Db-Query-Ms" in running_response.headers
 
     update_task_response = client.put(
-        f"/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
         json={"stop_time": datetime(2026, 1, 1, 11, 0).isoformat()},
         headers=headers,
     )
     assert update_task_response.status_code == 200
 
     template_response = client.post(
-        f"/db/time-tracking/templates?user_id={user_id}",
+        f"/api/time-tracking/templates?user_id={user_id}",
         json={
             "text": "Morning block",
             "label_id": label_id,
@@ -264,7 +264,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     template_id = template_response.json()["id"]
 
     list_tasks_response = client.get(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         headers=headers,
     )
     assert list_tasks_response.status_code == 200
@@ -272,25 +272,25 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
     assert "X-Db-Query-Ms" in list_tasks_response.headers
 
     delete_template_response = client.delete(
-        f"/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_template_response.status_code == 204
 
     delete_task_response = client.delete(
-        f"/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_task_response.status_code == 204
 
     delete_label_response = client.delete(
-        f"/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_label_response.status_code == 204
 
     missing_body_response = client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         headers=headers,
     )
     assert missing_body_response.status_code == 422
@@ -301,21 +301,21 @@ def test_work_location_endpoints_require_auth_and_user_match(db_client: TestClie
     admin_headers = _auth_headers(1, is_admin=True)
 
     owner_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "loc-other", "display_name": "Location Other", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
 
-    unauthenticated = client.get(f"/db/work-locations/?user_id={owner_id}")
+    unauthenticated = client.get(f"/api/work-locations/?user_id={owner_id}")
     assert unauthenticated.status_code == 401
 
     forbidden = client.get(
-        f"/db/work-locations/?user_id={owner_id}",
+        f"/api/work-locations/?user_id={owner_id}",
         headers=_auth_headers(other_id),
     )
     assert forbidden.status_code == 403
@@ -326,14 +326,14 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     admin_headers = _auth_headers(1, is_admin=True)
 
     user_id = client.post(
-        "/db/users/",
+        "/api/users/",
         json={"username": "loc-user", "display_name": "Location User", "settings": {}, "password": "test-password-1"},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)
 
     create_response = client.post(
-        f"/db/work-locations/?user_id={user_id}",
+        f"/api/work-locations/?user_id={user_id}",
         json={"date": "2026-01-02", "country_code": "nl", "label": "Home"},
         headers=headers,
     )
@@ -341,7 +341,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert create_response.json()["country_code"] == "NL"
 
     update_response = client.post(
-        f"/db/work-locations/?user_id={user_id}",
+        f"/api/work-locations/?user_id={user_id}",
         json={"date": "2026-01-02", "country_code": "BE", "label": "Client"},
         headers=headers,
     )
@@ -349,7 +349,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert update_response.json()["label"] == "Client"
 
     list_response = client.get(
-        f"/db/work-locations/?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03",
+        f"/api/work-locations/?user_id={user_id}&start_date=2026-01-01&end_date=2026-01-03",
         headers=headers,
     )
     assert list_response.status_code == 200
@@ -357,33 +357,33 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
     assert "X-Db-Query-Ms" in list_response.headers
 
     by_date_response = client.get(
-        f"/db/work-locations/2026-01-02?user_id={user_id}",
+        f"/api/work-locations/2026-01-02?user_id={user_id}",
         headers=headers,
     )
     assert by_date_response.status_code == 200
     assert "X-Db-Query-Ms" in by_date_response.headers
 
     delete_response = client.delete(
-        f"/db/work-locations/2026-01-02?user_id={user_id}",
+        f"/api/work-locations/2026-01-02?user_id={user_id}",
         headers=headers,
     )
     assert delete_response.status_code == 204
 
     missing_response = client.get(
-        f"/db/work-locations/2026-01-02?user_id={user_id}",
+        f"/api/work-locations/2026-01-02?user_id={user_id}",
         headers=headers,
     )
     assert missing_response.status_code == 404
 
     invalid_country_response = client.post(
-        f"/db/work-locations/?user_id={user_id}",
+        f"/api/work-locations/?user_id={user_id}",
         json={"date": "2026-01-03", "country_code": "ZZ", "label": None},
         headers=headers,
     )
     assert invalid_country_response.status_code == 422
 
     missing_body_response = client.post(
-        f"/db/work-locations/?user_id={user_id}",
+        f"/api/work-locations/?user_id={user_id}",
         headers=headers,
     )
     assert missing_body_response.status_code == 422

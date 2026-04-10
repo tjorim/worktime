@@ -2,18 +2,20 @@
  * Sync API client utilities.
  *
  * Provides typed wrappers around the backend sync endpoints
- * (GET /db/sync/status, POST /db/sync/push, GET /db/sync/pull)
+ * (GET /api/sync/status, POST /api/sync/push, GET /api/sync/pull)
  * and helpers to convert between localStorage formats and the
  * sync API wire format.
  *
  * Entities synced: tasks, templates, labels, work locations,
- * time-off entries, and user preferences.
+ * time-off entries, gantt tasks, and user preferences.
  */
 
-import dayjs from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
 import type { WorkLocationInfo } from "@/types/workLocation";
+import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
+import { GANTT_STORAGE_KEY } from "@/constants/storageKeys";
 import {
   TIME_OFF_ENTRIES_STORAGE_KEY,
   TIME_TRACKING_STORAGE_KEYS,
@@ -84,12 +86,25 @@ export interface TimeOffEntrySyncItem {
   note?: string | null;
 }
 
+export interface GanttTaskSyncItem {
+  id: string;
+  action: SyncAction;
+  client_updated_at: string;
+  name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  progress?: number | null;
+  dependencies?: string | null;
+  notes?: string | null;
+}
+
 export interface SyncPushPayload {
   labels: LabelSyncItem[];
   tasks: TaskSyncItem[];
   templates: TemplateSyncItem[];
   work_locations: WorkLocationSyncItem[];
   time_off_entries: TimeOffEntrySyncItem[];
+  gantt_tasks: GanttTaskSyncItem[];
 }
 
 export interface SyncRecordResult {
@@ -167,12 +182,28 @@ export interface TimeOffEntrySyncRead {
   deleted_at: string | null;
 }
 
+export interface GanttTaskSyncRead {
+  id: string;
+  user_id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  progress: number;
+  dependencies: string | null;
+  notes: string | null;
+  client_updated_at: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 export interface SyncPullResponse {
   labels: LabelSyncRead[];
   tasks: TaskSyncRead[];
   templates: TemplateSyncRead[];
   work_locations: WorkLocationSyncRead[];
   time_off_entries: TimeOffEntrySyncRead[];
+  gantt_tasks: GanttTaskSyncRead[];
   server_timestamp: string;
 }
 
@@ -182,6 +213,7 @@ export interface SyncStatusResponse {
   templates_updated_at: string | null;
   work_locations_updated_at: string | null;
   time_off_entries_updated_at: string | null;
+  gantt_tasks_updated_at: string | null;
   preferences_updated_at: string | null;
   server_timestamp: string;
 }
@@ -199,7 +231,7 @@ type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
  */
 export async function fetchSyncStatus(fetch: FetchFn): Promise<SyncStatusResponse | null> {
   try {
-    const response = await fetch("/db/sync/status");
+    const response = await fetch("/api/sync/status");
     if (!response.ok) return null;
     return (await response.json()) as SyncStatusResponse;
   } catch {
@@ -220,6 +252,7 @@ export function syncStatusHasData(status: SyncStatusResponse): boolean {
     status.templates_updated_at != null ||
     status.work_locations_updated_at != null ||
     status.time_off_entries_updated_at != null ||
+    status.gantt_tasks_updated_at != null ||
     status.preferences_updated_at != null
   );
 }
@@ -244,7 +277,7 @@ export async function pushSyncPayload(
   payload: SyncPushPayload,
 ): Promise<SyncPushResponse | null> {
   try {
-    const response = await fetch("/db/sync/push", {
+    const response = await fetch("/api/sync/push", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -265,7 +298,7 @@ export async function pullSyncData(
   since?: string,
 ): Promise<SyncPullResponse | null> {
   try {
-    const url = since ? `/db/sync/pull?since=${encodeURIComponent(since)}` : "/db/sync/pull";
+    const url = since ? `/api/sync/pull?since=${encodeURIComponent(since)}` : "/api/sync/pull";
     const response = await fetch(url);
     if (!response.ok) return null;
     return (await response.json()) as SyncPullResponse;
@@ -293,7 +326,7 @@ export interface PreferencesResponse {
  */
 export async function fetchPreferences(fetch: FetchFn): Promise<PreferencesResponse | null> {
   try {
-    const response = await fetch("/db/preferences");
+    const response = await fetch("/api/preferences");
     if (!response.ok) return null;
     const body: unknown = await response.json();
     // The endpoint returns null (JSON null) when no preferences exist yet.
@@ -314,7 +347,7 @@ export async function pushPreferences(
   clientUpdatedAt: string,
 ): Promise<boolean> {
   try {
-    const response = await fetch("/db/preferences", {
+    const response = await fetch("/api/preferences", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data, client_updated_at: clientUpdatedAt }),
@@ -529,12 +562,28 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 
+  const rawGanttTasks = safeParseJsonArray(GANTT_STORAGE_KEY) as RawGanttTask[];
+  const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks
+    .filter(isValidRawGanttTask)
+    .map((t) => ({
+      id: t.id,
+      action: "create" as const,
+      client_updated_at: now,
+      name: t.name,
+      start_date: t.start,
+      end_date: t.end,
+      progress: t.progress ?? 0,
+      dependencies: t.dependencies ?? null,
+      notes: t.notes ?? null,
+    }));
+
   return {
     labels,
     tasks,
     templates,
     work_locations: workLocations,
     time_off_entries: timeOffEntries,
+    gantt_tasks: ganttTasks,
   };
 }
 
@@ -606,6 +655,7 @@ export function buildKeepLocalReplacePayload(
   const localTemplateIds = new Set(localPayload.templates.map((t) => t.id));
   const localWorkLocationDates = new Set(localPayload.work_locations.map((wl) => wl.date));
   const localTimeOffIds = new Set((localPayload.time_off_entries ?? []).map((e) => e.id));
+  const localGanttIds = new Set((localPayload.gantt_tasks ?? []).map((g) => g.id));
 
   const deleteLabels: LabelSyncItem[] = serverData.labels
     .filter((l) => !localLabelIds.has(l.id) && l.deleted_at === null)
@@ -627,12 +677,17 @@ export function buildKeepLocalReplacePayload(
     .filter((e) => !localTimeOffIds.has(e.entry_id) && e.deleted_at === null)
     .map((e) => ({ id: e.entry_id, action: "delete", client_updated_at: now }));
 
+  const deleteGanttTasks: GanttTaskSyncItem[] = (serverData.gantt_tasks ?? [])
+    .filter((g) => !localGanttIds.has(g.id) && g.deleted_at === null)
+    .map((g) => ({ id: g.id, action: "delete", client_updated_at: now }));
+
   return {
     labels: [...localPayload.labels, ...deleteLabels],
     tasks: [...localPayload.tasks, ...deleteTasks],
     templates: [...localPayload.templates, ...deleteTemplates],
     work_locations: [...localPayload.work_locations, ...deleteWorkLocations],
     time_off_entries: [...localPayload.time_off_entries, ...deleteTimeOffEntries],
+    gantt_tasks: [...(localPayload.gantt_tasks ?? []), ...deleteGanttTasks],
   };
 }
 
@@ -650,7 +705,7 @@ function utcIsoToLocalTime(utcIso: string): string {
 
 /**
  * Write a full SyncPullResponse into localStorage, replacing any existing
- * syncable data. Developer options and Gantt tasks are left untouched.
+ * syncable data. Developer options are left untouched.
  *
  * Soft-deleted records (deleted_at !== null) are excluded from the local store.
  */
@@ -731,6 +786,21 @@ export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
   } else {
     localStorage.removeItem(TIME_OFF_ENTRIES_STORAGE_KEY);
   }
+
+  // Gantt tasks — replace all local tasks with the server state.
+  const localGanttTasks: RawGanttTask[] = (data.gantt_tasks ?? [])
+    .filter((g) => g.deleted_at === null)
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      start: g.start_date,
+      end: g.end_date,
+      progress: g.progress,
+      ...(g.dependencies ? { dependencies: g.dependencies } : {}),
+      ...(g.notes ? { notes: g.notes } : {}),
+    }));
+  localStorage.setItem(GANTT_STORAGE_KEY, JSON.stringify(localGanttTasks));
+
   return entries;
 }
 
@@ -826,6 +896,7 @@ export function dequeueAndMergeSyncOutbox(
     templates: [],
     work_locations: [],
     time_off_entries: [],
+    gantt_tasks: [],
   };
   for (const payload of outbox) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
@@ -834,6 +905,7 @@ export function dequeueAndMergeSyncOutbox(
     merged.templates.push(...(Array.isArray(payload.templates) ? payload.templates : []));
     merged.work_locations.push(...(Array.isArray(payload.work_locations) ? payload.work_locations : []));
     merged.time_off_entries.push(...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []));
+    merged.gantt_tasks.push(...(Array.isArray(payload.gantt_tasks) ? payload.gantt_tasks : []));
   }
   return { merged, commit: () => clearSyncOutbox(userId) };
 }
@@ -984,6 +1056,26 @@ export function applyIncrementalSyncPullResponse(
     const mergedWl = JSON.stringify(existing);
     setItemWithNotify(key, mergedWl);
   }
+
+  // --- Gantt tasks ---
+  const existingGanttTasks = safeParseJsonArray(GANTT_STORAGE_KEY) as RawGanttTask[];
+  const ganttMap = new Map(existingGanttTasks.map((g) => [g.id, g]));
+  for (const g of data.gantt_tasks ?? []) {
+    if (g.deleted_at === null) {
+      ganttMap.set(g.id, {
+        id: g.id,
+        name: g.name,
+        start: g.start_date,
+        end: g.end_date,
+        progress: g.progress,
+        ...(g.dependencies ? { dependencies: g.dependencies } : {}),
+        ...(g.notes ? { notes: g.notes } : {}),
+      });
+    } else {
+      ganttMap.delete(g.id);
+    }
+  }
+  setItemWithNotify(GANTT_STORAGE_KEY, JSON.stringify(Array.from(ganttMap.values())));
 
   // --- Time-off: merge into current EventStore entries ---
   const deletedIds = new Set(

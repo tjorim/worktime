@@ -122,5 +122,5 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
  * (`applyIncrementalSyncPullResponse`) rather than pushed from write hooks.
  */
 export function emptySyncPayload(): SyncPushPayload {
-  return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
+  return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [], gantt_tasks: [] };
 }

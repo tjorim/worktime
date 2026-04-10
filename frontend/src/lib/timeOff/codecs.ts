@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import dayjs from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { parseHday } from "@/lib/hday/parser";
 import { toLine } from "@/lib/hday/serializer";

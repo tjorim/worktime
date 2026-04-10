@@ -28,10 +28,10 @@ The following mechanisms are already implemented and authoritative:
 |-----------|-------------|
 | **Local-first storage** | All user data lives in `localStorage`; the app is fully functional offline. |
 | **Offline outbox queue** | Failed pushes are queued under `worktime_sync_outbox_<userId>` and flushed on reconnect. |
-| **Cursor-based REST pull** | `GET /db/sync/pull?since=<ISO-8601>` returns records where `updated_at > since`, ordered by `updated_at`. |
-| **Cursor-based REST push** | `POST /db/sync/push` accepts batches; last-write-wins via `client_updated_at`. |
+| **Cursor-based REST pull** | `GET /api/sync/pull?since=<ISO-8601>` returns records where `updated_at > since`, ordered by `updated_at`. |
+| **Cursor-based REST push** | `POST /api/sync/push` accepts batches; last-write-wins via `client_updated_at`. |
 | **First-sync bootstrapping** | On sign-in, Branches A–D handle the initial merge between local and server state (see §2 of the sync-flow doc). |
-| **Incremental pull** | After every successful push or flush, the client pulls with the stored `server_timestamp` cursor to pick up changes from other devices. |
+| **Incremental pull** | Successful immediate pushes refresh the sync cursor via `GET /api/sync/status`; incremental pulls with the stored `server_timestamp` cursor occur on reconnect/focus flushes and during conflict handling to pick up changes from other devices. |
 
 The REST endpoints remain **authoritative** for all data transfer, recovery,
 backfill, and conflict handling. The realtime layer described below is a
@@ -45,8 +45,16 @@ backfill, and conflict handling. The realtime layer described below is a
 
 When the server detects a change relevant to a signed-in user (e.g., a push
 from another device), it sends a lightweight signal to connected clients.
-Upon receiving the signal, the client triggers an incremental pull via the
-standard `GET /db/sync/pull?since=<cursor>` endpoint.
+Upon receiving the signal, the client triggers the incremental refresh flow:
+`GET /api/sync/pull?since=<cursor>` for sync-owned records, plus any
+additional per-domain fetches that remain outside `/api/sync/pull`.
+Today that explicitly includes user preferences via `GET /api/preferences`,
+because preferences are synced through a dedicated endpoint (as in
+`useFirstSyncFlow`) and are not yet folded into `/api/sync/pull`.
+Realtime signaling must therefore be treated as "notify, then run the full
+refresh sequence required for consistency," not "notify, then call only
+`/api/sync/pull`." If preferences are later incorporated into `/api/sync/pull`,
+the extra fetch can be dropped and this document updated accordingly.
 
 The signal carries **no data payload** — only a freshness hint (`"data
 changed; pull now"`). This keeps the signaling layer thin, stateless, and
@@ -63,11 +71,13 @@ realtime layer. SSE is chosen because:
 - It is trivially reconnectable; browsers retry automatically.
 - It requires no additional infrastructure beyond the existing FastAPI backend.
 
-The SSE endpoint will be added at `GET /db/sync/events` (authenticated, per-user
-stream). The event payload is a minimal JSON object, e.g.:
+The SSE endpoint will be added at `GET /api/sync/events` (authenticated, per-user
+stream). Each event is delivered as a `text/event-stream` frame; the `data:`
+field carries a serialized JSON object, e.g.:
 
-```json
-{ "type": "sync_changed", "server_timestamp": "<ISO-8601>" }
+```
+event: sync_changed
+data: {"type":"sync_changed","server_timestamp":"<ISO-8601>"}
 ```
 
 The client ignores the timestamp for data purposes and issues a pull using its
@@ -132,7 +142,7 @@ server-push of non-sync data (e.g., notifications) is needed.
 
 - An entity domain is migrated into the local-first sync pipeline (i.e., it is
   read from `localStorage`, written via the outbox, and reconciled via
-  `GET /db/sync/pull`).
+  `GET /api/sync/pull`).
 - Fine-grained reactivity (row-level subscriptions) is required for that
   domain, and the `localStorage`-based approach is no longer sufficient.
 
@@ -182,7 +192,7 @@ decisions:
 
 New issues should be filed as children of #510 for:
 
-1. `GET /db/sync/events` SSE endpoint (backend).
+1. `GET /api/sync/events` SSE endpoint (backend).
 2. `useSyncSignal` hook and SSE transport adapter (frontend).
 3. Wire `useSyncSignal` into the incremental pull trigger (frontend).
 4. Degrade gracefully when SSE is unavailable (fall back to pull-on-reconnect).

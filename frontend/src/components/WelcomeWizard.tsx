@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import dayjs from "dayjs";
+import { dayjs } from "@/utils/dateTimeUtils";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
