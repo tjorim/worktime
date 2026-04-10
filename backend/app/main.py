@@ -123,6 +123,10 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {e}")
             raise
+
+        # Start Postgres LISTEN/NOTIFY for cross-process SSE broadcast
+        from .utils.sse_manager import sync_event_manager
+        await sync_event_manager.start_pg_listener(settings.DATABASE_URL)
     else:
         logger.info("Database initialization skipped (DATABASE_ENABLED=false)")
 
@@ -140,6 +144,9 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Worktime Backend API shutting down...")
+    if settings.DATABASE_ENABLED:
+        from .utils.sse_manager import sync_event_manager
+        await sync_event_manager.stop_pg_listener()
 
 
 # Create FastAPI application

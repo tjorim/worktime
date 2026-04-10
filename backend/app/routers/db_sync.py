@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -21,6 +22,8 @@ from app.services.db_service import ValidationError
 from app.services.sync_service import get_sync_status, pull_changes, push_changes
 from app.utils.sse_manager import sync_event_manager
 from app.utils.timing import time_operation
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sync", tags=["Sync"])
 
@@ -52,7 +55,12 @@ async def push_endpoint(
     except ValidationError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    await sync_event_manager.broadcast_sync_changed(authenticated_user_id)
+    try:
+        await sync_event_manager.broadcast_sync_changed(authenticated_user_id)
+    except Exception:
+        logger.warning(
+            "SSE: broadcast_sync_changed failed for user %d (non-fatal)", authenticated_user_id, exc_info=True
+        )
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -125,7 +133,7 @@ async def events_endpoint(
     performed on reconnect.  Missed events are recovered by the incremental
     pull that the client issues on reconnect anyway.
     """
-    queue: asyncio.Queue[str] = asyncio.Queue()
+    queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
     sync_event_manager.subscribe(authenticated_user_id, queue)
 
     async def event_generator():

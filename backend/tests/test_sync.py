@@ -1646,6 +1646,45 @@ class TestSyncEventManager:
         assert not q1.empty()
         assert not q2.empty()
 
+    async def test_coalescing_drops_duplicate_when_queue_full(self) -> None:
+        """A full maxsize=1 queue silently drops the second hint."""
+        import asyncio
+
+        from app.utils.sse_manager import SyncEventManager
+
+        manager = SyncEventManager()
+        # Use a bounded queue matching what the SSE endpoint creates.
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
+        manager.subscribe(user_id=1, queue=queue)
+
+        # First hint fills the queue.
+        count1 = manager._enqueue_local(user_id=1)
+        assert count1 == 1
+        assert queue.full()
+
+        # Second hint is dropped silently.
+        count2 = manager._enqueue_local(user_id=1)
+        assert count2 == 0
+        assert queue.qsize() == 1  # still exactly one pending message
+
+    def test_pg_listener_callback_enqueues_locally(self) -> None:
+        """_pg_listener_callback parses user_id and calls _enqueue_local."""
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from app.utils.sse_manager import SyncEventManager
+
+        manager = SyncEventManager()
+        queue: asyncio.Queue[str] = asyncio.Queue()
+        manager.subscribe(user_id=7, queue=queue)
+
+        with patch.object(manager, "_enqueue_local", wraps=manager._enqueue_local) as spy:
+            manager._pg_listener_callback(
+                conn=MagicMock(), pid=12345, channel="worktime_sync_changed", payload="7"
+            )
+            spy.assert_called_once_with(7)
+        assert not queue.empty()
+
 
 class TestSyncEventsEndpoint:
     """GET /api/sync/events — HTTP-level tests for the SSE endpoint."""
@@ -1672,6 +1711,39 @@ class TestSyncEventsEndpoint:
         # Close the body iterator so the manager's finally block runs and
         # unsubscribes the connection from the SyncEventManager.
         await response.body_iterator.aclose()
+
+    def test_push_still_returns_200_when_broadcast_raises(self, db_client: TestClient, auth_headers) -> None:
+        """Push must succeed even if broadcast_sync_changed raises an exception."""
+        from unittest.mock import AsyncMock, patch
+
+        admin_h = auth_headers(1, is_admin=True)
+        user_id = _create_user(db_client, admin_h, "events-error-user")
+        headers = auth_headers(user_id)
+
+        label_id = str(uuid4())
+
+        with patch(
+            "app.routers.db_sync.sync_event_manager.broadcast_sync_changed",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("broadcast failed"),
+        ):
+            resp = db_client.post(
+                "/api/sync/push",
+                json={
+                    "labels": [
+                        {
+                            "id": label_id,
+                            "action": "create",
+                            "client_updated_at": _ts(-5),
+                            "name": "Error Test",
+                            "color": "#DDEEFF",
+                        }
+                    ]
+                },
+                headers=headers,
+            )
+            # Push must succeed despite broadcast failure.
+            assert resp.status_code == 200
 
     def test_push_triggers_broadcast_to_connected_client(self, db_client: TestClient, auth_headers) -> None:
         """After a successful push, broadcast_sync_changed is called for the pushing user."""
