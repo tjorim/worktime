@@ -111,7 +111,7 @@ export function useOngoingSync(
   });
   const [hasSyncError, setHasSyncError] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
-  // Exponential back-off state for failed outbox flushes.
+  // Exponential back-off state for failed flush-and-pull cycles.
   // retryDelayMsRef holds the *current* delay (0 = no active back-off).
   // retryAfterRef mirrors the state value so flushAndPull can read it without
   // creating a stale closure / extra dependency.
@@ -121,7 +121,7 @@ export function useOngoingSync(
 
   /**
    * Advance the back-off delay and set the next retry window.
-   * Called on every failed flush attempt.  Refs and the state setter are all
+   * Called on every failed flush-and-pull cycle.  Refs and the state setter are all
    * stable, so this callback never needs to be recreated.
    */
   const scheduleBackOff = useCallback(() => {

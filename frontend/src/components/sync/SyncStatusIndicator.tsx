@@ -43,8 +43,13 @@ export function SyncStatusIndicator() {
   // Tick every second while a back-off window is active so the countdown stays accurate.
   const [, setSecondTick] = useState(0);
   useEffect(() => {
-    if (!hasSyncError || retryAfter === null) return;
-    const id = setInterval(() => setSecondTick((t) => t + 1), MS_PER_SECOND);
+    if (!hasSyncError || retryAfter === null || Date.now() >= retryAfter) return;
+    const id = setInterval(() => {
+      if (Date.now() >= retryAfter) {
+        clearInterval(id);
+      }
+      setSecondTick((t) => t + 1);
+    }, MS_PER_SECOND);
     return () => clearInterval(id);
   }, [hasSyncError, retryAfter]);
 
