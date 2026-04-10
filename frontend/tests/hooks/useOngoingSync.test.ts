@@ -10,7 +10,7 @@ import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
 
-/** Initial exponential back-off delay (ms) — must match the value in useOngoingSync. */
+/** Initial exponential back-off delay (ms) — must match INITIAL_BACK_OFF_MS in useOngoingSync. */
 const INITIAL_BACK_OFF_MS = 1_000;
 
 const emptySyncPayload = () => ({
@@ -241,7 +241,8 @@ describe("useOngoingSync", () => {
 
       // Advance past the initial back-off window (INITIAL_BACK_OFF_MS) so the visibility-change flush
       // is not silently skipped by the back-off guard.
-      vi.spyOn(Date, "now").mockReturnValue(Date.now() + INITIAL_BACK_OFF_MS * 2);
+      const baseTime1 = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(baseTime1 + INITIAL_BACK_OFF_MS * 2);
 
       // Simulate tab becoming visible.
       await act(async () => {
@@ -489,7 +490,8 @@ describe("useOngoingSync", () => {
 
       // Advance past the initial back-off window (INITIAL_BACK_OFF_MS) so the visibility-change flush
       // is not silently skipped by the back-off guard.
-      vi.spyOn(Date, "now").mockReturnValue(Date.now() + INITIAL_BACK_OFF_MS * 2);
+      const baseTime2 = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(baseTime2 + INITIAL_BACK_OFF_MS * 2);
 
       // Trigger a successful flush via visibility change.
       Object.defineProperty(document, "visibilityState", {

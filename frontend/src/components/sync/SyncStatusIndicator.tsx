@@ -63,7 +63,7 @@ export function SyncStatusIndicator() {
   const tooltipText = (() => {
     if (hasSyncError) {
       if (retryAfter !== null) {
-        const seconds = Math.ceil((retryAfter - Date.now()) / MS_PER_SECOND);
+        const seconds = Math.max(0, Math.ceil((retryAfter - Date.now()) / MS_PER_SECOND));
         if (seconds > 0) return m.sync_indicator_tooltip_retry_in({ seconds: String(seconds) });
       }
       return m.sync_indicator_tooltip_error();

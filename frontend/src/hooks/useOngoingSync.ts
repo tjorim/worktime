@@ -43,6 +43,11 @@ import { getSyncCursorKey } from "@/constants/storageKeys";
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
+/** Minimum delay (ms) for the first outbox flush retry after a failure. */
+const INITIAL_BACK_OFF_MS = 1_000;
+/** Maximum delay (ms) between outbox flush retries. */
+const MAX_BACK_OFF_MS = 60_000;
+
 export interface OngoingSyncState {
   /** True while a push or pull network request is in flight. */
   isSyncing: boolean;
@@ -121,7 +126,9 @@ export function useOngoingSync(
    */
   const scheduleBackOff = useCallback(() => {
     const nextDelay =
-      retryDelayMsRef.current === 0 ? 1_000 : Math.min(retryDelayMsRef.current * 2, 60_000);
+      retryDelayMsRef.current === 0
+        ? INITIAL_BACK_OFF_MS
+        : Math.min(retryDelayMsRef.current * 2, MAX_BACK_OFF_MS);
     retryDelayMsRef.current = nextDelay;
     retryAfterRef.current = Date.now() + nextDelay;
     setRetryAfter(retryAfterRef.current);
