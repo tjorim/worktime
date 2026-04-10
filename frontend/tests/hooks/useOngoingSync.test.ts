@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useOngoingSync } from "@/hooks/useOngoingSync";
+import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import {
   appendToSyncOutbox,
   getSyncOutboxSize,
@@ -9,9 +9,6 @@ import {
 import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
-
-/** Initial exponential back-off delay (ms) — must match INITIAL_BACK_OFF_MS in useOngoingSync. */
-const INITIAL_BACK_OFF_MS = 1_000;
 
 const emptySyncPayload = () => ({
   labels: [],

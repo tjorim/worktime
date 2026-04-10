@@ -44,7 +44,7 @@ import { getSyncCursorKey } from "@/constants/storageKeys";
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 /** Minimum delay (ms) for the first outbox flush retry after a failure. */
-const INITIAL_BACK_OFF_MS = 1_000;
+export const INITIAL_BACK_OFF_MS = 1_000;
 /** Maximum delay (ms) between outbox flush retries. */
 const MAX_BACK_OFF_MS = 60_000;
 
