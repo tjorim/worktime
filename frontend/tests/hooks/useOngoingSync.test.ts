@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useOngoingSync } from "@/hooks/useOngoingSync";
+import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
 import {
   appendToSyncOutbox,
   getSyncOutboxSize,
@@ -52,17 +52,22 @@ describe("useOngoingSync", () => {
     // enqueueChange should be a no-op (no fetch calls)
     result.current.enqueueChange(emptySyncPayload());
     expect(mockFetch).not.toHaveBeenCalled();
+    // triggerPull should also be a no-op
+    result.current.triggerPull();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns no-op state when userId is null", () => {
     const { result } = renderHook(() => useOngoingSync(true, null, mockFetch));
     result.current.enqueueChange(emptySyncPayload());
+    result.current.triggerPull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns no-op state when fetchFn is null", () => {
     const { result } = renderHook(() => useOngoingSync(true, "user-1", null));
     result.current.enqueueChange(emptySyncPayload());
+    result.current.triggerPull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -230,6 +235,11 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
       });
+
+      // Advance past the initial back-off window (INITIAL_BACK_OFF_MS) so the visibility-change flush
+      // is not silently skipped by the back-off guard.
+      const baseTime1 = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(baseTime1 + INITIAL_BACK_OFF_MS * 2);
 
       // Simulate tab becoming visible.
       await act(async () => {
@@ -475,6 +485,11 @@ describe("useOngoingSync", () => {
         expect(result.current.hasSyncError).toBe(true);
       });
 
+      // Advance past the initial back-off window (INITIAL_BACK_OFF_MS) so the visibility-change flush
+      // is not silently skipped by the back-off guard.
+      const baseTime2 = Date.now();
+      vi.spyOn(Date, "now").mockReturnValue(baseTime2 + INITIAL_BACK_OFF_MS * 2);
+
       // Trigger a successful flush via visibility change.
       Object.defineProperty(document, "visibilityState", {
         value: "visible",
@@ -553,6 +568,338 @@ describe("useOngoingSync", () => {
 
       // conflictCount should be cleared after the conflict-free pull.
       expect(result.current.conflictCount).toBe(0);
+    });
+  });
+
+  describe("triggerPull", () => {
+    it("flushes outbox and pulls incremental data when called", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      // Initial mount flush (online): only pull (outbox is empty).
+      // triggerPull: only pull (outbox still empty).
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // triggerPull pull
+
+      const pullCallback = vi.fn();
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch, pullCallback),
+      );
+
+      // Wait for initial flush.
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+
+      // Call triggerPull directly (simulates an SSE signal).
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(pullCallback).toHaveBeenCalledTimes(2);
+      });
+
+      expect(pullCallback).toHaveBeenLastCalledWith(
+        expect.objectContaining({ server_timestamp: "2026-02-01T00:00:00.000Z" }),
+      );
+    });
+
+    it("updates lastSyncedAt after a successful triggerPull", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const laterPullResponse = {
+        ...incrementalPullResponse,
+        server_timestamp: "2026-03-01T00:00:00.000Z",
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }); // triggerPull pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
+      });
+
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-03-01T00:00:00.000Z");
+      });
+    });
+
+    it("does not make network calls when sync is not established", () => {
+      const { result } = renderHook(() =>
+        useOngoingSync(false, "user-1", mockFetch),
+      );
+
+      result.current.triggerPull();
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("is transport-neutral — caller does not need to know cursor or outbox details", async () => {
+      // Set up cursor and a pending outbox entry.
+      storeSyncCursor("user-1", "2026-01-10T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+      // Device starts offline to prevent initial flush from clearing the outbox.
+      vi.stubGlobal("navigator", { ...navigator, onLine: false });
+
+      const pullResponse = {
+        ...incrementalPullResponse,
+        server_timestamp: "2026-01-11T00:00:00.000Z",
+      };
+      // triggerPull should flush outbox (push) then pull — caller just calls triggerPull().
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // outbox flush push
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // At this point outbox has 1 entry; no network calls yet (offline).
+      expect(result.current.outboxCount).toBe(1);
+
+      // triggerPull is all the external caller needs to invoke.
+      await act(async () => {
+        result.current.triggerPull();
+      });
+
+      await waitFor(() => {
+        expect(result.current.outboxCount).toBe(0);
+      });
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-11T00:00:00.000Z");
+      });
+
+      // Assert push-before-pull call order: first call is the outbox flush
+      // (push endpoint), second is the incremental pull (pull endpoint).
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [firstCall, secondCall] = mockFetch.mock.calls as [[string], [string]];
+      expect(firstCall[0]).toBe("/api/sync/push");
+      expect(secondCall[0]).toMatch(/^\/api\/sync\/pull/);
+    });
+  });
+
+  describe("exponential back-off", () => {
+    it("sets retryAfter after a failed outbox flush", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      mockFetch.mockResolvedValue({ ok: false });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Initial flush fires on mount (force=true → bypasses back-off).
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+      });
+
+      // retryAfter should be set to ~1 second in the future.
+      expect(result.current.retryAfter).not.toBeNull();
+      expect(result.current.retryAfter).toBeGreaterThan(Date.now());
+    });
+
+    it("retryAfter is null in no-op state", () => {
+      const { result } = renderHook(() =>
+        useOngoingSync(false, "user-1", mockFetch),
+      );
+      expect(result.current.retryAfter).toBeNull();
+    });
+
+    it("resets retryAfter to null after a successful flush", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/api/sync/push") {
+          if (callCount <= 1) return { ok: false }; // First push fails.
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/api/sync/pull")) {
+          return { ok: true, json: async () => incrementalPullResponse };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Initial flush fails → back-off is set.
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+
+      // Force a flush via the online event (bypasses back-off) → succeeds.
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(false);
+        expect(result.current.retryAfter).toBeNull();
+      });
+    });
+
+    it("visibility-change flush is skipped during active back-off", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      // All requests fail so back-off is set.
+      mockFetch.mockResolvedValue({ ok: false });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Wait for the initial (forced) flush to fail and set back-off.
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+
+      const callsAfterInitial = mockFetch.mock.calls.length;
+
+      // Simulate visibility change — back-off window (1 s) has not expired yet,
+      // so the flush should be silently skipped.
+      await act(async () => {
+        Object.defineProperty(document, "visibilityState", {
+          value: "visible",
+          writable: true,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      // No additional fetch calls: back-off guard blocked the flush.
+      expect(mockFetch.mock.calls.length).toBe(callsAfterInitial);
+      // retryAfter is still set.
+      expect(result.current.retryAfter).not.toBeNull();
+    });
+
+    it("online event bypasses back-off and always retries immediately", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/api/sync/push") {
+          if (callCount <= 1) return { ok: false }; // Initial flush fails.
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/api/sync/pull")) {
+          return { ok: true, json: async () => incrementalPullResponse };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Wait for initial flush to fail and set back-off.
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(true);
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+
+      // Dispatch online event — should bypass back-off and succeed.
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(false);
+        expect(result.current.retryAfter).toBeNull();
+      });
+    });
+
+    it("doubles the delay on each successive forced failure", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      // All attempts fail — each online event forces a new flush attempt.
+      mockFetch.mockResolvedValue({ ok: false });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // 1st failure (initial forced flush): retryDelayMs = 1 000 ms.
+      await waitFor(() => {
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+      const firstRetryAfter = result.current.retryAfter!;
+
+      // 2nd forced failure (online event, bypasses back-off): retryDelayMs = 2 000 ms.
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+      });
+      await waitFor(() => {
+        // retryAfter must be strictly larger than the previous value.
+        expect(result.current.retryAfter).not.toBeNull();
+        expect(result.current.retryAfter).toBeGreaterThan(firstRetryAfter);
+      });
+    });
+
+    it("visibility-change flush proceeds after back-off window expires", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+      appendToSyncOutbox("user-1", emptySyncPayload());
+
+      let callCount = 0;
+      mockFetch.mockImplementation(async (url: string) => {
+        callCount++;
+        if (url === "/api/sync/push") {
+          if (callCount <= 1) return { ok: false }; // Initial flush fails.
+          return { ok: true, json: async () => emptyPushResponse };
+        }
+        if (url.startsWith("/api/sync/pull")) {
+          return { ok: true, json: async () => incrementalPullResponse };
+        }
+        return { ok: false };
+      });
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      // Wait for initial flush to fail and set back-off.
+      await waitFor(() => {
+        expect(result.current.retryAfter).not.toBeNull();
+      });
+
+      // Fake Date.now() to return a timestamp well past the back-off window.
+      const farFuture = Date.now() + 120_000;
+      const dateSpy = vi.spyOn(Date, "now").mockReturnValue(farFuture);
+
+      // A visibility-change should now proceed (window has expired).
+      await act(async () => {
+        Object.defineProperty(document, "visibilityState", {
+          value: "visible",
+          writable: true,
+        });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasSyncError).toBe(false);
+      });
+
+      dateSpy.mockRestore();
     });
   });
 });
