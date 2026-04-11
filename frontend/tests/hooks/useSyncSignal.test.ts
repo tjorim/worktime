@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useSyncSignal, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import { storeSyncCursor } from "@/utils/syncClient";
@@ -262,7 +262,7 @@ describe("useSyncSignal", () => {
   });
 
   describe("triggerPull ref stability", () => {
-    it("uses the latest triggerPull callback even if identity changes between renders", async () => {
+    it("uses the latest triggerPull callback even if identity changes between renders", () => {
       const triggerPull1 = vi.fn();
       const triggerPull2 = vi.fn();
       const { transport, emit } = createMockTransport();
@@ -281,9 +281,7 @@ describe("useSyncSignal", () => {
         emit("2026-05-01T00:00:00.000Z");
       });
 
-      await waitFor(() => {
-        expect(triggerPull2).toHaveBeenCalledTimes(1);
-      });
+      expect(triggerPull2).toHaveBeenCalledTimes(1);
       expect(triggerPull1).not.toHaveBeenCalled();
     });
   });

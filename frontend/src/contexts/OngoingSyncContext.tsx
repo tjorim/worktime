@@ -118,6 +118,7 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   // before sync is established.
   const sseTransport = useMemo<SyncSignalTransport | null>(() => {
     if (!isAuthenticated) return null;
+    if (!options.apiUrl) return null;
     const eventsUrl = new URL("/api/sync/events", options.apiUrl).toString();
     return createSseTransport(eventsUrl);
   }, [isAuthenticated, options.apiUrl]);
