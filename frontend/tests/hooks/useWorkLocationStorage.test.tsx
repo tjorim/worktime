@@ -258,9 +258,10 @@ describe("useWorkLocationStorage", () => {
         wrapper: makeWrapper("FR", "DE"),
       });
 
-      // The stored entry must still carry DE, unaffected by settings
+      // countryCode is always preserved; location is derived from current settings.
+      // With officeCountry now "DE", the stored DE entry is reclassified as "office".
       expect(remounted.current.workLocationMap.get("2026-02-18")).toEqual({
-        location: "other",
+        location: "office",
         countryCode: "DE",
       });
     });

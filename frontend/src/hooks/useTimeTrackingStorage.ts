@@ -139,22 +139,15 @@ export function useTimeTrackingStorage() {
       includesBreak?: boolean;
     }) => {
       if (!tasks.some((task) => task.id === payload.id)) return;
-      tasksCollection.utils.writeUpsert([
-        ...tasks.map((task) =>
-          task.id === payload.id
-            ? {
-              ...task,
-              ...(payload.newText !== undefined ? { text: payload.newText } : {}),
-              ...(payload.newLabel !== undefined ? { label: payload.newLabel } : {}),
-              startTime: payload.newStartTime,
-              stopTime: payload.newStopTime ?? undefined,
-              ...(typeof payload.includesBreak === "boolean"
-                ? { includesBreak: payload.includesBreak || undefined }
-                : {}),
-            }
-            : task,
-        ),
-      ]);
+      tasksCollection.update(payload.id, (d) => {
+        if (payload.newText !== undefined) d.text = payload.newText;
+        if (payload.newLabel !== undefined) d.label = payload.newLabel;
+        d.startTime = payload.newStartTime;
+        d.stopTime = payload.newStopTime ?? undefined;
+        if (typeof payload.includesBreak === "boolean") {
+          d.includesBreak = payload.includesBreak || undefined;
+        }
+      });
     },
     [tasks],
   );
@@ -171,26 +164,19 @@ export function useTimeTrackingStorage() {
    */
   const toggleBreak = useCallback((taskId: string, includesBreak: boolean) => {
     if (!tasks.some((task) => task.id === taskId)) return;
-    tasksCollection.utils.writeUpsert([
-      ...tasks.map((task) =>
-        task.id === taskId
-          ? {
-            ...task,
-            includesBreak: includesBreak || undefined,
-          }
-          : task,
-      ),
-    ]);
+    tasksCollection.update(taskId, (d) => {
+      d.includesBreak = includesBreak || undefined;
+    });
   }, [tasks]);
 
   const removeTask = useCallback((id: string) => {
     if (!tasks.some((task) => task.id === id)) return;
-    const remainingTasks = tasks.filter((task) => task.id !== id);
     if (!hasSyncCollectionAuth()) {
+      const remainingTasks = tasks.filter((task) => task.id !== id);
       replaceCollectionContents(tasksCollection, remainingTasks, (task) => task.id);
       return;
     }
-    tasksCollection.utils.writeDelete(id);
+    tasksCollection.delete(id);
   }, [tasks]);
 
   const addTemplate = useCallback((payload: Omit<TimeTrackingTemplate, "id">) => {
@@ -201,28 +187,21 @@ export function useTimeTrackingStorage() {
   const updateTemplate = useCallback(
     (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => {
       if (!templates.some((template) => template.id === payload.id)) return;
-      templatesCollection.utils.writeUpsert([
-        ...templates.map((template) =>
-          template.id === payload.id
-            ? {
-              ...template,
-              ...payload.template,
-            }
-            : template,
-        ),
-      ]);
+      templatesCollection.update(payload.id, (d) => {
+        Object.assign(d, payload.template);
+      });
     },
     [templates],
   );
 
   const deleteTemplate = useCallback((id: string) => {
     if (!templates.some((template) => template.id === id)) return;
-    const remainingTemplates = templates.filter((template) => template.id !== id);
     if (!hasSyncCollectionAuth()) {
+      const remainingTemplates = templates.filter((template) => template.id !== id);
       replaceCollectionContents(templatesCollection, remainingTemplates, (template) => template.id);
       return;
     }
-    templatesCollection.utils.writeDelete(id);
+    templatesCollection.delete(id);
   }, [templates]);
 
   const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {

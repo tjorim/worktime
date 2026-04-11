@@ -84,16 +84,14 @@ describe("appBackup", () => {
     });
 
     it("includes work locations for all stored years", () => {
-      const loc2025 = { "2025-06-01": { location: "home", countryCode: "NL" } };
-      const loc2026 = { "2026-02-24": { location: "office", countryCode: "DE" } };
+      const loc2025 = { "2025-06-01": { countryCode: "NL" } };
+      const loc2026 = { "2026-02-24": { countryCode: "DE" } };
       workLocationsCollection.insert({
         date: "2025-06-01",
-        location: "home",
         countryCode: "NL",
       });
       workLocationsCollection.insert({
         date: "2026-02-24",
-        location: "office",
         countryCode: "DE",
       });
       const payload = buildBackupPayload();
@@ -195,7 +193,6 @@ describe("appBackup", () => {
     it("detects work locations", () => {
       workLocationsCollection.insert({
         date: "2025-06-01",
-        location: "home",
         countryCode: "NL",
       });
       const presence = checkBackupDataPresence();
@@ -319,10 +316,10 @@ describe("appBackup", () => {
     });
 
     it("writes work locations for each year", () => {
-      const locs = { "2026": { "2026-02-24": { location: "home", countryCode: "NL" } } };
+      const locs = { "2026": { "2026-02-24": { countryCode: "NL" } } };
       restoreAppBackup({ exportedAt: "", version: 1, workLocations: locs });
       expect(plainCollectionItems(workLocationsCollection.toArray)).toEqual([
-        { date: "2026-02-24", location: "home", countryCode: "NL" },
+        { date: "2026-02-24", countryCode: "NL" },
       ]);
     });
 

@@ -721,12 +721,10 @@ describe("syncClient", () => {
     it("converts work locations from the flat collection", () => {
       workLocationsCollection.insert({
         date: "2026-01-05",
-        location: "home",
         countryCode: "NL",
       });
       workLocationsCollection.insert({
         date: "2026-01-06",
-        location: "office",
         countryCode: "DE",
         label: "Berlin",
       });
