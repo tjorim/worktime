@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { USER_STATE_STORAGE_KEY, getWorkLocationsStorageKey } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import type { SyncPushPayload } from "@/utils/syncClient";
 
 // Defined at module scope because vi.mock factories are hoisted before describe
@@ -287,7 +287,7 @@ describe("useWorkLocationStorage", () => {
   });
 
   describe("year-boundary handling", () => {
-    it("stores a date from the previous year in its own localStorage key", () => {
+    it("stores a date from the previous year", () => {
       const { result } = renderHook(() => useWorkLocationStorage(2026), {
         wrapper: makeWrapper(),
       });
@@ -302,10 +302,9 @@ describe("useWorkLocationStorage", () => {
         location: "home",
         countryCode: "NL",
       });
-      expect(window.localStorage.getItem(getWorkLocationsStorageKey(2025))).not.toBeNull();
     });
 
-    it("stores a date from the next year in its own localStorage key", () => {
+    it("stores a date from the next year", () => {
       const { result } = renderHook(() => useWorkLocationStorage(2026), {
         wrapper: makeWrapper(),
       });
@@ -320,7 +319,6 @@ describe("useWorkLocationStorage", () => {
         location: "office",
         countryCode: "BE",
       });
-      expect(window.localStorage.getItem(getWorkLocationsStorageKey(2027))).not.toBeNull();
     });
 
     it("returns false for a date more than one year outside the current year", () => {

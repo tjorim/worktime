@@ -179,7 +179,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       }
       pushUndo();
       timeOffCollection.update(id, (d) => {
-        Object.assign(d, entry);
+        // Exclude `id` from the spread — TanStack DB forbids changing an item's key.
+        const { id: _id, ...fields } = entry;
+        Object.assign(d, fields);
       });
     },
     [pushUndo],

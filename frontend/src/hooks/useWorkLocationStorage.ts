@@ -31,7 +31,16 @@ export function useWorkLocationStorage(year: number) {
    */
   const workLocationMap: WorkLocationMap = useMemo(() => {
     const entries = (rawData ?? []) as WorkLocationEntry[];
-    return new Map(entries.map((wl) => [wl.date, wl as WorkLocationInfo]));
+    return new Map(
+      entries.map((wl) => [
+        wl.date,
+        {
+          location: wl.location,
+          countryCode: wl.countryCode,
+          ...(wl.label ? { label: wl.label } : {}),
+        } as WorkLocationInfo,
+      ]),
+    );
   }, [rawData]);
 
   /**

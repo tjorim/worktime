@@ -9,8 +9,13 @@ export type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;
 
 function toTask(raw: RawGanttTask | GanttTask): GanttTask {
   return {
-    ...raw,
+    id: raw.id,
+    name: raw.name,
+    start: raw.start,
+    end: raw.end,
     progress: raw.progress ?? 0,
+    ...(raw.dependencies ? { dependencies: raw.dependencies } : {}),
+    ...(raw.notes ? { notes: raw.notes } : {}),
   };
 }
 
