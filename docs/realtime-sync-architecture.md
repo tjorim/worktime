@@ -167,83 +167,79 @@ It is a trigger: on event received → call pull. It must not cache data, mutate
 
 ---
 
-## Rollout Coexistence During Migration Window
+## Domain Ownership and Coexistence
 
-During the migration of sync-managed domains to TanStack DB (issue [#515](https://github.com/tjorim/worktime/issues/515)),
-non-migrated and migrated domains must coexist safely. The rules below govern
-that window.
+The table below is the authoritative record of per-domain ownership. Domains
+marked `migrated` are fully wired to a QueryCollection; those marked `pending`
+still use legacy `localStorage`-backed hooks.
 
-### Domain Ownership Table
-
-| Domain | localStorage key(s) | Current owner | Target owner | Status |
-|--------|---------------------|---------------|--------------|--------|
-| Time-tracking labels | `worktime_time_tracking_labels` | `EventStoreContext` | TanStack DB (`labelsCollection`) | pending |
-| Time-tracking tasks | `worktime_time_tracking_tasks` | `EventStoreContext` | TanStack DB (`tasksCollection`) | pending |
-| Time-tracking templates | `worktime_time_tracking_templates` | `EventStoreContext` | TanStack DB (`templatesCollection`) | pending |
-| Time-off entries | `worktime_time_off_entries` | `EventStoreContext` | TanStack DB (`timeOffCollection`) | pending |
-| Gantt tasks | `worktime_gantt_tasks` | `GanttContext` | TanStack DB (`ganttTasksCollection`) | pending |
-| Work locations | `worktime_work_locations_<year>` | work-location hooks | TanStack DB (`workLocationsCollection`) | pending |
-| User preferences | `worktime_user_state` (partial) | `SettingsContext` / sync pipeline | TanStack DB (future collection) | pending |
-| Public holidays | OpenHolidays API | TanStack Query (`useOpenHolidays`) | TanStack Query (unchanged) | stable |
-| Team / roster data | Backend `.hday` API | Fetched directly (no persistent cache) | No change planned | stable |
+| Domain | localStorage key(s) | Owner | Status |
+|--------|---------------------|-------|--------|
+| Time-tracking labels | `worktime_time_tracking_labels` | TanStack DB (`labelsCollection`) | migrated |
+| Time-tracking tasks | `worktime_time_tracking_tasks` | TanStack DB (`tasksCollection`) | migrated |
+| Time-tracking templates | `worktime_time_tracking_templates` | TanStack DB (`templatesCollection`) | migrated |
+| Time-off entries | `worktime_time_off_entries` | TanStack DB (`timeOffCollection`) | migrated |
+| Gantt tasks | `worktime_gantt_tasks` | TanStack DB (`ganttTasksCollection`) | migrated |
+| Work locations | `worktime_work_locations_<year>` | TanStack DB (`workLocationsCollection`) | migrated |
+| User preferences | `worktime_user_state` (partial) | `SettingsContext` / sync pipeline | pending |
+| Public holidays | OpenHolidays API | TanStack Query (`useOpenHolidays`) | stable |
+| Team / roster data | Backend `.hday` API | Fetched directly (no persistent cache) | stable |
 
 ### Coexistence Rules
 
-1. **One owner per domain, always.** During rollout, a domain is owned by
-   either the existing `localStorage`-backed hooks (`pending`) or by a TanStack
-   DB collection (`migrated`). It is never owned by both simultaneously.
+1. **One owner per domain, always.** A domain is owned by either a
+   `localStorage`-backed hook (`pending`) or by a TanStack DB QueryCollection
+   (`migrated`). It is never owned by both simultaneously.
 
-2. **QueryCollection is the transition layer, not standalone `useQuery`.** When
-   migrating a domain, wire it as a QueryCollection (TanStack DB collection
-   backed by a TanStack Query `queryFn`). Do not introduce a standalone
-   `useQuery` call as an intermediate step — that creates a competing cache.
-   QueryCollection uses TanStack Query internally and is the correct pattern.
+2. **QueryCollection is the correct pattern for sync-managed domains, not
+   standalone `useQuery`.** QueryCollection (TanStack DB collection backed by a
+   TanStack Query `queryFn`) uses TanStack Query internally. Do not introduce a
+   standalone `useQuery` call for a domain that already has a QueryCollection —
+   that creates a competing cache.
 
-3. **All domains migrate together.** All pending domains in the table above are
-   migrated in a single PR.
+3. **Legacy path stays until fully removed.** When a domain transitions from
+   `pending` to `migrated`, the corresponding legacy hook is removed in the same
+   PR — not after.
 
-4. **Legacy path stays until fully removed.** A `pending` domain's existing
-   hooks and localStorage writes remain unchanged. When a domain is marked
-   `migrated`, the corresponding legacy hook is removed in the same PR — not
-   after.
-
-5. **Test isolation is guaranteed by the existing setup.** TanStack DB
-   collections in this codebase use `localOnlyCollectionOptions` stubs during
-   the pending phase, which are in-memory only. Once switched to
-   `localStorageCollectionOptions`, test isolation is preserved by the
+4. **Test isolation is guaranteed by the existing setup.** QueryCollection
+   mutations are kept in memory during tests. Test isolation is preserved by the
    `localStorage.clear()` call already present in `tests/setup.ts`. No
    additional test setup is required.
 
-6. **No React provider required.** TanStack DB collections are module-level
+5. **No React provider required.** TanStack DB collections are module-level
    singletons and do not require a React context provider. The existing
    `TestProviders` wrapper in `tests/utils/testProviders.tsx` is sufficient for
    component tests that consume migrated collections.
 
-### Collection Stubs
+### QueryCollection Definitions
 
-The placeholder collections for all sync-managed domains are defined in
-`frontend/src/db/collections.ts`. Each currently uses `localOnlyCollectionOptions`
-(an in-memory store with no side effects). These stubs are temporary scaffolding
-only — they will be replaced by QueryCollections in
-[#515](https://github.com/tjorim/worktime/issues/515).
+All sync-managed domains are defined in `frontend/src/db/collections.ts` using
+`queryCollectionOptions` from `@tanstack/query-db-collection`. Each collection
+is wired as follows:
 
-When migrating a domain in [#515](https://github.com/tjorim/worktime/issues/515):
+- **`queryFn`** → `GET /api/sync/pull` — fetches the full current state for the
+  domain on first mount (full pull; cursor-based incremental pull is handled by
+  `applyIncrementalPullToCollections`).
+- **`onInsert` / `onUpdate` / `onDelete`** → `POST /api/sync/push` — pushes
+  local mutations to the server; QueryCollection applies optimistic updates
+  locally and rolls back on failure.
+- **Offline mutation queuing (Option A)** — on push failure, the payload is
+  enqueued into the per-user outbox (`worktime_sync_outbox_<userId>`) and
+  flushed on the next successful sync cycle, preserving existing offline
+  guarantees.
+- **SSE direct writes** — `applyIncrementalPullToCollections` uses the direct-
+  write API (`utils.writeUpsert` / `utils.writeDelete`) to merge server changes
+  without triggering new push operations.
 
-1. Install `@tanstack/query-db-collection`.
-2. Replace `localOnlyCollectionOptions` with a `QueryCollection` wired to the
-   pull/push endpoints:
-   - `queryFn` → `GET /api/sync/pull?since=<cursor>`
-   - `onInsert` / `onUpdate` / `onDelete` → `POST /api/sync/push`
-3. Wire SSE direct writes: on `sync_changed` from `useSyncSignal`, call the
-   collection's direct write API instead of triggering a full refetch.
-4. Decide offline mutation queuing: QueryCollection rolls back failed mutations
-   but does not persist them for retry. Either intercept failures and enqueue to
-   the existing outbox, or accept re-entry on reconnect.
-5. Replace usages of the legacy hook with `useLiveQuery` over the collection.
-6. Remove the legacy hook.
-7. Update the status column in this table from `pending` to `migrated`.
-8. Do **not** add a standalone `useQuery` call for the same domain alongside
-   the QueryCollection.
+To migrate the remaining `pending` domain (user preferences) in a future issue:
+
+1. Add a `userPreferencesCollection` entry to `frontend/src/db/collections.ts`
+   using `queryCollectionOptions`, wired to the preferences endpoint.
+2. Replace `SettingsContext` reads/writes for the synced fields with
+   `useLiveQuery` over the new collection.
+3. Remove the legacy sync pipeline path for preferences.
+4. Update the status column in this table from `pending` to `migrated`.
+5. Do **not** add a standalone `useQuery` call alongside the QueryCollection.
 
 ---
 
@@ -281,11 +277,10 @@ New issues should be filed as children of #510 for:
 2. `useSyncSignal` hook and SSE transport adapter (frontend).
 3. Wire `useSyncSignal` into the incremental pull trigger (frontend).
 4. Degrade gracefully when SSE is unavailable (fall back to pull-on-reconnect).
-5. Activate per-domain TanStack DB collections by following the migration steps
-   in **§Rollout Coexistence** above (tracked in [#515](https://github.com/tjorim/worktime/issues/515)).
+5. Migrate user preferences to a QueryCollection (see §Domain Ownership Table).
 
 **Code references for per-domain ownership:**
 
-- Collection stubs (to be replaced by QueryCollections in #515): `frontend/src/db/collections.ts`
+- QueryCollection definitions: `frontend/src/db/collections.ts`
 - Approved standalone `useQuery` usage: `frontend/src/hooks/useOpenHolidays.ts`
 - Storage key registry: `frontend/src/constants/storageKeys.ts`
