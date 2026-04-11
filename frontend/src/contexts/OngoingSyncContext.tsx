@@ -21,8 +21,10 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { useEventStore } from "./EventStoreContext";
+import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn, type TriggerPullFn } from "@/hooks/useOngoingSync";
+import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import {
   applyIncrementalSyncPullResponse,
   type SyncPullResponse,
@@ -84,6 +86,7 @@ interface OngoingSyncProviderProps {
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId } = useAuth();
   const fetchFn = useApiClient();
+  const { options } = useDeveloperOptions();
   const { entries: currentTimeOffEntries, replaceEntries } = useEventStore();
 
   // Keep a ref to currentTimeOffEntries so that onIncrementalPull always reads
@@ -109,6 +112,19 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     isAuthenticated ? fetchFn : null,
     onIncrementalPull,
   );
+
+  // Build the SSE transport once per API base URL change.  The transport is
+  // null when the user is not authenticated so that no connection is opened
+  // before sync is established.
+  const sseTransport = useMemo<SyncSignalTransport | null>(() => {
+    if (!isAuthenticated) return null;
+    if (!options.apiUrl) return null;
+    const eventsUrl = new URL("/api/sync/events", options.apiUrl).toString();
+    return createSseTransport(eventsUrl);
+  }, [isAuthenticated, options.apiUrl]);
+
+  // Subscribe to sync-changed signals and trigger incremental pulls.
+  useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
 
   const value = useMemo<OngoingSyncContextType>(
     () => ({ enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter }),
