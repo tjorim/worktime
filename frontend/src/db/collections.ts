@@ -162,7 +162,7 @@ function utcIsoToLocalTime(utcIso: string): string {
  * when the operation set is empty, and start the collection if needed when
  * there are real writes to apply.
  */
-function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void } }>(
+export function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void } }>(
   collection: T,
   hasWork: boolean,
   callback: () => void,

@@ -17,6 +17,7 @@ import json
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime
+from urllib.parse import urlparse, urlunparse
 
 import asyncpg
 
@@ -179,14 +180,15 @@ class SyncEventManager:
         Failures are logged and swallowed — the SSE endpoint continues to work
         within a single worker process without cross-process broadcast.
         """
-        asyncpg_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
-        if asyncpg_url == db_url:
+        parsed = urlparse(db_url)
+        if parsed.scheme != "postgresql+asyncpg":
             logger.warning(
                 "SSE: DATABASE_URL does not start with 'postgresql+asyncpg://' (%r); "
                 "LISTEN/NOTIFY will not be started",
                 db_url,
             )
             return
+        asyncpg_url = urlunparse(parsed._replace(scheme="postgresql"))
         # Note: further URL validation (host, port, credentials) is deferred to
         # asyncpg.connect(); any connection error is caught in the try/except below
         # and causes graceful degradation to single-process mode.

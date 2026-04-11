@@ -7,6 +7,7 @@ import {
   labelsCollection,
   hasSyncCollectionAuth,
   replaceCollectionContents,
+  runWriteBatch,
   tasksCollection,
   templatesCollection,
 } from "@/db/collections";
@@ -206,43 +207,47 @@ export function useTimeTrackingStorage() {
 
   const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {
     const nextIds = new Set(nextTemplates.map((t) => t.id));
-    // Upsert all templates in the new list
-    for (const t of nextTemplates) {
-      if (templatesCollection.has(t.id)) {
-        templatesCollection.update(t.id, (d) => {
-          Object.assign(d, t);
-        });
-      } else {
-        templatesCollection.insert(t);
+    const toDelete = (templatesCollection.toArray as TimeTrackingTemplate[]).filter((t) => !nextIds.has(t.id));
+    const hasWork = nextTemplates.length > 0 || toDelete.length > 0;
+    runWriteBatch(templatesCollection, hasWork, () => {
+      // Upsert all templates in the new list
+      for (const t of nextTemplates) {
+        if (templatesCollection.has(t.id)) {
+          templatesCollection.update(t.id, (d) => {
+            Object.assign(d, t);
+          });
+        } else {
+          templatesCollection.insert(t);
+        }
       }
-    }
-    // Delete templates not in the new list
-    for (const t of templatesCollection.toArray as TimeTrackingTemplate[]) {
-      if (!nextIds.has(t.id)) {
+      // Delete templates not in the new list
+      for (const t of toDelete) {
         templatesCollection.delete(t.id);
       }
-    }
+    });
   }, []);
 
   const updateLabels = useCallback((nextLabels: TimeTrackingLabel[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    // Upsert all labels in the new list
-    for (const l of sanitized) {
-      if (labelsCollection.has(l.id)) {
-        labelsCollection.update(l.id, (d) => {
-          Object.assign(d, l);
-        });
-      } else {
-        labelsCollection.insert(l);
+    const toDelete = (labelsCollection.toArray as TimeTrackingLabel[]).filter((l) => !nextIds.has(l.id));
+    const hasWork = sanitized.length > 0 || toDelete.length > 0;
+    runWriteBatch(labelsCollection, hasWork, () => {
+      // Upsert all labels in the new list
+      for (const l of sanitized) {
+        if (labelsCollection.has(l.id)) {
+          labelsCollection.update(l.id, (d) => {
+            Object.assign(d, l);
+          });
+        } else {
+          labelsCollection.insert(l);
+        }
       }
-    }
-    // Delete labels not in the new list
-    for (const l of labelsCollection.toArray as TimeTrackingLabel[]) {
-      if (!nextIds.has(l.id)) {
+      // Delete labels not in the new list
+      for (const l of toDelete) {
         labelsCollection.delete(l.id);
       }
-    }
+    });
   }, []);
 
   return {

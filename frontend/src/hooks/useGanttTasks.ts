@@ -5,6 +5,7 @@ import {
   ganttTasksCollection,
   hasSyncCollectionAuth,
   replaceCollectionContents,
+  runWriteBatch,
 } from "@/db/collections";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
@@ -113,16 +114,19 @@ export function useGanttTasks() {
       return;
     }
 
-    ganttTasksCollection.delete(id);
-    // Update dependency strings in affected tasks using proper mutation API
-    for (const task of nextTasks) {
+    const depUpdates = nextTasks.filter((task) => {
       const original = tasks.find((t) => t.id === task.id);
-      if (original && original.dependencies !== task.dependencies) {
+      return original && original.dependencies !== task.dependencies;
+    });
+    runWriteBatch(ganttTasksCollection, true, () => {
+      ganttTasksCollection.delete(id);
+      // Update dependency strings in affected tasks using proper mutation API
+      for (const task of depUpdates) {
         ganttTasksCollection.update(task.id, (d) => {
           d.dependencies = task.dependencies;
         });
       }
-    }
+    });
   }, [tasks]);
 
   return {

@@ -16,7 +16,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { hasSyncCollectionAuth, timeOffCollection } from "@/db/collections";
+import { hasSyncCollectionAuth, runWriteBatch, timeOffCollection } from "@/db/collections";
 
 interface EventStoreContextType {
   rawText: string;
@@ -221,16 +221,19 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
         const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
         const toDelete = [...currentMap.keys()].filter((id) => !result.entries.some((e) => e.id === id));
-        for (const id of toDelete) {
-          if (collectionIds.has(id)) timeOffCollection.delete(id);
-        }
-        for (const entry of result.entries) {
-          if (!collectionIds.has(entry.id)) {
-            timeOffCollection.insert(entry);
-          } else {
-            timeOffCollection.update(entry.id, (d) => { Object.assign(d, entry); });
+        const hasWork = toDelete.length > 0 || result.entries.length > 0;
+        runWriteBatch(timeOffCollection, hasWork, () => {
+          for (const id of toDelete) {
+            if (collectionIds.has(id)) timeOffCollection.delete(id);
           }
-        }
+          for (const entry of result.entries) {
+            if (!collectionIds.has(entry.id)) {
+              timeOffCollection.insert(entry);
+            } else {
+              timeOffCollection.update(entry.id, (d) => { Object.assign(d, entry); });
+            }
+          }
+        });
       }
       return result;
     },
@@ -245,9 +248,11 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       writeLocalSnapshot(current, []);
       return;
     }
-    for (const entry of current) {
-      timeOffCollection.delete(entry.id);
-    }
+    runWriteBatch(timeOffCollection, current.length > 0, () => {
+      for (const entry of current) {
+        timeOffCollection.delete(entry.id);
+      }
+    });
   }, []);
 
   const contextValue: EventStoreContextType = useMemo(
