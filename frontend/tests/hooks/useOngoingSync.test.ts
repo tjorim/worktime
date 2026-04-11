@@ -504,7 +504,7 @@ describe("useOngoingSync", () => {
       });
     });
 
-    it("resets conflictCount to 0 after a subsequent successful conflict-free sync", async () => {
+    it("keeps conflictCount across subsequent conflict-free syncs until explicitly resolved", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
@@ -566,8 +566,167 @@ describe("useOngoingSync", () => {
         expect(result.current.lastSyncedAt).toBe("2026-01-03T00:00:00.000Z");
       });
 
-      // conflictCount should be cleared after the conflict-free pull.
+      // conflictCount must NOT be cleared by a subsequent conflict-free flush —
+      // the unresolved conflict must persist until the user explicitly resolves it.
+      expect(result.current.conflictCount).toBe(1);
+    });
+
+    it("sets conflictedPayload alongside conflictCount when a conflict occurs", async () => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
+        },
+      };
+      const pullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+      const labelItem = { id: "lbl-1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" };
+      const changePayload = { ...emptySyncPayload(), labels: [labelItem] };
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // initial pull
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push conflict
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // reconciliation pull
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.enqueueChange(changePayload);
+      });
+
+      await waitFor(() => {
+        expect(result.current.conflictCount).toBe(1);
+      });
+
+      // conflictedPayload should contain only the conflicted label.
+      expect(result.current.conflictedPayload).not.toBeNull();
+      expect(result.current.conflictedPayload?.labels).toHaveLength(1);
+      expect(result.current.conflictedPayload?.labels[0].id).toBe("lbl-1");
+      // Other entity arrays should be empty.
+      expect(result.current.conflictedPayload?.tasks).toHaveLength(0);
+    });
+  });
+
+  describe("resolveOngoingConflicts", () => {
+    const setupConflict = async (mockFetch: ReturnType<typeof vi.fn>) => {
+      storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
+
+      const conflictPushResponse = {
+        results: {
+          labels: [{ id: "lbl-1", status: "conflict", conflict_reason: "server is newer" }],
+        },
+      };
+      const pullResponse = {
+        labels: [],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+        server_timestamp: "2026-01-02T00:00:00.000Z",
+      };
+      const labelItem = { id: "lbl-1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" };
+      const changePayload = { ...emptySyncPayload(), labels: [labelItem] };
+
+      // Initial pull + push conflict + reconciliation pull.
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse })
+        .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse })
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse });
+
+      return { changePayload, pullResponse };
+    };
+
+    it("'keep-server' clears conflictCount and conflictedPayload", async () => {
+      const { changePayload } = await setupConflict(mockFetch);
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.enqueueChange(changePayload);
+      });
+
+      await waitFor(() => {
+        expect(result.current.conflictCount).toBe(1);
+      });
+
+      act(() => {
+        result.current.resolveOngoingConflicts("keep-server");
+      });
+
       expect(result.current.conflictCount).toBe(0);
+      expect(result.current.conflictedPayload).toBeNull();
+    });
+
+    it("'keep-mine' clears conflictCount and triggers a re-push with bumped timestamps", async () => {
+      const { changePayload } = await setupConflict(mockFetch);
+
+      // After conflict + reconciliation, one more call: successful re-push.
+      const statusResponse = { server_timestamp: "2026-01-03T00:00:00.000Z" };
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: { labels: [{ id: "lbl-1", status: "ok" }] } }) }); // re-push
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => statusResponse }); // status fetch
+
+      const { result } = renderHook(() =>
+        useOngoingSync(true, "user-1", mockFetch),
+      );
+
+      await waitFor(() => {
+        expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
+      });
+
+      act(() => {
+        result.current.enqueueChange(changePayload);
+      });
+
+      await waitFor(() => {
+        expect(result.current.conflictCount).toBe(1);
+      });
+
+      act(() => {
+        result.current.resolveOngoingConflicts("keep-mine");
+      });
+
+      // conflictCount and conflictedPayload should be cleared immediately.
+      expect(result.current.conflictCount).toBe(0);
+      expect(result.current.conflictedPayload).toBeNull();
+
+      // A re-push should have been triggered.
+      await waitFor(() => {
+        // The re-push call comes after the 3 mock calls already consumed (initial pull,
+        // conflict push, reconciliation pull).
+        const repushCall = mockFetch.mock.calls.find(
+          ([url]: [string]) => url === "/api/sync/push",
+        );
+        expect(repushCall).toBeDefined();
+      });
+
+      // Verify the re-push timestamp was bumped (later than the original conflict timestamp).
+      const repushCalls = mockFetch.mock.calls.filter(([url]: [string]) => url === "/api/sync/push");
+      // Last push call should have a fresh timestamp
+      const repushBody = JSON.parse((repushCalls[repushCalls.length - 1][1] as RequestInit).body as string) as typeof changePayload;
+      expect(new Date(repushBody.labels[0].client_updated_at).getTime()).toBeGreaterThan(
+        new Date(changePayload.labels[0].client_updated_at).getTime(),
+      );
     });
   });
 

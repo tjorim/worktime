@@ -23,7 +23,7 @@ import { useAuth } from "./AuthContext";
 import { useEventStore } from "./EventStoreContext";
 import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn, type TriggerPullFn } from "@/hooks/useOngoingSync";
+import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn, type TriggerPullFn, type ResolveOngoingConflictsFn } from "@/hooks/useOngoingSync";
 import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import {
   applyIncrementalSyncPullResponse,
@@ -42,6 +42,12 @@ export interface OngoingSyncContextType extends OngoingSyncState {
    * Transport-neutral entry point for external callers such as SSE listeners.
    */
   triggerPull: TriggerPullFn;
+  /**
+   * Resolve a pending ongoing-sync conflict.
+   * `"keep-server"` accepts the server version and clears the conflict state.
+   * `"keep-mine"` re-pushes the conflicted items with fresh timestamps.
+   */
+  resolveOngoingConflicts: ResolveOngoingConflictsFn;
 }
 
 const NO_OP_CONTEXT: OngoingSyncContextType = {
@@ -50,9 +56,11 @@ const NO_OP_CONTEXT: OngoingSyncContextType = {
   outboxCount: 0,
   hasSyncError: false,
   conflictCount: 0,
+  conflictedPayload: null,
   retryAfter: null,
   enqueueChange: () => {},
   triggerPull: () => {},
+  resolveOngoingConflicts: () => {},
 };
 
 const OngoingSyncContext = createContext<OngoingSyncContextType | null>(null);
@@ -106,7 +114,7 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     [replaceEntries],
   );
 
-  const { enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter } = useOngoingSync(
+  const { enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter } = useOngoingSync(
     isSyncEstablished,
     userId,
     isAuthenticated ? fetchFn : null,
@@ -127,8 +135,8 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
 
   const value = useMemo<OngoingSyncContextType>(
-    () => ({ enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter }),
-    [enqueueChange, triggerPull, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter],
+    () => ({ enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter }),
+    [enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter],
   );
 
   return <OngoingSyncContext.Provider value={value}>{children}</OngoingSyncContext.Provider>;

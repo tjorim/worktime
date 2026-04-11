@@ -28,10 +28,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   appendToSyncOutbox,
+  bumpClientTimestamps,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  extractConflictedItems,
   fetchSyncStatus,
   getSyncOutboxSize,
+  maxConflictServerTimestamp,
   pullSyncData,
   pushSyncPayload,
   storeSyncCursor,
@@ -60,9 +63,15 @@ export interface OngoingSyncState {
   /**
    * Number of records that had conflicts in the last push operation.
    * Non-zero means the server version was kept for those records.
-   * Resets to 0 after the next successful conflict-free sync.
+   * Resets to 0 after the user resolves the conflict.
    */
   conflictCount: number;
+  /**
+   * The subset of the last push payload whose records were rejected (conflict).
+   * Non-null when `conflictCount > 0`.  Used by the conflict-resolution UI to
+   * show entity types/counts and to re-push with updated timestamps.
+   */
+  conflictedPayload: SyncPushPayload | null;
   /**
    * Epoch timestamp (ms) before which the next automatic outbox flush is
    * suppressed by exponential back-off.  Null when there is no active
@@ -79,6 +88,15 @@ export type EnqueueChangeFn = (change: SyncPushPayload) => void;
  * entry point — callers do not need to know about cursor, outbox, or merge logic.
  */
 export type TriggerPullFn = () => void;
+
+/**
+ * Resolve a pending ongoing-sync conflict.
+ *
+ * - `"keep-server"`: accept the server version — clears the conflict state without re-pushing.
+ * - `"keep-mine"`: re-push the conflicted local items with `client_updated_at = now()` so
+ *   they win the last-write-wins check on the next push.
+ */
+export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") => void;
 
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
@@ -99,7 +117,7 @@ export function useOngoingSync(
   userId: string | null,
   fetchFn: FetchFn | null,
   onIncrementalPull?: (data: SyncPullResponse) => void,
-): OngoingSyncState & { enqueueChange: EnqueueChangeFn; triggerPull: TriggerPullFn } {
+): OngoingSyncState & { enqueueChange: EnqueueChangeFn; triggerPull: TriggerPullFn; resolveOngoingConflicts: ResolveOngoingConflictsFn } {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
     if (!userId) return null;
@@ -111,6 +129,13 @@ export function useOngoingSync(
   });
   const [hasSyncError, setHasSyncError] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
+  const [conflictedPayload, setConflictedPayload] = useState<SyncPushPayload | null>(null);
+  // Keep a stable ref to conflictedPayload for use inside callbacks without
+  // creating stale closures.
+  const conflictedPayloadRef = useRef<SyncPushPayload | null>(null);
+  // Tracks the max server_updated_at reported for conflicted records so that
+  // "keep-mine" re-pushes carry a timestamp >= the server's to guarantee a LWW win.
+  const conflictServerTimestampRef = useRef<string | undefined>(undefined);
   // Exponential back-off state for failed flush-and-pull cycles.
   // retryDelayMsRef holds the *current* delay (0 = no active back-off).
   // retryAfterRef mirrors the state value so flushAndPull can read it without
@@ -204,6 +229,10 @@ export function useOngoingSync(
         // Surface any conflicts from the outbox flush.
         flushConflicts = countPushConflicts(pushResult);
         if (flushConflicts > 0) {
+          const extracted = extractConflictedItems(merged, pushResult);
+          conflictedPayloadRef.current = extracted;
+          conflictServerTimestampRef.current = maxConflictServerTimestamp(pushResult);
+          setConflictedPayload(extracted);
           setConflictCount(flushConflicts);
         }
       }
@@ -227,8 +256,9 @@ export function useOngoingSync(
         retryDelayMsRef.current = 0;
         retryAfterRef.current = null;
         setRetryAfter(null);
-        if (flushConflicts === 0) {
+        if (flushConflicts === 0 && conflictedPayloadRef.current === null) {
           setConflictCount(0);
+          setConflictedPayload(null);
         }
       } else {
         setHasSyncError(true);
@@ -285,6 +315,8 @@ export function useOngoingSync(
     setOutboxCount(userId ? getSyncOutboxSize(userId) : 0);
     setHasSyncError(false);
     setConflictCount(0);
+    conflictedPayloadRef.current = null;
+    setConflictedPayload(null);
     // Reset back-off when the signed-in user changes.
     retryDelayMsRef.current = 0;
     retryAfterRef.current = null;
@@ -334,6 +366,10 @@ export function useOngoingSync(
           // where the local cursor sits relative to the server's `updated_at`.
           const conflicts = countPushConflicts(result);
           if (conflicts > 0) {
+            const extracted = extractConflictedItems(change, result);
+            conflictedPayloadRef.current = extracted;
+            conflictServerTimestampRef.current = maxConflictServerTimestamp(result);
+            setConflictedPayload(extracted);
             setConflictCount(conflicts);
             let pullResult: SyncPullResponse | null = null;
             try {
@@ -366,7 +402,13 @@ export function useOngoingSync(
               setHasSyncError(true);
             }
           } else {
-            setConflictCount(0);
+            // Only clear conflict state when there is no pending unresolved conflict
+            // from a prior push.  A new no-conflict push should not wipe a conflict
+            // the user has not yet acknowledged.
+            if (conflictedPayloadRef.current === null) {
+              setConflictCount(0);
+              setConflictedPayload(null);
+            }
             // Refresh the cursor so incremental pulls stay accurate.  A second
             // network request is required here because the push response only
             // contains per-record results (no server_timestamp).  The alternative
@@ -405,6 +447,32 @@ export function useOngoingSync(
     [isActive, userId, fetchFn],
   );
 
+  /**
+   * Resolve the pending ongoing-sync conflict.
+   *
+   * - `"keep-server"`: accept the server's version — clears conflict state without re-pushing.
+   * - `"keep-mine"`: re-push the conflicted local items with bumped timestamps so they win
+   *   the next last-write-wins check on the server.
+   */
+  const resolveOngoingConflicts: ResolveOngoingConflictsFn = useCallback(
+    (choice) => {
+      const payload = conflictedPayloadRef.current;
+      const serverFloor = conflictServerTimestampRef.current;
+      // Clear conflict state immediately regardless of choice.
+      conflictedPayloadRef.current = null;
+      conflictServerTimestampRef.current = undefined;
+      setConflictedPayload(null);
+      setConflictCount(0);
+
+      if (choice === "keep-mine" && payload) {
+        // Re-push with timestamps bumped to max(server_updated_at, now) so the
+        // local version wins the LWW check even if the local clock is behind the server.
+        enqueueChange(bumpClientTimestamps(payload, serverFloor));
+      }
+    },
+    [enqueueChange],
+  );
+
   if (!isActive) {
     return {
       isSyncing: false,
@@ -412,11 +480,13 @@ export function useOngoingSync(
       outboxCount: 0,
       hasSyncError: false,
       conflictCount: 0,
+      conflictedPayload: null,
       retryAfter: null,
       enqueueChange: NOOP,
       triggerPull: NOOP,
+      resolveOngoingConflicts: NOOP,
     };
   }
 
-  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, enqueueChange, triggerPull };
+  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter, enqueueChange, triggerPull, resolveOngoingConflicts };
 }
