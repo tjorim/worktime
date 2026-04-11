@@ -13,8 +13,9 @@ import type { HdayEvent } from "@/lib/hday/types";
 import { getEventColorClass } from "@/lib/hday/presentation";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "./shared/NavigationButtonGroup";
-import { LAST_TEAM_ID_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
+
+const LAST_TEAM_ID_STORAGE_KEY = "worktime_last_team_id";
 
 interface TeamMember {
   username: string;
