@@ -2,9 +2,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { TIME_TRACKING_STORAGE_KEYS, TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { tasksCollection, timeOffCollection } from "@/db/collections";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(EventStoreProvider, null, children);
@@ -46,26 +46,18 @@ const emptyPullResponse = {
 const emptyPushResponse = { results: {} };
 
 function seedTasks() {
-  localStorage.setItem(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    JSON.stringify([{ id: "t1", text: "Test", label: "", startTime: "2026-01-01T09:00" }]),
-  );
+  tasksCollection.insert({ id: "t1", text: "Test", label: "", startTime: "2026-01-01T09:00" });
 }
 
 function seedTimeOff() {
-  localStorage.setItem(
-    TIME_OFF_ENTRIES_STORAGE_KEY,
-    JSON.stringify([
-      {
-        id: "t1",
-        entryKind: "date",
-        date: "2026-07-14",
-        entryType: "vacation",
-        entryFlag: "full_day",
-        note: "Bastille Day",
-      },
-    ]),
-  );
+  timeOffCollection.insert({
+    id: "t1",
+    entryKind: "date",
+    date: "2026-07-14",
+    entryType: "vacation",
+    entryFlag: "full_day",
+    note: "Bastille Day",
+  });
 }
 
 describe("useFirstSyncFlow", () => {

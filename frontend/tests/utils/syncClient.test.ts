@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  applySyncPullResponse,
-  applyIncrementalSyncPullResponse,
   applyPreferencesPull,
   appendToSyncOutbox,
   bumpClientTimestamps,
@@ -25,15 +23,18 @@ import {
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
 import {
-  GANTT_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
-  TIME_OFF_ENTRIES_STORAGE_KEY,
-  TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
-  WORK_LOCATIONS_STORAGE_PREFIX,
 } from "@/constants/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import {
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
 
 const mockFetch = vi.fn();
 
@@ -574,7 +575,7 @@ describe("syncClient", () => {
   // ---------------------------------------------------------------------------
 
   describe("buildLocalSyncPushPayload", () => {
-    it("returns empty arrays when localStorage is empty", () => {
+    it("returns empty arrays when the collections are empty", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(0);
       expect(payload.tasks).toHaveLength(0);
@@ -583,10 +584,7 @@ describe("syncClient", () => {
     });
 
     it("converts labels to sync items with action=create", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "label-1", name: "Work", color: "#FF0000" }]),
-      );
+      labelsCollection.insert({ id: "label-1", name: "Work", color: "#FF0000" });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(1);
@@ -600,19 +598,14 @@ describe("syncClient", () => {
     });
 
     it("converts tasks to sync items with UTC start_time", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([
-          {
-            id: "task-1",
-            text: "Hello",
-            label: "label-1",
-            startTime: "2026-01-01T09:00",
-            stopTime: "2026-01-01T17:00",
-            includesBreak: true,
-          },
-        ]),
-      );
+      tasksCollection.insert({
+        id: "task-1",
+        text: "Hello",
+        label: "label-1",
+        startTime: "2026-01-01T09:00",
+        stopTime: "2026-01-01T17:00",
+        includesBreak: true,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
@@ -629,22 +622,25 @@ describe("syncClient", () => {
     });
 
     it("handles tasks with no stopTime", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([{ id: "task-2", text: "Open", label: "", startTime: "2026-01-01T09:00" }]),
-      );
+      tasksCollection.insert({
+        id: "task-2",
+        text: "Open",
+        label: "",
+        startTime: "2026-01-01T09:00",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks[0].stop_time).toBeNull();
     });
 
     it("converts templates with HH:mm:ss time format", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.templates,
-        JSON.stringify([
-          { id: "tmpl-1", text: "Standup", label: "label-1", start: "09:00", stop: "09:15" },
-        ]),
-      );
+      templatesCollection.insert({
+        id: "tmpl-1",
+        text: "Standup",
+        label: "label-1",
+        start: "09:00",
+        stop: "09:15",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates[0]).toMatchObject({
@@ -658,14 +654,9 @@ describe("syncClient", () => {
     });
 
     it("excludes labels with missing or non-string color", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([
-          { id: "lbl-good", name: "Good", color: "#FF0000" },
-          { id: "lbl-no-color", name: "Bad", color: null },
-          { id: "lbl-num-color", name: "Numeric", color: 123 },
-        ]),
-      );
+      labelsCollection.insert({ id: "lbl-good", name: "Good", color: "#FF0000" });
+      labelsCollection.insert({ id: "lbl-no-color", name: "Bad", color: null as never });
+      labelsCollection.insert({ id: "lbl-num-color", name: "Numeric", color: 123 as never });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(1);
@@ -673,15 +664,34 @@ describe("syncClient", () => {
     });
 
     it("excludes templates with missing required fields", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.templates,
-        JSON.stringify([
-          { id: "tmpl-good", text: "Valid", label: "", start: "09:00", stop: "09:15" },
-          { id: "tmpl-no-text", text: "", label: "", start: "09:00", stop: "09:15" },
-          { id: "tmpl-bad-start", text: "Bad start", label: "", start: "9:00", stop: "09:15" },
-          { id: "tmpl-no-stop", text: "No stop", label: "", start: "09:00", stop: "" },
-        ]),
-      );
+      templatesCollection.insert({
+        id: "tmpl-good",
+        text: "Valid",
+        label: "",
+        start: "09:00",
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-no-text",
+        text: "",
+        label: "",
+        start: "09:00",
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-bad-start",
+        text: "Bad start",
+        label: "",
+        start: "9:00" as never,
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-no-stop",
+        text: "No stop",
+        label: "",
+        start: "09:00",
+        stop: "" as never,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates).toHaveLength(1);
@@ -689,33 +699,35 @@ describe("syncClient", () => {
     });
 
     it("excludes soft-deleted tasks from the payload", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([
-          { id: "task-live", text: "Live", label: "", startTime: "2026-01-01T09:00" },
-          {
-            id: "task-deleted",
-            text: "Gone",
-            label: "",
-            startTime: "2026-01-01T10:00",
-            deleted_at: "2026-01-02T00:00:00.000Z",
-          },
-        ]),
-      );
+      tasksCollection.insert({
+        id: "task-live",
+        text: "Live",
+        label: "",
+        startTime: "2026-01-01T09:00",
+      });
+      tasksCollection.insert({
+        id: "task-deleted",
+        text: "Gone",
+        label: "",
+        startTime: "2026-01-01T10:00",
+        deleted_at: "2026-01-02T00:00:00.000Z" as never,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
       expect(payload.tasks[0].id).toBe("task-live");
     });
 
-    it("converts work locations from per-year localStorage keys", () => {
-      localStorage.setItem(
-        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
-        JSON.stringify({
-          "2026-01-05": { location: "home", countryCode: "NL" },
-          "2026-01-06": { location: "office", countryCode: "DE", label: "Berlin" },
-        }),
-      );
+    it("converts work locations from the flat collection", () => {
+      workLocationsCollection.insert({
+        date: "2026-01-05",
+        countryCode: "NL",
+      });
+      workLocationsCollection.insert({
+        date: "2026-01-06",
+        countryCode: "DE",
+        label: "Berlin",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.work_locations).toHaveLength(2);
@@ -725,195 +737,6 @@ describe("syncClient", () => {
 
       const de = payload.work_locations.find((wl) => wl.date === "2026-01-06");
       expect(de).toMatchObject({ action: "create", country_code: "DE", label: "Berlin" });
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // applySyncPullResponse
-  // ---------------------------------------------------------------------------
-
-  describe("applySyncPullResponse", () => {
-    const makeBaseResponse = () => ({
-      labels: [],
-      tasks: [],
-      templates: [],
-      work_locations: [],
-      time_off_entries: [],
-      gantt_tasks: [],
-      server_timestamp: "2026-01-01T00:00:00Z",
-    });
-
-    it("stores labels in localStorage", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        labels: [
-          {
-            id: "lbl-1",
-            user_id: 1,
-            name: "Work",
-            color: "#AABBCC",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: null,
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toEqual({ id: "lbl-1", name: "Work", color: "#AABBCC" });
-    });
-
-    it("excludes soft-deleted labels", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        labels: [
-          {
-            id: "lbl-del",
-            user_id: 1,
-            name: "Gone",
-            color: "#000000",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: "2026-01-02T00:00:00Z",
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
-      expect(stored).toHaveLength(0);
-    });
-
-    it("stores templates with HH:mm times", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        templates: [
-          {
-            id: "tmpl-1",
-            user_id: 1,
-            label_id: "lbl-1",
-            text: "Standup",
-            start_time: "09:00:00",
-            stop_time: "09:15:00",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: null,
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject({
-        id: "tmpl-1",
-        text: "Standup",
-        label: "lbl-1",
-        start: "09:00",
-        stop: "09:15",
-      });
-    });
-
-    it("stores work locations grouped by year", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        work_locations: [
-          {
-            id: 1,
-            user_id: 1,
-            date: "2026-01-05",
-            country_code: "NL",
-            label: null,
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: null,
-          },
-          {
-            id: 2,
-            user_id: 1,
-            date: "2026-01-06",
-            country_code: "DE",
-            label: "Berlin",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: null,
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
-      expect(stored["2026-01-05"]).toMatchObject({ countryCode: "NL" });
-      expect(stored["2026-01-06"]).toMatchObject({ countryCode: "DE", label: "Berlin" });
-    });
-
-    it("excludes soft-deleted work locations", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        work_locations: [
-          {
-            id: 3,
-            user_id: 1,
-            date: "2026-01-07",
-            country_code: "FR",
-            label: null,
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: "2026-01-03T00:00:00Z",
-          },
-        ],
-      });
-
-      expect(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)).toBeNull();
-    });
-
-    it("stores gantt tasks in localStorage", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        gantt_tasks: [
-          {
-            id: "gantt-1",
-            user_id: 1,
-            name: "Design phase",
-            start_date: "2026-03-01",
-            end_date: "2026-03-15",
-            progress: 50,
-            dependencies: null,
-            notes: null,
-            client_updated_at: "2026-01-01T00:00:00Z",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-            deleted_at: null,
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject({ id: "gantt-1", name: "Design phase", start: "2026-03-01", end: "2026-03-15", progress: 50 });
-    });
-
-    it("excludes soft-deleted gantt tasks", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        gantt_tasks: [
-          {
-            id: "gantt-del",
-            user_id: 1,
-            name: "Deleted task",
-            start_date: "2026-03-01",
-            end_date: "2026-03-10",
-            progress: 0,
-            dependencies: null,
-            notes: null,
-            client_updated_at: "2026-01-01T00:00:00Z",
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-02T00:00:00Z",
-            deleted_at: "2026-01-02T00:00:00Z",
-          },
-        ],
-      });
-
-      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
-      expect(stored).toHaveLength(0);
     });
   });
 
@@ -979,10 +802,7 @@ describe("syncClient", () => {
     });
 
     it("preserves all local records in the output payload", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "local-lbl", name: "Local", color: "#FFFFFF" }]),
-      );
+      labelsCollection.insert({ id: "local-lbl", name: "Local", color: "#FFFFFF" });
       const localPayload = buildLocalSyncPushPayload();
       const result = buildKeepLocalReplacePayload(localPayload, makeEmptyPullResponse());
 
@@ -1054,10 +874,7 @@ describe("syncClient", () => {
     });
 
     it("does not delete server labels that also exist locally", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "shared-lbl", name: "Shared", color: "#FF0000" }]),
-      );
+      labelsCollection.insert({ id: "shared-lbl", name: "Shared", color: "#FF0000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1255,7 +1072,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: "Vacation",
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -1278,7 +1095,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: null,
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -1297,7 +1114,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: "Every Monday",
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -1310,170 +1127,6 @@ describe("syncClient", () => {
     it("returns empty time_off_entries when no .hday data", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(0);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // time-off entries in applySyncPullResponse
-  // ---------------------------------------------------------------------------
-
-  describe("applySyncPullResponse — time_off_entries", () => {
-    const makeBaseResponse = () => ({
-      labels: [],
-      tasks: [],
-      templates: [],
-      work_locations: [],
-      time_off_entries: [],
-      gantt_tasks: [],
-      server_timestamp: "2026-01-01T00:00:00Z",
-    });
-
-    const makeTimeOffEntry = (
-      entry_kind: "date" | "range" | "weekly",
-      shape: { date?: string; start_date?: string; end_date?: string; weekday?: number },
-      entry_type = "vacation",
-      entry_flag: string = "full_day",
-      note: string | null = null,
-      deleted_at: string | null = null,
-    ) => ({
-      id: 1,
-      entry_id: `entry-${Math.random()}`,
-      user_id: 1,
-      entry_kind,
-      date: shape.date ?? null,
-      start_date: shape.start_date ?? null,
-      end_date: shape.end_date ?? null,
-      weekday: shape.weekday ?? null,
-      entry_type,
-      entry_flag,
-      note,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at,
-    });
-
-    it("writes canonical time-off entries for pulled sync data", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        time_off_entries: [
-          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "full_day", "Bastille Day"),
-        ],
-      });
-
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!);
-      expect(entries).toHaveLength(1);
-      expect(entries[0]).toMatchObject({
-        entryKind: "date",
-        date: "2026-07-14",
-        note: "Bastille Day",
-      });
-    });
-
-    it("clears time-off storage when all entries are soft-deleted", () => {
-      localStorage.setItem(
-        TIME_OFF_ENTRIES_STORAGE_KEY,
-        JSON.stringify([
-          {
-            id: "e1",
-            entryKind: "date",
-            date: "2026-07-14",
-            entryType: "vacation",
-            entryFlag: "full_day",
-            note: null,
-          },
-        ]),
-      );
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        time_off_entries: [
-          makeTimeOffEntry(
-            "date",
-            { date: "2026-07-14" },
-            "vacation",
-            "full_day",
-            null,
-            "2026-07-15T00:00:00Z",
-          ),
-        ],
-      });
-
-      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
-    });
-
-    it("clears time-off storage when time_off_entries is empty", () => {
-      localStorage.setItem(
-        TIME_OFF_ENTRIES_STORAGE_KEY,
-        JSON.stringify([
-          {
-            id: "e1",
-            entryKind: "date",
-            date: "2026-07-14",
-            entryType: "vacation",
-            entryFlag: "full_day",
-            note: null,
-          },
-        ]),
-      );
-      applySyncPullResponse(makeBaseResponse());
-
-      expect(localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY)).toBeNull();
-    });
-
-    it("restores weekly and range entries as canonical entries without expanding them", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        time_off_entries: [
-          makeTimeOffEntry("weekly", { weekday: 1 }, "in", "full_day", "Every Monday"),
-          makeTimeOffEntry(
-            "range",
-            { start_date: "2026-12-24", end_date: "2026-12-26" },
-            "vacation",
-          ),
-        ],
-      });
-
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!) as Array<Record<string, unknown>>;
-      expect(entries).toHaveLength(2);
-      expect(
-        entries.some(
-          (e) => e.entryKind === "weekly" && e.weekday === 1 && e.note === "Every Monday",
-        ),
-      ).toBe(true);
-      expect(
-        entries.some(
-          (e) => e.entryKind === "range" && e.start === "2026-12-24" && e.end === "2026-12-26",
-        ),
-      ).toBe(true);
-    });
-
-    it("maps unknown entry_type to 'other'", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        time_off_entries: [makeTimeOffEntry("date", { date: "2026-07-14" }, "sick")],
-      });
-
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!);
-      expect(entries[0]).toMatchObject({
-        entryKind: "date",
-        date: "2026-07-14",
-        entryType: "other",
-      });
-    });
-
-    it("maps unknown flag to null", () => {
-      applySyncPullResponse({
-        ...makeBaseResponse(),
-        time_off_entries: [
-          makeTimeOffEntry("date", { date: "2026-07-14" }, "vacation", "unknown_flag"),
-        ],
-      });
-
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!);
-      expect(entries[0].entryFlag).toBe("full_day");
     });
   });
 
@@ -1722,298 +1375,4 @@ describe("syncClient", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // applyIncrementalSyncPullResponse
-  // ---------------------------------------------------------------------------
-
-  describe("applyIncrementalSyncPullResponse", () => {
-    const baseResponse = () => ({
-      labels: [] as never[],
-      tasks: [] as never[],
-      templates: [] as never[],
-      work_locations: [] as never[],
-      time_off_entries: [] as never[],
-      gantt_tasks: [] as never[],
-      server_timestamp: "2026-02-01T00:00:00.000Z",
-    });
-
-    const makeLabel = (id: string, name: string, deletedAt: string | null = null) => ({
-      id,
-      user_id: 1,
-      name,
-      color: "#AABBCC",
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: deletedAt,
-    });
-
-    const makeTask = (id: string, deletedAt: string | null = null) => ({
-      id,
-      user_id: 1,
-      label_id: null,
-      text: `Task ${id}`,
-      start_time: "2026-01-01T09:00:00Z",
-      stop_time: null,
-      includes_break: false,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: deletedAt,
-    });
-
-    const makeTemplate = (id: string, deletedAt: string | null = null) => ({
-      id,
-      user_id: 1,
-      label_id: null,
-      text: `Template ${id}`,
-      start_time: "09:00:00",
-      stop_time: "09:15:00",
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: deletedAt,
-    });
-
-    const makeWorkLocation = (date: string, countryCode = "NL", deletedAt: string | null = null) => ({
-      id: 1,
-      user_id: 1,
-      date,
-      country_code: countryCode,
-      label: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: deletedAt,
-    });
-
-    it("upserts a new label into localStorage", () => {
-      applyIncrementalSyncPullResponse({ ...baseResponse(), labels: [makeLabel("lbl-1", "Work")] }, []);
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject({ id: "lbl-1", name: "Work" });
-    });
-
-    it("merges a new label with existing labels", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "lbl-existing", name: "Existing", color: "#FF0000" }]),
-      );
-      applyIncrementalSyncPullResponse({ ...baseResponse(), labels: [makeLabel("lbl-new", "New")] }, []);
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
-      expect(stored).toHaveLength(2);
-    });
-
-    it("removes a soft-deleted label", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "lbl-del", name: "Gone", color: "#000" }]),
-      );
-      applyIncrementalSyncPullResponse(
-        { ...baseResponse(), labels: [makeLabel("lbl-del", "Gone", "2026-01-02T00:00:00Z")] },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!);
-      expect(stored).toHaveLength(0);
-    });
-
-    it("upserts a new task into localStorage", () => {
-      applyIncrementalSyncPullResponse({ ...baseResponse(), tasks: [makeTask("task-1")] }, []);
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0].id).toBe("task-1");
-    });
-
-    it("removes a soft-deleted task", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([{ id: "task-del", text: "Gone", label: "", startTime: "2026-01-01T09:00" }]),
-      );
-      applyIncrementalSyncPullResponse(
-        { ...baseResponse(), tasks: [makeTask("task-del", "2026-01-02T00:00:00Z")] },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!);
-      expect(stored).toHaveLength(0);
-    });
-
-    it("upserts a new template", () => {
-      applyIncrementalSyncPullResponse(
-        { ...baseResponse(), templates: [makeTemplate("tmpl-1")] },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0].id).toBe("tmpl-1");
-    });
-
-    it("removes a soft-deleted template", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.templates,
-        JSON.stringify([{ id: "tmpl-del", text: "Gone", label: "", start: "09:00", stop: "09:15" }]),
-      );
-      applyIncrementalSyncPullResponse(
-        { ...baseResponse(), templates: [makeTemplate("tmpl-del", "2026-01-02T00:00:00Z")] },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!);
-      expect(stored).toHaveLength(0);
-    });
-
-    it("upserts a work location entry", () => {
-      applyIncrementalSyncPullResponse(
-        { ...baseResponse(), work_locations: [makeWorkLocation("2026-03-10", "DE")] },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
-      expect(stored["2026-03-10"]).toMatchObject({ countryCode: "DE" });
-    });
-
-    it("removes a soft-deleted work location entry", () => {
-      localStorage.setItem(
-        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
-        JSON.stringify({ "2026-03-10": { location: "other", countryCode: "DE" } }),
-      );
-      applyIncrementalSyncPullResponse(
-        {
-          ...baseResponse(),
-          work_locations: [makeWorkLocation("2026-03-10", "DE", "2026-03-11T00:00:00Z")],
-        },
-        [],
-      );
-      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
-      expect(stored["2026-03-10"]).toBeUndefined();
-    });
-
-    it("does not touch work_locations key when response has no work_locations", () => {
-      localStorage.setItem(
-        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
-        JSON.stringify({ "2026-01-01": { location: "home", countryCode: "NL" } }),
-      );
-      applyIncrementalSyncPullResponse(baseResponse(), []);
-      const stored = JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_STORAGE_PREFIX}2026`)!);
-      expect(stored["2026-01-01"]).toBeDefined();
-    });
-
-    it("merges time_off_entries: new server entries are added to existing ones", () => {
-      const existingEntry = buildTimeOffEntryForRange({
-        start: "2026-06-01",
-        end: "2026-06-01",
-        note: null,
-        entryType: "vacation",
-        entryFlag: "full_day",
-      });
-      const newServerEntry = {
-        id: 99,
-        entry_id: "new-entry-id",
-        user_id: 1,
-        entry_kind: "date" as const,
-        date: "2026-07-14",
-        start_date: null,
-        end_date: null,
-        weekday: null,
-        entry_type: "vacation",
-        entry_flag: "full_day",
-        note: "Bastille Day",
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:00:00Z",
-        deleted_at: null,
-      };
-      const result = applyIncrementalSyncPullResponse(
-        { ...baseResponse(), time_off_entries: [newServerEntry] },
-        [existingEntry],
-      );
-      expect(result).toHaveLength(2);
-      expect(result.some((e) => e.id === "new-entry-id")).toBe(true);
-    });
-
-    it("merges time_off_entries: deleted server entries are removed from the result", () => {
-      const existingEntry = buildTimeOffEntryForRange({
-        start: "2026-07-14",
-        end: "2026-07-14",
-        note: null,
-        entryType: "vacation",
-        entryFlag: "full_day",
-      });
-      const deletedServerEntry = {
-        id: 99,
-        entry_id: existingEntry.id,
-        user_id: 1,
-        entry_kind: "date" as const,
-        date: "2026-07-14",
-        start_date: null,
-        end_date: null,
-        weekday: null,
-        entry_type: "vacation",
-        entry_flag: "full_day",
-        note: null,
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-02T00:00:00Z",
-        deleted_at: "2026-01-02T00:00:00Z",
-      };
-      const result = applyIncrementalSyncPullResponse(
-        { ...baseResponse(), time_off_entries: [deletedServerEntry] },
-        [existingEntry],
-      );
-      expect(result).toHaveLength(0);
-    });
-
-    it("upserts a new gantt task into localStorage", () => {
-      applyIncrementalSyncPullResponse(
-        {
-          ...baseResponse(),
-          gantt_tasks: [
-            {
-              id: "gantt-new",
-              user_id: 1,
-              name: "Build phase",
-              start_date: "2026-04-01",
-              end_date: "2026-04-30",
-              progress: 10,
-              dependencies: null,
-              notes: "Important",
-              client_updated_at: "2026-01-01T00:00:00Z",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-01T00:00:00Z",
-              deleted_at: null,
-            },
-          ],
-        },
-        [],
-      );
-
-      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject({ id: "gantt-new", name: "Build phase", progress: 10, notes: "Important" });
-    });
-
-    it("removes a soft-deleted gantt task from localStorage", () => {
-      localStorage.setItem(
-        GANTT_STORAGE_KEY,
-        JSON.stringify([{ id: "gantt-del", name: "Old task", start: "2026-01-01", end: "2026-01-10", progress: 0 }]),
-      );
-
-      applyIncrementalSyncPullResponse(
-        {
-          ...baseResponse(),
-          gantt_tasks: [
-            {
-              id: "gantt-del",
-              user_id: 1,
-              name: "Old task",
-              start_date: "2026-01-01",
-              end_date: "2026-01-10",
-              progress: 0,
-              dependencies: null,
-              notes: null,
-              client_updated_at: "2026-01-01T00:00:00Z",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-02T00:00:00Z",
-              deleted_at: "2026-01-02T00:00:00Z",
-            },
-          ],
-        },
-        [],
-      );
-
-      const stored = JSON.parse(localStorage.getItem(GANTT_STORAGE_KEY)!);
-      expect(stored).toHaveLength(0);
-    });
-  });
 });

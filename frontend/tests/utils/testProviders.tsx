@@ -11,9 +11,8 @@
  * TanStack DB collections (defined in `src/db/collections.ts`) are module-level
  * singletons that do not require a React provider. This wrapper is therefore
  * sufficient for component tests that consume migrated TanStack DB collections.
- * Test isolation is guaranteed by the `localStorage.clear()` call in
- * `tests/setup.ts`, which resets any `localStorageCollectionOptions`-backed
- * collection between tests.
+ * Test isolation is guaranteed by the global `beforeEach` in `tests/setup.ts`,
+ * which clears every collection's rows before each test.
  */
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

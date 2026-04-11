@@ -36,7 +36,8 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey, TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { getSyncCursorKey } from "@/constants/storageKeys";
+import { tasksCollection } from "@/db/collections";
 
 // ---------------------------------------------------------------------------
 // SuperTokens session mock — mutable so individual tests can override it.
@@ -96,19 +97,14 @@ const emptyPullResponse = {
 
 /** Seed a minimal task so buildLocalSyncPushPayload() returns non-empty payload. */
 function seedLocalTask() {
-  localStorage.setItem(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    JSON.stringify([
-      {
-        id: "local-task-1",
-        text: "Local task",
-        label: "",
-        startTime: "2026-01-01T09:00",
-        stopTime: null,
-        includesBreak: false,
-      },
-    ]),
-  );
+  tasksCollection.insert({
+    id: "local-task-1",
+    text: "Local task",
+    label: "",
+    startTime: "2026-01-01T09:00",
+    stopTime: null,
+    includesBreak: false,
+  });
 }
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<unknown>;
@@ -429,9 +425,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     expect(parsed.hasCompletedOnboarding).toBe(true);
     expect(parsed.myTeam).toBe(2);
 
-    // The pull call was made — entity stores are written by applySyncPullResponse.
-    // emptyPullResponse has empty arrays, so localStorage entity keys stay absent,
-    // which is verified separately in syncClient.test.ts applySyncPullResponse suite.
+    // The pull call was made. This scenario only verifies the fetch path because
+    // emptyPullResponse contains no entity data to write into local state.
     const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([url]: [string]) => url.includes("/api/sync/pull"),
     );

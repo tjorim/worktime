@@ -1,27 +1,30 @@
 /**
- * Full application backup and restore utilities.
+ * Current-state application backup and restore utilities.
  *
- * Covers all meaningful user data stored in localStorage:
- * - User settings & preferences (worktime_user_state)
- * - Time-off entries
- * - Work location entries (per-year keys)
- * - Time tracking tasks, templates and labels
+ * Covers all meaningful user data:
+ * - User settings & preferences (still stored in localStorage)
+ * - Sync-managed domains now backed by TanStack DB collections
+ *   (time-off, work locations, time tracking, gantt)
  *
- * Device-specific data (developer options) is intentionally excluded.
+ * Device-specific data (developer options, sync cursor, outbox) is excluded.
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import {
-  GANTT_STORAGE_KEY,
-  TIME_TRACKING_STORAGE_KEYS,
-  USER_STATE_STORAGE_KEY,
-  WORK_LOCATIONS_STORAGE_PREFIX,
-} from "@/constants/storageKeys";
-import {
-  loadTimeOffEntries,
-  normalizeTimeOffEntries,
-  saveTimeOffEntries,
-} from "@/lib/timeOff/storage";
+  ganttTasksCollection,
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
+import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
+import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
+import type { GanttTask } from "@/types/gantt";
+import type { WorkLocationEntry } from "@/types/workLocation";
+import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isValidScheduleType } from "./scheduleUtils";
 
 export type AppBackupPayload = {
@@ -37,12 +40,10 @@ export type AppBackupPayload = {
 };
 
 /**
- * Options controlling which sections and which year to include in a backup.
- * Omitted include flags default to true (include everything).
+ * Options controlling which sections to include in a backup.
+ * Omitted include flags default to true.
  */
 export type BackupOptions = {
-  /** When set, filters tasks and work location data to this year only. */
-  year?: number;
   includeUserState?: boolean;
   includeTimeOff?: boolean;
   includeWorkLocations?: boolean;
@@ -53,8 +54,8 @@ export type BackupOptions = {
 };
 
 /**
- * Summary of which data categories are present in localStorage.
- * Used to drive the BackupDialog UI — only categories with data are shown.
+ * Summary of which backup sections currently have data.
+ * Used to drive the BackupDialog UI.
  */
 export type BackupDataPresence = {
   hasUserState: boolean;
@@ -64,8 +65,6 @@ export type BackupDataPresence = {
   hasTemplates: boolean;
   hasLabels: boolean;
   hasGanttTasks: boolean;
-  /** Years that have tasks or work location data, sorted newest-first. */
-  availableYears: number[];
 };
 
 function safeParseJson(key: string): unknown {
@@ -77,75 +76,124 @@ function safeParseJson(key: string): unknown {
   }
 }
 
+function toPlainTask(task: StoredTimeTrackingTask): StoredTimeTrackingTask {
+  return {
+    id: task.id,
+    text: task.text,
+    label: task.label,
+    startTime: task.startTime,
+    ...(task.stopTime ? { stopTime: task.stopTime } : {}),
+    ...(task.includesBreak === true ? { includesBreak: true } : {}),
+  };
+}
+
+function toPlainTemplate(template: TimeTrackingTemplate): TimeTrackingTemplate {
+  return {
+    id: template.id,
+    text: template.text,
+    label: template.label,
+    start: template.start,
+    stop: template.stop,
+  };
+}
+
+function toPlainLabel(label: TimeTrackingLabel): TimeTrackingLabel {
+  return {
+    id: label.id,
+    name: label.name,
+    color: label.color,
+  };
+}
+
+function toPlainGanttTask(task: GanttTask): GanttTask {
+  return {
+    id: task.id,
+    name: task.name,
+    start: task.start,
+    end: task.end,
+    progress: task.progress,
+    ...(task.dependencies ? { dependencies: task.dependencies } : {}),
+    ...(task.notes ? { notes: task.notes } : {}),
+  };
+}
+
+function toPlainWorkLocation(entry: WorkLocationEntry): WorkLocationEntry {
+  return {
+    date: entry.date,
+    countryCode: entry.countryCode,
+    ...(entry.label ? { label: entry.label } : {}),
+  };
+}
+
+function toPlainTimeOffEntry(entry: TimeOffEntry): TimeOffEntry {
+  if (entry.entryKind === "date") {
+    return {
+      id: entry.id,
+      entryKind: "date",
+      date: entry.date,
+      entryType: entry.entryType,
+      entryFlag: entry.entryFlag,
+      ...(entry.note ? { note: entry.note } : { note: null }),
+    };
+  }
+
+  if (entry.entryKind === "range") {
+    return {
+      id: entry.id,
+      entryKind: "range",
+      start: entry.start,
+      end: entry.end,
+      entryType: entry.entryType,
+      entryFlag: entry.entryFlag,
+      ...(entry.note ? { note: entry.note } : { note: null }),
+    };
+  }
+
+  return {
+    id: entry.id,
+    entryKind: "weekly",
+    weekday: entry.weekday,
+    entryType: entry.entryType,
+    entryFlag: entry.entryFlag,
+    ...(entry.note ? { note: entry.note } : { note: null }),
+  };
+}
+
 function getWorkLocationEntries(): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) {
-      const year = key.slice(WORK_LOCATIONS_STORAGE_PREFIX.length);
-      const data = safeParseJson(key);
-      if (data !== undefined) result[year] = data;
-    }
+  const entries = (workLocationsCollection.toArray as WorkLocationEntry[]).map(toPlainWorkLocation);
+
+  for (const entry of entries) {
+    const entryYear = entry.date.slice(0, 4);
+    const bucket = (result[entryYear] ??= {}) as Record<string, unknown>;
+    bucket[entry.date] = {
+      countryCode: entry.countryCode,
+      ...(entry.label ? { label: entry.label } : {}),
+    };
   }
+
   return result;
 }
 
-function getWorkLocationEntriesForYear(year: number): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const key = `${WORK_LOCATIONS_STORAGE_PREFIX}${year}`;
-  const data = safeParseJson(key);
-  if (data !== undefined) result[String(year)] = data;
-  return result;
-}
-
-function getTaskYear(task: unknown): number | null {
-  if (!task || typeof task !== "object") return null;
-  const taskObj = task as Record<string, unknown>;
-  if (typeof taskObj.startTime !== "string") return null;
-  const year = parseInt(taskObj.startTime.slice(0, 4), 10);
-  return isNaN(year) ? null : year;
-}
-
-/**
- * Inspect localStorage and return a summary of which data categories exist
- * and which years have year-scoped data (tasks, work locations).
- */
+/** Inspect local storage and collections and return which backup sections have data. */
 export function checkBackupDataPresence(): BackupDataPresence {
   const hasUserState = localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
-  const hasTimeOff = loadTimeOffEntries().length > 0;
+  const timeOffEntries = (timeOffCollection.toArray as TimeOffEntry[]).map(toPlainTimeOffEntry);
+  const hasTimeOff = timeOffEntries.length > 0;
 
-  const taskYears = new Set<number>();
-  const tasksData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
-  const hasTasks = Array.isArray(tasksData) && tasksData.length > 0;
-  if (hasTasks) {
-    for (const task of tasksData) {
-      const year = getTaskYear(task);
-      if (year !== null) taskYears.add(year);
-    }
-  }
+  const tasksData = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
+  const hasTasks = tasksData.length > 0;
 
-  const templatesData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.templates);
-  const hasTemplates = Array.isArray(templatesData) && templatesData.length > 0;
+  const templatesData = (templatesCollection.toArray as TimeTrackingTemplate[]).map(toPlainTemplate);
+  const hasTemplates = templatesData.length > 0;
 
-  const labelsData = safeParseJson(TIME_TRACKING_STORAGE_KEYS.labels);
-  const hasLabels = Array.isArray(labelsData) && labelsData.length > 0;
+  const labelsData = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
+  const hasLabels = labelsData.length > 0;
 
-  const workLocationYears = new Set<number>();
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) {
-      const year = parseInt(key.slice(WORK_LOCATIONS_STORAGE_PREFIX.length), 10);
-      if (!isNaN(year)) workLocationYears.add(year);
-    }
-  }
-  const hasWorkLocations = workLocationYears.size > 0;
+  const hasWorkLocations = (workLocationsCollection.toArray as WorkLocationEntry[]).length > 0;
 
-  const availableYears = Array.from(new Set([...taskYears, ...workLocationYears])).sort(
-    (a, b) => b - a,
-  );
-
-  const ganttData = safeParseJson(GANTT_STORAGE_KEY);
-  const hasGanttTasks = Array.isArray(ganttData) && ganttData.length > 0;
+  const ganttData = (ganttTasksCollection.toArray as GanttTask[]).map(toPlainGanttTask);
+  const hasGanttTasks = ganttData.length > 0;
 
   return {
     hasUserState,
@@ -155,13 +203,12 @@ export function checkBackupDataPresence(): BackupDataPresence {
     hasTemplates,
     hasLabels,
     hasGanttTasks,
-    availableYears,
   };
 }
 
 /**
- * Collect all backed-up app data from localStorage into a payload object.
- * Pass `options` to restrict which sections are included or to filter by year.
+ * Collect the current app state into a backup payload object.
+ * Pass `options` to restrict which sections are included.
  */
 export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   const include = {
@@ -185,51 +232,33 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.timeOff) {
-    const timeOff = loadTimeOffEntries();
+    const timeOff = (timeOffCollection.toArray as TimeOffEntry[]).map(toPlainTimeOffEntry);
     if (timeOff.length > 0) payload.timeOff = timeOff;
   }
 
   if (include.workLocations) {
-    const workLocations =
-      options?.year !== undefined
-        ? getWorkLocationEntriesForYear(options.year)
-        : getWorkLocationEntries();
+    const workLocations = getWorkLocationEntries();
     if (Object.keys(workLocations).length > 0) payload.workLocations = workLocations;
   }
 
   if (include.tasks) {
-    const allTasks = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
-    if (Array.isArray(allTasks)) {
-      const tasks =
-        options?.year !== undefined
-          ? allTasks.filter((t: unknown) => {
-              if (t && typeof t === "object") {
-                const task = t as Record<string, unknown>;
-                return (
-                  typeof task.startTime === "string" &&
-                  task.startTime.startsWith(`${options.year}-`)
-                );
-              }
-              return false;
-            })
-          : allTasks;
-      if (tasks.length > 0) payload.tasks = tasks;
-    }
+    const tasks = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
+    if (tasks.length > 0) payload.tasks = tasks;
   }
 
   if (include.templates) {
-    const templates = safeParseJson(TIME_TRACKING_STORAGE_KEYS.templates);
-    if (Array.isArray(templates)) payload.templates = templates;
+    const templates = (templatesCollection.toArray as TimeTrackingTemplate[]).map(toPlainTemplate);
+    if (templates.length > 0) payload.templates = templates;
   }
 
   if (include.labels) {
-    const labels = safeParseJson(TIME_TRACKING_STORAGE_KEYS.labels);
-    if (Array.isArray(labels)) payload.labels = labels;
+    const labels = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
+    if (labels.length > 0) payload.labels = labels;
   }
 
   if (include.ganttTasks) {
-    const ganttTasks = safeParseJson(GANTT_STORAGE_KEY);
-    if (Array.isArray(ganttTasks)) payload.ganttTasks = ganttTasks;
+    const ganttTasks = (ganttTasksCollection.toArray as GanttTask[]).map(toPlainGanttTask);
+    if (ganttTasks.length > 0) payload.ganttTasks = ganttTasks;
   }
 
   return payload;
@@ -239,7 +268,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
  * Build a backup payload and trigger a browser download of the JSON file.
  *
  * @param date - ISO date string (YYYY-MM-DD) used in the filename.
- * @param options - Optional section/year filter for partial backups.
+ * @param options - Optional section filter for partial backups.
  */
 export function downloadAppBackup(date: string, options?: BackupOptions): void {
   const payload = buildBackupPayload(options);
@@ -298,7 +327,6 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
       for (const dayEntry of Object.values(yearData as Record<string, unknown>)) {
         if (!dayEntry || typeof dayEntry !== "object") return false;
         const entry = dayEntry as Record<string, unknown>;
-        if (typeof entry.location !== "string") return false;
         if (typeof entry.countryCode !== "string") return false;
       }
     }
@@ -315,9 +343,62 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   return true;
 }
 
+function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkLocationEntry[] {
+  const incomingEntries: WorkLocationEntry[] = [];
+
+  for (const yearData of Object.values(workLocations)) {
+    if (!yearData || typeof yearData !== "object" || Array.isArray(yearData)) continue;
+    for (const [date, value] of Object.entries(yearData as Record<string, unknown>)) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const entry = value as Record<string, unknown>;
+      if (typeof entry.countryCode !== "string") continue;
+      incomingEntries.push({
+        date,
+        countryCode: entry.countryCode as WorkLocationEntry["countryCode"],
+        ...(typeof entry.label === "string" && entry.label.length > 0 ? { label: entry.label } : {}),
+      });
+    }
+  }
+
+  return incomingEntries;
+}
+
+function replaceCollectionContents<T extends object, TKey extends string>(
+  collection: {
+    toArray: T[];
+    has: (key: TKey) => boolean;
+    insert: (item: T) => void;
+    update: (key: TKey, cb: (draft: T) => void) => void;
+    delete: (key: TKey) => void;
+  },
+  items: T[],
+  getKey: (item: T) => TKey,
+): void {
+  const nextKeys = new Set(items.map(getKey));
+
+  for (const item of items) {
+    const key = getKey(item);
+    if (collection.has(key)) {
+      collection.update(key, (draft) => {
+        Object.assign(draft, item);
+      });
+    } else {
+      collection.insert(item);
+    }
+  }
+
+  for (const existing of collection.toArray) {
+    const key = getKey(existing);
+    if (!nextKeys.has(key) && collection.has(key)) {
+      collection.delete(key);
+    }
+  }
+}
+
 /**
- * Write each section from the backup payload to localStorage, then reload the
- * page so all React contexts pick up the restored values.
+ * Write each section from the backup payload to the current storage model,
+ * replacing the current contents of any included section, then reload the page
+ * so all React contexts pick up the restored values.
  *
  * Only sections present in the payload are restored; absent sections are left
  * untouched.
@@ -328,48 +409,87 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
   }
 
   if (Array.isArray(payload.timeOff)) {
-    saveTimeOffEntries(normalizeTimeOffEntries(payload.timeOff));
+    replaceCollectionContents(
+      timeOffCollection as unknown as {
+        toArray: TimeOffEntry[];
+        has: (id: string) => boolean;
+        insert: (item: TimeOffEntry) => void;
+        update: (id: string, cb: (draft: TimeOffEntry) => void) => void;
+        delete: (id: string) => void;
+      },
+      normalizeTimeOffEntries(payload.timeOff),
+      (entry) => entry.id,
+    );
   }
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
-    for (const [year, data] of Object.entries(payload.workLocations)) {
-      localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(data));
-    }
+    replaceCollectionContents(
+      workLocationsCollection as unknown as {
+        toArray: WorkLocationEntry[];
+        has: (id: string) => boolean;
+        insert: (item: WorkLocationEntry) => void;
+        update: (id: string, cb: (draft: WorkLocationEntry) => void) => void;
+        delete: (id: string) => void;
+      },
+      parseWorkLocationEntries(payload.workLocations),
+      (entry) => entry.date,
+    );
   }
 
   if (Array.isArray(payload.tasks)) {
-    const existingTasks = safeParseJson(TIME_TRACKING_STORAGE_KEYS.tasks);
-    if (!Array.isArray(existingTasks)) {
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(payload.tasks));
-    } else {
-      const incomingYears = new Set<number>();
-      for (const task of payload.tasks) {
-        const year = getTaskYear(task);
-        if (year !== null) incomingYears.add(year);
-      }
-
-      const tasksToKeep = existingTasks.filter((task) => {
-        const year = getTaskYear(task);
-        return year === null || !incomingYears.has(year);
-      });
-
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([...tasksToKeep, ...payload.tasks]),
-      );
-    }
+    replaceCollectionContents(
+      tasksCollection as unknown as {
+        toArray: StoredTimeTrackingTask[];
+        has: (id: string) => boolean;
+        insert: (item: StoredTimeTrackingTask) => void;
+        update: (id: string, cb: (draft: StoredTimeTrackingTask) => void) => void;
+        delete: (id: string) => void;
+      },
+      payload.tasks as StoredTimeTrackingTask[],
+      (task) => task.id,
+    );
   }
 
   if (Array.isArray(payload.templates)) {
-    localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(payload.templates));
+    replaceCollectionContents(
+      templatesCollection as unknown as {
+        toArray: TimeTrackingTemplate[];
+        has: (id: string) => boolean;
+        insert: (item: TimeTrackingTemplate) => void;
+        update: (id: string, cb: (draft: TimeTrackingTemplate) => void) => void;
+        delete: (id: string) => void;
+      },
+      payload.templates as TimeTrackingTemplate[],
+      (template) => template.id,
+    );
   }
 
   if (Array.isArray(payload.labels)) {
-    localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(payload.labels));
+    replaceCollectionContents(
+      labelsCollection as unknown as {
+        toArray: TimeTrackingLabel[];
+        has: (id: string) => boolean;
+        insert: (item: TimeTrackingLabel) => void;
+        update: (id: string, cb: (draft: TimeTrackingLabel) => void) => void;
+        delete: (id: string) => void;
+      },
+      payload.labels as TimeTrackingLabel[],
+      (label) => label.id,
+    );
   }
 
   if (Array.isArray(payload.ganttTasks)) {
-    localStorage.setItem(GANTT_STORAGE_KEY, JSON.stringify(payload.ganttTasks));
+    replaceCollectionContents(
+      ganttTasksCollection as unknown as {
+        toArray: GanttTask[];
+        has: (id: string) => boolean;
+        insert: (item: GanttTask) => void;
+        update: (id: string, cb: (draft: GanttTask) => void) => void;
+        delete: (id: string) => void;
+      },
+      payload.ganttTasks as GanttTask[],
+      (task) => task.id,
+    );
   }
 
   window.location.reload();

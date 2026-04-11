@@ -65,6 +65,7 @@ vi.mock("@/components/gantt/GanttChart.tsx", () => ({
 }));
 
 import { GanttView } from "@/components/gantt/GanttView";
+import { ganttTasksCollection } from "@/db/collections";
 
 type MockUserState = {
   hasCompletedOnboarding: boolean;
@@ -155,18 +156,13 @@ describe("GanttView", () => {
 
   it("clicking a task opens edit modal with pre-filled data", async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem(
-      "worktime_gantt_tasks",
-      JSON.stringify([
-        {
-          id: "task-1",
-          name: "Plan release",
-          start: "2026-03-01",
-          end: "2026-03-05",
-          progress: 40,
-        },
-      ]),
-    );
+    ganttTasksCollection.utils.writeUpsert([{
+      id: "task-1",
+      name: "Plan release",
+      start: "2026-03-01",
+      end: "2026-03-05",
+      progress: 40,
+    }]);
 
     renderWithSettings(<GanttView />);
 
@@ -180,18 +176,13 @@ describe("GanttView", () => {
 
   it("deletes a task from the list", async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem(
-      "worktime_gantt_tasks",
-      JSON.stringify([
-        {
-          id: "task-1",
-          name: "Plan release",
-          start: "2026-03-01",
-          end: "2026-03-05",
-          progress: 40,
-        },
-      ]),
-    );
+    ganttTasksCollection.utils.writeUpsert([{
+      id: "task-1",
+      name: "Plan release",
+      start: "2026-03-01",
+      end: "2026-03-05",
+      progress: 40,
+    }]);
 
     renderWithSettings(<GanttView />);
 
