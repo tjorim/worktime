@@ -360,4 +360,47 @@ describe("useSyncSignal", () => {
       expect(triggerPull).not.toHaveBeenCalled();
     });
   });
+
+  describe("invalid timestamp handling", () => {
+    it("does NOT call triggerPull when server_timestamp is not a parseable date", () => {
+      const triggerPull = vi.fn();
+      const { transport, emit } = createMockTransport();
+
+      renderHook(() => useSyncSignal(true, "user-1", triggerPull, transport));
+
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      act(() => {
+        emit("not-a-date");
+      });
+
+      expect(triggerPull).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("invalid server_timestamp"),
+        "not-a-date",
+      );
+    });
+
+    it("does NOT call triggerPull when the stored cursor is not a parseable date", () => {
+      const triggerPull = vi.fn();
+      const { transport, emit } = createMockTransport();
+
+      // Corrupt the stored cursor.
+      localStorage.setItem(getSyncCursorKey("user-1"), "garbage");
+
+      renderHook(() => useSyncSignal(true, "user-1", triggerPull, transport));
+
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      act(() => {
+        emit("2026-06-01T00:00:00.000Z");
+      });
+
+      expect(triggerPull).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("stored sync cursor is invalid"),
+        "garbage",
+      );
+    });
+  });
 });

@@ -140,10 +140,23 @@ export function useSyncSignal(
     if (!isActive || !userId || !transport) return;
 
     const unsubscribe = transport.subscribe((serverTimestamp) => {
+      const serverTimestampMs = Date.parse(serverTimestamp);
+      if (Number.isNaN(serverTimestampMs)) {
+        console.warn("useSyncSignal: ignoring signal with invalid server_timestamp:", serverTimestamp);
+        return;
+      }
+
       // Dedup: skip pull if the local cursor is already at or ahead of the signal.
       const cursor = localStorage.getItem(getSyncCursorKey(userId));
-      if (cursor !== null && cursor >= serverTimestamp) {
-        return;
+      if (cursor !== null) {
+        const cursorMs = Date.parse(cursor);
+        if (Number.isNaN(cursorMs)) {
+          console.warn("useSyncSignal: ignoring signal because stored sync cursor is invalid:", cursor);
+          return;
+        }
+        if (cursorMs >= serverTimestampMs) {
+          return;
+        }
       }
       triggerPullRef.current();
     });

@@ -118,32 +118,38 @@ class SyncEventManager:
         local SSE queues.
 
         Falls back to direct :meth:`_enqueue_local` when no Postgres NOTIFY
-        connection is available (e.g. tests or ``DATABASE_ENABLED=False``).
+        connection is available (e.g. tests or ``DATABASE_ENABLED=False``), or
+        when sending the NOTIFY fails.
 
         Returns the number of local queues notified in the fallback path, or
         ``0`` when the Postgres path is used (delivery happens asynchronously
         via the LISTEN callback).
         """
-        if self._notify_conn is not None:
-            await self._pg_notify(user_id)
+        conn = self._notify_conn
+        if conn is not None and not conn.is_closed() and await self._pg_notify(user_id):
             return 0
         return self._enqueue_local(user_id)
 
-    async def _pg_notify(self, user_id: int) -> None:
+    async def _pg_notify(self, user_id: int) -> bool:
         """Send ``NOTIFY worktime_sync_changed, '<user_id>'`` via asyncpg.
 
         PostgreSQL's bare ``NOTIFY`` statement does not support bind parameters
         so we use the ``pg_notify(channel, payload)`` function via ``SELECT``
         which accepts ``$1``/``$2`` placeholders safely.
+
+        Returns ``True`` if the NOTIFY was sent, else ``False`` so callers can
+        fall back to in-process delivery.
         """
         conn = self._notify_conn
         if conn is None or conn.is_closed():
             logger.debug("SSE: notify connection unavailable — skipping cross-process NOTIFY")
-            return
+            return False
         try:
             await conn.execute("SELECT pg_notify($1, $2)", _NOTIFY_CHANNEL, str(user_id))
+            return True
         except Exception:
             logger.warning("SSE: Postgres NOTIFY failed (non-fatal)", exc_info=True)
+            return False
 
     def _pg_listener_callback(
         self,
@@ -198,8 +204,7 @@ class SyncEventManager:
                 "SSE: Postgres LISTEN/NOTIFY setup failed — SSE will work within a single worker only",
                 exc_info=True,
             )
-            self._listen_conn = None
-            self._notify_conn = None
+            await self.stop_pg_listener()
 
     async def stop_pg_listener(self) -> None:
         """Remove the LISTEN callback and close asyncpg connections."""
