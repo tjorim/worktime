@@ -373,6 +373,22 @@ function AppContent() {
  * @returns The root React element: SuperTokensWrapper, SettingsProvider, EventStoreProvider,
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
+
+// ---------------------------------------------------------------------------
+
+/**
+ * TanStack Query client shared by the whole app.
+ *
+ * Standalone `useQuery` is only correct for read-only server-state domains that have no
+ * offline write requirements (e.g. public holidays via useOpenHolidays).
+ *
+ * Sync-managed domains (labels, tasks, templates, work locations, time-off entries,
+ * gantt tasks, user preferences) use QueryCollection from @tanstack/query-db-collection,
+ * which feeds TanStack Query's fetch lifecycle into a TanStack DB collection. Do NOT add
+ * a standalone useQuery alongside a QueryCollection for the same domain.
+ *
+ * See docs/realtime-sync-architecture.md §Data Ownership Boundaries for details.
+ */
 const queryClient = new QueryClient();
 
 function App() {
