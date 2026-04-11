@@ -6,9 +6,7 @@ import {
   restoreAppBackup,
   validateAppBackupPayload,
 } from "@/utils/appBackup";
-import {
-  USER_STATE_STORAGE_KEY,
-} from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import {
   ganttTasksCollection,
@@ -150,7 +148,6 @@ describe("appBackup", () => {
       expect(payload.userState).toBeUndefined();
       expect(payload.timeOff).toBeUndefined();
     });
-
   });
 
   describe("checkBackupDataPresence", () => {

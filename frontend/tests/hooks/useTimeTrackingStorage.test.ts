@@ -10,9 +10,11 @@ function nextId(prefix: string): string {
   return `${prefix}-${uniqueCounter}`;
 }
 
-function clearCollectionById(
-  collection: { toArray: Array<{ id: string }>; has: (id: string) => boolean; delete: (id: string) => void },
-) {
+function clearCollectionById(collection: {
+  toArray: Array<{ id: string }>;
+  has: (id: string) => boolean;
+  delete: (id: string) => void;
+}) {
   const items = [...collection.toArray];
   for (const item of items) {
     try {
@@ -329,7 +331,9 @@ describe("useTimeTrackingStorage", () => {
         expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
       });
 
-      expect(result.current.tasks.find((task) => task.id === taskId)?.includesBreak).toBeUndefined();
+      expect(
+        result.current.tasks.find((task) => task.id === taskId)?.includesBreak,
+      ).toBeUndefined();
 
       act(() => {
         result.current.toggleBreak(taskId, true);
@@ -357,11 +361,17 @@ describe("useTimeTrackingStorage", () => {
         expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
       });
 
-      act(() => { result.current.toggleBreak(taskId, true); });
-      act(() => { result.current.toggleBreak(taskId, false); });
+      act(() => {
+        result.current.toggleBreak(taskId, true);
+      });
+      act(() => {
+        result.current.toggleBreak(taskId, false);
+      });
 
       await waitFor(() => {
-        expect(result.current.tasks.find((task) => task.id === taskId)?.includesBreak).toBeUndefined();
+        expect(
+          result.current.tasks.find((task) => task.id === taskId)?.includesBreak,
+        ).toBeUndefined();
       });
     });
 
@@ -388,7 +398,9 @@ describe("useTimeTrackingStorage", () => {
 
       await waitFor(() => {
         expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
-        expect(result.current.tasks.find((task) => task.id === taskId)?.includesBreak).toBeUndefined();
+        expect(
+          result.current.tasks.find((task) => task.id === taskId)?.includesBreak,
+        ).toBeUndefined();
       });
     });
   });
@@ -398,8 +410,20 @@ describe("useTimeTrackingStorage", () => {
       const badId = nextId("bad");
       const goodId = nextId("good");
       // Insert tasks directly into the collection (bypassing hook validation).
-      tasksCollection.insert({ id: badId, text: "Bad", label: "Support", startTime: "invalid", stopTime: undefined });
-      tasksCollection.insert({ id: goodId, text: "Good", label: "Support", startTime: "2026-02-07T08:00", stopTime: "2026-02-07T09:00" });
+      tasksCollection.insert({
+        id: badId,
+        text: "Bad",
+        label: "Support",
+        startTime: "invalid",
+        stopTime: undefined,
+      });
+      tasksCollection.insert({
+        id: goodId,
+        text: "Good",
+        label: "Support",
+        startTime: "2026-02-07T08:00",
+        stopTime: "2026-02-07T09:00",
+      });
 
       const { result } = renderHook(() => useTimeTrackingStorage());
 
@@ -434,11 +458,45 @@ describe("useTimeTrackingStorage", () => {
       const validFalseId = nextId("valid-false");
       const validAbsentId = nextId("valid-absent");
       // Insert tasks directly to bypass the hook's insert validation.
-      tasksCollection.insert({ id: truthyId, text: "Bad break", label: "Support", startTime: "2026-02-07T08:00", stopTime: "2026-02-07T12:00", includesBreak: "yes" as unknown as true });
-      tasksCollection.insert({ id: numericId, text: "Numeric break", label: "Support", startTime: "2026-02-07T13:00", stopTime: "2026-02-07T14:00", includesBreak: 1 as unknown as true });
-      tasksCollection.insert({ id: validTrueId, text: "Valid true", label: "Support", startTime: "2026-02-07T08:00", stopTime: "2026-02-07T09:00", includesBreak: true });
-      tasksCollection.insert({ id: validFalseId, text: "Valid false", label: "Support", startTime: "2026-02-07T10:00", stopTime: "2026-02-07T11:00", includesBreak: false });
-      tasksCollection.insert({ id: validAbsentId, text: "No field", label: "Support", startTime: "2026-02-07T14:00", stopTime: "2026-02-07T15:00" });
+      tasksCollection.insert({
+        id: truthyId,
+        text: "Bad break",
+        label: "Support",
+        startTime: "2026-02-07T08:00",
+        stopTime: "2026-02-07T12:00",
+        includesBreak: "yes" as unknown as true,
+      });
+      tasksCollection.insert({
+        id: numericId,
+        text: "Numeric break",
+        label: "Support",
+        startTime: "2026-02-07T13:00",
+        stopTime: "2026-02-07T14:00",
+        includesBreak: 1 as unknown as true,
+      });
+      tasksCollection.insert({
+        id: validTrueId,
+        text: "Valid true",
+        label: "Support",
+        startTime: "2026-02-07T08:00",
+        stopTime: "2026-02-07T09:00",
+        includesBreak: true,
+      });
+      tasksCollection.insert({
+        id: validFalseId,
+        text: "Valid false",
+        label: "Support",
+        startTime: "2026-02-07T10:00",
+        stopTime: "2026-02-07T11:00",
+        includesBreak: false,
+      });
+      tasksCollection.insert({
+        id: validAbsentId,
+        text: "No field",
+        label: "Support",
+        startTime: "2026-02-07T14:00",
+        stopTime: "2026-02-07T15:00",
+      });
 
       const { result } = renderHook(() => useTimeTrackingStorage());
 
@@ -500,7 +558,13 @@ describe("useTimeTrackingStorage", () => {
 
     it("updates an existing template", async () => {
       const templateId = nextId("tpl");
-      templatesCollection.insert({ id: templateId, text: "Old name", label: "Support", start: "08:00", stop: "09:00" });
+      templatesCollection.insert({
+        id: templateId,
+        text: "Old name",
+        label: "Support",
+        start: "08:00",
+        stop: "09:00",
+      });
 
       const { result } = renderHook(() => useTimeTrackingStorage());
       await waitFor(() => {
@@ -524,8 +588,20 @@ describe("useTimeTrackingStorage", () => {
     it("deletes a template by id", async () => {
       const keepId = nextId("tpl");
       const deleteId = nextId("tpl");
-      templatesCollection.insert({ id: keepId, text: "Keep", label: "Support", start: "08:00", stop: "09:00" });
-      templatesCollection.insert({ id: deleteId, text: "Delete", label: "Dev", start: "10:00", stop: "11:00" });
+      templatesCollection.insert({
+        id: keepId,
+        text: "Keep",
+        label: "Support",
+        start: "08:00",
+        stop: "09:00",
+      });
+      templatesCollection.insert({
+        id: deleteId,
+        text: "Delete",
+        label: "Dev",
+        start: "10:00",
+        stop: "11:00",
+      });
 
       const { result } = renderHook(() => useTimeTrackingStorage());
       await waitFor(() => {
@@ -594,7 +670,13 @@ describe("useTimeTrackingStorage", () => {
     it("replaces existing templates", async () => {
       const oldId = nextId("tpl-old");
       const newId = nextId("tpl-new");
-      templatesCollection.insert({ id: oldId, text: "Old", label: "Support", start: "08:00", stop: "09:00" });
+      templatesCollection.insert({
+        id: oldId,
+        text: "Old",
+        label: "Support",
+        start: "08:00",
+        stop: "09:00",
+      });
 
       const { result } = renderHook(() => useTimeTrackingStorage());
       await waitFor(() => {
@@ -613,5 +695,4 @@ describe("useTimeTrackingStorage", () => {
       });
     });
   });
-
 });

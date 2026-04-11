@@ -19,16 +19,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo } from "reac
 import { useAuth } from "./AuthContext";
 import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn, type TriggerPullFn, type ResolveOngoingConflictsFn } from "@/hooks/useOngoingSync";
+import {
+  useOngoingSync,
+  type OngoingSyncState,
+  type EnqueueChangeFn,
+  type TriggerPullFn,
+  type ResolveOngoingConflictsFn,
+} from "@/hooks/useOngoingSync";
 import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
-import {
-  setSyncCollectionAuth,
-  applyIncrementalPullToCollections,
-} from "@/db/collections";
-import {
-  type SyncPullResponse,
-  type SyncPushPayload,
-} from "@/utils/syncClient";
+import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
+import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
 export interface OngoingSyncContextType extends OngoingSyncState {
   /**
@@ -108,7 +108,18 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     applyIncrementalPullToCollections(data);
   }, []);
 
-  const { enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter } = useOngoingSync(
+  const {
+    enqueueChange,
+    triggerPull,
+    resolveOngoingConflicts,
+    isSyncing,
+    lastSyncedAt,
+    outboxCount,
+    hasSyncError,
+    conflictCount,
+    conflictedPayload,
+    retryAfter,
+  } = useOngoingSync(
     isSyncEstablished,
     userId,
     isAuthenticated ? fetchFn : null,
@@ -129,8 +140,30 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
 
   const value = useMemo<OngoingSyncContextType>(
-    () => ({ enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter }),
-    [enqueueChange, triggerPull, resolveOngoingConflicts, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter],
+    () => ({
+      enqueueChange,
+      triggerPull,
+      resolveOngoingConflicts,
+      isSyncing,
+      lastSyncedAt,
+      outboxCount,
+      hasSyncError,
+      conflictCount,
+      conflictedPayload,
+      retryAfter,
+    }),
+    [
+      enqueueChange,
+      triggerPull,
+      resolveOngoingConflicts,
+      isSyncing,
+      lastSyncedAt,
+      outboxCount,
+      hasSyncError,
+      conflictCount,
+      conflictedPayload,
+      retryAfter,
+    ],
   );
 
   return <OngoingSyncContext.Provider value={value}>{children}</OngoingSyncContext.Provider>;
@@ -141,5 +174,12 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
  * Callers fill in the relevant entity arrays before calling `enqueueChange`.
  */
 export function emptySyncPayload(): SyncPushPayload {
-  return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [], gantt_tasks: [] };
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+  };
 }

@@ -467,7 +467,6 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Week vacation")).toBeInTheDocument();
       expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
     });
-
   });
 
   describe("Display and Grouping", () => {

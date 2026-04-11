@@ -90,9 +90,7 @@ export function useTimeTrackingStorage() {
 
   const tasks = useMemo(
     () =>
-      ((rawTaskData ?? []) as StoredTimeTrackingTask[])
-        .filter(isValidRawTask)
-        .map(convertToTask),
+      ((rawTaskData ?? []) as StoredTimeTrackingTask[]).filter(isValidRawTask).map(convertToTask),
     [rawTaskData],
   );
 
@@ -163,22 +161,28 @@ export function useTimeTrackingStorage() {
    *
    * If `taskId` does not match any stored task the call is a no-op.
    */
-  const toggleBreak = useCallback((taskId: string, includesBreak: boolean) => {
-    if (!tasks.some((task) => task.id === taskId)) return;
-    tasksCollection.update(taskId, (d) => {
-      d.includesBreak = includesBreak || undefined;
-    });
-  }, [tasks]);
+  const toggleBreak = useCallback(
+    (taskId: string, includesBreak: boolean) => {
+      if (!tasks.some((task) => task.id === taskId)) return;
+      tasksCollection.update(taskId, (d) => {
+        d.includesBreak = includesBreak || undefined;
+      });
+    },
+    [tasks],
+  );
 
-  const removeTask = useCallback((id: string) => {
-    if (!tasks.some((task) => task.id === id)) return;
-    if (!hasSyncCollectionAuth()) {
-      const remainingTasks = tasks.filter((task) => task.id !== id);
-      replaceCollectionContents(tasksCollection, remainingTasks, (task) => task.id);
-      return;
-    }
-    tasksCollection.delete(id);
-  }, [tasks]);
+  const removeTask = useCallback(
+    (id: string) => {
+      if (!tasks.some((task) => task.id === id)) return;
+      if (!hasSyncCollectionAuth()) {
+        const remainingTasks = tasks.filter((task) => task.id !== id);
+        replaceCollectionContents(tasksCollection, remainingTasks, (task) => task.id);
+        return;
+      }
+      tasksCollection.delete(id);
+    },
+    [tasks],
+  );
 
   const addTemplate = useCallback((payload: Omit<TimeTrackingTemplate, "id">) => {
     const id = crypto.randomUUID();
@@ -195,19 +199,28 @@ export function useTimeTrackingStorage() {
     [templates],
   );
 
-  const deleteTemplate = useCallback((id: string) => {
-    if (!templates.some((template) => template.id === id)) return;
-    if (!hasSyncCollectionAuth()) {
-      const remainingTemplates = templates.filter((template) => template.id !== id);
-      replaceCollectionContents(templatesCollection, remainingTemplates, (template) => template.id);
-      return;
-    }
-    templatesCollection.delete(id);
-  }, [templates]);
+  const deleteTemplate = useCallback(
+    (id: string) => {
+      if (!templates.some((template) => template.id === id)) return;
+      if (!hasSyncCollectionAuth()) {
+        const remainingTemplates = templates.filter((template) => template.id !== id);
+        replaceCollectionContents(
+          templatesCollection,
+          remainingTemplates,
+          (template) => template.id,
+        );
+        return;
+      }
+      templatesCollection.delete(id);
+    },
+    [templates],
+  );
 
   const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {
     const nextIds = new Set(nextTemplates.map((t) => t.id));
-    const toDelete = (templatesCollection.toArray as TimeTrackingTemplate[]).filter((t) => !nextIds.has(t.id));
+    const toDelete = (templatesCollection.toArray as TimeTrackingTemplate[]).filter(
+      (t) => !nextIds.has(t.id),
+    );
     const hasWork = nextTemplates.length > 0 || toDelete.length > 0;
     runWriteBatch(templatesCollection, hasWork, () => {
       // Upsert all templates in the new list
@@ -230,7 +243,9 @@ export function useTimeTrackingStorage() {
   const updateLabels = useCallback((nextLabels: TimeTrackingLabel[]) => {
     const sanitized = sanitizeLabels(nextLabels);
     const nextIds = new Set(sanitized.map((l) => l.id));
-    const toDelete = (labelsCollection.toArray as TimeTrackingLabel[]).filter((l) => !nextIds.has(l.id));
+    const toDelete = (labelsCollection.toArray as TimeTrackingLabel[]).filter(
+      (l) => !nextIds.has(l.id),
+    );
     const hasWork = sanitized.length > 0 || toDelete.length > 0;
     runWriteBatch(labelsCollection, hasWork, () => {
       // Upsert all labels in the new list

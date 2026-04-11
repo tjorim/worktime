@@ -156,7 +156,9 @@ describe("useGanttTasks", () => {
 
     await waitFor(() => {
       expect(result.current.tasks.some((task) => task.id === firstId)).toBe(false);
-      expect(result.current.tasks.find((task) => task.id === secondId)?.dependencies).toBeUndefined();
+      expect(
+        result.current.tasks.find((task) => task.id === secondId)?.dependencies,
+      ).toBeUndefined();
       expect(result.current.tasks.find((task) => task.id === thirdId)?.dependencies).toBe(secondId);
     });
   });
@@ -165,10 +167,7 @@ describe("useGanttTasks", () => {
     const okId = nextId("ok");
     const badId = nextId("bad-format");
     vi.stubGlobal("crypto", {
-      randomUUID: vi
-        .fn()
-        .mockReturnValueOnce(okId)
-        .mockReturnValueOnce(badId),
+      randomUUID: vi.fn().mockReturnValueOnce(okId).mockReturnValueOnce(badId),
     });
 
     const { result } = renderHook(() => useGanttTasks());

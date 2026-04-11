@@ -117,7 +117,11 @@ export function useOngoingSync(
   userId: string | null,
   fetchFn: FetchFn | null,
   onIncrementalPull?: (data: SyncPullResponse) => void,
-): OngoingSyncState & { enqueueChange: EnqueueChangeFn; triggerPull: TriggerPullFn; resolveOngoingConflicts: ResolveOngoingConflictsFn } {
+): OngoingSyncState & {
+  enqueueChange: EnqueueChangeFn;
+  triggerPull: TriggerPullFn;
+  resolveOngoingConflicts: ResolveOngoingConflictsFn;
+} {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
     if (!userId) return null;
@@ -189,88 +193,91 @@ export function useOngoingSync(
    *   Defaults to false so that passive triggers (visibility change) respect
    *   the current back-off window.
    */
-  const flushAndPull = useCallback(async (force = false) => {
-    if (!isActive || !userId || !fetchFn) return;
-    if (isFlushingRef.current) return;
-    // Respect back-off unless the caller explicitly forces a flush (e.g. the
-    // `online` event after a real reconnect, or an SSE-triggered pull).
-    if (!force && retryAfterRef.current !== null && Date.now() < retryAfterRef.current) return;
-    isFlushingRef.current = true;
-    setIsSyncing(true);
-    try {
-      // --- Flush outbox ---
-      let flushConflicts = 0;
-      const dequeued = dequeueAndMergeSyncOutbox(userId);
-      if (dequeued) {
-        const { merged, commit } = dequeued;
-        let pushResult: SyncPushResponse | null;
-        try {
-          pushResult = await pushSyncPayload(fetchFn, merged);
-        } catch (err) {
-          // Push threw (e.g. network error) — outbox stays intact for next retry.
-          console.error("useOngoingSync: outbox push threw:", err);
+  const flushAndPull = useCallback(
+    async (force = false) => {
+      if (!isActive || !userId || !fetchFn) return;
+      if (isFlushingRef.current) return;
+      // Respect back-off unless the caller explicitly forces a flush (e.g. the
+      // `online` event after a real reconnect, or an SSE-triggered pull).
+      if (!force && retryAfterRef.current !== null && Date.now() < retryAfterRef.current) return;
+      isFlushingRef.current = true;
+      setIsSyncing(true);
+      try {
+        // --- Flush outbox ---
+        let flushConflicts = 0;
+        const dequeued = dequeueAndMergeSyncOutbox(userId);
+        if (dequeued) {
+          const { merged, commit } = dequeued;
+          let pushResult: SyncPushResponse | null;
+          try {
+            pushResult = await pushSyncPayload(fetchFn, merged);
+          } catch (err) {
+            // Push threw (e.g. network error) — outbox stays intact for next retry.
+            console.error("useOngoingSync: outbox push threw:", err);
+            if (!mountedRef.current) return;
+            setOutboxCount(getSyncOutboxSize(userId));
+            setHasSyncError(true);
+            scheduleBackOff();
+            return;
+          }
           if (!mountedRef.current) return;
+          if (!pushResult) {
+            // Push returned falsy — outbox stays intact for next retry.
+            setOutboxCount(getSyncOutboxSize(userId));
+            setHasSyncError(true);
+            scheduleBackOff();
+            return;
+          }
+          // Push succeeded — commit (clear) the outbox and continue to pull.
+          commit();
           setOutboxCount(getSyncOutboxSize(userId));
-          setHasSyncError(true);
-          scheduleBackOff();
-          return;
+          // Surface any conflicts from the outbox flush.
+          flushConflicts = countPushConflicts(pushResult);
+          if (flushConflicts > 0) {
+            const extracted = extractConflictedItems(merged, pushResult);
+            conflictedPayloadRef.current = extracted;
+            conflictServerTimestampRef.current = maxConflictServerTimestamp(pushResult);
+            setConflictedPayload(extracted);
+            setConflictCount(flushConflicts);
+          }
         }
-        if (!mountedRef.current) return;
-        if (!pushResult) {
-          // Push returned falsy — outbox stays intact for next retry.
-          setOutboxCount(getSyncOutboxSize(userId));
-          setHasSyncError(true);
-          scheduleBackOff();
-          return;
-        }
-        // Push succeeded — commit (clear) the outbox and continue to pull.
-        commit();
-        setOutboxCount(getSyncOutboxSize(userId));
-        // Surface any conflicts from the outbox flush.
-        flushConflicts = countPushConflicts(pushResult);
-        if (flushConflicts > 0) {
-          const extracted = extractConflictedItems(merged, pushResult);
-          conflictedPayloadRef.current = extracted;
-          conflictServerTimestampRef.current = maxConflictServerTimestamp(pushResult);
-          setConflictedPayload(extracted);
-          setConflictCount(flushConflicts);
-        }
-      }
 
-      // --- Pull ---
-      // When conflicts occurred during push (or remain unresolved), skip the
-      // cursor so that conflicted records are always included regardless of their
-      // server `updated_at`.
-      const cursor =
-        flushConflicts > 0 || conflictCount > 0
-          ? undefined
-          : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
-      const pullResult = await pullSyncData(fetchFn, cursor);
-      if (!mountedRef.current) return;
-      if (pullResult) {
-        onIncrementalPullRef.current?.(pullResult);
-        storeSyncCursor(userId, pullResult.server_timestamp);
-        setLastSyncedAt(pullResult.server_timestamp);
-        setHasSyncError(false);
-        // Reset back-off on success.
-        retryDelayMsRef.current = 0;
-        retryAfterRef.current = null;
-        setRetryAfter(null);
-        if (flushConflicts === 0 && conflictedPayloadRef.current === null) {
-          setConflictCount(0);
-          setConflictedPayload(null);
+        // --- Pull ---
+        // When conflicts occurred during push (or remain unresolved), skip the
+        // cursor so that conflicted records are always included regardless of their
+        // server `updated_at`.
+        const cursor =
+          flushConflicts > 0 || conflictCount > 0
+            ? undefined
+            : (localStorage.getItem(getSyncCursorKey(userId)) ?? undefined);
+        const pullResult = await pullSyncData(fetchFn, cursor);
+        if (!mountedRef.current) return;
+        if (pullResult) {
+          onIncrementalPullRef.current?.(pullResult);
+          storeSyncCursor(userId, pullResult.server_timestamp);
+          setLastSyncedAt(pullResult.server_timestamp);
+          setHasSyncError(false);
+          // Reset back-off on success.
+          retryDelayMsRef.current = 0;
+          retryAfterRef.current = null;
+          setRetryAfter(null);
+          if (flushConflicts === 0 && conflictedPayloadRef.current === null) {
+            setConflictCount(0);
+            setConflictedPayload(null);
+          }
+        } else {
+          setHasSyncError(true);
+          scheduleBackOff();
         }
-      } else {
-        setHasSyncError(true);
-        scheduleBackOff();
+      } finally {
+        if (mountedRef.current) {
+          setIsSyncing(false);
+        }
+        isFlushingRef.current = false;
       }
-    } finally {
-      if (mountedRef.current) {
-        setIsSyncing(false);
-      }
-      isFlushingRef.current = false;
-    }
-  }, [isActive, userId, fetchFn, conflictCount, scheduleBackOff]);
+    },
+    [isActive, userId, fetchFn, conflictCount, scheduleBackOff],
+  );
 
   // Listen for reconnect and visibility-change events.
   useEffect(() => {
@@ -435,7 +442,11 @@ export function useOngoingSync(
         try {
           await doEnqueue();
         } catch (err) {
-          console.error("useOngoingSync: enqueueChange threw unexpectedly:", { userId, change }, err);
+          console.error(
+            "useOngoingSync: enqueueChange threw unexpectedly:",
+            { userId, change },
+            err,
+          );
           // On unexpected error, queue the change so it is not lost.
           if (mountedRef.current) {
             appendToSyncOutbox(userId, change);
@@ -488,5 +499,16 @@ export function useOngoingSync(
     };
   }
 
-  return { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, conflictedPayload, retryAfter, enqueueChange, triggerPull, resolveOngoingConflicts };
+  return {
+    isSyncing,
+    lastSyncedAt,
+    outboxCount,
+    hasSyncError,
+    conflictCount,
+    conflictedPayload,
+    retryAfter,
+    enqueueChange,
+    triggerPull,
+    resolveOngoingConflicts,
+  };
 }

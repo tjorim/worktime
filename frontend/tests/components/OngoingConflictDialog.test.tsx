@@ -6,7 +6,14 @@ import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
 import type { SyncPushPayload } from "@/utils/syncClient";
 
 function emptyPayload(): SyncPushPayload {
-  return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [], gantt_tasks: [] };
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+  };
 }
 
 describe("OngoingConflictDialog", () => {

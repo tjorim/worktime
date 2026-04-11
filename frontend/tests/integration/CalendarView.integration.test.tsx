@@ -218,9 +218,7 @@ describe("CalendarView Integration Tests", () => {
 
       // Verify time-off events are rendered (may appear multiple times across date range)
       expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(
-        0,
-      );
+      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(0);
     });
 
     it("combines school holidays with roster shifts", () => {
@@ -488,9 +486,7 @@ describe("CalendarView Integration Tests", () => {
 
       // Verify time-off events ARE displayed (may appear multiple times)
       expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(
-        0,
-      );
+      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(0);
     });
 
     it("does not show event modal when time-off is disabled", () => {

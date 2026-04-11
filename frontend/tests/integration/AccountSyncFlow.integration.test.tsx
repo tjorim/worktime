@@ -158,11 +158,7 @@ function SyncHarness({ isAuthenticated, userId, fetchFn }: SyncHarnessProps) {
   );
 }
 
-function renderSync(
-  isAuthenticated: boolean,
-  userId: string | null,
-  fetchFn: FetchFn,
-) {
+function renderSync(isAuthenticated: boolean, userId: string | null, fetchFn: FetchFn) {
   return render(
     <EventStoreProvider>
       <ToastProvider>
@@ -222,9 +218,7 @@ describe("§1 Local-only usage", () => {
       expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument(),
     );
 
-    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
-      url.includes("/api/sync"),
-    );
+    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) => url.includes("/api/sync"));
     expect(syncCalls).toHaveLength(0);
   });
 });
@@ -245,9 +239,7 @@ describe("§2 Branch D — both sides empty → cursor stored immediately", () =
       expect(screen.getByTestId("sync-phase")).toHaveTextContent("done");
     });
 
-    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBe(
-      emptyStatus.server_timestamp,
-    );
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBe(emptyStatus.server_timestamp);
   });
 
   it("does not run the flow when not authenticated", () => {
@@ -316,8 +308,8 @@ describe("§2 Branch A — sync enablement from an existing local-only device", 
 
     expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).not.toBeNull();
 
-    const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/api/sync/push"),
+    const pushCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
+      url.includes("/api/sync/push"),
     );
     expect(pushCalls.length).toBeGreaterThan(0);
   });
@@ -389,8 +381,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
       emptyPullResponse.server_timestamp,
     );
 
-    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/api/sync/pull"),
+    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
+      url.includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -427,8 +419,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
 
     // The pull call was made. This scenario only verifies the fetch path because
     // emptyPullResponse contains no entity data to write into local state.
-    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([url]: [string]) => url.includes("/api/sync/pull"),
+    const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(([url]: [string]) =>
+      url.includes("/api/sync/pull"),
     );
     expect(pullCalls.length).toBeGreaterThan(0);
   });
@@ -597,9 +589,7 @@ describe("Auth edge cases", () => {
     // Flush pending effects without relying on a fixed-duration delay.
     await act(async () => {});
 
-    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
-      url.includes("/api/sync"),
-    );
+    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) => url.includes("/api/sync"));
     expect(syncCalls).toHaveLength(0);
   });
 

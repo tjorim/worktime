@@ -186,16 +186,14 @@ class SyncEventManager:
         """
         if not isinstance(db_url, str) or not db_url:
             logger.warning(
-                "SSE: DATABASE_URL is not a valid string (%r); "
-                "LISTEN/NOTIFY will not be started",
+                "SSE: DATABASE_URL is not a valid string (%r); LISTEN/NOTIFY will not be started",
                 db_url,
             )
             return
         parsed = urlparse(db_url)
         if parsed.scheme != "postgresql+asyncpg":
             logger.warning(
-                "SSE: DATABASE_URL does not start with 'postgresql+asyncpg://' (%r); "
-                "LISTEN/NOTIFY will not be started",
+                "SSE: DATABASE_URL does not start with 'postgresql+asyncpg://' (%r); LISTEN/NOTIFY will not be started",
                 db_url,
             )
             return

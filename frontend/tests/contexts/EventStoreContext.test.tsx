@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
-import {
-  buildTimeOffEntryForRange,
-  createWeeklyTimeOffEntry,
-} from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

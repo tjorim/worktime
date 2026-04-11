@@ -51,9 +51,7 @@ async def health_check(
                 response = await client.get(f"{settings.SUPERTOKENS_CONNECTION_URI}/hello")
             if response.status_code == 200:
                 return "ok", False
-            logger.warning(
-                "Health check: SuperTokens returned unexpected status %s", response.status_code
-            )
+            logger.warning("Health check: SuperTokens returned unexpected status %s", response.status_code)
             return "unreachable", True
         except Exception as e:
             logger.error("Health check failed: SuperTokens core unreachable", exc_info=e)
@@ -103,4 +101,3 @@ async def health_check(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE if degraded else status.HTTP_200_OK,
         content=content,
     )
-

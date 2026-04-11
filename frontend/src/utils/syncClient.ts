@@ -283,7 +283,9 @@ export function extractConflictedItems(
 ): SyncPushPayload {
   const conflicted: Record<string, Set<string>> = {};
   for (const [entityType, results] of Object.entries(response.results)) {
-    conflicted[entityType] = new Set(results.filter((r) => r.status === "conflict").map((r) => r.id));
+    conflicted[entityType] = new Set(
+      results.filter((r) => r.status === "conflict").map((r) => r.id),
+    );
   }
   const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
 
@@ -299,9 +301,18 @@ export function extractConflictedItems(
   }
 
   return {
-    labels: dedupeByKey(payload.labels.filter((l) => ids("labels").has(l.id)), (l) => l.id),
-    tasks: dedupeByKey(payload.tasks.filter((t) => ids("tasks").has(t.id)), (t) => t.id),
-    templates: dedupeByKey(payload.templates.filter((t) => ids("templates").has(t.id)), (t) => t.id),
+    labels: dedupeByKey(
+      payload.labels.filter((l) => ids("labels").has(l.id)),
+      (l) => l.id,
+    ),
+    tasks: dedupeByKey(
+      payload.tasks.filter((t) => ids("tasks").has(t.id)),
+      (t) => t.id,
+    ),
+    templates: dedupeByKey(
+      payload.templates.filter((t) => ids("templates").has(t.id)),
+      (t) => t.id,
+    ),
     // work_locations use `date` as their natural key; the server returns it as `id`.
     work_locations: dedupeByKey(
       payload.work_locations.filter((w) => ids("work_locations").has(w.date)),
@@ -349,7 +360,10 @@ export function maxConflictServerTimestamp(response: SyncPushResponse): string |
  * still lose the next last-write-wins check.  Taking the max ensures the
  * re-pushed version is always ≥ the server timestamp and therefore wins.
  */
-export function bumpClientTimestamps(payload: SyncPushPayload, serverTimestampFloor?: string): SyncPushPayload {
+export function bumpClientTimestamps(
+  payload: SyncPushPayload,
+  serverTimestampFloor?: string,
+): SyncPushPayload {
   const nowMs = Date.now();
   const floorMs = serverTimestampFloor ? new Date(serverTimestampFloor).getTime() : nowMs;
   const effectiveFloorMs = Number.isFinite(floorMs) ? floorMs : nowMs;
@@ -632,19 +646,17 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 
   const rawGanttTasks = ganttTasksCollection.toArray as RawGanttTask[];
-  const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks
-    .filter(isValidRawGanttTask)
-    .map((t) => ({
-      id: t.id,
-      action: "create" as const,
-      client_updated_at: now,
-      name: t.name,
-      start_date: t.start,
-      end_date: t.end,
-      progress: t.progress ?? 0,
-      dependencies: t.dependencies ?? null,
-      notes: t.notes ?? null,
-    }));
+  const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks.filter(isValidRawGanttTask).map((t) => ({
+    id: t.id,
+    action: "create" as const,
+    client_updated_at: now,
+    name: t.name,
+    start_date: t.start,
+    end_date: t.end,
+    progress: t.progress ?? 0,
+    dependencies: t.dependencies ?? null,
+    notes: t.notes ?? null,
+  }));
 
   return {
     labels,
@@ -835,10 +847,13 @@ export function dequeueAndMergeSyncOutbox(
     merged.labels.push(...(Array.isArray(payload.labels) ? payload.labels : []));
     merged.tasks.push(...(Array.isArray(payload.tasks) ? payload.tasks : []));
     merged.templates.push(...(Array.isArray(payload.templates) ? payload.templates : []));
-    merged.work_locations.push(...(Array.isArray(payload.work_locations) ? payload.work_locations : []));
-    merged.time_off_entries.push(...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []));
+    merged.work_locations.push(
+      ...(Array.isArray(payload.work_locations) ? payload.work_locations : []),
+    );
+    merged.time_off_entries.push(
+      ...(Array.isArray(payload.time_off_entries) ? payload.time_off_entries : []),
+    );
     merged.gantt_tasks.push(...(Array.isArray(payload.gantt_tasks) ? payload.gantt_tasks : []));
   }
   return { merged, commit: () => clearSyncOutbox(userId) };
 }
-

@@ -79,9 +79,7 @@ describe("useSyncSignal", () => {
       const triggerPull = vi.fn();
       const { transport, unsubscribeMock } = createMockTransport();
 
-      const { unmount } = renderHook(() =>
-        useSyncSignal(true, "user-1", triggerPull, transport),
-      );
+      const { unmount } = renderHook(() => useSyncSignal(true, "user-1", triggerPull, transport));
 
       unmount();
 
@@ -270,8 +268,7 @@ describe("useSyncSignal", () => {
       const { transport, emit } = createMockTransport();
 
       const { rerender } = renderHook(
-        ({ fn }: { fn: () => void }) =>
-          useSyncSignal(true, "user-1", fn, transport),
+        ({ fn }: { fn: () => void }) => useSyncSignal(true, "user-1", fn, transport),
         { initialProps: { fn: triggerPull1 } },
       );
 

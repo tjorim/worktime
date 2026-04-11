@@ -1,11 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
-import {
-  appendToSyncOutbox,
-  getSyncOutboxSize,
-  storeSyncCursor,
-} from "@/utils/syncClient";
+import { appendToSyncOutbox, getSyncOutboxSize, storeSyncCursor } from "@/utils/syncClient";
 import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
 
 const mockFetch = vi.fn();
@@ -43,9 +39,7 @@ describe("useOngoingSync", () => {
   });
 
   it("returns no-op state when isSyncEstablished is false", () => {
-    const { result } = renderHook(() =>
-      useOngoingSync(false, "user-1", mockFetch),
-    );
+    const { result } = renderHook(() => useOngoingSync(false, "user-1", mockFetch));
     expect(result.current.isSyncing).toBe(false);
     expect(result.current.lastSyncedAt).toBeNull();
     expect(result.current.outboxCount).toBe(0);
@@ -73,9 +67,7 @@ describe("useOngoingSync", () => {
 
   it("initialises lastSyncedAt from existing cursor in localStorage", () => {
     storeSyncCursor("user-1", "2026-01-15T00:00:00.000Z");
-    const { result } = renderHook(() =>
-      useOngoingSync(true, "user-1", mockFetch),
-    );
+    const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
     expect(result.current.lastSyncedAt).toBe("2026-01-15T00:00:00.000Z");
   });
 
@@ -86,9 +78,7 @@ describe("useOngoingSync", () => {
     vi.stubGlobal("navigator", { ...navigator, onLine: false });
 
     storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
-    const { result } = renderHook(() =>
-      useOngoingSync(true, "user-1", mockFetch),
-    );
+    const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
     expect(result.current.outboxCount).toBe(2);
   });
 
@@ -114,9 +104,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
         .mockResolvedValueOnce({ ok: true, json: async () => refreshedStatus }); // status refresh
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Wait for initial flush to complete.
       await waitFor(() => {
@@ -143,9 +131,7 @@ describe("useOngoingSync", () => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
       });
 
-      const pushCall = mockFetch.mock.calls.find(
-        ([url]: [string]) => url === "/api/sync/push",
-      );
+      const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
       expect(pushCall).toBeDefined();
       // Outbox should remain empty after successful push
       expect(result.current.outboxCount).toBe(0);
@@ -156,9 +142,7 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
       mockFetch.mockResolvedValue({ ok: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       const change = emptySyncPayload();
       change.tasks.push({
@@ -227,9 +211,7 @@ describe("useOngoingSync", () => {
       });
 
       const pullCallback = vi.fn();
-      renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch, pullCallback),
-      );
+      renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
 
       // Wait for initial flush to complete (push fails, no pull triggered).
       await waitFor(() => {
@@ -257,9 +239,7 @@ describe("useOngoingSync", () => {
       });
 
       // Cursor should be updated to pull response timestamp.
-      expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(
-        "2026-02-01T00:00:00.000Z",
-      );
+      expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe("2026-02-01T00:00:00.000Z");
     });
   });
 
@@ -272,9 +252,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // online pull
 
       const pullCallback = vi.fn();
-      renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch, pullCallback),
-      );
+      renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
 
       // Let initial flush complete.
       await waitFor(() => {
@@ -299,17 +277,13 @@ describe("useOngoingSync", () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
       vi.stubGlobal("navigator", { ...navigator, onLine: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
       expect(result.current.hasSyncError).toBe(false);
       expect(result.current.conflictCount).toBe(0);
     });
 
     it("returns hasSyncError false and conflictCount 0 in no-op state", () => {
-      const { result } = renderHook(() =>
-        useOngoingSync(false, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(false, "user-1", mockFetch));
       expect(result.current.hasSyncError).toBe(false);
       expect(result.current.conflictCount).toBe(0);
     });
@@ -320,9 +294,7 @@ describe("useOngoingSync", () => {
 
       mockFetch.mockResolvedValue({ ok: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.hasSyncError).toBe(true);
@@ -374,9 +346,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }); // full pull after conflict
 
       const pullCallback = vi.fn();
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch, pullCallback),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
 
       // Wait for initial flush to complete.
       await waitFor(() => {
@@ -394,9 +364,7 @@ describe("useOngoingSync", () => {
       expect(result.current.hasSyncError).toBe(false);
 
       // Verify the reconciliation pull was a full pull (no `since` param).
-      const pullCall = mockFetch.mock.calls.find(
-        ([url]: [string]) => url === "/api/sync/pull",
-      );
+      const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
       expect(pullCall).toBeDefined();
 
       // Verify onIncrementalPull received the server version of the conflicted record.
@@ -412,7 +380,9 @@ describe("useOngoingSync", () => {
 
       const conflictPushResponse = {
         results: {
-          labels: [{ id: "label-1", status: "conflict", conflict_reason: "server version is newer" }],
+          labels: [
+            { id: "label-1", status: "conflict", conflict_reason: "server version is newer" },
+          ],
         },
       };
       const initialPullResponse = {
@@ -429,9 +399,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push with conflict
         .mockResolvedValueOnce({ ok: false }); // reconciliation full pull fails
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-01T12:00:00.000Z");
@@ -476,9 +444,7 @@ describe("useOngoingSync", () => {
         return { ok: false };
       });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Wait for the initial failed flush.
       await waitFor(() => {
@@ -536,9 +502,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // reconciliation full pull
         .mockResolvedValueOnce({ ok: true, json: async () => cleanPull }); // visibility-change pull
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
@@ -588,7 +552,11 @@ describe("useOngoingSync", () => {
         gantt_tasks: [],
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
-      const labelItem = { id: "lbl-1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" };
+      const labelItem = {
+        id: "lbl-1",
+        action: "update" as const,
+        client_updated_at: "2026-01-01T00:00:00.000Z",
+      };
       const changePayload = { ...emptySyncPayload(), labels: [labelItem] };
 
       mockFetch
@@ -596,9 +564,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push conflict
         .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // reconciliation pull
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
@@ -639,7 +605,11 @@ describe("useOngoingSync", () => {
         gantt_tasks: [],
         server_timestamp: "2026-01-02T00:00:00.000Z",
       };
-      const labelItem = { id: "lbl-1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" };
+      const labelItem = {
+        id: "lbl-1",
+        action: "update" as const,
+        client_updated_at: "2026-01-01T00:00:00.000Z",
+      };
       const changePayload = { ...emptySyncPayload(), labels: [labelItem] };
 
       // Initial pull + push conflict + reconciliation pull.
@@ -654,9 +624,7 @@ describe("useOngoingSync", () => {
     it("'keep-server' clears conflictCount and conflictedPayload", async () => {
       const { changePayload } = await setupConflict(mockFetch);
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
@@ -683,12 +651,13 @@ describe("useOngoingSync", () => {
 
       // After conflict + reconciliation, one more call: successful re-push.
       const statusResponse = { server_timestamp: "2026-01-03T00:00:00.000Z" };
-      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: { labels: [{ id: "lbl-1", status: "ok" }] } }) }); // re-push
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: { labels: [{ id: "lbl-1", status: "ok" }] } }),
+      }); // re-push
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => statusResponse }); // status fetch
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-01-02T00:00:00.000Z");
@@ -714,14 +683,20 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         // The re-push call comes after the 3 mock calls already consumed (initial pull,
         // conflict push, reconciliation pull).
-        const repushCalls = mockFetch.mock.calls.filter(([url]: [string]) => url === "/api/sync/push");
+        const repushCalls = mockFetch.mock.calls.filter(
+          ([url]: [string]) => url === "/api/sync/push",
+        );
         expect(repushCalls.length).toBeGreaterThan(1);
       });
 
       // Verify the re-push timestamp was bumped (later than the original conflict timestamp).
-      const repushCalls = mockFetch.mock.calls.filter(([url]: [string]) => url === "/api/sync/push");
+      const repushCalls = mockFetch.mock.calls.filter(
+        ([url]: [string]) => url === "/api/sync/push",
+      );
       // Last push call should have a fresh timestamp
-      const repushBody = JSON.parse((repushCalls[repushCalls.length - 1][1] as RequestInit).body as string) as typeof changePayload;
+      const repushBody = JSON.parse(
+        (repushCalls[repushCalls.length - 1][1] as RequestInit).body as string,
+      ) as typeof changePayload;
       expect(new Date(repushBody.labels[0].client_updated_at).getTime()).toBeGreaterThan(
         new Date(changePayload.labels[0].client_updated_at).getTime(),
       );
@@ -739,9 +714,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // triggerPull pull
 
       const pullCallback = vi.fn();
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch, pullCallback),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
 
       // Wait for initial flush.
       await waitFor(() => {
@@ -774,9 +747,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
         .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }); // triggerPull pull
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       await waitFor(() => {
         expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
@@ -792,9 +763,7 @@ describe("useOngoingSync", () => {
     });
 
     it("does not make network calls when sync is not established", () => {
-      const { result } = renderHook(() =>
-        useOngoingSync(false, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(false, "user-1", mockFetch));
 
       result.current.triggerPull();
 
@@ -817,9 +786,7 @@ describe("useOngoingSync", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // outbox flush push
         .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // pull
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // At this point outbox has 1 entry; no network calls yet (offline).
       expect(result.current.outboxCount).toBe(1);
@@ -853,9 +820,7 @@ describe("useOngoingSync", () => {
 
       mockFetch.mockResolvedValue({ ok: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Initial flush fires on mount (force=true → bypasses back-off).
       await waitFor(() => {
@@ -868,9 +833,7 @@ describe("useOngoingSync", () => {
     });
 
     it("retryAfter is null in no-op state", () => {
-      const { result } = renderHook(() =>
-        useOngoingSync(false, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(false, "user-1", mockFetch));
       expect(result.current.retryAfter).toBeNull();
     });
 
@@ -891,9 +854,7 @@ describe("useOngoingSync", () => {
         return { ok: false };
       });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Initial flush fails → back-off is set.
       await waitFor(() => {
@@ -919,9 +880,7 @@ describe("useOngoingSync", () => {
       // All requests fail so back-off is set.
       mockFetch.mockResolvedValue({ ok: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Wait for the initial (forced) flush to fail and set back-off.
       await waitFor(() => {
@@ -964,9 +923,7 @@ describe("useOngoingSync", () => {
         return { ok: false };
       });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Wait for initial flush to fail and set back-off.
       await waitFor(() => {
@@ -992,9 +949,7 @@ describe("useOngoingSync", () => {
       // All attempts fail — each online event forces a new flush attempt.
       mockFetch.mockResolvedValue({ ok: false });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // 1st failure (initial forced flush): retryDelayMs = 1 000 ms.
       await waitFor(() => {
@@ -1030,9 +985,7 @@ describe("useOngoingSync", () => {
         return { ok: false };
       });
 
-      const { result } = renderHook(() =>
-        useOngoingSync(true, "user-1", mockFetch),
-      );
+      const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
       // Wait for initial flush to fail and set back-off.
       await waitFor(() => {

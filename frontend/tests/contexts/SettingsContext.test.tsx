@@ -457,7 +457,6 @@ describe("SettingsContext unified user state", () => {
         ganttViewMode: "Day",
       });
     });
-
   });
 
   describe("Country preferences", () => {

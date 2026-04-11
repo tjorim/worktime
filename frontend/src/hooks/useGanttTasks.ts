@@ -61,73 +61,81 @@ export function useGanttTasks() {
     return toTask(createdTask);
   }, []);
 
-  const updateTask = useCallback((id: string, changes: GanttTaskChanges) => {
-    if (!tasks.some((task) => task.id === id)) return;
+  const updateTask = useCallback(
+    (id: string, changes: GanttTaskChanges) => {
+      if (!tasks.some((task) => task.id === id)) return;
 
-    if (!hasSyncCollectionAuth()) {
-      const nextTasks = tasks.map((task) =>
-        task.id === id
-          ? {
-            ...task,
-            ...(changes.name !== undefined ? { name: changes.name } : {}),
-            ...(changes.start !== undefined ? { start: changes.start } : {}),
-            ...(changes.end !== undefined ? { end: changes.end } : {}),
-            progress: changes.progress ?? task.progress ?? 0,
-            ...(changes.dependencies !== undefined ? { dependencies: changes.dependencies ?? undefined } : {}),
-            ...(changes.notes !== undefined ? { notes: changes.notes ?? undefined } : {}),
-          }
-          : task,
-      );
-      replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
-      return;
-    }
-
-    ganttTasksCollection.update(id, (d) => {
-      if (changes.name !== undefined) d.name = changes.name;
-      if (changes.start !== undefined) d.start = changes.start;
-      if (changes.end !== undefined) d.end = changes.end;
-      d.progress = changes.progress ?? d.progress ?? 0;
-      if (changes.dependencies !== undefined) d.dependencies = changes.dependencies ?? undefined;
-      if (changes.notes !== undefined) d.notes = changes.notes ?? undefined;
-    });
-  }, [tasks]);
-
-  const removeTask = useCallback((id: string) => {
-    if (!tasks.some((task) => task.id === id)) return;
-
-    // Clean up dependency references in other tasks before deleting
-    const nextTasks = tasks
-      .filter((task) => task.id !== id)
-      .map((task) => {
-        if (!task.dependencies) return task;
-        const parts = task.dependencies.split(",").map((d) => d.trim());
-        if (!parts.includes(id)) return task;
-        const cleaned = parts.filter((d) => d && d !== id).join(", ");
-        return {
-          ...task,
-          dependencies: cleaned || undefined,
-        };
-      });
-
-    if (!hasSyncCollectionAuth()) {
-      replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
-      return;
-    }
-
-    const depUpdates = nextTasks.filter((task) => {
-      const original = tasks.find((t) => t.id === task.id);
-      return original && original.dependencies !== task.dependencies;
-    });
-    runWriteBatch(ganttTasksCollection, true, () => {
-      ganttTasksCollection.delete(id);
-      // Update dependency strings in affected tasks using proper mutation API
-      for (const task of depUpdates) {
-        ganttTasksCollection.update(task.id, (d) => {
-          d.dependencies = task.dependencies;
-        });
+      if (!hasSyncCollectionAuth()) {
+        const nextTasks = tasks.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                ...(changes.name !== undefined ? { name: changes.name } : {}),
+                ...(changes.start !== undefined ? { start: changes.start } : {}),
+                ...(changes.end !== undefined ? { end: changes.end } : {}),
+                progress: changes.progress ?? task.progress ?? 0,
+                ...(changes.dependencies !== undefined
+                  ? { dependencies: changes.dependencies ?? undefined }
+                  : {}),
+                ...(changes.notes !== undefined ? { notes: changes.notes ?? undefined } : {}),
+              }
+            : task,
+        );
+        replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
+        return;
       }
-    });
-  }, [tasks]);
+
+      ganttTasksCollection.update(id, (d) => {
+        if (changes.name !== undefined) d.name = changes.name;
+        if (changes.start !== undefined) d.start = changes.start;
+        if (changes.end !== undefined) d.end = changes.end;
+        d.progress = changes.progress ?? d.progress ?? 0;
+        if (changes.dependencies !== undefined) d.dependencies = changes.dependencies ?? undefined;
+        if (changes.notes !== undefined) d.notes = changes.notes ?? undefined;
+      });
+    },
+    [tasks],
+  );
+
+  const removeTask = useCallback(
+    (id: string) => {
+      if (!tasks.some((task) => task.id === id)) return;
+
+      // Clean up dependency references in other tasks before deleting
+      const nextTasks = tasks
+        .filter((task) => task.id !== id)
+        .map((task) => {
+          if (!task.dependencies) return task;
+          const parts = task.dependencies.split(",").map((d) => d.trim());
+          if (!parts.includes(id)) return task;
+          const cleaned = parts.filter((d) => d && d !== id).join(", ");
+          return {
+            ...task,
+            dependencies: cleaned || undefined,
+          };
+        });
+
+      if (!hasSyncCollectionAuth()) {
+        replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
+        return;
+      }
+
+      const depUpdates = nextTasks.filter((task) => {
+        const original = tasks.find((t) => t.id === task.id);
+        return original && original.dependencies !== task.dependencies;
+      });
+      runWriteBatch(ganttTasksCollection, true, () => {
+        ganttTasksCollection.delete(id);
+        // Update dependency strings in affected tasks using proper mutation API
+        for (const task of depUpdates) {
+          ganttTasksCollection.update(task.id, (d) => {
+            d.dependencies = task.dependencies;
+          });
+        }
+      });
+    },
+    [tasks],
+  );
 
   return {
     tasks,

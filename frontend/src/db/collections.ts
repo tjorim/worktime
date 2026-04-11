@@ -187,11 +187,7 @@ export function replaceCollectionContents<
       writeInsert: (items: TItem[]) => void;
     };
   },
->(
-  collection: TCollection,
-  nextItems: TItem[],
-  getKey: (item: TItem) => TKey,
-): void {
+>(collection: TCollection, nextItems: TItem[], getKey: (item: TItem) => TKey): void {
   const existingKeys = collection.toArray.map(getKey);
 
   // During first sync there is no configured sync auth yet. Use normal local
@@ -270,14 +266,10 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   // Labels
   const labelUpserts = data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel);
   const labelDeletes = data.labels.filter((l) => l.deleted_at !== null).map((l) => l.id);
-  runWriteBatch(
-    labelsCollection,
-    labelDeletes.length > 0 || labelUpserts.length > 0,
-    () => {
-      if (labelDeletes.length > 0) labelsCollection.utils.writeDelete(labelDeletes);
-      if (labelUpserts.length > 0) labelsCollection.utils.writeUpsert(labelUpserts);
-    },
-  );
+  runWriteBatch(labelsCollection, labelDeletes.length > 0 || labelUpserts.length > 0, () => {
+    if (labelDeletes.length > 0) labelsCollection.utils.writeDelete(labelDeletes);
+    if (labelUpserts.length > 0) labelsCollection.utils.writeUpsert(labelUpserts);
+  });
 
   // Tasks
   const taskUpserts = data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask);
@@ -291,9 +283,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   const templateUpserts = data.templates
     .filter((t) => t.deleted_at === null)
     .map(syncTemplateToTemplate);
-  const templateDeletes = data.templates
-    .filter((t) => t.deleted_at !== null)
-    .map((t) => t.id);
+  const templateDeletes = data.templates.filter((t) => t.deleted_at !== null).map((t) => t.id);
   runWriteBatch(
     templatesCollection,
     templateDeletes.length > 0 || templateUpserts.length > 0,
@@ -307,17 +297,11 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   const wlUpserts = data.work_locations
     .filter((wl) => wl.deleted_at === null)
     .map(syncWorkLocationToEntry);
-  const wlDeletes = data.work_locations
-    .filter((wl) => wl.deleted_at !== null)
-    .map((wl) => wl.date);
-  runWriteBatch(
-    workLocationsCollection,
-    wlDeletes.length > 0 || wlUpserts.length > 0,
-    () => {
-      if (wlDeletes.length > 0) workLocationsCollection.utils.writeDelete(wlDeletes);
-      if (wlUpserts.length > 0) workLocationsCollection.utils.writeUpsert(wlUpserts);
-    },
-  );
+  const wlDeletes = data.work_locations.filter((wl) => wl.deleted_at !== null).map((wl) => wl.date);
+  runWriteBatch(workLocationsCollection, wlDeletes.length > 0 || wlUpserts.length > 0, () => {
+    if (wlDeletes.length > 0) workLocationsCollection.utils.writeDelete(wlDeletes);
+    if (wlUpserts.length > 0) workLocationsCollection.utils.writeUpsert(wlUpserts);
+  });
 
   // Time-off entries
   const timeOffUpserts = _syncItemsToTimeOffEntries(
@@ -326,14 +310,10 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   const timeOffDeletes = (data.time_off_entries ?? [])
     .filter((e) => e.deleted_at !== null)
     .map((e) => e.entry_id);
-  runWriteBatch(
-    timeOffCollection,
-    timeOffDeletes.length > 0 || timeOffUpserts.length > 0,
-    () => {
-      if (timeOffDeletes.length > 0) timeOffCollection.utils.writeDelete(timeOffDeletes);
-      if (timeOffUpserts.length > 0) timeOffCollection.utils.writeUpsert(timeOffUpserts);
-    },
-  );
+  runWriteBatch(timeOffCollection, timeOffDeletes.length > 0 || timeOffUpserts.length > 0, () => {
+    if (timeOffDeletes.length > 0) timeOffCollection.utils.writeDelete(timeOffDeletes);
+    if (timeOffUpserts.length > 0) timeOffCollection.utils.writeUpsert(timeOffUpserts);
+  });
 
   // Gantt tasks
   const ganttUpserts = (data.gantt_tasks ?? [])
@@ -342,14 +322,10 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   const ganttDeletes = (data.gantt_tasks ?? [])
     .filter((g) => g.deleted_at !== null)
     .map((g) => g.id);
-  runWriteBatch(
-    ganttTasksCollection,
-    ganttDeletes.length > 0 || ganttUpserts.length > 0,
-    () => {
-      if (ganttDeletes.length > 0) ganttTasksCollection.utils.writeDelete(ganttDeletes);
-      if (ganttUpserts.length > 0) ganttTasksCollection.utils.writeUpsert(ganttUpserts);
-    },
-  );
+  runWriteBatch(ganttTasksCollection, ganttDeletes.length > 0 || ganttUpserts.length > 0, () => {
+    if (ganttDeletes.length > 0) ganttTasksCollection.utils.writeDelete(ganttDeletes);
+    if (ganttUpserts.length > 0) ganttTasksCollection.utils.writeUpsert(ganttUpserts);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -410,15 +386,37 @@ function _syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry
     const entryFlag = isValidFlag(item.entry_flag) ? item.entry_flag : "full_day";
     if (item.entry_kind === "date" && item.date != null) {
       results.push(
-        createTimeOffEntry({ id: item.entry_id, entryKind: "date", date: item.date, entryType, entryFlag, note: item.note }),
+        createTimeOffEntry({
+          id: item.entry_id,
+          entryKind: "date",
+          date: item.date,
+          entryType,
+          entryFlag,
+          note: item.note,
+        }),
       );
     } else if (item.entry_kind === "range" && item.start_date != null && item.end_date != null) {
       results.push(
-        createTimeOffEntry({ id: item.entry_id, entryKind: "range", start: item.start_date, end: item.end_date, entryType, entryFlag, note: item.note }),
+        createTimeOffEntry({
+          id: item.entry_id,
+          entryKind: "range",
+          start: item.start_date,
+          end: item.end_date,
+          entryType,
+          entryFlag,
+          note: item.note,
+        }),
       );
     } else if (item.entry_kind === "weekly" && item.weekday != null) {
       results.push(
-        createTimeOffEntry({ id: item.entry_id, entryKind: "weekly", weekday: item.weekday, entryType, entryFlag, note: item.note }),
+        createTimeOffEntry({
+          id: item.entry_id,
+          entryKind: "weekly",
+          weekday: item.weekday,
+          entryType,
+          entryFlag,
+          note: item.note,
+        }),
       );
     }
   }

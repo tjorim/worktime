@@ -156,9 +156,7 @@ describe("syncClient", () => {
               { id: "l1", status: "ok" },
               { id: "l2", status: "conflict", conflict_reason: "server is newer" },
             ],
-            tasks: [
-              { id: "t1", status: "conflict", conflict_reason: "server is newer" },
-            ],
+            tasks: [{ id: "t1", status: "conflict", conflict_reason: "server is newer" }],
             templates: [],
           },
         }),
@@ -181,7 +179,12 @@ describe("syncClient", () => {
       ],
       templates: [],
       work_locations: [
-        { date: "2026-01-05", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z", country_code: "NL" },
+        {
+          date: "2026-01-05",
+          action: "update" as const,
+          client_updated_at: "2026-01-01T00:00:00.000Z",
+          country_code: "NL",
+        },
       ],
       time_off_entries: [],
       gantt_tasks: [],
@@ -251,7 +254,14 @@ describe("syncClient", () => {
         labels: [{ id: "l1", action: "update" as const, client_updated_at: before }],
         tasks: [{ id: "t1", action: "update" as const, client_updated_at: before }],
         templates: [{ id: "tp1", action: "update" as const, client_updated_at: before }],
-        work_locations: [{ date: "2026-01-05", action: "update" as const, client_updated_at: before, country_code: "NL" }],
+        work_locations: [
+          {
+            date: "2026-01-05",
+            action: "update" as const,
+            client_updated_at: before,
+            country_code: "NL",
+          },
+        ],
         time_off_entries: [{ id: "toe1", action: "update" as const, client_updated_at: before }],
         gantt_tasks: [{ id: "gt1", action: "update" as const, client_updated_at: before }],
       };
@@ -291,7 +301,9 @@ describe("syncClient", () => {
       const now = "2026-06-01T12:00:00.000Z";
       vi.setSystemTime(new Date(now));
       const payload = {
-        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        labels: [
+          { id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+        ],
         tasks: [],
         templates: [],
         work_locations: [],
@@ -308,7 +320,9 @@ describe("syncClient", () => {
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const serverFloor = "2026-06-01T12:00:00.000Z";
       const payload = {
-        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        labels: [
+          { id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+        ],
         tasks: [],
         templates: [],
         work_locations: [],
@@ -325,7 +339,9 @@ describe("syncClient", () => {
       vi.setSystemTime(new Date(now));
       const serverFloor = "2026-01-01T00:00:00.000Z";
       const payload = {
-        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2025-01-01T00:00:00.000Z" }],
+        labels: [
+          { id: "l1", action: "update" as const, client_updated_at: "2025-01-01T00:00:00.000Z" },
+        ],
         tasks: [],
         templates: [],
         work_locations: [],
@@ -341,7 +357,9 @@ describe("syncClient", () => {
       const now = "2026-06-01T12:00:00.000Z";
       vi.setSystemTime(new Date(now));
       const payload = {
-        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        labels: [
+          { id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+        ],
         tasks: [],
         templates: [],
         work_locations: [],
@@ -1243,9 +1261,7 @@ describe("syncClient", () => {
 
     it("stores the cursor under the per-user key", () => {
       storeSyncCursor("user-42", "2026-03-15T12:00:00.000Z");
-      expect(localStorage.getItem(getSyncCursorKey("user-42"))).toBe(
-        "2026-03-15T12:00:00.000Z",
-      );
+      expect(localStorage.getItem(getSyncCursorKey("user-42"))).toBe("2026-03-15T12:00:00.000Z");
     });
 
     it("isolates cursors between different users", () => {
@@ -1374,5 +1390,4 @@ describe("syncClient", () => {
       expect(result!.merged.labels).toHaveLength(0);
     });
   });
-
 });

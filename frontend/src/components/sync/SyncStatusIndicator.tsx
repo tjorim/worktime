@@ -55,11 +55,24 @@ export function SyncStatusIndicator() {
 
   // Icon, label, and variant are stable between minute ticks — memoize them.
   const { icon, label, variant } = useMemo(() => {
-    if (hasSyncError) return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
-    if (conflictCount > 0) return { icon: "bi-exclamation-triangle", label: m.sync_indicator_conflicts({ count: String(conflictCount) }), variant: "warning" };
-    if (isSyncing) return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
-    if (outboxCount > 0) return { icon: "bi-cloud-upload", label: m.sync_indicator_pending({ count: String(outboxCount) }), variant: "warning" };
-    if (lastSyncedAt) return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
+    if (hasSyncError)
+      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
+    if (conflictCount > 0)
+      return {
+        icon: "bi-exclamation-triangle",
+        label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
+        variant: "warning",
+      };
+    if (isSyncing)
+      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
+    if (outboxCount > 0)
+      return {
+        icon: "bi-cloud-upload",
+        label: m.sync_indicator_pending({ count: String(outboxCount) }),
+        variant: "warning",
+      };
+    if (lastSyncedAt)
+      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
     return { icon: "bi-cloud", label: "", variant: "secondary" };
   }, [hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
@@ -73,10 +86,12 @@ export function SyncStatusIndicator() {
       }
       return m.sync_indicator_tooltip_error();
     }
-    if (conflictCount > 0) return m.sync_indicator_tooltip_conflicts({ count: String(conflictCount) });
+    if (conflictCount > 0)
+      return m.sync_indicator_tooltip_conflicts({ count: String(conflictCount) });
     if (isSyncing) return null;
     if (outboxCount > 0) return m.sync_indicator_tooltip_pending({ count: String(outboxCount) });
-    if (lastSyncedAt) return m.sync_indicator_tooltip_synced_at({ time: dayjs(lastSyncedAt).fromNow() });
+    if (lastSyncedAt)
+      return m.sync_indicator_tooltip_synced_at({ time: dayjs(lastSyncedAt).fromNow() });
     return null;
   })();
 
@@ -94,10 +109,7 @@ export function SyncStatusIndicator() {
       tabIndex={tooltipText ? 0 : undefined}
       aria-describedby={tooltipText ? tooltipId : undefined}
     >
-      <i
-        className={`bi ${icon}${shouldSpin ? " sync-spin" : ""}`}
-        aria-hidden="true"
-      />
+      <i className={`bi ${icon}${shouldSpin ? " sync-spin" : ""}`} aria-hidden="true" />
       <span className="d-none d-sm-inline">{label}</span>
     </span>
   );

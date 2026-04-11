@@ -22,11 +22,7 @@ import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
-import {
-  labelsCollection,
-  tasksCollection,
-  templatesCollection,
-} from "@/db/collections";
+import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
@@ -68,9 +64,11 @@ interface SettingsPanelProps {
   onChangeTeam?: () => void;
 }
 
-function clearCollectionById(
-  collection: { toArray: Array<{ id: string }>; has: (id: string) => boolean; delete: (id: string) => void },
-): void {
+function clearCollectionById(collection: {
+  toArray: Array<{ id: string }>;
+  has: (id: string) => boolean;
+  delete: (id: string) => void;
+}): void {
   for (const item of [...collection.toArray]) {
     if (collection.has(item.id)) {
       collection.delete(item.id);

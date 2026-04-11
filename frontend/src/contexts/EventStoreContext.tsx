@@ -86,48 +86,38 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     }
   }, [sortedEntries]);
 
-  const getEventsInRange = useCallback(
-    (startDate: Date, endDate: Date): CalendarEvent[] => {
-      const startStr = dayjs(startDate).format("YYYY-MM-DD");
-      const endStr = dayjs(endDate).format("YYYY-MM-DD");
-      // Use ref to avoid recreating the callback on every entry change
-      const calendarEvents = entriesToCalendarEvents(
-        sortedEntriesRef.current,
-        startDate,
-        endDate,
-      );
-      return filterEventsInRange(calendarEvents, startStr, endStr);
-    },
-    [],
-  );
+  const getEventsInRange = useCallback((startDate: Date, endDate: Date): CalendarEvent[] => {
+    const startStr = dayjs(startDate).format("YYYY-MM-DD");
+    const endStr = dayjs(endDate).format("YYYY-MM-DD");
+    // Use ref to avoid recreating the callback on every entry change
+    const calendarEvents = entriesToCalendarEvents(sortedEntriesRef.current, startDate, endDate);
+    return filterEventsInRange(calendarEvents, startStr, endStr);
+  }, []);
 
-  const addEntries = useCallback(
-    (newEntries: TimeOffEntry[]) => {
-      const currentEntries = cloneEntries(sortedEntriesRef.current);
-      const existingIds = new Set(currentEntries.map((e) => e.id));
-      const nextEntriesMap = new Map(currentEntries.map((entry) => [entry.id, entry]));
-      for (const entry of newEntries) {
-        nextEntriesMap.set(entry.id, structuredClone(entry));
+  const addEntries = useCallback((newEntries: TimeOffEntry[]) => {
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    const existingIds = new Set(currentEntries.map((e) => e.id));
+    const nextEntriesMap = new Map(currentEntries.map((entry) => [entry.id, entry]));
+    for (const entry of newEntries) {
+      nextEntriesMap.set(entry.id, structuredClone(entry));
+    }
+    const nextEntries = sortEntries([...nextEntriesMap.values()]);
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+      return;
+    }
+    for (const entry of newEntries) {
+      if (existingIds.has(entry.id)) {
+        timeOffCollection.update(entry.id, (d) => {
+          const { id: _id, ...patch } = entry;
+          Object.assign(d, patch);
+        });
+      } else {
+        timeOffCollection.insert(entry);
       }
-      const nextEntries = sortEntries([...nextEntriesMap.values()]);
-      sortedEntriesRef.current = nextEntries;
-      if (!hasSyncCollectionAuth()) {
-        writeLocalSnapshot(currentEntries, nextEntries);
-        return;
-      }
-      for (const entry of newEntries) {
-        if (existingIds.has(entry.id)) {
-          timeOffCollection.update(entry.id, (d) => {
-            const { id: _id, ...patch } = entry;
-            Object.assign(d, patch);
-          });
-        } else {
-          timeOffCollection.insert(entry);
-        }
-      }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const replaceEntries = useCallback((newEntries: TimeOffEntry[]) => {
     sortedEntriesRef.current = sortEntries(cloneEntries(newEntries));
@@ -139,110 +129,102 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     });
   }, []);
 
-  const updateEntry = useCallback(
-    (id: string, entry: TimeOffEntry) => {
-      const currentEntries = cloneEntries(sortedEntriesRef.current);
-      if (!currentEntries.some((existing) => existing.id === id)) {
-        console.error(`Invalid entry id: ${id}`);
-        return;
-      }
-      const nextEntries = sortEntries(
-        currentEntries.map((existing) => (existing.id === id ? { ...structuredClone(entry), id } : existing)),
-      );
-      sortedEntriesRef.current = nextEntries;
-      if (!hasSyncCollectionAuth()) {
-        writeLocalSnapshot(currentEntries, nextEntries);
-        return;
-      }
-      timeOffCollection.update(id, (d) => {
-        // Exclude `id` from the spread — TanStack DB forbids changing an item's key.
-        const { id: _id, ...fields } = entry;
-        Object.assign(d, fields);
-      });
-    },
-    [],
-  );
+  const updateEntry = useCallback((id: string, entry: TimeOffEntry) => {
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    if (!currentEntries.some((existing) => existing.id === id)) {
+      console.error(`Invalid entry id: ${id}`);
+      return;
+    }
+    const nextEntries = sortEntries(
+      currentEntries.map((existing) =>
+        existing.id === id ? { ...structuredClone(entry), id } : existing,
+      ),
+    );
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+      return;
+    }
+    timeOffCollection.update(id, (d) => {
+      // Exclude `id` from the spread — TanStack DB forbids changing an item's key.
+      const { id: _id, ...fields } = entry;
+      Object.assign(d, fields);
+    });
+  }, []);
 
-  const deleteEntry = useCallback(
-    (id: string) => {
-      const currentEntries = cloneEntries(sortedEntriesRef.current);
-      if (!currentEntries.some((existing) => existing.id === id)) {
-        console.error(`Invalid entry id: ${id}`);
-        return;
-      }
-      const nextEntries = currentEntries.filter((entry) => entry.id !== id);
-      sortedEntriesRef.current = nextEntries;
-      if (!hasSyncCollectionAuth()) {
-        writeLocalSnapshot(currentEntries, nextEntries);
-        return;
-      }
-      if ((timeOffCollection.toArray as TimeOffEntry[]).some((entry) => entry.id === id)) {
+  const deleteEntry = useCallback((id: string) => {
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    if (!currentEntries.some((existing) => existing.id === id)) {
+      console.error(`Invalid entry id: ${id}`);
+      return;
+    }
+    const nextEntries = currentEntries.filter((entry) => entry.id !== id);
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+      return;
+    }
+    if ((timeOffCollection.toArray as TimeOffEntry[]).some((entry) => entry.id === id)) {
+      timeOffCollection.delete(id);
+    }
+  }, []);
+
+  const deleteEntries = useCallback((ids: string[]) => {
+    const unique = ids.filter((id, index, arr) => arr.indexOf(id) === index);
+    if (unique.length === 0) return;
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    const existingIds = new Set(currentEntries.map((entry) => entry.id));
+    const valid = unique.filter((id) => existingIds.has(id));
+    if (valid.length === 0) {
+      console.error("Invalid entry ids:", ids);
+      return;
+    }
+    const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+      return;
+    }
+    const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
+    for (const id of valid) {
+      if (collectionIds.has(id)) {
         timeOffCollection.delete(id);
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
-  const deleteEntries = useCallback(
-    (ids: string[]) => {
-      const unique = ids.filter((id, index, arr) => arr.indexOf(id) === index);
-      if (unique.length === 0) return;
-      const currentEntries = cloneEntries(sortedEntriesRef.current);
-      const existingIds = new Set(currentEntries.map((entry) => entry.id));
-      const valid = unique.filter((id) => existingIds.has(id));
-      if (valid.length === 0) {
-        console.error("Invalid entry ids:", ids);
-        return;
-      }
-      const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));
-      sortedEntriesRef.current = nextEntries;
-      if (!hasSyncCollectionAuth()) {
-        writeLocalSnapshot(currentEntries, nextEntries);
-        return;
-      }
+  const importHday = useCallback((text: string) => {
+    const result = hdayToTimeOffEntries(text);
+    const currentEntries = cloneEntries(sortedEntriesRef.current);
+    const nextEntries = sortEntries(cloneEntries(result.entries));
+    sortedEntriesRef.current = nextEntries;
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(currentEntries, nextEntries);
+    } else {
+      const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
       const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
-      for (const id of valid) {
-        if (collectionIds.has(id)) {
-          timeOffCollection.delete(id);
+      const toDelete = [...currentMap.keys()].filter(
+        (id) => !result.entries.some((e) => e.id === id),
+      );
+      const hasWork = toDelete.length > 0 || result.entries.length > 0;
+      runWriteBatch(timeOffCollection, hasWork, () => {
+        for (const id of toDelete) {
+          if (collectionIds.has(id)) timeOffCollection.delete(id);
         }
-      }
-    },
-    [],
-  );
-
-  const importHday = useCallback(
-    (text: string) => {
-      const result = hdayToTimeOffEntries(text);
-      const currentEntries = cloneEntries(sortedEntriesRef.current);
-      const nextEntries = sortEntries(cloneEntries(result.entries));
-      sortedEntriesRef.current = nextEntries;
-      if (!hasSyncCollectionAuth()) {
-        writeLocalSnapshot(currentEntries, nextEntries);
-      } else {
-        const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
-        const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
-        const toDelete = [...currentMap.keys()].filter((id) => !result.entries.some((e) => e.id === id));
-        const hasWork = toDelete.length > 0 || result.entries.length > 0;
-        runWriteBatch(timeOffCollection, hasWork, () => {
-          for (const id of toDelete) {
-            if (collectionIds.has(id)) timeOffCollection.delete(id);
+        for (const entry of result.entries) {
+          if (!collectionIds.has(entry.id)) {
+            timeOffCollection.insert(entry);
+          } else {
+            timeOffCollection.update(entry.id, (d) => {
+              const { id: _id, ...patch } = entry;
+              Object.assign(d, patch);
+            });
           }
-          for (const entry of result.entries) {
-            if (!collectionIds.has(entry.id)) {
-              timeOffCollection.insert(entry);
-            } else {
-              timeOffCollection.update(entry.id, (d) => {
-                const { id: _id, ...patch } = entry;
-                Object.assign(d, patch);
-              });
-            }
-          }
-        });
-      }
-      return result;
-    },
-    [],
-  );
+        }
+      });
+    }
+    return result;
+  }, []);
 
   const clearAll = useCallback(() => {
     const current = cloneEntries(sortedEntriesRef.current);

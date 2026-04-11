@@ -72,15 +72,8 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const helpText = getViewModeHelpText();
-  const {
-    rawText,
-    entries,
-    addEntries,
-    updateEntry,
-    deleteEntry,
-    deleteEntries,
-    importHday,
-  } = useEventStore();
+  const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
+    useEventStore();
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const { options } = useDeveloperOptions();
   const toast = useToast();

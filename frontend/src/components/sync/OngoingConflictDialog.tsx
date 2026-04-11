@@ -69,14 +69,16 @@ export function OngoingConflictDialog({
 
   // Compute per-entity-type conflict counts for the detail section.
   const entityCounts = conflictedPayload
-    ? ([
-        ["labels", conflictedPayload.labels.length],
-        ["tasks", conflictedPayload.tasks.length],
-        ["templates", conflictedPayload.templates.length],
-        ["work_locations", conflictedPayload.work_locations.length],
-        ["time_off_entries", conflictedPayload.time_off_entries.length],
-        ["gantt_tasks", conflictedPayload.gantt_tasks.length],
-      ] as const).filter(([, count]) => count > 0)
+    ? (
+        [
+          ["labels", conflictedPayload.labels.length],
+          ["tasks", conflictedPayload.tasks.length],
+          ["templates", conflictedPayload.templates.length],
+          ["work_locations", conflictedPayload.work_locations.length],
+          ["time_off_entries", conflictedPayload.time_off_entries.length],
+          ["gantt_tasks", conflictedPayload.gantt_tasks.length],
+        ] as const
+      ).filter(([, count]) => count > 0)
     : [];
 
   return (
@@ -159,7 +161,13 @@ export function OngoingConflictDialog({
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={() => { onResolve("keep-server"); setSelected(null); }}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            onResolve("keep-server");
+            setSelected(null);
+          }}
+        >
           {m.ongoing_conflict_dismiss()}
         </Button>
         <Button variant="primary" onClick={handleConfirm} disabled={!selected}>

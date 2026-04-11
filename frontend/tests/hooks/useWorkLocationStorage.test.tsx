@@ -347,5 +347,4 @@ describe("useWorkLocationStorage", () => {
       expect(result.current.workLocationMap.has("2024-01-01")).toBe(false);
     });
   });
-
 });

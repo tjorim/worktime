@@ -184,7 +184,9 @@ export function checkBackupDataPresence(): BackupDataPresence {
   const tasksData = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
   const hasTasks = tasksData.length > 0;
 
-  const templatesData = (templatesCollection.toArray as TimeTrackingTemplate[]).map(toPlainTemplate);
+  const templatesData = (templatesCollection.toArray as TimeTrackingTemplate[]).map(
+    toPlainTemplate,
+  );
   const hasTemplates = templatesData.length > 0;
 
   const labelsData = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
@@ -355,7 +357,9 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
       incomingEntries.push({
         date,
         countryCode: entry.countryCode as WorkLocationEntry["countryCode"],
-        ...(typeof entry.label === "string" && entry.label.length > 0 ? { label: entry.label } : {}),
+        ...(typeof entry.label === "string" && entry.label.length > 0
+          ? { label: entry.label }
+          : {}),
       });
     }
   }
