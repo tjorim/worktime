@@ -171,7 +171,7 @@ It is a trigger: on event received → call pull. It must not cache data, mutate
 
 The table below is the authoritative record of per-domain ownership. All
 sync-managed domains are fully wired to a QueryCollection; only user
-preferences remains in a `localStorage`-backed context pending a future
+preferences remain in a `localStorage`-backed context pending a future
 migration.
 
 | Domain | localStorage key(s) | Owner | Status |
@@ -239,8 +239,9 @@ To migrate the remaining `pending` domain (user preferences) in a future issue:
 2. Replace `SettingsContext` reads/writes for the synced fields with
    `useLiveQuery` over the new collection.
 3. Remove the legacy sync pipeline path for preferences.
-4. Remove the `worktime_user_state` entry from the domain table and mark the
-   domain as `migrated`.
+4. In the domain table, keep the preferences row, clear the
+   `worktime_user_state` value from the `localStorage key(s)` column, and mark
+   the domain as `migrated`.
 5. Do **not** add a standalone `useQuery` call alongside the QueryCollection.
 
 ---
