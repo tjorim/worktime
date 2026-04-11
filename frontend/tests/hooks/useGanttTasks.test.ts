@@ -1,7 +1,7 @@
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
-import { ganttTasksCollection } from "@/db/collections";
+import { ganttTasksCollection, replaceCollectionContents } from "@/db/collections";
 
 let uniqueCounter = 0;
 
@@ -10,27 +10,8 @@ function nextId(prefix: string): string {
   return `${prefix}-${uniqueCounter}`;
 }
 
-function clearGanttCollection() {
-  const items = [...ganttTasksCollection.toArray];
-  for (const item of items) {
-    try {
-      if (ganttTasksCollection.has(item.id)) {
-        ganttTasksCollection.delete(item.id);
-      }
-    } catch {
-      // Ignore rows already removed during teardown.
-    }
-  }
-}
-
 describe("useGanttTasks", () => {
-  beforeEach(() => {
-    clearGanttCollection();
-  });
-
   afterEach(() => {
-    cleanup();
-    clearGanttCollection();
     vi.unstubAllGlobals();
   });
 
@@ -67,11 +48,15 @@ describe("useGanttTasks", () => {
   });
 
   it("updateTask modifies an existing task", async () => {
+    const taskId = nextId("update-task");
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn(() => taskId),
+    });
+
     const { result } = renderHook(() => useGanttTasks());
-    let taskId = "";
 
     act(() => {
-      taskId = result.current.addTask({ name: "Initial", start: "2026-03-01", end: "2026-03-05" }).id;
+      result.current.addTask({ name: "Initial", start: "2026-03-01", end: "2026-03-05" });
     });
 
     await waitFor(() => {
@@ -83,7 +68,8 @@ describe("useGanttTasks", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.tasks.find((task) => task.name === "Initial")).toMatchObject({
+      expect(result.current.tasks.find((task) => task.id === taskId)).toMatchObject({
+        id: taskId,
         name: "Initial",
         end: "2026-03-06",
         progress: 25,
@@ -93,57 +79,75 @@ describe("useGanttTasks", () => {
   });
 
   it("removeTask deletes the task from state", async () => {
+    const firstId = nextId("remove-a");
+    const secondId = nextId("remove-b");
+
     const { result } = renderHook(() => useGanttTasks());
-    let secondId = "";
 
     act(() => {
-      result.current.addTask({ name: "A", start: "2026-03-01", end: "2026-03-05" });
-      secondId = result.current.addTask({ name: "B", start: "2026-03-02", end: "2026-03-06" }).id;
+      replaceCollectionContents(
+        ganttTasksCollection,
+        [
+          { id: firstId, name: "A", start: "2026-03-01", end: "2026-03-05", progress: 0 },
+          { id: secondId, name: "B", start: "2026-03-02", end: "2026-03-06", progress: 0 },
+        ],
+        (task) => task.id,
+      );
     });
     await waitFor(() => {
-      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
-      expect(result.current.tasks.some((task) => task.name === "B")).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === firstId)).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === secondId)).toBe(true);
     });
-
-    const taskToRemove = result.current.tasks.find((task) => task.name === "B");
-    expect(taskToRemove).toBeDefined();
 
     act(() => {
-      result.current.removeTask(taskToRemove!.id);
+      result.current.removeTask(secondId);
     });
 
     await waitFor(() => {
-      expect(result.current.tasks.some((task) => task.name === "B")).toBe(false);
-      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === secondId)).toBe(false);
+      expect(result.current.tasks.some((task) => task.id === firstId)).toBe(true);
     });
   });
 
   it("removeTask strips deleted id from other tasks' dependencies", async () => {
+    const firstGeneratedId = nextId("dep-a");
+    const secondGeneratedId = nextId("dep-b");
+    const thirdGeneratedId = nextId("dep-c");
+
     const { result } = renderHook(() => useGanttTasks());
-    let firstId = "";
-    let secondId = "";
+    const firstId = firstGeneratedId;
+    const secondId = secondGeneratedId;
+    const thirdId = thirdGeneratedId;
 
     act(() => {
-      const first = result.current.addTask({ name: "A", start: "2026-03-01", end: "2026-03-05" });
-      firstId = first.id;
-      const second = result.current.addTask({
-        name: "B",
-        start: "2026-03-02",
-        end: "2026-03-06",
-        dependencies: first.id,
-      });
-      secondId = second.id;
-      result.current.addTask({
-        name: "C",
-        start: "2026-03-03",
-        end: "2026-03-07",
-        dependencies: [first.id, second.id].join(", "),
-      });
+      replaceCollectionContents(
+        ganttTasksCollection,
+        [
+          { id: firstId, name: "A", start: "2026-03-01", end: "2026-03-05", progress: 0 },
+          {
+            id: secondId,
+            name: "B",
+            start: "2026-03-02",
+            end: "2026-03-06",
+            progress: 0,
+            dependencies: firstId,
+          },
+          {
+            id: thirdId,
+            name: "C",
+            start: "2026-03-03",
+            end: "2026-03-07",
+            progress: 0,
+            dependencies: [firstId, secondId].join(", "),
+          },
+        ],
+        (task) => task.id,
+      );
     });
     await waitFor(() => {
-      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
-      expect(result.current.tasks.some((task) => task.name === "B")).toBe(true);
-      expect(result.current.tasks.some((task) => task.name === "C")).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === firstId)).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === secondId)).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === thirdId)).toBe(true);
     });
 
     act(() => {
@@ -151,9 +155,9 @@ describe("useGanttTasks", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.tasks.some((task) => task.name === "A")).toBe(false);
-      expect(result.current.tasks.find((t) => t.name === "B")?.dependencies).toBeUndefined();
-      expect(result.current.tasks.find((t) => t.name === "C")?.dependencies).toBe(secondId);
+      expect(result.current.tasks.some((task) => task.id === firstId)).toBe(false);
+      expect(result.current.tasks.find((task) => task.id === secondId)?.dependencies).toBeUndefined();
+      expect(result.current.tasks.find((task) => task.id === thirdId)?.dependencies).toBe(secondId);
     });
   });
 

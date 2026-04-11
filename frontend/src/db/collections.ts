@@ -75,6 +75,10 @@ export function setSyncCollectionAuth(userId: string | null, apiBaseUrl: string)
   _syncApiBaseUrl = apiBaseUrl || DEFAULT_API_BASE_URL;
 }
 
+export function hasSyncCollectionAuth(): boolean {
+  return _currentUserId !== null;
+}
+
 // ---------------------------------------------------------------------------
 // Internal fetch helper
 // ---------------------------------------------------------------------------
@@ -163,7 +167,7 @@ function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void
   collection.utils.writeBatch(callback);
 }
 
-function replaceCollectionContents<
+export function replaceCollectionContents<
   TItem,
   TKey extends string,
   TCollection extends {
@@ -456,7 +460,7 @@ export const labelsCollection = createCollection(
     getKey: (label) => label.id,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return labelsCollection.toArray as TimeTrackingLabel[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
@@ -531,7 +535,7 @@ export const tasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return tasksCollection.toArray as StoredTimeTrackingTask[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
@@ -622,7 +626,7 @@ export const templatesCollection = createCollection(
     getKey: (template) => template.id,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return templatesCollection.toArray as TimeTrackingTemplate[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
@@ -709,7 +713,7 @@ export const timeOffCollection = createCollection(
     getKey: (entry) => entry.id,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return timeOffCollection.toArray as TimeOffEntry[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
@@ -800,7 +804,7 @@ export const ganttTasksCollection = createCollection(
     getKey: (task) => task.id,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return ganttTasksCollection.toArray as GanttTask[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
@@ -898,7 +902,7 @@ export const workLocationsCollection = createCollection(
     getKey: (entry) => entry.date,
     staleTime: Infinity,
     queryFn: async () => {
-      if (!_currentUserId) return [];
+      if (!_currentUserId) return workLocationsCollection.toArray as WorkLocationEntry[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;

@@ -1,7 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { isValidRawGanttTask, type GanttTask, type RawGanttTask } from "@/types/gantt";
-import { ganttTasksCollection } from "@/db/collections";
+import {
+  ganttTasksCollection,
+  hasSyncCollectionAuth,
+  replaceCollectionContents,
+} from "@/db/collections";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
@@ -44,29 +48,40 @@ export function useGanttTasks() {
       ...(payload.dependencies ? { dependencies: payload.dependencies } : {}),
       ...(payload.notes ? { notes: payload.notes } : {}),
     };
-    ganttTasksCollection.insert(createdTask);
+    if (!hasSyncCollectionAuth()) {
+      replaceCollectionContents(
+        ganttTasksCollection,
+        [...(ganttTasksCollection.toArray as GanttTask[]), createdTask],
+        (task) => task.id,
+      );
+    } else {
+      ganttTasksCollection.insert(createdTask);
+    }
     return toTask(createdTask);
   }, []);
 
   const updateTask = useCallback((id: string, changes: GanttTaskChanges) => {
     if (!tasks.some((task) => task.id === id)) return;
-    ganttTasksCollection.utils.writeUpsert([
-      ...tasks.map((task) =>
-        task.id === id
-          ? {
-            ...task,
-            ...(changes.name !== undefined ? { name: changes.name } : {}),
-            ...(changes.start !== undefined ? { start: changes.start } : {}),
-            ...(changes.end !== undefined ? { end: changes.end } : {}),
-            progress: changes.progress ?? task.progress ?? 0,
-            ...(changes.dependencies !== undefined
-              ? { dependencies: changes.dependencies ?? undefined }
-              : {}),
-            ...(changes.notes !== undefined ? { notes: changes.notes ?? undefined } : {}),
-          }
-          : task,
-      ),
-    ]);
+    const nextTasks = tasks.map((task) =>
+      task.id === id
+        ? {
+          ...task,
+          ...(changes.name !== undefined ? { name: changes.name } : {}),
+          ...(changes.start !== undefined ? { start: changes.start } : {}),
+          ...(changes.end !== undefined ? { end: changes.end } : {}),
+          progress: changes.progress ?? task.progress ?? 0,
+          ...(changes.dependencies !== undefined ? { dependencies: changes.dependencies ?? undefined } : {}),
+          ...(changes.notes !== undefined ? { notes: changes.notes ?? undefined } : {}),
+        }
+        : task,
+    );
+
+    if (!hasSyncCollectionAuth()) {
+      replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
+      return;
+    }
+
+    ganttTasksCollection.utils.writeUpsert(nextTasks);
   }, [tasks]);
 
   const removeTask = useCallback((id: string) => {
@@ -86,6 +101,12 @@ export function useGanttTasks() {
         };
       });
 
+    if (!hasSyncCollectionAuth()) {
+      replaceCollectionContents(ganttTasksCollection, nextTasks, (task) => task.id);
+      return;
+    }
+
+    ganttTasksCollection.delete(id);
     ganttTasksCollection.utils.writeUpsert(nextTasks);
   }, [tasks]);
 

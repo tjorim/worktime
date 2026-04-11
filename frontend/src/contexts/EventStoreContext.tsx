@@ -20,7 +20,7 @@ import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { timeOffCollection } from "@/db/collections";
+import { hasSyncCollectionAuth, timeOffCollection } from "@/db/collections";
 
 interface EventStoreContextType {
   rawText: string;
@@ -57,6 +57,10 @@ function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   });
 }
 
+function cloneEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
+  return entries.map((entry) => structuredClone(entry));
+}
+
 /**
  * Apply a snapshot of entries to `timeOffCollection` using normal mutations so
  * that the diff is pushed to the server (undo/redo are synchronised across
@@ -65,16 +69,19 @@ function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
 function applySnapshotToCollection(current: TimeOffEntry[], target: TimeOffEntry[]): void {
   const currentMap = new Map(current.map((e) => [e.id, e]));
   const targetMap = new Map(target.map((e) => [e.id, e]));
+  const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
 
   // Delete entries present in current but absent from target
   const toDelete = [...currentMap.keys()].filter((id) => !targetMap.has(id));
   for (const id of toDelete) {
-    timeOffCollection.delete(id);
+    if (collectionIds.has(id)) {
+      timeOffCollection.delete(id);
+    }
   }
 
   // Insert entries present in target but absent from current
   for (const entry of target) {
-    if (!currentMap.has(entry.id)) {
+    if (!collectionIds.has(entry.id)) {
       timeOffCollection.insert(entry);
     } else {
       // Update entries that exist in both (always push to keep server in sync)
@@ -83,6 +90,19 @@ function applySnapshotToCollection(current: TimeOffEntry[], target: TimeOffEntry
       });
     }
   }
+}
+
+function writeLocalSnapshot(current: TimeOffEntry[], target: TimeOffEntry[]): void {
+  const targetIds = new Set(target.map((entry) => entry.id));
+  const toDelete = current.map((entry) => entry.id).filter((id) => !targetIds.has(id));
+  timeOffCollection.utils.writeBatch(() => {
+    if (toDelete.length > 0) {
+      timeOffCollection.utils.writeDelete(toDelete);
+    }
+    if (target.length > 0) {
+      timeOffCollection.utils.writeUpsert(target);
+    }
+  });
 }
 
 export function EventStoreProvider({ children }: EventStoreProviderProps) {
@@ -111,12 +131,21 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   historyRef.current = historyStack;
   futureRef.current = futureStack;
 
-  // Snapshot current entries onto the undo stack and clear the redo stack
-  const pushUndo = useCallback(() => {
-    const snapshot = sortedEntriesRef.current;
-    setHistoryStack([...historyRef.current, snapshot].slice(-HISTORY_LIMIT));
-    setFutureStack([]);
+  const commitHistory = useCallback((next: TimeOffEntry[][]) => {
+    historyRef.current = next;
+    setHistoryStack(next);
   }, []);
+
+  const commitFuture = useCallback((next: TimeOffEntry[][]) => {
+    futureRef.current = next;
+    setFutureStack(next);
+  }, []);
+
+  // Snapshot current entries onto the undo stack and clear the redo stack
+  const pushUndo = useCallback((snapshot: TimeOffEntry[] = cloneEntries(sortedEntriesRef.current)) => {
+    commitHistory([...historyRef.current, snapshot].slice(-HISTORY_LIMIT));
+    commitFuture([]);
+  }, [commitFuture, commitHistory]);
 
   const rawText = useMemo(() => {
     if (sortedEntries.length === 0) return "";
@@ -145,9 +174,19 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   const addEntries = useCallback(
     (newEntries: TimeOffEntry[]) => {
-      pushUndo();
-      const currentEntries = sortedEntriesRef.current;
+      const currentEntries = cloneEntries(sortedEntriesRef.current);
+      pushUndo(currentEntries);
       const existingIds = new Set(currentEntries.map((e) => e.id));
+      const nextEntriesMap = new Map(currentEntries.map((entry) => [entry.id, entry]));
+      for (const entry of newEntries) {
+        nextEntriesMap.set(entry.id, structuredClone(entry));
+      }
+      const nextEntries = sortEntries([...nextEntriesMap.values()]);
+      sortedEntriesRef.current = nextEntries;
+      if (!hasSyncCollectionAuth()) {
+        writeLocalSnapshot(currentEntries, nextEntries);
+        return;
+      }
       for (const entry of newEntries) {
         if (existingIds.has(entry.id)) {
           timeOffCollection.update(entry.id, (d) => {
@@ -162,6 +201,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   );
 
   const replaceEntries = useCallback((newEntries: TimeOffEntry[]) => {
+    sortedEntriesRef.current = sortEntries(cloneEntries(newEntries));
     // Server-pushed data: write directly without pushing back to server and
     // without touching the undo/redo history.
     const existingKeys = timeOffCollection.toArray.map((e) => e.id);
@@ -173,11 +213,20 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   const updateEntry = useCallback(
     (id: string, entry: TimeOffEntry) => {
-      if (!timeOffCollection.has(id)) {
+      const currentEntries = cloneEntries(sortedEntriesRef.current);
+      if (!currentEntries.some((existing) => existing.id === id)) {
         console.error(`Invalid entry id: ${id}`);
         return;
       }
-      pushUndo();
+      pushUndo(currentEntries);
+      const nextEntries = sortEntries(
+        currentEntries.map((existing) => (existing.id === id ? { ...structuredClone(entry), id } : existing)),
+      );
+      sortedEntriesRef.current = nextEntries;
+      if (!hasSyncCollectionAuth()) {
+        writeLocalSnapshot(currentEntries, nextEntries);
+        return;
+      }
       timeOffCollection.update(id, (d) => {
         // Exclude `id` from the spread — TanStack DB forbids changing an item's key.
         const { id: _id, ...fields } = entry;
@@ -189,12 +238,21 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
 
   const deleteEntry = useCallback(
     (id: string) => {
-      if (!timeOffCollection.has(id)) {
+      const currentEntries = cloneEntries(sortedEntriesRef.current);
+      if (!currentEntries.some((existing) => existing.id === id)) {
         console.error(`Invalid entry id: ${id}`);
         return;
       }
-      pushUndo();
-      timeOffCollection.delete(id);
+      pushUndo(currentEntries);
+      const nextEntries = currentEntries.filter((entry) => entry.id !== id);
+      sortedEntriesRef.current = nextEntries;
+      if (!hasSyncCollectionAuth()) {
+        writeLocalSnapshot(currentEntries, nextEntries);
+        return;
+      }
+      if ((timeOffCollection.toArray as TimeOffEntry[]).some((entry) => entry.id === id)) {
+        timeOffCollection.delete(id);
+      }
     },
     [pushUndo],
   );
@@ -203,14 +261,25 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     (ids: string[]) => {
       const unique = ids.filter((id, index, arr) => arr.indexOf(id) === index);
       if (unique.length === 0) return;
-      const valid = unique.filter((id) => timeOffCollection.has(id));
+      const currentEntries = cloneEntries(sortedEntriesRef.current);
+      const existingIds = new Set(currentEntries.map((entry) => entry.id));
+      const valid = unique.filter((id) => existingIds.has(id));
       if (valid.length === 0) {
         console.error("Invalid entry ids:", ids);
         return;
       }
-      pushUndo();
+      pushUndo(currentEntries);
+      const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));
+      sortedEntriesRef.current = nextEntries;
+      if (!hasSyncCollectionAuth()) {
+        writeLocalSnapshot(currentEntries, nextEntries);
+        return;
+      }
+      const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
       for (const id of valid) {
-        timeOffCollection.delete(id);
+        if (collectionIds.has(id)) {
+          timeOffCollection.delete(id);
+        }
       }
     },
     [pushUndo],
@@ -219,17 +288,29 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   const importHday = useCallback(
     (text: string) => {
       const result = hdayToTimeOffEntries(text);
-      pushUndo();
-      applySnapshotToCollection(sortedEntriesRef.current, result.entries);
+      const currentEntries = cloneEntries(sortedEntriesRef.current);
+      pushUndo(currentEntries);
+      const nextEntries = sortEntries(cloneEntries(result.entries));
+      sortedEntriesRef.current = nextEntries;
+      if (!hasSyncCollectionAuth()) {
+        writeLocalSnapshot(currentEntries, nextEntries);
+      } else {
+        applySnapshotToCollection(currentEntries, result.entries);
+      }
       return result;
     },
     [pushUndo],
   );
 
   const clearAll = useCallback(() => {
-    const current = sortedEntriesRef.current;
+    const current = cloneEntries(sortedEntriesRef.current);
     if (current.length === 0) return;
-    pushUndo();
+    pushUndo(current);
+    sortedEntriesRef.current = [];
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(current, []);
+      return;
+    }
     for (const entry of current) {
       timeOffCollection.delete(entry.id);
     }
@@ -239,22 +320,32 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     const history = historyRef.current;
     if (history.length === 0) return;
     const previous = history[history.length - 1]!;
-    const current = sortedEntriesRef.current;
-    setHistoryStack(history.slice(0, -1));
-    setFutureStack([current, ...futureRef.current]);
+    const current = cloneEntries(sortedEntriesRef.current);
+    commitHistory(history.slice(0, -1));
+    commitFuture([current, ...futureRef.current]);
+    sortedEntriesRef.current = cloneEntries(previous);
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(current, previous);
+      return;
+    }
     applySnapshotToCollection(current, previous);
-  }, []);
+  }, [commitFuture, commitHistory]);
 
   const redo = useCallback(() => {
     const future = futureRef.current;
     if (future.length === 0) return;
     const [next, ...remaining] = future;
     if (!next) return;
-    const current = sortedEntriesRef.current;
-    setHistoryStack([...historyRef.current, current].slice(-HISTORY_LIMIT));
-    setFutureStack(remaining);
+    const current = cloneEntries(sortedEntriesRef.current);
+    commitHistory([...historyRef.current, current].slice(-HISTORY_LIMIT));
+    commitFuture(remaining);
+    sortedEntriesRef.current = cloneEntries(next);
+    if (!hasSyncCollectionAuth()) {
+      writeLocalSnapshot(current, next);
+      return;
+    }
     applySnapshotToCollection(current, next);
-  }, []);
+  }, [commitFuture, commitHistory]);
 
   const contextValue: EventStoreContextType = useMemo(
     () => ({

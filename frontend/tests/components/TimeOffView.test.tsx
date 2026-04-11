@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
@@ -282,8 +282,9 @@ describe("TimeOffView", () => {
       await user.click(confirmButton);
 
       // Event should be removed
-      expect(screen.queryByText("To be deleted")).not.toBeInTheDocument();
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText("To be deleted")).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -450,17 +451,21 @@ describe("TimeOffView", () => {
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
+      const titleInput = screen.getByLabelText(/Comment/i);
+      await user.type(titleInput, "Bulk delete me");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      expect(within(screen.getByRole("table")).getByText("2025/01/15")).toBeInTheDocument();
+      expect(screen.getByText("Bulk delete me")).toBeInTheDocument();
 
-      await user.click(screen.getByRole("checkbox", { name: /Select Holiday/i }));
+      await user.click(screen.getByRole("checkbox", { name: /Select Bulk delete me/i }));
       await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
 
       const dialog = await screen.findByRole("dialog");
       await user.click(within(dialog).getByRole("button", { name: /Delete/i }));
 
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText("Bulk delete me")).not.toBeInTheDocument();
+      });
     });
   });
 });

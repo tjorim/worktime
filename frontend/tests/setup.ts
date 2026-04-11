@@ -1,5 +1,6 @@
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
+import { cleanup } from "@testing-library/react";
 import * as React from "react";
 import {
   ganttTasksCollection,
@@ -98,38 +99,28 @@ Object.defineProperty(window, "matchMedia", {
 // fires but is a no-op in tests because `_currentUserId` is null.
 // ---------------------------------------------------------------------------
 
-function clearTanStackCollection(
-  collection: { toArray: unknown[]; has: (id: string) => boolean; delete: (id: string) => void },
-  getKey: (item: unknown) => string,
-): void {
-  const items = [...(collection.toArray as unknown[])];
-  for (const item of items) {
-    const id = getKey(item);
-    try {
-      if (collection.has(id)) collection.delete(id);
-    } catch {
-      // Ignore if the item was already removed
-    }
-  }
+async function resetTestState(): Promise<void> {
+  document.body.innerHTML = "";
+  localStorage.clear();
+
+  await Promise.all([
+    ganttTasksCollection.cleanup(),
+    tasksCollection.cleanup(),
+    labelsCollection.cleanup(),
+    templatesCollection.cleanup(),
+    timeOffCollection.cleanup(),
+    workLocationsCollection.cleanup(),
+  ]);
 }
 
 // Set up DOM environment
-beforeEach(() => {
-  // Clear document body
-  document.body.innerHTML = "";
+beforeEach(async () => {
+  await resetTestState();
+});
 
-  // Reset localStorage
-  localStorage.clear();
-
-  // Clear all TanStack DB collections so tests start with a clean slate.
-  // queryCollectionOptions-backed collections are module-level singletons and
-  // are not affected by localStorage.clear().
-  clearTanStackCollection(ganttTasksCollection, (item) => (item as { id: string }).id);
-  clearTanStackCollection(tasksCollection, (item) => (item as { id: string }).id);
-  clearTanStackCollection(labelsCollection, (item) => (item as { id: string }).id);
-  clearTanStackCollection(templatesCollection, (item) => (item as { id: string }).id);
-  clearTanStackCollection(timeOffCollection, (item) => (item as { id: string }).id);
-  clearTanStackCollection(workLocationsCollection, (item) => (item as { date: string }).date);
+afterEach(async () => {
+  cleanup();
+  await resetTestState();
 });
 
 // Note: dayjs plugins are handled by actual imports in components for better compatibility

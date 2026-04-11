@@ -4,6 +4,8 @@ import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTrackin
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import {
   labelsCollection,
+  hasSyncCollectionAuth,
+  replaceCollectionContents,
   tasksCollection,
   templatesCollection,
 } from "@/db/collections";
@@ -180,6 +182,10 @@ export function useTimeTrackingStorage() {
   const removeTask = useCallback((id: string) => {
     if (!tasks.some((task) => task.id === id)) return;
     const remainingTasks = tasks.filter((task) => task.id !== id);
+    if (!hasSyncCollectionAuth()) {
+      replaceCollectionContents(tasksCollection, remainingTasks, (task) => task.id);
+      return;
+    }
     tasksCollection.utils.writeUpsert(remainingTasks);
   }, [tasks]);
 
@@ -208,6 +214,10 @@ export function useTimeTrackingStorage() {
   const deleteTemplate = useCallback((id: string) => {
     if (!templates.some((template) => template.id === id)) return;
     const remainingTemplates = templates.filter((template) => template.id !== id);
+    if (!hasSyncCollectionAuth()) {
+      replaceCollectionContents(templatesCollection, remainingTemplates, (template) => template.id);
+      return;
+    }
     templatesCollection.utils.writeUpsert(remainingTemplates);
   }, [templates]);
 

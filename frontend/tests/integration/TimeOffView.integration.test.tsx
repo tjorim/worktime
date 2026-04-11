@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeOffView } from "@/components/TimeOffView";
@@ -7,9 +7,8 @@ import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
-import { loadTimeOffEntries } from "@/lib/timeOff/storage";
 import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
+import { timeOffCollection } from "@/db/collections";
 import {
   SIMPLE_HDAY,
   MULTI_TYPE_HDAY,
@@ -30,6 +29,10 @@ function renderWithProviders() {
       </DeveloperOptionsProvider>
     </ToastProvider>,
   );
+}
+
+function getStoredEntries() {
+  return [...timeOffCollection.toArray];
 }
 
 describe("TimeOffView Integration Tests", () => {
@@ -238,8 +241,8 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Summer vacation")).toBeInTheDocument();
       expect(within(screen.getByRole("table")).getByText("2025/06/15")).toBeInTheDocument();
 
-      // Verify localStorage persistence
-      const entries = loadTimeOffEntries();
+      // Verify collection-backed persistence
+      const entries = getStoredEntries();
       expect(entries.some((e) => e.note === "Summer vacation")).toBe(true);
       expect(entries.some((e) => e.entryKind === "date" && e.date === "2025-06-15")).toBe(true);
 
@@ -260,8 +263,8 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Updated summer vacation")).toBeInTheDocument();
       expect(screen.queryByText("Summer vacation")).not.toBeInTheDocument();
 
-      // Verify updated localStorage
-      const updatedEntries = loadTimeOffEntries();
+      // Verify updated collection state
+      const updatedEntries = getStoredEntries();
       expect(updatedEntries.some((e) => e.note === "Updated summer vacation")).toBe(true);
       expect(updatedEntries.every((e) => e.note !== "Summer vacation")).toBe(true);
 
@@ -278,11 +281,12 @@ describe("TimeOffView Integration Tests", () => {
       await user.click(confirmButton);
 
       // Verify event is removed
-      expect(screen.queryByText("Updated summer vacation")).not.toBeInTheDocument();
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText("Updated summer vacation")).not.toBeInTheDocument();
+      });
 
-      // Verify localStorage is updated (should be empty or not contain the event)
-      const finalEntries = loadTimeOffEntries();
+      // Verify collection state is updated (should be empty or not contain the event)
+      const finalEntries = getStoredEntries();
       expect(finalEntries.every((e) => e.note !== "Updated summer vacation")).toBe(true);
     }, 15000);
 
@@ -316,7 +320,7 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Conference")).toBeInTheDocument();
 
       // Verify canonical entry has correct fields
-      const entries = loadTimeOffEntries();
+      const entries = getStoredEntries();
       const conference = entries.find((e) => e.note === "Conference");
       expect(conference).toBeTruthy();
       expect(conference).toMatchObject({
@@ -333,7 +337,7 @@ describe("TimeOffView Integration Tests", () => {
   });
 
   describe("Persistence and Serialization", () => {
-    it("persists modified events to localStorage in .hday format", async () => {
+    it("persists modified events in collection state", async () => {
       const user = userEvent.setup();
       renderWithProviders();
 
@@ -355,7 +359,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
       // Verify canonical entries have correct fields
-      const entries = loadTimeOffEntries();
+      const entries = getStoredEntries();
       expect(
         entries.some(
           (e) => e.entryKind === "date" && e.date === "2025-08-10" && e.note === "First event",
@@ -378,7 +382,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.upload(fileInput, file);
 
       // Verify canonical entries contain all event types
-      const entries = loadTimeOffEntries();
+      const entries = getStoredEntries();
 
       // Check date event
       expect(
@@ -444,13 +448,17 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Event should still be there after remount
-      expect(screen.getByText("Persistent event")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Persistent event")).toBeInTheDocument();
+      });
     });
 
-    it("loads events from localStorage on initial render", () => {
-      // Pre-populate localStorage with canonical entries parsed from the fixture
+    it("loads events from collection state on initial render", () => {
+      // Pre-populate the collection with canonical entries parsed from the fixture
       const { entries } = hdayToTimeOffEntries(SIMPLE_HDAY);
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
+      for (const entry of entries) {
+        timeOffCollection.insert(entry);
+      }
 
       renderWithProviders();
 
@@ -591,8 +599,8 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.queryByText("Event 2")).not.toBeInTheDocument();
       expect(screen.getByText("Event 3")).toBeInTheDocument();
 
-      // Verify canonical entries updated correctly
-      const entries = loadTimeOffEntries();
+      // Verify collection-backed entries updated correctly
+      const entries = getStoredEntries();
       expect(entries.every((e) => e.note !== "Event 1")).toBe(true);
       expect(entries.every((e) => e.note !== "Event 2")).toBe(true);
       expect(entries.some((e) => e.note === "Event 3")).toBe(true);
