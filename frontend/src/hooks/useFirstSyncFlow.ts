@@ -27,7 +27,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  applySyncPullResponse,
   applyPreferencesPull,
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
@@ -43,7 +42,7 @@ import {
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { useEventStore } from "@/contexts/EventStoreContext";
+import { applyPullToCollections } from "@/db/collections";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -137,7 +136,6 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
-  const { replaceEntries } = useEventStore();
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -228,7 +226,7 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        replaceEntries(applySyncPullResponse(pullResult));
+        applyPullToCollections(pullResult);
         // Also pull preferences from the server and apply to localStorage.
         const stillMounted = await pullAndApplyServerPreferencesIfPresent(
           fetch,
@@ -246,7 +244,7 @@ export function useFirstSyncFlow(
       capturedStatusRef.current = status;
       setPhase("conflict");
     },
-    [replaceEntries],
+    [],
   );
 
   const resolveConflict = useCallback(
@@ -310,7 +308,7 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
-            replaceEntries(applySyncPullResponse(pullResult));
+            applyPullToCollections(pullResult);
             // Pull preferences from the server (use-server means server wins).
             const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
               fetch,
@@ -330,7 +328,7 @@ export function useFirstSyncFlow(
         if (mountedRef.current) setPhase("error");
       });
     },
-    [phase, userId, fetchFn, replaceEntries],
+    [phase, userId, fetchFn],
   );
 
   const dismiss = useCallback(() => {

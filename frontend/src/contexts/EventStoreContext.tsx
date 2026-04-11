@@ -2,36 +2,25 @@
  * Event Store Context
  *
  * Manages canonical time-off entries with CRUD operations, import/export helpers,
- * undo/redo history, and localStorage persistence.
+ * undo/redo history, and TanStack DB collection backing (timeOffCollection).
+ *
+ * Entries are stored in and read from `timeOffCollection` (a QueryCollection
+ * wired to the sync pull/push endpoints). Undo/redo history is tracked
+ * separately as a stack of entry snapshots; undoing applies the diff back to
+ * the collection so the server stays in sync.
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
+import { createContext, useCallback, useContext, useMemo, useReducer, useRef } from "react";
+import { useLiveQuery } from "@tanstack/react-db";
 import type { CalendarEvent } from "@/lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
 import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
-import { loadTimeOffEntries, saveTimeOffEntries } from "@/lib/timeOff/storage";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { TimeOffImportResult } from "@/lib/timeOff/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
 import { dayjs } from "@/utils/dateTimeUtils";
-
-type EventStoreAction =
-  | { type: "ADD_ENTRIES"; payload: TimeOffEntry[] }
-  | { type: "REPLACE_ENTRIES"; payload: TimeOffEntry[] }
-  | { type: "UPDATE_ENTRY"; payload: { id: string; entry: TimeOffEntry } }
-  | { type: "DELETE_ENTRY"; payload: string }
-  | { type: "DELETE_ENTRIES"; payload: string[] }
-  | { type: "IMPORT_HDAY"; payload: TimeOffEntry[] }
-  | { type: "CLEAR_ALL" }
-  | { type: "UNDO" }
-  | { type: "REDO" };
-
-interface EventStoreState {
-  entries: TimeOffEntry[];
-  history: TimeOffEntry[][];
-  future: TimeOffEntry[][];
-}
+import { timeOffCollection } from "@/db/collections";
 
 interface EventStoreContextType {
   rawText: string;
@@ -68,189 +57,207 @@ function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   });
 }
 
-function mergeEntries(currentEntries: TimeOffEntry[], nextEntries: TimeOffEntry[]): TimeOffEntry[] {
-  const byId = new Map(currentEntries.map((entry) => [entry.id, entry]));
-  for (const entry of nextEntries) {
-    byId.set(entry.id, entry);
-  }
-  return sortEntries(Array.from(byId.values()));
-}
+/**
+ * Apply a snapshot of entries to `timeOffCollection` using normal mutations so
+ * that the diff is pushed to the server (undo/redo are synchronised across
+ * devices).
+ */
+function applySnapshotToCollection(current: TimeOffEntry[], target: TimeOffEntry[]): void {
+  const currentMap = new Map(current.map((e) => [e.id, e]));
+  const targetMap = new Map(target.map((e) => [e.id, e]));
 
-// Every mutation goes through applyWithHistory, which snapshots the current entries
-// onto the undo stack (capped at HISTORY_LIMIT) and clears the redo stack.
-// Returning the existing state object unchanged when entries are the same prevents
-// unnecessary re-renders.
-function applyWithHistory(state: EventStoreState, nextEntries: TimeOffEntry[]): EventStoreState {
-  if (nextEntries === state.entries) {
-    return state;
+  // Delete entries present in current but absent from target
+  const toDelete = [...currentMap.keys()].filter((id) => !targetMap.has(id));
+  for (const id of toDelete) {
+    timeOffCollection.delete(id);
   }
 
-  return {
-    entries: nextEntries,
-    history: [...state.history, state.entries].slice(-HISTORY_LIMIT),
-    future: [],
-  };
-}
-
-function entriesReducer(state: EventStoreState, action: EventStoreAction): EventStoreState {
-  switch (action.type) {
-    case "ADD_ENTRIES":
-      return applyWithHistory(state, mergeEntries(state.entries, action.payload));
-
-    case "REPLACE_ENTRIES":
-      return applyWithHistory(state, sortEntries(action.payload));
-
-    case "UPDATE_ENTRY": {
-      const { id, entry } = action.payload;
-      if (!state.entries.some((currentEntry) => currentEntry.id === id)) {
-        console.error(`Invalid entry id: ${id}`);
-        return state;
-      }
-
-      const filteredEntries = state.entries.filter((currentEntry) => currentEntry.id !== id);
-      return applyWithHistory(state, sortEntries([...filteredEntries, { ...entry, id }]));
+  // Insert entries present in target but absent from current
+  for (const entry of target) {
+    if (!currentMap.has(entry.id)) {
+      timeOffCollection.insert(entry);
+    } else {
+      // Update entries that exist in both (always push to keep server in sync)
+      timeOffCollection.update(entry.id, (d) => {
+        Object.assign(d, entry);
+      });
     }
-
-    case "DELETE_ENTRY": {
-      if (!state.entries.some((entry) => entry.id === action.payload)) {
-        console.error(`Invalid entry id: ${action.payload}`);
-        return state;
-      }
-      return applyWithHistory(
-        state,
-        state.entries.filter((entry) => entry.id !== action.payload),
-      );
-    }
-
-    case "DELETE_ENTRIES": {
-      if (action.payload.length === 0) {
-        return state;
-      }
-      const ids = new Set(action.payload);
-      const filteredEntries = state.entries.filter((entry) => !ids.has(entry.id));
-      if (filteredEntries.length === state.entries.length) {
-        console.error("Invalid entry ids:", action.payload);
-        return state;
-      }
-      return applyWithHistory(state, filteredEntries);
-    }
-
-    case "IMPORT_HDAY":
-      return applyWithHistory(state, sortEntries(action.payload));
-
-    case "CLEAR_ALL":
-      if (state.entries.length === 0) return state;
-      return applyWithHistory(state, []);
-
-    case "UNDO": {
-      if (state.history.length === 0) {
-        return state;
-      }
-      const previous = state.history[state.history.length - 1];
-      if (!previous) return state;
-      return {
-        entries: previous,
-        history: state.history.slice(0, -1),
-        future: [state.entries, ...state.future],
-      };
-    }
-
-    case "REDO": {
-      if (state.future.length === 0) {
-        return state;
-      }
-      const [next, ...remaining] = state.future;
-      if (!next) return state;
-      return {
-        entries: next,
-        history: [...state.history, state.entries].slice(-HISTORY_LIMIT),
-        future: remaining,
-      };
-    }
-
-    default:
-      return state;
   }
 }
 
 export function EventStoreProvider({ children }: EventStoreProviderProps) {
-  const [state, dispatch] = useReducer(entriesReducer, undefined, () => ({
-    entries: loadTimeOffEntries(),
-    history: [],
-    future: [],
-  }));
+  // Live entries from the collection — always reflects the latest server + local state
+  const { data: rawCollectionData } = useLiveQuery(timeOffCollection);
+  const sortedEntries = useMemo(
+    () => sortEntries((rawCollectionData ?? []) as TimeOffEntry[]),
+    [rawCollectionData],
+  );
+
+  // Undo / redo stacks (snapshots; no server sync for the stacks themselves)
+  const [historyStack, setHistoryStack] = useReducer(
+    (_: TimeOffEntry[][], next: TimeOffEntry[][]): TimeOffEntry[][] => next,
+    [],
+  );
+  const [futureStack, setFutureStack] = useReducer(
+    (_: TimeOffEntry[][], next: TimeOffEntry[][]): TimeOffEntry[][] => next,
+    [],
+  );
+
+  // Stable refs so callbacks don't need to list the live arrays as deps
+  const sortedEntriesRef = useRef<TimeOffEntry[]>(sortedEntries);
+  const historyRef = useRef<TimeOffEntry[][]>(historyStack);
+  const futureRef = useRef<TimeOffEntry[][]>(futureStack);
+  sortedEntriesRef.current = sortedEntries;
+  historyRef.current = historyStack;
+  futureRef.current = futureStack;
+
+  // Snapshot current entries onto the undo stack and clear the redo stack
+  const pushUndo = useCallback(() => {
+    const snapshot = sortedEntriesRef.current;
+    setHistoryStack([...historyRef.current, snapshot].slice(-HISTORY_LIMIT));
+    setFutureStack([]);
+  }, []);
 
   const rawText = useMemo(() => {
-    if (state.entries.length === 0) return "";
+    if (sortedEntries.length === 0) return "";
     try {
-      return `${timeOffEntriesToHday(state.entries)}\n`;
+      return `${timeOffEntriesToHday(sortedEntries)}\n`;
     } catch (error) {
       console.error("Failed to serialize time-off entries:", error);
       return "";
     }
-  }, [state.entries]);
-
-  useEffect(() => {
-    try {
-      saveTimeOffEntries(state.entries);
-    } catch (error) {
-      console.error("Failed to save time-off entries to localStorage:", error);
-    }
-  }, [state.entries]);
+  }, [sortedEntries]);
 
   const getEventsInRange = useCallback(
     (startDate: Date, endDate: Date): CalendarEvent[] => {
       const startStr = dayjs(startDate).format("YYYY-MM-DD");
       const endStr = dayjs(endDate).format("YYYY-MM-DD");
-      const calendarEvents = entriesToCalendarEvents(state.entries, startDate, endDate);
+      // Use ref to avoid recreating the callback on every entry change
+      const calendarEvents = entriesToCalendarEvents(
+        sortedEntriesRef.current,
+        startDate,
+        endDate,
+      );
       return filterEventsInRange(calendarEvents, startStr, endStr);
     },
-    [state.entries],
+    [],
   );
 
-  const addEntries = useCallback((entries: TimeOffEntry[]) => {
-    dispatch({ type: "ADD_ENTRIES", payload: entries });
+  const addEntries = useCallback(
+    (newEntries: TimeOffEntry[]) => {
+      pushUndo();
+      const currentEntries = sortedEntriesRef.current;
+      const existingIds = new Set(currentEntries.map((e) => e.id));
+      for (const entry of newEntries) {
+        if (existingIds.has(entry.id)) {
+          timeOffCollection.update(entry.id, (d) => {
+            Object.assign(d, entry);
+          });
+        } else {
+          timeOffCollection.insert(entry);
+        }
+      }
+    },
+    [pushUndo],
+  );
+
+  const replaceEntries = useCallback((newEntries: TimeOffEntry[]) => {
+    // Server-pushed data: write directly without pushing back to server and
+    // without touching the undo/redo history.
+    const existingKeys = timeOffCollection.toArray.map((e) => e.id);
+    timeOffCollection.utils.writeBatch(() => {
+      if (existingKeys.length > 0) timeOffCollection.utils.writeDelete(existingKeys);
+      if (newEntries.length > 0) timeOffCollection.utils.writeInsert(newEntries);
+    });
   }, []);
 
-  const replaceEntries = useCallback((entries: TimeOffEntry[]) => {
-    dispatch({ type: "REPLACE_ENTRIES", payload: entries });
-  }, []);
+  const updateEntry = useCallback(
+    (id: string, entry: TimeOffEntry) => {
+      if (!timeOffCollection.has(id)) {
+        console.error(`Invalid entry id: ${id}`);
+        return;
+      }
+      pushUndo();
+      timeOffCollection.update(id, (d) => {
+        Object.assign(d, entry);
+      });
+    },
+    [pushUndo],
+  );
 
-  const updateEntry = useCallback((id: string, entry: TimeOffEntry) => {
-    dispatch({ type: "UPDATE_ENTRY", payload: { id, entry } });
-  }, []);
+  const deleteEntry = useCallback(
+    (id: string) => {
+      if (!timeOffCollection.has(id)) {
+        console.error(`Invalid entry id: ${id}`);
+        return;
+      }
+      pushUndo();
+      timeOffCollection.delete(id);
+    },
+    [pushUndo],
+  );
 
-  const deleteEntry = useCallback((id: string) => {
-    dispatch({ type: "DELETE_ENTRY", payload: id });
-  }, []);
+  const deleteEntries = useCallback(
+    (ids: string[]) => {
+      const unique = ids.filter((id, index, arr) => arr.indexOf(id) === index);
+      if (unique.length === 0) return;
+      const valid = unique.filter((id) => timeOffCollection.has(id));
+      if (valid.length === 0) {
+        console.error("Invalid entry ids:", ids);
+        return;
+      }
+      pushUndo();
+      for (const id of valid) {
+        timeOffCollection.delete(id);
+      }
+    },
+    [pushUndo],
+  );
 
-  const deleteEntries = useCallback((ids: string[]) => {
-    const resolvedIds = ids.filter((id, index, allIds) => allIds.indexOf(id) === index);
-    dispatch({ type: "DELETE_ENTRIES", payload: resolvedIds });
-  }, []);
-
-  const importHday = useCallback((text: string) => {
-    const result = hdayToTimeOffEntries(text);
-    dispatch({ type: "IMPORT_HDAY", payload: result.entries });
-    return result;
-  }, []);
+  const importHday = useCallback(
+    (text: string) => {
+      const result = hdayToTimeOffEntries(text);
+      pushUndo();
+      applySnapshotToCollection(sortedEntriesRef.current, result.entries);
+      return result;
+    },
+    [pushUndo],
+  );
 
   const clearAll = useCallback(() => {
-    dispatch({ type: "CLEAR_ALL" });
-  }, []);
+    const current = sortedEntriesRef.current;
+    if (current.length === 0) return;
+    pushUndo();
+    for (const entry of current) {
+      timeOffCollection.delete(entry.id);
+    }
+  }, [pushUndo]);
 
   const undo = useCallback(() => {
-    dispatch({ type: "UNDO" });
+    const history = historyRef.current;
+    if (history.length === 0) return;
+    const previous = history[history.length - 1]!;
+    const current = sortedEntriesRef.current;
+    setHistoryStack(history.slice(0, -1));
+    setFutureStack([current, ...futureRef.current]);
+    applySnapshotToCollection(current, previous);
   }, []);
 
   const redo = useCallback(() => {
-    dispatch({ type: "REDO" });
+    const future = futureRef.current;
+    if (future.length === 0) return;
+    const [next, ...remaining] = future;
+    if (!next) return;
+    const current = sortedEntriesRef.current;
+    setHistoryStack([...historyRef.current, current].slice(-HISTORY_LIMIT));
+    setFutureStack(remaining);
+    applySnapshotToCollection(current, next);
   }, []);
 
   const contextValue: EventStoreContextType = useMemo(
     () => ({
       rawText,
-      entries: state.entries,
+      entries: sortedEntries,
       getEventsInRange,
       addEntries,
       replaceEntries,
@@ -259,14 +266,14 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntries,
       importHday,
       clearAll,
-      canUndo: state.history.length > 0,
-      canRedo: state.future.length > 0,
+      canUndo: historyStack.length > 0,
+      canRedo: futureStack.length > 0,
       undo,
       redo,
     }),
     [
       rawText,
-      state.entries,
+      sortedEntries,
       getEventsInRange,
       addEntries,
       replaceEntries,
@@ -275,8 +282,8 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntries,
       importHday,
       clearAll,
-      state.history.length,
-      state.future.length,
+      historyStack.length,
+      futureStack.length,
       undo,
       redo,
     ],

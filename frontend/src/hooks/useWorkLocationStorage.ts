@@ -1,86 +1,48 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
+import { useLiveQuery } from "@tanstack/react-db";
 
 import { useSettings } from "@/contexts/SettingsContext";
-import { useOngoingSyncContext, emptySyncPayload } from "@/contexts/OngoingSyncContext";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { useLocalStorage } from "./useLocalStorage";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
+import type { WorkLocationEntry } from "@/types/workLocation";
 import { toCountryCode } from "@/types/workLocation";
-import { getWorkLocationsStorageKey } from "@/constants/storageKeys";
+import { workLocationsCollection } from "@/db/collections";
 
 /**
- * Raw storage shape persisted to localStorage.
- * Keys are date strings in YYYY-MM-DD format; values are WorkLocationInfo objects.
- */
-type StoredWorkLocations = Record<string, WorkLocationInfo>;
-
-/**
- * Manages per-day work location storage for a given year.
+ * Manages per-day work location storage backed by `workLocationsCollection`.
  *
- * Stores explicit work location overrides in localStorage under
- * `worktime_work_locations_{year}`. Days without an explicit entry default
- * to "office" using the user's officeCountry setting.
+ * Days without an explicit entry default to "office" using the user's
+ * officeCountry setting — callers handle the null case from getLocationForDate.
  *
- * @param year - The calendar year to manage work locations for
- * @returns An object with the location map and CRUD methods
- *
- * @example
- * const { workLocationMap, getLocationForDate, setLocationForDate, clearLocationForDate } =
- *   useWorkLocationStorage(2026);
- *
- * // Set today as WFH
- * setLocationForDate(dayjs(), "home");
- *
- * // Query a specific date — returns null when nothing has been explicitly set
- * const info = getLocationForDate("2026-02-20"); // null if not set
+ * @param year - The calendar year to manage work locations for (retained for
+ *   API compatibility; filtering is no longer needed since the collection holds
+ *   all years in one flat store).
  */
 export function useWorkLocationStorage(year: number) {
   const { settings } = useSettings();
   const { homeCountry, officeCountry } = settings;
-  const { enqueueChange } = useOngoingSyncContext();
 
-  const storageKey = getWorkLocationsStorageKey(year);
-  const prevStorageKey = getWorkLocationsStorageKey(year - 1);
-  const nextStorageKey = getWorkLocationsStorageKey(year + 1);
-
-  const [storedLocations, setStoredLocations] = useLocalStorage<StoredWorkLocations>(
-    storageKey,
-    {},
-  );
-  const [prevYearLocations, setPrevYearLocations] = useLocalStorage<StoredWorkLocations>(
-    prevStorageKey,
-    {},
-  );
-  const [nextYearLocations, setNextYearLocations] = useLocalStorage<StoredWorkLocations>(
-    nextStorageKey,
-    {},
-  );
+  const { data: rawData } = useLiveQuery(workLocationsCollection);
 
   /**
    * Map of explicitly set work locations for calendar consumption.
-   * Only contains days where the user has explicitly set a location.
+   * Contains every day for which the user has stored an explicit location.
    */
-  const workLocationMap: WorkLocationMap = useMemo(
-    () =>
-      new Map(Object.entries({ ...prevYearLocations, ...storedLocations, ...nextYearLocations })),
-    [prevYearLocations, storedLocations, nextYearLocations],
-  );
+  const workLocationMap: WorkLocationMap = useMemo(() => {
+    const entries = (rawData ?? []) as WorkLocationEntry[];
+    return new Map(entries.map((wl) => [wl.date, wl as WorkLocationInfo]));
+  }, [rawData]);
 
   /**
    * Returns the explicitly stored work location for a given date, or null if
-   * none has been set. Never assumes a default — callers must handle the null
-   * case rather than relying on an implicit office fallback.
-   *
-   * @param date - The date to query (YYYY-MM-DD string, Date, or Dayjs)
-   * @returns The WorkLocationInfo for that day, or null if no location was set
+   * none has been set.
    */
   const getLocationForDate = useCallback(
     (date: Dayjs | Date | string): WorkLocationInfo | null => {
       const d = dayjs(date);
       if (!d.isValid()) return null;
-      const key = d.format("YYYY-MM-DD");
-      return workLocationMap.get(key) ?? null;
+      return workLocationMap.get(d.format("YYYY-MM-DD")) ?? null;
     },
     [workLocationMap],
   );
@@ -88,20 +50,12 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Stores an explicit work location for a given date.
    *
-   * For "home" and "office" locations, the country code is derived from the user's
-   * homeCountry / officeCountry setting. For "other" locations, the caller must
-   * supply a valid ISO 3166-1 alpha-2 code via `extra.countryCode`.
+   * For "home" and "office" locations, the country code is derived from the
+   * user's homeCountry / officeCountry setting. For "other" locations, the
+   * caller must supply a valid ISO 3166-1 alpha-2 code via `extra.countryCode`.
    *
-   * The countryCode is captured at write time. Changing homeCountry/officeCountry
-   * later does not retroactively update historical entries.
-   *
-   * @param date - The date to set (YYYY-MM-DD string, Date, or Dayjs)
-   * @param location - The work location ("home", "office", or "other")
-   * @param extra - For "other" locations: required countryCode and optional label
-   * @returns `true` when the location was stored. Returns `false` when the relevant
-   *   country setting is not configured or the code is invalid, or when the
-   *   date year is outside the allowed {year-1, year, year+1} range (which also logs
-   *   a warning). Callers can inspect logs to distinguish the failure mode.
+   * Returns `true` when the location was stored, `false` when the country
+   * setting is missing/invalid or the date is invalid.
    */
   const setLocationForDate = useCallback(
     (
@@ -119,10 +73,7 @@ export function useWorkLocationStorage(year: number) {
       }
 
       const parsedCountryCode = countryCode ? toCountryCode(countryCode) : null;
-      // Country must be a valid ISO alpha-2 code before a location can be stored
-      if (!parsedCountryCode) {
-        return false;
-      }
+      if (!parsedCountryCode) return false;
 
       const d = dayjs(date);
       if (!d.isValid()) {
@@ -130,87 +81,44 @@ export function useWorkLocationStorage(year: number) {
         return false;
       }
       const key = d.format("YYYY-MM-DD");
-      const dateYear = d.year();
-      const entry: WorkLocationInfo = {
+      const entry: WorkLocationEntry = {
+        date: key,
         location,
         countryCode: parsedCountryCode,
         ...(extra?.label ? { label: extra.label } : {}),
       };
 
-      if (dateYear === year - 1) {
-        setPrevYearLocations((prev) => ({ ...prev, [key]: entry }));
-      } else if (dateYear === year) {
-        setStoredLocations((prev) => ({ ...prev, [key]: entry }));
-      } else if (dateYear === year + 1) {
-        setNextYearLocations((prev) => ({ ...prev, [key]: entry }));
+      if (workLocationsCollection.has(key)) {
+        workLocationsCollection.update(key, (d) => {
+          Object.assign(d, entry);
+        });
       } else {
-        console.warn(`Skipping work location update for out-of-range year: ${dateYear}`);
-        return false;
+        workLocationsCollection.insert(entry);
       }
-
-      const now = dayjs().toISOString();
-      const change = emptySyncPayload();
-      change.work_locations.push({
-        date: key,
-        action: "create",
-        client_updated_at: now,
-        country_code: parsedCountryCode,
-        label: extra?.label ?? null,
-      });
-      enqueueChange(change);
 
       return true;
     },
-    [
-      homeCountry,
-      officeCountry,
-      year,
-      setStoredLocations,
-      setPrevYearLocations,
-      setNextYearLocations,
-      enqueueChange,
-    ],
+    [homeCountry, officeCountry],
   );
 
   /**
    * Removes the explicit work location for a given date, reverting to the default.
-   *
-   * @param date - The date to clear (YYYY-MM-DD string, Date, or Dayjs)
    */
-  const clearLocationForDate = useCallback(
-    (date: Dayjs | Date | string) => {
-      const d = dayjs(date);
-      if (!d.isValid()) {
-        console.warn("Invalid date passed to clearLocationForDate:", date);
-        return;
-      }
-      const key = d.format("YYYY-MM-DD");
-      const dateYear = d.year();
+  const clearLocationForDate = useCallback((date: Dayjs | Date | string) => {
+    const d = dayjs(date);
+    if (!d.isValid()) {
+      console.warn("Invalid date passed to clearLocationForDate:", date);
+      return;
+    }
+    const key = d.format("YYYY-MM-DD");
+    if (!workLocationsCollection.has(key)) return;
+    workLocationsCollection.delete(key);
+  }, []);
 
-      const removeKey = (prev: StoredWorkLocations) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      };
-
-      if (dateYear === year - 1) {
-        setPrevYearLocations(removeKey);
-      } else if (dateYear === year) {
-        setStoredLocations(removeKey);
-      } else if (dateYear === year + 1) {
-        setNextYearLocations(removeKey);
-      } else {
-        console.warn(`Skipping work location clear for out-of-range year: ${dateYear}`);
-        return;
-      }
-
-      const now = dayjs().toISOString();
-      const change = emptySyncPayload();
-      change.work_locations.push({ date: key, action: "delete", client_updated_at: now });
-      enqueueChange(change);
-    },
-    [year, setStoredLocations, setPrevYearLocations, setNextYearLocations, enqueueChange],
-  );
+  // Suppress unused-variable lint warning: `year` is kept in the signature for
+  // API compatibility with callers that pass it, but is no longer used for
+  // storage-key selection now that all years live in a single collection.
+  void year;
 
   return {
     workLocationMap,
@@ -219,3 +127,4 @@ export function useWorkLocationStorage(year: number) {
     clearLocationForDate,
   };
 }
+
