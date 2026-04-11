@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import type { SyncPushPayload } from "@/utils/syncClient";
@@ -33,16 +33,38 @@ export function OngoingConflictDialog({
   const bodyId = useId();
   const [selected, setSelected] = useState<ConflictChoice | null>(null);
 
+  // Reset selection when the dialog is closed programmatically (show → false).
+  // React-Bootstrap's onHide only fires on user-driven closes (backdrop/Escape),
+  // not when the parent flips show={false} directly.
+  useEffect(() => {
+    if (!show) {
+      setSelected(null);
+    }
+  }, [show]);
+
   const handleConfirm = () => {
     if (!selected) return;
     onResolve(selected);
     setSelected(null);
   };
 
-  // Reset selection when the dialog closes (e.g. via programmatic show toggle).
+  // Reset selection when the user closes via backdrop/Escape.  The parent controls
+  // `show` and may not immediately react, so the selection must be cleared here too.
   const handleHide = () => {
     setSelected(null);
   };
+
+  // Map each entity key to a localized display label.
+  const entityLabels: Record<string, () => string> = {
+    labels: m.ongoing_conflict_entity_labels,
+    tasks: m.ongoing_conflict_entity_tasks,
+    templates: m.ongoing_conflict_entity_templates,
+    work_locations: m.ongoing_conflict_entity_work_locations,
+    time_off_entries: m.ongoing_conflict_entity_time_off_entries,
+    gantt_tasks: m.ongoing_conflict_entity_gantt_tasks,
+  };
+  const getEntityLabel = (entity: string) =>
+    (entityLabels[entity] ?? (() => entity.replace(/_/g, " ")))();
 
   // Compute per-entity-type conflict counts for the detail section.
   const entityCounts = conflictedPayload
@@ -61,19 +83,23 @@ export function OngoingConflictDialog({
       <Modal.Header>
         <Modal.Title>
           <i className="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>
-          {m.ongoing_conflict_title({ count: String(conflictCount) })}
+          {conflictCount === 1
+            ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
+            : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body id={bodyId}>
         <p className="text-muted small mb-3">
-          {m.ongoing_conflict_body({ count: String(conflictCount) })}
+          {conflictCount === 1
+            ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
+            : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
         </p>
 
         {entityCounts.length > 0 && (
           <ul className="small text-muted mb-4 ps-3">
             {entityCounts.map(([entity, count]) => (
               <li key={entity}>
-                {count} {entity.replace(/_/g, " ")}
+                {count} {getEntityLabel(entity)}
               </li>
             ))}
           </ul>

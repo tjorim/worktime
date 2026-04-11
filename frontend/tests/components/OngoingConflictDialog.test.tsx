@@ -46,8 +46,8 @@ describe("OngoingConflictDialog", () => {
           onResolve={vi.fn()}
         />,
       );
-      // The title should include the count
-      expect(screen.getByText(/3 record\(s\) overwritten/i)).toBeInTheDocument();
+      // The title should include the count (plural form for count > 1)
+      expect(screen.getByText(/3 records overwritten/i)).toBeInTheDocument();
     });
 
     it("shows entity type counts for conflicted labels", () => {

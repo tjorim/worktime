@@ -504,7 +504,7 @@ describe("useOngoingSync", () => {
       });
     });
 
-    it("resets conflictCount to 0 after a subsequent successful conflict-free sync", async () => {
+    it("keeps conflictCount across subsequent conflict-free syncs until explicitly resolved", async () => {
       storeSyncCursor("user-1", "2026-01-01T00:00:00.000Z");
 
       const conflictPushResponse = {
@@ -566,8 +566,9 @@ describe("useOngoingSync", () => {
         expect(result.current.lastSyncedAt).toBe("2026-01-03T00:00:00.000Z");
       });
 
-      // conflictCount should be cleared after the conflict-free pull.
-      expect(result.current.conflictCount).toBe(0);
+      // conflictCount must NOT be cleared by a subsequent conflict-free flush —
+      // the unresolved conflict must persist until the user explicitly resolves it.
+      expect(result.current.conflictCount).toBe(1);
     });
 
     it("sets conflictedPayload alongside conflictCount when a conflict occurs", async () => {

@@ -286,24 +286,72 @@ export function extractConflictedItems(
   }
   const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
 
+  // Deduplicate by natural key, keeping the last (most-recent local) entry per key.
+  // The outbox merge concatenates multiple offline mutations, so the same record
+  // may appear more than once.
+  function dedupeByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
+    const map = new Map<string, T>();
+    for (const item of items) {
+      map.set(keyFn(item), item);
+    }
+    return Array.from(map.values());
+  }
+
   return {
-    labels: payload.labels.filter((l) => ids("labels").has(l.id)),
-    tasks: payload.tasks.filter((t) => ids("tasks").has(t.id)),
-    templates: payload.templates.filter((t) => ids("templates").has(t.id)),
+    labels: dedupeByKey(payload.labels.filter((l) => ids("labels").has(l.id)), (l) => l.id),
+    tasks: dedupeByKey(payload.tasks.filter((t) => ids("tasks").has(t.id)), (t) => t.id),
+    templates: dedupeByKey(payload.templates.filter((t) => ids("templates").has(t.id)), (t) => t.id),
     // work_locations use `date` as their natural key; the server returns it as `id`.
-    work_locations: payload.work_locations.filter((w) => ids("work_locations").has(w.date)),
-    time_off_entries: payload.time_off_entries.filter((e) => ids("time_off_entries").has(e.id)),
-    gantt_tasks: payload.gantt_tasks.filter((g) => ids("gantt_tasks").has(g.id)),
+    work_locations: dedupeByKey(
+      payload.work_locations.filter((w) => ids("work_locations").has(w.date)),
+      (w) => w.date,
+    ),
+    time_off_entries: dedupeByKey(
+      payload.time_off_entries.filter((e) => ids("time_off_entries").has(e.id)),
+      (e) => e.id,
+    ),
+    gantt_tasks: dedupeByKey(
+      payload.gantt_tasks.filter((g) => ids("gantt_tasks").has(g.id)),
+      (g) => g.id,
+    ),
   };
 }
 
 /**
- * Return a copy of `payload` with all `client_updated_at` fields set to the
- * current time (ISO-8601).  Used when re-pushing after a conflict so that the
- * local version wins the last-write-wins check on the server.
+ * Extract the maximum `server_updated_at` timestamp from the conflict results
+ * in a push response.  Returns undefined if no conflicted records reported a
+ * server timestamp.  Used as the `serverTimestampFloor` argument to
+ * `bumpClientTimestamps` so that re-pushed records always carry a timestamp
+ * at least as recent as the server's latest conflict timestamp.
  */
-export function bumpClientTimestamps(payload: SyncPushPayload): SyncPushPayload {
-  const now = new Date().toISOString();
+export function maxConflictServerTimestamp(response: SyncPushResponse): string | undefined {
+  let max: number | undefined;
+  for (const results of Object.values(response.results)) {
+    for (const r of results) {
+      if (r.status === "conflict" && r.server_updated_at) {
+        const ms = new Date(r.server_updated_at).getTime();
+        if (!isNaN(ms) && (max === undefined || ms > max)) {
+          max = ms;
+        }
+      }
+    }
+  }
+  return max !== undefined ? new Date(max).toISOString() : undefined;
+}
+
+/**
+ * `max(serverTimestampFloor, Date.now())` expressed as an ISO-8601 string.
+ *
+ * Passing `serverTimestampFloor` (the `server_updated_at` returned by the last
+ * conflicting push) guards against a behind-the-clock local device: if the
+ * local clock is earlier than the server's timestamp the bumped value would
+ * still lose the next last-write-wins check.  Taking the max ensures the
+ * re-pushed version is always ≥ the server timestamp and therefore wins.
+ */
+export function bumpClientTimestamps(payload: SyncPushPayload, serverTimestampFloor?: string): SyncPushPayload {
+  const nowMs = Date.now();
+  const floorMs = serverTimestampFloor ? new Date(serverTimestampFloor).getTime() : 0;
+  const now = new Date(Math.max(nowMs, floorMs)).toISOString();
   return {
     labels: payload.labels.map((l) => ({ ...l, client_updated_at: now })),
     tasks: payload.tasks.map((t) => ({ ...t, client_updated_at: now })),
