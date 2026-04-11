@@ -367,21 +367,23 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
   return incomingEntries;
 }
 
-function replaceCollectionById<T extends { id: string }>(
+function replaceCollectionContents<T extends object, TKey extends string>(
   collection: {
     toArray: T[];
-    has: (id: string) => boolean;
+    has: (key: TKey) => boolean;
     insert: (item: T) => void;
-    update: (id: string, cb: (draft: T) => void) => void;
-    delete: (id: string) => void;
+    update: (key: TKey, cb: (draft: T) => void) => void;
+    delete: (key: TKey) => void;
   },
   items: T[],
+  getKey: (item: T) => TKey,
 ): void {
-  const nextIds = new Set(items.map((item) => item.id));
+  const nextKeys = new Set(items.map(getKey));
 
   for (const item of items) {
-    if (collection.has(item.id)) {
-      collection.update(item.id, (draft) => {
+    const key = getKey(item);
+    if (collection.has(key)) {
+      collection.update(key, (draft) => {
         Object.assign(draft, item);
       });
     } else {
@@ -390,8 +392,9 @@ function replaceCollectionById<T extends { id: string }>(
   }
 
   for (const existing of collection.toArray) {
-    if (!nextIds.has(existing.id) && collection.has(existing.id)) {
-      collection.delete(existing.id);
+    const key = getKey(existing);
+    if (!nextKeys.has(key) && collection.has(key)) {
+      collection.delete(key);
     }
   }
 }
@@ -410,7 +413,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
   }
 
   if (Array.isArray(payload.timeOff)) {
-    replaceCollectionById(
+    replaceCollectionContents(
       timeOffCollection as unknown as {
         toArray: TimeOffEntry[];
         has: (id: string) => boolean;
@@ -419,11 +422,12 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       normalizeTimeOffEntries(payload.timeOff),
+      (entry) => entry.id,
     );
   }
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
-    replaceCollectionById(
+    replaceCollectionContents(
       workLocationsCollection as unknown as {
         toArray: WorkLocationEntry[];
         has: (id: string) => boolean;
@@ -432,11 +436,12 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       parseWorkLocationEntries(payload.workLocations),
+      (entry) => entry.date,
     );
   }
 
   if (Array.isArray(payload.tasks)) {
-    replaceCollectionById(
+    replaceCollectionContents(
       tasksCollection as unknown as {
         toArray: StoredTimeTrackingTask[];
         has: (id: string) => boolean;
@@ -445,11 +450,12 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       payload.tasks as StoredTimeTrackingTask[],
+      (task) => task.id,
     );
   }
 
   if (Array.isArray(payload.templates)) {
-    replaceCollectionById(
+    replaceCollectionContents(
       templatesCollection as unknown as {
         toArray: TimeTrackingTemplate[];
         has: (id: string) => boolean;
@@ -458,11 +464,12 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       payload.templates as TimeTrackingTemplate[],
+      (template) => template.id,
     );
   }
 
   if (Array.isArray(payload.labels)) {
-    replaceCollectionById(
+    replaceCollectionContents(
       labelsCollection as unknown as {
         toArray: TimeTrackingLabel[];
         has: (id: string) => boolean;
@@ -471,11 +478,12 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       payload.labels as TimeTrackingLabel[],
+      (label) => label.id,
     );
   }
 
   if (Array.isArray(payload.ganttTasks)) {
-    replaceCollectionById(
+    replaceCollectionContents(
       ganttTasksCollection as unknown as {
         toArray: GanttTask[];
         has: (id: string) => boolean;
@@ -484,6 +492,7 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
         delete: (id: string) => void;
       },
       payload.ganttTasks as GanttTask[],
+      (task) => task.id,
     );
   }
 

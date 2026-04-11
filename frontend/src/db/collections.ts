@@ -164,22 +164,23 @@ function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void
 }
 
 function replaceCollectionContents<
-  TItem extends { [key: string]: unknown },
+  TItem,
+  TKey extends string,
   TCollection extends {
     toArray: TItem[];
-    has: (key: string) => boolean;
-    delete: (key: string) => void;
+    has: (key: TKey) => boolean;
+    delete: (key: TKey) => void;
     insert: (item: TItem) => void;
     utils: {
       writeBatch: (cb: () => void) => void;
-      writeDelete: (keys: string[]) => void;
+      writeDelete: (keys: TKey[]) => void;
       writeInsert: (items: TItem[]) => void;
     };
   },
 >(
   collection: TCollection,
   nextItems: TItem[],
-  getKey: (item: TItem) => string,
+  getKey: (item: TItem) => TKey,
 ): void {
   const existingKeys = collection.toArray.map(getKey);
 
