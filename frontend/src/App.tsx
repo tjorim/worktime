@@ -387,8 +387,6 @@ function AppContent() {
  * gantt tasks, user preferences) use QueryCollection from @tanstack/query-db-collection,
  * which feeds TanStack Query's fetch lifecycle into a TanStack DB collection. Do NOT add
  * a standalone useQuery alongside a QueryCollection for the same domain.
- *
- * See docs/realtime-sync-architecture.md §Data Ownership Boundaries for details.
  */
 
 function App() {

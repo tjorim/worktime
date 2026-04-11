@@ -4,7 +4,7 @@
  * Transport-neutral SSE listener that invokes `triggerPull` when a
  * `sync_changed` signal is received from the server.
  *
- * Architecture (per docs/realtime-sync-architecture.md §2–§4):
+ * Architecture:
  *
  * - **Notify-then-pull**: the signal carries only a freshness hint (a
  *   `server_timestamp`); all data is fetched via the existing incremental

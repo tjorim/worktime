@@ -1576,7 +1576,7 @@ class TestSyncEventManager:
         assert "server_timestamp" in msg
 
     async def test_broadcast_message_format_matches_sse_spec(self) -> None:
-        """SSE frame must follow the wire format in realtime-sync-architecture.md."""
+        """SSE frame must follow the wire format defined in the SSE endpoint implementation."""
         manager = SyncEventManager()
         queue: asyncio.Queue[str] = asyncio.Queue()
         manager.subscribe(user_id=1, queue=queue)
