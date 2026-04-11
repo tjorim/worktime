@@ -376,7 +376,7 @@ describe("useSyncSignal", () => {
 
       expect(triggerPull).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("invalid server_timestamp"),
+        expect.stringContaining("invalid server_timestamp from sync signal"),
         "not-a-date",
       );
     });
@@ -398,7 +398,7 @@ describe("useSyncSignal", () => {
 
       expect(triggerPull).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("stored sync cursor is invalid"),
+        expect.stringContaining("stored sync cursor is corrupted"),
         "garbage",
       );
     });

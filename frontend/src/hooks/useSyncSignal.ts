@@ -142,7 +142,10 @@ export function useSyncSignal(
     const unsubscribe = transport.subscribe((serverTimestamp) => {
       const serverTimestampMs = Date.parse(serverTimestamp);
       if (Number.isNaN(serverTimestampMs)) {
-        console.warn("useSyncSignal: ignoring signal with invalid server_timestamp:", serverTimestamp);
+        console.warn(
+          "useSyncSignal: received invalid server_timestamp from sync signal (expected ISO-8601 date):",
+          serverTimestamp,
+        );
         return;
       }
 
@@ -151,7 +154,10 @@ export function useSyncSignal(
       if (cursor !== null) {
         const cursorMs = Date.parse(cursor);
         if (Number.isNaN(cursorMs)) {
-          console.warn("useSyncSignal: ignoring signal because stored sync cursor is invalid:", cursor);
+          console.warn(
+            "useSyncSignal: stored sync cursor is corrupted and will be ignored (will resync on next update):",
+            cursor,
+          );
           return;
         }
         if (cursorMs >= serverTimestampMs) {

@@ -112,21 +112,20 @@ class SyncEventManager:
     async def broadcast_sync_changed(self, user_id: int) -> int:
         """Notify all connected clients of *user_id* that sync data has changed.
 
-        Publishes a Postgres NOTIFY on channel ``worktime_sync_changed`` so all
-        worker processes receive the event via their LISTEN connection.  The
-        LISTEN callback then calls :meth:`_enqueue_local` to fill each worker's
-        local SSE queues.
+        Attempts to publish a Postgres NOTIFY on channel ``worktime_sync_changed``
+        via :meth:`_pg_notify`.  If NOTIFY succeeds, all worker processes receive
+        the event via their LISTEN connection and fill their local SSE queues
+        asynchronously.
 
-        Falls back to direct :meth:`_enqueue_local` when no Postgres NOTIFY
-        connection is available (e.g. tests or ``DATABASE_ENABLED=False``), or
-        when sending the NOTIFY fails.
+        Falls back to direct :meth:`_enqueue_local` when the Postgres NOTIFY
+        connection is unavailable or when sending the NOTIFY fails (e.g. tests
+        or ``DATABASE_ENABLED=False``), so local SSE subscribers always receive
+        hints even without a shared pub/sub layer.
 
         Returns the number of local queues notified in the fallback path, or
-        ``0`` when the Postgres path is used (delivery happens asynchronously
-        via the LISTEN callback).
+        ``0`` when the Postgres path successfully delivered the notification.
         """
-        conn = self._notify_conn
-        if conn is not None and not conn.is_closed() and await self._pg_notify(user_id):
+        if await self._pg_notify(user_id):
             return 0
         return self._enqueue_local(user_id)
 
