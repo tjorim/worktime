@@ -459,7 +459,7 @@ export const labelsCollection = createCollection(
     queryClient,
     getKey: (label) => label.id,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<TimeTrackingLabel[]> => {
       if (!_currentUserId) return labelsCollection.toArray as TimeTrackingLabel[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
@@ -534,7 +534,7 @@ export const tasksCollection = createCollection(
     queryClient,
     getKey: (task) => task.id,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<StoredTimeTrackingTask[]> => {
       if (!_currentUserId) return tasksCollection.toArray as StoredTimeTrackingTask[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
@@ -625,7 +625,7 @@ export const templatesCollection = createCollection(
     queryClient,
     getKey: (template) => template.id,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<TimeTrackingTemplate[]> => {
       if (!_currentUserId) return templatesCollection.toArray as TimeTrackingTemplate[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
@@ -712,7 +712,7 @@ export const timeOffCollection = createCollection(
     queryClient,
     getKey: (entry) => entry.id,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<TimeOffEntry[]> => {
       if (!_currentUserId) return timeOffCollection.toArray as TimeOffEntry[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
@@ -803,7 +803,7 @@ export const ganttTasksCollection = createCollection(
     queryClient,
     getKey: (task) => task.id,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<GanttTask[]> => {
       if (!_currentUserId) return ganttTasksCollection.toArray as GanttTask[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
@@ -901,7 +901,7 @@ export const workLocationsCollection = createCollection(
     queryClient,
     getKey: (entry) => entry.date,
     staleTime: Infinity,
-    queryFn: async () => {
+    queryFn: async (): Promise<WorkLocationEntry[]> => {
       if (!_currentUserId) return workLocationsCollection.toArray as WorkLocationEntry[];
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
