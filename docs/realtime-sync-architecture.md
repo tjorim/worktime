@@ -214,7 +214,7 @@ that window.
    `localStorage.clear()` call already present in `tests/setup.ts`. No
    additional test setup is required.
 
-7. **No React provider required.** TanStack DB collections are module-level
+6. **No React provider required.** TanStack DB collections are module-level
    singletons and do not require a React context provider. The existing
    `TestProviders` wrapper in `tests/utils/testProviders.tsx` is sufficient for
    component tests that consume migrated collections.
