@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { dayjs } from "@/utils/dateTimeUtils";
 
 const DEVELOPER_OPTIONS_STORAGE_KEY = "worktime_developer_options";
 
@@ -133,14 +134,14 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
             ...prev,
             enabled: true,
             connectionStatus: "connected",
-            lastConnectionTest: Date.now(),
+            lastConnectionTest: dayjs().valueOf(),
           }));
           return true;
         } else {
           setOptions((prev) => ({
             ...prev,
             connectionStatus: "error",
-            lastConnectionTest: Date.now(),
+            lastConnectionTest: dayjs().valueOf(),
           }));
           return false;
         }
@@ -149,7 +150,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         setOptions((prev) => ({
           ...prev,
           connectionStatus: "error",
-          lastConnectionTest: Date.now(),
+          lastConnectionTest: dayjs().valueOf(),
         }));
         return false;
       } finally {

@@ -7,6 +7,7 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface DevOptionsPanelProps {
@@ -136,8 +137,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
   const formatLastTest = () => {
     if (!options.lastConnectionTest) return m.dev_never();
-    const date = new Date(options.lastConnectionTest);
-    return date.toLocaleString();
+    return dayjs(options.lastConnectionTest).format("YYYY-MM-DD HH:mm:ss");
   };
 
   return (
