@@ -383,7 +383,7 @@ describe("useSyncSignal", () => {
       );
     });
 
-    it("does NOT call triggerPull when the stored cursor is not a parseable date", () => {
+    it("calls triggerPull and removes the cursor when the stored cursor is not a parseable date", () => {
       const triggerPull = vi.fn();
       const { transport, emit } = createMockTransport();
 
@@ -398,11 +398,12 @@ describe("useSyncSignal", () => {
         emit("2026-06-01T00:00:00.000Z");
       });
 
-      expect(triggerPull).not.toHaveBeenCalled();
+      expect(triggerPull).toHaveBeenCalledOnce();
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("stored sync cursor is corrupted"),
         "garbage",
       );
+      expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBeNull();
     });
   });
 });
