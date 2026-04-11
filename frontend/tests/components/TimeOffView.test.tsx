@@ -409,35 +409,6 @@ describe("TimeOffView", () => {
       expect(rowCheckbox).not.toBeChecked();
     });
 
-    it("should enable undo and redo buttons after adding and undoing", async () => {
-      render(
-        <AllProviders>
-          <TimeOffView />
-        </AllProviders>,
-      );
-
-      const user = userEvent.setup();
-
-      const undoButton = screen.getByRole("button", { name: /Undo last change/i });
-      const redoButton = screen.getByRole("button", { name: /Redo last change/i });
-
-      expect(undoButton).toBeDisabled();
-      expect(redoButton).toBeDisabled();
-
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
-      const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
-      await user.clear(startInput);
-      await user.type(startInput, "2025-01-15");
-      await user.click(screen.getByRole("button", { name: /^Add$/i }));
-
-      expect(undoButton).toBeEnabled();
-      expect(redoButton).toBeDisabled();
-
-      await user.click(undoButton);
-
-      expect(redoButton).toBeEnabled();
-    });
-
     it("should bulk delete selected events after confirmation", async () => {
       render(
         <AllProviders>

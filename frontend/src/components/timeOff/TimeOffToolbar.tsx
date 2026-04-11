@@ -5,12 +5,6 @@ import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffToolbarProps = {
-  // Undo/Redo
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-
   // Selection
   eventCount: number;
   selectedCount: number;
@@ -35,10 +29,6 @@ type TimeOffToolbarProps = {
  * Memoized to prevent unnecessary re-renders from parent prop changes.
  */
 function TimeOffToolbarComponent({
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
   eventCount,
   selectedCount,
   onSelectAll,
@@ -74,26 +64,6 @@ function TimeOffToolbarComponent({
           >
             <i className="bi bi-upload me-1" aria-hidden="true"></i>
             {m.timeoff_export_btn()}
-          </Button>
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={onUndo}
-            disabled={!canUndo}
-            aria-label={m.timeoff_undo_last_change_aria()}
-          >
-            <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-            {m.timeoff_undo_btn()}
-          </Button>
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={onRedo}
-            disabled={!canRedo}
-            aria-label={m.timeoff_redo_last_change_aria()}
-          >
-            <i className="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
-            {m.timeoff_redo_btn()}
           </Button>
         </div>
       </div>

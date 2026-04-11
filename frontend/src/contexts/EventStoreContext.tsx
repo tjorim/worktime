@@ -1,17 +1,13 @@
 /**
  * Event Store Context
  *
- * Manages canonical time-off entries with CRUD operations, import/export helpers,
- * undo/redo history, and TanStack DB collection backing (timeOffCollection).
- *
- * Entries are stored in and read from `timeOffCollection` (a QueryCollection
- * wired to the sync pull/push endpoints). Undo/redo history is tracked
- * separately as a stack of entry snapshots; undoing applies the diff back to
- * the collection so the server stays in sync.
+ * Manages canonical time-off entries with CRUD operations and import/export
+ * helpers, backed by `timeOffCollection` (a QueryCollection wired to the
+ * sync pull/push endpoints).
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useReducer, useRef } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { CalendarEvent } from "@/lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
@@ -33,10 +29,6 @@ interface EventStoreContextType {
   deleteEntries: (ids: string[]) => void;
   importHday: (text: string) => TimeOffImportResult;
   clearAll: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  undo: () => void;
-  redo: () => void;
 }
 
 const EventStoreContext = createContext<EventStoreContextType | undefined>(undefined);
@@ -44,8 +36,6 @@ const EventStoreContext = createContext<EventStoreContextType | undefined>(undef
 interface EventStoreProviderProps {
   children: ReactNode;
 }
-
-const HISTORY_LIMIT = 50;
 
 function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   return [...entries].sort((a, b) => {
@@ -59,37 +49,6 @@ function sortEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
 
 function cloneEntries(entries: TimeOffEntry[]): TimeOffEntry[] {
   return entries.map((entry) => structuredClone(entry));
-}
-
-/**
- * Apply a snapshot of entries to `timeOffCollection` using normal mutations so
- * that the diff is pushed to the server (undo/redo are synchronised across
- * devices).
- */
-function applySnapshotToCollection(current: TimeOffEntry[], target: TimeOffEntry[]): void {
-  const currentMap = new Map(current.map((e) => [e.id, e]));
-  const targetMap = new Map(target.map((e) => [e.id, e]));
-  const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
-
-  // Delete entries present in current but absent from target
-  const toDelete = [...currentMap.keys()].filter((id) => !targetMap.has(id));
-  for (const id of toDelete) {
-    if (collectionIds.has(id)) {
-      timeOffCollection.delete(id);
-    }
-  }
-
-  // Insert entries present in target but absent from current
-  for (const entry of target) {
-    if (!collectionIds.has(entry.id)) {
-      timeOffCollection.insert(entry);
-    } else {
-      // Update entries that exist in both (always push to keep server in sync)
-      timeOffCollection.update(entry.id, (d) => {
-        Object.assign(d, entry);
-      });
-    }
-  }
 }
 
 function writeLocalSnapshot(current: TimeOffEntry[], target: TimeOffEntry[]): void {
@@ -113,39 +72,9 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     [rawCollectionData],
   );
 
-  // Undo / redo stacks (snapshots; no server sync for the stacks themselves)
-  const [historyStack, setHistoryStack] = useReducer(
-    (_: TimeOffEntry[][], next: TimeOffEntry[][]): TimeOffEntry[][] => next,
-    [],
-  );
-  const [futureStack, setFutureStack] = useReducer(
-    (_: TimeOffEntry[][], next: TimeOffEntry[][]): TimeOffEntry[][] => next,
-    [],
-  );
-
-  // Stable refs so callbacks don't need to list the live arrays as deps
+  // Stable ref so callbacks don't need to list the live array as a dep
   const sortedEntriesRef = useRef<TimeOffEntry[]>(sortedEntries);
-  const historyRef = useRef<TimeOffEntry[][]>(historyStack);
-  const futureRef = useRef<TimeOffEntry[][]>(futureStack);
   sortedEntriesRef.current = sortedEntries;
-  historyRef.current = historyStack;
-  futureRef.current = futureStack;
-
-  const commitHistory = useCallback((next: TimeOffEntry[][]) => {
-    historyRef.current = next;
-    setHistoryStack(next);
-  }, []);
-
-  const commitFuture = useCallback((next: TimeOffEntry[][]) => {
-    futureRef.current = next;
-    setFutureStack(next);
-  }, []);
-
-  // Snapshot current entries onto the undo stack and clear the redo stack
-  const pushUndo = useCallback((snapshot: TimeOffEntry[] = cloneEntries(sortedEntriesRef.current)) => {
-    commitHistory([...historyRef.current, snapshot].slice(-HISTORY_LIMIT));
-    commitFuture([]);
-  }, [commitFuture, commitHistory]);
 
   const rawText = useMemo(() => {
     if (sortedEntries.length === 0) return "";
@@ -175,7 +104,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
   const addEntries = useCallback(
     (newEntries: TimeOffEntry[]) => {
       const currentEntries = cloneEntries(sortedEntriesRef.current);
-      pushUndo(currentEntries);
       const existingIds = new Set(currentEntries.map((e) => e.id));
       const nextEntriesMap = new Map(currentEntries.map((entry) => [entry.id, entry]));
       for (const entry of newEntries) {
@@ -197,13 +125,12 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         }
       }
     },
-    [pushUndo],
+    [],
   );
 
   const replaceEntries = useCallback((newEntries: TimeOffEntry[]) => {
     sortedEntriesRef.current = sortEntries(cloneEntries(newEntries));
-    // Server-pushed data: write directly without pushing back to server and
-    // without touching the undo/redo history.
+    // Server-pushed data: write directly without pushing back to server.
     const existingKeys = timeOffCollection.toArray.map((e) => e.id);
     timeOffCollection.utils.writeBatch(() => {
       if (existingKeys.length > 0) timeOffCollection.utils.writeDelete(existingKeys);
@@ -218,7 +145,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         console.error(`Invalid entry id: ${id}`);
         return;
       }
-      pushUndo(currentEntries);
       const nextEntries = sortEntries(
         currentEntries.map((existing) => (existing.id === id ? { ...structuredClone(entry), id } : existing)),
       );
@@ -233,7 +159,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         Object.assign(d, fields);
       });
     },
-    [pushUndo],
+    [],
   );
 
   const deleteEntry = useCallback(
@@ -243,7 +169,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         console.error(`Invalid entry id: ${id}`);
         return;
       }
-      pushUndo(currentEntries);
       const nextEntries = currentEntries.filter((entry) => entry.id !== id);
       sortedEntriesRef.current = nextEntries;
       if (!hasSyncCollectionAuth()) {
@@ -254,7 +179,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         timeOffCollection.delete(id);
       }
     },
-    [pushUndo],
+    [],
   );
 
   const deleteEntries = useCallback(
@@ -268,7 +193,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         console.error("Invalid entry ids:", ids);
         return;
       }
-      pushUndo(currentEntries);
       const nextEntries = currentEntries.filter((entry) => !valid.includes(entry.id));
       sortedEntriesRef.current = nextEntries;
       if (!hasSyncCollectionAuth()) {
@@ -282,30 +206,40 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
         }
       }
     },
-    [pushUndo],
+    [],
   );
 
   const importHday = useCallback(
     (text: string) => {
       const result = hdayToTimeOffEntries(text);
       const currentEntries = cloneEntries(sortedEntriesRef.current);
-      pushUndo(currentEntries);
       const nextEntries = sortEntries(cloneEntries(result.entries));
       sortedEntriesRef.current = nextEntries;
       if (!hasSyncCollectionAuth()) {
         writeLocalSnapshot(currentEntries, nextEntries);
       } else {
-        applySnapshotToCollection(currentEntries, result.entries);
+        const currentMap = new Map(currentEntries.map((e) => [e.id, e]));
+        const collectionIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((e) => e.id));
+        const toDelete = [...currentMap.keys()].filter((id) => !result.entries.some((e) => e.id === id));
+        for (const id of toDelete) {
+          if (collectionIds.has(id)) timeOffCollection.delete(id);
+        }
+        for (const entry of result.entries) {
+          if (!collectionIds.has(entry.id)) {
+            timeOffCollection.insert(entry);
+          } else {
+            timeOffCollection.update(entry.id, (d) => { Object.assign(d, entry); });
+          }
+        }
       }
       return result;
     },
-    [pushUndo],
+    [],
   );
 
   const clearAll = useCallback(() => {
     const current = cloneEntries(sortedEntriesRef.current);
     if (current.length === 0) return;
-    pushUndo(current);
     sortedEntriesRef.current = [];
     if (!hasSyncCollectionAuth()) {
       writeLocalSnapshot(current, []);
@@ -314,38 +248,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     for (const entry of current) {
       timeOffCollection.delete(entry.id);
     }
-  }, [pushUndo]);
-
-  const undo = useCallback(() => {
-    const history = historyRef.current;
-    if (history.length === 0) return;
-    const previous = history[history.length - 1]!;
-    const current = cloneEntries(sortedEntriesRef.current);
-    commitHistory(history.slice(0, -1));
-    commitFuture([current, ...futureRef.current]);
-    sortedEntriesRef.current = cloneEntries(previous);
-    if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(current, previous);
-      return;
-    }
-    applySnapshotToCollection(current, previous);
-  }, [commitFuture, commitHistory]);
-
-  const redo = useCallback(() => {
-    const future = futureRef.current;
-    if (future.length === 0) return;
-    const [next, ...remaining] = future;
-    if (!next) return;
-    const current = cloneEntries(sortedEntriesRef.current);
-    commitHistory([...historyRef.current, current].slice(-HISTORY_LIMIT));
-    commitFuture(remaining);
-    sortedEntriesRef.current = cloneEntries(next);
-    if (!hasSyncCollectionAuth()) {
-      writeLocalSnapshot(current, next);
-      return;
-    }
-    applySnapshotToCollection(current, next);
-  }, [commitFuture, commitHistory]);
+  }, []);
 
   const contextValue: EventStoreContextType = useMemo(
     () => ({
@@ -359,10 +262,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntries,
       importHday,
       clearAll,
-      canUndo: historyStack.length > 0,
-      canRedo: futureStack.length > 0,
-      undo,
-      redo,
     }),
     [
       rawText,
@@ -375,10 +274,6 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       deleteEntries,
       importHday,
       clearAll,
-      historyStack.length,
-      futureStack.length,
-      undo,
-      redo,
     ],
   );
 

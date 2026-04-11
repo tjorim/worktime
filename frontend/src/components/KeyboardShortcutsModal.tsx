@@ -40,8 +40,6 @@ export function KeyboardShortcutsModal({
         { keys: ["Ctrl", "S"], description: m.shortcuts_export_hday() },
         { keys: ["Delete"], description: m.shortcuts_delete_events() },
         { keys: ["Escape"], description: m.shortcuts_cancel_edit() },
-        { keys: ["Ctrl", "Z"], description: m.shortcuts_undo() },
-        { keys: ["Ctrl", "Y"], description: m.shortcuts_redo() },
       ],
     });
   }

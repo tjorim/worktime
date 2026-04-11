@@ -20,8 +20,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 type KeyboardShortcutHandlers = {
-  onUndo: () => void;
-  onRedo: () => void;
   onImport: () => void;
   onExport: () => void;
   onBulkDelete: () => void;
@@ -91,25 +89,6 @@ export function useTimeOffKeyboardShortcuts(
       // Ctrl/Cmd shortcuts
       if (event.ctrlKey || event.metaKey) {
         const key = event.key.toLowerCase();
-
-        // Ctrl+Z / Cmd+Z - Undo
-        // Ctrl+Shift+Z / Cmd+Shift+Z - Redo
-        if (key === "z") {
-          event.preventDefault();
-          if (event.shiftKey) {
-            handlersRef.current.onRedo();
-          } else {
-            handlersRef.current.onUndo();
-          }
-          return;
-        }
-
-        // Ctrl+Y / Cmd+Y - Redo
-        if (key === "y") {
-          event.preventDefault();
-          handlersRef.current.onRedo();
-          return;
-        }
 
         // Ctrl+S / Cmd+S - Export
         if (key === "s") {

@@ -468,49 +468,6 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Doctor appointment")).toBeInTheDocument();
     });
 
-    it("maintains undo/redo state through multiple operations", async () => {
-      const user = userEvent.setup();
-      renderWithProviders();
-
-      const undoButton = screen.getByRole("button", { name: /Undo last change/i });
-      const redoButton = screen.getByRole("button", { name: /Redo last change/i });
-
-      // Initially both should be disabled
-      expect(undoButton).toBeDisabled();
-      expect(redoButton).toBeDisabled();
-
-      // Add first event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
-      let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
-      await user.clear(startInput);
-      await user.type(startInput, "2025-10-01");
-      await user.click(screen.getByRole("button", { name: /^Add$/i }));
-
-      // Undo should be enabled
-      expect(undoButton).toBeEnabled();
-      expect(redoButton).toBeDisabled();
-
-      // Add second event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
-      startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
-      await user.clear(startInput);
-      await user.type(startInput, "2025-10-02");
-      await user.click(screen.getByRole("button", { name: /^Add$/i }));
-
-      // Undo first operation
-      await user.click(undoButton);
-
-      // Redo should now be enabled
-      expect(undoButton).toBeEnabled();
-      expect(redoButton).toBeEnabled();
-
-      // Redo the undone operation
-      await user.click(redoButton);
-
-      // Both events should be present
-      expect(within(screen.getByRole("table")).getByText("2025/10/01")).toBeInTheDocument();
-      expect(within(screen.getByRole("table")).getByText("2025/10/02")).toBeInTheDocument();
-    });
   });
 
   describe("Display and Grouping", () => {

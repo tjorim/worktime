@@ -18,10 +18,6 @@ import type { TimeOffViewMode } from "@/data/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffTableViewProps = {
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
   eventCount: number;
   selectedCount: number;
   onSelectAll: () => void;
@@ -46,10 +42,6 @@ type TimeOffTableViewProps = {
 };
 
 export function TimeOffTableView({
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
   eventCount,
   selectedCount,
   onSelectAll,
@@ -85,10 +77,6 @@ export function TimeOffTableView({
     <>
       <Card>
         <TimeOffToolbar
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={onUndo}
-          onRedo={onRedo}
           eventCount={eventCount}
           selectedCount={selectedCount}
           onSelectAll={onSelectAll}
