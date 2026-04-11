@@ -155,12 +155,11 @@ export function useSyncSignal(
         const cursorMs = Date.parse(cursor);
         if (Number.isNaN(cursorMs)) {
           console.warn(
-            "useSyncSignal: stored sync cursor is corrupted and will be ignored (will resync on next update):",
+            "useSyncSignal: stored sync cursor is corrupted and will be removed; triggering a full pull:",
             cursor,
           );
-          return;
-        }
-        if (cursorMs >= serverTimestampMs) {
+          localStorage.removeItem(getSyncCursorKey(userId));
+        } else if (cursorMs >= serverTimestampMs) {
           return;
         }
       }
