@@ -120,7 +120,6 @@ function toPlainGanttTask(task: GanttTask): GanttTask {
 function toPlainWorkLocation(entry: WorkLocationEntry): WorkLocationEntry {
   return {
     date: entry.date,
-    location: entry.location,
     countryCode: entry.countryCode,
     ...(entry.label ? { label: entry.label } : {}),
   };
@@ -168,7 +167,6 @@ function getWorkLocationEntries(): Record<string, unknown> {
     const entryYear = entry.date.slice(0, 4);
     const bucket = (result[entryYear] ??= {}) as Record<string, unknown>;
     bucket[entry.date] = {
-      location: entry.location,
       countryCode: entry.countryCode,
       ...(entry.label ? { label: entry.label } : {}),
     };
@@ -329,7 +327,6 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
       for (const dayEntry of Object.values(yearData as Record<string, unknown>)) {
         if (!dayEntry || typeof dayEntry !== "object") return false;
         const entry = dayEntry as Record<string, unknown>;
-        if (typeof entry.location !== "string") return false;
         if (typeof entry.countryCode !== "string") return false;
       }
     }
@@ -354,10 +351,9 @@ function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkL
     for (const [date, value] of Object.entries(yearData as Record<string, unknown>)) {
       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
       const entry = value as Record<string, unknown>;
-      if (typeof entry.location !== "string" || typeof entry.countryCode !== "string") continue;
+      if (typeof entry.countryCode !== "string") continue;
       incomingEntries.push({
         date,
-        location: entry.location as WorkLocationEntry["location"],
         countryCode: entry.countryCode as WorkLocationEntry["countryCode"],
         ...(typeof entry.label === "string" && entry.label.length > 0 ? { label: entry.label } : {}),
       });

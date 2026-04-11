@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { sanitizeLabels, type TimeTrackingLabel } from "@/components/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import {
@@ -26,15 +27,18 @@ function isValidTaskDateRange(startTime: string, stopTime?: string | null): bool
     return true;
   }
 
-  const startDate = startTime.slice(0, 10);
-  const stopDate = stopTime.slice(0, 10);
-  if (startDate !== stopDate) {
+  const start = dayjs(startTime);
+  const stop = dayjs(stopTime);
+
+  if (!start.isValid() || !stop.isValid()) {
     return false;
   }
 
-  const startClock = startTime.slice(11, 16);
-  const stopClock = stopTime.slice(11, 16);
-  return startClock < stopClock;
+  if (!start.isSame(stop, "day")) {
+    return false;
+  }
+
+  return start.isBefore(stop);
 }
 
 function isValidRawTask(value: unknown): value is RawTask {
@@ -106,7 +110,7 @@ export function useTimeTrackingStorage() {
       const hasValidRunningTask = tasks.some(
         (task) => task.stopTime === undefined || task.stopTime === null,
       );
-      if (payload.stopTime === undefined && hasValidRunningTask) {
+      if (payload.stopTime == null && hasValidRunningTask) {
         return false;
       }
       const newTask: StoredTimeTrackingTask = {
@@ -186,7 +190,7 @@ export function useTimeTrackingStorage() {
       replaceCollectionContents(tasksCollection, remainingTasks, (task) => task.id);
       return;
     }
-    tasksCollection.utils.writeUpsert(remainingTasks);
+    tasksCollection.utils.writeDelete(id);
   }, [tasks]);
 
   const addTemplate = useCallback((payload: Omit<TimeTrackingTemplate, "id">) => {
@@ -218,7 +222,7 @@ export function useTimeTrackingStorage() {
       replaceCollectionContents(templatesCollection, remainingTemplates, (template) => template.id);
       return;
     }
-    templatesCollection.utils.writeUpsert(remainingTemplates);
+    templatesCollection.utils.writeDelete(id);
   }, [templates]);
 
   const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {

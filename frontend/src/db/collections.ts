@@ -44,8 +44,14 @@ import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
   appendToSyncOutbox,
+  type GanttTaskSyncRead,
+  type LabelSyncRead,
   type SyncPullResponse,
   type SyncPushPayload,
+  type TaskSyncRead,
+  type TemplateSyncRead,
+  type TimeOffEntrySyncRead,
+  type WorkLocationSyncRead,
 } from "@/utils/syncClient";
 import { dayjs } from "@/utils/dateTimeUtils";
 
@@ -211,79 +217,46 @@ export function replaceCollectionContents<
 
 export function applyPullToCollections(data: SyncPullResponse): void {
   // Labels
-  const activeLabels = data.labels
-    .filter((l) => l.deleted_at === null)
-    .map(
-      (l): TimeTrackingLabel => ({
-        id: l.id,
-        name: l.name,
-        color: l.color,
-      }),
-    );
-  replaceCollectionContents(labelsCollection, activeLabels, (label) => label.id);
+  replaceCollectionContents(
+    labelsCollection,
+    data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel),
+    (label) => label.id,
+  );
 
   // Tasks
-  const activeTasks = data.tasks
-    .filter((t) => t.deleted_at === null)
-    .map((t): StoredTimeTrackingTask => {
-      const task: StoredTimeTrackingTask = {
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        startTime: utcIsoToLocalTime(t.start_time),
-        stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
-      };
-      if (t.includes_break) task.includesBreak = true;
-      return task;
-    });
-  replaceCollectionContents(tasksCollection, activeTasks, (task) => task.id);
+  replaceCollectionContents(
+    tasksCollection,
+    data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask),
+    (task) => task.id,
+  );
 
   // Templates
-  const activeTemplates = data.templates
-    .filter((t) => t.deleted_at === null)
-    .map(
-      (t): TimeTrackingTemplate => ({
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        start: t.start_time.slice(0, 5),
-        stop: t.stop_time.slice(0, 5),
-      }),
-    );
-  replaceCollectionContents(templatesCollection, activeTemplates, (template) => template.id);
+  replaceCollectionContents(
+    templatesCollection,
+    data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate),
+    (template) => template.id,
+  );
 
   // Work locations
-  const activeWorkLocations = data.work_locations
-    .filter((wl) => wl.deleted_at === null)
-    .map(
-      (wl): WorkLocationEntry => ({
-        date: wl.date,
-        location: "other",
-        countryCode: wl.country_code as WorkLocationEntry["countryCode"],
-        ...(wl.label ? { label: wl.label } : {}),
-      }),
-    );
-  replaceCollectionContents(workLocationsCollection, activeWorkLocations, (entry) => entry.date);
+  replaceCollectionContents(
+    workLocationsCollection,
+    data.work_locations.filter((wl) => wl.deleted_at === null).map(syncWorkLocationToEntry),
+    (entry) => entry.date,
+  );
 
   // Time-off entries
-  const activeTimeOffEntries = _syncItemsToTimeOffEntries(data.time_off_entries ?? []);
-  replaceCollectionContents(timeOffCollection, activeTimeOffEntries, (entry) => entry.id);
+  replaceCollectionContents(
+    timeOffCollection,
+    _syncItemsToTimeOffEntries(data.time_off_entries ?? []),
+    (entry) => entry.id,
+  );
 
   // Gantt tasks
-  const activeGanttTasks = (data.gantt_tasks ?? [])
-    .filter((g) => g.deleted_at === null)
-    .map(
-      (g): GanttTask => ({
-        id: g.id,
-        name: g.name,
-        start: g.start_date,
-        end: g.end_date,
-        progress: g.progress,
-        ...(g.dependencies ? { dependencies: g.dependencies } : {}),
-        ...(g.notes ? { notes: g.notes } : {}),
-      }),
-    );
-  replaceCollectionContents(ganttTasksCollection, activeGanttTasks, (task) => task.id);
+  replaceCollectionContents(
+    ganttTasksCollection,
+    (data.gantt_tasks ?? []).filter((g) => g.deleted_at === null).map(syncGanttTaskToGanttTask),
+    (task) => task.id,
+  );
 }
 
 /**
@@ -295,9 +268,7 @@ export function applyPullToCollections(data: SyncPullResponse): void {
  */
 export function applyIncrementalPullToCollections(data: SyncPullResponse): void {
   // Labels
-  const labelUpserts = data.labels
-    .filter((l) => l.deleted_at === null)
-    .map((l): TimeTrackingLabel => ({ id: l.id, name: l.name, color: l.color }));
+  const labelUpserts = data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel);
   const labelDeletes = data.labels.filter((l) => l.deleted_at !== null).map((l) => l.id);
   runWriteBatch(
     labelsCollection,
@@ -309,19 +280,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   );
 
   // Tasks
-  const taskUpserts = data.tasks
-    .filter((t) => t.deleted_at === null)
-    .map((t): StoredTimeTrackingTask => {
-      const task: StoredTimeTrackingTask = {
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        startTime: utcIsoToLocalTime(t.start_time),
-        stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
-      };
-      if (t.includes_break) task.includesBreak = true;
-      return task;
-    });
+  const taskUpserts = data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask);
   const taskDeletes = data.tasks.filter((t) => t.deleted_at !== null).map((t) => t.id);
   runWriteBatch(tasksCollection, taskDeletes.length > 0 || taskUpserts.length > 0, () => {
     if (taskDeletes.length > 0) tasksCollection.utils.writeDelete(taskDeletes);
@@ -331,15 +290,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   // Templates
   const templateUpserts = data.templates
     .filter((t) => t.deleted_at === null)
-    .map(
-      (t): TimeTrackingTemplate => ({
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        start: t.start_time.slice(0, 5),
-        stop: t.stop_time.slice(0, 5),
-      }),
-    );
+    .map(syncTemplateToTemplate);
   const templateDeletes = data.templates
     .filter((t) => t.deleted_at !== null)
     .map((t) => t.id);
@@ -355,14 +306,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   // Work locations
   const wlUpserts = data.work_locations
     .filter((wl) => wl.deleted_at === null)
-    .map(
-      (wl): WorkLocationEntry => ({
-        date: wl.date,
-        location: "other",
-        countryCode: wl.country_code as WorkLocationEntry["countryCode"],
-        ...(wl.label ? { label: wl.label } : {}),
-      }),
-    );
+    .map(syncWorkLocationToEntry);
   const wlDeletes = data.work_locations
     .filter((wl) => wl.deleted_at !== null)
     .map((wl) => wl.date);
@@ -394,17 +338,7 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
   // Gantt tasks
   const ganttUpserts = (data.gantt_tasks ?? [])
     .filter((g) => g.deleted_at === null)
-    .map(
-      (g): GanttTask => ({
-        id: g.id,
-        name: g.name,
-        start: g.start_date,
-        end: g.end_date,
-        progress: g.progress,
-        ...(g.dependencies ? { dependencies: g.dependencies } : {}),
-        ...(g.notes ? { notes: g.notes } : {}),
-      }),
-    );
+    .map(syncGanttTaskToGanttTask);
   const ganttDeletes = (data.gantt_tasks ?? [])
     .filter((g) => g.deleted_at !== null)
     .map((g) => g.id);
@@ -422,30 +356,73 @@ export function applyIncrementalPullToCollections(data: SyncPullResponse): void 
 // Internal sync-item → domain-type converters
 // ---------------------------------------------------------------------------
 
-import type { TimeOffEntrySyncRead } from "@/utils/syncClient";
+function syncLabelToLabel(l: LabelSyncRead): TimeTrackingLabel {
+  return { id: l.id, name: l.name, color: l.color };
+}
+
+function syncTaskToStoredTask(t: TaskSyncRead): StoredTimeTrackingTask {
+  const task: StoredTimeTrackingTask = {
+    id: t.id,
+    text: t.text,
+    label: t.label_id ?? "",
+    startTime: utcIsoToLocalTime(t.start_time),
+    stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
+  };
+  if (t.includes_break) task.includesBreak = true;
+  return task;
+}
+
+function syncTemplateToTemplate(t: TemplateSyncRead): TimeTrackingTemplate {
+  return {
+    id: t.id,
+    text: t.text,
+    label: t.label_id ?? "",
+    start: t.start_time.slice(0, 5),
+    stop: t.stop_time.slice(0, 5),
+  };
+}
+
+function syncWorkLocationToEntry(wl: WorkLocationSyncRead): WorkLocationEntry {
+  return {
+    date: wl.date,
+    countryCode: wl.country_code as WorkLocationEntry["countryCode"],
+    ...(wl.label ? { label: wl.label } : {}),
+  };
+}
+
+function syncGanttTaskToGanttTask(g: GanttTaskSyncRead): GanttTask {
+  return {
+    id: g.id,
+    name: g.name,
+    start: g.start_date,
+    end: g.end_date,
+    progress: g.progress,
+    ...(g.dependencies ? { dependencies: g.dependencies } : {}),
+    ...(g.notes ? { notes: g.notes } : {}),
+  };
+}
 
 function _syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
-  return items
-    .filter((item) => {
-      if (item.deleted_at !== null) return false;
-      if (item.entry_kind === "date") return item.date != null;
-      if (item.entry_kind === "range") return item.start_date != null && item.end_date != null;
-      if (item.entry_kind === "weekly") return item.weekday != null;
-      return false;
-    })
-    .map((item) =>
-      createTimeOffEntry({
-        id: item.entry_id,
-        entryKind: item.entry_kind,
-        date: item.entry_kind === "date" ? item.date! : undefined,
-        start: item.entry_kind === "range" ? item.start_date! : undefined,
-        end: item.entry_kind === "range" ? item.end_date! : undefined,
-        weekday: item.entry_kind === "weekly" ? item.weekday! : undefined,
-        entryType: isValidEntryType(item.entry_type) ? item.entry_type : "other",
-        entryFlag: isValidFlag(item.entry_flag) ? item.entry_flag : "full_day",
-        note: item.note,
-      } as Parameters<typeof createTimeOffEntry>[0]),
-    );
+  const results: TimeOffEntry[] = [];
+  for (const item of items) {
+    if (item.deleted_at !== null) continue;
+    const entryType = isValidEntryType(item.entry_type) ? item.entry_type : "other";
+    const entryFlag = isValidFlag(item.entry_flag) ? item.entry_flag : "full_day";
+    if (item.entry_kind === "date" && item.date != null) {
+      results.push(
+        createTimeOffEntry({ id: item.entry_id, entryKind: "date", date: item.date, entryType, entryFlag, note: item.note }),
+      );
+    } else if (item.entry_kind === "range" && item.start_date != null && item.end_date != null) {
+      results.push(
+        createTimeOffEntry({ id: item.entry_id, entryKind: "range", start: item.start_date, end: item.end_date, entryType, entryFlag, note: item.note }),
+      );
+    } else if (item.entry_kind === "weekly" && item.weekday != null) {
+      results.push(
+        createTimeOffEntry({ id: item.entry_id, entryKind: "weekly", weekday: item.weekday, entryType, entryFlag, note: item.note }),
+      );
+    }
+  }
+  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -464,9 +441,7 @@ export const labelsCollection = createCollection(
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
-      return data.labels
-        .filter((l) => l.deleted_at === null)
-        .map((l): TimeTrackingLabel => ({ id: l.id, name: l.name, color: l.color }));
+      return data.labels.filter((l) => l.deleted_at === null).map(syncLabelToLabel);
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -539,19 +514,7 @@ export const tasksCollection = createCollection(
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
-      return data.tasks
-        .filter((t) => t.deleted_at === null)
-        .map((t): StoredTimeTrackingTask => {
-          const task: StoredTimeTrackingTask = {
-            id: t.id,
-            text: t.text,
-            label: t.label_id ?? "",
-            startTime: utcIsoToLocalTime(t.start_time),
-            stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
-          };
-          if (t.includes_break) task.includesBreak = true;
-          return task;
-        });
+      return data.tasks.filter((t) => t.deleted_at === null).map(syncTaskToStoredTask);
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -630,17 +593,7 @@ export const templatesCollection = createCollection(
       const response = await collectionFetch("/api/sync/pull");
       if (!response.ok) return [];
       const data = (await response.json()) as SyncPullResponse;
-      return data.templates
-        .filter((t) => t.deleted_at === null)
-        .map(
-          (t): TimeTrackingTemplate => ({
-            id: t.id,
-            text: t.text,
-            label: t.label_id ?? "",
-            start: t.start_time.slice(0, 5),
-            stop: t.stop_time.slice(0, 5),
-          }),
-        );
+      return data.templates.filter((t) => t.deleted_at === null).map(syncTemplateToTemplate);
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -810,17 +763,7 @@ export const ganttTasksCollection = createCollection(
       const data = (await response.json()) as SyncPullResponse;
       return (data.gantt_tasks ?? [])
         .filter((g) => g.deleted_at === null)
-        .map(
-          (g): GanttTask => ({
-            id: g.id,
-            name: g.name,
-            start: g.start_date,
-            end: g.end_date,
-            progress: g.progress,
-            ...(g.dependencies ? { dependencies: g.dependencies } : {}),
-            ...(g.notes ? { notes: g.notes } : {}),
-          }),
-        );
+        .map(syncGanttTaskToGanttTask);
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();
@@ -908,14 +851,7 @@ export const workLocationsCollection = createCollection(
       const data = (await response.json()) as SyncPullResponse;
       return data.work_locations
         .filter((wl) => wl.deleted_at === null)
-        .map(
-          (wl): WorkLocationEntry => ({
-            date: wl.date,
-            location: "other",
-            countryCode: wl.country_code as WorkLocationEntry["countryCode"],
-            ...(wl.label ? { label: wl.label } : {}),
-          }),
-        );
+        .map(syncWorkLocationToEntry);
     },
     onInsert: async ({ transaction }) => {
       const now = dayjs().toISOString();

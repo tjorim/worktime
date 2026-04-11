@@ -28,20 +28,34 @@ export function useWorkLocationStorage(year: number) {
   /**
    * Map of explicitly set work locations for calendar consumption.
    * Contains every day for which the user has stored an explicit location.
+   *
+   * `location` is derived from `countryCode` vs. current profile settings so
+   * it reflects the user's current home/office configuration rather than the
+   * value at write time.
    */
   const workLocationMap: WorkLocationMap = useMemo(() => {
     const entries = (rawData ?? []) as WorkLocationEntry[];
     return new Map(
-      entries.map((wl) => [
-        wl.date,
-        {
-          location: wl.location,
-          countryCode: wl.countryCode,
-          ...(wl.label ? { label: wl.label } : {}),
-        } as WorkLocationInfo,
-      ]),
+      entries.map((wl) => {
+        let location: WorkLocation;
+        if (wl.countryCode === homeCountry) {
+          location = "home";
+        } else if (wl.countryCode === officeCountry) {
+          location = "office";
+        } else {
+          location = "other";
+        }
+        return [
+          wl.date,
+          {
+            location,
+            countryCode: wl.countryCode,
+            ...(wl.label ? { label: wl.label } : {}),
+          } as WorkLocationInfo,
+        ];
+      }),
     );
-  }, [rawData]);
+  }, [rawData, homeCountry, officeCountry]);
 
   /**
    * Returns the explicitly stored work location for a given date, or null if
@@ -92,13 +106,12 @@ export function useWorkLocationStorage(year: number) {
       const key = d.format("YYYY-MM-DD");
       const entry: WorkLocationEntry = {
         date: key,
-        location,
         countryCode: parsedCountryCode,
         ...(extra?.label ? { label: extra.label } : {}),
       };
 
       if (workLocationsCollection.has(key)) {
-        workLocationsCollection.update(key, (d) => {
+        workLocationsCollection.update(key, (d: WorkLocationEntry) => {
           Object.assign(d, entry);
         });
       } else {
