@@ -269,6 +269,52 @@ export function countPushConflicts(response: SyncPushResponse): number {
 }
 
 /**
+ * Extract only the conflicted items from a push payload by matching them
+ * against the conflict results in the push response.
+ *
+ * Returns a new payload containing only items whose server push was rejected
+ * with `status='conflict'`.  Work locations are matched by `date` (their
+ * natural key), all other entity types are matched by `id`.
+ */
+export function extractConflictedItems(
+  payload: SyncPushPayload,
+  response: SyncPushResponse,
+): SyncPushPayload {
+  const conflicted: Record<string, Set<string>> = {};
+  for (const [entityType, results] of Object.entries(response.results)) {
+    conflicted[entityType] = new Set(results.filter((r) => r.status === "conflict").map((r) => r.id));
+  }
+  const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
+
+  return {
+    labels: payload.labels.filter((l) => ids("labels").has(l.id)),
+    tasks: payload.tasks.filter((t) => ids("tasks").has(t.id)),
+    templates: payload.templates.filter((t) => ids("templates").has(t.id)),
+    // work_locations use `date` as their natural key; the server returns it as `id`.
+    work_locations: payload.work_locations.filter((w) => ids("work_locations").has(w.date)),
+    time_off_entries: payload.time_off_entries.filter((e) => ids("time_off_entries").has(e.id)),
+    gantt_tasks: payload.gantt_tasks.filter((g) => ids("gantt_tasks").has(g.id)),
+  };
+}
+
+/**
+ * Return a copy of `payload` with all `client_updated_at` fields set to the
+ * current time (ISO-8601).  Used when re-pushing after a conflict so that the
+ * local version wins the last-write-wins check on the server.
+ */
+export function bumpClientTimestamps(payload: SyncPushPayload): SyncPushPayload {
+  const now = new Date().toISOString();
+  return {
+    labels: payload.labels.map((l) => ({ ...l, client_updated_at: now })),
+    tasks: payload.tasks.map((t) => ({ ...t, client_updated_at: now })),
+    templates: payload.templates.map((t) => ({ ...t, client_updated_at: now })),
+    work_locations: payload.work_locations.map((w) => ({ ...w, client_updated_at: now })),
+    time_off_entries: payload.time_off_entries.map((e) => ({ ...e, client_updated_at: now })),
+    gantt_tasks: payload.gantt_tasks.map((g) => ({ ...g, client_updated_at: now })),
+  };
+}
+
+/**
  * Call POST /db/sync/push with a pre-built payload.
  * Returns the server response, or null on network/parse failure.
  */

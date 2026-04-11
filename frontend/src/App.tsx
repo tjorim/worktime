@@ -9,10 +9,11 @@ import { Header } from "./components/Header";
 import { MainTabs } from "./components/MainTabs";
 import { FeatureIntroAlert } from "./components/FeatureIntroAlert";
 import { FirstSyncConflictDialog } from "./components/FirstSyncConflictDialog";
+import { OngoingConflictDialog } from "./components/sync/OngoingConflictDialog";
 import { WelcomeWizard, type WizardCompletionPayload } from "./components/WelcomeWizard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EventStoreProvider } from "./contexts/EventStoreContext";
-import { OngoingSyncProvider } from "./contexts/OngoingSyncContext";
+import { OngoingSyncProvider, useOngoingSyncContext } from "./contexts/OngoingSyncContext";
 import { SettingsProvider, type TabKey, useSettings } from "./contexts/SettingsContext";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { DeveloperOptionsProvider } from "./contexts/DeveloperOptionsContext";
@@ -23,6 +24,23 @@ import { useFirstSyncFlow } from "./hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "./utils/scheduleUtils";
 import { validateVacationAllowance } from "./utils/vacationCalculations";
 import * as m from "./paraglide/messages.js";
+
+/**
+ * Inner component that consumes OngoingSyncContext to render the conflict
+ * resolution dialog.  Must be rendered inside <OngoingSyncProvider>.
+ */
+function OngoingConflictHandler() {
+  const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
+
+  return (
+    <OngoingConflictDialog
+      show={conflictCount > 0}
+      conflictCount={conflictCount}
+      conflictedPayload={conflictedPayload}
+      onResolve={resolveOngoingConflicts}
+    />
+  );
+}
 
 /**
  * The main application component for team selection and shift management.
@@ -340,6 +358,7 @@ function AppContent() {
               onResolve={resolveConflict}
               onDismiss={dismissSync}
             />
+            <OngoingConflictHandler />
             <AboutModal show={showAbout} onHide={() => setShowAbout(false)} />
           </Container>
         </div>

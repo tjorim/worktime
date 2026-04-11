@@ -4,11 +4,14 @@ import {
   applyIncrementalSyncPullResponse,
   applyPreferencesPull,
   appendToSyncOutbox,
+  bumpClientTimestamps,
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
   buildLocalSyncPushPayload,
   clearSyncOutbox,
+  countPushConflicts,
   dequeueAndMergeSyncOutbox,
+  extractConflictedItems,
   fetchPreferences,
   fetchSyncStatus,
   getSyncOutboxSize,
@@ -18,7 +21,6 @@ import {
   pushSyncPayload,
   storeSyncCursor,
   syncStatusHasData,
-  countPushConflicts,
   timeOffEntriesToSyncItems,
 } from "@/utils/syncClient";
 import {
@@ -159,6 +161,128 @@ describe("syncClient", () => {
           },
         }),
       ).toBe(2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // extractConflictedItems
+  // ---------------------------------------------------------------------------
+
+  describe("extractConflictedItems", () => {
+    const makePayload = () => ({
+      labels: [
+        { id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+        { id: "l2", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+      ],
+      tasks: [
+        { id: "t1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" },
+      ],
+      templates: [],
+      work_locations: [
+        { date: "2026-01-05", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z", country_code: "NL" },
+      ],
+      time_off_entries: [],
+      gantt_tasks: [],
+    });
+
+    it("returns empty payload when no conflicts", () => {
+      const result = extractConflictedItems(makePayload(), {
+        results: {
+          labels: [
+            { id: "l1", status: "ok" },
+            { id: "l2", status: "ok" },
+          ],
+          tasks: [{ id: "t1", status: "ok" }],
+        },
+      });
+      expect(result.labels).toHaveLength(0);
+      expect(result.tasks).toHaveLength(0);
+      expect(result.work_locations).toHaveLength(0);
+    });
+
+    it("extracts only conflicted labels", () => {
+      const result = extractConflictedItems(makePayload(), {
+        results: {
+          labels: [
+            { id: "l1", status: "ok" },
+            { id: "l2", status: "conflict", conflict_reason: "server is newer" },
+          ],
+          tasks: [{ id: "t1", status: "ok" }],
+        },
+      });
+      expect(result.labels).toHaveLength(1);
+      expect(result.labels[0].id).toBe("l2");
+      expect(result.tasks).toHaveLength(0);
+    });
+
+    it("extracts conflicted work_locations matched by date", () => {
+      const result = extractConflictedItems(makePayload(), {
+        results: {
+          work_locations: [
+            { id: "2026-01-05", status: "conflict", conflict_reason: "server is newer" },
+          ],
+        },
+      });
+      expect(result.work_locations).toHaveLength(1);
+      expect(result.work_locations[0].date).toBe("2026-01-05");
+    });
+
+    it("returns empty arrays for entity types absent from response results", () => {
+      const result = extractConflictedItems(makePayload(), { results: {} });
+      expect(result.labels).toHaveLength(0);
+      expect(result.tasks).toHaveLength(0);
+      expect(result.templates).toHaveLength(0);
+      expect(result.work_locations).toHaveLength(0);
+      expect(result.time_off_entries).toHaveLength(0);
+      expect(result.gantt_tasks).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // bumpClientTimestamps
+  // ---------------------------------------------------------------------------
+
+  describe("bumpClientTimestamps", () => {
+    it("updates client_updated_at on all entity types to the same ISO timestamp", () => {
+      const before = new Date("2026-01-01T00:00:00.000Z").toISOString();
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: before }],
+        tasks: [{ id: "t1", action: "update" as const, client_updated_at: before }],
+        templates: [{ id: "tp1", action: "update" as const, client_updated_at: before }],
+        work_locations: [{ date: "2026-01-05", action: "update" as const, client_updated_at: before, country_code: "NL" }],
+        time_off_entries: [{ id: "toe1", action: "update" as const, client_updated_at: before }],
+        gantt_tasks: [{ id: "gt1", action: "update" as const, client_updated_at: before }],
+      };
+
+      const now = new Date("2026-06-01T12:00:00.000Z").toISOString();
+      vi.setSystemTime(new Date(now));
+
+      const result = bumpClientTimestamps(payload);
+
+      expect(result.labels[0].client_updated_at).toBe(now);
+      expect(result.tasks[0].client_updated_at).toBe(now);
+      expect(result.templates[0].client_updated_at).toBe(now);
+      expect(result.work_locations[0].client_updated_at).toBe(now);
+      expect(result.time_off_entries[0].client_updated_at).toBe(now);
+      expect(result.gantt_tasks[0].client_updated_at).toBe(now);
+
+      vi.useRealTimers();
+    });
+
+    it("does not mutate the original payload", () => {
+      const before = "2026-01-01T00:00:00.000Z";
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: before }],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+
+      bumpClientTimestamps(payload);
+
+      expect(payload.labels[0].client_updated_at).toBe(before);
     });
   });
 

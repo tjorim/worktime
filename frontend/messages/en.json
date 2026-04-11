@@ -956,6 +956,15 @@
   "first_sync_conflict_confirm": "Apply",
   "first_sync_conflict_cancel": "Decide later",
 
+  "ongoing_conflict_title": "{count} record(s) overwritten by another device",
+  "ongoing_conflict_body": "Another device saved a newer version of {count} record(s) at the same time. The server version is now active. Choose which version to keep.",
+  "ongoing_conflict_keep_server": "Keep server version",
+  "ongoing_conflict_keep_server_desc": "Accept the server's changes. Your local edits for those records are discarded.",
+  "ongoing_conflict_keep_mine": "Keep my version",
+  "ongoing_conflict_keep_mine_desc": "Re-upload your local changes so they overwrite the server version.",
+  "ongoing_conflict_confirm": "Apply",
+  "ongoing_conflict_dismiss": "Dismiss",
+
   "sync_indicator_syncing": "Syncing\u2026",
   "sync_indicator_synced": "Synced",
   "sync_indicator_pending": "{count} pending",
