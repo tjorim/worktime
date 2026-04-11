@@ -72,19 +72,8 @@ const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[num
 
 export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const helpText = getViewModeHelpText();
-  const {
-    rawText,
-    entries,
-    addEntries,
-    updateEntry,
-    deleteEntry,
-    deleteEntries,
-    importHday,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-  } = useEventStore();
+  const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
+    useEventStore();
   const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
   const { options } = useDeveloperOptions();
   const toast = useToast();
@@ -422,23 +411,9 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
     toast.showSuccess(m.timeoff_exported(), "bi-upload");
   }, [entries, rawText, toast]);
 
-  const handleUndo = useCallback(() => {
-    if (!canUndo) return;
-    undo();
-    toast.showSuccess(m.timeoff_undo_success(), "bi-arrow-counterclockwise");
-  }, [canUndo, undo, toast]);
-
-  const handleRedo = useCallback(() => {
-    if (!canRedo) return;
-    redo();
-    toast.showSuccess(m.timeoff_redo_success(), "bi-arrow-clockwise");
-  }, [canRedo, redo, toast]);
-
   // Use custom hook for keyboard shortcuts
   useTimeOffKeyboardShortcuts(
     {
-      onUndo: handleUndo,
-      onRedo: handleRedo,
       onImport: handleImport,
       onExport: handleExport,
       onBulkDelete: () => setShowBulkDeleteConfirm(true),
@@ -509,10 +484,6 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "table" && (
         <TimeOffTableView
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
           eventCount={entries.length}
           selectedCount={selectedIds.size}
           onSelectAll={handleSelectAll}

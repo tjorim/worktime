@@ -346,15 +346,9 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
 };
 
 /**
- * Settings provider that manages user preferences using localStorage.
+ * Settings provider that manages the current unified user state in localStorage.
  *
- * Provides a context for managing app-wide settings including:
- * - Time format (12h/24h)
- * - Theme preference (light/dark/auto)
- * - Notification settings (on/off)
- * - Team selection and onboarding state
- *
- * All settings are persisted to localStorage for the internal user base.
+ * Provides app-wide settings, onboarding state, and last-used UI preferences.
  */
 export function SettingsProvider({ children }: SettingsProviderProps) {
   // Unified user state in a single localStorage key.

@@ -25,6 +25,7 @@ from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.team import router as team_router
+from .utils.sse_manager import sync_event_manager
 
 # Configure logging
 logging.basicConfig(
@@ -72,39 +73,42 @@ async def lifespan(app: FastAPI):
     # Log configuration
     settings.log_configuration()
 
-    # Ensure share directory exists (dev convenience; no-op in production with mounted volumes)
-    settings.ensure_share_dir_exists()
+    if settings.LEGACY_FILESHARE_ENABLED:
+        # Ensure share directory exists (dev convenience; no-op in production with mounted volumes)
+        settings.ensure_share_dir_exists()
 
-    # Verify share directory accessibility
-    share_path = settings.get_share_dir_path()
-    try:
-        if not share_path.exists():
-            logger.warning(
-                f"⚠️  Share directory does not exist: {share_path}\n"
-                f"   The health endpoint will report 'degraded' status until this is resolved.\n"
-                f"   For Docker: Ensure volume is mounted correctly.\n"
-                f"   For development: Directory will be created automatically."
-            )
-        elif not share_path.is_dir():
-            logger.warning(
-                f"⚠️  Share path exists but is not a directory: {share_path}\n"
-                f"   The health endpoint will report 'degraded' status."
-            )
-        else:
-            # Check read and execute permissions (execute needed to list directory)
-            if os.access(share_path, os.R_OK | os.X_OK):
-                logger.info(f"✓ Share directory is accessible: {share_path}")
-            else:
+        # Verify share directory accessibility
+        share_path = settings.get_share_dir_path()
+        try:
+            if not share_path.exists():
                 logger.warning(
-                    f"⚠️  Share directory exists but is not accessible: {share_path}\n"
-                    f"   Check file permissions (read+execute required). The health endpoint will report 'degraded' status."
+                    f"⚠️  Share directory does not exist: {share_path}\n"
+                    f"   The health endpoint will report 'degraded' status until this is resolved.\n"
+                    f"   For Docker: Ensure volume is mounted correctly.\n"
+                    f"   For development: Directory will be created automatically."
                 )
-    except Exception as e:
-        logger.warning(
-            f"⚠️  Could not verify share directory status: {e}\n"
-            f"   The health endpoint will report current status."
-        )
-    
+            elif not share_path.is_dir():
+                logger.warning(
+                    f"⚠️  Share path exists but is not a directory: {share_path}\n"
+                    f"   The health endpoint will report 'degraded' status."
+                )
+            else:
+                # Check read and execute permissions (execute needed to list directory)
+                if os.access(share_path, os.R_OK | os.X_OK):
+                    logger.info(f"✓ Share directory is accessible: {share_path}")
+                else:
+                    logger.warning(
+                        f"⚠️  Share directory exists but is not accessible: {share_path}\n"
+                        f"   Check file permissions (read+execute required). The health endpoint will report 'degraded' status."
+                    )
+        except Exception as e:
+            logger.warning(
+                f"⚠️  Could not verify share directory status: {e}\n"
+                f"   The health endpoint will report current status."
+            )
+    else:
+        logger.info("Legacy file-share disabled (LEGACY_FILESHARE_ENABLED=false) — skipping share checks")
+
     # Initialize SuperTokens SDK before accepting connections
     try:
         init_supertokens()
@@ -120,11 +124,14 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {e}")
             raise
+
+        # Start Postgres LISTEN/NOTIFY for cross-process SSE broadcast
+        await sync_event_manager.start_pg_listener(settings.DATABASE_URL)
     else:
         logger.info("Database initialization skipped (DATABASE_ENABLED=false)")
 
-    # Warm cache in background if enabled
-    if settings.CACHE_ENABLED:
+    # Warm cache in background if enabled and file-share is available
+    if settings.CACHE_ENABLED and settings.LEGACY_FILESHARE_ENABLED:
         # Start cache warming in background - don't block startup
         asyncio.create_task(_warm_cache_async())
         logger.info("✓ Cache warming started in background")
@@ -137,6 +144,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Worktime Backend API shutting down...")
+    if settings.DATABASE_ENABLED:
+        await sync_event_manager.stop_pg_listener()
 
 
 # Create FastAPI application
@@ -175,10 +184,11 @@ app.add_middleware(
 app.add_middleware(TimingMiddleware)
 
 
-# Register API routers
-app.include_router(health_router)
-app.include_router(hday_router)
-app.include_router(team_router)
+# Register API routers — all backend routes are served under /api
+app.include_router(health_router, prefix="/api")
+if settings.LEGACY_FILESHARE_ENABLED:
+    app.include_router(hday_router, prefix="/api")
+    app.include_router(team_router, prefix="/api")
 
 if settings.DATABASE_ENABLED:
     from .routers.account_router import router as account_router
@@ -191,15 +201,15 @@ if settings.DATABASE_ENABLED:
     from .routers.db_work_locations import router as db_work_locations_router
     from .routers.registration import router as registration_router
 
-    app.include_router(account_router)
-    app.include_router(registration_router)
-    app.include_router(db_users_router)
-    app.include_router(db_time_tracking_router)
-    app.include_router(db_work_locations_router)
-    app.include_router(db_gantt_router)
-    app.include_router(db_sync_router)
-    app.include_router(db_preferences_router)
-    app.include_router(db_time_off_router)
+    app.include_router(account_router, prefix="/api")
+    app.include_router(registration_router, prefix="/api")
+    app.include_router(db_users_router, prefix="/api")
+    app.include_router(db_time_tracking_router, prefix="/api")
+    app.include_router(db_work_locations_router, prefix="/api")
+    app.include_router(db_gantt_router, prefix="/api")
+    app.include_router(db_sync_router, prefix="/api")
+    app.include_router(db_preferences_router, prefix="/api")
+    app.include_router(db_time_off_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:
     logger.info("Database API endpoint registration skipped (DATABASE_ENABLED=false)")
@@ -207,7 +217,7 @@ else:
 # Register debug router only in non-production environments
 if settings.ENVIRONMENT != "production":
     from .routers.debug import router as debug_router
-    app.include_router(debug_router)
+    app.include_router(debug_router, prefix="/api")
     logger.info("✓ Debug endpoints enabled (development mode only)")
 
 

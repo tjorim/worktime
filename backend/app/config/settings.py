@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         extra="allow"
     )
     
+    # Legacy file-share configuration — set to False when .hday file share is unavailable.
+    # Disables share directory checks, cache warming, and the hday/team endpoints.
+    LEGACY_FILESHARE_ENABLED: bool = False
+
     # File storage configuration
     SHARE_DIR: str = "./data/hday_files"
     
@@ -176,7 +180,9 @@ class Settings(BaseSettings):
         logger.info(f"Environment:     {self.ENVIRONMENT}")
         logger.info(f"Host:            {self.HOST}")
         logger.info(f"Port:            {self.PORT}")
-        logger.info(f"Share Directory: {self.get_share_dir_path()}")
+        logger.info(f"Legacy fileshare: {'enabled' if self.LEGACY_FILESHARE_ENABLED else 'disabled'}")
+        if self.LEGACY_FILESHARE_ENABLED:
+            logger.info(f"Share Directory: {self.get_share_dir_path()}")
         
         # Log CORS configuration
         cors_origins = self.get_cors_origins_list()

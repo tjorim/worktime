@@ -6,28 +6,29 @@
  * completed.
  *
  * Rendering `<OngoingSyncProvider>` inside `<AuthProvider>`,
- * `<DeveloperOptionsProvider>`, `<ToastProvider>`, and `<EventStoreProvider>`
- * is required because it calls `useAuth()`, `useApiClient()` (which depends on
- * `<DeveloperOptionsProvider>` and `<ToastProvider>`), and `useEventStore()`
- * internally.
+ * `<DeveloperOptionsProvider>`, and `<ToastProvider>` is required because it
+ * calls `useAuth()`, `useApiClient()` (which depends on
+ * `<DeveloperOptionsProvider>` and `<ToastProvider>`).
  *
- * Write hooks (`useTimeTrackingStorage`, `useWorkLocationStorage`) call
- * `useOngoingSyncContext()` to obtain `enqueueChange`.  The hook returns a
- * no-op implementation when no provider is present (e.g. in tests), so
- * existing test setups do not need to change.
+ * Incremental-pull data is applied directly to TanStack DB collections via
+ * `applyIncrementalPullToCollections` — no EventStore dependency required.
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { useAuth } from "./AuthContext";
-import { useEventStore } from "./EventStoreContext";
+import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useOngoingSync, type OngoingSyncState, type EnqueueChangeFn } from "@/hooks/useOngoingSync";
 import {
-  applyIncrementalSyncPullResponse,
-  type SyncPullResponse,
-  type SyncPushPayload,
-} from "@/utils/syncClient";
+  useOngoingSync,
+  type OngoingSyncState,
+  type EnqueueChangeFn,
+  type TriggerPullFn,
+  type ResolveOngoingConflictsFn,
+} from "@/hooks/useOngoingSync";
+import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
+import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
+import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
 export interface OngoingSyncContextType extends OngoingSyncState {
   /**
@@ -35,6 +36,17 @@ export interface OngoingSyncContextType extends OngoingSyncState {
    * Call this after each local write so the server stays in sync.
    */
   enqueueChange: EnqueueChangeFn;
+  /**
+   * Trigger an incremental pull (flush outbox + pull from server).
+   * Transport-neutral entry point for external callers such as SSE listeners.
+   */
+  triggerPull: TriggerPullFn;
+  /**
+   * Resolve a pending ongoing-sync conflict.
+   * `"keep-server"` accepts the server version and clears the conflict state.
+   * `"keep-mine"` re-pushes the conflicted items with fresh timestamps.
+   */
+  resolveOngoingConflicts: ResolveOngoingConflictsFn;
 }
 
 const NO_OP_CONTEXT: OngoingSyncContextType = {
@@ -43,7 +55,11 @@ const NO_OP_CONTEXT: OngoingSyncContextType = {
   outboxCount: 0,
   hasSyncError: false,
   conflictCount: 0,
+  conflictedPayload: null,
+  retryAfter: null,
   enqueueChange: () => {},
+  triggerPull: () => {},
+  resolveOngoingConflicts: () => {},
 };
 
 const OngoingSyncContext = createContext<OngoingSyncContextType | null>(null);
@@ -77,35 +93,77 @@ interface OngoingSyncProviderProps {
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId } = useAuth();
   const fetchFn = useApiClient();
-  const { entries: currentTimeOffEntries, replaceEntries } = useEventStore();
+  const { options } = useDeveloperOptions();
 
-  // Keep a ref to currentTimeOffEntries so that onIncrementalPull always reads
-  // the latest local entries without needing to be recreated on every change.
-  const currentTimeOffEntriesRef = useRef(currentTimeOffEntries);
+  // Keep collection mutation handlers and the queryFn informed of the current
+  // user ID and API base URL so they can attach auth cookies and queue outbox
+  // entries under the correct user key.
   useEffect(() => {
-    currentTimeOffEntriesRef.current = currentTimeOffEntries;
-  }, [currentTimeOffEntries]);
+    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null, options.apiUrl);
+  }, [isAuthenticated, userId, options.apiUrl]);
 
-  // Build the incremental-pull callback.  When a pull returns data, merge it
-  // into localStorage and the EventStore without resetting other state.
-  const onIncrementalPull = useCallback(
-    (data: SyncPullResponse) => {
-      const merged = applyIncrementalSyncPullResponse(data, currentTimeOffEntriesRef.current);
-      replaceEntries(merged);
-    },
-    [replaceEntries],
-  );
+  // Build the incremental-pull callback. When a pull returns data, apply it
+  // to all collections via direct writes (no server re-push triggered).
+  const onIncrementalPull = useCallback((data: SyncPullResponse) => {
+    applyIncrementalPullToCollections(data);
+  }, []);
 
-  const { enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount } = useOngoingSync(
+  const {
+    enqueueChange,
+    triggerPull,
+    resolveOngoingConflicts,
+    isSyncing,
+    lastSyncedAt,
+    outboxCount,
+    hasSyncError,
+    conflictCount,
+    conflictedPayload,
+    retryAfter,
+  } = useOngoingSync(
     isSyncEstablished,
     userId,
     isAuthenticated ? fetchFn : null,
     onIncrementalPull,
   );
 
+  // Build the SSE transport once per API base URL change.  The transport is
+  // null when the user is not authenticated so that no connection is opened
+  // before sync is established.
+  const sseTransport = useMemo<SyncSignalTransport | null>(() => {
+    if (!isAuthenticated) return null;
+    if (!options.apiUrl) return null;
+    const eventsUrl = new URL("/api/sync/events", options.apiUrl).toString();
+    return createSseTransport(eventsUrl);
+  }, [isAuthenticated, options.apiUrl]);
+
+  // Subscribe to sync-changed signals and trigger incremental pulls.
+  useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
+
   const value = useMemo<OngoingSyncContextType>(
-    () => ({ enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount }),
-    [enqueueChange, isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount],
+    () => ({
+      enqueueChange,
+      triggerPull,
+      resolveOngoingConflicts,
+      isSyncing,
+      lastSyncedAt,
+      outboxCount,
+      hasSyncError,
+      conflictCount,
+      conflictedPayload,
+      retryAfter,
+    }),
+    [
+      enqueueChange,
+      triggerPull,
+      resolveOngoingConflicts,
+      isSyncing,
+      lastSyncedAt,
+      outboxCount,
+      hasSyncError,
+      conflictCount,
+      conflictedPayload,
+      retryAfter,
+    ],
   );
 
   return <OngoingSyncContext.Provider value={value}>{children}</OngoingSyncContext.Provider>;
@@ -114,13 +172,14 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
 /**
  * Build a full sync payload skeleton with all arrays initialised to empty.
  * Callers fill in the relevant entity arrays before calling `enqueueChange`.
- *
- * Note: `time_off_entries` is included in the skeleton because the backend
- * push endpoint accepts them, but write hooks (`useTimeTrackingStorage`,
- * `useWorkLocationStorage`) do not populate it — time-off entries are managed
- * exclusively through the EventStore and are received via incremental pull
- * (`applyIncrementalSyncPullResponse`) rather than pushed from write hooks.
  */
 export function emptySyncPayload(): SyncPushPayload {
-  return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
+  return {
+    labels: [],
+    tasks: [],
+    templates: [],
+    work_locations: [],
+    time_off_entries: [],
+    gantt_tasks: [],
+  };
 }

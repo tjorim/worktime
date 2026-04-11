@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { dayjs } from "@/utils/dateTimeUtils";
 import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -119,7 +120,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         const controller = new AbortController();
         timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch(`${testUrl}/health`, {
+        const response = await fetch(`${testUrl}/api/health`, {
           method: "GET",
           signal: controller.signal,
           headers: {
@@ -132,14 +133,14 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
             ...prev,
             enabled: true,
             connectionStatus: "connected",
-            lastConnectionTest: Date.now(),
+            lastConnectionTest: dayjs().valueOf(),
           }));
           return true;
         } else {
           setOptions((prev) => ({
             ...prev,
             connectionStatus: "error",
-            lastConnectionTest: Date.now(),
+            lastConnectionTest: dayjs().valueOf(),
           }));
           return false;
         }
@@ -148,7 +149,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         setOptions((prev) => ({
           ...prev,
           connectionStatus: "error",
-          lastConnectionTest: Date.now(),
+          lastConnectionTest: dayjs().valueOf(),
         }));
         return false;
       } finally {

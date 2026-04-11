@@ -1,6 +1,15 @@
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
+import { cleanup } from "@testing-library/react";
 import * as React from "react";
+import {
+  ganttTasksCollection,
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
 
 // Make React available globally for JSX in tests
 globalThis.React = React;
@@ -76,13 +85,42 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// Set up DOM environment
-beforeEach(() => {
-  // Clear document body
-  document.body.innerHTML = "";
+// ---------------------------------------------------------------------------
+// TanStack DB collection cleanup helper
+//
+// QueryCollection-backed collections are module-level singletons. Unlike
+// localStorage, they are NOT reset by localStorage.clear(). We must explicitly
+// delete every row before each test to prevent state from bleeding between tests.
+//
+// We use `collection.delete(id)` directly rather than `utils.writeBatch` +
+// `utils.writeDelete` because the latter requires an active sync context, which
+// may not be present when the cleanup runs outside a React component tree.
+// The regular `delete` works without a sync context. Its `onDelete` push handler
+// fires but is a no-op in tests because `_currentUserId` is null.
+// ---------------------------------------------------------------------------
 
-  // Reset localStorage
+async function resetTestState(): Promise<void> {
+  document.body.innerHTML = "";
   localStorage.clear();
+
+  await Promise.all([
+    ganttTasksCollection.cleanup(),
+    tasksCollection.cleanup(),
+    labelsCollection.cleanup(),
+    templatesCollection.cleanup(),
+    timeOffCollection.cleanup(),
+    workLocationsCollection.cleanup(),
+  ]);
+}
+
+// Set up DOM environment
+beforeEach(async () => {
+  await resetTestState();
+});
+
+afterEach(async () => {
+  cleanup();
+  await resetTestState();
 });
 
 // Note: dayjs plugins are handled by actual imports in components for better compatibility

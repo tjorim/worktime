@@ -5,6 +5,14 @@
  * mirrors the App provider composition (without SuperTokensWrapper / AuthProvider
  * which carry network side effects). Import these in component/integration tests
  * that need QueryClient, Settings, Toast, or EventStore context.
+ *
+ * ## TanStack DB compatibility
+ *
+ * TanStack DB collections (defined in `src/db/collections.ts`) are module-level
+ * singletons that do not require a React provider. This wrapper is therefore
+ * sufficient for component tests that consume migrated TanStack DB collections.
+ * Test isolation is guaranteed by the global `beforeEach` in `tests/setup.ts`,
+ * which clears every collection's rows before each test.
  */
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

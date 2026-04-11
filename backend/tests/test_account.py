@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 def test_unauthenticated_me_returns_401(db_client: TestClient) -> None:
     """Requests without an Authorization header should be rejected with 401."""
-    response = db_client.get("/me")
+    response = db_client.get("/api/me")
     assert response.status_code == 401
 
 
@@ -22,7 +22,7 @@ def test_authenticated_me_returns_profile(
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "me-user")
 
-    response = db_client.get("/me", headers=auth_headers(user_id))
+    response = db_client.get("/api/me", headers=auth_headers(user_id))
 
     assert response.status_code == 200
     data = response.json()
@@ -42,7 +42,7 @@ def test_admin_me_returns_admin_flag(
     admin_headers = auth_headers(1, is_admin=True)
     user_id = create_user_factory(db_client, admin_headers, "me-regular")
 
-    response = db_client.get("/me", headers=auth_headers(user_id, is_admin=True))
+    response = db_client.get("/api/me", headers=auth_headers(user_id, is_admin=True))
 
     assert response.status_code == 200
     data = response.json()
@@ -56,5 +56,5 @@ def test_me_stale_principal_returns_404(
     auth_headers: Callable[..., dict[str, str]],
 ) -> None:
     """A token for a user that does not exist in the DB should yield 404."""
-    response = db_client.get("/me", headers=auth_headers(9999))
+    response = db_client.get("/api/me", headers=auth_headers(9999))
     assert response.status_code == 404

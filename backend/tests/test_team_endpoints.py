@@ -3,11 +3,16 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import settings
+from app.config.settings import settings
 from app.main import app
 
 # Expected etag length: "sha256:" (7 chars) + 64 hex characters = 71
 EXPECTED_SHA256_ETAG_LENGTH = 71
+
+pytestmark = pytest.mark.skipif(
+    not settings.LEGACY_FILESHARE_ENABLED,
+    reason="Legacy fileshare not enabled (LEGACY_FILESHARE_ENABLED=False)"
+)
 
 
 @pytest.fixture
@@ -42,7 +47,7 @@ class TestGetTeamInfoEndpoint:
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         assert response.status_code == 200
         data = response.json()
@@ -65,7 +70,7 @@ class TestGetTeamInfoEndpoint:
         people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         assert response.status_code == 200
         data = response.json()
@@ -73,7 +78,7 @@ class TestGetTeamInfoEndpoint:
 
     def test_get_team_info_team_not_found(self, client, share_dir):
         """Test GET returns 404 when team doesn't exist."""
-        response = client.get("/team/nonexistent")
+        response = client.get("/api/team/nonexistent")
 
         assert response.status_code == 404
         data = response.json()
@@ -88,7 +93,7 @@ class TestGetTeamInfoEndpoint:
         people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe\n", encoding="utf-8")
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         assert response.status_code == 404
         data = response.json()
@@ -103,7 +108,7 @@ class TestGetTeamInfoEndpoint:
         config_file = config_dir / "team1.conf"
         config_file.write_text("groupname=Engineering Team", encoding="utf-8")
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         assert response.status_code == 404
         data = response.json()
@@ -114,7 +119,7 @@ class TestGetTeamInfoEndpoint:
         # Use a non-existent directory
         monkeypatch.setattr(settings, "SHARE_DIR", str(tmp_path / "nonexistent"))
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         # When share directory doesn't exist, we get 503
         assert response.status_code == 503
@@ -125,21 +130,21 @@ class TestGetTeamInfoEndpoint:
         """Test GET rejects path traversal attempts."""
         # FastAPI normalizes the path, so "../etc" becomes "..%2Fetc" in the URL
         # or gets normalized before reaching our handler
-        response = client.get("/team/../etc")
+        response = client.get("/api/team/../etc")
 
         # FastAPI's routing may return 404 Not Found for invalid paths
         assert response.status_code == 404
 
     def test_get_team_info_rejects_absolute_path(self, client, share_dir):
         """Test GET rejects absolute path attempts."""
-        response = client.get("/team//etc/passwd")
+        response = client.get("/api/team//etc/passwd")
 
         assert response.status_code == 404
 
     def test_get_team_info_rejects_invalid_team_id(self, client, share_dir):
         """Test GET returns 400 for invalid team_id format."""
         # Test team_id with leading dot (invalid format that reaches our handler)
-        response = client.get("/team/.hidden")
+        response = client.get("/api/team/.hidden")
         assert response.status_code == 400
         data = response.json()
         assert "Invalid team_id" in data["detail"]
@@ -155,7 +160,7 @@ class TestGetTeamInfoEndpoint:
         people_file = config_dir / "team1.people"
         people_file.write_text("", encoding="utf-8")
 
-        response = client.get("/team/team1")
+        response = client.get("/api/team/team1")
 
         assert response.status_code == 200
         data = response.json()
@@ -188,7 +193,7 @@ class TestGetTeamHdayEndpoint:
         asmith_hday = share_dir / "asmith.hday"
         asmith_hday.write_text("2025/02/20 # Conference\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -231,7 +236,7 @@ class TestGetTeamHdayEndpoint:
         jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -262,7 +267,7 @@ class TestGetTeamHdayEndpoint:
             "jdoe,John Doe\nasmith,Alice Smith\n", encoding="utf-8"
         )
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -290,7 +295,7 @@ class TestGetTeamHdayEndpoint:
         jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -321,7 +326,7 @@ d1 # Every Monday
         jdoe_hday.write_text(hday_content, encoding="utf-8")
 
         # Use format=parsed to get parsed events
-        response = client.get("/team/team1/hday?format=parsed")
+        response = client.get("/api/team/team1/hday?format=parsed")
 
         assert response.status_code == 200
         data = response.json()
@@ -335,7 +340,7 @@ d1 # Every Monday
 
     def test_get_team_hday_team_not_found(self, client, share_dir):
         """Test GET returns 404 when team doesn't exist."""
-        response = client.get("/team/nonexistent/hday")
+        response = client.get("/api/team/nonexistent/hday")
 
         assert response.status_code == 404
         data = response.json()
@@ -349,7 +354,7 @@ d1 # Every Monday
         config_file = config_dir / "team1.conf"
         config_file.write_text("groupname=Engineering Team", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 404
         data = response.json()
@@ -359,7 +364,7 @@ d1 # Every Monday
         """Test GET returns 503 when share directory is not accessible."""
         monkeypatch.setattr(settings, "SHARE_DIR", str(tmp_path / "nonexistent"))
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         # When share directory doesn't exist, we get 503
         assert response.status_code == 503
@@ -370,7 +375,7 @@ d1 # Every Monday
         """Test GET rejects path traversal attempts."""
         # FastAPI normalizes the path, so "../etc" becomes "..%2Fetc" in the URL
         # or gets normalized before reaching our handler
-        response = client.get("/team/../etc/hday")
+        response = client.get("/api/team/../etc/hday")
 
         # FastAPI's routing may return 404 Not Found for invalid paths
         assert response.status_code == 404
@@ -378,7 +383,7 @@ d1 # Every Monday
     def test_get_team_hday_rejects_invalid_team_id(self, client, share_dir):
         """Test GET returns 400 for invalid team_id format."""
         # Test team_id with leading dot (invalid format that reaches our handler)
-        response = client.get("/team/.hidden/hday")
+        response = client.get("/api/team/.hidden/hday")
         assert response.status_code == 400
         data = response.json()
         assert "Invalid team_id" in data["detail"]
@@ -394,7 +399,7 @@ d1 # Every Monday
         people_file = config_dir / "team1.people"
         people_file.write_text("", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -416,7 +421,7 @@ d1 # Every Monday
         jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # 휴가일 (vacation)\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -438,7 +443,7 @@ d1 # Every Monday
         jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
 
         assert response.status_code == 200
         data = response.json()
@@ -462,7 +467,7 @@ d1 # Every Monday
         jdoe_hday = share_dir / "jdoe.hday"
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday?format=raw")
+        response = client.get("/api/team/team1/hday?format=raw")
 
         assert response.status_code == 200
         data = response.json()
@@ -486,7 +491,7 @@ d1 # Every Monday
         asmith_hday = share_dir / "asmith.hday"
         asmith_hday.write_text("2025/02/20 # Conference\n", encoding="utf-8")
 
-        response = client.get("/team/team1/hday?format=parsed")
+        response = client.get("/api/team/team1/hday?format=parsed")
 
         assert response.status_code == 200
         data = response.json()
@@ -521,7 +526,7 @@ d1 # Every Monday
         jdoe_hday.write_text("2025/01/15 # Vacation\n", encoding="utf-8")
         # asmith.hday intentionally not created
 
-        response = client.get("/team/team1/hday?format=parsed")
+        response = client.get("/api/team/team1/hday?format=parsed")
 
         assert response.status_code == 200
         data = response.json()
@@ -557,7 +562,7 @@ class TestTeamHdayTimingHeaders:
         hday_file = share_dir / "jdoe.hday"
         hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
         
-        response = client.get("/team/team1/hday?format=raw")
+        response = client.get("/api/team/team1/hday?format=raw")
         
         assert response.status_code == 200
         
@@ -595,7 +600,7 @@ class TestTeamHdayTimingHeaders:
         hday_file = share_dir / "jdoe.hday"
         hday_file.write_text("2025/01/15 # Vacation", encoding="utf-8")
         
-        response = client.get("/team/team1/hday?format=parsed")
+        response = client.get("/api/team/team1/hday?format=parsed")
         
         assert response.status_code == 200
         
@@ -630,7 +635,7 @@ class TestTeamHdayTimingHeaders:
         people_file = config_dir / "team1.people"
         people_file.write_text("jdoe,John Doe", encoding="utf-8")
         
-        response = client.get("/team/team1/hday")
+        response = client.get("/api/team/team1/hday")
         
         assert response.status_code == 200
         
@@ -666,7 +671,7 @@ class TestTeamHdayTimingHeaders:
         (share_dir / "asmith.hday").write_text("2025/02/10 # Day off", encoding="utf-8")
         (share_dir / "blee.hday").write_text("2025/03/01 # Conference", encoding="utf-8")
         
-        response = client.get("/team/team1/hday?format=parsed")
+        response = client.get("/api/team/team1/hday?format=parsed")
         
         assert response.status_code == 200
         

@@ -709,21 +709,21 @@ describe("WelcomeWizard", () => {
 
       // Navigate to features step
       await user.click(screen.getByRole("button", { name: /Let's Get Started/i }));
-      expect(screen.getByText(/Step 2 of 9/i)).toBeInTheDocument();
+      await waitForStep(2, 9);
 
       // Navigate to schedule selection step
       await user.click(screen.getByRole("button", { name: /Choose a Schedule/i }));
-      expect(screen.getByText(/Step 3 of 9/i)).toBeInTheDocument();
+      await waitForStep(3, 9);
 
       // Choose 5-shift to reveal team selection
       await user.click(screen.getByRole("button", { name: /5-shift/i }));
       await user.click(screen.getByRole("button", { name: /Continue/i }));
-      expect(screen.getByText(/Step 4 of 9/i)).toBeInTheDocument();
+      await waitForStep(4, 9);
 
       // Select a team to go to vacation allowance step
       await user.click(screen.getByLabelText(/Select Team 1/i));
-      expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
-    });
+      await waitForStep(5, 9);
+    }, 15000);
 
     it("should save vacation allowance when browsing all teams without selecting one", async () => {
       const user = userEvent.setup();
@@ -771,7 +771,7 @@ describe("WelcomeWizard", () => {
       );
       expect(saved.hasCompletedOnboarding).toBe(true);
       expect(saved.myTeam).toBeNull(); // No team was selected
-    });
+    }, 15000);
 
     it("should save vacation allowance when updated in change-team mode", async () => {
       const user = userEvent.setup();

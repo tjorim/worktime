@@ -59,3 +59,27 @@ export interface WorkLocationInfo {
  * Contains only explicitly set locations; days without an entry use the default (office).
  */
 export type WorkLocationMap = Map<string, WorkLocationInfo>;
+
+/**
+ * A work location record with its date key inlined.
+ * Used as the item type for the TanStack DB work locations collection,
+ * where each row must carry its own identity.
+ *
+ * Only `countryCode` and optional `label` are persisted (locally and via sync).
+ * The `location` classification (home/office/other) is derived at read time by
+ * comparing `countryCode` against the user's homeCountry/officeCountry settings,
+ * so it always reflects the current profile — not the value at write time.
+ */
+export interface WorkLocationEntry {
+  /** Date string in YYYY-MM-DD format. */
+  date: string;
+  /**
+   * ISO 3166-1 alpha-2 country code for the work location.
+   * Captured at write time for tax/regulatory compliance.
+   */
+  countryCode: IsoAlpha2;
+  /**
+   * Optional free-text annotation for "other" locations (e.g. "Berlin office", "Client NL").
+   */
+  label?: string;
+}

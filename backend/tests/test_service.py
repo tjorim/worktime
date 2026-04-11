@@ -125,12 +125,13 @@ class TestReadHdayFile:
         with patch("app.services.hday_service.get_hday_path", return_value=test_file):
             with patch("app.services.hday_service.os.access", return_value=True):
                 with patch("app.services.hday_service.Path.exists", return_value=True):
-                    # Read the file
-                    raw, etag = read_hday_file("testuser")
+                    with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
+                        # Read the file
+                        raw, etag = read_hday_file("testuser")
 
-                    assert raw == content
-                    assert etag.startswith("sha256:")
-                    assert etag == compute_etag(content)
+                        assert raw == content
+                        assert etag.startswith("sha256:")
+                        assert etag == compute_etag(content)
 
     def test_read_nonexistent_file(self, tmp_path):
         """Test reading a nonexistent file."""
@@ -142,10 +143,11 @@ class TestReadHdayFile:
         with patch("app.services.hday_service.get_hday_path", return_value=test_file):
             with patch("app.services.hday_service.os.access", return_value=True):
                 with patch("app.services.hday_service.Path.exists", autospec=True, side_effect=mocked_exists):
-                    with pytest.raises(HdayFileNotFoundError) as exc_info:
-                        read_hday_file("nonexistent")
+                    with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
+                        with pytest.raises(HdayFileNotFoundError) as exc_info:
+                            read_hday_file("nonexistent")
 
-                    assert "nonexistent" in str(exc_info.value)
+                        assert "nonexistent" in str(exc_info.value)
 
     def test_read_file_with_unicode(self, tmp_path):
         """Test reading a file with Unicode content."""
@@ -156,10 +158,11 @@ class TestReadHdayFile:
         with patch("app.services.hday_service.get_hday_path", return_value=test_file):
             with patch("app.services.hday_service.os.access", return_value=True):
                 with patch("app.services.hday_service.Path.exists", return_value=True):
-                    raw, etag = read_hday_file("testuser")
+                    with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
+                        raw, etag = read_hday_file("testuser")
 
-                    assert raw == content
-                    assert etag == compute_etag(content)
+                        assert raw == content
+                        assert etag == compute_etag(content)
 
     def test_read_empty_file(self, tmp_path):
         """Test reading an empty file."""
@@ -169,10 +172,11 @@ class TestReadHdayFile:
         with patch("app.services.hday_service.get_hday_path", return_value=test_file):
             with patch("app.services.hday_service.os.access", return_value=True):
                 with patch("app.services.hday_service.Path.exists", return_value=True):
-                    raw, etag = read_hday_file("testuser")
+                    with patch("app.services.hday_service.settings.get_share_dir_path", return_value=tmp_path):
+                        raw, etag = read_hday_file("testuser")
 
-                    assert raw == ""
-                    assert etag == compute_etag("")
+                        assert raw == ""
+                        assert etag == compute_etag("")
 
     def test_read_share_dir_not_exists(self):
         """Test reading when share directory doesn't exist."""

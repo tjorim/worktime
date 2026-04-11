@@ -139,7 +139,7 @@ export function TeamScheduleView() {
     try {
       // Fetch team .hday data (includes team info)
       const response = await fetch(
-        `${apiUrl}/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
+        `${apiUrl}/api/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
         {
           method: "GET",
           headers: {

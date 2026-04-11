@@ -105,7 +105,7 @@ class TestTimingMiddleware:
     
     def test_timing_header_on_health(self, client):
         """Test that timing header is added to health endpoint."""
-        response = client.get("/health")
+        response = client.get("/api/health")
         
         assert "X-Total-Ms" in response.headers
         timing_value = float(response.headers["X-Total-Ms"])

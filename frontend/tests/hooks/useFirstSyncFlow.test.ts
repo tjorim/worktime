@@ -2,9 +2,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { TIME_TRACKING_STORAGE_KEYS, TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { tasksCollection, timeOffCollection } from "@/db/collections";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(EventStoreProvider, null, children);
@@ -17,6 +17,7 @@ const emptyStatus = {
   templates_updated_at: null,
   work_locations_updated_at: null,
   time_off_entries_updated_at: null,
+  gantt_tasks_updated_at: null,
   preferences_updated_at: null,
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
@@ -27,6 +28,7 @@ const populatedStatus = {
   templates_updated_at: null,
   work_locations_updated_at: null,
   time_off_entries_updated_at: null,
+  gantt_tasks_updated_at: null,
   preferences_updated_at: null,
   server_timestamp: "2026-01-01T00:00:00.000Z",
 };
@@ -37,32 +39,25 @@ const emptyPullResponse = {
   templates: [],
   work_locations: [],
   time_off_entries: [],
+  gantt_tasks: [],
   server_timestamp: "2026-01-02T00:00:00.000Z",
 };
 
 const emptyPushResponse = { results: {} };
 
 function seedTasks() {
-  localStorage.setItem(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    JSON.stringify([{ id: "t1", text: "Test", label: "", startTime: "2026-01-01T09:00" }]),
-  );
+  tasksCollection.insert({ id: "t1", text: "Test", label: "", startTime: "2026-01-01T09:00" });
 }
 
 function seedTimeOff() {
-  localStorage.setItem(
-    TIME_OFF_ENTRIES_STORAGE_KEY,
-    JSON.stringify([
-      {
-        id: "t1",
-        entryKind: "date",
-        date: "2026-07-14",
-        entryType: "vacation",
-        entryFlag: "full_day",
-        note: "Bastille Day",
-      },
-    ]),
-  );
+  timeOffCollection.insert({
+    id: "t1",
+    entryKind: "date",
+    date: "2026-07-14",
+    entryType: "vacation",
+    entryFlag: "full_day",
+    note: "Bastille Day",
+  });
 }
 
 describe("useFirstSyncFlow", () => {
@@ -115,7 +110,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities (empty payload)
-      .mockResolvedValueOnce({ ok: true }) // PUT /db/preferences
+      .mockResolvedValueOnce({ ok: true }) // PUT /api/preferences
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -124,12 +119,12 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/push");
+    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
     expect(pushCall).toBeDefined();
 
     const prefsPushCall = mockFetch.mock.calls.find(
       ([url, init]: [string, RequestInit | undefined]) =>
-        url === "/db/preferences" && init?.method === "PUT",
+        url === "/api/preferences" && init?.method === "PUT",
     );
     expect(prefsPushCall).toBeDefined();
   });
@@ -149,7 +144,7 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/push");
+    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
     expect(pushCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).not.toBeNull();
   });
@@ -169,7 +164,7 @@ describe("useFirstSyncFlow", () => {
     });
 
     // Push endpoint should have been called with time-off entries
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/push");
+    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
     expect(pushCall).toBeDefined();
     const body = JSON.parse((pushCall as [string, RequestInit])[1].body as string);
     expect(body.time_off_entries).toHaveLength(1);
@@ -182,7 +177,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
-      .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
+      .mockResolvedValueOnce({ ok: false }); // GET /api/preferences — no prefs on server
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -190,7 +185,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/pull");
+    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
     expect(pullCall).toBeDefined();
     expect(localStorage.getItem(getSyncCursorKey("user-1"))).toBe(
       emptyPullResponse.server_timestamp,
@@ -232,7 +227,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/push");
+    const pushCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/push");
     expect(pushCall).toBeDefined();
   });
 
@@ -242,7 +237,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // initial status
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull
-      .mockResolvedValueOnce({ ok: false }); // GET /db/preferences — no prefs on server
+      .mockResolvedValueOnce({ ok: false }); // GET /api/preferences — no prefs on server
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -258,7 +253,7 @@ describe("useFirstSyncFlow", () => {
       expect(result.current.phase).toBe("done");
     });
 
-    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/db/sync/pull");
+    const pullCall = mockFetch.mock.calls.find(([url]: [string]) => url === "/api/sync/pull");
     expect(pullCall).toBeDefined();
   });
 
@@ -297,7 +292,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
-      .mockResolvedValueOnce({ ok: true }) // PUT /db/preferences
+      .mockResolvedValueOnce({ ok: true }) // PUT /api/preferences
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }); // re-fetch status
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
@@ -308,7 +303,7 @@ describe("useFirstSyncFlow", () => {
 
     const prefsPushCall = mockFetch.mock.calls.find(
       ([url, init]: [string, RequestInit | undefined]) =>
-        url === "/db/preferences" && init?.method === "PUT",
+        url === "/api/preferences" && init?.method === "PUT",
     );
     expect(prefsPushCall).toBeDefined();
   });
@@ -320,7 +315,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => emptyStatus }) // status check
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // push entities
-      .mockResolvedValueOnce({ ok: false }); // PUT /db/preferences fails
+      .mockResolvedValueOnce({ ok: false }); // PUT /api/preferences fails
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 
@@ -343,7 +338,7 @@ describe("useFirstSyncFlow", () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => populatedStatus }) // status
       .mockResolvedValueOnce({ ok: true, json: async () => emptyPullResponse }) // pull entities
-      .mockResolvedValueOnce({ ok: true, json: async () => serverPrefs }); // GET /db/preferences
+      .mockResolvedValueOnce({ ok: true, json: async () => serverPrefs }); // GET /api/preferences
 
     const { result } = renderHook(() => useFirstSyncFlow(true, "user-1", mockFetch), { wrapper });
 

@@ -7,7 +7,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
+import { timeOffCollection } from "@/db/collections";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
@@ -117,10 +117,10 @@ const setupUserState = (
 };
 
 /**
- * Stores time-off entries in localStorage for EventStoreProvider.
+ * Seeds time-off entries into the collection for EventStoreProvider.
  */
 const setupTimeOffEvents = (events: TimeOffEntry[]) => {
-  localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(events));
+  timeOffCollection.utils.writeUpsert(events);
 };
 
 /**
@@ -217,10 +217,8 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events are rendered (may appear multiple times across date range)
-      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole("button", { name: /View Remote Work/i }).length).toBeGreaterThan(
-        0,
-      );
+      expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(0);
     });
 
     it("combines school holidays with roster shifts", () => {
@@ -276,7 +274,7 @@ describe("CalendarView Integration Tests", () => {
       expect(
         screen.getAllByRole("gridcell", { name: /School Holiday: Winter Holiday/i }).length,
       ).toBeGreaterThan(0);
-      expect(screen.getByRole("button", { name: /View Personal Day/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Personal Day/i })).toBeInTheDocument();
     });
   });
 
@@ -320,7 +318,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence since it spans multiple days)
-      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
+      const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
       expect(vacationBadges.length).toBeGreaterThan(0);
       const vacationBadge = vacationBadges[0];
 
@@ -350,7 +348,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence)
-      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
+      const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
       const vacationBadge = vacationBadges[0];
 
       // Right-click the event using fireEvent
@@ -472,8 +470,8 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events are NOT displayed
-      expect(screen.queryByRole("button", { name: /View Vacation/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /View Remote Work/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Vacation/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Remote Work/i })).not.toBeInTheDocument();
     });
 
     it("shows time-off events when feature is enabled", () => {
@@ -487,10 +485,8 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Verify time-off events ARE displayed (may appear multiple times)
-      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole("button", { name: /View Remote Work/i }).length).toBeGreaterThan(
-        0,
-      );
+      expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Remote Work/i }).length).toBeGreaterThan(0);
     });
 
     it("does not show event modal when time-off is disabled", () => {
@@ -599,7 +595,7 @@ describe("CalendarView Integration Tests", () => {
 
       // Verify modal closes and event is added
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /View Doctor Appointment/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Doctor Appointment/i })).toBeInTheDocument();
     });
 
     it("validates date input when adding events", async () => {
@@ -631,7 +627,7 @@ describe("CalendarView Integration Tests", () => {
       renderCalendarView({ myTeam: 1 });
 
       // Click on an event to view it (get first occurrence) using fireEvent
-      const vacationBadges = screen.getAllByRole("button", { name: /View Vacation/i });
+      const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
       const vacationBadge = vacationBadges[0];
       fireEvent.click(vacationBadge);
 
@@ -660,7 +656,7 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.click(vacationBadge);
 
       const modal = screen.getByRole("dialog");
@@ -687,7 +683,7 @@ describe("CalendarView Integration Tests", () => {
 
       renderCalendarView({ myTeam: 1 });
 
-      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.click(vacationBadge);
 
       const modal = screen.getByRole("dialog");
@@ -720,7 +716,7 @@ describe("CalendarView Integration Tests", () => {
      * Helper function to open the delete confirmation dialog for the first vacation event.
      */
     const openDeleteConfirmationForVacation = () => {
-      const vacationBadge = screen.getAllByRole("button", { name: /View Vacation/i })[0];
+      const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.contextMenu(vacationBadge);
       fireEvent.click(screen.getByText("Delete event"));
     };
@@ -750,7 +746,7 @@ describe("CalendarView Integration Tests", () => {
       fireEvent.click(cancelButton);
 
       // Verify event still exists
-      expect(screen.getAllByRole("button", { name: /View Vacation/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
     });
 
     it("deletes event when user confirms", async () => {
@@ -761,7 +757,7 @@ describe("CalendarView Integration Tests", () => {
       fireEvent.click(deleteButton);
 
       // Verify event is removed
-      expect(screen.queryByRole("button", { name: /View Vacation/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Vacation/i })).not.toBeInTheDocument();
     });
   });
 });

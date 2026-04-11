@@ -19,7 +19,7 @@ def test_label_crud_and_cascade_delete(
     headers = auth_headers(user_id)
 
     label_response = db_client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         json={"name": "Focus", "color": "#112233"},
         headers=headers,
     )
@@ -27,14 +27,14 @@ def test_label_crud_and_cascade_delete(
     label_id = label_response.json()["id"]
 
     update_label_response = db_client.put(
-        f"/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         json={"name": "Deep Focus", "color": "#223344"},
         headers=headers,
     )
     assert update_label_response.status_code == 200
 
     task_response = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Labeled task",
             "label_id": label_id,
@@ -48,12 +48,12 @@ def test_label_crud_and_cascade_delete(
     task_id = task_response.json()["id"]
 
     delete_label_response = db_client.delete(
-        f"/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_label_response.status_code == 204
 
-    list_tasks_response = db_client.get(f"/db/time-tracking/tasks?user_id={user_id}", headers=headers)
+    list_tasks_response = db_client.get(f"/api/time-tracking/tasks?user_id={user_id}", headers=headers)
     assert list_tasks_response.status_code == 200
     assert list_tasks_response.json()["items"][0]["id"] == task_id
     assert list_tasks_response.json()["items"][0]["label_id"] is None
@@ -72,7 +72,7 @@ def test_task_constraints_and_filtering(
     other_headers = auth_headers(other_user_id)
 
     label_response = db_client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         json={"name": "Client", "color": "#778899"},
         headers=headers,
     )
@@ -80,7 +80,7 @@ def test_task_constraints_and_filtering(
     label_id = label_response.json()["id"]
 
     invalid_label_task = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Invalid label",
             "label_id": "not-a-real-label",
@@ -93,7 +93,7 @@ def test_task_constraints_and_filtering(
     assert invalid_label_task.status_code == 404
 
     running_task = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Running task",
             "label_id": label_id,
@@ -107,7 +107,7 @@ def test_task_constraints_and_filtering(
     running_task_id = running_task.json()["id"]
 
     second_running_task = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Second running",
             "label_id": label_id,
@@ -120,14 +120,14 @@ def test_task_constraints_and_filtering(
     assert second_running_task.status_code == 409
 
     stop_running_response = db_client.put(
-        f"/db/time-tracking/tasks/{running_task_id}?user_id={user_id}",
+        f"/api/time-tracking/tasks/{running_task_id}?user_id={user_id}",
         json={"stop_time": datetime(2026, 2, 2, 11, 0).isoformat()},
         headers=headers,
     )
     assert stop_running_response.status_code == 200
 
     second_task = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Filtered task",
             "label_id": label_id,
@@ -140,14 +140,14 @@ def test_task_constraints_and_filtering(
     assert second_task.status_code == 201
 
     other_user_label = db_client.post(
-        f"/db/time-tracking/labels?user_id={other_user_id}",
+        f"/api/time-tracking/labels?user_id={other_user_id}",
         json={"name": "Other", "color": "#102030"},
         headers=other_headers,
     )
     assert other_user_label.status_code == 201
 
     other_user_task = db_client.post(
-        f"/db/time-tracking/tasks?user_id={other_user_id}",
+        f"/api/time-tracking/tasks?user_id={other_user_id}",
         json={
             "text": "Other user task",
             "label_id": other_user_label.json()["id"],
@@ -161,7 +161,7 @@ def test_task_constraints_and_filtering(
 
     filtered_by_date_and_label = db_client.get(
         (
-            f"/db/time-tracking/tasks?user_id={user_id}"
+            f"/api/time-tracking/tasks?user_id={user_id}"
             "&start_date=2026-02-03T00:00:00&end_date=2026-02-03T23:59:59"
             f"&label_id={label_id}"
         ),
@@ -186,7 +186,7 @@ def test_get_single_resources(
 
     # Create a label
     label_response = db_client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         json={"name": "Single Label", "color": "#aabbcc"},
         headers=headers,
     )
@@ -195,7 +195,7 @@ def test_get_single_resources(
 
     # GET label by id — owner gets 200
     get_label_response = db_client.get(
-        f"/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert get_label_response.status_code == 200
@@ -204,28 +204,28 @@ def test_get_single_resources(
 
     # GET label by id — user_id/token mismatch (impersonation) gets 403
     get_label_forbidden = db_client.get(
-        f"/db/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
         headers=other_headers,
     )
     assert get_label_forbidden.status_code == 403
 
     # GET label by id — other user's own id but label belongs to owner → 404
     get_label_wrong_owner = db_client.get(
-        f"/db/time-tracking/labels/{label_id}?user_id={other_user_id}",
+        f"/api/time-tracking/labels/{label_id}?user_id={other_user_id}",
         headers=other_headers,
     )
     assert get_label_wrong_owner.status_code == 404
 
     # GET label by id — missing id gets 404
     get_label_missing = db_client.get(
-        f"/db/time-tracking/labels/not-a-real-id?user_id={user_id}",
+        f"/api/time-tracking/labels/not-a-real-id?user_id={user_id}",
         headers=headers,
     )
     assert get_label_missing.status_code == 404
 
     # Create a task
     task_response = db_client.post(
-        f"/db/time-tracking/tasks?user_id={user_id}",
+        f"/api/time-tracking/tasks?user_id={user_id}",
         json={
             "text": "Single task",
             "label_id": label_id,
@@ -240,7 +240,7 @@ def test_get_single_resources(
 
     # GET task by id — owner gets 200
     get_task_response = db_client.get(
-        f"/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
         headers=headers,
     )
     assert get_task_response.status_code == 200
@@ -249,21 +249,21 @@ def test_get_single_resources(
 
     # GET task by id — user_id/token mismatch (impersonation) gets 403
     get_task_forbidden = db_client.get(
-        f"/db/time-tracking/tasks/{task_id}?user_id={user_id}",
+        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}",
         headers=other_headers,
     )
     assert get_task_forbidden.status_code == 403
 
     # GET task by id — missing id gets 404
     get_task_missing = db_client.get(
-        f"/db/time-tracking/tasks/not-a-real-id?user_id={user_id}",
+        f"/api/time-tracking/tasks/not-a-real-id?user_id={user_id}",
         headers=headers,
     )
     assert get_task_missing.status_code == 404
 
     # Create a template
     template_response = db_client.post(
-        f"/db/time-tracking/templates?user_id={user_id}",
+        f"/api/time-tracking/templates?user_id={user_id}",
         json={
             "text": "Single template",
             "label_id": label_id,
@@ -277,7 +277,7 @@ def test_get_single_resources(
 
     # GET template by id — owner gets 200
     get_template_response = db_client.get(
-        f"/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         headers=headers,
     )
     assert get_template_response.status_code == 200
@@ -286,14 +286,14 @@ def test_get_single_resources(
 
     # GET template by id — user_id/token mismatch (impersonation) gets 403
     get_template_forbidden = db_client.get(
-        f"/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         headers=other_headers,
     )
     assert get_template_forbidden.status_code == 403
 
     # GET template by id — missing id gets 404
     get_template_missing = db_client.get(
-        f"/db/time-tracking/templates/not-a-real-id?user_id={user_id}",
+        f"/api/time-tracking/templates/not-a-real-id?user_id={user_id}",
         headers=headers,
     )
     assert get_template_missing.status_code == 404
@@ -309,7 +309,7 @@ def test_template_crud(
     headers = auth_headers(user_id)
 
     label_response = db_client.post(
-        f"/db/time-tracking/labels?user_id={user_id}",
+        f"/api/time-tracking/labels?user_id={user_id}",
         json={"name": "Template Label", "color": "#445566"},
         headers=headers,
     )
@@ -317,7 +317,7 @@ def test_template_crud(
     label_id = label_response.json()["id"]
 
     create_template_response = db_client.post(
-        f"/db/time-tracking/templates?user_id={user_id}",
+        f"/api/time-tracking/templates?user_id={user_id}",
         json={
             "text": "Daily focus",
             "label_id": label_id,
@@ -330,14 +330,14 @@ def test_template_crud(
     template_id = create_template_response.json()["id"]
 
     list_templates_response = db_client.get(
-        f"/db/time-tracking/templates?user_id={user_id}",
+        f"/api/time-tracking/templates?user_id={user_id}",
         headers=headers,
     )
     assert list_templates_response.status_code == 200
     assert list_templates_response.json()["total"] == 1
 
     update_template_response = db_client.put(
-        f"/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         json={"text": "Updated daily focus"},
         headers=headers,
     )
@@ -345,13 +345,13 @@ def test_template_crud(
     assert update_template_response.json()["text"] == "Updated daily focus"
 
     delete_template_response = db_client.delete(
-        f"/db/time-tracking/templates/{template_id}?user_id={user_id}",
+        f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_template_response.status_code == 204
 
     empty_templates_response = db_client.get(
-        f"/db/time-tracking/templates?user_id={user_id}",
+        f"/api/time-tracking/templates?user_id={user_id}",
         headers=headers,
     )
     assert empty_templates_response.status_code == 200

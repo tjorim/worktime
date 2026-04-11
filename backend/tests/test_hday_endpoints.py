@@ -6,11 +6,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config.settings import settings
 from app.main import app
-from app.config import settings
 
 # Expected etag length: "sha256:" (7 chars) + 64 hex characters = 71
 EXPECTED_SHA256_ETAG_LENGTH = 71
+
+pytestmark = pytest.mark.skipif(
+    not settings.LEGACY_FILESHARE_ENABLED,
+    reason="Legacy fileshare not enabled (LEGACY_FILESHARE_ENABLED=False)"
+)
 
 
 @pytest.fixture
@@ -47,7 +52,7 @@ class TestGetEndpoint:
     
     def test_get_file_not_found(self, client, share_dir):
         """Test GET returns 404 when file doesn't exist."""
-        response = client.get("/hday/nonexistent")
+        response = client.get("/api/hday/nonexistent")
         
         assert response.status_code == 404
         data = response.json()
@@ -61,7 +66,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser")
+        response = client.get("/api/hday/testuser")
         
         assert response.status_code == 200
         data = response.json()
@@ -76,7 +81,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # 휴가일 (vacation)"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser")
+        response = client.get("/api/hday/testuser")
         
         assert response.status_code == 200
         data = response.json()
@@ -87,7 +92,7 @@ class TestGetEndpoint:
         # Use a non-existent directory
         monkeypatch.setattr(settings, "SHARE_DIR", str(tmp_path / "nonexistent"))
         
-        response = client.get("/hday/testuser")
+        response = client.get("/api/hday/testuser")
         
         assert response.status_code == 503
         data = response.json()
@@ -100,7 +105,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser")
+        response = client.get("/api/hday/testuser")
         
         assert response.status_code == 200
         data = response.json()
@@ -117,7 +122,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # Vacation"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=raw")
+        response = client.get("/api/hday/testuser?format=raw")
         
         assert response.status_code == 200
         data = response.json()
@@ -133,7 +138,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=parsed")
+        response = client.get("/api/hday/testuser?format=parsed")
         
         assert response.status_code == 200
         data = response.json()
@@ -154,7 +159,7 @@ class TestGetEndpoint:
         test_file = share_dir / "testuser.hday"
         test_file.write_text("", encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=parsed")
+        response = client.get("/api/hday/testuser?format=parsed")
         
         assert response.status_code == 200
         data = response.json()
@@ -171,7 +176,7 @@ class TestGetEndpoint:
         test_content = "2025/01/15 # Valid event"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=parsed")
+        response = client.get("/api/hday/testuser?format=parsed")
         
         # Should still return 200 even if parsing has issues
         assert response.status_code == 200
@@ -190,7 +195,7 @@ class TestPutEndpoint:
         test_content = "2025/01/15 # Vacation"
         
         response = client.put(
-            "/hday/newuser",
+            "/api/hday/newuser",
             json={"raw": test_content, "etag": None}
         )
         
@@ -227,7 +232,7 @@ class TestPutEndpoint:
         # Update file
         new_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": new_content, "etag": initial_etag}
         )
         
@@ -252,7 +257,7 @@ class TestPutEndpoint:
         ]
         
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"events": events, "etag": None}
         )
         
@@ -278,7 +283,7 @@ class TestPutEndpoint:
         ]
         
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={
                 "raw": "2025/01/15 # Should be ignored",
                 "events": events,
@@ -297,7 +302,7 @@ class TestPutEndpoint:
     def test_put_validation_neither_raw_nor_events(self, client, share_dir):
         """Test PUT returns 422 when neither raw nor events provided."""
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"etag": None}
         )
         
@@ -314,7 +319,7 @@ class TestPutEndpoint:
         
         # Try to update with wrong etag
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={
                 "raw": "2025/12/25 # Christmas",
                 "etag": "sha256:wrongetag"
@@ -332,7 +337,7 @@ class TestPutEndpoint:
     def test_put_null_etag_succeeds_for_new_file(self, client, share_dir, audit_log):
         """Test PUT with null etag succeeds when creating new file."""
         response = client.put(
-            "/hday/newuser",
+            "/api/hday/newuser",
             json={"raw": "2025/01/15 # Test", "etag": None}
         )
         
@@ -349,7 +354,7 @@ class TestPutEndpoint:
         
         # Try to create with null etag (should fail)
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/12/25 # New", "etag": None}
         )
         
@@ -362,7 +367,7 @@ class TestPutEndpoint:
         monkeypatch.setattr(settings, "SHARE_DIR", str(tmp_path / "nonexistent"))
         
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/01/15 # Test", "etag": None}
         )
         
@@ -377,7 +382,7 @@ class TestAtomicWrites:
     def test_temp_file_cleanup_on_success(self, client, share_dir, audit_log):
         """Test that temporary file is cleaned up after successful write."""
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/01/15 # Test", "etag": None}
         )
         
@@ -398,7 +403,7 @@ class TestAuditLogging:
     def test_audit_log_created_on_write(self, client, share_dir, audit_log):
         """Test that audit log entry is created on successful write."""
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/01/15 # Test", "etag": None}
         )
         
@@ -418,7 +423,7 @@ class TestAuditLogging:
         
         # Try to create with null etag (will conflict)
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/12/25 # New", "etag": None}
         )
         
@@ -432,7 +437,7 @@ class TestAuditLogging:
     def test_audit_log_format(self, client, share_dir, audit_log):
         """Test audit log entry format."""
         response = client.put(
-            "/hday/testuser",
+            "/api/hday/testuser",
             json={"raw": "2025/01/15 # Test", "etag": None}
         )
         
@@ -459,7 +464,7 @@ class TestTimingHeaders:
         test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=raw")
+        response = client.get("/api/hday/testuser?format=raw")
         
         assert response.status_code == 200
         
@@ -488,7 +493,7 @@ class TestTimingHeaders:
         test_content = "2025/01/15 # Vacation\n2025/12/25 # Christmas"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser?format=parsed")
+        response = client.get("/api/hday/testuser?format=parsed")
         
         assert response.status_code == 200
         
@@ -518,7 +523,7 @@ class TestTimingHeaders:
         test_content = "2025/01/15 # Vacation"
         test_file.write_text(test_content, encoding="utf-8")
         
-        response = client.get("/hday/testuser")
+        response = client.get("/api/hday/testuser")
         
         assert response.status_code == 200
         

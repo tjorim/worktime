@@ -15,7 +15,7 @@
  *    Push all local data to the server; store the returned sync cursor.
  *
  *  Branch B — server has data + local is empty:
- *    Pull all server data to localStorage; store the cursor.
+ *    Pull all server data into the collection-backed local state; store the cursor.
  *
  *  Branch C — both have data:
  *    Surface the conflict to the user (phase = "conflict").
@@ -27,7 +27,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  applySyncPullResponse,
   applyPreferencesPull,
   buildKeepLocalReplacePayload,
   buildLocalPreferencesPayload,
@@ -43,7 +42,7 @@ import {
   type SyncPushPayload,
   type SyncStatusResponse,
 } from "@/utils/syncClient";
-import { useEventStore } from "@/contexts/EventStoreContext";
+import { applyPullToCollections } from "@/db/collections";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */
@@ -54,7 +53,7 @@ export type FirstSyncPhase =
   | "conflict"
   /** Uploading local data to the server (Branch A or user chose "keep local"). */
   | "pushing"
-  /** Downloading server data to localStorage (Branch B or user chose "use server"). */
+  /** Downloading server data into the collection-backed local state (Branch B or user chose "use server"). */
   | "pulling"
   /** Flow completed successfully. */
   | "done"
@@ -85,7 +84,8 @@ function payloadHasData(payload: SyncPushPayload): boolean {
     payload.tasks.length > 0 ||
     payload.templates.length > 0 ||
     payload.work_locations.length > 0 ||
-    payload.time_off_entries.length > 0
+    payload.time_off_entries.length > 0 ||
+    payload.gantt_tasks.length > 0
   );
 }
 
@@ -93,7 +93,14 @@ function buildSafeLocalSyncPushPayload(): SyncPushPayload {
   try {
     return buildLocalSyncPushPayload();
   } catch {
-    return { labels: [], tasks: [], templates: [], work_locations: [], time_off_entries: [] };
+    return {
+      labels: [],
+      tasks: [],
+      templates: [],
+      work_locations: [],
+      time_off_entries: [],
+      gantt_tasks: [],
+    };
   }
 }
 
@@ -101,7 +108,7 @@ type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 type MountedCheck = () => boolean;
 
 /**
- * Push local user preferences to the server if they exist in localStorage.
+ * Push local user preferences to the server if they exist in unified user state storage.
  * Returns false and does nothing if `mounted()` returns false (component unmounted).
  */
 async function pushLocalPreferencesIfPresent(
@@ -116,7 +123,7 @@ async function pushLocalPreferencesIfPresent(
 }
 
 /**
- * Pull server preferences and apply them to localStorage if the server has any.
+ * Pull server preferences and apply them to unified user state storage if the server has any.
  * Returns false if `mounted()` returns false after the fetch (component unmounted).
  */
 async function pullAndApplyServerPreferencesIfPresent(
@@ -136,7 +143,6 @@ export function useFirstSyncFlow(
   userId: string | null,
   fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null,
 ): UseFirstSyncFlowResult {
-  const { replaceEntries } = useEventStore();
   const [phase, setPhase] = useState<FirstSyncPhase>("idle");
 
   // Guard against running the flow more than once per mount when deps change.
@@ -227,8 +233,8 @@ export function useFirstSyncFlow(
           setPhase("error");
           return;
         }
-        replaceEntries(applySyncPullResponse(pullResult));
-        // Also pull preferences from the server and apply to localStorage.
+        applyPullToCollections(pullResult);
+        // Also pull preferences from the server and apply to unified user state storage.
         const stillMounted = await pullAndApplyServerPreferencesIfPresent(
           fetch,
           () => mountedRef.current && flowStartedForUser.current === uid,
@@ -245,7 +251,7 @@ export function useFirstSyncFlow(
       capturedStatusRef.current = status;
       setPhase("conflict");
     },
-    [replaceEntries],
+    [],
   );
 
   const resolveConflict = useCallback(
@@ -309,7 +315,7 @@ export function useFirstSyncFlow(
               setPhase("error");
               return;
             }
-            replaceEntries(applySyncPullResponse(pullResult));
+            applyPullToCollections(pullResult);
             // Pull preferences from the server (use-server means server wins).
             const prefsMounted = await pullAndApplyServerPreferencesIfPresent(
               fetch,
@@ -329,7 +335,7 @@ export function useFirstSyncFlow(
         if (mountedRef.current) setPhase("error");
       });
     },
-    [phase, userId, fetchFn, replaceEntries],
+    [phase, userId, fetchFn],
   );
 
   const dismiss = useCallback(() => {

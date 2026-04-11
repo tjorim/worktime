@@ -12,7 +12,7 @@ from app.schemas import UserPreferencesRead, UserPreferencesWrite
 from app.services.db_service import get_user_preferences, upsert_user_preferences
 from app.utils.timing import time_operation
 
-router = APIRouter(prefix="/db/preferences", tags=["Database Preferences"])
+router = APIRouter(prefix="/preferences", tags=["Preferences"])
 
 
 @router.get("", response_model=UserPreferencesRead | None)

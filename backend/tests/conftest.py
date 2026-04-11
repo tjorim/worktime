@@ -264,7 +264,7 @@ def create_user_factory() -> Callable[..., int]:
         settings_payload: dict | None = None,
     ) -> int:
         response = db_client.post(
-            "/db/users/",
+            "/api/users/",
             json={
                 "username": username,
                 "display_name": display_name or username.title(),

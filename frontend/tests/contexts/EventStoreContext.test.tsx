@@ -2,12 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
-import {
-  buildTimeOffEntryForRange,
-  createWeeklyTimeOffEntry,
-} from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <EventStoreProvider>{children}</EventStoreProvider>
@@ -56,8 +52,9 @@ function createWeeklyEntry(
 }
 
 describe("EventStoreContext", () => {
+  // Collections are cleared globally in tests/setup.ts beforeEach.
   beforeEach(() => {
-    localStorage.clear();
+    localStorage.removeItem("worktime_hday_raw");
   });
 
   describe("Initial State", () => {
@@ -66,22 +63,6 @@ describe("EventStoreContext", () => {
 
       expect(result.current.entries).toEqual([]);
       expect(result.current.rawText).toBe("");
-    });
-
-    it("should load entries from localStorage if present", () => {
-      const entry = buildTimeOffEntryForRange({
-        start: "2025-01-15",
-        end: "2025-01-15",
-        note: "Test event",
-        entryType: "vacation",
-        entryFlag: "full_day",
-      });
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
-
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.note).toBe("Test event");
     });
   });
 
@@ -97,18 +78,17 @@ describe("EventStoreContext", () => {
       expect(result.current.entries[0]?.note).toBe("New event");
     });
 
-    it("should persist entry to localStorage", () => {
+    it("should persist entry in the store", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       act(() => {
         result.current.addEntries([createDateEntry("2025-01-15", "Persisted event")]);
       });
 
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!) as TimeOffEntry[];
-      expect(entries).toHaveLength(1);
-      expect(entries[0]?.note).toBe("Persisted event");
-      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-15");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Persisted event");
+      const e = result.current.entries[0];
+      expect(e?.entryKind === "date" ? e.date : null).toBe("2025-01-15");
     });
 
     it("should add weekly entry", () => {
@@ -146,7 +126,7 @@ describe("EventStoreContext", () => {
       expect(result.current.entries[0]?.entryType).toBe("business");
     });
 
-    it("should persist update to localStorage", () => {
+    it("should persist update in the store", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       act(() => {
@@ -160,11 +140,10 @@ describe("EventStoreContext", () => {
         result.current.updateEntry(entryId!, createDateEntry("2025-01-20", "Updated", "business"));
       });
 
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!) as TimeOffEntry[];
-      expect(entries).toHaveLength(1);
-      expect(entries[0]?.note).toBe("Updated");
-      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-20");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Updated");
+      const e = result.current.entries[0];
+      expect(e?.entryKind === "date" ? e.date : null).toBe("2025-01-20");
     });
   });
 
@@ -192,7 +171,7 @@ describe("EventStoreContext", () => {
       expect(result.current.entries[0]?.note).toBe("Event 2");
     });
 
-    it("should persist deletion to localStorage", () => {
+    it("should remove the entry from the store", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       act(() => {
@@ -206,8 +185,7 @@ describe("EventStoreContext", () => {
         result.current.deleteEntry(entryId!);
       });
 
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      expect(stored).toBeNull();
+      expect(result.current.entries).toHaveLength(0);
     });
   });
 
@@ -323,7 +301,7 @@ d1 # Every Monday`;
       expect(result.current.entries[0]?.note).toBe("New event");
     });
 
-    it("should persist imported content to localStorage", () => {
+    it("should persist imported content in the store", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       const hdayContent = "2025/01/15 # Imported event\n";
@@ -332,11 +310,10 @@ d1 # Every Monday`;
         result.current.importHday(hdayContent);
       });
 
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      const entries = JSON.parse(stored!) as TimeOffEntry[];
-      expect(entries).toHaveLength(1);
-      expect(entries[0]?.note).toBe("Imported event");
-      expect(entries[0]?.entryKind === "date" ? entries[0].date : null).toBe("2025-01-15");
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.entries[0]?.note).toBe("Imported event");
+      const e = result.current.entries[0];
+      expect(e?.entryKind === "date" ? e.date : null).toBe("2025-01-15");
     });
   });
 
@@ -358,7 +335,7 @@ d1 # Every Monday`;
       expect(result.current.rawText).toBe("");
     });
 
-    it("should remove data from localStorage", () => {
+    it("should empty the store after clearAll", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
       act(() => {
@@ -369,151 +346,7 @@ d1 # Every Monday`;
         result.current.clearAll();
       });
 
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      expect(stored).toBeNull();
-    });
-  });
-
-  describe("undo/redo", () => {
-    it("should undo and redo changes", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEntries([createDateEntry("2025-01-15", "First")]);
-      });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.canUndo).toBe(true);
-      expect(result.current.canRedo).toBe(false);
-
-      act(() => {
-        result.current.undo();
-      });
-
       expect(result.current.entries).toHaveLength(0);
-      expect(result.current.canUndo).toBe(false);
-      expect(result.current.canRedo).toBe(true);
-
-      act(() => {
-        result.current.redo();
-      });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.note).toBe("First");
-      expect(result.current.canUndo).toBe(true);
-      expect(result.current.canRedo).toBe(false);
-    });
-
-    it("should clear redo stack after new changes", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEntries([
-          createDateEntry("2025-01-15", "First"),
-          createDateEntry("2025-01-16", "Second"),
-        ]);
-      });
-
-      act(() => {
-        result.current.undo();
-      });
-
-      expect(result.current.entries).toHaveLength(0);
-      expect(result.current.canRedo).toBe(true);
-
-      act(() => {
-        result.current.addEntries([createDateEntry("2025-01-17", "Third")]);
-      });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.canRedo).toBe(false);
-    });
-
-    it("should enforce history limit when undoing many changes", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        for (let i = 0; i < 55; i += 1) {
-          result.current.addEntries([
-            createDateEntry(`2025-02-${String(i + 1).padStart(2, "0")}`, `Event ${i + 1}`),
-          ]);
-        }
-      });
-
-      expect(result.current.entries).toHaveLength(55);
-
-      act(() => {
-        for (let i = 0; i < 50; i += 1) {
-          result.current.undo();
-        }
-      });
-
-      expect(result.current.entries).toHaveLength(5);
-      expect(result.current.canUndo).toBe(false);
-      expect(result.current.canRedo).toBe(true);
-    });
-
-    it("should undo update and delete operations", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEntries([createDateEntry("2025-03-10", "Original")]);
-      });
-
-      const entryId = result.current.entries[0]?.id;
-      expect(entryId).toBeTruthy();
-
-      act(() => {
-        result.current.updateEntry(entryId!, createDateEntry("2025-03-11", "Updated", "business"));
-      });
-
-      expect(result.current.entries[0]?.note).toBe("Updated");
-
-      act(() => {
-        result.current.deleteEntry(entryId!);
-      });
-
-      expect(result.current.entries).toHaveLength(0);
-
-      act(() => {
-        result.current.undo();
-      });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.note).toBe("Updated");
-
-      act(() => {
-        result.current.undo();
-      });
-
-      expect(result.current.entries).toHaveLength(1);
-      expect(result.current.entries[0]?.note).toBe("Original");
-    });
-
-    it("should support multiple consecutive undos and redos", () => {
-      const { result } = renderHook(() => useEventStore(), { wrapper });
-
-      act(() => {
-        result.current.addEntries([
-          createDateEntry("2025-04-01", "Event 1"),
-          createDateEntry("2025-04-02", "Event 2"),
-          createDateEntry("2025-04-03", "Event 3"),
-        ]);
-      });
-
-      act(() => {
-        result.current.undo();
-        result.current.undo();
-      });
-
-      expect(result.current.entries).toHaveLength(0);
-
-      act(() => {
-        result.current.redo();
-      });
-
-      expect(result.current.entries).toHaveLength(3);
-      expect(result.current.entries[1]?.note).toBe("Event 2");
     });
   });
 
