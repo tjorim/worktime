@@ -97,6 +97,13 @@ async function collectionFetch(url: string, init?: RequestInit): Promise<Respons
  * update regardless of push outcome (Option A offline strategy).
  */
 async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
+  // No authenticated sync user: keep the local optimistic write only.
+  // This is expected in local-only mode and in tests that exercise collection
+  // mutations without mounting OngoingSyncProvider.
+  if (!_currentUserId) {
+    return;
+  }
+
   try {
     const response = await collectionFetch("/api/sync/push", {
       method: "POST",
@@ -108,9 +115,7 @@ async function pushAndQueue(payload: SyncPushPayload): Promise<void> {
     }
   } catch {
     // Push failed — enqueue to outbox for retry on next sync cycle.
-    if (_currentUserId) {
-      appendToSyncOutbox(_currentUserId, payload);
-    }
+    appendToSyncOutbox(_currentUserId, payload);
   }
 }
 
@@ -158,6 +163,47 @@ function runWriteBatch<T extends { utils: { writeBatch: (cb: () => void) => void
   collection.utils.writeBatch(callback);
 }
 
+function replaceCollectionContents<
+  TItem extends { [key: string]: unknown },
+  TCollection extends {
+    toArray: TItem[];
+    has: (key: string) => boolean;
+    delete: (key: string) => void;
+    insert: (item: TItem) => void;
+    utils: {
+      writeBatch: (cb: () => void) => void;
+      writeDelete: (keys: string[]) => void;
+      writeInsert: (items: TItem[]) => void;
+    };
+  },
+>(
+  collection: TCollection,
+  nextItems: TItem[],
+  getKey: (item: TItem) => string,
+): void {
+  const existingKeys = collection.toArray.map(getKey);
+
+  // During first sync there is no configured sync auth yet. Use normal local
+  // mutations instead of direct-write batches so collection replacement works
+  // without starting sync machinery for unmounted collections.
+  if (!_currentUserId) {
+    for (const key of existingKeys) {
+      if (collection.has(key)) {
+        collection.delete(key);
+      }
+    }
+    for (const item of nextItems) {
+      collection.insert(item);
+    }
+    return;
+  }
+
+  runWriteBatch(collection, existingKeys.length > 0 || nextItems.length > 0, () => {
+    if (existingKeys.length > 0) collection.utils.writeDelete(existingKeys);
+    if (nextItems.length > 0) collection.utils.writeInsert(nextItems);
+  });
+}
+
 export function applyPullToCollections(data: SyncPullResponse): void {
   // Labels
   const activeLabels = data.labels
@@ -169,11 +215,7 @@ export function applyPullToCollections(data: SyncPullResponse): void {
         color: l.color,
       }),
     );
-  const existingLabelKeys = labelsCollection.toArray.map((l) => l.id);
-  runWriteBatch(labelsCollection, existingLabelKeys.length > 0 || activeLabels.length > 0, () => {
-    if (existingLabelKeys.length > 0) labelsCollection.utils.writeDelete(existingLabelKeys);
-    if (activeLabels.length > 0) labelsCollection.utils.writeInsert(activeLabels);
-  });
+  replaceCollectionContents(labelsCollection, activeLabels, (label) => label.id);
 
   // Tasks
   const activeTasks = data.tasks
@@ -189,11 +231,7 @@ export function applyPullToCollections(data: SyncPullResponse): void {
       if (t.includes_break) task.includesBreak = true;
       return task;
     });
-  const existingTaskKeys = tasksCollection.toArray.map((t) => t.id);
-  runWriteBatch(tasksCollection, existingTaskKeys.length > 0 || activeTasks.length > 0, () => {
-    if (existingTaskKeys.length > 0) tasksCollection.utils.writeDelete(existingTaskKeys);
-    if (activeTasks.length > 0) tasksCollection.utils.writeInsert(activeTasks);
-  });
+  replaceCollectionContents(tasksCollection, activeTasks, (task) => task.id);
 
   // Templates
   const activeTemplates = data.templates
@@ -207,16 +245,7 @@ export function applyPullToCollections(data: SyncPullResponse): void {
         stop: t.stop_time.slice(0, 5),
       }),
     );
-  const existingTemplateKeys = templatesCollection.toArray.map((t) => t.id);
-  runWriteBatch(
-    templatesCollection,
-    existingTemplateKeys.length > 0 || activeTemplates.length > 0,
-    () => {
-      if (existingTemplateKeys.length > 0)
-        templatesCollection.utils.writeDelete(existingTemplateKeys);
-      if (activeTemplates.length > 0) templatesCollection.utils.writeInsert(activeTemplates);
-    },
-  );
+  replaceCollectionContents(templatesCollection, activeTemplates, (template) => template.id);
 
   // Work locations
   const activeWorkLocations = data.work_locations
@@ -229,29 +258,11 @@ export function applyPullToCollections(data: SyncPullResponse): void {
         ...(wl.label ? { label: wl.label } : {}),
       }),
     );
-  const existingWlKeys = workLocationsCollection.toArray.map((wl) => wl.date);
-  runWriteBatch(
-    workLocationsCollection,
-    existingWlKeys.length > 0 || activeWorkLocations.length > 0,
-    () => {
-      if (existingWlKeys.length > 0) workLocationsCollection.utils.writeDelete(existingWlKeys);
-      if (activeWorkLocations.length > 0)
-        workLocationsCollection.utils.writeInsert(activeWorkLocations);
-    },
-  );
+  replaceCollectionContents(workLocationsCollection, activeWorkLocations, (entry) => entry.date);
 
   // Time-off entries
   const activeTimeOffEntries = _syncItemsToTimeOffEntries(data.time_off_entries ?? []);
-  const existingTimeOffKeys = timeOffCollection.toArray.map((e) => e.id);
-  runWriteBatch(
-    timeOffCollection,
-    existingTimeOffKeys.length > 0 || activeTimeOffEntries.length > 0,
-    () => {
-      if (existingTimeOffKeys.length > 0) timeOffCollection.utils.writeDelete(existingTimeOffKeys);
-      if (activeTimeOffEntries.length > 0)
-        timeOffCollection.utils.writeInsert(activeTimeOffEntries);
-    },
-  );
+  replaceCollectionContents(timeOffCollection, activeTimeOffEntries, (entry) => entry.id);
 
   // Gantt tasks
   const activeGanttTasks = (data.gantt_tasks ?? [])
@@ -267,15 +278,7 @@ export function applyPullToCollections(data: SyncPullResponse): void {
         ...(g.notes ? { notes: g.notes } : {}),
       }),
     );
-  const existingGanttKeys = ganttTasksCollection.toArray.map((g) => g.id);
-  runWriteBatch(
-    ganttTasksCollection,
-    existingGanttKeys.length > 0 || activeGanttTasks.length > 0,
-    () => {
-      if (existingGanttKeys.length > 0) ganttTasksCollection.utils.writeDelete(existingGanttKeys);
-      if (activeGanttTasks.length > 0) ganttTasksCollection.utils.writeInsert(activeGanttTasks);
-    },
-  );
+  replaceCollectionContents(ganttTasksCollection, activeGanttTasks, (task) => task.id);
 }
 
 /**

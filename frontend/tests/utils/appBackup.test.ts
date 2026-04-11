@@ -7,15 +7,30 @@ import {
   validateAppBackupPayload,
 } from "@/utils/appBackup";
 import {
-  TIME_OFF_ENTRIES_STORAGE_KEY,
-  TIME_TRACKING_STORAGE_KEYS,
   USER_STATE_STORAGE_KEY,
-  WORK_LOCATIONS_STORAGE_PREFIX,
 } from "@/constants/storageKeys";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
+import {
+  ganttTasksCollection,
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
-const WORK_LOCATIONS_PREFIX = WORK_LOCATIONS_STORAGE_PREFIX;
+
+function plainCollectionItems<T extends object>(items: T[]): Array<Record<string, unknown>> {
+  return items.map((item) => {
+    const plain = { ...item } as Record<string, unknown>;
+    delete plain.$collectionId;
+    delete plain.$key;
+    delete plain.$origin;
+    delete plain.$synced;
+    return plain;
+  });
+}
 
 describe("appBackup", () => {
   afterEach(() => {
@@ -57,7 +72,7 @@ describe("appBackup", () => {
         entryFlag: "full_day",
         note: "Vacation",
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildBackupPayload();
       expect(Array.isArray(payload.timeOff)).toBe(true);
       expect(payload.timeOff).toHaveLength(1);
@@ -71,8 +86,16 @@ describe("appBackup", () => {
     it("includes work locations for all stored years", () => {
       const loc2025 = { "2025-06-01": { location: "home", countryCode: "NL" } };
       const loc2026 = { "2026-02-24": { location: "office", countryCode: "DE" } };
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify(loc2025));
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify(loc2026));
+      workLocationsCollection.insert({
+        date: "2025-06-01",
+        location: "home",
+        countryCode: "NL",
+      });
+      workLocationsCollection.insert({
+        date: "2026-02-24",
+        location: "office",
+        countryCode: "DE",
+      });
       const payload = buildBackupPayload();
       expect(payload.workLocations).toEqual({ "2025": loc2025, "2026": loc2026 });
     });
@@ -85,17 +108,31 @@ describe("appBackup", () => {
         { id: "tp1", text: "Template", label: "l1", start: "09:00", stop: "17:00" },
       ];
       const labels = [{ id: "l1", name: "Work", color: "#198754" }];
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(templates));
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(labels));
+      tasksCollection.insert(tasks[0]!);
+      templatesCollection.insert(templates[0]!);
+      labelsCollection.insert(labels[0]!);
       const payload = buildBackupPayload();
-      expect(payload.tasks).toEqual(tasks);
+      expect(payload.tasks).toEqual([
+        { id: "t1", text: "Task", label: "l1", startTime: "2026-02-24T09:00" },
+      ]);
       expect(payload.templates).toEqual(templates);
       expect(payload.labels).toEqual(labels);
     });
 
-    it("omits tasks/templates/labels when stored value is not an array", () => {
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify({ bad: true }));
+    it("includes gantt tasks when present", () => {
+      const ganttTask = {
+        id: "g1",
+        name: "Plan release",
+        start: "2026-02-24",
+        end: "2026-02-28",
+        progress: 25,
+      };
+      ganttTasksCollection.insert(ganttTask);
+      const payload = buildBackupPayload();
+      expect(payload.ganttTasks).toEqual([ganttTask]);
+    });
+
+    it("omits tasks when the collection is empty", () => {
       const payload = buildBackupPayload();
       expect(payload.tasks).toBeUndefined();
     });
@@ -110,7 +147,7 @@ describe("appBackup", () => {
         note: "Vacation",
       };
       localStorage.setItem(USER_STATE_KEY, JSON.stringify({ myTeam: 1 }));
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildBackupPayload({ includeUserState: false, includeTimeOff: false });
       expect(payload.userState).toBeUndefined();
       expect(payload.timeOff).toBeUndefined();
@@ -121,23 +158,32 @@ describe("appBackup", () => {
         { id: "t1", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
         { id: "t2", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
       ];
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      tasksCollection.insert(tasks[0]!);
+      tasksCollection.insert(tasks[1]!);
       const payload = buildBackupPayload({ year: 2025 });
       expect(payload.tasks).toEqual([tasks[0]]);
     });
 
     it("filters work locations to the selected year", () => {
-      const loc2025 = { "2025-06-01": { location: "home" } };
-      const loc2026 = { "2026-02-24": { location: "office" } };
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify(loc2025));
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify(loc2026));
+      workLocationsCollection.insert({
+        date: "2025-06-01",
+        location: "home",
+        countryCode: "NL",
+      });
+      workLocationsCollection.insert({
+        date: "2026-02-24",
+        location: "office",
+        countryCode: "DE",
+      });
       const payload = buildBackupPayload({ year: 2025 });
-      expect(payload.workLocations).toEqual({ "2025": loc2025 });
+      expect(payload.workLocations).toEqual({
+        "2025": { "2025-06-01": { location: "home", countryCode: "NL" } },
+      });
     });
 
     it("omits filtered tasks when none match the selected year", () => {
       const tasks = [{ id: "t1", text: "A", label: "l1", startTime: "2026-02-24T09:00" }];
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      tasksCollection.insert(tasks[0]!);
       const payload = buildBackupPayload({ year: 2025 });
       expect(payload.tasks).toBeUndefined();
     });
@@ -169,7 +215,7 @@ describe("appBackup", () => {
         entryFlag: "full_day",
         note: null,
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       expect(checkBackupDataPresence().hasTimeOff).toBe(true);
     });
 
@@ -178,25 +224,31 @@ describe("appBackup", () => {
         { id: "t1", startTime: "2025-06-01T09:00" },
         { id: "t2", startTime: "2026-02-24T09:00" },
       ];
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(tasks));
+      tasksCollection.insert({ id: "t1", text: "A", label: "l1", startTime: "2025-06-01T09:00" });
+      tasksCollection.insert({ id: "t2", text: "B", label: "l1", startTime: "2026-02-24T09:00" });
       const presence = checkBackupDataPresence();
       expect(presence.hasTasks).toBe(true);
       expect(presence.availableYears).toEqual([2026, 2025]);
     });
 
     it("detects work locations and includes their years", () => {
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2025`, JSON.stringify({}));
+      workLocationsCollection.insert({
+        date: "2025-06-01",
+        location: "home",
+        countryCode: "NL",
+      });
       const presence = checkBackupDataPresence();
       expect(presence.hasWorkLocations).toBe(true);
       expect(presence.availableYears).toContain(2025);
     });
 
     it("merges task years and work location years, sorted newest-first", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([{ id: "t1", startTime: "2024-01-01T09:00" }]),
-      );
-      localStorage.setItem(`${WORK_LOCATIONS_PREFIX}2026`, JSON.stringify({}));
+      tasksCollection.insert({ id: "t1", text: "A", label: "l1", startTime: "2024-01-01T09:00" });
+      workLocationsCollection.insert({
+        date: "2026-02-24",
+        location: "office",
+        countryCode: "DE",
+      });
       const presence = checkBackupDataPresence();
       expect(presence.availableYears).toEqual([2026, 2024]);
     });
@@ -297,19 +349,20 @@ describe("appBackup", () => {
         note: "Vacation",
       };
       restoreAppBackup({ exportedAt: "", version: 1, timeOff: [entry] });
-      const stored = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-      expect(stored).not.toBeNull();
-      const parsed = JSON.parse(stored!);
-      expect(parsed).toHaveLength(1);
-      expect(parsed[0]).toMatchObject({ entryKind: "date", date: "2026-01-15", note: "Vacation" });
+      expect(timeOffCollection.toArray).toHaveLength(1);
+      expect(timeOffCollection.toArray[0]).toMatchObject({
+        entryKind: "date",
+        date: "2026-01-15",
+        note: "Vacation",
+      });
     });
 
     it("writes work locations for each year", () => {
       const locs = { "2026": { "2026-02-24": { location: "home", countryCode: "NL" } } };
       restoreAppBackup({ exportedAt: "", version: 1, workLocations: locs });
-      expect(JSON.parse(localStorage.getItem(`${WORK_LOCATIONS_PREFIX}2026`)!)).toEqual(
-        locs["2026"],
-      );
+      expect(plainCollectionItems(workLocationsCollection.toArray)).toEqual([
+        { date: "2026-02-24", location: "home", countryCode: "NL" },
+      ]);
     });
 
     it("writes time tracking tasks, templates and labels", () => {
@@ -317,11 +370,9 @@ describe("appBackup", () => {
       const templates = [{ id: "tp1", text: "T", label: "l1", start: "09:00", stop: "17:00" }];
       const labels = [{ id: "l1", name: "Work", color: "#198754" }];
       restoreAppBackup({ exportedAt: "", version: 1, tasks, templates, labels });
-      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual(tasks);
-      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.templates)!)).toEqual(
-        templates,
-      );
-      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.labels)!)).toEqual(labels);
+      expect(plainCollectionItems(tasksCollection.toArray)).toEqual(tasks);
+      expect(plainCollectionItems(templatesCollection.toArray)).toEqual(templates);
+      expect(plainCollectionItems(labelsCollection.toArray)).toEqual(labels);
     });
 
     it("preserves existing tasks from years not included in the backup payload", () => {
@@ -333,10 +384,11 @@ describe("appBackup", () => {
         { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },
       ];
 
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(existingTasks));
+      tasksCollection.insert(existingTasks[0]!);
+      tasksCollection.insert(existingTasks[1]!);
       restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
 
-      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual([
+      expect(plainCollectionItems(tasksCollection.toArray)).toEqual([
         existingTasks[1],
         backupTasks[0],
       ]);
@@ -351,12 +403,11 @@ describe("appBackup", () => {
         { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },
       ];
 
-      localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(existingTasks));
+      tasksCollection.insert(existingTasks[0]!);
+      tasksCollection.insert(existingTasks[1]!);
       restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
 
-      expect(JSON.parse(localStorage.getItem(TIME_TRACKING_STORAGE_KEYS.tasks)!)).toEqual(
-        backupTasks,
-      );
+      expect(plainCollectionItems(tasksCollection.toArray)).toEqual(backupTasks);
     });
 
     it("leaves unspecified sections untouched", () => {

@@ -7,6 +7,13 @@ export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 
 export type GanttTaskChanges = Partial<Omit<RawGanttTask, "id">>;
 
+function generateTaskId(): string {
+  const candidate = globalThis.crypto?.randomUUID?.();
+  return typeof candidate === "string" && candidate.length > 0
+    ? candidate
+    : `gantt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function toTask(raw: RawGanttTask | GanttTask): GanttTask {
   return {
     id: raw.id,
@@ -29,7 +36,7 @@ export function useGanttTasks() {
 
   const addTask = useCallback((payload: NewGanttTaskInput) => {
     const createdTask: GanttTask = {
-      id: crypto.randomUUID(),
+      id: generateTaskId(),
       name: payload.name,
       start: payload.start,
       end: payload.end,
@@ -42,36 +49,45 @@ export function useGanttTasks() {
   }, []);
 
   const updateTask = useCallback((id: string, changes: GanttTaskChanges) => {
-    if (!ganttTasksCollection.has(id)) return;
-    ganttTasksCollection.update(id, (d) => {
-      if (changes.name !== undefined) d.name = changes.name;
-      if (changes.start !== undefined) d.start = changes.start;
-      if (changes.end !== undefined) d.end = changes.end;
-      d.progress = changes.progress ?? d.progress ?? 0;
-      if (changes.dependencies !== undefined)
-        d.dependencies = changes.dependencies ?? undefined;
-      if (changes.notes !== undefined) d.notes = changes.notes ?? undefined;
-    });
-  }, []);
+    if (!tasks.some((task) => task.id === id)) return;
+    ganttTasksCollection.utils.writeUpsert([
+      ...tasks.map((task) =>
+        task.id === id
+          ? {
+            ...task,
+            ...(changes.name !== undefined ? { name: changes.name } : {}),
+            ...(changes.start !== undefined ? { start: changes.start } : {}),
+            ...(changes.end !== undefined ? { end: changes.end } : {}),
+            progress: changes.progress ?? task.progress ?? 0,
+            ...(changes.dependencies !== undefined
+              ? { dependencies: changes.dependencies ?? undefined }
+              : {}),
+            ...(changes.notes !== undefined ? { notes: changes.notes ?? undefined } : {}),
+          }
+          : task,
+      ),
+    ]);
+  }, [tasks]);
 
   const removeTask = useCallback((id: string) => {
-    if (!ganttTasksCollection.has(id)) return;
+    if (!tasks.some((task) => task.id === id)) return;
 
     // Clean up dependency references in other tasks before deleting
-    const all = ganttTasksCollection.toArray as GanttTask[];
-    for (const raw of all) {
-      if (!raw.dependencies || raw.id === id) continue;
-      const parts = raw.dependencies.split(",").map((d) => d.trim());
-      if (parts.includes(id)) {
+    const nextTasks = tasks
+      .filter((task) => task.id !== id)
+      .map((task) => {
+        if (!task.dependencies) return task;
+        const parts = task.dependencies.split(",").map((d) => d.trim());
+        if (!parts.includes(id)) return task;
         const cleaned = parts.filter((d) => d && d !== id).join(", ");
-        ganttTasksCollection.update(raw.id, (d) => {
-          d.dependencies = cleaned || undefined;
-        });
-      }
-    }
+        return {
+          ...task,
+          dependencies: cleaned || undefined,
+        };
+      });
 
-    ganttTasksCollection.delete(id);
-  }, []);
+    ganttTasksCollection.utils.writeUpsert(nextTasks);
+  }, [tasks]);
 
   return {
     tasks,

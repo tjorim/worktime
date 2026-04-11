@@ -34,6 +34,13 @@ import {
   WORK_LOCATIONS_STORAGE_PREFIX,
 } from "@/constants/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import {
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
 
 const mockFetch = vi.fn();
 
@@ -574,7 +581,7 @@ describe("syncClient", () => {
   // ---------------------------------------------------------------------------
 
   describe("buildLocalSyncPushPayload", () => {
-    it("returns empty arrays when localStorage is empty", () => {
+    it("returns empty arrays when the collections are empty", () => {
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(0);
       expect(payload.tasks).toHaveLength(0);
@@ -583,10 +590,7 @@ describe("syncClient", () => {
     });
 
     it("converts labels to sync items with action=create", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "label-1", name: "Work", color: "#FF0000" }]),
-      );
+      labelsCollection.insert({ id: "label-1", name: "Work", color: "#FF0000" });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(1);
@@ -600,19 +604,14 @@ describe("syncClient", () => {
     });
 
     it("converts tasks to sync items with UTC start_time", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([
-          {
-            id: "task-1",
-            text: "Hello",
-            label: "label-1",
-            startTime: "2026-01-01T09:00",
-            stopTime: "2026-01-01T17:00",
-            includesBreak: true,
-          },
-        ]),
-      );
+      tasksCollection.insert({
+        id: "task-1",
+        text: "Hello",
+        label: "label-1",
+        startTime: "2026-01-01T09:00",
+        stopTime: "2026-01-01T17:00",
+        includesBreak: true,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
@@ -629,22 +628,25 @@ describe("syncClient", () => {
     });
 
     it("handles tasks with no stopTime", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([{ id: "task-2", text: "Open", label: "", startTime: "2026-01-01T09:00" }]),
-      );
+      tasksCollection.insert({
+        id: "task-2",
+        text: "Open",
+        label: "",
+        startTime: "2026-01-01T09:00",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks[0].stop_time).toBeNull();
     });
 
     it("converts templates with HH:mm:ss time format", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.templates,
-        JSON.stringify([
-          { id: "tmpl-1", text: "Standup", label: "label-1", start: "09:00", stop: "09:15" },
-        ]),
-      );
+      templatesCollection.insert({
+        id: "tmpl-1",
+        text: "Standup",
+        label: "label-1",
+        start: "09:00",
+        stop: "09:15",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates[0]).toMatchObject({
@@ -658,14 +660,9 @@ describe("syncClient", () => {
     });
 
     it("excludes labels with missing or non-string color", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([
-          { id: "lbl-good", name: "Good", color: "#FF0000" },
-          { id: "lbl-no-color", name: "Bad", color: null },
-          { id: "lbl-num-color", name: "Numeric", color: 123 },
-        ]),
-      );
+      labelsCollection.insert({ id: "lbl-good", name: "Good", color: "#FF0000" });
+      labelsCollection.insert({ id: "lbl-no-color", name: "Bad", color: null as never });
+      labelsCollection.insert({ id: "lbl-num-color", name: "Numeric", color: 123 as never });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.labels).toHaveLength(1);
@@ -673,15 +670,34 @@ describe("syncClient", () => {
     });
 
     it("excludes templates with missing required fields", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.templates,
-        JSON.stringify([
-          { id: "tmpl-good", text: "Valid", label: "", start: "09:00", stop: "09:15" },
-          { id: "tmpl-no-text", text: "", label: "", start: "09:00", stop: "09:15" },
-          { id: "tmpl-bad-start", text: "Bad start", label: "", start: "9:00", stop: "09:15" },
-          { id: "tmpl-no-stop", text: "No stop", label: "", start: "09:00", stop: "" },
-        ]),
-      );
+      templatesCollection.insert({
+        id: "tmpl-good",
+        text: "Valid",
+        label: "",
+        start: "09:00",
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-no-text",
+        text: "",
+        label: "",
+        start: "09:00",
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-bad-start",
+        text: "Bad start",
+        label: "",
+        start: "9:00" as never,
+        stop: "09:15",
+      });
+      templatesCollection.insert({
+        id: "tmpl-no-stop",
+        text: "No stop",
+        label: "",
+        start: "09:00",
+        stop: "" as never,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.templates).toHaveLength(1);
@@ -689,33 +705,37 @@ describe("syncClient", () => {
     });
 
     it("excludes soft-deleted tasks from the payload", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.tasks,
-        JSON.stringify([
-          { id: "task-live", text: "Live", label: "", startTime: "2026-01-01T09:00" },
-          {
-            id: "task-deleted",
-            text: "Gone",
-            label: "",
-            startTime: "2026-01-01T10:00",
-            deleted_at: "2026-01-02T00:00:00.000Z",
-          },
-        ]),
-      );
+      tasksCollection.insert({
+        id: "task-live",
+        text: "Live",
+        label: "",
+        startTime: "2026-01-01T09:00",
+      });
+      tasksCollection.insert({
+        id: "task-deleted",
+        text: "Gone",
+        label: "",
+        startTime: "2026-01-01T10:00",
+        deleted_at: "2026-01-02T00:00:00.000Z" as never,
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.tasks).toHaveLength(1);
       expect(payload.tasks[0].id).toBe("task-live");
     });
 
-    it("converts work locations from per-year localStorage keys", () => {
-      localStorage.setItem(
-        `${WORK_LOCATIONS_STORAGE_PREFIX}2026`,
-        JSON.stringify({
-          "2026-01-05": { location: "home", countryCode: "NL" },
-          "2026-01-06": { location: "office", countryCode: "DE", label: "Berlin" },
-        }),
-      );
+    it("converts work locations from the flat collection", () => {
+      workLocationsCollection.insert({
+        date: "2026-01-05",
+        location: "home",
+        countryCode: "NL",
+      });
+      workLocationsCollection.insert({
+        date: "2026-01-06",
+        location: "office",
+        countryCode: "DE",
+        label: "Berlin",
+      });
 
       const payload = buildLocalSyncPushPayload();
       expect(payload.work_locations).toHaveLength(2);
@@ -979,10 +999,7 @@ describe("syncClient", () => {
     });
 
     it("preserves all local records in the output payload", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "local-lbl", name: "Local", color: "#FFFFFF" }]),
-      );
+      labelsCollection.insert({ id: "local-lbl", name: "Local", color: "#FFFFFF" });
       const localPayload = buildLocalSyncPushPayload();
       const result = buildKeepLocalReplacePayload(localPayload, makeEmptyPullResponse());
 
@@ -1054,10 +1071,7 @@ describe("syncClient", () => {
     });
 
     it("does not delete server labels that also exist locally", () => {
-      localStorage.setItem(
-        TIME_TRACKING_STORAGE_KEYS.labels,
-        JSON.stringify([{ id: "shared-lbl", name: "Shared", color: "#FF0000" }]),
-      );
+      labelsCollection.insert({ id: "shared-lbl", name: "Shared", color: "#FF0000" });
       const localPayload = buildLocalSyncPushPayload();
       const serverData = {
         ...makeEmptyPullResponse(),
@@ -1255,7 +1269,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: "Vacation",
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -1278,7 +1292,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: null,
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({
@@ -1297,7 +1311,7 @@ describe("syncClient", () => {
         entryFlag: "full_day",
         note: "Every Monday",
       };
-      localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify([entry]));
+      timeOffCollection.insert(entry);
       const payload = buildLocalSyncPushPayload();
       expect(payload.time_off_entries).toHaveLength(1);
       expect(payload.time_off_entries[0]).toMatchObject({

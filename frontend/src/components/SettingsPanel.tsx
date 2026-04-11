@@ -22,8 +22,11 @@ import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
-import { TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
-import { saveTimeOffEntries } from "@/lib/timeOff/storage";
+import {
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+} from "@/db/collections";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
@@ -63,6 +66,16 @@ interface SettingsPanelProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+}
+
+function clearCollectionById(
+  collection: { toArray: Array<{ id: string }>; has: (id: string) => boolean; delete: (id: string) => void },
+): void {
+  for (const item of [...collection.toArray]) {
+    if (collection.has(item.id)) {
+      collection.delete(item.id);
+    }
+  }
 }
 
 /**
@@ -198,9 +211,9 @@ export function SettingsPanel({
     // Attempt time tracking data clearing if requested
     if (clearTimeTrackingData) {
       try {
-        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.tasks);
-        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.templates);
-        localStorage.removeItem(TIME_TRACKING_STORAGE_KEYS.labels);
+        clearCollectionById(tasksCollection);
+        clearCollectionById(templatesCollection);
+        clearCollectionById(labelsCollection);
         timeTrackingCleared = true;
       } catch (error) {
         console.error("Failed to clear time tracking data:", error);
@@ -212,7 +225,6 @@ export function SettingsPanel({
     if (clearTimeOffData) {
       try {
         clearTimeOffEvents();
-        saveTimeOffEntries([]);
         timeOffCleared = true;
       } catch (error) {
         console.error("Failed to clear time off data:", error);

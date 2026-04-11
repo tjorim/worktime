@@ -36,7 +36,8 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey, TIME_TRACKING_STORAGE_KEYS } from "@/constants/storageKeys";
+import { getSyncCursorKey } from "@/constants/storageKeys";
+import { tasksCollection } from "@/db/collections";
 
 // ---------------------------------------------------------------------------
 // SuperTokens session mock — mutable so individual tests can override it.
@@ -96,19 +97,14 @@ const emptyPullResponse = {
 
 /** Seed a minimal task so buildLocalSyncPushPayload() returns non-empty payload. */
 function seedLocalTask() {
-  localStorage.setItem(
-    TIME_TRACKING_STORAGE_KEYS.tasks,
-    JSON.stringify([
-      {
-        id: "local-task-1",
-        text: "Local task",
-        label: "",
-        startTime: "2026-01-01T09:00",
-        stopTime: null,
-        includesBreak: false,
-      },
-    ]),
-  );
+  tasksCollection.insert({
+    id: "local-task-1",
+    text: "Local task",
+    label: "",
+    startTime: "2026-01-01T09:00",
+    stopTime: null,
+    includesBreak: false,
+  });
 }
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<unknown>;

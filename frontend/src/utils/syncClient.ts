@@ -13,7 +13,7 @@
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/timeTracking/types";
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
-import type { WorkLocationInfo } from "@/types/workLocation";
+import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
 import { GANTT_STORAGE_KEY } from "@/constants/storageKeys";
 import {
@@ -24,8 +24,15 @@ import {
   getSyncCursorKey,
   getSyncOutboxKey,
 } from "@/constants/storageKeys";
+import {
+  ganttTasksCollection,
+  labelsCollection,
+  tasksCollection,
+  templatesCollection,
+  timeOffCollection,
+  workLocationsCollection,
+} from "@/db/collections";
 import { createTimeOffEntry } from "@/lib/timeOff/codecs";
-import { loadTimeOffEntries } from "@/lib/timeOff/storage";
 import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 
@@ -532,7 +539,7 @@ function localTimeToUtcIso(localTime: string): string | null {
 }
 
 /**
- * Build a SyncPushPayload from the current localStorage contents.
+ * Build a SyncPushPayload from the current collection-backed local state.
  *
  * Entities included: labels, tasks, templates, work locations, and time-off
  * entries. All records are sent with `action: "create"` and a
@@ -544,7 +551,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
 
   // Labels — filter out rows with missing/invalid required fields so that a
   // single corrupted label cannot cause the entire first-sync push to fail.
-  const rawLabels = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.labels) as TimeTrackingLabel[];
+  const rawLabels = labelsCollection.toArray as TimeTrackingLabel[];
   const labels: LabelSyncItem[] = rawLabels
     .filter(
       (l) =>
@@ -563,7 +570,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     }));
 
   // Tasks
-  const rawTasks = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.tasks) as StoredTimeTrackingTask[];
+  const rawTasks = tasksCollection.toArray as StoredTimeTrackingTask[];
   const tasks: TaskSyncItem[] = rawTasks
     .filter((t) => {
       if (!t || typeof t.id !== "string" || typeof t.startTime !== "string") return false;
@@ -596,9 +603,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     const m = parts[1];
     return h !== undefined && h >= 0 && h <= 23 && m !== undefined && m >= 0 && m <= 59;
   };
-  const rawTemplates = safeParseJsonArray(
-    TIME_TRACKING_STORAGE_KEYS.templates,
-  ) as TimeTrackingTemplate[];
+  const rawTemplates = templatesCollection.toArray as TimeTrackingTemplate[];
   const templates: TemplateSyncItem[] = rawTemplates
     .filter(
       (t) =>
@@ -622,8 +627,7 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
       stop_time: `${t.stop}:00`,
     }));
 
-  // Work locations — iterate all matching localStorage keys
-  // Validate date keys: must be YYYY-MM-DD and produce a valid calendar date.
+  // Work locations — validate date keys before pushing.
   const isValidDateKey = (dateStr: string): boolean => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
     const parsed = new Date(dateStr);
@@ -634,30 +638,30 @@ export function buildLocalSyncPushPayload(): SyncPushPayload {
     const dd = String(parsed.getUTCDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}` === dateStr;
   };
-  const workLocations: WorkLocationSyncItem[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) continue;
-    const yearData = safeParseJsonObject(key) as Record<string, WorkLocationInfo>;
-    for (const [date, info] of Object.entries(yearData)) {
-      if (!info || typeof info.countryCode !== "string") continue;
-      // Validate the date key before pushing.
-      if (!isValidDateKey(date)) continue;
-      workLocations.push({
-        date,
-        action: "create",
-        client_updated_at: now,
-        country_code: info.countryCode,
-        label: info.label ?? null,
-      });
-    }
-  }
+  const rawWorkLocations = workLocationsCollection.toArray as WorkLocationEntry[];
+  const workLocations: WorkLocationSyncItem[] = rawWorkLocations
+    .filter(
+      (entry) =>
+        entry &&
+        typeof entry.date === "string" &&
+        isValidDateKey(entry.date) &&
+        typeof entry.countryCode === "string",
+    )
+    .map((entry) => ({
+      date: entry.date,
+      action: "create",
+      client_updated_at: now,
+      country_code: entry.countryCode,
+      label: entry.label ?? null,
+    }));
 
-  const localTimeOffEntries: TimeOffEntry[] = loadTimeOffEntries();
+  const localTimeOffEntries = (timeOffCollection.toArray as TimeOffEntry[]).filter(
+    (entry) => entry && typeof entry.id === "string",
+  );
 
   const timeOffEntries = timeOffEntriesToSyncItems(localTimeOffEntries, now);
 
-  const rawGanttTasks = safeParseJsonArray(GANTT_STORAGE_KEY) as RawGanttTask[];
+  const rawGanttTasks = ganttTasksCollection.toArray as RawGanttTask[];
   const ganttTasks: GanttTaskSyncItem[] = rawGanttTasks
     .filter(isValidRawGanttTask)
     .map((t) => ({

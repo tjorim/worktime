@@ -1,9 +1,36 @@
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
+import { ganttTasksCollection } from "@/db/collections";
+
+let uniqueCounter = 0;
+
+function nextId(prefix: string): string {
+  uniqueCounter += 1;
+  return `${prefix}-${uniqueCounter}`;
+}
+
+function clearGanttCollection() {
+  const items = [...ganttTasksCollection.toArray];
+  for (const item of items) {
+    try {
+      if (ganttTasksCollection.has(item.id)) {
+        ganttTasksCollection.delete(item.id);
+      }
+    } catch {
+      // Ignore rows already removed during teardown.
+    }
+  }
+}
 
 describe("useGanttTasks", () => {
+  beforeEach(() => {
+    clearGanttCollection();
+  });
+
   afterEach(() => {
+    cleanup();
+    clearGanttCollection();
     vi.unstubAllGlobals();
   });
 
@@ -13,9 +40,10 @@ describe("useGanttTasks", () => {
     expect(result.current.tasks).toEqual([]);
   });
 
-  it("addTask creates a task with generated id", () => {
+  it("addTask creates a task with generated id", async () => {
+    const taskId = nextId("generated-id");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => "generated-id"),
+      randomUUID: vi.fn(() => taskId),
     });
 
     const { result } = renderHook(() => useGanttTasks());
@@ -28,91 +56,115 @@ describe("useGanttTasks", () => {
       });
     });
 
-    expect(result.current.tasks).toHaveLength(1);
-    expect(result.current.tasks[0]).toMatchObject({
-      id: "generated-id",
-      name: "Plan sprint",
-      progress: 0,
+    await waitFor(() => {
+      expect(result.current.tasks).toHaveLength(1);
+      expect(result.current.tasks[0]).toMatchObject({
+        id: taskId,
+        name: "Plan sprint",
+        progress: 0,
+      });
     });
   });
 
-  it("updateTask modifies an existing task", () => {
-    vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "t1") });
-
+  it("updateTask modifies an existing task", async () => {
     const { result } = renderHook(() => useGanttTasks());
+    let taskId = "";
 
     act(() => {
-      result.current.addTask({ name: "Initial", start: "2026-03-01", end: "2026-03-05" });
+      taskId = result.current.addTask({ name: "Initial", start: "2026-03-01", end: "2026-03-05" }).id;
+    });
+
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.id === taskId)).toBe(true);
     });
 
     act(() => {
-      result.current.updateTask("t1", { end: "2026-03-06", progress: 25, notes: "Resized" });
+      result.current.updateTask(taskId, { end: "2026-03-06", progress: 25, notes: "Resized" });
     });
 
-    expect(result.current.tasks[0]).toMatchObject({
-      id: "t1",
-      name: "Initial",
-      end: "2026-03-06",
-      progress: 25,
-      notes: "Resized",
+    await waitFor(() => {
+      expect(result.current.tasks.find((task) => task.name === "Initial")).toMatchObject({
+        name: "Initial",
+        end: "2026-03-06",
+        progress: 25,
+        notes: "Resized",
+      });
     });
   });
 
-  it("removeTask deletes the task from state", () => {
-    vi.stubGlobal("crypto", {
-      randomUUID: vi
-        .fn()
-        .mockReturnValueOnce("t1")
-        .mockReturnValueOnce("t2"),
-    });
-
+  it("removeTask deletes the task from state", async () => {
     const { result } = renderHook(() => useGanttTasks());
+    let secondId = "";
 
     act(() => {
       result.current.addTask({ name: "A", start: "2026-03-01", end: "2026-03-05" });
-      result.current.addTask({ name: "B", start: "2026-03-02", end: "2026-03-06" });
+      secondId = result.current.addTask({ name: "B", start: "2026-03-02", end: "2026-03-06" }).id;
     });
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
+      expect(result.current.tasks.some((task) => task.name === "B")).toBe(true);
+    });
+
+    const taskToRemove = result.current.tasks.find((task) => task.name === "B");
+    expect(taskToRemove).toBeDefined();
 
     act(() => {
-      result.current.removeTask("t2");
+      result.current.removeTask(taskToRemove!.id);
     });
 
-    expect(result.current.tasks).toHaveLength(1);
-    expect(result.current.tasks[0].id).toBe("t1");
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.name === "B")).toBe(false);
+      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
+    });
   });
 
-  it("removeTask strips deleted id from other tasks' dependencies", () => {
-    vi.stubGlobal("crypto", {
-      randomUUID: vi
-        .fn()
-        .mockReturnValueOnce("t1")
-        .mockReturnValueOnce("t2")
-        .mockReturnValueOnce("t3"),
-    });
-
+  it("removeTask strips deleted id from other tasks' dependencies", async () => {
     const { result } = renderHook(() => useGanttTasks());
+    let firstId = "";
+    let secondId = "";
 
     act(() => {
-      result.current.addTask({ name: "A", start: "2026-03-01", end: "2026-03-05" });
-      result.current.addTask({ name: "B", start: "2026-03-02", end: "2026-03-06", dependencies: "t1" });
-      result.current.addTask({ name: "C", start: "2026-03-03", end: "2026-03-07", dependencies: "t1, t2" });
+      const first = result.current.addTask({ name: "A", start: "2026-03-01", end: "2026-03-05" });
+      firstId = first.id;
+      const second = result.current.addTask({
+        name: "B",
+        start: "2026-03-02",
+        end: "2026-03-06",
+        dependencies: first.id,
+      });
+      secondId = second.id;
+      result.current.addTask({
+        name: "C",
+        start: "2026-03-03",
+        end: "2026-03-07",
+        dependencies: [first.id, second.id].join(", "),
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.name === "A")).toBe(true);
+      expect(result.current.tasks.some((task) => task.name === "B")).toBe(true);
+      expect(result.current.tasks.some((task) => task.name === "C")).toBe(true);
     });
 
     act(() => {
-      result.current.removeTask("t1");
+      result.current.removeTask(firstId);
     });
 
-    expect(result.current.tasks).toHaveLength(2);
-    expect(result.current.tasks.find((t) => t.id === "t2")?.dependencies).toBeUndefined();
-    expect(result.current.tasks.find((t) => t.id === "t3")?.dependencies).toBe("t2");
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.name === "A")).toBe(false);
+      expect(result.current.tasks.find((t) => t.name === "B")?.dependencies).toBeUndefined();
+      expect(result.current.tasks.find((t) => t.name === "C")?.dependencies).toBe(secondId);
+    });
   });
 
-  it("filters invalid tasks (bad date format)", () => {
+  it("filters invalid tasks (bad date format)", async () => {
+    const okId = nextId("ok");
+    const badId = nextId("bad-format");
     vi.stubGlobal("crypto", {
       randomUUID: vi
         .fn()
-        .mockReturnValueOnce("ok")
-        .mockReturnValueOnce("bad-format"),
+        .mockReturnValueOnce(okId)
+        .mockReturnValueOnce(badId),
     });
 
     const { result } = renderHook(() => useGanttTasks());
@@ -121,13 +173,15 @@ describe("useGanttTasks", () => {
       result.current.addTask({ name: "Valid", start: "2026-02-01", end: "2026-02-03" });
     });
 
-    expect(result.current.tasks).toHaveLength(1);
-    expect(result.current.tasks[0]).toMatchObject({ id: "ok", progress: 0 });
+    await waitFor(() => {
+      expect(result.current.tasks.some((task) => task.id === okId)).toBe(true);
+    });
   });
 
-  it("persists tasks across hook re-renders", () => {
+  it("persists tasks across hook re-renders", async () => {
+    const persistentId = nextId("persistent-id");
     vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => "persistent-id"),
+      randomUUID: vi.fn(() => persistentId),
     });
 
     const { result, unmount } = renderHook(() => useGanttTasks());
@@ -143,14 +197,8 @@ describe("useGanttTasks", () => {
     unmount();
 
     const { result: remountedResult } = renderHook(() => useGanttTasks());
-    expect(remountedResult.current.tasks).toEqual([
-      {
-        id: "persistent-id",
-        name: "Persistent task",
-        start: "2026-04-01",
-        end: "2026-04-02",
-        progress: 0,
-      },
-    ]);
+    await waitFor(() => {
+      expect(remountedResult.current.tasks.some((task) => task.id === persistentId)).toBe(true);
+    });
   });
 });

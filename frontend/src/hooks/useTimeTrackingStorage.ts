@@ -101,11 +101,7 @@ export function useTimeTrackingStorage() {
 
   const addTask = useCallback(
     async (payload: StoredTimeTrackingTask): Promise<boolean> => {
-      // Check if a running (unstopped) task already exists in the collection
-      const currentTasks = (tasksCollection.toArray as StoredTimeTrackingTask[]).filter(
-        isValidRawTask,
-      );
-      const hasValidRunningTask = currentTasks.some(
+      const hasValidRunningTask = tasks.some(
         (task) => task.stopTime === undefined || task.stopTime === null,
       );
       if (payload.stopTime === undefined && hasValidRunningTask) {
@@ -124,7 +120,7 @@ export function useTimeTrackingStorage() {
       tasksCollection.insert(newTask);
       return true;
     },
-    [],
+    [tasks],
   );
 
   const updateTaskTimes = useCallback(
@@ -136,18 +132,25 @@ export function useTimeTrackingStorage() {
       newLabel?: string;
       includesBreak?: boolean;
     }) => {
-      if (!tasksCollection.has(payload.id)) return;
-      tasksCollection.update(payload.id, (d) => {
-        if (payload.newText !== undefined) d.text = payload.newText;
-        if (payload.newLabel !== undefined) d.label = payload.newLabel;
-        d.startTime = payload.newStartTime;
-        d.stopTime = payload.newStopTime ?? undefined;
-        if (typeof payload.includesBreak === "boolean") {
-          d.includesBreak = payload.includesBreak || undefined;
-        }
-      });
+      if (!tasks.some((task) => task.id === payload.id)) return;
+      tasksCollection.utils.writeUpsert([
+        ...tasks.map((task) =>
+          task.id === payload.id
+            ? {
+              ...task,
+              ...(payload.newText !== undefined ? { text: payload.newText } : {}),
+              ...(payload.newLabel !== undefined ? { label: payload.newLabel } : {}),
+              startTime: payload.newStartTime,
+              stopTime: payload.newStopTime ?? undefined,
+              ...(typeof payload.includesBreak === "boolean"
+                ? { includesBreak: payload.includesBreak || undefined }
+                : {}),
+            }
+            : task,
+        ),
+      ]);
     },
-    [],
+    [tasks],
   );
 
   /**
@@ -161,16 +164,24 @@ export function useTimeTrackingStorage() {
    * If `taskId` does not match any stored task the call is a no-op.
    */
   const toggleBreak = useCallback((taskId: string, includesBreak: boolean) => {
-    if (!tasksCollection.has(taskId)) return;
-    tasksCollection.update(taskId, (d) => {
-      d.includesBreak = includesBreak || undefined;
-    });
-  }, []);
+    if (!tasks.some((task) => task.id === taskId)) return;
+    tasksCollection.utils.writeUpsert([
+      ...tasks.map((task) =>
+        task.id === taskId
+          ? {
+            ...task,
+            includesBreak: includesBreak || undefined,
+          }
+          : task,
+      ),
+    ]);
+  }, [tasks]);
 
   const removeTask = useCallback((id: string) => {
-    if (!tasksCollection.has(id)) return;
-    tasksCollection.delete(id);
-  }, []);
+    if (!tasks.some((task) => task.id === id)) return;
+    const remainingTasks = tasks.filter((task) => task.id !== id);
+    tasksCollection.utils.writeUpsert(remainingTasks);
+  }, [tasks]);
 
   const addTemplate = useCallback((payload: Omit<TimeTrackingTemplate, "id">) => {
     const id = crypto.randomUUID();
@@ -179,18 +190,26 @@ export function useTimeTrackingStorage() {
 
   const updateTemplate = useCallback(
     (payload: { id: string; template: Omit<TimeTrackingTemplate, "id"> }) => {
-      if (!templatesCollection.has(payload.id)) return;
-      templatesCollection.update(payload.id, (d) => {
-        Object.assign(d, payload.template);
-      });
+      if (!templates.some((template) => template.id === payload.id)) return;
+      templatesCollection.utils.writeUpsert([
+        ...templates.map((template) =>
+          template.id === payload.id
+            ? {
+              ...template,
+              ...payload.template,
+            }
+            : template,
+        ),
+      ]);
     },
-    [],
+    [templates],
   );
 
   const deleteTemplate = useCallback((id: string) => {
-    if (!templatesCollection.has(id)) return;
-    templatesCollection.delete(id);
-  }, []);
+    if (!templates.some((template) => template.id === id)) return;
+    const remainingTemplates = templates.filter((template) => template.id !== id);
+    templatesCollection.utils.writeUpsert(remainingTemplates);
+  }, [templates]);
 
   const updateTemplates = useCallback((nextTemplates: TimeTrackingTemplate[]) => {
     const nextIds = new Set(nextTemplates.map((t) => t.id));
