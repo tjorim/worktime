@@ -1,4 +1,3 @@
-import { TIME_OFF_ENTRIES_STORAGE_KEY } from "@/constants/storageKeys";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { TimeOffEntry, TimeOffEntryFlag } from "./types";
 import {
@@ -85,27 +84,4 @@ export function normalizeTimeOffEntries(input: unknown): TimeOffEntry[] {
     if (byIdentity !== 0) return byIdentity;
     return a.id.localeCompare(b.id);
   });
-}
-
-export function loadTimeOffEntries(): TimeOffEntry[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = localStorage.getItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-    if (!raw) return [];
-    return normalizeTimeOffEntries(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
-
-export function saveTimeOffEntries(entries: TimeOffEntry[]): void {
-  if (typeof window === "undefined") return;
-
-  if (entries.length === 0) {
-    localStorage.removeItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-    return;
-  }
-
-  localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
 }

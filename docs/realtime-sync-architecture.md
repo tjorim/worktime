@@ -26,7 +26,7 @@ The following mechanisms are already implemented and authoritative:
 
 | Mechanism | Description |
 |-----------|-------------|
-| **Local-first storage** | All user data lives in `localStorage`; the app is fully functional offline. |
+| **Local-first storage** | Sync-managed domains are backed by TanStack DB QueryCollections; user settings remain in `localStorage`. The app is fully functional offline. |
 | **Offline outbox queue** | Failed pushes are queued under `worktime_sync_outbox_<userId>` and flushed on reconnect. |
 | **Cursor-based REST pull** | `GET /api/sync/pull?since=<ISO-8601>` returns records where `updated_at > since`, ordered by `updated_at`. |
 | **Cursor-based REST push** | `POST /api/sync/push` accepts batches; last-write-wins via `client_updated_at`. |
@@ -169,18 +169,19 @@ It is a trigger: on event received → call pull. It must not cache data, mutate
 
 ## Domain Ownership and Coexistence
 
-The table below is the authoritative record of per-domain ownership. Domains
-marked `migrated` are fully wired to a QueryCollection; those marked `pending`
-still use legacy `localStorage`-backed hooks.
+The table below is the authoritative record of per-domain ownership. All
+sync-managed domains are fully wired to a QueryCollection; only user
+preferences remains in a `localStorage`-backed context pending a future
+migration.
 
 | Domain | localStorage key(s) | Owner | Status |
 |--------|---------------------|-------|--------|
-| Time-tracking labels | `worktime_time_tracking_labels` | TanStack DB (`labelsCollection`) | migrated |
-| Time-tracking tasks | `worktime_time_tracking_tasks` | TanStack DB (`tasksCollection`) | migrated |
-| Time-tracking templates | `worktime_time_tracking_templates` | TanStack DB (`templatesCollection`) | migrated |
-| Time-off entries | `worktime_time_off_entries` | TanStack DB (`timeOffCollection`) | migrated |
-| Gantt tasks | `worktime_gantt_tasks` | TanStack DB (`ganttTasksCollection`) | migrated |
-| Work locations | `worktime_work_locations_<year>` | TanStack DB (`workLocationsCollection`) | migrated |
+| Time-tracking labels | — (collection only) | TanStack DB (`labelsCollection`) | migrated |
+| Time-tracking tasks | — (collection only) | TanStack DB (`tasksCollection`) | migrated |
+| Time-tracking templates | — (collection only) | TanStack DB (`templatesCollection`) | migrated |
+| Time-off entries | — (collection only) | TanStack DB (`timeOffCollection`) | migrated |
+| Gantt tasks | — (collection only) | TanStack DB (`ganttTasksCollection`) | migrated |
+| Work locations | — (collection only) | TanStack DB (`workLocationsCollection`) | migrated |
 | User preferences | `worktime_user_state` (partial) | `SettingsContext` / sync pipeline | pending |
 | Public holidays | OpenHolidays API | TanStack Query (`useOpenHolidays`) | stable |
 | Team / roster data | Backend `.hday` API | Fetched directly (no persistent cache) | stable |
@@ -197,9 +198,9 @@ still use legacy `localStorage`-backed hooks.
    standalone `useQuery` call for a domain that already has a QueryCollection —
    that creates a competing cache.
 
-3. **Legacy path stays until fully removed.** When a domain transitions from
-   `pending` to `migrated`, the corresponding legacy hook is removed in the same
-   PR — not after.
+3. **Legacy path is removed on migration.** When a domain transitions from
+   `pending` to `migrated`, the corresponding legacy localStorage-backed hook
+   and any associated storage key constants are removed in the same PR.
 
 4. **Test isolation is guaranteed by the existing setup.** QueryCollection
    mutations are kept in memory during tests. Test isolation is preserved by the
@@ -238,7 +239,8 @@ To migrate the remaining `pending` domain (user preferences) in a future issue:
 2. Replace `SettingsContext` reads/writes for the synced fields with
    `useLiveQuery` over the new collection.
 3. Remove the legacy sync pipeline path for preferences.
-4. Update the status column in this table from `pending` to `migrated`.
+4. Remove the `worktime_user_state` entry from the domain table and mark the
+   domain as `migrated`.
 5. Do **not** add a standalone `useQuery` call alongside the QueryCollection.
 
 ---
