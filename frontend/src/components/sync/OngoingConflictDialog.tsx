@@ -21,9 +21,8 @@ interface OngoingConflictDialogProps {
  *   - Accept the server version → conflict state is cleared, no re-push.
  *   - Keep their own version → conflicted items are re-pushed with a fresh
  *     `client_updated_at` timestamp so they win the next push.
- *
- * The dialog is non-dismissible without a choice to prevent accidental data
- * loss by ambiguous dismissal.
+ *   - Dismiss → treated as accepting the server version (equivalent to
+ *     "Keep server version").
  */
 export function OngoingConflictDialog({
   show,
