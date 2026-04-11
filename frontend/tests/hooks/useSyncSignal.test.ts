@@ -11,7 +11,9 @@ import { getSyncCursorKey } from "@/constants/storageKeys";
  */
 function createMockTransport() {
   let capturedOnSignal: ((serverTimestamp: string) => void) | null = null;
-  const unsubscribeMock = vi.fn();
+  const unsubscribeMock = vi.fn(() => {
+    capturedOnSignal = null;
+  });
 
   const transport: SyncSignalTransport = {
     subscribe(onSignal) {

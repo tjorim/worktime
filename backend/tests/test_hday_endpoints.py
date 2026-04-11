@@ -6,13 +6,16 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import settings
+from app.config.settings import settings
 from app.main import app
 
 # Expected etag length: "sha256:" (7 chars) + 64 hex characters = 71
 EXPECTED_SHA256_ETAG_LENGTH = 71
 
-pytestmark = pytest.mark.skip(reason="Legacy fileshare not enabled (LEGACY_FILESHARE_ENABLED=False)")
+pytestmark = pytest.mark.skipif(
+    not settings.LEGACY_FILESHARE_ENABLED,
+    reason="Legacy fileshare not enabled (LEGACY_FILESHARE_ENABLED=False)"
+)
 
 
 @pytest.fixture

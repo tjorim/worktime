@@ -63,8 +63,26 @@ def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
-    response = client.get("/api/health")
-    
+    # Stub DB/auth so we only test file-share behavior
+    async def mock_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[_get_db_if_enabled] = mock_db
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_http_client = AsyncMock()
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_ctx = MagicMock()
+    mock_http_ctx.__aenter__ = AsyncMock(return_value=mock_http_client)
+    mock_http_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    try:
+        with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
+            response = client.get("/api/health")
+    finally:
+        del app.dependency_overrides[_get_db_if_enabled]
+
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "degraded"
@@ -80,8 +98,26 @@ def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_file))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
-    response = client.get("/api/health")
-    
+    # Stub DB/auth so we only test file-share behavior
+    async def mock_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[_get_db_if_enabled] = mock_db
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_http_client = AsyncMock()
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_ctx = MagicMock()
+    mock_http_ctx.__aenter__ = AsyncMock(return_value=mock_http_client)
+    mock_http_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    try:
+        with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
+            response = client.get("/api/health")
+    finally:
+        del app.dependency_overrides[_get_db_if_enabled]
+
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "degraded"
@@ -93,22 +129,40 @@ def test_health_check_permission_denied(client, tmp_path, monkeypatch):
     # Create a directory
     share_dir = tmp_path / "share"
     share_dir.mkdir()
-    
+
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
+    # Stub DB/auth so we only test file-share behavior
+    async def mock_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[_get_db_if_enabled] = mock_db
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_http_client = AsyncMock()
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_ctx = MagicMock()
+    mock_http_ctx.__aenter__ = AsyncMock(return_value=mock_http_client)
+    mock_http_ctx.__aexit__ = AsyncMock(return_value=None)
+
     # Mock iterdir to raise PermissionError
     original_iterdir = Path.iterdir
-    
+
     def mock_iterdir(self):
         if str(self) == str(share_dir):
             raise PermissionError("Permission denied")
         return original_iterdir(self)
-    
+
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
-    
-    response = client.get("/api/health")
-    
+
+    try:
+        with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
+            response = client.get("/api/health")
+    finally:
+        del app.dependency_overrides[_get_db_if_enabled]
+
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "degraded"
@@ -120,22 +174,40 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     # Create a directory
     share_dir = tmp_path / "share"
     share_dir.mkdir()
-    
+
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
+    # Stub DB/auth so we only test file-share behavior
+    async def mock_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[_get_db_if_enabled] = mock_db
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_http_client = AsyncMock()
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_ctx = MagicMock()
+    mock_http_ctx.__aenter__ = AsyncMock(return_value=mock_http_client)
+    mock_http_ctx.__aexit__ = AsyncMock(return_value=None)
+
     # Mock iterdir to raise a general exception
     original_iterdir = Path.iterdir
-    
+
     def mock_iterdir(self):
         if str(self) == str(share_dir):
             raise OSError("Disk error")
         return original_iterdir(self)
-    
+
     monkeypatch.setattr(Path, "iterdir", mock_iterdir)
-    
-    response = client.get("/api/health")
-    
+
+    try:
+        with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
+            response = client.get("/api/health")
+    finally:
+        del app.dependency_overrides[_get_db_if_enabled]
+
     assert response.status_code == 503
     data = response.json()
     assert data["status"] == "degraded"
@@ -143,5 +215,4 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
     assert "error" in data
     # Error message is now generic for security (no information disclosure)
     assert data["error"] == "internal_error"
-
 

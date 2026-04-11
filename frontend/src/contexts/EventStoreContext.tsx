@@ -118,7 +118,8 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
       for (const entry of newEntries) {
         if (existingIds.has(entry.id)) {
           timeOffCollection.update(entry.id, (d) => {
-            Object.assign(d, entry);
+            const { id: _id, ...patch } = entry;
+            Object.assign(d, patch);
           });
         } else {
           timeOffCollection.insert(entry);
@@ -230,7 +231,10 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
             if (!collectionIds.has(entry.id)) {
               timeOffCollection.insert(entry);
             } else {
-              timeOffCollection.update(entry.id, (d) => { Object.assign(d, entry); });
+              timeOffCollection.update(entry.id, (d) => {
+                const { id: _id, ...patch } = entry;
+                Object.assign(d, patch);
+              });
             }
           }
         });

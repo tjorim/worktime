@@ -714,10 +714,8 @@ describe("useOngoingSync", () => {
       await waitFor(() => {
         // The re-push call comes after the 3 mock calls already consumed (initial pull,
         // conflict push, reconciliation pull).
-        const repushCall = mockFetch.mock.calls.find(
-          ([url]: [string]) => url === "/api/sync/push",
-        );
-        expect(repushCall).toBeDefined();
+        const repushCalls = mockFetch.mock.calls.filter(([url]: [string]) => url === "/api/sync/push");
+        expect(repushCalls.length).toBeGreaterThan(1);
       });
 
       // Verify the re-push timestamp was bumped (later than the original conflict timestamp).

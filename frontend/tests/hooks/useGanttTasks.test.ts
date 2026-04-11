@@ -180,6 +180,16 @@ describe("useGanttTasks", () => {
     await waitFor(() => {
       expect(result.current.tasks.some((task) => task.id === okId)).toBe(true);
     });
+
+    act(() => {
+      result.current.addTask({ name: "Invalid", start: "bad-date", end: "2026-02-05" });
+    });
+
+    await waitFor(() => {
+      expect(result.current.tasks.length).toBe(1);
+      expect(result.current.tasks.some((task) => task.id === okId)).toBe(true);
+      expect(result.current.tasks.some((task) => task.id === badId)).toBe(false);
+    });
   });
 
   it("persists tasks across hook re-renders", async () => {

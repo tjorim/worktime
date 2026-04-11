@@ -113,6 +113,7 @@ export function useWorkLocationStorage(year: number) {
       if (workLocationsCollection.has(key)) {
         workLocationsCollection.update(key, (d: WorkLocationEntry) => {
           Object.assign(d, entry);
+          if (entry.label === undefined) delete d.label;
         });
       } else {
         workLocationsCollection.insert(entry);
@@ -149,4 +150,3 @@ export function useWorkLocationStorage(year: number) {
     clearLocationForDate,
   };
 }
-

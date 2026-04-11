@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { dayjs } from "@/utils/dateTimeUtils";
-
-const DEVELOPER_OPTIONS_STORAGE_KEY = "worktime_developer_options";
+import { DEVELOPER_OPTIONS_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 

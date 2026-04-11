@@ -56,6 +56,9 @@ function createWeeklyEntry(
 
 describe("EventStoreContext", () => {
   // Collections are cleared globally in tests/setup.ts beforeEach.
+  beforeEach(() => {
+    localStorage.removeItem("worktime_hday_raw");
+  });
 
   describe("Initial State", () => {
     it("should start with empty entries", () => {
