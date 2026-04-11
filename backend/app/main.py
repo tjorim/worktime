@@ -25,6 +25,7 @@ from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.team import router as team_router
+from .utils.sse_manager import sync_event_manager
 
 # Configure logging
 logging.basicConfig(
@@ -123,6 +124,9 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"❌ Database initialization failed: {e}")
             raise
+
+        # Start Postgres LISTEN/NOTIFY for cross-process SSE broadcast
+        await sync_event_manager.start_pg_listener(settings.DATABASE_URL)
     else:
         logger.info("Database initialization skipped (DATABASE_ENABLED=false)")
 
@@ -140,6 +144,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Worktime Backend API shutting down...")
+    if settings.DATABASE_ENABLED:
+        await sync_event_manager.stop_pg_listener()
 
 
 # Create FastAPI application
