@@ -374,6 +374,8 @@ function AppContent() {
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
 
+// ---------------------------------------------------------------------------
+
 /**
  * TanStack Query client shared by the whole app.
  *

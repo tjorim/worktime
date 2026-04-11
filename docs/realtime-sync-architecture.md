@@ -199,21 +199,15 @@ that window.
    `useQuery` call as an intermediate step — that creates a competing cache.
    QueryCollection uses TanStack Query internally and is the correct pattern.
 
-3. **Migrate one domain at a time.** Each domain in the table above is an
-   independent migration unit. Migrating labels does not require migrating tasks
-   at the same time.
+3. **All domains migrate together.** All pending domains in the table above are
+   migrated in a single PR.
 
-4. **Rollout flag gates the migration.** Each migrated domain is activated
-   behind a `useTanStackDB` rollout flag (stored in developer options) so that
-   the migration can be compared, rolled back, and verified in isolation before
-   the legacy path is removed.
-
-5. **Legacy path stays until fully removed.** A `pending` domain's existing
+4. **Legacy path stays until fully removed.** A `pending` domain's existing
    hooks and localStorage writes remain unchanged. When a domain is marked
    `migrated`, the corresponding legacy hook is removed in the same PR — not
    after.
 
-6. **Test isolation is guaranteed by the existing setup.** TanStack DB
+5. **Test isolation is guaranteed by the existing setup.** TanStack DB
    collections in this codebase use `localOnlyCollectionOptions` stubs during
    the pending phase, which are in-memory only. Once switched to
    `localStorageCollectionOptions`, test isolation is preserved by the
