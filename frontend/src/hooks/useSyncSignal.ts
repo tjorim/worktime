@@ -91,8 +91,9 @@ export function createSseTransport(url: string): SyncSignalTransport {
       es.addEventListener("sync_changed", handleMessage);
 
       es.onerror = () => {
-        // EventSource reconnects automatically; log for observability only.
-        console.warn("useSyncSignal: SSE connection error — will retry automatically.");
+        // EventSource reconnects automatically after every error; using debug
+        // level avoids console spam on flaky networks or proxy interruptions.
+        console.debug("useSyncSignal: SSE connection error — will retry automatically.");
       };
 
       return () => {

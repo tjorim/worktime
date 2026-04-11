@@ -163,6 +163,10 @@ class SyncEventManager:
         Called by asyncpg for every ``NOTIFY worktime_sync_changed`` received
         on this process's LISTEN connection, including notifications that
         originated from other worker processes.
+
+        asyncpg invokes this callback synchronously on the event loop thread
+        (not in a separate thread), so calling the non-blocking ``put_nowait``
+        inside ``_enqueue_local`` is safe — no thread-safety concerns apply.
         """
         try:
             user_id = int(payload)
@@ -216,6 +220,7 @@ class SyncEventManager:
 
     async def stop_pg_listener(self) -> None:
         """Remove the LISTEN callback and close asyncpg connections."""
+        had_connections = self._listen_conn is not None or self._notify_conn is not None
         if self._listen_conn is not None:
             try:
                 await self._listen_conn.remove_listener(_NOTIFY_CHANNEL, self._pg_listener_callback)
@@ -231,7 +236,8 @@ class SyncEventManager:
                 logger.debug("SSE: error closing notify connection", exc_info=True)
             finally:
                 self._notify_conn = None
-        logger.info("SSE: Postgres LISTEN/NOTIFY connections closed")
+        if had_connections:
+            logger.info("SSE: Postgres LISTEN/NOTIFY connections closed")
 
 
 #: Module-level singleton; imported by routers and wired up in main.py lifespan.

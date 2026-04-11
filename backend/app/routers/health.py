@@ -1,5 +1,6 @@
 """Health check endpoint."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from typing import Annotated
@@ -43,30 +44,39 @@ async def health_check(
         - 503: {"status": "degraded", ...} - One or more systems unavailable
     """
     content: dict = {}
-    degraded = False
 
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{settings.SUPERTOKENS_CONNECTION_URI}/hello")
-        if response.status_code == 200:
-            content["auth"] = "ok"
-        else:
-            logger.warning("Health check: SuperTokens returned unexpected status %s", response.status_code)
-            content["auth"] = "unreachable"
-            degraded = True
-    except Exception as e:
-        logger.error("Health check failed: SuperTokens core unreachable", exc_info=e)
-        content["auth"] = "unreachable"
-        degraded = True
+    async def _check_auth() -> tuple[str, bool]:
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                response = await client.get(f"{settings.SUPERTOKENS_CONNECTION_URI}/hello")
+            if response.status_code == 200:
+                return "ok", False
+            logger.warning(
+                "Health check: SuperTokens returned unexpected status %s", response.status_code
+            )
+            return "unreachable", True
+        except Exception as e:
+            logger.error("Health check failed: SuperTokens core unreachable", exc_info=e)
+            return "unreachable", True
 
-    if db is not None:
+    async def _check_db() -> tuple[str, bool] | None:
+        if db is None:
+            return None
         try:
             await db.execute(text("SELECT 1"))
-            content["database"] = "ok"
+            return "ok", False
         except Exception as e:
             logger.error("Health check failed: database unreachable", exc_info=e)
-            content["database"] = "unreachable"
-            degraded = True
+            return "unreachable", True
+
+    auth_status, db_status = await asyncio.gather(_check_auth(), _check_db())
+
+    content["auth"], auth_degraded = auth_status
+    degraded = auth_degraded
+
+    if db_status is not None:
+        content["database"], db_degraded = db_status
+        degraded = degraded or db_degraded
 
     if settings.LEGACY_FILESHARE_ENABLED:
         share_path = settings.get_share_dir_path()
