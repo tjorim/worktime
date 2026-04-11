@@ -425,9 +425,8 @@ describe("§2 Branch B / §4 — second-device restore", () => {
     expect(parsed.hasCompletedOnboarding).toBe(true);
     expect(parsed.myTeam).toBe(2);
 
-    // The pull call was made — entity stores are written by applySyncPullResponse.
-    // emptyPullResponse has empty arrays, so localStorage entity keys stay absent,
-    // which is verified separately in syncClient.test.ts applySyncPullResponse suite.
+    // The pull call was made. This scenario only verifies the fetch path because
+    // emptyPullResponse contains no entity data to write into local state.
     const pullCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([url]: [string]) => url.includes("/api/sync/pull"),
     );

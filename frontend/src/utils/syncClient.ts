@@ -2,12 +2,12 @@
  * Sync API client utilities.
  *
  * Provides typed wrappers around the backend sync endpoints
- * (GET /api/sync/status, POST /api/sync/push, GET /api/sync/pull)
- * and helpers to convert between localStorage formats and the
- * sync API wire format.
+ * (GET /api/sync/status, POST /api/sync/push, GET /api/sync/pull).
  *
- * Entities synced: tasks, templates, labels, work locations,
- * time-off entries, gantt tasks, and user preferences.
+ * Fresh-launch architecture:
+ * - Sync-managed domains live in TanStack DB collections.
+ * - User preferences, sync cursor, and outbox remain in localStorage.
+ *
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
@@ -15,11 +15,7 @@ import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
-import { GANTT_STORAGE_KEY } from "@/constants/storageKeys";
 import {
-  TIME_OFF_ENTRIES_STORAGE_KEY,
-  TIME_TRACKING_STORAGE_KEYS,
-  WORK_LOCATIONS_STORAGE_PREFIX,
   USER_STATE_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
@@ -32,8 +28,6 @@ import {
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
-import { createTimeOffEntry } from "@/lib/timeOff/codecs";
-import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 
 // ---------------------------------------------------------------------------
@@ -499,32 +493,8 @@ export function applyPreferencesPull(data: Record<string, unknown>): void {
 }
 
 // ---------------------------------------------------------------------------
-// Local data → push payload conversion
+// Collection-backed local data -> push payload conversion
 // ---------------------------------------------------------------------------
-
-function safeParseJsonArray(key: string): unknown[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function safeParseJsonObject(key: string): Record<string, unknown> {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
-}
 
 /**
  * Convert a local time string ("YYYY-MM-DDTHH:mm") to a UTC ISO-8601 string
@@ -712,30 +682,6 @@ export function timeOffEntriesToSyncItems(
   }));
 }
 
-function syncItemsToTimeOffEntries(items: TimeOffEntrySyncRead[]): TimeOffEntry[] {
-  return items
-    .filter((item) => {
-      if (item.deleted_at !== null) return false;
-      if (item.entry_kind === "date") return item.date != null;
-      if (item.entry_kind === "range") return item.start_date != null && item.end_date != null;
-      if (item.entry_kind === "weekly") return item.weekday != null;
-      return false;
-    })
-    .map((item) =>
-      createTimeOffEntry({
-        id: item.entry_id,
-        entryKind: item.entry_kind,
-        date: item.entry_kind === "date" ? item.date! : undefined,
-        start: item.entry_kind === "range" ? item.start_date! : undefined,
-        end: item.entry_kind === "range" ? item.end_date! : undefined,
-        weekday: item.entry_kind === "weekly" ? item.weekday! : undefined,
-        entryType: isValidEntryType(item.entry_type) ? item.entry_type : "other",
-        entryFlag: isValidFlag(item.entry_flag) ? item.entry_flag : "full_day",
-        note: item.note,
-      } as Parameters<typeof createTimeOffEntry>[0]),
-    );
-}
-
 /**
  * Build the payload for the "keep-local" conflict resolution path.
  *
@@ -788,119 +734,6 @@ export function buildKeepLocalReplacePayload(
     time_off_entries: [...localPayload.time_off_entries, ...deleteTimeOffEntries],
     gantt_tasks: [...(localPayload.gantt_tasks ?? []), ...deleteGanttTasks],
   };
-}
-
-// ---------------------------------------------------------------------------
-// Pull response → localStorage conversion
-// ---------------------------------------------------------------------------
-
-/**
- * Convert a UTC ISO-8601 datetime string to a local-time string in the format
- * "YYYY-MM-DDTHH:mm", matching the format used by the task storage layer.
- */
-function utcIsoToLocalTime(utcIso: string): string {
-  return dayjs(utcIso).format("YYYY-MM-DDTHH:mm");
-}
-
-/**
- * Write a full SyncPullResponse into localStorage, replacing any existing
- * syncable data. Developer options are left untouched.
- *
- * Soft-deleted records (deleted_at !== null) are excluded from the local store.
- */
-export function applySyncPullResponse(data: SyncPullResponse): TimeOffEntry[] {
-  // Labels
-  const localLabels = data.labels
-    .filter((l) => l.deleted_at === null)
-    .map((l) => ({ id: l.id, name: l.name, color: l.color }));
-  localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.labels, JSON.stringify(localLabels));
-
-  // Tasks — convert UTC datetime strings to local "YYYY-MM-DDTHH:mm"
-  const localTasks = data.tasks
-    .filter((t) => t.deleted_at === null)
-    .map((t) => {
-      const task: StoredTimeTrackingTask = {
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        startTime: utcIsoToLocalTime(t.start_time),
-        stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
-      };
-      if (t.includes_break) task.includesBreak = true;
-      return task;
-    });
-  localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.tasks, JSON.stringify(localTasks));
-
-  // Templates — convert "HH:mm:ss" to "HH:mm"
-  const localTemplates = data.templates
-    .filter((t) => t.deleted_at === null)
-    .map((t) => ({
-      id: t.id,
-      text: t.text,
-      label: t.label_id ?? "",
-      start: t.start_time.slice(0, 5),
-      stop: t.stop_time.slice(0, 5),
-    }));
-  localStorage.setItem(TIME_TRACKING_STORAGE_KEYS.templates, JSON.stringify(localTemplates));
-
-  // Work locations — group per year into the per-year localStorage format.
-  //
-  // ⚠️ Data-loss note: The backend sync schema only stores `country_code` and
-  // `label`; it does not persist the local `location` type ("home"/"office"/
-  // "other"). When restoring from the server, all entries are written with
-  // `location: "other"` as a safe default. The home/office distinction visible
-  // in the UI will be lost for any work-location entry that was originally
-  // synced from local data. This is a known temporary limitation of the sync
-  // schema (see docs/local-first-sync-flow.md §Data Scope).
-  // Clear all existing work-location keys before writing pulled data so that
-  // years not present in the server response (e.g. all entries were deleted)
-  // don't leave stale records behind.
-  const existingWlKeys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(WORK_LOCATIONS_STORAGE_PREFIX)) existingWlKeys.push(key);
-  }
-  for (const key of existingWlKeys) {
-    localStorage.removeItem(key);
-  }
-
-  const byYear: Record<string, Record<string, unknown>> = {};
-  for (const wl of data.work_locations) {
-    if (wl.deleted_at !== null) continue;
-    const year = wl.date.slice(0, 4);
-    if (!byYear[year]) byYear[year] = {};
-    byYear[year][wl.date] = {
-      location: "other" as const,
-      countryCode: wl.country_code,
-      ...(wl.label ? { label: wl.label } : {}),
-    };
-  }
-  for (const [year, yearData] of Object.entries(byYear)) {
-    localStorage.setItem(`${WORK_LOCATIONS_STORAGE_PREFIX}${year}`, JSON.stringify(yearData));
-  }
-
-  const entries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
-  if (entries.length > 0) {
-    localStorage.setItem(TIME_OFF_ENTRIES_STORAGE_KEY, JSON.stringify(entries));
-  } else {
-    localStorage.removeItem(TIME_OFF_ENTRIES_STORAGE_KEY);
-  }
-
-  // Gantt tasks — replace all local tasks with the server state.
-  const localGanttTasks: RawGanttTask[] = (data.gantt_tasks ?? [])
-    .filter((g) => g.deleted_at === null)
-    .map((g) => ({
-      id: g.id,
-      name: g.name,
-      start: g.start_date,
-      end: g.end_date,
-      progress: g.progress,
-      ...(g.dependencies ? { dependencies: g.dependencies } : {}),
-      ...(g.notes ? { notes: g.notes } : {}),
-    }));
-  localStorage.setItem(GANTT_STORAGE_KEY, JSON.stringify(localGanttTasks));
-
-  return entries;
 }
 
 // ---------------------------------------------------------------------------
@@ -1009,186 +842,3 @@ export function dequeueAndMergeSyncOutbox(
   return { merged, commit: () => clearSyncOutbox(userId) };
 }
 
-// ---------------------------------------------------------------------------
-// Incremental pull — merge server changes into existing localStorage data
-// ---------------------------------------------------------------------------
-
-/**
- * Dispatch a synthetic StorageEvent on `window` so that same-tab
- * `useLocalStorage` instances watching the given key pick up the new value.
- */
-function notifyLocalStorageChange(key: string, newValue: string, oldValue: string | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key,
-        newValue,
-        oldValue,
-        storageArea: window.localStorage,
-      }),
-    );
-  } catch {
-    // Ignore dispatch errors (e.g., in environments without StorageEvent)
-  }
-}
-
-/**
- * Write `value` to `localStorage[key]` and notify same-tab `useLocalStorage`
- * instances via a synthetic storage event.
- */
-function setItemWithNotify(key: string, value: string): void {
-  try {
-    const oldValue = localStorage.getItem(key);
-    localStorage.setItem(key, value);
-    notifyLocalStorageChange(key, value, oldValue);
-  } catch (err) {
-    // Log and ignore storage write/read errors (e.g., quota exceeded, storage disabled)
-    // so incremental sync fails gracefully instead of crashing callers.
-    console.error("setItemWithNotify: failed to write localStorage key:", key, err);
-  }
-}
-
-/**
- * Apply an incremental SyncPullResponse (i.e. a pull with `since=<cursor>`)
- * to localStorage, merging with existing data rather than replacing it.
- *
- * - Records present in the pull with `deleted_at === null` are upserted.
- * - Records with `deleted_at !== null` are removed from localStorage.
- * - Synthetic StorageEvents are dispatched so that same-tab `useLocalStorage`
- *   instances update their React state immediately.
- *
- * @returns The merged time-off entries (for the caller to pass to
- *   EventStoreContext's `replaceEntries`).
- */
-export function applyIncrementalSyncPullResponse(
-  data: SyncPullResponse,
-  currentTimeOffEntries: TimeOffEntry[],
-): TimeOffEntry[] {
-  // --- Labels ---
-  const existingLabels = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.labels) as Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
-  const labelMap = new Map(existingLabels.map((l) => [l.id, l]));
-  for (const l of data.labels) {
-    if (l.deleted_at === null) {
-      labelMap.set(l.id, { id: l.id, name: l.name, color: l.color });
-    } else {
-      labelMap.delete(l.id);
-    }
-  }
-  const mergedLabels = JSON.stringify(Array.from(labelMap.values()));
-  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.labels, mergedLabels);
-
-  // --- Tasks ---
-  type StoredTask = {
-    id: string;
-    text: string;
-    label: string;
-    startTime: string;
-    stopTime?: string | null;
-    includesBreak?: boolean;
-  };
-  const existingTasks = safeParseJsonArray(TIME_TRACKING_STORAGE_KEYS.tasks) as StoredTask[];
-  const taskMap = new Map(existingTasks.map((t) => [t.id, t]));
-  for (const t of data.tasks) {
-    if (t.deleted_at === null) {
-      taskMap.set(t.id, {
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        startTime: utcIsoToLocalTime(t.start_time),
-        stopTime: t.stop_time ? utcIsoToLocalTime(t.stop_time) : undefined,
-        ...(t.includes_break ? { includesBreak: true } : {}),
-      });
-    } else {
-      taskMap.delete(t.id);
-    }
-  }
-  const mergedTasks = JSON.stringify(Array.from(taskMap.values()));
-  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.tasks, mergedTasks);
-
-  // --- Templates ---
-  type StoredTemplate = { id: string; text: string; label: string; start: string; stop: string };
-  const existingTemplates = safeParseJsonArray(
-    TIME_TRACKING_STORAGE_KEYS.templates,
-  ) as StoredTemplate[];
-  const templateMap = new Map(existingTemplates.map((t) => [t.id, t]));
-  for (const t of data.templates) {
-    if (t.deleted_at === null) {
-      templateMap.set(t.id, {
-        id: t.id,
-        text: t.text,
-        label: t.label_id ?? "",
-        start: t.start_time.slice(0, 5),
-        stop: t.stop_time.slice(0, 5),
-      });
-    } else {
-      templateMap.delete(t.id);
-    }
-  }
-  const mergedTemplates = JSON.stringify(Array.from(templateMap.values()));
-  setItemWithNotify(TIME_TRACKING_STORAGE_KEYS.templates, mergedTemplates);
-
-  // --- Work locations: collect keys to update ---
-  const affectedYears = new Set<string>();
-  for (const wl of data.work_locations) {
-    affectedYears.add(wl.date.slice(0, 4));
-  }
-  for (const year of affectedYears) {
-    const key = `${WORK_LOCATIONS_STORAGE_PREFIX}${year}`;
-    const existing = safeParseJsonObject(key) as Record<string, unknown>;
-    for (const wl of data.work_locations) {
-      if (wl.date.slice(0, 4) !== year) continue;
-      if (wl.deleted_at === null) {
-        existing[wl.date] = {
-          location: "other" as const,
-          countryCode: wl.country_code,
-          ...(wl.label ? { label: wl.label } : {}),
-        };
-      } else {
-        delete existing[wl.date];
-      }
-    }
-    const mergedWl = JSON.stringify(existing);
-    setItemWithNotify(key, mergedWl);
-  }
-
-  // --- Gantt tasks ---
-  const existingGanttTasks = safeParseJsonArray(GANTT_STORAGE_KEY) as RawGanttTask[];
-  const ganttMap = new Map(existingGanttTasks.map((g) => [g.id, g]));
-  for (const g of data.gantt_tasks ?? []) {
-    if (g.deleted_at === null) {
-      ganttMap.set(g.id, {
-        id: g.id,
-        name: g.name,
-        start: g.start_date,
-        end: g.end_date,
-        progress: g.progress,
-        ...(g.dependencies ? { dependencies: g.dependencies } : {}),
-        ...(g.notes ? { notes: g.notes } : {}),
-      });
-    } else {
-      ganttMap.delete(g.id);
-    }
-  }
-  setItemWithNotify(GANTT_STORAGE_KEY, JSON.stringify(Array.from(ganttMap.values())));
-
-  // --- Time-off: merge into current EventStore entries ---
-  const deletedIds = new Set(
-    (data.time_off_entries ?? [])
-      .filter((e) => e.deleted_at !== null)
-      .map((e) => e.entry_id),
-  );
-  const newEntries = syncItemsToTimeOffEntries(data.time_off_entries ?? []);
-
-  const byId = new Map(
-    currentTimeOffEntries.filter((e) => !deletedIds.has(e.id)).map((e) => [e.id, e]),
-  );
-  for (const entry of newEntries) {
-    byId.set(entry.id, entry);
-  }
-  return Array.from(byId.values());
-}

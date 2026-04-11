@@ -121,27 +121,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.scheduleType).toBe(null);
   });
 
-  it("migrates from old keys to unified state (documented gap)", () => {
-    window.localStorage.setItem("hasCompletedOnboarding", "true");
-    window.localStorage.setItem("worktime_user_preferences", JSON.stringify({ myTeam: 2 }));
-    window.localStorage.setItem(
-      "userSettings",
-      JSON.stringify({
-        timeFormat: "12h",
-        theme: "dark",
-        notifications: "on",
-      }),
-    );
-    // Simulate first load with legacy keys
-    const { result } = renderHook(() => useSettings(), { wrapper });
-    // Should fallback to default, as migration is not implemented, but this test documents the gap
-    expect(result.current.hasCompletedOnboarding).toBe(false);
-    expect(result.current.myTeam).toBe(null);
-    expect(result.current.settings.timeFormat).toBe("24h");
-    expect(result.current.scheduleType).toBe(null);
-  });
-
-  it("resetSettings clears unified key and does not leave old keys", () => {
+  it("resetSettings writes the default unified user state", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     act(() => {
       result.current.setMyTeam(1);
@@ -187,11 +167,6 @@ describe("SettingsContext unified user state", () => {
         ganttViewMode: "Day",
       },
     });
-
-    // Check that all old/legacy keys are null (not written by the implementation)
-    expect(window.localStorage.getItem("hasCompletedOnboarding")).toBeNull();
-    expect(window.localStorage.getItem("worktime_user_preferences")).toBeNull();
-    expect(window.localStorage.getItem("userSettings")).toBeNull();
   });
 
   it("updates theme setting without DOM side effects", () => {
@@ -381,7 +356,7 @@ describe("SettingsContext unified user state", () => {
     });
   });
 
-  describe("lastUsed migration and updaters", () => {
+  describe("lastUsed and updaters", () => {
     it("prefers lastUsed over settings when both present", () => {
       window.localStorage.setItem(
         USER_STATE_STORAGE_KEY,
@@ -483,108 +458,6 @@ describe("SettingsContext unified user state", () => {
       });
     });
 
-    it("recovers with salvaged values when a migration is missing", () => {
-      window.localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({
-          version: -1,
-          myTeam: 4,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "12h",
-            theme: "dark",
-            notifications: "on",
-            vacationAllowance: { amount: 20, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: true,
-            enableTimeTracking: true,
-            timeTrackingWeeklyTargetHours: 36,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.myTeam).toBe(4);
-      expect(result.current.scheduleType).toBe("9-5");
-      expect(result.current.settings.timeFormat).toBe("12h");
-      expect(result.current.settings.theme).toBe("dark");
-      // Recovery resets non-salvaged values to defaults
-      expect(result.current.hasCompletedOnboarding).toBe(false);
-      expect(result.current.lastUsed.activeTab).toBe("calendar");
-    });
-  });
-
-  describe("v1 to v2 migration (yearlyAmounts)", () => {
-    it("does not overwrite existing yearlyAmounts entry for current year", () => {
-      const currentYear = String(new Date().getFullYear());
-      window.localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({
-          version: 1,
-          hasCompletedOnboarding: true,
-          myTeam: 1,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: {
-              amount: 20,
-              yearlyAmounts: { [currentYear]: 35 },
-              unit: "hours",
-              hoursPerDay: 7.5,
-            },
-            enableTimeOff: true,
-            enableTimeTracking: false,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      // Existing entry should be preserved, not overwritten by old amount
-      expect(result.current.settings.vacationAllowance.yearlyAmounts[currentYear]).toBe(35);
-    });
-
-    it("handles zero amount gracefully (does not seed yearlyAmounts)", () => {
-      window.localStorage.setItem(
-        USER_STATE_STORAGE_KEY,
-        JSON.stringify({
-          version: 1,
-          hasCompletedOnboarding: true,
-          myTeam: null,
-          scheduleType: "9-5",
-          settings: {
-            timeFormat: "24h",
-            theme: "auto",
-            notifications: "off",
-            vacationAllowance: { amount: 0, unit: "days", hoursPerDay: 8 },
-            enableTimeOff: false,
-            enableTimeTracking: false,
-          },
-          lastUsed: {
-            activeTab: "calendar",
-            scheduleView: "today",
-            otherSchedule: null,
-            timeOffView: "table",
-            timeTrackingView: "daily",
-            otherTeam: null,
-          },
-        }),
-      );
-
-      const { result } = renderHook(() => useSettings(), { wrapper });
-
-      expect(result.current.settings.vacationAllowance.yearlyAmounts).toEqual({});
-    });
   });
 
   describe("Country preferences", () => {
@@ -626,7 +499,6 @@ describe("SettingsContext unified user state", () => {
       window.localStorage.setItem(
         USER_STATE_STORAGE_KEY,
         JSON.stringify({
-          version: 2,
           hasCompletedOnboarding: false,
           myTeam: null,
           scheduleType: null,
@@ -666,79 +538,6 @@ describe("SettingsContext unified user state", () => {
       const parsed = JSON.parse(stored!);
       expect(parsed.settings.homeCountry).toBe("GB");
       expect(parsed.settings.officeCountry).toBe("NL");
-    });
-  });
-
-  describe("v2 to v3 migration (country + cross-border tracking)", () => {
-    const migrateFromV2 = (state: Record<string, unknown>) => {
-      window.localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(state));
-      return renderHook(() => useSettings(), { wrapper });
-    };
-
-    it("adds defaults and preserves existing values", () => {
-      const { result } = migrateFromV2({
-        version: 2,
-        hasCompletedOnboarding: true,
-        myTeam: 1,
-        scheduleType: "5-shift",
-        settings: {
-          timeFormat: "24h",
-          theme: "auto",
-          notifications: "off",
-          vacationAllowance: { yearlyAmounts: { "2025": 25 }, unit: "days", hoursPerDay: 8 },
-          enableTimeOff: true,
-          enableTimeTracking: false,
-        },
-        lastUsed: {
-          activeTab: "calendar",
-          scheduleView: "today",
-          otherSchedule: null,
-          timeOffView: "table",
-          timeTrackingView: "daily",
-          otherTeam: null,
-        },
-      });
-
-      expect(result.current.settings.homeCountry).toBe(null);
-      expect(result.current.settings.officeCountry).toBe(null);
-      expect(result.current.settings.enableCrossBorderTracking).toBe(false);
-      expect(result.current.myTeam).toBe(1);
-      expect(result.current.scheduleType).toBe("5-shift");
-      expect(result.current.settings.vacationAllowance.yearlyAmounts["2025"]).toBe(25);
-    });
-
-    it("preserves existing country values and enableCrossBorderTracking when migrating", () => {
-      // Intentional: include enableCrossBorderTracking in the v2 blob to ensure
-      // the migration preserves already-present values rather than resetting to defaults.
-      const { result } = migrateFromV2({
-        version: 2,
-        hasCompletedOnboarding: true,
-        myTeam: 2,
-        scheduleType: "9-5",
-        settings: {
-          timeFormat: "12h",
-          theme: "dark",
-          notifications: "off",
-          vacationAllowance: { yearlyAmounts: {}, unit: "days", hoursPerDay: 8 },
-          enableTimeOff: false,
-          enableTimeTracking: false,
-          homeCountry: "NL",
-          officeCountry: "BE",
-          enableCrossBorderTracking: true,
-        },
-        lastUsed: {
-          activeTab: "calendar",
-          scheduleView: "today",
-          otherSchedule: null,
-          timeOffView: "table",
-          timeTrackingView: "daily",
-          otherTeam: null,
-        },
-      });
-
-      expect(result.current.settings.homeCountry).toBe("NL");
-      expect(result.current.settings.officeCountry).toBe("BE");
-      expect(result.current.settings.enableCrossBorderTracking).toBe(true);
     });
   });
 

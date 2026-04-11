@@ -15,7 +15,7 @@
  *    Push all local data to the server; store the returned sync cursor.
  *
  *  Branch B — server has data + local is empty:
- *    Pull all server data to localStorage; store the cursor.
+ *    Pull all server data into the collection-backed local state; store the cursor.
  *
  *  Branch C — both have data:
  *    Surface the conflict to the user (phase = "conflict").
@@ -53,7 +53,7 @@ export type FirstSyncPhase =
   | "conflict"
   /** Uploading local data to the server (Branch A or user chose "keep local"). */
   | "pushing"
-  /** Downloading server data to localStorage (Branch B or user chose "use server"). */
+  /** Downloading server data into the collection-backed local state (Branch B or user chose "use server"). */
   | "pulling"
   /** Flow completed successfully. */
   | "done"
@@ -101,7 +101,7 @@ type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 type MountedCheck = () => boolean;
 
 /**
- * Push local user preferences to the server if they exist in localStorage.
+ * Push local user preferences to the server if they exist in unified user state storage.
  * Returns false and does nothing if `mounted()` returns false (component unmounted).
  */
 async function pushLocalPreferencesIfPresent(
@@ -116,7 +116,7 @@ async function pushLocalPreferencesIfPresent(
 }
 
 /**
- * Pull server preferences and apply them to localStorage if the server has any.
+ * Pull server preferences and apply them to unified user state storage if the server has any.
  * Returns false if `mounted()` returns false after the fetch (component unmounted).
  */
 async function pullAndApplyServerPreferencesIfPresent(
@@ -227,7 +227,7 @@ export function useFirstSyncFlow(
           return;
         }
         applyPullToCollections(pullResult);
-        // Also pull preferences from the server and apply to localStorage.
+        // Also pull preferences from the server and apply to unified user state storage.
         const stillMounted = await pullAndApplyServerPreferencesIfPresent(
           fetch,
           () => mountedRef.current && flowStartedForUser.current === uid,
