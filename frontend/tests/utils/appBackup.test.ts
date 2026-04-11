@@ -153,44 +153,10 @@ describe("appBackup", () => {
       expect(payload.timeOff).toBeUndefined();
     });
 
-    it("filters tasks by year when year option is provided", () => {
-      const tasks = [
-        { id: "t1", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
-        { id: "t2", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
-      ];
-      tasksCollection.insert(tasks[0]!);
-      tasksCollection.insert(tasks[1]!);
-      const payload = buildBackupPayload({ year: 2025 });
-      expect(payload.tasks).toEqual([tasks[0]]);
-    });
-
-    it("filters work locations to the selected year", () => {
-      workLocationsCollection.insert({
-        date: "2025-06-01",
-        location: "home",
-        countryCode: "NL",
-      });
-      workLocationsCollection.insert({
-        date: "2026-02-24",
-        location: "office",
-        countryCode: "DE",
-      });
-      const payload = buildBackupPayload({ year: 2025 });
-      expect(payload.workLocations).toEqual({
-        "2025": { "2025-06-01": { location: "home", countryCode: "NL" } },
-      });
-    });
-
-    it("omits filtered tasks when none match the selected year", () => {
-      const tasks = [{ id: "t1", text: "A", label: "l1", startTime: "2026-02-24T09:00" }];
-      tasksCollection.insert(tasks[0]!);
-      const payload = buildBackupPayload({ year: 2025 });
-      expect(payload.tasks).toBeUndefined();
-    });
   });
 
   describe("checkBackupDataPresence", () => {
-    it("returns all false and empty years when localStorage is empty", () => {
+    it("returns all false when storage is empty", () => {
       const presence = checkBackupDataPresence();
       expect(presence.hasUserState).toBe(false);
       expect(presence.hasTimeOff).toBe(false);
@@ -198,7 +164,7 @@ describe("appBackup", () => {
       expect(presence.hasTasks).toBe(false);
       expect(presence.hasTemplates).toBe(false);
       expect(presence.hasLabels).toBe(false);
-      expect(presence.availableYears).toEqual([]);
+      expect(presence.hasGanttTasks).toBe(false);
     });
 
     it("detects user state", () => {
@@ -219,19 +185,14 @@ describe("appBackup", () => {
       expect(checkBackupDataPresence().hasTimeOff).toBe(true);
     });
 
-    it("detects tasks and extracts their years", () => {
-      const tasks = [
-        { id: "t1", startTime: "2025-06-01T09:00" },
-        { id: "t2", startTime: "2026-02-24T09:00" },
-      ];
+    it("detects tasks", () => {
       tasksCollection.insert({ id: "t1", text: "A", label: "l1", startTime: "2025-06-01T09:00" });
       tasksCollection.insert({ id: "t2", text: "B", label: "l1", startTime: "2026-02-24T09:00" });
       const presence = checkBackupDataPresence();
       expect(presence.hasTasks).toBe(true);
-      expect(presence.availableYears).toEqual([2026, 2025]);
     });
 
-    it("detects work locations and includes their years", () => {
+    it("detects work locations", () => {
       workLocationsCollection.insert({
         date: "2025-06-01",
         location: "home",
@@ -239,18 +200,18 @@ describe("appBackup", () => {
       });
       const presence = checkBackupDataPresence();
       expect(presence.hasWorkLocations).toBe(true);
-      expect(presence.availableYears).toContain(2025);
     });
 
-    it("merges task years and work location years, sorted newest-first", () => {
-      tasksCollection.insert({ id: "t1", text: "A", label: "l1", startTime: "2024-01-01T09:00" });
-      workLocationsCollection.insert({
-        date: "2026-02-24",
-        location: "office",
-        countryCode: "DE",
+    it("detects gantt tasks", () => {
+      ganttTasksCollection.insert({
+        id: "g1",
+        name: "Plan release",
+        start: "2026-02-24",
+        end: "2026-02-28",
+        progress: 25,
       });
       const presence = checkBackupDataPresence();
-      expect(presence.availableYears).toEqual([2026, 2024]);
+      expect(presence.hasGanttTasks).toBe(true);
     });
   });
 
@@ -375,29 +336,10 @@ describe("appBackup", () => {
       expect(plainCollectionItems(labelsCollection.toArray)).toEqual(labels);
     });
 
-    it("preserves existing tasks from years not included in the backup payload", () => {
+    it("replaces existing tasks when tasks are present in the backup payload", () => {
       const existingTasks = [
         { id: "t-2025", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
         { id: "t-2026", text: "B", label: "l1", startTime: "2026-02-24T09:00" },
-      ];
-      const backupTasks = [
-        { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },
-      ];
-
-      tasksCollection.insert(existingTasks[0]!);
-      tasksCollection.insert(existingTasks[1]!);
-      restoreAppBackup({ exportedAt: "", version: 1, tasks: backupTasks });
-
-      expect(plainCollectionItems(tasksCollection.toArray)).toEqual([
-        existingTasks[1],
-        backupTasks[0],
-      ]);
-    });
-
-    it("replaces existing tasks from years included in the backup payload", () => {
-      const existingTasks = [
-        { id: "t-2025", text: "A", label: "l1", startTime: "2025-06-01T09:00" },
-        { id: "t-2025-b", text: "B", label: "l1", startTime: "2025-06-02T09:00" },
       ];
       const backupTasks = [
         { id: "t-2025-new", text: "A2", label: "l1", startTime: "2025-07-01T09:00" },

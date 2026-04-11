@@ -1,12 +1,12 @@
 /**
- * Full application backup and restore utilities.
+ * Current-state application backup and restore utilities.
  *
  * Covers all meaningful user data:
  * - User settings & preferences (still stored in localStorage)
  * - Sync-managed domains now backed by TanStack DB collections
  *   (time-off, work locations, time tracking, gantt)
  *
- * Device-specific data (developer options) is intentionally excluded.
+ * Device-specific data (developer options, sync cursor, outbox) is excluded.
  */
 
 import { dayjs } from "@/utils/dateTimeUtils";
@@ -40,12 +40,10 @@ export type AppBackupPayload = {
 };
 
 /**
- * Options controlling which sections and which year to include in a backup.
- * Omitted include flags default to true (include everything).
+ * Options controlling which sections to include in a backup.
+ * Omitted include flags default to true.
  */
 export type BackupOptions = {
-  /** When set, filters tasks and work location data to this year only. */
-  year?: number;
   includeUserState?: boolean;
   includeTimeOff?: boolean;
   includeWorkLocations?: boolean;
@@ -56,8 +54,8 @@ export type BackupOptions = {
 };
 
 /**
- * Summary of which data categories are present in localStorage.
- * Used to drive the BackupDialog UI — only categories with data are shown.
+ * Summary of which backup sections currently have data.
+ * Used to drive the BackupDialog UI.
  */
 export type BackupDataPresence = {
   hasUserState: boolean;
@@ -67,8 +65,6 @@ export type BackupDataPresence = {
   hasTemplates: boolean;
   hasLabels: boolean;
   hasGanttTasks: boolean;
-  /** Years that have tasks or work location data, sorted newest-first. */
-  availableYears: number[];
 };
 
 function safeParseJson(key: string): unknown {
@@ -164,13 +160,12 @@ function toPlainTimeOffEntry(entry: TimeOffEntry): TimeOffEntry {
   };
 }
 
-function getWorkLocationEntries(year?: number): Record<string, unknown> {
+function getWorkLocationEntries(): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const entries = (workLocationsCollection.toArray as WorkLocationEntry[]).map(toPlainWorkLocation);
 
   for (const entry of entries) {
     const entryYear = entry.date.slice(0, 4);
-    if (year !== undefined && entryYear !== String(year)) continue;
     const bucket = (result[entryYear] ??= {}) as Record<string, unknown>;
     bucket[entry.date] = {
       location: entry.location,
@@ -182,30 +177,14 @@ function getWorkLocationEntries(year?: number): Record<string, unknown> {
   return result;
 }
 
-function getTaskYear(task: unknown): number | null {
-  if (!task || typeof task !== "object") return null;
-  const taskObj = task as Record<string, unknown>;
-  if (typeof taskObj.startTime !== "string") return null;
-  const year = parseInt(taskObj.startTime.slice(0, 4), 10);
-  return isNaN(year) ? null : year;
-}
-
-/**
- * Inspect localStorage and return a summary of which data categories exist
- * and which years have year-scoped data (tasks, work locations).
- */
+/** Inspect local storage and collections and return which backup sections have data. */
 export function checkBackupDataPresence(): BackupDataPresence {
   const hasUserState = localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
   const timeOffEntries = (timeOffCollection.toArray as TimeOffEntry[]).map(toPlainTimeOffEntry);
   const hasTimeOff = timeOffEntries.length > 0;
 
-  const taskYears = new Set<number>();
   const tasksData = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
   const hasTasks = tasksData.length > 0;
-  for (const task of tasksData) {
-    const year = getTaskYear(task);
-    if (year !== null) taskYears.add(year);
-  }
 
   const templatesData = (templatesCollection.toArray as TimeTrackingTemplate[]).map(toPlainTemplate);
   const hasTemplates = templatesData.length > 0;
@@ -213,16 +192,7 @@ export function checkBackupDataPresence(): BackupDataPresence {
   const labelsData = (labelsCollection.toArray as TimeTrackingLabel[]).map(toPlainLabel);
   const hasLabels = labelsData.length > 0;
 
-  const workLocationYears = new Set<number>();
-  for (const entry of workLocationsCollection.toArray as WorkLocationEntry[]) {
-    const year = parseInt(entry.date.slice(0, 4), 10);
-    if (!isNaN(year)) workLocationYears.add(year);
-  }
-  const hasWorkLocations = workLocationYears.size > 0;
-
-  const availableYears = Array.from(new Set([...taskYears, ...workLocationYears])).sort(
-    (a, b) => b - a,
-  );
+  const hasWorkLocations = (workLocationsCollection.toArray as WorkLocationEntry[]).length > 0;
 
   const ganttData = (ganttTasksCollection.toArray as GanttTask[]).map(toPlainGanttTask);
   const hasGanttTasks = ganttData.length > 0;
@@ -235,13 +205,12 @@ export function checkBackupDataPresence(): BackupDataPresence {
     hasTemplates,
     hasLabels,
     hasGanttTasks,
-    availableYears,
   };
 }
 
 /**
- * Collect all backed-up app data from localStorage into a payload object.
- * Pass `options` to restrict which sections are included or to filter by year.
+ * Collect the current app state into a backup payload object.
+ * Pass `options` to restrict which sections are included.
  */
 export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   const include = {
@@ -270,16 +239,12 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
   }
 
   if (include.workLocations) {
-    const workLocations = getWorkLocationEntries(options?.year);
+    const workLocations = getWorkLocationEntries();
     if (Object.keys(workLocations).length > 0) payload.workLocations = workLocations;
   }
 
   if (include.tasks) {
-    const allTasks = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
-    const tasks =
-      options?.year !== undefined
-        ? allTasks.filter((task) => task.startTime.startsWith(`${options.year}-`))
-        : allTasks;
+    const tasks = (tasksCollection.toArray as StoredTimeTrackingTask[]).map(toPlainTask);
     if (tasks.length > 0) payload.tasks = tasks;
   }
 
@@ -305,7 +270,7 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
  * Build a backup payload and trigger a browser download of the JSON file.
  *
  * @param date - ISO date string (YYYY-MM-DD) used in the filename.
- * @param options - Optional section/year filter for partial backups.
+ * @param options - Optional section filter for partial backups.
  */
 export function downloadAppBackup(date: string, options?: BackupOptions): void {
   const payload = buildBackupPayload(options);
@@ -381,32 +346,10 @@ export function validateAppBackupPayload(parsed: unknown): parsed is AppBackupPa
   return true;
 }
 
-function replaceTimeOffEntries(entries: TimeOffEntry[]): void {
-  const existingIds = new Set((timeOffCollection.toArray as TimeOffEntry[]).map((entry) => entry.id));
-  const nextIds = new Set(entries.map((entry) => entry.id));
-
-  for (const entry of entries) {
-    if (timeOffCollection.has(entry.id)) {
-      timeOffCollection.update(entry.id, (draft) => {
-        const { id: _id, ...fields } = entry;
-        Object.assign(draft, fields);
-      });
-    } else {
-      timeOffCollection.insert(entry);
-    }
-  }
-
-  for (const id of existingIds) {
-    if (!nextIds.has(id) && timeOffCollection.has(id)) {
-      timeOffCollection.delete(id);
-    }
-  }
-}
-
-function upsertWorkLocationEntries(workLocations: Record<string, unknown>): void {
+function parseWorkLocationEntries(workLocations: Record<string, unknown>): WorkLocationEntry[] {
   const incomingEntries: WorkLocationEntry[] = [];
 
-  for (const [year, yearData] of Object.entries(workLocations)) {
+  for (const yearData of Object.values(workLocations)) {
     if (!yearData || typeof yearData !== "object" || Array.isArray(yearData)) continue;
     for (const [date, value] of Object.entries(yearData as Record<string, unknown>)) {
       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
@@ -419,52 +362,9 @@ function upsertWorkLocationEntries(workLocations: Record<string, unknown>): void
         ...(typeof entry.label === "string" && entry.label.length > 0 ? { label: entry.label } : {}),
       });
     }
-    void year;
   }
 
-  const incomingYears = new Set(incomingEntries.map((entry) => entry.date.slice(0, 4)));
-  for (const entry of incomingEntries) {
-    if (workLocationsCollection.has(entry.date)) {
-      workLocationsCollection.update(entry.date, (draft) => {
-        Object.assign(draft, entry);
-      });
-    } else {
-      workLocationsCollection.insert(entry);
-    }
-  }
-
-  for (const entry of workLocationsCollection.toArray as WorkLocationEntry[]) {
-    if (!incomingYears.has(entry.date.slice(0, 4))) continue;
-    if (incomingEntries.some((candidate) => candidate.date === entry.date)) continue;
-    if (workLocationsCollection.has(entry.date)) {
-      workLocationsCollection.delete(entry.date);
-    }
-  }
-}
-
-function mergeTasksByYear(incomingTasks: StoredTimeTrackingTask[]): void {
-  const incomingYears = new Set<number>();
-  for (const task of incomingTasks) {
-    const year = getTaskYear(task);
-    if (year !== null) incomingYears.add(year);
-  }
-
-  for (const existing of tasksCollection.toArray as StoredTimeTrackingTask[]) {
-    const year = getTaskYear(existing);
-    if (year !== null && incomingYears.has(year) && tasksCollection.has(existing.id)) {
-      tasksCollection.delete(existing.id);
-    }
-  }
-
-  for (const task of incomingTasks) {
-    if (tasksCollection.has(task.id)) {
-      tasksCollection.update(task.id, (draft) => {
-        Object.assign(draft, task);
-      });
-    } else {
-      tasksCollection.insert(task);
-    }
-  }
+  return incomingEntries;
 }
 
 function replaceCollectionById<T extends { id: string }>(
@@ -498,7 +398,8 @@ function replaceCollectionById<T extends { id: string }>(
 
 /**
  * Write each section from the backup payload to the current storage model,
- * then reload the page so all React contexts pick up the restored values.
+ * replacing the current contents of any included section, then reload the page
+ * so all React contexts pick up the restored values.
  *
  * Only sections present in the payload are restored; absent sections are left
  * untouched.
@@ -509,15 +410,42 @@ export function restoreAppBackup(payload: AppBackupPayload): void {
   }
 
   if (Array.isArray(payload.timeOff)) {
-    replaceTimeOffEntries(normalizeTimeOffEntries(payload.timeOff));
+    replaceCollectionById(
+      timeOffCollection as unknown as {
+        toArray: TimeOffEntry[];
+        has: (id: string) => boolean;
+        insert: (item: TimeOffEntry) => void;
+        update: (id: string, cb: (draft: TimeOffEntry) => void) => void;
+        delete: (id: string) => void;
+      },
+      normalizeTimeOffEntries(payload.timeOff),
+    );
   }
 
   if (payload.workLocations && typeof payload.workLocations === "object") {
-    upsertWorkLocationEntries(payload.workLocations);
+    replaceCollectionById(
+      workLocationsCollection as unknown as {
+        toArray: WorkLocationEntry[];
+        has: (id: string) => boolean;
+        insert: (item: WorkLocationEntry) => void;
+        update: (id: string, cb: (draft: WorkLocationEntry) => void) => void;
+        delete: (id: string) => void;
+      },
+      parseWorkLocationEntries(payload.workLocations),
+    );
   }
 
   if (Array.isArray(payload.tasks)) {
-    mergeTasksByYear(payload.tasks as StoredTimeTrackingTask[]);
+    replaceCollectionById(
+      tasksCollection as unknown as {
+        toArray: StoredTimeTrackingTask[];
+        has: (id: string) => boolean;
+        insert: (item: StoredTimeTrackingTask) => void;
+        update: (id: string, cb: (draft: StoredTimeTrackingTask) => void) => void;
+        delete: (id: string) => void;
+      },
+      payload.tasks as StoredTimeTrackingTask[],
+    );
   }
 
   if (Array.isArray(payload.templates)) {

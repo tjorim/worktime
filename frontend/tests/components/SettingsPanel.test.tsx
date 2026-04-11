@@ -89,7 +89,7 @@ describe("SettingsPanel Account Section", () => {
 
   it("shows sync benefits (backup and cross-device icons) when not authenticated", () => {
     renderWithProviders(<SettingsPanel show onHide={vi.fn()} />);
-    expect(screen.getByText("Automatic backup")).toBeInTheDocument();
+    expect(screen.getByText("Automatic cloud backup")).toBeInTheDocument();
     expect(screen.getByText("Cross-device access")).toBeInTheDocument();
   });
 });
