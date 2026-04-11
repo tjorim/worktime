@@ -48,10 +48,11 @@ export function OngoingConflictDialog({
     setSelected(null);
   };
 
-  // Reset selection when the user closes via backdrop/Escape.  The parent controls
-  // `show` and may not immediately react, so the selection must be cleared here too.
+  // Treat backdrop/Escape dismissal as accepting the server version so the
+  // parent can clear the conflict state and actually close the modal.
   const handleHide = () => {
     setSelected(null);
+    onResolve("keep-server");
   };
 
   // Map each entity key to a localized display label.

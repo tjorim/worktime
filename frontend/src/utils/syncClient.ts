@@ -350,8 +350,9 @@ export function maxConflictServerTimestamp(response: SyncPushResponse): string |
  */
 export function bumpClientTimestamps(payload: SyncPushPayload, serverTimestampFloor?: string): SyncPushPayload {
   const nowMs = Date.now();
-  const floorMs = serverTimestampFloor ? new Date(serverTimestampFloor).getTime() : 0;
-  const now = new Date(Math.max(nowMs, floorMs)).toISOString();
+  const floorMs = serverTimestampFloor ? new Date(serverTimestampFloor).getTime() : nowMs;
+  const effectiveFloorMs = Number.isFinite(floorMs) ? floorMs : nowMs;
+  const now = new Date(Math.max(nowMs, effectiveFloorMs)).toISOString();
   return {
     labels: payload.labels.map((l) => ({ ...l, client_updated_at: now })),
     tasks: payload.tasks.map((t) => ({ ...t, client_updated_at: now })),

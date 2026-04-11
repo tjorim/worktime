@@ -16,6 +16,7 @@ import {
   fetchSyncStatus,
   getSyncOutboxSize,
   hasSyncCursor,
+  maxConflictServerTimestamp,
   pullSyncData,
   pushPreferences,
   pushSyncPayload,
@@ -283,6 +284,191 @@ describe("syncClient", () => {
       bumpClientTimestamps(payload);
 
       expect(payload.labels[0].client_updated_at).toBe(before);
+    });
+
+    it("uses local clock when serverTimestampFloor is not provided", () => {
+      const now = "2026-06-01T12:00:00.000Z";
+      vi.setSystemTime(new Date(now));
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      const result = bumpClientTimestamps(payload);
+      expect(result.labels[0].client_updated_at).toBe(now);
+      vi.useRealTimers();
+    });
+
+    it("uses serverTimestampFloor when it is ahead of the local clock", () => {
+      // Local clock is set to a time behind the server timestamp.
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const serverFloor = "2026-06-01T12:00:00.000Z";
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      const result = bumpClientTimestamps(payload, serverFloor);
+      expect(result.labels[0].client_updated_at).toBe(serverFloor);
+      vi.useRealTimers();
+    });
+
+    it("uses local clock when serverTimestampFloor is in the past", () => {
+      const now = "2026-06-01T12:00:00.000Z";
+      vi.setSystemTime(new Date(now));
+      const serverFloor = "2026-01-01T00:00:00.000Z";
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2025-01-01T00:00:00.000Z" }],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      const result = bumpClientTimestamps(payload, serverFloor);
+      expect(result.labels[0].client_updated_at).toBe(now);
+      vi.useRealTimers();
+    });
+
+    it("falls back to local clock when serverTimestampFloor is an invalid string", () => {
+      const now = "2026-06-01T12:00:00.000Z";
+      vi.setSystemTime(new Date(now));
+      const payload = {
+        labels: [{ id: "l1", action: "update" as const, client_updated_at: "2026-01-01T00:00:00.000Z" }],
+        tasks: [],
+        templates: [],
+        work_locations: [],
+        time_off_entries: [],
+        gantt_tasks: [],
+      };
+      const result = bumpClientTimestamps(payload, "not-a-date");
+      expect(result.labels[0].client_updated_at).toBe(now);
+      vi.useRealTimers();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // maxConflictServerTimestamp
+  // ---------------------------------------------------------------------------
+
+  describe("maxConflictServerTimestamp", () => {
+    it("returns undefined when results object is empty", () => {
+      expect(maxConflictServerTimestamp({ results: {} })).toBeUndefined();
+    });
+
+    it("returns undefined when no records have status conflict", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [{ id: "l1", status: "ok" }],
+          },
+        }),
+      ).toBeUndefined();
+    });
+
+    it("returns undefined when conflicted records have no server_updated_at", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [{ id: "l1", status: "conflict", conflict_reason: "server is newer" }],
+          },
+        }),
+      ).toBeUndefined();
+    });
+
+    it("returns the single conflict server_updated_at", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [
+              {
+                id: "l1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-03-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      ).toBe("2026-03-01T00:00:00.000Z");
+    });
+
+    it("returns the maximum server_updated_at across multiple conflict records", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [
+              {
+                id: "l1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-03-01T00:00:00.000Z",
+              },
+              {
+                id: "l2",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+            tasks: [
+              {
+                id: "t1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-06-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      ).toBe("2026-06-01T00:00:00.000Z");
+    });
+
+    it("ignores non-conflict records when computing the max", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [
+              { id: "l1", status: "ok", server_updated_at: "2099-01-01T00:00:00.000Z" },
+              {
+                id: "l2",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-03-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      ).toBe("2026-03-01T00:00:00.000Z");
+    });
+
+    it("ignores entries with invalid server_updated_at values", () => {
+      expect(
+        maxConflictServerTimestamp({
+          results: {
+            labels: [
+              {
+                id: "l1",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "not-a-date",
+              },
+              {
+                id: "l2",
+                status: "conflict",
+                conflict_reason: "server is newer",
+                server_updated_at: "2026-03-01T00:00:00.000Z",
+              },
+            ],
+          },
+        }),
+      ).toBe("2026-03-01T00:00:00.000Z");
     });
   });
 
