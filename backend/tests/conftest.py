@@ -137,6 +137,7 @@ def reset_cache() -> Generator[None, None, None]:
     cache = get_cache()
     cache._hday_entries.clear()
     cache._team_entries.clear()
+    cache._holiday_entries.clear()
     yield
 
 

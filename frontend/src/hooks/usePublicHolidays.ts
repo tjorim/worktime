@@ -63,16 +63,15 @@ export function usePublicHolidays(
   const isEnabled = enabled && !isTestEnv && Boolean(countryCode) && isValidYear;
   const params = useMemo(
     () => ({
-      countryIsoCode: countryCode,
-      validFrom: `${year}-01-01`,
-      validTo: `${year}-12-31`,
-      languageIsoCode: language,
+      country: countryCode,
+      year: String(year),
+      language,
     }),
     [countryCode, year, language],
   );
 
   const { holidays, loading, error } = useOpenHolidays<PublicHoliday>({
-    endpoint: "PublicHolidays",
+    endpoint: "public",
     params,
     enabled: isEnabled,
     responseErrorPrefix: "Failed to fetch holidays",

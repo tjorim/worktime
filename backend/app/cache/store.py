@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from app.cache.models import HdayCacheEntry, TeamConfigCacheEntry
+from app.cache.models import HdayCacheEntry, HolidayCacheEntry, TeamConfigCacheEntry
 from app.config.settings import settings
 from app.models.hday import HdayEvent
 
@@ -40,6 +40,7 @@ class FileCache:
             
         self._hday_entries: dict[str, HdayCacheEntry] = {}
         self._team_entries: dict[str, TeamConfigCacheEntry] = {}
+        self._holiday_entries: dict[str, HolidayCacheEntry] = {}
         self._initialized = True
         logger.info("FileCache initialized")
     
@@ -51,18 +52,20 @@ class FileCache:
         """
         return settings.CACHE_ENABLED
     
-    def _is_fresh(self, cached_at: float) -> bool:
+    def _is_fresh(self, cached_at: float, ttl: int | None = None) -> bool:
         """Check if a cache entry is fresh based on TTL.
         
         Args:
             cached_at: Timestamp when the entry was cached
+            ttl: Optional TTL override in seconds. Defaults to settings.CACHE_TTL.
             
         Returns:
             True if the entry is within TTL, False if stale
         """
         current_time = datetime.now().timestamp()
         age = current_time - cached_at
-        return age < settings.CACHE_TTL
+        effective_ttl = ttl if ttl is not None else settings.CACHE_TTL
+        return age < effective_ttl
     
     # .hday cache operations
     
@@ -331,6 +334,47 @@ class FileCache:
             
         # Entry exists but is stale
         return not self._is_fresh(entry.cached_at)
+
+    # Holiday cache operations
+
+    def get_holiday(self, cache_key: str) -> HolidayCacheEntry | None:
+        """Get cached holiday data entry.
+
+        Returns the cached entry if it exists and is fresh (within HOLIDAY_CACHE_TTL),
+        or None if the entry is missing or stale.
+
+        Args:
+            cache_key: Unique key identifying the holiday request
+
+        Returns:
+            Cached entry if fresh, None otherwise
+        """
+        if not self._is_enabled():
+            return None
+
+        entry = self._holiday_entries.get(cache_key)
+        if entry is None:
+            return None
+
+        if not self._is_fresh(entry.cached_at, ttl=settings.HOLIDAY_CACHE_TTL):
+            del self._holiday_entries[cache_key]
+            return None
+
+        return entry
+
+    def set_holiday(self, cache_key: str, data: list) -> None:
+        """Store holiday data in cache.
+
+        Args:
+            cache_key: Unique key identifying the holiday request
+            data: Raw JSON response from the upstream holiday API
+        """
+        if not self._is_enabled():
+            return
+
+        entry = HolidayCacheEntry(data=data)
+        self._holiday_entries[cache_key] = entry
+        logger.debug("Cached holiday entry (TTL: %ss)", settings.HOLIDAY_CACHE_TTL)
 
 
 # Global cache instance

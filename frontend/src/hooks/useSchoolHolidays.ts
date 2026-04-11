@@ -76,17 +76,16 @@ export function useSchoolHolidays(
     enabled && !isTestEnv && Boolean(countryCode) && Boolean(subdivisionCode) && isValidYear;
   const params = useMemo(
     () => ({
-      countryIsoCode: countryCode,
-      validFrom: `${year}-01-01`,
-      validTo: `${year}-12-31`,
-      languageIsoCode: language,
-      subdivisionCode,
+      country: countryCode,
+      year: String(year),
+      language,
+      subdivision: subdivisionCode,
     }),
     [countryCode, year, language, subdivisionCode],
   );
 
   const { holidays, loading, error } = useOpenHolidays<SchoolHoliday>({
-    endpoint: "SchoolHolidays",
+    endpoint: "school",
     params,
     enabled: isEnabled,
     responseErrorPrefix: "Failed to fetch school holidays",

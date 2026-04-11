@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useApiClient } from "./useApiClient";
 
 interface UseOpenHolidaysOptions {
   endpoint: string;
@@ -17,14 +18,14 @@ async function fetchOpenHolidays<T>(
   timeoutError: string,
   networkError: string,
   signal: AbortSignal,
+  apiFetch: (url: string, init?: RequestInit) => Promise<Response>,
 ): Promise<T[]> {
   const timeoutSignal = AbortSignal.timeout(10000);
 
   let response: Response;
   try {
     const searchParams = new URLSearchParams(params);
-    response = await fetch(`https://openholidaysapi.org/${endpoint}?${searchParams}`, {
-      headers: { Accept: "application/json" },
+    response = await apiFetch(`/api/holidays/${endpoint}?${searchParams}`, {
       signal: AbortSignal.any([signal, timeoutSignal]),
     });
   } catch (err) {
@@ -55,6 +56,7 @@ export function useOpenHolidays<T>({
   networkError,
   unknownError,
 }: UseOpenHolidaysOptions) {
+  const apiFetch = useApiClient();
   // Serialize params so the query key is stable regardless of whether callers
   // (e.g. usePublicHolidays / useSchoolHolidays) pass a new object reference
   // on every render. Those hooks already memoize params, but this extra step
@@ -70,6 +72,7 @@ export function useOpenHolidays<T>({
         timeoutError,
         networkError,
         signal,
+        apiFetch,
       ),
     enabled,
     staleTime: 1000 * 60 * 60 * 24, // holiday data doesn't change intra-day
