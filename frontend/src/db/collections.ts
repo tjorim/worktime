@@ -1,32 +1,27 @@
 /**
- * TanStack DB collection definitions for sync-managed domains.
+ * TanStack DB collection stubs for sync-managed domains.
  *
- * ## Ownership boundary
+ * Each collection uses `localOnlyCollectionOptions` (in-memory, zero side
+ * effects) as temporary scaffolding. These stubs establish the collection ID
+ * and item type so the rest of the codebase can reference them before the
+ * full migration wires up the pull/push endpoints.
  *
- * TanStack DB is authoritative for sync-managed user data once migrated.
- * TanStack Query (useQuery) must NOT be used for these domains.
- * See `docs/realtime-sync-architecture.md` §Data Ownership Boundaries for details.
+ * When migrating a domain:
+ * 1. Replace `localOnlyCollectionOptions` with a QueryCollection
+ *    (@tanstack/query-db-collection):
+ *    - `queryFn`  → GET /api/sync/pull?since=<cursor>
+ *    - `onInsert` / `onUpdate` / `onDelete` → POST /api/sync/push
+ * 2. Wire SSE direct writes: on `sync_changed` from useSyncSignal, call the
+ *    collection's direct write API instead of triggering a full refetch.
+ * 3. Decide offline queuing: QueryCollection rolls back failed mutations but
+ *    does not persist them for retry. Either enqueue failures to the existing
+ *    outbox or accept re-entry on reconnect.
+ * 4. Replace usages of the legacy hook with `useLiveQuery` over the collection.
+ * 5. Remove the legacy hook.
+ * 6. Update the status comment below from `pending` to `migrated`.
  *
- * ## Rollout status
- *
- * Each collection below is marked with its current migration status:
- *
- * - `pending`   — domain still lives in localStorage behind existing hooks; TanStack DB not yet active.
- * - `migrated`  — domain has been moved to TanStack DB; localStorage hooks are removed.
- *
- * During rollout, only `migrated` collections are live. A `pending` collection
- * is a placeholder that establishes the data contract and key mapping so that
- * issue #515 can activate it without touching unrelated code.
- *
- * ## Adding a migrated collection
- *
- * When migrating a domain in issue #515:
- * 1. Replace `localOnlyCollectionOptions` with `localStorageCollectionOptions` (or a custom
- *    sync adapter if the existing localStorage format needs migration).
- * 2. Wire up `onInsert`, `onUpdate`, and `onDelete` handlers to call the sync outbox.
- * 3. Remove the corresponding localStorage-backed hook (e.g. `useTimeTrackingLabels`).
- * 4. Update the collection status comment from `pending` to `migrated`.
- * 5. Do NOT add a `useQuery` call for the same domain — that would create a redundant cache.
+ * Do NOT add a standalone useQuery alongside a QueryCollection for the same
+ * domain — that creates a competing cache.
  */
 
 import { createCollection, localOnlyCollectionOptions } from "@tanstack/react-db";
@@ -34,11 +29,11 @@ import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/components/
 import type { TimeTrackingLabel } from "@/components/timeTracking/constants";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import type { GanttTask } from "@/types/gantt";
+import type { WorkLocationEntry } from "@/types/workLocation";
 
 // ---------------------------------------------------------------------------
 // Time-tracking labels
 // Status: pending — still managed by the labels hooks in EventStoreContext.
-// Target localStorage key: TIME_TRACKING_STORAGE_KEYS.labels
 // ---------------------------------------------------------------------------
 
 export const labelsCollection = createCollection(
@@ -51,7 +46,6 @@ export const labelsCollection = createCollection(
 // ---------------------------------------------------------------------------
 // Time-tracking tasks
 // Status: pending — still managed by the tasks hooks in EventStoreContext.
-// Target localStorage key: TIME_TRACKING_STORAGE_KEYS.tasks
 // ---------------------------------------------------------------------------
 
 export const tasksCollection = createCollection(
@@ -64,7 +58,6 @@ export const tasksCollection = createCollection(
 // ---------------------------------------------------------------------------
 // Time-tracking templates
 // Status: pending — still managed by the templates hooks in EventStoreContext.
-// Target localStorage key: TIME_TRACKING_STORAGE_KEYS.templates
 // ---------------------------------------------------------------------------
 
 export const templatesCollection = createCollection(
@@ -77,7 +70,6 @@ export const templatesCollection = createCollection(
 // ---------------------------------------------------------------------------
 // Time-off entries
 // Status: pending — still managed by EventStoreContext / loadTimeOffEntries.
-// Target localStorage key: TIME_OFF_ENTRIES_STORAGE_KEY
 // ---------------------------------------------------------------------------
 
 export const timeOffCollection = createCollection(
@@ -89,8 +81,7 @@ export const timeOffCollection = createCollection(
 
 // ---------------------------------------------------------------------------
 // Gantt tasks
-// Status: pending — still managed by GanttContext / GANTT_STORAGE_KEY.
-// Target localStorage key: GANTT_STORAGE_KEY
+// Status: pending — still managed by GanttContext.
 // ---------------------------------------------------------------------------
 
 export const ganttTasksCollection = createCollection(
@@ -104,22 +95,15 @@ export const ganttTasksCollection = createCollection(
 // Work locations
 // Status: pending — stored per-year under WORK_LOCATIONS_STORAGE_PREFIX.
 //
-// NOTE: Work locations use a multi-key per-year layout in localStorage
-// (e.g. "worktime_work_locations_2026"). Migrating to TanStack DB requires
-// a custom sync adapter or a data layout change. See issue #515 for details.
+// The existing localStorage layout stores locations per-year
+// (e.g. "worktime_work_locations_2026"). The QueryCollection migration must
+// flatten this into a single collection keyed by date. A data-format migration
+// will be needed for existing stored values.
 // ---------------------------------------------------------------------------
 
-export type WorkLocationRecord = {
-  /** Composite key: "<YYYY-MM-DD>" */
-  date: string;
-  countryCode: string;
-  location: "home" | "office" | "other";
-  label?: string;
-};
-
 export const workLocationsCollection = createCollection(
-  localOnlyCollectionOptions<WorkLocationRecord>({
+  localOnlyCollectionOptions<WorkLocationEntry>({
     id: "worktime/work-locations",
-    getKey: (record) => record.date,
+    getKey: (entry) => entry.date,
   }),
 );

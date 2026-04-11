@@ -375,15 +375,17 @@ function AppContent() {
  */
 
 /**
- * TanStack Query client — intentionally scoped to server-state-only domains.
+ * TanStack Query client shared by the whole app.
  *
- * Permitted useQuery domains (see docs/realtime-sync-architecture.md §Data Ownership):
- *   - Public holidays and school holidays (useOpenHolidays / usePublicHolidays / useSchoolHolidays)
+ * Standalone `useQuery` is only correct for read-only server-state domains that have no
+ * offline write requirements (e.g. public holidays via useOpenHolidays).
  *
- * Do NOT add useQuery for sync-managed domains (labels, tasks, templates, work locations,
- * time-off entries, gantt tasks, user preferences). Those are owned by TanStack DB once
- * migrated, and by the existing localStorage hooks until then. Adding useQuery for any of
- * those domains creates a redundant cache that diverges from the authoritative store.
+ * Sync-managed domains (labels, tasks, templates, work locations, time-off entries,
+ * gantt tasks, user preferences) use QueryCollection from @tanstack/query-db-collection,
+ * which feeds TanStack Query's fetch lifecycle into a TanStack DB collection. Do NOT add
+ * a standalone useQuery alongside a QueryCollection for the same domain.
+ *
+ * See docs/realtime-sync-architecture.md §Data Ownership Boundaries for details.
  */
 const queryClient = new QueryClient();
 

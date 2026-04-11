@@ -59,3 +59,13 @@ export interface WorkLocationInfo {
  * Contains only explicitly set locations; days without an entry use the default (office).
  */
 export type WorkLocationMap = Map<string, WorkLocationInfo>;
+
+/**
+ * A work location record with its date key inlined.
+ * Used as the item type for the TanStack DB work locations collection,
+ * where each row must carry its own identity.
+ */
+export interface WorkLocationEntry extends WorkLocationInfo {
+  /** Date string in YYYY-MM-DD format. */
+  date: string;
+}

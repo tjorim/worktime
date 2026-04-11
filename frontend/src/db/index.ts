@@ -12,5 +12,6 @@ export {
   timeOffCollection,
   ganttTasksCollection,
   workLocationsCollection,
-  type WorkLocationRecord,
 } from "./collections";
+
+export type { WorkLocationEntry } from "@/types/workLocation";

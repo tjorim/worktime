@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tanstack/query-db-collection':
+        specifier: ^1.0.35
+        version: 1.0.35(@tanstack/query-core@5.97.0)(typescript@6.0.2)
       '@tanstack/react-db':
         specifier: ^0.1.82
         version: 0.1.82(react@19.2.5)(typescript@6.0.2)
@@ -921,6 +924,12 @@ packages:
 
   '@tanstack/query-core@5.97.0':
     resolution: {integrity: sha512-QdpLP5VzVMgo4VtaPppRA2W04UFjIqX+bxke/ZJhE5cfd5UPkRzqIAJQt9uXkQJjqE8LBOMbKv7f8HCsZltXlg==}
+
+  '@tanstack/query-db-collection@1.0.35':
+    resolution: {integrity: sha512-hfVwlkJoVlhJSCZm9B/KdkYvxl9twVrEt3q0IkXSEmblvslE/+vFQ7IoRciKKKBbJb6PoT2tQFD8FhxFvcypLg==}
+    peerDependencies:
+      '@tanstack/query-core': ^5.0.0
+      typescript: '>=4.7'
 
   '@tanstack/react-db@0.1.82':
     resolution: {integrity: sha512-lQ5igC7Dgb5HwnfwSyKsuHPYo8wdO0HyHSF3ygBvZ8RZ3KTRtdHbYGsphz7iKJKoZhFmBE/hafq0oichY7m7rQ==}
@@ -2539,6 +2548,13 @@ snapshots:
   '@tanstack/pacer-lite@0.2.1': {}
 
   '@tanstack/query-core@5.97.0': {}
+
+  '@tanstack/query-db-collection@1.0.35(@tanstack/query-core@5.97.0)(typescript@6.0.2)':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@tanstack/db': 0.6.4(typescript@6.0.2)
+      '@tanstack/query-core': 5.97.0
+      typescript: 6.0.2
 
   '@tanstack/react-db@0.1.82(react@19.2.5)(typescript@6.0.2)':
     dependencies:
