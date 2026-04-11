@@ -373,6 +373,18 @@ function AppContent() {
  * @returns The root React element: SuperTokensWrapper, SettingsProvider, EventStoreProvider,
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
+
+/**
+ * TanStack Query client — intentionally scoped to server-state-only domains.
+ *
+ * Permitted useQuery domains (see docs/realtime-sync-architecture.md §Data Ownership):
+ *   - Public holidays and school holidays (useOpenHolidays / usePublicHolidays / useSchoolHolidays)
+ *
+ * Do NOT add useQuery for sync-managed domains (labels, tasks, templates, work locations,
+ * time-off entries, gantt tasks, user preferences). Those are owned by TanStack DB once
+ * migrated, and by the existing localStorage hooks until then. Adding useQuery for any of
+ * those domains creates a redundant cache that diverges from the authoritative store.
+ */
 const queryClient = new QueryClient();
 
 function App() {
