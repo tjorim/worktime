@@ -17,7 +17,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { getMonthlyPaydayMap } from "@/utils/paydayUtils";
+import { usePaydates } from "@/hooks/usePaydates";
 import { calculateShift } from "@/utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "@/data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
@@ -94,11 +94,8 @@ export function CalendarView({
   const { workLocationMap, setLocationForDate, clearLocationForDate } =
     useWorkLocationStorage(currentYear);
 
-  // Get payday information for the year
-  const paydayMapForYear = useMemo(
-    () => getMonthlyPaydayMap(currentYear, publicHolidayMap),
-    [currentYear, publicHolidayMap],
-  );
+  // Fetch payday dates from the backend
+  const { paydayMap: paydayMapForYear } = usePaydates(currentYear);
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);

@@ -7,7 +7,7 @@ from datetime import time as dt_time
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Time, func
+from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Time, UniqueConstraint, func
 from sqlalchemy import false as sa_false
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -263,5 +263,42 @@ class TimeOffEntry(ClientTimestampMixin, Base):
             " OR entry_kind = 'range' AND start_date IS NOT NULL AND end_date IS NOT NULL AND start_date < end_date AND date IS NULL AND weekday IS NULL"
             " OR entry_kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL",
             name="ck_time_off_shape",
+        ),
+    )
+
+
+class CachedHoliday(Base):
+    """Persisted holiday data from openholidaysapi.org.
+
+    Each row represents one upstream API response for a specific
+    (holiday_type, country, year, subdivision, language) combination.
+    The ``data`` column holds the raw JSON list returned by the API.
+    ``fetched_at`` is used to determine staleness:
+    - current year: stale after 24 h
+    - past years: stale after 7 days
+    """
+
+    __tablename__ = "cached_holidays"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    holiday_type: Mapped[str] = mapped_column(String, nullable=False)
+    country: Mapped[str] = mapped_column(String(2), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    subdivision: Mapped[str | None] = mapped_column(String, nullable=True)
+    language: Mapped[str] = mapped_column(String(2), nullable=False)
+    data: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+    fetched_at: Mapped[dt_datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=_utc_now
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "holiday_type",
+            "country",
+            "year",
+            "subdivision",
+            "language",
+            name="uq_cached_holiday",
+            postgresql_nulls_not_distinct=True,
         ),
     )
