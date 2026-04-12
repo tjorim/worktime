@@ -362,6 +362,71 @@ async def get_school_holidays(
     return JSONResponse(content=data)
 
 
+@router.get("/holidays/longweekend")
+async def get_long_weekends(
+    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
+    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    availableBridgeDays: Annotated[
+        int, Query(ge=0, le=5, description="Max bridge days to include (0 = no bridge days)")
+    ] = 0,
+) -> JSONResponse:
+    """Return long weekend opportunities for a country/year, proxied from date.nager.at.
+
+    Optionally includes periods that require up to ``availableBridgeDays`` bridge
+    days (i.e. annual-leave days) to create the long weekend.  Responses are
+    stored **in memory only** (keyed on country + year + availableBridgeDays).
+    The DB is intentionally skipped because the result set varies per
+    ``availableBridgeDays`` value (capped at 5), so the in-memory cache is
+    sufficient for this bounded set of parameter combinations.
+
+    Returns 503 if the upstream is unreachable and the in-memory cache is cold.
+    """
+    cache_key = f"longweekend:{country}:{year}:{availableBridgeDays}"
+    mem_cache = get_cache()
+
+    # In-memory cache only (no DB persistence)
+    cached_entry = mem_cache.get_holiday(cache_key)
+    if cached_entry is not None:
+        logger.debug("L1 cache hit for long weekends: %s", cache_key)
+        return JSONResponse(content=cached_entry.data)
+
+    upstream_url = f"{NAGER_BASE_URL}/LongWeekend/{year}/{country}"
+    upstream_params: dict[str, str] = {}
+    if availableBridgeDays > 0:
+        upstream_params["availableBridgeDays"] = str(availableBridgeDays)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                upstream_url,
+                params=upstream_params,
+                headers={"Accept": "application/json"},
+            )
+
+        if not response.is_success:
+            logger.warning(
+                "Upstream Nager.Date returned %s for long weekends (%s)",
+                response.status_code,
+                cache_key,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"detail": "Long weekend API is unreachable"},
+            )
+
+        data: list[Any] = response.json()
+
+    except Exception:
+        logger.exception("Failed to fetch long weekends from upstream (%s)", cache_key)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Long weekend API is unreachable"},
+        )
+
+    mem_cache.set_holiday(cache_key, data)
+    return JSONResponse(content=data)
+
+
 @router.get("/holidays/paydates")
 async def get_paydates(
     country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
