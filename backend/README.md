@@ -81,7 +81,9 @@ The shared directory is expected to look like this:
 ## API Groups
 
 - File/share endpoints: `/hday/*`, `/team/*`, `/health`
-- Auth endpoints: `/auth/*`
+- Auth endpoints:
+  - local development default: `/auth/*`
+  - shared production infra: `/api/auth/*`
 - Registration endpoint (public): `POST /users/register`
 - Database endpoints: `/db/users/*`, `/db/time-tracking/*`, `/db/work-locations/*`, `/db/gantt-tasks/*`, `/db/sync/*`
 - Debug endpoint in non-production only: `/debug/benchmark`

@@ -19,7 +19,11 @@ The service is built with FastAPI and currently combines:
 - in-memory caching for file-backed operations
 - a non-production debug benchmark endpoint
 
-There is no `/v1` prefix. Current routes live directly under `/health`, `/hday/*`, `/team/*`, `/db/*`, `/auth/*`, and `/debug/*`.
+There is no `/v1` prefix. Current routes live directly under `/health`, `/hday/*`, `/team/*`, `/db/*`, and `/debug/*`.
+SuperTokens auth uses:
+
+- local development default: `/auth/*`
+- shared production infra: `/api/auth/*`
 
 ## Runtime Shape
 
@@ -39,7 +43,7 @@ The app always exposes:
 - `GET /health`
 - `.hday` file endpoints
 - team endpoints
-- SuperTokens auth endpoints under `/auth/*`
+- SuperTokens auth endpoints under the configured API base path
 
 The app conditionally exposes:
 
@@ -69,9 +73,10 @@ Team metadata is read from `config/{team_id}.conf` and `config/{team_id}.people`
 
 ### Auth routes
 
-SuperTokens mounts its own auth/session routes under:
+SuperTokens mounts its own auth/session routes under the configured API base path:
 
-- `/auth/*`
+- local development default: `/auth/*`
+- shared production infra: `/api/auth/*`
 
 The backend uses those sessions for database-backed endpoints.
 
@@ -170,7 +175,8 @@ Current configuration lives in:
 Important points:
 
 - the backend talks to a self-hosted SuperTokens core
-- auth/session routes live under `/auth`
+- auth/session routes live under `SUPERTOKENS_API_BASE_PATH`
+- in the shared production infra, the backend auth API is `/api/auth` while the frontend auth UI remains `/auth`
 - DB endpoints depend on authenticated sessions
 - production requires `SUPERTOKENS_API_KEY`
 - user creation, rename, and deletion must stay consistent between the local DB and SuperTokens
