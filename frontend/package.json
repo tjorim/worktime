@@ -29,7 +29,6 @@
     "build": "pnpm paraglide:compile && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
-    "postinstall": "msw init public --no-save",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "lint": "oxlint",
     "format": "oxfmt .",
