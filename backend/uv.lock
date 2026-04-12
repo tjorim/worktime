@@ -1797,7 +1797,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.3" },
     { name = "pycountry", specifier = ">=24.6.1" },
-    { name = "pydantic", extras = ["email"], specifier = ">=2.9" },
+    { name = "pydantic", extras = ["email"], specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "sqlalchemy", specifier = ">=2.0" },
