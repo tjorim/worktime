@@ -72,18 +72,15 @@ def _make_cache_key(
     return key
 
 
-def _build_openholidays_params(year: int, subdivision: str | None = None) -> dict[str, str]:
+def _build_openholidays_params(year: int) -> dict[str, str]:
     """Build the query parameters for an openholidaysapi.org request."""
-    params: dict[str, str] = {
+    return {
         "countryIsoCode": HOLIDAY_COUNTRY_CODE,
         "validFrom": f"{year}-01-01",
         "validTo": f"{year}-12-31",
         "languageIsoCode": OPENHOLIDAYS_LANGUAGE_CODE,
         "groupCode": OPENHOLIDAYS_GROUP_CODE,
     }
-    if subdivision:
-        params["subdivisionCode"] = subdivision
-    return params
 
 
 def _normalize_country(_: str | None = None) -> str:
@@ -344,9 +341,6 @@ async def get_public_holidays(
 async def get_school_holidays(
     year: Annotated[int, Query(description="Year, e.g. 2026")],
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
-    subdivision: Annotated[
-        str | None, Query(description="Subdivision code, e.g. NL-NH")
-    ] = None,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return school holidays for a country/year, proxied from openholidaysapi.org.
@@ -367,9 +361,9 @@ async def get_school_holidays(
         country=country,
         year=year,
         language=None,
-        subdivision=subdivision,
+        subdivision=None,
         upstream_url=f"{OPENHOLIDAYS_BASE_URL}/SchoolHolidays",
-        upstream_params=_build_openholidays_params(year, subdivision),
+        upstream_params=_build_openholidays_params(year),
         db=db,
     )
     if data is None:

@@ -27,7 +27,6 @@ export interface SchoolHoliday {
 }
 
 const DEFAULT_COUNTRY = "NL";
-const DEFAULT_SUBDIVISION = "NL-NH";
 const DEFAULT_LANGUAGE = "EN";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
 
@@ -63,21 +62,16 @@ const toSchoolHolidayMap = (
   return map;
 };
 
-export function useSchoolHolidays(
-  year: number,
-  subdivisionCode: string = DEFAULT_SUBDIVISION,
-  enabled: boolean = true,
-) {
+export function useSchoolHolidays(year: number, enabled: boolean = true) {
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && Boolean(subdivisionCode) && isValidYear;
+  const isEnabled = enabled && !isTestEnv && isValidYear;
   const params = useMemo(
     () => ({
       country: DEFAULT_COUNTRY,
       year: String(year),
-      subdivision: subdivisionCode,
     }),
-    [year, subdivisionCode],
+    [year],
   );
 
   const { holidays, loading, error } = useOpenHolidays<SchoolHoliday>({
