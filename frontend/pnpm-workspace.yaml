@@ -1,0 +1,6 @@
+allowBuilds:
+  '@parcel/watcher': true
+  browser-tabs-lock: true
+  canvas: true
+  esbuild: true
+  msw: true
