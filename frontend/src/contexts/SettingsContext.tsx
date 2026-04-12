@@ -38,8 +38,6 @@ interface UserSettings {
   enableCrossBorderTracking: boolean;
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
-  /** Max bridge days for long weekend highlighting (0 = disabled). */
-  maxBridgeDays: number;
 }
 
 interface SettingsContextType {
@@ -55,7 +53,6 @@ interface SettingsContextType {
   updateCrossBorderTrackingEnabled: (enabled: boolean) => void;
   updateHomeCountry: (country: CountryCode | null) => void;
   updateOfficeCountry: (country: CountryCode | null) => void;
-  updateMaxBridgeDays: (days: number) => void;
   updateLastActiveTab: (tab: TabKey) => void;
   updateLastScheduleView: (view: ScheduleViewKey) => void;
   updateLastTimeOffView: (view: TimeOffViewKey) => void;
@@ -122,7 +119,6 @@ export const defaultSettings: UserSettings = {
   enableCrossBorderTracking: false,
   homeCountry: null,
   officeCountry: null,
-  maxBridgeDays: 0,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -223,14 +219,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
   const officeCountry = isValidCountryCode(settings.officeCountry)
     ? settings.officeCountry
     : defaultSettings.officeCountry;
-
-  const maxBridgeDays =
-    typeof settings.maxBridgeDays === "number" &&
-    Number.isInteger(settings.maxBridgeDays) &&
-    settings.maxBridgeDays >= 0 &&
-    settings.maxBridgeDays <= 5
-      ? settings.maxBridgeDays
-      : defaultSettings.maxBridgeDays;
 
   // --- Validate lastUsed ---
   const lastUsed = (
@@ -344,7 +332,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       enableCrossBorderTracking,
       homeCountry,
       officeCountry,
-      maxBridgeDays,
     },
     lastUsed: {
       activeTab,
@@ -473,16 +460,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, officeCountry: country },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateMaxBridgeDays = useCallback(
-    (days: number) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, maxBridgeDays: days },
       }));
     },
     [setUserState],
@@ -725,7 +702,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateMaxBridgeDays,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,
@@ -762,7 +738,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateCrossBorderTrackingEnabled,
       updateHomeCountry,
       updateOfficeCountry,
-      updateMaxBridgeDays,
       updateLastActiveTab,
       updateLastScheduleView,
       updateLastTimeOffView,

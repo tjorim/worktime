@@ -32,6 +32,7 @@ import {
 import { useEventForm } from "@/hooks/useEventForm";
 import { MonthCalendar } from "./calendar/MonthCalendar";
 import { CalendarLegend } from "./calendar/CalendarLegend";
+import { LongWeekendModal } from "./calendar/LongWeekendModal";
 import { LocationYearSummary } from "./calendar/LocationYearSummary";
 import { OtherLocationModal } from "./calendar/OtherLocationModal";
 import * as m from "@/paraglide/messages.js";
@@ -98,12 +99,22 @@ export function CalendarView({
   // Fetch payday dates from the backend
   const { paydayMap: paydayMapForYear } = usePaydates(currentYear);
 
+  // Long weekend state: local (not persisted) bridge-days selector + modal
+  const [bridgeDays, setBridgeDays] = useState(1);
+  const [showLongWeekendModal, setShowLongWeekendModal] = useState(false);
+  const isNineToFive = scheduleType === "9-5";
+
   // Fetch long weekend data (only for standard 9-5 schedule)
-  const { longWeekendMap } = useLongWeekend(
+  const {
+    periods: longWeekendPeriods,
+    longWeekendMap,
+    loading: longWeekendLoading,
+    error: longWeekendError,
+  } = useLongWeekend(
     currentYear,
-    settings.maxBridgeDays,
+    bridgeDays,
     undefined, // default country (NL)
-    scheduleType === "9-5",
+    isNineToFive,
   );
 
   // Modal state
@@ -394,6 +405,17 @@ export function CalendarView({
                   {m.calendar_annual_summary()}
                 </Button>
               )}
+              {isNineToFive && (
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={() => setShowLongWeekendModal(true)}
+                  title={m.long_weekend_btn()}
+                >
+                  <span aria-hidden="true">🏖️</span>
+                  <span className="ms-1">{m.long_weekend_btn()}</span>
+                </Button>
+              )}
               <CalendarLegend showEventTypes={timeOffEnabled} />
             </div>
           )}
@@ -469,6 +491,19 @@ export function CalendarView({
           existing={workLocationMap.get(otherLocationDate.format("YYYY-MM-DD"))}
           onHide={() => setShowOtherLocationModal(false)}
           onConfirm={handleOtherLocationConfirm}
+        />
+      )}
+
+      {isNineToFive && (
+        <LongWeekendModal
+          show={showLongWeekendModal}
+          year={currentYear}
+          bridgeDays={bridgeDays}
+          periods={longWeekendPeriods}
+          loading={longWeekendLoading}
+          error={longWeekendError}
+          onHide={() => setShowLongWeekendModal(false)}
+          onBridgeDaysChange={setBridgeDays}
         />
       )}
 

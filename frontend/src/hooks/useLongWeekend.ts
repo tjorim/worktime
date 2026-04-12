@@ -89,7 +89,10 @@ export function useLongWeekend(
     [data, isEnabled],
   );
 
+  const periods = isEnabled && data ? data : [];
+
   return {
+    periods,
     longWeekendMap,
     loading: isLoading,
     error: error ? error.message : null,

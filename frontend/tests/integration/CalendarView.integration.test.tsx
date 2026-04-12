@@ -169,6 +169,7 @@ describe("CalendarView Integration Tests", () => {
     });
 
     mockedUseLongWeekend.mockReturnValue({
+      periods: [],
       longWeekendMap: new Map(),
       loading: false,
       error: null,
