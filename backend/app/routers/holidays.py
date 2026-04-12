@@ -376,7 +376,8 @@ async def get_long_weekends(
     days (i.e. annual-leave days) to create the long weekend.  Responses are
     stored **in memory only** (keyed on country + year + availableBridgeDays).
     The DB is intentionally skipped because the result set varies per
-    ``availableBridgeDays`` value, which is unbounded.
+    ``availableBridgeDays`` value (capped at 5), so the in-memory cache is
+    sufficient for this bounded set of parameter combinations.
 
     Returns 503 if the upstream is unreachable and the in-memory cache is cold.
     """

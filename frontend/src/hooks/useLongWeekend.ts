@@ -1,10 +1,22 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useApiClient } from "./useApiClient";
+import { useApiClient } from "@/hooks/useApiClient";
 import type { LongWeekend, LongWeekendDayInfo } from "@/types/longWeekend";
 import { dayjs } from "@/utils/dateTimeUtils";
 
 const DEFAULT_COUNTRY = "NL";
+
+function isValidLongWeekend(item: unknown): item is LongWeekend {
+  if (typeof item !== "object" || item === null) return false;
+  const candidate = item as Record<string, unknown>;
+  return (
+    typeof candidate.startDate === "string" &&
+    typeof candidate.endDate === "string" &&
+    typeof candidate.dayCount === "number" &&
+    Array.isArray(candidate.bridgeDays) &&
+    candidate.bridgeDays.every((d) => typeof d === "string")
+  );
+}
 
 async function fetchLongWeekends(
   country: string,
@@ -22,7 +34,11 @@ async function fetchLongWeekends(
   if (!response.ok) {
     throw new Error(`Failed to fetch long weekends: ${response.status} ${response.statusText}`);
   }
-  return response.json() as Promise<LongWeekend[]>;
+  const rawData = await response.json();
+  if (!Array.isArray(rawData)) {
+    throw new Error("Invalid response: expected an array");
+  }
+  return rawData.filter(isValidLongWeekend);
 }
 
 /**

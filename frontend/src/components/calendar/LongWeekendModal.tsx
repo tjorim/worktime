@@ -39,12 +39,18 @@ export function LongWeekendModal({
 }: LongWeekendModalProps) {
   const locale = getLocale();
 
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
+  const formatDate = (iso: string) => {
+    const parts = iso.split("-").map(Number);
+    const year = parts[0] ?? 0;
+    const month = parts[1] ?? 1;
+    const day = parts[2] ?? 1;
+    const localDate = new Date(year, month - 1, day);
+    return new Intl.DateTimeFormat(locale, {
       weekday: "short",
       day: "numeric",
       month: "short",
-    }).format(new Date(iso));
+    }).format(localDate);
+  };
 
   return (
     <Modal show={show} onHide={onHide} centered scrollable>
