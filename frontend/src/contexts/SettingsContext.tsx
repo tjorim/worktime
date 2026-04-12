@@ -228,7 +228,7 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     typeof settings.maxBridgeDays === "number" &&
     Number.isInteger(settings.maxBridgeDays) &&
     settings.maxBridgeDays >= 0 &&
-    settings.maxBridgeDays <= 100
+    settings.maxBridgeDays <= 5
       ? settings.maxBridgeDays
       : defaultSettings.maxBridgeDays;
 

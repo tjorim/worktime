@@ -367,7 +367,7 @@ async def get_long_weekends(
     country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
     availableBridgeDays: Annotated[
-        int, Query(ge=0, le=100, description="Max bridge days to include (0 = no bridge days)")
+        int, Query(ge=0, le=5, description="Max bridge days to include (0 = no bridge days)")
     ] = 0,
 ) -> JSONResponse:
     """Return long weekend opportunities for a country/year, proxied from date.nager.at.
