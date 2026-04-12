@@ -23,9 +23,8 @@ export function usePaydates(
   enabled: boolean = true,
 ) {
   const apiFetch = usePublicApiClient();
-  const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && isValidYear;
+  const isEnabled = enabled && isValidYear;
 
   const { data, isLoading, error } = useQuery<string[], Error>({
     queryKey: ["paydates", DEFAULT_COUNTRY, year],

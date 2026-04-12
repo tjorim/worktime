@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 import * as React from "react";
@@ -10,6 +10,8 @@ import {
   timeOffCollection,
   workLocationsCollection,
 } from "@/db/collections";
+import { server } from "@/mocks/server";
+import { resetSyncStore } from "@/mocks/data/syncStore";
 
 // Make React available globally for JSX in tests
 globalThis.React = React;
@@ -113,14 +115,28 @@ async function resetTestState(): Promise<void> {
   ]);
 }
 
+// ---------------------------------------------------------------------------
+// MSW server lifecycle
+// ---------------------------------------------------------------------------
+
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "warn" });
+});
+
 // Set up DOM environment
 beforeEach(async () => {
   await resetTestState();
+  resetSyncStore();
 });
 
 afterEach(async () => {
   cleanup();
+  server.resetHandlers();
   await resetTestState();
+});
+
+afterAll(() => {
+  server.close();
 });
 
 // Note: dayjs plugins are handled by actual imports in components for better compatibility

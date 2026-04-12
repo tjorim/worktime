@@ -83,9 +83,8 @@ export function useLongWeekend(
   enabled: boolean = true,
 ) {
   const apiFetch = usePublicApiClient();
-  const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && isValidYear && maxBridgeDays > 0;
+  const isEnabled = enabled && isValidYear && maxBridgeDays > 0;
 
   const { data, isLoading, error } = useQuery<LongWeekend[], Error>({
     queryKey: ["longWeekend", DEFAULT_COUNTRY, year, maxBridgeDays],
