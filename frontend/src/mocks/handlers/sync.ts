@@ -6,7 +6,7 @@
  *  POST /api/sync/push
  *  POST /api/sync/pull
  *  GET  /api/preferences
- *  POST /api/preferences  (PUT is what the backend uses; POST is the alias used in syncClient)
+ *  PUT  /api/preferences
  *  GET  /api/me
  */
 
