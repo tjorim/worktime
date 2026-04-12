@@ -116,6 +116,23 @@ async def _get_or_fetch_holidays(
 
     Returns the holiday list on success, or ``None`` if the upstream is
     unreachable and both caches are cold.
+
+    Args:
+        holiday_type: Cache key prefix, e.g. ``"public"`` or ``"school"``.
+        country: ISO 3166-1 alpha-2 country code.
+        year: The calendar year to fetch holidays for.
+        language: Language code for the cache key (e.g. ``"EN"``), or ``None``
+            for sources that do not accept a language parameter (Nager.At).
+        subdivision: Optional region/subdivision code (school holidays only).
+        upstream_url: Full URL of the upstream API endpoint to request.
+        upstream_params: Query parameters to pass with the upstream request.
+            Pass an empty dict when the endpoint uses path parameters only
+            (e.g. Nager.At ``/PublicHolidays/{year}/{country}``).
+        db: The async database session used for L2 cache reads/writes.
+        response_filter: Optional callable applied to the raw JSON list returned
+            by the upstream before the data is cached and returned.  Use this to
+            strip entries that do not match the desired type — e.g. keeping only
+            ``"Public"``-typed entries from the Nager.At response.
     """
     cache_key = _make_cache_key(holiday_type, country, year, language, subdivision)
     mem_cache = get_cache()
