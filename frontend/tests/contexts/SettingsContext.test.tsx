@@ -156,6 +156,7 @@ describe("SettingsContext unified user state", () => {
         enableCrossBorderTracking: false,
         homeCountry: null,
         officeCountry: null,
+        maxBridgeDays: 0,
       },
       lastUsed: {
         activeTab: "calendar",

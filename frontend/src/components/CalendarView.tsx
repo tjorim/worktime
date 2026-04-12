@@ -18,6 +18,7 @@ import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { usePaydates } from "@/hooks/usePaydates";
+import { useLongWeekend } from "@/hooks/useLongWeekend";
 import { calculateShift } from "@/utils/shiftCalculations";
 import { SCHEDULE_OPTIONS } from "@/data/rosters";
 import { isWorkingDay, hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
@@ -96,6 +97,14 @@ export function CalendarView({
 
   // Fetch payday dates from the backend
   const { paydayMap: paydayMapForYear } = usePaydates(currentYear);
+
+  // Fetch long weekend data (only for standard 9-5 schedule)
+  const { longWeekendMap } = useLongWeekend(
+    currentYear,
+    settings.maxBridgeDays,
+    undefined, // default country (NL)
+    scheduleType === "9-5",
+  );
 
   // Modal state
   const [showEventModal, setShowEventModal] = useState(false);
@@ -433,6 +442,7 @@ export function CalendarView({
                 publicHolidays={publicHolidayMap}
                 schoolHolidays={schoolHolidayMap}
                 paydayMap={paydayMapForYear}
+                longWeekendMap={longWeekendMap}
                 workLocationMap={workLocationMap}
                 onMonthChange={setCurrentMonth}
                 onAddEvent={handleAddEventForDate}

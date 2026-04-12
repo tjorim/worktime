@@ -119,6 +119,7 @@ export function SettingsPanel({
     updateCrossBorderTrackingEnabled,
     updateHomeCountry,
     updateOfficeCountry,
+    updateMaxBridgeDays,
     resetSettings,
   } = useSettings();
 
@@ -548,6 +549,43 @@ export function SettingsPanel({
                       onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
                       aria-label="Toggle cross-border tracking"
                     />
+                  </div>
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <div className="d-flex flex-column gap-2">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-medium">{m.long_weekend_label()}</div>
+                        <small className="text-muted">{m.long_weekend_description()}</small>
+                      </div>
+                    </div>
+                    {scheduleType === "9-5" && (
+                      <div className="d-flex align-items-center gap-2">
+                        <Form.Label
+                          htmlFor="max-bridge-days"
+                          className="mb-0 small text-muted text-nowrap"
+                        >
+                          {m.long_weekend_bridge_days_label()}
+                        </Form.Label>
+                        <Form.Select
+                          id="max-bridge-days"
+                          size="sm"
+                          style={{ maxWidth: "9rem" }}
+                          value={settings.maxBridgeDays}
+                          onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                            updateMaxBridgeDays(Number(e.target.value))
+                          }
+                          aria-label={m.long_weekend_bridge_days_label()}
+                        >
+                          <option value={0}>{m.long_weekend_bridge_days_off()}</option>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </div>
+                    )}
                   </div>
                 </ListGroup.Item>
               </ListGroup>
