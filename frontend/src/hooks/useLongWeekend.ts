@@ -19,14 +19,13 @@ function isValidLongWeekend(item: unknown): item is LongWeekend {
 }
 
 async function fetchLongWeekends(
-  country: string,
   year: number,
   availableBridgeDays: number,
   apiFetch: (url: string, init?: RequestInit) => Promise<Response>,
   signal: AbortSignal,
 ): Promise<LongWeekend[]> {
   const params = new URLSearchParams({
-    country,
+    country: DEFAULT_COUNTRY,
     year: String(year),
     availableBridgeDays: String(availableBridgeDays),
   });
@@ -82,19 +81,17 @@ function toLongWeekendMap(periods: LongWeekend[]): Map<string, LongWeekendDayInf
 export function useLongWeekend(
   year: number,
   maxBridgeDays: number,
-  countryCode: string = DEFAULT_COUNTRY,
   enabled: boolean = true,
 ) {
   const apiFetch = usePublicApiClient();
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled =
-    enabled && !isTestEnv && Boolean(countryCode) && isValidYear && maxBridgeDays > 0;
+  const isEnabled = enabled && !isTestEnv && isValidYear && maxBridgeDays > 0;
 
   const { data, isLoading, error } = useQuery<LongWeekend[], Error>({
-    queryKey: ["longWeekend", countryCode, year, maxBridgeDays],
+    queryKey: ["longWeekend", DEFAULT_COUNTRY, year, maxBridgeDays],
     queryFn: ({ signal }) =>
-      fetchLongWeekends(countryCode, year, maxBridgeDays, apiFetch, signal),
+      fetchLongWeekends(year, maxBridgeDays, apiFetch, signal),
     enabled: isEnabled,
     staleTime: 1000 * 60 * 60 * 24, // long weekend data doesn't change intra-day
     retry: 1,

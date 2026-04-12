@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 
 NAGER_BASE_URL = "https://date.nager.at/api/v3"
 OPENHOLIDAYS_BASE_URL = "https://openholidaysapi.org"
+HOLIDAY_COUNTRY_CODE = "NL"
+OPENHOLIDAYS_LANGUAGE_CODE = "EN"
 
 # Staleness thresholds
 _STALE_CURRENT_YEAR = timedelta(hours=24)
@@ -69,19 +71,26 @@ def _make_cache_key(
     return key
 
 
-def _build_openholidays_params(
-    country: str, year: int, language: str, subdivision: str | None = None
-) -> dict[str, str]:
+def _build_openholidays_params(year: int, subdivision: str | None = None) -> dict[str, str]:
     """Build the query parameters for an openholidaysapi.org request."""
     params: dict[str, str] = {
-        "countryIsoCode": country,
+        "countryIsoCode": HOLIDAY_COUNTRY_CODE,
         "validFrom": f"{year}-01-01",
         "validTo": f"{year}-12-31",
-        "languageIsoCode": language,
+        "languageIsoCode": OPENHOLIDAYS_LANGUAGE_CODE,
     }
     if subdivision:
         params["subdivisionCode"] = subdivision
     return params
+
+
+def _normalize_country(_: str | None = None) -> str:
+    """Return the currently supported holiday country code.
+
+    The product currently supports Dutch holiday data only, so all holiday
+    endpoints are normalized to ``NL`` regardless of any incoming query value.
+    """
+    return HOLIDAY_COUNTRY_CODE
 
 
 def _is_stale(fetched_at: dt_datetime, year: int) -> bool:
@@ -298,8 +307,8 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 
 @router.get("/holidays/public")
 async def get_public_holidays(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return public holidays for a country/year, proxied from date.nager.at.
@@ -309,6 +318,7 @@ async def get_public_holidays(
     Staleness windows: 24 h for the current year, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
     """
+    country = _normalize_country(country)
     data = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,
@@ -330,9 +340,8 @@ async def get_public_holidays(
 
 @router.get("/holidays/school")
 async def get_school_holidays(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     subdivision: Annotated[
         str | None, Query(description="Subdivision code, e.g. NL-NH")
     ] = None,
@@ -343,15 +352,20 @@ async def get_school_holidays(
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
     Staleness windows: 24 h for the current year, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
+
+    The openholidays upstream is always queried with ``languageIsoCode=EN`` so
+    the response consistently includes an English primary name plus the native
+    Dutch entry, matching the Nager.Date behavior used for public holidays.
     """
+    country = _normalize_country(country)
     data = await _get_or_fetch_holidays(
         holiday_type="school",
         country=country,
         year=year,
-        language=language,
+        language=None,
         subdivision=subdivision,
         upstream_url=f"{OPENHOLIDAYS_BASE_URL}/SchoolHolidays",
-        upstream_params=_build_openholidays_params(country, year, language, subdivision),
+        upstream_params=_build_openholidays_params(year, subdivision),
         db=db,
     )
     if data is None:
@@ -364,8 +378,8 @@ async def get_school_holidays(
 
 @router.get("/holidays/longweekend")
 async def get_long_weekends(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     availableBridgeDays: Annotated[
         int, Query(ge=0, le=5, description="Max bridge days to include (0 = no bridge days)")
     ] = 0,
@@ -381,6 +395,7 @@ async def get_long_weekends(
 
     Returns 503 if the upstream is unreachable and the in-memory cache is cold.
     """
+    country = _normalize_country(country)
     cache_key = f"longweekend:{country}:{year}:{availableBridgeDays}"
     mem_cache = get_cache()
 
@@ -429,8 +444,8 @@ async def get_long_weekends(
 
 @router.get("/holidays/paydates")
 async def get_paydates(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return the 12 monthly payday dates for a country/year.
@@ -442,6 +457,7 @@ async def get_paydates(
 
     Returns a JSON array of ISO date strings (YYYY-MM-DD), one per month.
     """
+    country = _normalize_country(country)
     holidays = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,

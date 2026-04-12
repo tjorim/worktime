@@ -113,7 +113,6 @@ export function CalendarView({
   } = useLongWeekend(
     currentYear,
     bridgeDays,
-    undefined, // default country (NL)
     isNineToFive,
   );
 

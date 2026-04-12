@@ -285,9 +285,9 @@ class CachedHoliday(Base):
 
     Each row represents one upstream API response for a specific
     (holiday_type, country, year, subdivision, language) combination.
-    Public holidays (Nager.At) use ``language=None`` since that API always
-    returns both English and native names without a language parameter.
-    School holidays (openholidaysapi.org) use a language code (e.g. ``"EN"``).
+    Holiday payloads are normalized around English + native Dutch names, so the
+    upstream-language dimension is not part of the cache key and
+    ``language=None`` is used for persisted rows.
     The ``data`` column holds the raw JSON list returned by the API.
     ``fetched_at`` is used to determine staleness:
     - current year: stale after 24 h

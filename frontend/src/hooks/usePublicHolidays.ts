@@ -30,18 +30,17 @@ const toHolidayMap = (holidays: PublicHoliday[]) => {
 
 export function usePublicHolidays(
   year: number,
-  countryCode: string = DEFAULT_COUNTRY,
   enabled: boolean = true,
 ) {
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && Boolean(countryCode) && isValidYear;
+  const isEnabled = enabled && !isTestEnv && isValidYear;
   const params = useMemo(
     () => ({
-      country: countryCode,
+      country: DEFAULT_COUNTRY,
       year: String(year),
     }),
-    [countryCode, year],
+    [year],
   );
 
   const { holidays, loading, error } = useOpenHolidays<PublicHoliday>({

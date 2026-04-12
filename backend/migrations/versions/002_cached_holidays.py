@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("country", sa.String(2), nullable=False),
         sa.Column("year", sa.Integer(), nullable=False),
         sa.Column("subdivision", sa.String(), nullable=True),
-        sa.Column("language", sa.String(2), nullable=False),
+        sa.Column("language", sa.String(2), nullable=True),
         sa.Column("data", sa.JSON(), nullable=False),
         sa.Column(
             "fetched_at",
