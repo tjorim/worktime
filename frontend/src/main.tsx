@@ -36,12 +36,21 @@ const container = document.getElementById("root");
 if (!container) {
   throw new Error("Root element not found");
 }
+const rootContainer = container;
 
-enableMocking().then(() => {
-  const root = createRoot(container);
+async function startApp(): Promise<void> {
+  try {
+    await enableMocking();
+  } catch (error) {
+    console.error("MSW failed to start:", error);
+  }
+
+  const root = createRoot(rootContainer);
   root.render(
     <StrictMode>
       <App />
     </StrictMode>,
   );
-});
+}
+
+void startApp();

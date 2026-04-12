@@ -46,7 +46,7 @@ export const emptyPushResponse: SyncPushResponse = {
 };
 
 // ---------------------------------------------------------------------------
-// Runtime store — tests can mutate these to control handler behaviour.
+// Runtime store — tests can mutate these to control handler behavior.
 // ---------------------------------------------------------------------------
 
 export interface SyncStore {
@@ -70,23 +70,21 @@ export interface PreferencesPayload {
   updated_at: string;
 }
 
-export const syncStore: SyncStore = {
-  status: emptyStatus,
-  pullData: emptyPullResponse,
-  pushResponse: emptyPushResponse,
-  statusError: null,
-  pushError: null,
-  pullError: null,
-  preferences: null,
-};
+function createInitialSyncStore(): SyncStore {
+  return {
+    status: structuredClone(emptyStatus),
+    pullData: structuredClone(emptyPullResponse),
+    pushResponse: structuredClone(emptyPushResponse),
+    statusError: null,
+    pushError: null,
+    pullError: null,
+    preferences: null,
+  };
+}
+
+export const syncStore: SyncStore = createInitialSyncStore();
 
 /** Reset the store to its initial seed state. */
 export function resetSyncStore(): void {
-  syncStore.status = emptyStatus;
-  syncStore.pullData = emptyPullResponse;
-  syncStore.pushResponse = emptyPushResponse;
-  syncStore.statusError = null;
-  syncStore.pushError = null;
-  syncStore.pullError = null;
-  syncStore.preferences = null;
+  Object.assign(syncStore, createInitialSyncStore());
 }
