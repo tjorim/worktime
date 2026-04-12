@@ -16,16 +16,19 @@ import type { PaydayInfo } from "@/types/paydays";
 vi.mock("@/hooks/usePublicHolidays");
 vi.mock("@/hooks/useSchoolHolidays");
 vi.mock("@/hooks/usePaydates");
+vi.mock("@/hooks/useLongWeekend");
 
 // Import after mocking to get the mocked versions
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 import { usePaydates } from "@/hooks/usePaydates";
+import { useLongWeekend } from "@/hooks/useLongWeekend";
 
 // Cast to mocked functions for type safety
 const mockedUsePublicHolidays = vi.mocked(usePublicHolidays);
 const mockedUseSchoolHolidays = vi.mocked(useSchoolHolidays);
 const mockedUsePaydates = vi.mocked(usePaydates);
+const mockedUseLongWeekend = vi.mocked(useLongWeekend);
 
 /**
  * Test fixtures for multi-source data integration testing.
@@ -161,6 +164,13 @@ describe("CalendarView Integration Tests", () => {
 
     mockedUsePaydates.mockReturnValue({
       paydayMap: new Map(),
+      loading: false,
+      error: null,
+    });
+
+    mockedUseLongWeekend.mockReturnValue({
+      periods: [],
+      longWeekendMap: new Map(),
       loading: false,
       error: null,
     });

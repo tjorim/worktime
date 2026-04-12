@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
@@ -27,8 +28,6 @@ export interface SchoolHoliday {
 }
 
 const DEFAULT_LANGUAGE = "EN";
-const DEFAULT_COUNTRY = "NL";
-const DEFAULT_SUBDIVISION = "NL-NH";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
 
 export function getSchoolHolidayName(holiday: SchoolHoliday, language: string = DEFAULT_LANGUAGE) {
@@ -63,25 +62,16 @@ const toSchoolHolidayMap = (
   return map;
 };
 
-export function useSchoolHolidays(
-  year: number,
-  countryCode: string = DEFAULT_COUNTRY,
-  subdivisionCode: string = DEFAULT_SUBDIVISION,
-  language: string = DEFAULT_LANGUAGE,
-  enabled: boolean = true,
-) {
+export function useSchoolHolidays(year: number, enabled: boolean = true) {
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled =
-    enabled && !isTestEnv && Boolean(countryCode) && Boolean(subdivisionCode) && isValidYear;
+  const isEnabled = enabled && !isTestEnv && isValidYear;
   const params = useMemo(
     () => ({
-      country: countryCode,
+      country: DEFAULT_COUNTRY,
       year: String(year),
-      language,
-      subdivision: subdivisionCode,
     }),
-    [countryCode, year, language, subdivisionCode],
+    [year],
   );
 
   const { holidays, loading, error } = useOpenHolidays<SchoolHoliday>({
@@ -97,9 +87,9 @@ export function useSchoolHolidays(
   const schoolHolidayMap = useMemo(
     () =>
       isEnabled
-        ? toSchoolHolidayMap(holidays, language, NATIVE_LANGUAGE)
+        ? toSchoolHolidayMap(holidays, DEFAULT_LANGUAGE, NATIVE_LANGUAGE)
         : new Map<string, SchoolHolidayInfo>(),
-    [holidays, isEnabled, language],
+    [holidays, isEnabled],
   );
 
   return { schoolHolidayMap, loading, error };

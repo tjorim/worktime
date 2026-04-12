@@ -6,6 +6,7 @@ import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
+import type { LongWeekendDayInfo } from "@/types/longWeekend";
 import type { TimeOffEntry } from "@/lib/timeOff/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
 import { DayCell, type DayEvent } from "./DayCell";
@@ -18,6 +19,7 @@ interface MonthCalendarProps {
   publicHolidays?: Map<string, PublicHolidayInfo>;
   schoolHolidays?: Map<string, SchoolHolidayInfo>;
   paydayMap?: Map<string, PaydayInfo>;
+  longWeekendMap?: Map<string, LongWeekendDayInfo>;
   workLocationMap?: WorkLocationMap;
   onMonthChange: (month: Dayjs) => void;
   onAddEvent: (date: Dayjs) => void;
@@ -82,6 +84,7 @@ export function MonthCalendar({
   publicHolidays = new Map(),
   schoolHolidays = new Map(),
   paydayMap = new Map(),
+  longWeekendMap = new Map(),
   workLocationMap,
   onMonthChange,
   onAddEvent,
@@ -490,6 +493,7 @@ export function MonthCalendar({
                   publicHoliday={publicHolidays.get(dayKey) ?? publicHolidays.get(hdayKey)}
                   schoolHoliday={schoolHolidays.get(dayKey) ?? schoolHolidays.get(hdayKey)}
                   paydayInfo={paydayMap.get(dayKey) ?? paydayMap.get(hdayKey)}
+                  longWeekendInfo={longWeekendMap.get(dayKey)}
                   workLocation={workLocationMap?.get(dayKey)}
                   events={cellEvents}
                   shiftBadge={getShiftForDate ? getShiftForDate(day) : undefined}

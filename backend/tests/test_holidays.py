@@ -19,18 +19,29 @@ from app.routers.holidays import (
 
 # ── sample upstream payloads ──────────────────────────────────────────────────
 
+# Nager.At format — used by /holidays/public and /holidays/paydates
 SAMPLE_PUBLIC_HOLIDAYS = [
     {
-        "id": "ph-nl-2026-01",
-        "startDate": "2026-01-01",
-        "endDate": "2026-01-01",
-        "type": "Public",
-        "name": [{"language": "EN", "text": "New Year's Day"}, {"language": "NL", "text": "Nieuwjaarsdag"}],
-        "regionalScope": "National",
-        "temporalScope": "FullDay",
-        "nationwide": True,
+        "date": "2026-01-01",
+        "localName": "Nieuwjaarsdag",
+        "name": "New Year's Day",
+        "countryCode": "NL",
+        "global": True,
+        "counties": None,
+        "types": ["Public"],
     }
 ]
+
+# A Nager.At response entry that should be filtered out (non-Public type)
+SAMPLE_NON_PUBLIC_HOLIDAY = {
+    "date": "2026-04-27",
+    "localName": "Koningsdag",
+    "name": "King's Day",
+    "countryCode": "NL",
+    "global": True,
+    "counties": None,
+    "types": ["Authorities", "School"],
+}
 
 SAMPLE_SCHOOL_HOLIDAYS = [
     {
@@ -74,49 +85,75 @@ class TestGetPublicHolidays:
     """Tests for GET /api/holidays/public."""
 
     def test_returns_holiday_data(self, db_client: TestClient):
-        """Successful upstream call returns JSON array."""
+        """Successful upstream call returns JSON array of Public-typed entries."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/public?country=NL&year=2026")
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 1
-        assert data[0]["id"] == "ph-nl-2026-01"
+        assert data[0]["date"] == "2026-01-01"
+        assert data[0]["name"] == "New Year's Day"
 
-    def test_upstream_called_with_correct_params(self, db_client: TestClient):
-        """Upstream API receives the expected OpenHolidays query parameters."""
+    def test_non_public_types_are_filtered_out(self, db_client: TestClient):
+        """Entries whose types do not include 'Public' are excluded from the response."""
+        raw = SAMPLE_PUBLIC_HOLIDAYS + [SAMPLE_NON_PUBLIC_HOLIDAY]
+        mock_ctx = _mock_httpx_client(200, raw)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            response = db_client.get("/api/holidays/public?country=NL&year=2026")
+
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["date"] == "2026-01-01"
+
+    def test_upstream_called_with_nager_url(self, db_client: TestClient):
+        """Upstream request targets Nager.At with year/country path params, no query params."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         call_kwargs = mock_http_client.get.call_args
         assert call_kwargs is not None
-        params = call_kwargs.kwargs["params"]
-        assert params["countryIsoCode"] == "NL"
-        assert params["validFrom"] == "2026-01-01"
-        assert params["validTo"] == "2026-12-31"
-        assert params["languageIsoCode"] == "EN"
+        url = call_kwargs.args[0] if call_kwargs.args else call_kwargs.kwargs.get("url", "")
+        assert "date.nager.at" in url
+        assert "2026" in url
+        assert "NL" in url
+        # No OpenHolidays-style query params
+        params = call_kwargs.kwargs.get("params", {})
+        assert "countryIsoCode" not in params
+        assert "languageIsoCode" not in params
+
+    def test_language_param_ignored(self, db_client: TestClient):
+        """The language query parameter has no effect on the public holidays endpoint."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+
+        # Should still be called once; language is silently ignored
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        assert mock_http_client.get.call_count == 1
 
     def test_l1_cached_on_first_request(self, db_client: TestClient):
         """Response is stored in the in-memory L1 cache after the first fetch."""
         cache = get_cache()
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
 
-        entry = cache.get_holiday("public:NL:2026:EN")
+        # Cache key has no language dimension for public (Nager) holidays
+        entry = cache.get_holiday("public:NL:2026")
         assert entry is not None
         assert entry.data == SAMPLE_PUBLIC_HOLIDAYS
 
     def test_l1_cache_hit_skips_upstream(self, db_client: TestClient):
-        """Second request for identical params does not hit openholidaysapi.org (L1 hit)."""
+        """Second request for identical params does not hit date.nager.at (L1 hit)."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
@@ -125,7 +162,7 @@ class TestGetPublicHolidays:
         """503 is returned when the upstream responds with a non-2xx status."""
         mock_ctx = _mock_httpx_client(500)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/public?country=NL&year=2026")
 
         assert response.status_code == 503
         assert "detail" in response.json()
@@ -134,35 +171,45 @@ class TestGetPublicHolidays:
         """503 is returned when the upstream raises a network exception."""
         mock_ctx = _mock_httpx_client(raise_exc=Exception("connection refused"))
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/public?country=NL&year=2026")
 
         assert response.status_code == 503
         assert "detail" in response.json()
 
     def test_different_params_produce_different_cache_entries(self, db_client: TestClient):
-        """Requests with different countries are cached independently."""
+        """Requests for different years are cached independently."""
         cache = get_cache()
         nl_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
-        be_data = [{"id": "ph-be-2026-01", "startDate": "2026-01-01"}]
-        be_ctx = _mock_httpx_client(200, be_data)
+        next_year_data = [
+            {
+                "date": "2027-01-01",
+                "name": "New Year's Day",
+                "localName": "Nieuwjaarsdag",
+                "countryCode": "NL",
+                "global": True,
+                "counties": None,
+                "types": ["Public"],
+            }
+        ]
+        next_year_ctx = _mock_httpx_client(200, next_year_data)
 
-        with patch("app.routers.holidays.httpx.AsyncClient", side_effect=[nl_ctx, be_ctx]):
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
-            db_client.get("/api/holidays/public?country=BE&year=2026&language=EN")
+        with patch("app.routers.holidays.httpx.AsyncClient", side_effect=[nl_ctx, next_year_ctx]):
+            db_client.get("/api/holidays/public?country=NL&year=2026")
+            db_client.get("/api/holidays/public?country=NL&year=2027")
 
-        assert cache.get_holiday("public:NL:2026:EN") is not None
-        assert cache.get_holiday("public:BE:2026:EN") is not None
+        assert cache.get_holiday("public:NL:2026") is not None
+        assert cache.get_holiday("public:NL:2027") is not None
 
     def test_l2_db_cache_hit_skips_upstream(self, db_client: TestClient):
         """After a restart (empty L1), the DB (L2) serves the response without upstream."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
             # First request: upstream + DB write
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
             # Simulate restart by clearing L1
             get_cache()._holiday_entries.clear()
             # Second request: DB hit, no upstream
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
@@ -172,22 +219,23 @@ class TestGetPublicHolidays:
         monkeypatch.setattr(settings, "CACHE_ENABLED", False)
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         # Second request served from DB, so only 1 upstream call
         assert mock_http_client.get.call_count == 1
 
-    def test_default_language_is_en(self, db_client: TestClient):
-        """language parameter defaults to EN when omitted."""
+    def test_country_param_is_normalized_to_nl(self, db_client: TestClient):
+        """Non-NL country query values are normalized to NL for now."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=NL&year=2026")
+            db_client.get("/api/holidays/public?country=BE&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
-        params = mock_http_client.get.call_args.kwargs["params"]
-        assert params["languageIsoCode"] == "EN"
+        call_kwargs = mock_http_client.get.call_args
+        url = call_kwargs.args[0] if call_kwargs.args else call_kwargs.kwargs.get("url", "")
+        assert url.endswith("/PublicHolidays/2026/NL")
 
 
 # ── school holidays ───────────────────────────────────────────────────────────
@@ -199,9 +247,7 @@ class TestGetSchoolHolidays:
         """Successful upstream call returns JSON array."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            response = db_client.get("/api/holidays/school?country=NL&year=2026&language=EN")
 
         assert response.status_code == 200
         data = response.json()
@@ -209,13 +255,11 @@ class TestGetSchoolHolidays:
         assert len(data) == 1
         assert data[0]["id"] == "sh-nl-nh-2026-01"
 
-    def test_upstream_called_with_subdivision(self, db_client: TestClient):
-        """Upstream API receives subdivisionCode when provided."""
+    def test_upstream_uses_fixed_group_code_without_subdivision(self, db_client: TestClient):
+        """School holiday upstream requests use only the fixed group code."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            db_client.get("/api/holidays/school?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         params = mock_http_client.get.call_args.kwargs["params"]
@@ -223,13 +267,25 @@ class TestGetSchoolHolidays:
         assert params["validFrom"] == "2026-01-01"
         assert params["validTo"] == "2026-12-31"
         assert params["languageIsoCode"] == "EN"
-        assert params["subdivisionCode"] == "NL-NH"
+        assert params["groupCode"] == "NL-ZU"
+        assert "subdivisionCode" not in params
 
-    def test_upstream_called_without_subdivision(self, db_client: TestClient):
-        """Upstream API omits subdivisionCode when not provided."""
+    def test_language_param_ignored(self, db_client: TestClient):
+        """School holiday responses are normalized to EN + native Dutch names."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/school?country=NL&year=2026")
+            db_client.get("/api/holidays/school?country=NL&year=2026&language=DE")
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        params = mock_http_client.get.call_args.kwargs["params"]
+        assert params["languageIsoCode"] == "EN"
+        assert params["groupCode"] == "NL-ZU"
+
+    def test_subdivision_query_param_is_ignored(self, db_client: TestClient):
+        """A subdivision query value does not affect upstream school-holiday requests."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/school?country=NL&year=2026&subdivision=NL-NH")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         params = mock_http_client.get.call_args.kwargs["params"]
@@ -240,11 +296,9 @@ class TestGetSchoolHolidays:
         cache = get_cache()
         mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            db_client.get("/api/holidays/school?country=NL&year=2026")
 
-        entry = cache.get_holiday("school:NL:2026:EN:NL-NH")
+        entry = cache.get_holiday("school-nl-zu:NL:2026")
         assert entry is not None
         assert entry.data == SAMPLE_SCHOOL_HOLIDAYS
 
@@ -252,12 +306,8 @@ class TestGetSchoolHolidays:
         """Second request for identical params does not hit openholidaysapi.org (L1 hit)."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            db_client.get("/api/holidays/school?country=NL&year=2026")
+            db_client.get("/api/holidays/school?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
@@ -266,9 +316,7 @@ class TestGetSchoolHolidays:
         """503 is returned when the upstream responds with a non-2xx status."""
         mock_ctx = _mock_httpx_client(500)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            response = db_client.get("/api/holidays/school?country=NL&year=2026")
 
         assert response.status_code == 503
 
@@ -276,29 +324,22 @@ class TestGetSchoolHolidays:
         """503 is returned when the upstream raises a network exception."""
         mock_ctx = _mock_httpx_client(raise_exc=Exception("network error"))
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
+            response = db_client.get("/api/holidays/school?country=NL&year=2026")
 
         assert response.status_code == 503
 
-    def test_subdivision_creates_separate_cache_key(self, db_client: TestClient):
-        """Requests with different subdivisions are cached independently."""
+    def test_subdivision_query_param_reuses_same_cache_entry(self, db_client: TestClient):
+        """Subdivision query values do not create separate cache entries."""
         cache = get_cache()
-        nh_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
-        zh_data = [{"id": "sh-nl-zh-2026-01"}]
-        zh_ctx = _mock_httpx_client(200, zh_data)
+        mock_ctx = _mock_httpx_client(200, SAMPLE_SCHOOL_HOLIDAYS)
 
-        with patch("app.routers.holidays.httpx.AsyncClient", side_effect=[nh_ctx, zh_ctx]):
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-NH"
-            )
-            db_client.get(
-                "/api/holidays/school?country=NL&year=2026&language=EN&subdivision=NL-ZH"
-            )
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/school?country=NL&year=2026&subdivision=NL-NH")
+            db_client.get("/api/holidays/school?country=NL&year=2026&subdivision=NL-ZH")
 
-        assert cache.get_holiday("school:NL:2026:EN:NL-NH") is not None
-        assert cache.get_holiday("school:NL:2026:EN:NL-ZH") is not None
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        assert mock_http_client.get.call_count == 1
+        assert cache.get_holiday("school-nl-zu:NL:2026") is not None
 
 
 # ── staleness helpers ─────────────────────────────────────────────────────────
@@ -342,14 +383,20 @@ class TestIsStale:
 class TestPaydayComputation:
     """Unit tests for payday calculation helpers."""
 
+    def test_build_holiday_date_set_nager_single_date(self):
+        """Nager.At format: single 'date' field maps to one date."""
+        holidays = [{"date": "2026-01-01", "name": "New Year's Day", "types": ["Public"]}]
+        dates = _build_holiday_date_set(holidays)
+        assert dates == {"2026-01-01"}
+
     def test_build_holiday_date_set_single_day(self):
-        """Single-day holiday expands to one date."""
+        """Legacy OpenHolidays format: single-day range expands to one date."""
         holidays = [{"startDate": "2026-01-01", "endDate": "2026-01-01"}]
         dates = _build_holiday_date_set(holidays)
         assert dates == {"2026-01-01"}
 
     def test_build_holiday_date_set_range(self):
-        """Multi-day holiday expands to all dates in range."""
+        """Legacy OpenHolidays format: multi-day range expands to all dates."""
         holidays = [{"startDate": "2026-12-24", "endDate": "2026-12-26"}]
         dates = _build_holiday_date_set(holidays)
         assert dates == {"2026-12-24", "2026-12-25", "2026-12-26"}
@@ -431,7 +478,7 @@ class TestGetPaydates:
         """Paydates endpoint returns exactly 12 ISO date strings."""
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/paydates?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/paydates?country=NL&year=2026")
 
         assert response.status_code == 200
         data = response.json()
@@ -443,7 +490,7 @@ class TestGetPaydates:
         from datetime import date
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/paydates?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/paydates?country=NL&year=2026")
 
         for d in response.json():
             parsed = date.fromisoformat(d)
@@ -453,19 +500,9 @@ class TestGetPaydates:
         """503 is returned when the upstream raises a network exception."""
         mock_ctx = _mock_httpx_client(raise_exc=Exception("network error"))
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
-            response = db_client.get("/api/holidays/paydates?country=NL&year=2026&language=EN")
+            response = db_client.get("/api/holidays/paydates?country=NL&year=2026")
 
         assert response.status_code == 503
-
-    def test_default_language_is_en(self, db_client: TestClient):
-        """language parameter defaults to EN when omitted."""
-        mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
-        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/paydates?country=NL&year=2026")
-
-        mock_http_client = mock_cls.return_value.__aenter__.return_value
-        params = mock_http_client.get.call_args.kwargs["params"]
-        assert params["languageIsoCode"] == "EN"
 
     def test_reuses_cached_public_holidays(self, db_client: TestClient):
         """Paydates endpoint reuses a previously fetched public holiday cache."""
@@ -473,10 +510,138 @@ class TestGetPaydates:
         mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
         with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
             # Prime the cache via the public holidays endpoint
-            db_client.get("/api/holidays/public?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/public?country=NL&year=2026")
             # Paydates should hit L1 cache, not upstream
-            db_client.get("/api/holidays/paydates?country=NL&year=2026&language=EN")
+            db_client.get("/api/holidays/paydates?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1  # upstream called only once
-        assert cache.get_holiday("public:NL:2026:EN") is not None
+        assert cache.get_holiday("public:NL:2026") is not None
+
+
+# ── long weekend endpoint ─────────────────────────────────────────────────────
+
+SAMPLE_LONG_WEEKENDS = [
+    {
+        "startDate": "2026-05-14",
+        "endDate": "2026-05-17",
+        "dayCount": 4,
+        "needBridgeDay": True,
+        "bridgeDays": ["2026-05-15"],
+    }
+]
+
+
+class TestGetLongWeekends:
+    """Tests for GET /api/holidays/longweekend."""
+
+    def test_returns_long_weekend_data(self, db_client: TestClient):
+        """Successful upstream call returns JSON array of long weekend periods."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            response = db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]["startDate"] == "2026-05-14"
+        assert data[0]["bridgeDays"] == ["2026-05-15"]
+
+    def test_no_bridge_days_param_omits_query_param(self, db_client: TestClient):
+        """When availableBridgeDays=0, the upstream is called without that param."""
+        mock_ctx = _mock_httpx_client(200, [])
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026")
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        call_kwargs = mock_http_client.get.call_args.kwargs
+        assert "availableBridgeDays" not in call_kwargs.get("params", {})
+
+    def test_bridge_days_param_passed_to_upstream(self, db_client: TestClient):
+        """availableBridgeDays is forwarded to the upstream as a query param."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=3"
+            )
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        call_kwargs = mock_http_client.get.call_args.kwargs
+        assert call_kwargs.get("params", {}).get("availableBridgeDays") == "3"
+
+    def test_l1_cached_on_first_request(self, db_client: TestClient):
+        """Response is stored in the in-memory cache after the first request."""
+        cache = get_cache()
+        cache._holiday_entries.pop("longweekend:NL:2026:1", None)
+
+        mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+
+        assert cache.get_holiday("longweekend:NL:2026:1") is not None
+
+    def test_l1_cache_hit_skips_upstream(self, db_client: TestClient):
+        """Second identical request uses the in-memory cache and skips the upstream."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        assert mock_http_client.get.call_count == 1
+
+    def test_different_bridge_days_are_cached_separately(self, db_client: TestClient):
+        """Requests with different availableBridgeDays values are cached independently."""
+        cache = get_cache()
+        ctx1 = _mock_httpx_client(200, SAMPLE_LONG_WEEKENDS)
+        ctx2 = _mock_httpx_client(200, [])
+
+        with patch("app.routers.holidays.httpx.AsyncClient", side_effect=[ctx1, ctx2]):
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+            db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=2"
+            )
+
+        assert cache.get_holiday("longweekend:NL:2026:1") is not None
+        assert cache.get_holiday("longweekend:NL:2026:2") is not None
+
+    def test_503_when_upstream_error_status(self, db_client: TestClient):
+        """503 is returned when the upstream responds with a non-2xx status."""
+        mock_ctx = _mock_httpx_client(500)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            response = db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+
+        assert response.status_code == 503
+
+    def test_503_when_upstream_unreachable(self, db_client: TestClient):
+        """503 is returned when the upstream raises a network exception."""
+        mock_ctx = _mock_httpx_client(raise_exc=Exception("network error"))
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx):
+            response = db_client.get(
+                "/api/holidays/longweekend?country=NL&year=2026&availableBridgeDays=1"
+            )
+
+        assert response.status_code == 503
+
+    def test_upstream_url_uses_nager_longweekend_path(self, db_client: TestClient):
+        """The upstream request targets the Nager.Date LongWeekend endpoint."""
+        mock_ctx = _mock_httpx_client(200, [])
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/longweekend?country=NL&year=2026")
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        call_args, _ = mock_http_client.get.call_args
+        assert "LongWeekend/2026/NL" in call_args[0]

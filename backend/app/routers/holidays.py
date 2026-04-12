@@ -1,7 +1,7 @@
 """Holiday proxy endpoints.
 
-Proxies public and school holiday requests to openholidaysapi.org, caching
-responses in two layers:
+Proxies public holiday requests to date.nager.at and school holiday requests
+to openholidaysapi.org, caching responses in two layers:
 - L1: in-memory ``FileCache`` (fast, lost on restart)
 - L2: PostgreSQL ``cached_holidays`` table (persists across restarts)
 
@@ -16,6 +16,7 @@ payday dates server-side from the cached public holiday data.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, timedelta
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
@@ -34,7 +35,11 @@ from ..database.models import CachedHoliday
 
 logger = logging.getLogger(__name__)
 
+NAGER_BASE_URL = "https://date.nager.at/api/v3"
 OPENHOLIDAYS_BASE_URL = "https://openholidaysapi.org"
+HOLIDAY_COUNTRY_CODE = "NL"
+OPENHOLIDAYS_LANGUAGE_CODE = "EN"
+OPENHOLIDAYS_GROUP_CODE = "NL-ZU"
 
 # Staleness thresholds
 _STALE_CURRENT_YEAR = timedelta(hours=24)
@@ -55,29 +60,36 @@ def _make_cache_key(
     holiday_type: str,
     country: str,
     year: int,
-    language: str,
+    language: str | None = None,
     subdivision: str | None = None,
 ) -> str:
     """Build a deterministic in-memory cache key for a holiday request."""
-    key = f"{holiday_type}:{country}:{year}:{language}"
+    key = f"{holiday_type}:{country}:{year}"
+    if language is not None:
+        key += f":{language}"
     if subdivision:
         key += f":{subdivision}"
     return key
 
 
-def _build_upstream_params(
-    country: str, year: int, language: str, subdivision: str | None = None
-) -> dict[str, str]:
+def _build_openholidays_params(year: int) -> dict[str, str]:
     """Build the query parameters for an openholidaysapi.org request."""
-    params: dict[str, str] = {
-        "countryIsoCode": country,
+    return {
+        "countryIsoCode": HOLIDAY_COUNTRY_CODE,
         "validFrom": f"{year}-01-01",
         "validTo": f"{year}-12-31",
-        "languageIsoCode": language,
+        "languageIsoCode": OPENHOLIDAYS_LANGUAGE_CODE,
+        "groupCode": OPENHOLIDAYS_GROUP_CODE,
     }
-    if subdivision:
-        params["subdivisionCode"] = subdivision
-    return params
+
+
+def _normalize_country(_: str | None = None) -> str:
+    """Return the currently supported holiday country code.
+
+    The product currently supports Dutch holiday data only, so all holiday
+    endpoints are normalized to ``NL`` regardless of any incoming query value.
+    """
+    return HOLIDAY_COUNTRY_CODE
 
 
 def _is_stale(fetched_at: dt_datetime, year: int) -> bool:
@@ -100,15 +112,35 @@ async def _get_or_fetch_holidays(
     holiday_type: str,
     country: str,
     year: int,
-    language: str,
+    language: str | None,
     subdivision: str | None,
-    upstream_path: str,
+    upstream_url: str,
+    upstream_params: dict[str, str],
     db: AsyncSession,
+    *,
+    response_filter: Callable[[list[Any]], list[Any]] | None = None,
 ) -> list[Any] | None:
     """Return holiday data, using L1 -> L2 -> upstream waterfall.
 
     Returns the holiday list on success, or ``None`` if the upstream is
     unreachable and both caches are cold.
+
+    Args:
+        holiday_type: Cache key prefix, e.g. ``"public"`` or ``"school"``.
+        country: ISO 3166-1 alpha-2 country code.
+        year: The calendar year to fetch holidays for.
+        language: Language code for the cache key (e.g. ``"EN"``), or ``None``
+            for sources that do not accept a language parameter (Nager.At).
+        subdivision: Optional region/subdivision code (school holidays only).
+        upstream_url: Full URL of the upstream API endpoint to request.
+        upstream_params: Query parameters to pass with the upstream request.
+            Pass an empty dict when the endpoint uses path parameters only
+            (e.g. Nager.At ``/PublicHolidays/{year}/{country}``).
+        db: The async database session used for L2 cache reads/writes.
+        response_filter: Optional callable applied to the raw JSON list returned
+            by the upstream before the data is cached and returned.  Use this to
+            strip entries that do not match the desired type — e.g. keeping only
+            ``"Public"``-typed entries from the Nager.At response.
     """
     cache_key = _make_cache_key(holiday_type, country, year, language, subdivision)
     mem_cache = get_cache()
@@ -142,8 +174,8 @@ async def _get_or_fetch_holidays(
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                f"{OPENHOLIDAYS_BASE_URL}/{upstream_path}",
-                params=_build_upstream_params(country, year, language, subdivision),
+                upstream_url,
+                params=upstream_params,
                 headers={"Accept": "application/json"},
             )
 
@@ -163,6 +195,8 @@ async def _get_or_fetch_holidays(
             return None
 
         data: list[Any] = response.json()
+        if response_filter is not None:
+            data = response_filter(data)
 
     except Exception:
         logger.exception(
@@ -213,15 +247,24 @@ async def _get_or_fetch_holidays(
 
 
 def _build_holiday_date_set(holidays: list[Any]) -> set[str]:
-    """Expand holiday date ranges into a flat set of ISO date strings."""
+    """Expand holiday entries into a flat set of ISO date strings.
+
+    Handles both the Nager.At format (single ``date`` field) and the legacy
+    OpenHolidays format (``startDate``/``endDate`` range).
+    """
     dates: set[str] = set()
     for h in holidays:
-        start = dt_date.fromisoformat(h["startDate"])
-        end = dt_date.fromisoformat(h["endDate"])
-        current = start
-        while current <= end:
-            dates.add(current.isoformat())
-            current += timedelta(days=1)
+        if "date" in h:
+            # Nager.At format: single date field
+            dates.add(h["date"])
+        else:
+            # OpenHolidays format: date range
+            start = dt_date.fromisoformat(h["startDate"])
+            end = dt_date.fromisoformat(h["endDate"])
+            current = start
+            while current <= end:
+                dates.add(current.isoformat())
+                current += timedelta(days=1)
     return dates
 
 
@@ -263,25 +306,28 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 
 @router.get("/holidays/public")
 async def get_public_holidays(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    """Return public holidays for a country/year, proxied from openholidaysapi.org.
+    """Return public holidays for a country/year, proxied from date.nager.at.
 
+    Only entries whose ``types`` list includes ``"Public"`` are returned.
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
     Staleness windows: 24 h for the current year, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
     """
+    country = _normalize_country(country)
     data = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,
         year=year,
-        language=language,
+        language=None,
         subdivision=None,
-        upstream_path="PublicHolidays",
+        upstream_url=f"{NAGER_BASE_URL}/PublicHolidays/{year}/{country}",
+        upstream_params={},
         db=db,
+        response_filter=lambda holidays: [h for h in holidays if "Public" in h.get("types", [])],
     )
     if data is None:
         return JSONResponse(
@@ -293,12 +339,8 @@ async def get_public_holidays(
 
 @router.get("/holidays/school")
 async def get_school_holidays(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
-    subdivision: Annotated[
-        str | None, Query(description="Subdivision code, e.g. NL-NH")
-    ] = None,
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return school holidays for a country/year, proxied from openholidaysapi.org.
@@ -306,14 +348,22 @@ async def get_school_holidays(
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
     Staleness windows: 24 h for the current year, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
+
+    The openholidays upstream is always queried with ``languageIsoCode=EN`` so
+    the response consistently includes an English primary name plus the native
+    Dutch entry, matching the Nager.Date behavior used for public holidays.
+    The Netherlands South holiday group (``groupCode=NL-ZU``) is also fixed for
+    now to match the currently supported school-holiday dataset.
     """
+    country = _normalize_country(country)
     data = await _get_or_fetch_holidays(
-        holiday_type="school",
+        holiday_type=f"school-{OPENHOLIDAYS_GROUP_CODE.lower()}",
         country=country,
         year=year,
-        language=language,
-        subdivision=subdivision,
-        upstream_path="SchoolHolidays",
+        language=None,
+        subdivision=None,
+        upstream_url=f"{OPENHOLIDAYS_BASE_URL}/SchoolHolidays",
+        upstream_params=_build_openholidays_params(year),
         db=db,
     )
     if data is None:
@@ -324,11 +374,76 @@ async def get_school_holidays(
     return JSONResponse(content=data)
 
 
+@router.get("/holidays/longweekend")
+async def get_long_weekends(
+    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
+    availableBridgeDays: Annotated[
+        int, Query(ge=0, le=5, description="Max bridge days to include (0 = no bridge days)")
+    ] = 0,
+) -> JSONResponse:
+    """Return long weekend opportunities for a country/year, proxied from date.nager.at.
+
+    Optionally includes periods that require up to ``availableBridgeDays`` bridge
+    days (i.e. annual-leave days) to create the long weekend.  Responses are
+    stored **in memory only** (keyed on country + year + availableBridgeDays).
+    The DB is intentionally skipped because the result set varies per
+    ``availableBridgeDays`` value (capped at 5), so the in-memory cache is
+    sufficient for this bounded set of parameter combinations.
+
+    Returns 503 if the upstream is unreachable and the in-memory cache is cold.
+    """
+    country = _normalize_country(country)
+    cache_key = f"longweekend:{country}:{year}:{availableBridgeDays}"
+    mem_cache = get_cache()
+
+    # In-memory cache only (no DB persistence)
+    cached_entry = mem_cache.get_holiday(cache_key)
+    if cached_entry is not None:
+        logger.debug("L1 cache hit for long weekends: %s", cache_key)
+        return JSONResponse(content=cached_entry.data)
+
+    upstream_url = f"{NAGER_BASE_URL}/LongWeekend/{year}/{country}"
+    upstream_params: dict[str, str] = {}
+    if availableBridgeDays > 0:
+        upstream_params["availableBridgeDays"] = str(availableBridgeDays)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                upstream_url,
+                params=upstream_params,
+                headers={"Accept": "application/json"},
+            )
+
+        if not response.is_success:
+            logger.warning(
+                "Upstream Nager.Date returned %s for long weekends (%s)",
+                response.status_code,
+                cache_key,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"detail": "Long weekend API is unreachable"},
+            )
+
+        data: list[Any] = response.json()
+
+    except Exception:
+        logger.exception("Failed to fetch long weekends from upstream (%s)", cache_key)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Long weekend API is unreachable"},
+        )
+
+    mem_cache.set_holiday(cache_key, data)
+    return JSONResponse(content=data)
+
+
 @router.get("/holidays/paydates")
 async def get_paydates(
-    country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
+    country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return the 12 monthly payday dates for a country/year.
@@ -340,14 +455,17 @@ async def get_paydates(
 
     Returns a JSON array of ISO date strings (YYYY-MM-DD), one per month.
     """
+    country = _normalize_country(country)
     holidays = await _get_or_fetch_holidays(
         holiday_type="public",
         country=country,
         year=year,
-        language=language,
+        language=None,
         subdivision=None,
-        upstream_path="PublicHolidays",
+        upstream_url=f"{NAGER_BASE_URL}/PublicHolidays/{year}/{country}",
+        upstream_params={},
         db=db,
+        response_filter=lambda data: [h for h in data if "Public" in h.get("types", [])],
     )
     if holidays is None:
         return JSONResponse(

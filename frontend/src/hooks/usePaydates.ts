@@ -1,20 +1,17 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useApiClient } from "./useApiClient";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
+import { usePublicApiClient } from "./usePublicApiClient";
 import type { PaydayInfo } from "@/types/paydays";
 
 const PAYDAY_LABEL = "Payday";
-const DEFAULT_COUNTRY = "NL";
-const DEFAULT_LANGUAGE = "EN";
 
 async function fetchPaydates(
-  country: string,
   year: number,
-  language: string,
   apiFetch: (url: string, init?: RequestInit) => Promise<Response>,
   signal: AbortSignal,
 ): Promise<string[]> {
-  const params = new URLSearchParams({ country, year: String(year), language });
+  const params = new URLSearchParams({ country: DEFAULT_COUNTRY, year: String(year) });
   const response = await apiFetch(`/api/holidays/paydates?${params}`, { signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch paydates: ${response.status} ${response.statusText}`);
@@ -24,18 +21,16 @@ async function fetchPaydates(
 
 export function usePaydates(
   year: number,
-  countryCode: string = DEFAULT_COUNTRY,
-  language: string = DEFAULT_LANGUAGE,
   enabled: boolean = true,
 ) {
-  const apiFetch = useApiClient();
+  const apiFetch = usePublicApiClient();
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && Boolean(countryCode) && isValidYear;
+  const isEnabled = enabled && !isTestEnv && isValidYear;
 
   const { data, isLoading, error } = useQuery<string[], Error>({
-    queryKey: ["paydates", countryCode, year, language],
-    queryFn: ({ signal }) => fetchPaydates(countryCode, year, language, apiFetch, signal),
+    queryKey: ["paydates", DEFAULT_COUNTRY, year],
+    queryFn: ({ signal }) => fetchPaydates(year, apiFetch, signal),
     enabled: isEnabled,
     staleTime: 1000 * 60 * 60 * 24, // holiday data doesn't change intra-day
     retry: 1,
