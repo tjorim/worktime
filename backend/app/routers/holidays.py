@@ -1,7 +1,7 @@
 """Holiday proxy endpoints.
 
-Proxies public and school holiday requests to openholidaysapi.org, caching
-responses in two layers:
+Proxies public holiday requests to date.nager.at and school holiday requests
+to openholidaysapi.org, caching responses in two layers:
 - L1: in-memory ``FileCache`` (fast, lost on restart)
 - L2: PostgreSQL ``cached_holidays`` table (persists across restarts)
 
@@ -16,6 +16,7 @@ payday dates server-side from the cached public holiday data.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, timedelta
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
@@ -34,6 +35,7 @@ from ..database.models import CachedHoliday
 
 logger = logging.getLogger(__name__)
 
+NAGER_BASE_URL = "https://date.nager.at/api/v3"
 OPENHOLIDAYS_BASE_URL = "https://openholidaysapi.org"
 
 # Staleness thresholds
@@ -55,17 +57,19 @@ def _make_cache_key(
     holiday_type: str,
     country: str,
     year: int,
-    language: str,
+    language: str | None = None,
     subdivision: str | None = None,
 ) -> str:
     """Build a deterministic in-memory cache key for a holiday request."""
-    key = f"{holiday_type}:{country}:{year}:{language}"
+    key = f"{holiday_type}:{country}:{year}"
+    if language is not None:
+        key += f":{language}"
     if subdivision:
         key += f":{subdivision}"
     return key
 
 
-def _build_upstream_params(
+def _build_openholidays_params(
     country: str, year: int, language: str, subdivision: str | None = None
 ) -> dict[str, str]:
     """Build the query parameters for an openholidaysapi.org request."""
@@ -100,10 +104,13 @@ async def _get_or_fetch_holidays(
     holiday_type: str,
     country: str,
     year: int,
-    language: str,
+    language: str | None,
     subdivision: str | None,
-    upstream_path: str,
+    upstream_url: str,
+    upstream_params: dict[str, str],
     db: AsyncSession,
+    *,
+    response_filter: Callable[[list[Any]], list[Any]] | None = None,
 ) -> list[Any] | None:
     """Return holiday data, using L1 -> L2 -> upstream waterfall.
 
@@ -142,8 +149,8 @@ async def _get_or_fetch_holidays(
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                f"{OPENHOLIDAYS_BASE_URL}/{upstream_path}",
-                params=_build_upstream_params(country, year, language, subdivision),
+                upstream_url,
+                params=upstream_params,
                 headers={"Accept": "application/json"},
             )
 
@@ -163,6 +170,8 @@ async def _get_or_fetch_holidays(
             return None
 
         data: list[Any] = response.json()
+        if response_filter is not None:
+            data = response_filter(data)
 
     except Exception:
         logger.exception(
@@ -213,15 +222,24 @@ async def _get_or_fetch_holidays(
 
 
 def _build_holiday_date_set(holidays: list[Any]) -> set[str]:
-    """Expand holiday date ranges into a flat set of ISO date strings."""
+    """Expand holiday entries into a flat set of ISO date strings.
+
+    Handles both the Nager.At format (single ``date`` field) and the legacy
+    OpenHolidays format (``startDate``/``endDate`` range).
+    """
     dates: set[str] = set()
     for h in holidays:
-        start = dt_date.fromisoformat(h["startDate"])
-        end = dt_date.fromisoformat(h["endDate"])
-        current = start
-        while current <= end:
-            dates.add(current.isoformat())
-            current += timedelta(days=1)
+        if "date" in h:
+            # Nager.At format: single date field
+            dates.add(h["date"])
+        else:
+            # OpenHolidays format: date range
+            start = dt_date.fromisoformat(h["startDate"])
+            end = dt_date.fromisoformat(h["endDate"])
+            current = start
+            while current <= end:
+                dates.add(current.isoformat())
+                current += timedelta(days=1)
     return dates
 
 
@@ -265,11 +283,11 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 async def get_public_holidays(
     country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    """Return public holidays for a country/year, proxied from openholidaysapi.org.
+    """Return public holidays for a country/year, proxied from date.nager.at.
 
+    Only entries whose ``types`` list includes ``"Public"`` are returned.
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
     Staleness windows: 24 h for the current year, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
@@ -278,10 +296,12 @@ async def get_public_holidays(
         holiday_type="public",
         country=country,
         year=year,
-        language=language,
+        language=None,
         subdivision=None,
-        upstream_path="PublicHolidays",
+        upstream_url=f"{NAGER_BASE_URL}/PublicHolidays/{year}/{country}",
+        upstream_params={},
         db=db,
+        response_filter=lambda holidays: [h for h in holidays if "Public" in h.get("types", [])],
     )
     if data is None:
         return JSONResponse(
@@ -313,7 +333,8 @@ async def get_school_holidays(
         year=year,
         language=language,
         subdivision=subdivision,
-        upstream_path="SchoolHolidays",
+        upstream_url=f"{OPENHOLIDAYS_BASE_URL}/SchoolHolidays",
+        upstream_params=_build_openholidays_params(country, year, language, subdivision),
         db=db,
     )
     if data is None:
@@ -328,7 +349,6 @@ async def get_school_holidays(
 async def get_paydates(
     country: Annotated[str, Query(description="Country ISO code, e.g. NL")],
     year: Annotated[int, Query(description="Year, e.g. 2026")],
-    language: Annotated[str, Query(description="Language ISO code, e.g. EN")] = "EN",
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Return the 12 monthly payday dates for a country/year.
@@ -344,10 +364,12 @@ async def get_paydates(
         holiday_type="public",
         country=country,
         year=year,
-        language=language,
+        language=None,
         subdivision=None,
-        upstream_path="PublicHolidays",
+        upstream_url=f"{NAGER_BASE_URL}/PublicHolidays/{year}/{country}",
+        upstream_params={},
         db=db,
+        response_filter=lambda data: [h for h in data if "Public" in h.get("types", [])],
     )
     if holidays is None:
         return JSONResponse(

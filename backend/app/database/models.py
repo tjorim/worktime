@@ -281,10 +281,13 @@ class TimeOffEntry(ClientTimestampMixin, Base):
 
 
 class CachedHoliday(Base):
-    """Persisted holiday data from openholidaysapi.org.
+    """Persisted holiday data from upstream holiday APIs.
 
     Each row represents one upstream API response for a specific
     (holiday_type, country, year, subdivision, language) combination.
+    Public holidays (Nager.At) use ``language=None`` since that API always
+    returns both English and native names without a language parameter.
+    School holidays (openholidaysapi.org) use a language code (e.g. ``"EN"``).
     The ``data`` column holds the raw JSON list returned by the API.
     ``fetched_at`` is used to determine staleness:
     - current year: stale after 24 h
@@ -298,7 +301,7 @@ class CachedHoliday(Base):
     country: Mapped[str] = mapped_column(String(2), nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     subdivision: Mapped[str | None] = mapped_column(String, nullable=True)
-    language: Mapped[str] = mapped_column(String(2), nullable=False)
+    language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     data: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
     fetched_at: Mapped[dt_datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), default=_utc_now
