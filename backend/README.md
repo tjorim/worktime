@@ -80,11 +80,13 @@ The shared directory is expected to look like this:
 
 ## API Groups
 
-- File/share endpoints: `/hday/*`, `/team/*`, `/health`
-- Auth endpoints: `/auth/*`
-- Registration endpoint (public): `POST /users/register`
-- Database endpoints: `/db/users/*`, `/db/time-tracking/*`, `/db/work-locations/*`, `/db/gantt-tasks/*`, `/db/sync/*`
-- Debug endpoint in non-production only: `/debug/benchmark`
+- File/share endpoints: `/api/hday/*`, `/api/team/*`, `/api/health`
+- Auth endpoints:
+  - internal SuperTokens base path: `/auth/*`
+  - public shared-host path in this repo: `/auth/*`
+- Registration endpoint (public): `POST /api/users/register`
+- Database endpoints: `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`
+- Debug endpoint in non-production only: `/api/debug/benchmark`
 
 Use `/docs` or `/redoc` for the full OpenAPI view while the server is running.
 

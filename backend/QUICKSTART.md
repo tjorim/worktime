@@ -61,7 +61,7 @@ uv run python -m app.main
 
 ## API Endpoints
 
-- **GET /health** - Health check endpoint
+- **GET /api/health** - Health check endpoint
 - **GET /** - API information (title and version)
 - **GET /docs** - Interactive API documentation (Swagger UI)
 - **GET /redoc** - Alternative API documentation (ReDoc)
@@ -138,7 +138,7 @@ Cache:           enabled (TTL: 10s)
 Health check:
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 ```
 
 API information:

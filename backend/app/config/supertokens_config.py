@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 from sqlalchemy import select
 from supertokens_python import InputAppInfo, SupertokensConfig, init
-from supertokens_python.recipe import emailpassword, session
+from supertokens_python.recipe import dashboard, emailpassword, session
 from supertokens_python.recipe.session.interfaces import (
     RecipeInterface as SessionRecipeInterface,
 )
@@ -137,6 +137,7 @@ def init_supertokens() -> None:
                     functions=_override_session_functions,
                 ),
             ),
+            dashboard.init(api_key=api_key),
         ],
         mode="asgi",
     )
