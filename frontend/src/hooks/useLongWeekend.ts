@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 import type { LongWeekend, LongWeekendDayInfo } from "@/types/longWeekend";
 import { dayjs } from "@/utils/dateTimeUtils";
-
-const DEFAULT_COUNTRY = "NL";
 
 function isValidLongWeekend(item: unknown): item is LongWeekend {
   if (typeof item !== "object" || item === null) return false;
@@ -13,6 +12,7 @@ function isValidLongWeekend(item: unknown): item is LongWeekend {
     typeof candidate.startDate === "string" &&
     typeof candidate.endDate === "string" &&
     typeof candidate.dayCount === "number" &&
+    typeof candidate.needBridgeDay === "boolean" &&
     Array.isArray(candidate.bridgeDays) &&
     candidate.bridgeDays.every((d) => typeof d === "string")
   );
@@ -75,7 +75,6 @@ function toLongWeekendMap(periods: LongWeekend[]): Map<string, LongWeekendDayInf
  *
  * @param year - Calendar year to fetch for.
  * @param maxBridgeDays - Maximum bridge days to include. 0 disables the feature.
- * @param countryCode - ISO 3166-1 alpha-2 country code.
  * @param enabled - External enabled flag (e.g. schedule is standard 9-5).
  */
 export function useLongWeekend(

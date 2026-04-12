@@ -557,7 +557,7 @@ class TestGetLongWeekends:
             db_client.get("/api/holidays/longweekend?country=NL&year=2026")
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
-        _, call_kwargs = mock_http_client.get.call_args
+        call_kwargs = mock_http_client.get.call_args.kwargs
         assert "availableBridgeDays" not in call_kwargs.get("params", {})
 
     def test_bridge_days_param_passed_to_upstream(self, db_client: TestClient):
@@ -569,7 +569,7 @@ class TestGetLongWeekends:
             )
 
         mock_http_client = mock_cls.return_value.__aenter__.return_value
-        _, call_kwargs = mock_http_client.get.call_args
+        call_kwargs = mock_http_client.get.call_args.kwargs
         assert call_kwargs.get("params", {}).get("availableBridgeDays") == "3"
 
     def test_l1_cached_on_first_request(self, db_client: TestClient):

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { usePublicApiClient } from "./usePublicApiClient";
 import type { PaydayInfo } from "@/types/paydays";
 
 const PAYDAY_LABEL = "Payday";
-const DEFAULT_COUNTRY = "NL";
 
 async function fetchPaydates(
   year: number,

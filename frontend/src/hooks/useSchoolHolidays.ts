@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
@@ -26,7 +27,6 @@ export interface SchoolHoliday {
   subdivisions: SchoolHolidaySubdivision[];
 }
 
-const DEFAULT_COUNTRY = "NL";
 const DEFAULT_LANGUAGE = "EN";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
 

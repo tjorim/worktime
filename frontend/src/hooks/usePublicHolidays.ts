@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
@@ -12,8 +13,6 @@ export interface PublicHoliday {
   counties: string[] | null;
   types: string[];
 }
-
-const DEFAULT_COUNTRY = "NL";
 
 const toHolidayMap = (holidays: PublicHoliday[]) => {
   const map = new Map<string, PublicHolidayInfo>();
