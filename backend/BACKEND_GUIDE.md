@@ -19,11 +19,11 @@ The service is built with FastAPI and currently combines:
 - in-memory caching for file-backed operations
 - a non-production debug benchmark endpoint
 
-There is no `/v1` prefix. Current routes live directly under `/health`, `/hday/*`, `/team/*`, `/db/*`, and `/debug/*`.
+There is no `/v1` prefix. All backend routers are mounted under `/api`, so the effective route groups are `/api/health`, `/api/hday/*`, `/api/team/*`, `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`, and `/api/debug/*`.
 SuperTokens auth uses:
 
 - local development default: `/auth/*`
-- shared production infra: `/api/auth/*`
+- recommended shared path when the backend also serves the dashboard: `/auth/*`
 
 ## Runtime Shape
 
@@ -40,34 +40,34 @@ At startup, [main.py](app/main.py):
 The app always exposes:
 
 - `GET /`
-- `GET /health`
+- `GET /api/health`
 - `.hday` file endpoints
 - team endpoints
 - SuperTokens auth endpoints under the configured API base path
 
 The app conditionally exposes:
 
-- database-backed routes under `/db/*` when `DATABASE_ENABLED=true`
-- `/debug/benchmark` when `ENVIRONMENT != production`
+- database-backed routes under `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, and `/api/me` when `DATABASE_ENABLED=true`
+- `/api/debug/benchmark` when `ENVIRONMENT != production`
 
 ## Route Groups
 
 ### Core routes
 
 - `GET /` returns the API title and version
-- `GET /health` verifies share-directory accessibility and returns JSON health status
+- `GET /api/health` verifies share-directory accessibility and returns JSON health status
 
 ### Shared `.hday` routes
 
-- `GET /hday/{username}`
-- `PUT /hday/{username}`
+- `GET /api/hday/{username}`
+- `PUT /api/hday/{username}`
 
 These endpoints read and write `.hday` files in the share root and use ETags for optimistic concurrency on writes.
 
 ### Team routes
 
-- `GET /team/{team_id}`
-- `GET /team/{team_id}/hday`
+- `GET /api/team/{team_id}`
+- `GET /api/team/{team_id}/hday`
 
 Team metadata is read from `config/{team_id}.conf` and `config/{team_id}.people` under the share directory.
 
@@ -76,24 +76,24 @@ Team metadata is read from `config/{team_id}.conf` and `config/{team_id}.people`
 SuperTokens mounts its own auth/session routes under the configured API base path:
 
 - local development default: `/auth/*`
-- shared production infra: `/api/auth/*`
+- recommended shared path when the backend also serves the dashboard: `/auth/*`
 
 The backend uses those sessions for database-backed endpoints.
 
 ### Database user routes
 
-- `POST /db/users/`
-- `GET /db/users/`
-- `GET /db/users/{user_id}`
-- `GET /db/users/by-username/{username}`
-- `PUT /db/users/{user_id}`
-- `DELETE /db/users/{user_id}`
+- `POST /api/users/`
+- `GET /api/users/`
+- `GET /api/users/{user_id}`
+- `GET /api/users/by-username/{username}`
+- `PUT /api/users/{user_id}`
+- `DELETE /api/users/{user_id}`
 
 These routes manage app users and keep local users aligned with SuperTokens identities.
 
 ### Database time-tracking routes
 
-Under `/db/time-tracking`:
+Under `/api/time-tracking`:
 
 - label CRUD under `/labels`
 - task CRUD under `/tasks`
@@ -102,7 +102,7 @@ Under `/db/time-tracking`:
 
 ### Database work-location routes
 
-Under `/db/work-locations`:
+Under `/api/work-locations`:
 
 - `POST /`
 - `GET /`
@@ -111,7 +111,7 @@ Under `/db/work-locations`:
 
 ### Database Gantt routes
 
-Under `/db/gantt-tasks`:
+Under `/api/gantt-tasks`:
 
 - `POST`
 - `GET`
@@ -121,17 +121,34 @@ Under `/db/gantt-tasks`:
 
 ### Database sync routes
 
-Under `/db/sync`:
+Under `/api/sync`:
 
 - `POST /push`
 - `GET /pull`
 - `GET /status`
 
+### Database preferences route
+
+- `GET /api/preferences`
+- `PUT /api/preferences`
+
+### Database time-off routes
+
+- `POST /api/time-off/`
+- `GET /api/time-off/`
+- `GET /api/time-off/{entry_id}`
+- `PATCH /api/time-off/{entry_id}`
+- `DELETE /api/time-off/{entry_id}`
+
+### Account route
+
+- `GET /api/me`
+
 ### Debug routes
 
 In non-production only:
 
-- `GET /debug/benchmark`
+- `GET /api/debug/benchmark`
 
 ## Storage Model
 
@@ -176,7 +193,8 @@ Important points:
 
 - the backend talks to a self-hosted SuperTokens core
 - auth/session routes live under `SUPERTOKENS_API_BASE_PATH`
-- in the shared production infra, the backend auth API is `/api/auth` while the frontend auth UI remains `/auth`
+- the standard SuperTokens setup uses `/auth` for both the frontend auth UI and the backend auth APIs
+- the dashboard then lives at `/auth/dashboard`
 - DB endpoints depend on authenticated sessions
 - production requires `SUPERTOKENS_API_KEY`
 - user creation, rename, and deletion must stay consistent between the local DB and SuperTokens
@@ -254,7 +272,7 @@ Current Docker characteristics:
 - dependency installation via `uv`
 - runtime data directory rooted at `/var/data/worktime`
 - default `SHARE_DIR=/var/data/worktime/hday_files`
-- healthcheck against `GET /health`
+- healthcheck against `GET /api/health`
 - non-root runtime user
 
 ## Testing
