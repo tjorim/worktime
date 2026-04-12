@@ -1,13 +1,12 @@
 """Tests for benchmark service functions."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import patch
 
+import pytest
+
+from app.config.settings import settings
 from app.services import benchmark_service
 from app.services.hday_service import HdayFileNotFoundError
 from app.services.team_service import TeamNotFoundError
-from app.config.settings import settings
 
 
 @pytest.fixture

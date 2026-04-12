@@ -6,13 +6,14 @@ from datetime import date, datetime, time
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import GanttTask
 from app.schemas import (
+    GanttTaskCreate,
+    GanttTaskUpdate,
     LabelCreate,
     TaskCreate,
     TaskUpdate,
@@ -20,16 +21,13 @@ from app.schemas import (
     UserCreate,
     UserUpdate,
     WorkLocationCreate,
-    GanttTaskCreate,
-    GanttTaskUpdate,
 )
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
-    ValidationError as ServiceValidationError,
+    create_gantt_task,
     create_label,
     create_or_update_work_location,
-    create_gantt_task,
     create_task,
     create_template,
     create_user,
@@ -39,11 +37,14 @@ from app.services.db_service import (
     get_running_task,
     get_task,
     get_template,
-    list_users,
     list_tasks,
+    list_users,
     update_gantt_task,
     update_task,
     update_user,
+)
+from app.services.db_service import (
+    ValidationError as ServiceValidationError,
 )
 
 

@@ -1,7 +1,6 @@
 """Tests for .hday file API endpoints."""
 
 import json
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient

@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.cache.store import get_cache
@@ -17,7 +16,6 @@ from app.routers.holidays import (
     _payday_for_month,
     compute_paydates,
 )
-
 
 # ── sample upstream payloads ──────────────────────────────────────────────────
 
@@ -335,7 +333,7 @@ class TestIsStale:
     def test_naive_datetime_treated_as_utc(self):
         """Naive fetched_at timestamps are treated as UTC."""
         year = datetime.now(UTC).year - 1
-        fetched_at_naive = datetime.utcnow() - timedelta(days=3)  # naive
+        fetched_at_naive = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=3)  # naive
         assert not _is_stale(fetched_at_naive, year)
 
 

@@ -41,7 +41,7 @@ class TestPrefixMap:
             "n": "no_fly",
             "f": "can_fly",
         }
-        assert PREFIX_MAP == expected_flags
+        assert expected_flags == PREFIX_MAP
 
     def test_reverse_map_symmetry(self):
         """Test that REV_MAP is the reverse of PREFIX_MAP."""

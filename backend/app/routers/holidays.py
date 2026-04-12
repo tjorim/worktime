@@ -240,6 +240,7 @@ def _payday_for_month(year: int, month: int, holiday_dates: set[str]) -> dt_date
     backward until a business day is found.
     """
     scheduled = dt_date(year, month, _PAYDAY_DOM)
+    # December special case: Christmas on the 25th → start the walk-back from 23rd.
     candidate = dt_date(year, 12, 23) if month == 12 and scheduled.isoformat() in holiday_dates else scheduled
     while not _is_business_day(candidate, holiday_dates):
         candidate -= timedelta(days=1)
