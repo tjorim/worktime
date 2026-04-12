@@ -32,6 +32,8 @@ export function CalendarLegend({ showEventTypes = true }: CalendarLegendProps) {
     { emoji: "🏫", label: m.calendar_legend_school_holiday() },
     { emoji: "💶", label: m.calendar_legend_payday() },
     { emoji: "📘", label: m.calendar_legend_course_training() },
+    { emoji: "🏖️", label: m.calendar_legend_long_weekend() },
+    { emoji: "🌉", label: m.calendar_legend_bridge_day() },
   ];
 
   const legendPopover = (

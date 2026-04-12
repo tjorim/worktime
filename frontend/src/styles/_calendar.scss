@@ -94,6 +94,16 @@
   background: var(--wt-month-calendar-payday-bg);
 }
 
+.month-calendar-day.is-long-weekend {
+  border-color: var(--wt-month-calendar-long-weekend-border);
+  background: var(--wt-month-calendar-long-weekend-bg);
+}
+
+.month-calendar-day.is-bridge-day {
+  border-color: var(--wt-month-calendar-bridge-day-border);
+  background: var(--wt-month-calendar-bridge-day-bg);
+}
+
 .month-calendar-day.is-today {
   border-color: var(--wt-month-calendar-today-border);
   background: var(--wt-month-calendar-today-bg);

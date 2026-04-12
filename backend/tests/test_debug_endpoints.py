@@ -1,11 +1,11 @@
 """Tests for debug API endpoints."""
 
+
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
 
-from app.main import app
 from app.config.settings import settings
+from app.main import app
 
 
 @pytest.fixture
@@ -180,6 +180,7 @@ class TestDebugBenchmarkEndpoint:
         
         # Mock the benchmark service to simulate file deletion
         from unittest.mock import patch
+
         from app.services import benchmark_service
         from app.services.hday_service import HdayFileNotFoundError
         
@@ -240,6 +241,7 @@ class TestDebugRouterRegistration:
         
         # Import fresh app to trigger registration
         from importlib import reload
+
         from app import main
         reload(main)
         
@@ -263,6 +265,7 @@ class TestDebugRouterRegistration:
         
         # Import fresh app to trigger registration
         from importlib import reload
+
         from app import main
         reload(main)
         

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useApiClient } from "./useApiClient";
+import { usePublicApiClient } from "./usePublicApiClient";
 
 interface UseOpenHolidaysOptions {
   endpoint: string;
@@ -56,7 +56,7 @@ export function useOpenHolidays<T>({
   networkError,
   unknownError,
 }: UseOpenHolidaysOptions) {
-  const apiFetch = useApiClient();
+  const apiFetch = usePublicApiClient();
   // Serialize params so the query key is stable regardless of whether callers
   // (e.g. usePublicHolidays / useSchoolHolidays) pass a new object reference
   // on every render. Those hooks already memoize params, but this extra step

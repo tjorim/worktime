@@ -12,17 +12,23 @@ import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 
-// Mock the hooks that fetch external holiday data
+// Mock the hooks that fetch external holiday and payday data
 vi.mock("@/hooks/usePublicHolidays");
 vi.mock("@/hooks/useSchoolHolidays");
+vi.mock("@/hooks/usePaydates");
+vi.mock("@/hooks/useLongWeekend");
 
 // Import after mocking to get the mocked versions
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
+import { usePaydates } from "@/hooks/usePaydates";
+import { useLongWeekend } from "@/hooks/useLongWeekend";
 
 // Cast to mocked functions for type safety
 const mockedUsePublicHolidays = vi.mocked(usePublicHolidays);
 const mockedUseSchoolHolidays = vi.mocked(useSchoolHolidays);
+const mockedUsePaydates = vi.mocked(usePaydates);
+const mockedUseLongWeekend = vi.mocked(useLongWeekend);
 
 /**
  * Test fixtures for multi-source data integration testing.
@@ -155,6 +161,19 @@ describe("CalendarView Integration Tests", () => {
       loading: false,
       error: null,
     });
+
+    mockedUsePaydates.mockReturnValue({
+      paydayMap: new Map(),
+      loading: false,
+      error: null,
+    });
+
+    mockedUseLongWeekend.mockReturnValue({
+      periods: [],
+      longWeekendMap: new Map(),
+      loading: false,
+      error: null,
+    });
   });
 
   afterEach(() => {
@@ -174,6 +193,12 @@ describe("CalendarView Integration Tests", () => {
 
       mockedUseSchoolHolidays.mockReturnValue({
         schoolHolidayMap: fixtures.schoolHolidayMap,
+        loading: false,
+        error: null,
+      });
+
+      mockedUsePaydates.mockReturnValue({
+        paydayMap: fixtures.paydayMap,
         loading: false,
         error: null,
       });

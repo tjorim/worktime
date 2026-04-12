@@ -8,7 +8,6 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 
 
-
 def test_label_crud_and_cascade_delete(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],

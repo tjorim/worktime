@@ -5,24 +5,22 @@ read_team_info(), and read_team_hday_files() functions.
 """
 
 import time
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from app.cache.store import get_cache
 from app.config.settings import settings
+from app.models.team import TeamMember
 from app.services.hday_service import (
+    HdayConflictError,
     read_hday_file,
     write_hday_file,
-    compute_etag,
-    HdayConflictError,
 )
 from app.services.team_service import (
-    read_team_info,
     read_team_hday_files,
+    read_team_info,
 )
-from app.models.team import TeamMember
 
 
 @pytest.fixture
