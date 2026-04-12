@@ -29,6 +29,7 @@
     "build": "pnpm paraglide:compile && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
+    "postinstall": "msw init public --no-save",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "lint": "oxlint",
     "format": "oxfmt .",
@@ -72,6 +73,7 @@
     "canvas": "^3.2.3",
     "happy-dom": "^20.8.9",
     "lightningcss": "^1.31.1",
+    "msw": "^2.13.2",
     "oxfmt": "^0.44.0",
     "oxlint": "^1.59.0",
     "sass": "^1.99.0",
@@ -84,5 +86,10 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
 }
