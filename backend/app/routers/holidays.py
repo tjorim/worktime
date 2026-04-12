@@ -6,7 +6,7 @@ to openholidaysapi.org, caching responses in two layers:
 - L2: PostgreSQL ``cached_holidays`` table (persists across restarts)
 
 Staleness windows:
-- Current year: 24 h
+- Current and future years: 24 h
 - Past years: 7 days
 
 Also exposes a ``/holidays/paydates`` endpoint that computes the 12 monthly
@@ -99,7 +99,7 @@ def _is_stale(fetched_at: dt_datetime, year: int) -> bool:
     if fetched_at.tzinfo is None:
         fetched_at = fetched_at.replace(tzinfo=UTC)
     age = now - fetched_at
-    threshold = _STALE_CURRENT_YEAR if year == now.year else _STALE_PAST_YEAR
+    threshold = _STALE_PAST_YEAR if year < now.year else _STALE_CURRENT_YEAR
     return age > threshold
 
 
@@ -314,7 +314,7 @@ async def get_public_holidays(
 
     Only entries whose ``types`` list includes ``"Public"`` are returned.
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
-    Staleness windows: 24 h for the current year, 7 days for past years.
+    Staleness windows: 24 h for the current and future years, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
     """
     country = _normalize_country(country)
@@ -346,7 +346,7 @@ async def get_school_holidays(
     """Return school holidays for a country/year, proxied from openholidaysapi.org.
 
     Responses are stored in PostgreSQL (L2) and an in-memory cache (L1).
-    Staleness windows: 24 h for the current year, 7 days for past years.
+    Staleness windows: 24 h for the current and future years, 7 days for past years.
     Returns 503 if the upstream is unreachable and both caches are cold.
 
     The openholidays upstream is always queried with ``languageIsoCode=EN`` so

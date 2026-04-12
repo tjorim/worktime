@@ -359,6 +359,18 @@ class TestIsStale:
         fetched_at = datetime.now(UTC) - timedelta(hours=25)
         assert _is_stale(fetched_at, year)
 
+    def test_fresh_future_year(self):
+        """Entry fetched 1 hour ago for a future year is not stale."""
+        year = datetime.now(UTC).year + 1
+        fetched_at = datetime.now(UTC) - timedelta(hours=1)
+        assert not _is_stale(fetched_at, year)
+
+    def test_stale_future_year(self):
+        """Entry fetched 25 hours ago for a future year is stale."""
+        year = datetime.now(UTC).year + 1
+        fetched_at = datetime.now(UTC) - timedelta(hours=25)
+        assert _is_stale(fetched_at, year)
+
     def test_fresh_past_year(self):
         """Entry fetched 3 days ago for a past year is not stale."""
         year = datetime.now(UTC).year - 1

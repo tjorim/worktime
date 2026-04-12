@@ -290,7 +290,7 @@ class CachedHoliday(Base):
     is not part of the cache key.
     The ``data`` column holds the raw JSON list returned by the API.
     ``fetched_at`` is used to determine staleness:
-    - current year: stale after 24 h
+    - current and future years: stale after 24 h
     - past years: stale after 7 days
     """
 
