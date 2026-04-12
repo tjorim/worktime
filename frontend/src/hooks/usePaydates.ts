@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useApiClient } from "./useApiClient";
+import { usePublicApiClient } from "./usePublicApiClient";
 import type { PaydayInfo } from "@/types/paydays";
 
 const PAYDAY_LABEL = "Payday";
@@ -28,7 +28,7 @@ export function usePaydates(
   language: string = DEFAULT_LANGUAGE,
   enabled: boolean = true,
 ) {
-  const apiFetch = useApiClient();
+  const apiFetch = usePublicApiClient();
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled = enabled && !isTestEnv && Boolean(countryCode) && isValidYear;

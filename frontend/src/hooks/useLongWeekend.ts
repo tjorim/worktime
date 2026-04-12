@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useApiClient } from "@/hooks/useApiClient";
+import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 import type { LongWeekend, LongWeekendDayInfo } from "@/types/longWeekend";
 import { dayjs } from "@/utils/dateTimeUtils";
 
@@ -85,7 +85,7 @@ export function useLongWeekend(
   countryCode: string = DEFAULT_COUNTRY,
   enabled: boolean = true,
 ) {
-  const apiFetch = useApiClient();
+  const apiFetch = usePublicApiClient();
   const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
   const isEnabled =
