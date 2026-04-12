@@ -120,7 +120,7 @@ async function resetTestState(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "warn" });
+  server.listen({ onUnhandledRequest: "error" });
 });
 
 // Set up DOM environment
