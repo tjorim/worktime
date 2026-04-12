@@ -83,7 +83,7 @@ export function LongWeekendModal({
         {loading && (
           <div className="d-flex justify-content-center py-4">
             <Spinner animation="border" size="sm" role="status">
-              <span className="visually-hidden">Loading…</span>
+              <span className="visually-hidden">{m.loading()}</span>
             </Spinner>
           </div>
         )}
