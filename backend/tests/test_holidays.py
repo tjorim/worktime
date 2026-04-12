@@ -226,6 +226,17 @@ class TestGetPublicHolidays:
         # Second request served from DB, so only 1 upstream call
         assert mock_http_client.get.call_count == 1
 
+    def test_country_param_is_normalized_to_nl(self, db_client: TestClient):
+        """Non-NL country query values are normalized to NL for now."""
+        mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            db_client.get("/api/holidays/public?country=BE&year=2026")
+
+        mock_http_client = mock_cls.return_value.__aenter__.return_value
+        call_kwargs = mock_http_client.get.call_args
+        url = call_kwargs.args[0] if call_kwargs.args else call_kwargs.kwargs.get("url", "")
+        assert url.endswith("/PublicHolidays/2026/NL")
+
 
 # ── school holidays ───────────────────────────────────────────────────────────
 
@@ -329,17 +340,6 @@ class TestGetSchoolHolidays:
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         assert mock_http_client.get.call_count == 1
         assert cache.get_holiday("school-nl-zu:NL:2026") is not None
-
-    def test_country_param_is_normalized_to_nl(self, db_client: TestClient):
-        """Non-NL country query values are normalized to NL for now."""
-        mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
-        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=BE&year=2026")
-
-        mock_http_client = mock_cls.return_value.__aenter__.return_value
-        call_kwargs = mock_http_client.get.call_args
-        url = call_kwargs.args[0] if call_kwargs.args else call_kwargs.kwargs.get("url", "")
-        assert url.endswith("/PublicHolidays/2026/NL")
 
 
 # ── staleness helpers ─────────────────────────────────────────────────────────
