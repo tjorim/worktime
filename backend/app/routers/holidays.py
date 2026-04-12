@@ -23,7 +23,7 @@ from datetime import datetime as dt_datetime
 from typing import Annotated, Any
 
 import httpx
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -49,6 +49,7 @@ _STALE_PAST_YEAR = timedelta(days=7)
 _PAYDAY_DOM = 25
 
 router = APIRouter(tags=["Holidays"])
+YearQuery = Annotated[int, Query(description="Year, e.g. 2026", ge=1900, le=2100)]
 
 
 # ---------------------------------------------------------------------------
@@ -83,13 +84,16 @@ def _build_openholidays_params(year: int) -> dict[str, str]:
     }
 
 
-def _normalize_country(_: str | None = None) -> str:
-    """Return the currently supported holiday country code.
-
-    The product currently supports Dutch holiday data only, so all holiday
-    endpoints are normalized to ``NL`` regardless of any incoming query value.
-    """
-    return HOLIDAY_COUNTRY_CODE
+def _normalize_country(country: str | None = None) -> str:
+    """Validate and return the currently supported holiday country code."""
+    if country is None:
+        return HOLIDAY_COUNTRY_CODE
+    if country == HOLIDAY_COUNTRY_CODE:
+        return country
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unsupported country code: {country}. Only {HOLIDAY_COUNTRY_CODE} is supported.",
+    )
 
 
 def _is_stale(fetched_at: dt_datetime, year: int) -> bool:
@@ -306,7 +310,7 @@ def compute_paydates(year: int, holidays: list[Any]) -> list[str]:
 
 @router.get("/holidays/public")
 async def get_public_holidays(
-    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
@@ -339,7 +343,7 @@ async def get_public_holidays(
 
 @router.get("/holidays/school")
 async def get_school_holidays(
-    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
@@ -376,7 +380,7 @@ async def get_school_holidays(
 
 @router.get("/holidays/longweekend")
 async def get_long_weekends(
-    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     availableBridgeDays: Annotated[
         int, Query(ge=0, le=5, description="Max bridge days to include (0 = no bridge days)")
@@ -442,7 +446,7 @@ async def get_long_weekends(
 
 @router.get("/holidays/paydates")
 async def get_paydates(
-    year: Annotated[int, Query(description="Year, e.g. 2026")],
+    year: YearQuery,
     country: Annotated[str, Query(description="Country ISO code, currently NL only")] = HOLIDAY_COUNTRY_CODE,
     db: AsyncSession = Depends(get_session),
 ) -> JSONResponse:

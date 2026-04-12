@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
-import { usePublicApiClient } from "./usePublicApiClient";
+import * as m from "@/paraglide/messages.js";
 import type { PaydayInfo } from "@/types/paydays";
-
-const PAYDAY_LABEL = "Payday";
+import { usePublicApiClient } from "./usePublicApiClient";
 
 async function fetchPaydates(
   year: number,
@@ -40,7 +39,7 @@ export function usePaydates(
     if (!isEnabled || !data) return new Map();
     const map = new Map<string, PaydayInfo>();
     for (const dateStr of data) {
-      map.set(dateStr, { name: PAYDAY_LABEL });
+      map.set(dateStr, { name: m.calendar_legend_payday() });
     }
     return map;
   }, [data, isEnabled]);

@@ -284,10 +284,10 @@ class CachedHoliday(Base):
     """Persisted holiday data from upstream holiday APIs.
 
     Each row represents one upstream API response for a specific
-    (holiday_type, country, year, subdivision) cache-key tuple.
-    Holiday payloads are normalized around English + native Dutch names, so
-    persisted rows store ``language=None`` and the upstream-language dimension
-    is not part of the cache key.
+    (holiday_type, country, year, subdivision, language) cache-key tuple.
+    Holiday payloads are currently normalized so persisted rows typically store
+    ``language=None``, but the language column remains part of the unique
+    constraint for cache-key completeness.
     The ``data`` column holds the raw JSON list returned by the API.
     ``fetched_at`` is used to determine staleness:
     - current and future years: stale after 24 h

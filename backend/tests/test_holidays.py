@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.cache.store import get_cache
 from app.config import settings
+from app.database.models import CachedHoliday
 from app.routers.holidays import (
     _build_holiday_date_set,
     _is_business_day,
@@ -226,16 +229,47 @@ class TestGetPublicHolidays:
         # Second request served from DB, so only 1 upstream call
         assert mock_http_client.get.call_count == 1
 
-    def test_country_param_is_normalized_to_nl(self, db_client: TestClient):
-        """Non-NL country query values are normalized to NL for now."""
-        mock_ctx = _mock_httpx_client(200, SAMPLE_PUBLIC_HOLIDAYS)
-        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
-            db_client.get("/api/holidays/public?country=BE&year=2026")
+    def test_stale_l2_entry_is_served_when_upstream_returns_error(self, db_client: TestClient, db_session):
+        """A stale DB cache entry is returned when the upstream responds with an error."""
 
+        async def seed_stale_entry() -> None:
+            db_session.add(
+                CachedHoliday(
+                    holiday_type="public",
+                    country="NL",
+                    year=2026,
+                    subdivision=None,
+                    language=None,
+                    data=SAMPLE_PUBLIC_HOLIDAYS,
+                    fetched_at=datetime.now(UTC) - timedelta(days=8),
+                )
+            )
+            await db_session.commit()
+
+        asyncio.run(seed_stale_entry())
+
+        mock_ctx = _mock_httpx_client(503)
+        with patch("app.routers.holidays.httpx.AsyncClient", return_value=mock_ctx) as mock_cls:
+            response = db_client.get("/api/holidays/public?country=NL&year=2026")
+
+        assert response.status_code == 200
+        assert response.json() == SAMPLE_PUBLIC_HOLIDAYS
         mock_http_client = mock_cls.return_value.__aenter__.return_value
-        call_kwargs = mock_http_client.get.call_args
-        url = call_kwargs.args[0] if call_kwargs.args else call_kwargs.kwargs.get("url", "")
-        assert url.endswith("/PublicHolidays/2026/NL")
+        assert mock_http_client.get.call_count == 1
+
+    def test_unsupported_country_returns_400(self, db_client: TestClient):
+        """Unsupported country codes are rejected with a clear 400 response."""
+        response = db_client.get("/api/holidays/public?country=BE&year=2026")
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Unsupported country code: BE. Only NL is supported."}
+
+    @pytest.mark.parametrize("path", ["/api/holidays/public", "/api/holidays/school", "/api/holidays/longweekend", "/api/holidays/paydates"])
+    def test_year_out_of_range_returns_422(self, db_client: TestClient, path: str):
+        """Holiday endpoints validate the year query parameter consistently."""
+        response = db_client.get(f"{path}?country=NL&year=2200")
+
+        assert response.status_code == 422
 
 
 # ── school holidays ───────────────────────────────────────────────────────────
