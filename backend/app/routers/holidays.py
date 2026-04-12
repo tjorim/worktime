@@ -39,6 +39,7 @@ NAGER_BASE_URL = "https://date.nager.at/api/v3"
 OPENHOLIDAYS_BASE_URL = "https://openholidaysapi.org"
 HOLIDAY_COUNTRY_CODE = "NL"
 OPENHOLIDAYS_LANGUAGE_CODE = "EN"
+OPENHOLIDAYS_GROUP_CODE = "NL-ZU"
 
 # Staleness thresholds
 _STALE_CURRENT_YEAR = timedelta(hours=24)
@@ -78,6 +79,7 @@ def _build_openholidays_params(year: int, subdivision: str | None = None) -> dic
         "validFrom": f"{year}-01-01",
         "validTo": f"{year}-12-31",
         "languageIsoCode": OPENHOLIDAYS_LANGUAGE_CODE,
+        "groupCode": OPENHOLIDAYS_GROUP_CODE,
     }
     if subdivision:
         params["subdivisionCode"] = subdivision
@@ -356,10 +358,12 @@ async def get_school_holidays(
     The openholidays upstream is always queried with ``languageIsoCode=EN`` so
     the response consistently includes an English primary name plus the native
     Dutch entry, matching the Nager.Date behavior used for public holidays.
+    The Netherlands South holiday group (``groupCode=NL-ZU``) is also fixed for
+    now to match the currently supported school-holiday dataset.
     """
     country = _normalize_country(country)
     data = await _get_or_fetch_holidays(
-        holiday_type="school",
+        holiday_type=f"school-{OPENHOLIDAYS_GROUP_CODE.lower()}",
         country=country,
         year=year,
         language=None,

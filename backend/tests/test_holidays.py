@@ -258,6 +258,7 @@ class TestGetSchoolHolidays:
         assert params["validFrom"] == "2026-01-01"
         assert params["validTo"] == "2026-12-31"
         assert params["languageIsoCode"] == "EN"
+        assert params["groupCode"] == "NL-ZU"
         assert params["subdivisionCode"] == "NL-NH"
 
     def test_language_param_ignored(self, db_client: TestClient):
@@ -271,6 +272,7 @@ class TestGetSchoolHolidays:
         mock_http_client = mock_cls.return_value.__aenter__.return_value
         params = mock_http_client.get.call_args.kwargs["params"]
         assert params["languageIsoCode"] == "EN"
+        assert params["groupCode"] == "NL-ZU"
 
     def test_upstream_called_without_subdivision(self, db_client: TestClient):
         """Upstream API omits subdivisionCode when not provided."""
@@ -291,7 +293,7 @@ class TestGetSchoolHolidays:
                 "/api/holidays/school?country=NL&year=2026&subdivision=NL-NH"
             )
 
-        entry = cache.get_holiday("school:NL:2026:NL-NH")
+        entry = cache.get_holiday("school-nl-zu:NL:2026:NL-NH")
         assert entry is not None
         assert entry.data == SAMPLE_SCHOOL_HOLIDAYS
 
@@ -340,8 +342,8 @@ class TestGetSchoolHolidays:
                 "/api/holidays/school?country=NL&year=2026&subdivision=NL-ZH"
             )
 
-        assert cache.get_holiday("school:NL:2026:NL-NH") is not None
-        assert cache.get_holiday("school:NL:2026:NL-ZH") is not None
+        assert cache.get_holiday("school-nl-zu:NL:2026:NL-NH") is not None
+        assert cache.get_holiday("school-nl-zu:NL:2026:NL-ZH") is not None
 
     def test_country_param_is_normalized_to_nl(self, db_client: TestClient):
         """Non-NL country query values are normalized to NL for now."""
