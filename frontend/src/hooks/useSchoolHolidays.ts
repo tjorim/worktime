@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
@@ -27,8 +28,6 @@ export interface SchoolHoliday {
 }
 
 const DEFAULT_LANGUAGE = "EN";
-const DEFAULT_COUNTRY = "NL";
-const DEFAULT_SUBDIVISION = "NL-NH";
 const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
 
 export function getSchoolHolidayName(holiday: SchoolHoliday, language: string = DEFAULT_LANGUAGE) {
@@ -63,30 +62,19 @@ const toSchoolHolidayMap = (
   return map;
 };
 
-export function useSchoolHolidays(
-  year: number,
-  countryCode: string = DEFAULT_COUNTRY,
-  subdivisionCode: string = DEFAULT_SUBDIVISION,
-  language: string = DEFAULT_LANGUAGE,
-  enabled: boolean = true,
-) {
-  const isTestEnv = import.meta.env.MODE === "test";
+export function useSchoolHolidays(year: number, enabled: boolean = true) {
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled =
-    enabled && !isTestEnv && Boolean(countryCode) && Boolean(subdivisionCode) && isValidYear;
+  const isEnabled = enabled && isValidYear;
   const params = useMemo(
     () => ({
-      countryIsoCode: countryCode,
-      validFrom: `${year}-01-01`,
-      validTo: `${year}-12-31`,
-      languageIsoCode: language,
-      subdivisionCode,
+      country: DEFAULT_COUNTRY,
+      year: String(year),
     }),
-    [countryCode, year, language, subdivisionCode],
+    [year],
   );
 
   const { holidays, loading, error } = useOpenHolidays<SchoolHoliday>({
-    endpoint: "SchoolHolidays",
+    endpoint: "school",
     params,
     enabled: isEnabled,
     responseErrorPrefix: "Failed to fetch school holidays",
@@ -98,9 +86,9 @@ export function useSchoolHolidays(
   const schoolHolidayMap = useMemo(
     () =>
       isEnabled
-        ? toSchoolHolidayMap(holidays, language, NATIVE_LANGUAGE)
+        ? toSchoolHolidayMap(holidays, DEFAULT_LANGUAGE, NATIVE_LANGUAGE)
         : new Map<string, SchoolHolidayInfo>(),
-    [holidays, isEnabled, language],
+    [holidays, isEnabled],
   );
 
   return { schoolHolidayMap, loading, error };

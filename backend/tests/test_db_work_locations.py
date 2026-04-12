@@ -7,7 +7,6 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 
 
-
 def test_work_location_upsert_and_filtering(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],

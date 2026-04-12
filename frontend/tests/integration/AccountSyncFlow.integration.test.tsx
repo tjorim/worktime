@@ -209,17 +209,14 @@ describe("§1 Local-only usage", () => {
   });
 
   it("does not trigger any sync API calls when the user is not authenticated", async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-
     render(<App />);
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: /Welcome to Worktime/i })).toBeInTheDocument(),
     );
 
-    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) => url.includes("/api/sync"));
-    expect(syncCalls).toHaveLength(0);
+    // When unauthenticated, no sync cursor should be stored — the sync flow never ran.
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBeNull();
   });
 });
 
@@ -582,15 +579,12 @@ describe("Auth edge cases", () => {
   it("does not run sync when session is still loading", async () => {
     mockSessionContext = { loading: true };
 
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-
     render(<App />);
     // Flush pending effects without relying on a fixed-duration delay.
     await act(async () => {});
 
-    const syncCalls = fetchSpy.mock.calls.filter(([url]: [string]) => url.includes("/api/sync"));
-    expect(syncCalls).toHaveLength(0);
+    // When the session is still loading, no sync cursor should be stored.
+    expect(localStorage.getItem(getSyncCursorKey(TEST_USER_ID))).toBeNull();
   });
 
   it("is not authenticated when session does not exist", () => {

@@ -1,6 +1,5 @@
 """Tests for CORS configuration module."""
 
-import pytest
 
 from app.config.cors import get_cors_origins
 

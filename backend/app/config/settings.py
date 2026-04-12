@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # Cache configuration
     CACHE_TTL: int = 10
     CACHE_ENABLED: bool = True
+    HOLIDAY_CACHE_TTL: int = 86400  # 24 hours — holiday data doesn't change intra-year
 
     # Database configuration
     DATABASE_URL: str = "postgresql+asyncpg://worktime:worktime@localhost/worktime"

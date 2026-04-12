@@ -1,52 +1,27 @@
 import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
 import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 
-export interface PublicHolidayName {
-  language: string;
-  text: string;
-}
-
 export interface PublicHoliday {
-  id: string;
-  startDate: string;
-  endDate: string;
-  type: string;
-  name: PublicHolidayName[];
-  regionalScope: string;
-  temporalScope: string;
-  nationwide: boolean;
+  date: string;
+  name: string;
+  localName: string;
+  global: boolean;
+  counties: string[] | null;
+  types: string[];
 }
 
-const DEFAULT_LANGUAGE = "EN";
-const DEFAULT_COUNTRY = "NL";
-const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
-
-export function getPublicHolidayName(holiday: PublicHoliday, language: string = DEFAULT_LANGUAGE) {
-  const match = holiday.name.find((entry) => entry.language === language);
-  if (match?.text) {
-    return match.text;
-  }
-  return holiday.name[0]?.text ?? "Public Holiday";
-}
-
-const toHolidayMap = (holidays: PublicHoliday[], language: string, nativeLanguage: string) => {
+const toHolidayMap = (holidays: PublicHoliday[]) => {
   const map = new Map<string, PublicHolidayInfo>();
 
   holidays.forEach((holiday) => {
-    const start = dayjs(holiday.startDate);
-    const end = dayjs(holiday.endDate);
-    const name = getPublicHolidayName(holiday, language);
-    // Extract the local/native language name (e.g., "NL" for Netherlands = Dutch)
-    const localName = getPublicHolidayName(holiday, nativeLanguage);
-
-    let current = start;
-    while (current.isSameOrBefore(end, "day")) {
-      map.set(formatHdayDate(current), { name, localName });
-      current = current.add(1, "day");
-    }
+    map.set(formatHdayDate(dayjs(holiday.date)), {
+      name: holiday.name,
+      localName: holiday.localName,
+    });
   });
 
   return map;
@@ -54,25 +29,20 @@ const toHolidayMap = (holidays: PublicHoliday[], language: string, nativeLanguag
 
 export function usePublicHolidays(
   year: number,
-  countryCode: string = DEFAULT_COUNTRY,
-  language: string = DEFAULT_LANGUAGE,
   enabled: boolean = true,
 ) {
-  const isTestEnv = import.meta.env.MODE === "test";
   const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
-  const isEnabled = enabled && !isTestEnv && Boolean(countryCode) && isValidYear;
+  const isEnabled = enabled && isValidYear;
   const params = useMemo(
     () => ({
-      countryIsoCode: countryCode,
-      validFrom: `${year}-01-01`,
-      validTo: `${year}-12-31`,
-      languageIsoCode: language,
+      country: DEFAULT_COUNTRY,
+      year: String(year),
     }),
-    [countryCode, year, language],
+    [year],
   );
 
   const { holidays, loading, error } = useOpenHolidays<PublicHoliday>({
-    endpoint: "PublicHolidays",
+    endpoint: "public",
     params,
     enabled: isEnabled,
     responseErrorPrefix: "Failed to fetch holidays",
@@ -82,11 +52,8 @@ export function usePublicHolidays(
   });
 
   const publicHolidayMap = useMemo(
-    () =>
-      isEnabled
-        ? toHolidayMap(holidays, language, NATIVE_LANGUAGE)
-        : new Map<string, PublicHolidayInfo>(),
-    [holidays, isEnabled, language],
+    () => (isEnabled ? toHolidayMap(holidays) : new Map<string, PublicHolidayInfo>()),
+    [holidays, isEnabled],
   );
 
   return { publicHolidayMap, loading, error };

@@ -1,8 +1,7 @@
 """Tests for audit logging module."""
 
 import json
-import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -35,7 +34,7 @@ def test_audit_append_basic(temp_audit_dir):
     assert audit_file.exists()
     
     # Read and verify log entry
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         line = f.readline()
         entry = json.loads(line)
     
@@ -57,7 +56,7 @@ def test_audit_append_without_details(temp_audit_dir):
     audit_logger.append("user123.hday", "delete")
     
     # Read and verify log entry
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         line = f.readline()
         entry = json.loads(line)
     
@@ -76,7 +75,7 @@ def test_audit_append_multiple_entries(temp_audit_dir):
     audit_logger.append("file3.hday", "delete", "third")
     
     # Read and verify all entries
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         lines = f.readlines()
     
     assert len(lines) == 3
@@ -105,7 +104,7 @@ def test_audit_append_unicode(temp_audit_dir):
     audit_logger.append("ユーザー.hday", "read", "Détails spéciaux 中文")
     
     # Read and verify Unicode handling
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         line = f.readline()
         entry = json.loads(line)
     
@@ -137,7 +136,7 @@ def test_audit_log_format(temp_audit_dir):
     audit_logger.append("test.hday", "read", "details")
     
     # Read raw line
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         line = f.readline()
     
     # Verify line ends with newline
@@ -157,11 +156,11 @@ def test_audit_timestamp_format(temp_audit_dir):
     """Test that timestamps are in UTC ISO 8601 format."""
     audit_dir, audit_file = temp_audit_dir
     
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     audit_logger.append("test.hday", "read")
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
     
-    with open(audit_file, "r", encoding="utf-8") as f:
+    with open(audit_file, encoding="utf-8") as f:
         entry = json.loads(f.readline())
     
     # Parse timestamp

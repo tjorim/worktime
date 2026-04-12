@@ -6,15 +6,14 @@ Create Date: 2026-04-05
 """
 
 from collections.abc import Sequence
-from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -194,8 +193,34 @@ def upgrade() -> None:
         " OR (entry_kind = 'weekly' AND weekday IS NOT NULL AND date IS NULL AND start_date IS NULL AND end_date IS NULL)",
     )
 
+    op.create_table(
+        "cached_holidays",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("holiday_type", sa.String(), nullable=False),
+        sa.Column("country", sa.String(2), nullable=False),
+        sa.Column("year", sa.Integer(), nullable=False),
+        sa.Column("subdivision", sa.String(), nullable=True),
+        sa.Column("language", sa.String(2), nullable=True),
+        sa.Column("data", sa.JSON(), nullable=False),
+        sa.Column(
+            "fetched_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+    op.execute(
+        """
+        ALTER TABLE cached_holidays
+        ADD CONSTRAINT uq_cached_holiday
+        UNIQUE NULLS NOT DISTINCT (holiday_type, country, year, subdivision, language)
+        """
+    )
+
 
 def downgrade() -> None:
+    op.drop_constraint("uq_cached_holiday", "cached_holidays", type_="unique")
+    op.drop_table("cached_holidays")
     op.drop_constraint("ck_time_off_shape", "time_off_entries", type_="check")
     op.drop_constraint("ck_time_off_weekday_range", "time_off_entries", type_="check")
     op.drop_constraint("ck_time_off_entry_flag", "time_off_entries", type_="check")

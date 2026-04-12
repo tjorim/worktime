@@ -29,6 +29,18 @@ class HdayCacheEntry(BaseModel):
     cached_at: float = Field(default_factory=lambda: datetime.now().timestamp())
 
 
+class HolidayCacheEntry(BaseModel):
+    """Cache entry for holiday data from openholidaysapi.org.
+
+    Attributes:
+        data: Raw JSON response as a list of holiday objects
+        cached_at: Timestamp when this entry was cached (for TTL calculation)
+    """
+
+    data: list
+    cached_at: float = Field(default_factory=lambda: datetime.now().timestamp())
+
+
 class TeamConfigCacheEntry(BaseModel):
     """Cache entry for team configuration data.
     

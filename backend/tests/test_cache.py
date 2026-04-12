@@ -3,8 +3,6 @@
 import time
 from unittest.mock import patch
 
-import pytest
-
 from app.cache.models import HdayCacheEntry, TeamConfigCacheEntry
 from app.cache.store import FileCache, get_cache
 from app.models.hday import HdayEvent
