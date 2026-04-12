@@ -42,6 +42,8 @@ def test_init_supertokens_registers_dashboard_recipe(monkeypatch) -> None:
 
     assert recorded["framework"] == "fastapi"
     assert recorded["mode"] == "asgi"
+    assert recorded["app_info"].api_base_path == "/auth"
+    assert recorded["app_info"].website_base_path == "/auth"
     assert recorded["dashboard_api_key"] == "worktime-api-key"
     assert recorded["session_override"] is sentinel.override_config
     assert recorded["recipe_list"] == [

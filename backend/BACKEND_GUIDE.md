@@ -22,8 +22,8 @@ The service is built with FastAPI and currently combines:
 There is no `/v1` prefix. All backend routers are mounted under `/api`, so the effective route groups are `/api/health`, `/api/hday/*`, `/api/team/*`, `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`, and `/api/debug/*`.
 SuperTokens auth uses:
 
-- local development default: `/auth/*`
-- recommended shared path when the backend also serves the dashboard: `/auth/*`
+- internal SuperTokens base path: `/auth/*`
+- public shared-host path in this repo: `/auth/*`
 
 ## Runtime Shape
 
@@ -75,8 +75,12 @@ Team metadata is read from `config/{team_id}.conf` and `config/{team_id}.people`
 
 SuperTokens mounts its own auth/session routes under the configured API base path:
 
-- local development default: `/auth/*`
-- recommended shared path when the backend also serves the dashboard: `/auth/*`
+- internal SuperTokens base path: `/auth/*`
+- public shared-host path in this repo: `/auth/*`
+
+In this deployment, `SUPERTOKENS_API_BASE_PATH=/auth` and Caddy forwards `/auth*`
+directly to `worktime-api`, so the internal base path and the effective public path
+are the same.
 
 The backend uses those sessions for database-backed endpoints.
 

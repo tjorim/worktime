@@ -82,9 +82,9 @@ The shared directory is expected to look like this:
 
 - File/share endpoints: `/api/hday/*`, `/api/team/*`, `/api/health`
 - Auth endpoints:
-  - local development default: `/auth/*`
-  - recommended shared path when the backend also serves the dashboard: `/auth/*`
-- Registration endpoint (public): `POST /users/register`
+  - internal SuperTokens base path: `/auth/*`
+  - public shared-host path in this repo: `/auth/*`
+- Registration endpoint (public): `POST /api/users/register`
 - Database endpoints: `/api/users/*`, `/api/time-tracking/*`, `/api/work-locations/*`, `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/time-off/*`, `/api/me`
 - Debug endpoint in non-production only: `/api/debug/benchmark`
 
