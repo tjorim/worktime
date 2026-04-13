@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -22,7 +22,10 @@ import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { DevOptionsPanel } from "./DevOptionsPanel";
+import { useApiClient } from "@/hooks/useApiClient";
+import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
+import { dayjs } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
@@ -64,6 +67,16 @@ interface SettingsPanelProps {
   onChangeTeam?: () => void;
 }
 
+interface AccountProfile {
+  id: number;
+  username: string;
+  display_name: string;
+  is_admin: boolean;
+  capabilities: {
+    backup_enabled: boolean;
+  };
+}
+
 function clearCollectionById(collection: {
   toArray: Array<{ id: string }>;
   has: (id: string) => boolean;
@@ -100,14 +113,22 @@ export function SettingsPanel({
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
   const [clearTimeOffData, setClearTimeOffData] = useState(false);
+  const [accountProfile, setAccountProfile] = useState<AccountProfile | null>(null);
+  const [profileDraft, setProfileDraft] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const versionClickCountRef = useRef(0);
   const versionClickTimeoutRef = useRef<number | null>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const { isDevMode, toggleDevMode } = useDeveloperOptions();
-  const { isAuthenticated, isValidating, displayName, triggerLogin, triggerSignup, logout } =
+  const fetchFn = useApiClient();
+  const { isAuthenticated, isValidating, userId, displayName, triggerLogin, triggerSignup, logout } =
     useAuth();
+  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, triggerPull } =
+    useOngoingSyncContext();
   const {
     settings,
     scheduleType,
@@ -121,6 +142,137 @@ export function SettingsPanel({
     updateOfficeCountry,
     resetSettings,
   } = useSettings();
+
+  useEffect(() => {
+    if (!show || !isAuthenticated) {
+      setAccountProfile(null);
+      setProfileDraft("");
+      setProfileError(null);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsProfileLoading(true);
+    setProfileError(null);
+
+    fetchFn("/api/me")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Unexpected status: ${response.status}`);
+        }
+        const profile = (await response.json()) as AccountProfile;
+        if (isCancelled) return;
+        setAccountProfile(profile);
+        setProfileDraft(profile.display_name);
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        console.error("Failed to load account profile:", error);
+        setProfileError(m.account_profile_load_failed());
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsProfileLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [show, isAuthenticated, fetchFn]);
+
+  const handleSaveProfile = async () => {
+    if (!accountProfile) return;
+    const nextDisplayName = profileDraft.trim();
+    if (!nextDisplayName) {
+      setProfileError(m.account_profile_display_name_required());
+      return;
+    }
+
+    setIsProfileSaving(true);
+    setProfileError(null);
+
+    try {
+      const response = await fetchFn(`/api/users/${accountProfile.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ display_name: nextDisplayName }),
+      });
+      if (!response.ok) {
+        throw new Error(`Unexpected status: ${response.status}`);
+      }
+      const updatedProfile = (await response.json()) as {
+        id: number;
+        username: string;
+        display_name: string;
+      };
+      setAccountProfile((current) =>
+        current
+          ? {
+              ...current,
+              username: updatedProfile.username,
+              display_name: updatedProfile.display_name,
+            }
+          : current,
+      );
+      setProfileDraft(updatedProfile.display_name);
+      toast.showSuccess(m.account_profile_saved(), "bi-person-check");
+    } catch (error) {
+      console.error("Failed to save account profile:", error);
+      setProfileError(m.account_profile_save_failed());
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
+  const syncStatus = useMemo(() => {
+    if (!isAuthenticated) {
+      return {
+        icon: "bi-cloud-slash",
+        label: m.account_not_signed_in(),
+        variant: "muted",
+      };
+    }
+    if (hasSyncError) {
+      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
+    }
+    if (conflictCount > 0) {
+      return {
+        icon: "bi-exclamation-triangle",
+        label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
+        variant: "warning",
+      };
+    }
+    if (isSyncing) {
+      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
+    }
+    if (outboxCount > 0) {
+      return {
+        icon: "bi-cloud-upload",
+        label: m.sync_indicator_pending({ count: String(outboxCount) }),
+        variant: "warning",
+      };
+    }
+    if (lastSyncedAt) {
+      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
+    }
+    return {
+      icon: "bi-cloud",
+      label: m.sync_never_synced(),
+      variant: "muted",
+    };
+  }, [isAuthenticated, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
+
+  const retryInSeconds =
+    retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000)) : null;
+  const hasProfileChanges =
+    accountProfile !== null &&
+    profileDraft.trim() !== "" &&
+    profileDraft.trim() !== accountProfile.display_name;
+  const lastSyncedLabel = lastSyncedAt
+    ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
+    : m.sync_never_synced();
+  const resolvedDisplayName = accountProfile?.display_name ?? displayName;
 
   const handleChangelogClick = () => {
     setShowChangelog(true);
@@ -336,19 +488,95 @@ export function SettingsPanel({
                   </ListGroup.Item>
                 ) : isAuthenticated ? (
                   <ListGroup.Item>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-person-check me-2 text-success"></i>
-                          {displayName
-                            ? m.auth_logged_in_as({ displayName })
-                            : m.account_signed_in()}
+                    <div className="d-flex flex-column gap-3">
+                      <div className="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                          <div className="fw-medium">
+                            <i className="bi bi-person-check me-2 text-success"></i>
+                            {resolvedDisplayName
+                              ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
+                              : m.account_signed_in()}
+                          </div>
+                          {accountProfile?.username ? (
+                            <small className="text-muted">@{accountProfile.username}</small>
+                          ) : null}
                         </div>
+                        <Button variant="outline-secondary" size="sm" onClick={logout}>
+                          <i className="bi bi-box-arrow-right me-1"></i>
+                          {m.auth_logout()}
+                        </Button>
                       </div>
-                      <Button variant="outline-secondary" size="sm" onClick={logout}>
-                        <i className="bi bi-box-arrow-right me-1"></i>
-                        {m.auth_logout()}
-                      </Button>
+
+                      {profileError ? (
+                        <Alert variant="warning" className="mb-0 py-2">
+                          {profileError}
+                        </Alert>
+                      ) : null}
+
+                      {isProfileLoading && accountProfile === null ? (
+                        <div className="d-flex align-items-center gap-2 text-muted small">
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          <span>{m.loading()}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Form.Group controlId="account-display-name">
+                            <Form.Label className="fw-medium mb-1">
+                              {m.account_profile_display_name_label()}
+                            </Form.Label>
+                            <Form.Control
+                              size="sm"
+                              type="text"
+                              value={profileDraft}
+                              onChange={(event) => setProfileDraft(event.target.value)}
+                              placeholder={m.account_profile_display_name_placeholder()}
+                              disabled={accountProfile === null || isProfileSaving}
+                            />
+                            <Form.Text className="text-muted">
+                              {m.account_profile_display_name_description()}
+                            </Form.Text>
+                          </Form.Group>
+
+                          <div className="small text-muted d-flex flex-column gap-1">
+                            <div>
+                              <span className="fw-medium">
+                                {m.account_profile_username_label()}:
+                              </span>{" "}
+                              {accountProfile?.username ?? "—"}
+                            </div>
+                            <div>
+                              <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
+                              {accountProfile?.id ?? userId ?? "—"}
+                            </div>
+                            <div>
+                              <span className="fw-medium">{m.account_profile_role_label()}:</span>{" "}
+                              {accountProfile?.is_admin
+                                ? m.account_profile_role_admin()
+                                : m.account_profile_role_member()}
+                            </div>
+                          </div>
+
+                          <div className="d-flex gap-2 flex-wrap">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={handleSaveProfile}
+                              disabled={
+                                !hasProfileChanges || isProfileSaving || accountProfile === null
+                              }
+                            >
+                              <i className="bi bi-floppy me-1"></i>
+                              {isProfileSaving
+                                ? m.account_profile_saving_btn()
+                                : m.account_profile_save_btn()}
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </ListGroup.Item>
                 ) : (
@@ -380,6 +608,71 @@ export function SettingsPanel({
                         {m.account_sign_in_btn()}
                       </Button>
                     </div>
+                  </ListGroup.Item>
+                )}
+              </ListGroup>
+            </div>
+          </div>
+
+          <div className="border-bottom">
+            <div className="p-3">
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-cloud-check me-2"></i>
+                {m.sync_section_title()}
+              </h6>
+              <ListGroup variant="flush">
+                {isAuthenticated ? (
+                  <ListGroup.Item>
+                    <div className="d-flex flex-column gap-3">
+                      <div className={`fw-medium text-${syncStatus.variant}`}>
+                        <i
+                          className={`bi ${syncStatus.icon}${isSyncing ? " sync-spin" : ""} me-2`}
+                          aria-hidden="true"
+                        ></i>
+                        {syncStatus.label}
+                      </div>
+                      <div className="small text-muted d-flex flex-column gap-1">
+                        <div>
+                          <span className="fw-medium">{m.sync_last_synced_label()}:</span>{" "}
+                          {lastSyncedLabel}
+                        </div>
+                        <div>
+                          <span className="fw-medium">{m.sync_pending_changes_label()}:</span>{" "}
+                          {outboxCount}
+                        </div>
+                        <div>
+                          <span className="fw-medium">{m.sync_conflicts_label()}:</span>{" "}
+                          {conflictCount}
+                        </div>
+                        <div>
+                          <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
+                          {accountProfile?.capabilities.backup_enabled
+                            ? m.sync_backup_status_enabled()
+                            : m.sync_backup_status_disabled()}
+                        </div>
+                        {hasSyncError && retryInSeconds !== null ? (
+                          <div>
+                            <span className="fw-medium">{m.sync_retry_in_label()}:</span>{" "}
+                            {m.sync_retry_in_seconds({ seconds: String(retryInSeconds) })}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="d-flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={triggerPull}
+                          disabled={isSyncing}
+                        >
+                          <i className="bi bi-arrow-repeat me-1"></i>
+                          {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
+                        </Button>
+                      </div>
+                    </div>
+                  </ListGroup.Item>
+                ) : (
+                  <ListGroup.Item>
+                    <small className="text-muted">{m.sync_signed_out_description()}</small>
                   </ListGroup.Item>
                 )}
               </ListGroup>

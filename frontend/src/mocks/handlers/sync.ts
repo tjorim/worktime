@@ -8,6 +8,7 @@
  *  GET  /api/preferences
  *  PUT  /api/preferences
  *  GET  /api/me
+ *  PUT  /api/users/:id
  */
 
 import { http, HttpResponse } from "msw";
@@ -66,6 +67,19 @@ export const syncHandlers = [
       display_name: "Dev User",
       is_admin: false,
       capabilities: { backup_enabled: true },
+    });
+  }),
+
+  // PUT /api/users/:id
+  http.put("*/api/users/:id", async ({ params, request }) => {
+    const body = (await request.json()) as { display_name?: string };
+    return HttpResponse.json({
+      id: Number(params.id),
+      username: "dev-user",
+      display_name: body.display_name ?? "Dev User",
+      settings: {},
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     });
   }),
 ];
