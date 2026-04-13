@@ -23,6 +23,8 @@ from supertokens_python.asyncio import get_user as st_get_user
 from supertokens_python.recipe import dashboard, emailpassword, session
 from supertokens_python.recipe.session.interfaces import (
     RecipeInterface as SessionRecipeInterface,
+)
+from supertokens_python.recipe.session.interfaces import (
     SessionContainer,
 )
 from supertokens_python.types import RecipeUserId
