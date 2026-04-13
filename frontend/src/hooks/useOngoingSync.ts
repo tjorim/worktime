@@ -27,15 +27,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  applyPreferencesPull,
   appendToSyncOutbox,
+  buildLocalPreferencesPayload,
   bumpClientTimestamps,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
   extractConflictedItems,
+  fetchPreferences,
   fetchSyncStatus,
   getSyncOutboxSize,
   maxConflictServerTimestamp,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
   storeSyncCursor,
   type SyncPullResponse,
@@ -101,6 +105,28 @@ export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") =>
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
 
+async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
+  const [localPrefs, serverPrefs] = await Promise.all([
+    Promise.resolve(buildLocalPreferencesPayload()),
+    fetchPreferences(fetchFn),
+  ]);
+
+  const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
+  const serverTimestamp = serverPrefs?.client_updated_at ?? null;
+
+  if (localPrefs && (!serverPrefs || localPrefs.clientUpdatedAt > serverPrefs.client_updated_at)) {
+    const pushed = await pushPreferences(fetchFn, localPrefs.data, localPrefs.clientUpdatedAt);
+    return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
+  }
+
+  if (serverPrefs && (!localPrefs || serverPrefs.client_updated_at > localPrefs.clientUpdatedAt)) {
+    applyPreferencesPull(serverPrefs.data);
+    return serverPrefs.client_updated_at;
+  }
+
+  return localTimestamp ?? serverTimestamp;
+}
+
 /**
  * Hook that manages ongoing write-through sync and incremental pulls after the
  * first-sync flow has completed.
@@ -147,6 +173,8 @@ export function useOngoingSync(
   const retryDelayMsRef = useRef(0);
   const retryAfterRef = useRef<number | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
+  const syncedPreferencesTimestampRef = useRef<string | null>(null);
+  const hasHydratedPreferencesRef = useRef(false);
 
   /**
    * Advance the back-off delay and set the next retry window.
@@ -254,6 +282,10 @@ export function useOngoingSync(
         if (!mountedRef.current) return;
         if (pullResult) {
           onIncrementalPullRef.current?.(pullResult);
+          const syncedPreferencesTimestamp = await reconcilePreferences(fetchFn);
+          if (!mountedRef.current) return;
+          syncedPreferencesTimestampRef.current = syncedPreferencesTimestamp;
+          hasHydratedPreferencesRef.current = true;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
           setHasSyncError(false);
@@ -328,6 +360,8 @@ export function useOngoingSync(
     retryDelayMsRef.current = 0;
     retryAfterRef.current = null;
     setRetryAfter(null);
+    syncedPreferencesTimestampRef.current = null;
+    hasHydratedPreferencesRef.current = false;
     hasRunInitialFlushRef.current = false;
   }, [userId]);
 

@@ -500,7 +500,19 @@ export function buildLocalPreferencesPayload(): {
  */
 export function applyPreferencesPull(data: Record<string, unknown>): void {
   try {
-    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
+    const serialized = JSON.stringify(data);
+    const oldValue = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    localStorage.setItem(USER_STATE_STORAGE_KEY, serialized);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: USER_STATE_STORAGE_KEY,
+          newValue: serialized,
+          oldValue,
+          storageArea: localStorage,
+        }),
+      );
+    }
   } catch {
     // Ignore storage errors (e.g., private browsing with full storage quota)
   }

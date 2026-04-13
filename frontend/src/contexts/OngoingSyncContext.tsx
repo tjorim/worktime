@@ -15,8 +15,9 @@
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./AuthContext";
+import { useSettings } from "./SettingsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
   useOngoingSync,
@@ -91,6 +92,16 @@ interface OngoingSyncProviderProps {
  */
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId } = useAuth();
+  const {
+    settings,
+    lastUsed,
+    myTeam,
+    scheduleType,
+    hasCompletedOnboarding,
+    accountSyncAnnouncementSeen,
+    ganttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+  } = useSettings();
   const fetchFn = useApiClient();
 
   // Keep collection mutation handlers informed of the current user ID so they
@@ -133,6 +144,30 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
 
   // Subscribe to sync-changed signals and trigger incremental pulls.
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
+
+  const preferencesSyncKey = JSON.stringify({
+    settings,
+    lastUsed,
+    myTeam,
+    scheduleType,
+    hasCompletedOnboarding,
+    accountSyncAnnouncementSeen,
+    ganttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+  });
+  const hasSeenPreferencesStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!isSyncEstablished || !isAuthenticated) {
+      hasSeenPreferencesStateRef.current = false;
+      return;
+    }
+    if (!hasSeenPreferencesStateRef.current) {
+      hasSeenPreferencesStateRef.current = true;
+      return;
+    }
+    triggerPull();
+  }, [isSyncEstablished, isAuthenticated, preferencesSyncKey, triggerPull]);
 
   const value = useMemo<OngoingSyncContextType>(
     () => ({
