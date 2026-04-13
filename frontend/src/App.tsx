@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import Container from "react-bootstrap/Container";
 import { SuperTokensWrapper } from "supertokens-auth-react";
+import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import { AboutModal } from "@/components/AboutModal";
 import { CurrentStatus } from "@/components/CurrentStatus";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -25,6 +26,9 @@ import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 import { validateVacationAllowance } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
+import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
+
+const AUTH_PREBUILT_UI_LIST = [EmailPasswordPreBuiltUI];
 
 /**
  * Inner component that consumes OngoingSyncContext to render the conflict
@@ -390,6 +394,14 @@ function AppContent() {
  */
 
 function App() {
+  if (canHandleRoute(AUTH_PREBUILT_UI_LIST)) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <SuperTokensWrapper>{getRoutingComponent(AUTH_PREBUILT_UI_LIST)}</SuperTokensWrapper>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <SuperTokensWrapper>

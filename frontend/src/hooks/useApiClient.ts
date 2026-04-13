@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { apiFetch } from "@/utils/apiClient";
 import * as m from "@/paraglide/messages.js";
@@ -20,13 +19,11 @@ import * as m from "@/paraglide/messages.js";
  */
 export function useApiClient() {
   const { triggerLogin, logout } = useAuth();
-  const { options } = useDeveloperOptions();
   const { showError, showWarning } = useToast();
 
   const authenticatedFetch = useCallback(
     async (url: string, init: RequestInit = {}): Promise<Response> => {
       return apiFetch(url, init, {
-        apiUrl: options.apiUrl,
         onUnauthorized: () => {
           logout();
           showWarning(m.auth_session_expired());
@@ -38,7 +35,7 @@ export function useApiClient() {
         },
       });
     },
-    [options.apiUrl, triggerLogin, logout, showError, showWarning],
+    [triggerLogin, logout, showError, showWarning],
   );
 
   return authenticatedFetch;

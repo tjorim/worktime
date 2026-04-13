@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ShiftResult } from "@/utils/shiftCalculations";
+import * as SuperTokensUi from "supertokens-auth-react/ui";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
@@ -101,6 +102,25 @@ vi.mock("@/hooks/useShiftCalculation", () => ({
 }));
 
 describe("App", () => {
+  beforeEach(() => {
+    vi.mocked(SuperTokensUi.canHandleRoute).mockReturnValue(false);
+    vi.mocked(SuperTokensUi.getRoutingComponent).mockReturnValue(null);
+  });
+
+  describe("SuperTokens Routing", () => {
+    it("renders the SuperTokens auth UI when the current route is an auth route", () => {
+      vi.mocked(SuperTokensUi.canHandleRoute).mockReturnValue(true);
+      vi.mocked(SuperTokensUi.getRoutingComponent).mockReturnValue(
+        <div data-testid="supertokens-auth-route">Auth Route</div>,
+      );
+
+      render(<App />);
+
+      expect(screen.getByTestId("supertokens-auth-route")).toBeInTheDocument();
+      expect(screen.queryByTestId("welcome-wizard")).not.toBeInTheDocument();
+    });
+  });
+
   describe("Component Structure", () => {
     it("renders all main components", () => {
       render(

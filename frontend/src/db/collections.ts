@@ -18,9 +18,9 @@
  * offline guarantees.
  *
  * **Auth wiring**
- * Collections need the current user ID (for the outbox key) and the API base
- * URL (for fetch). Call `setSyncCollectionAuth(userId, apiBaseUrl)` from
- * `OngoingSyncProvider` whenever auth or developer options change.
+ * Collections need the current user ID (for the outbox key). Call
+ * `setSyncCollectionAuth(userId)` from `OngoingSyncProvider` whenever auth
+ * changes.
  *
  * **SSE direct writes**
  * When `sync_changed` fires, `onIncrementalPull` in `OngoingSyncContext` calls
@@ -62,23 +62,13 @@ import { dayjs } from "@/utils/dateTimeUtils";
 let _currentUserId: string | null = null;
 
 /**
- * Default API base URL derived from environment or production fallback.
- * Can be overridden via the developer options menu.
- */
-const DEFAULT_API_BASE_URL: string =
-  (import.meta.env.VITE_API_DOMAIN as string | undefined) ?? "https://worktime.tjor.im";
-
-let _syncApiBaseUrl: string = DEFAULT_API_BASE_URL;
-
-/**
  * Update the auth context used by collection mutation handlers.
  *
- * Must be called whenever the user's authentication state or developer API URL
- * changes — typically from `OngoingSyncProvider`.
+ * Must be called whenever the user's authentication state changes — typically
+ * from `OngoingSyncProvider`.
  */
-export function setSyncCollectionAuth(userId: string | null, apiBaseUrl: string): void {
+export function setSyncCollectionAuth(userId: string | null): void {
   _currentUserId = userId;
-  _syncApiBaseUrl = apiBaseUrl || DEFAULT_API_BASE_URL;
 }
 
 export function hasSyncCollectionAuth(): boolean {
@@ -94,7 +84,8 @@ export function hasSyncCollectionAuth(): boolean {
  * Uses `credentials: "include"` so that session cookies are sent automatically.
  */
 async function collectionFetch(url: string, init?: RequestInit): Promise<Response> {
-  const fullUrl = new URL(url, _syncApiBaseUrl).toString();
+  const fullUrl =
+    typeof window === "undefined" ? url : new URL(url, window.location.origin).toString();
   return fetch(fullUrl, { ...init, credentials: "include" });
 }
 

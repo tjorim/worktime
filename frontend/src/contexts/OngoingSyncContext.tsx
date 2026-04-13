@@ -17,7 +17,6 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { useAuth } from "./AuthContext";
-import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
   useOngoingSync,
@@ -93,14 +92,12 @@ interface OngoingSyncProviderProps {
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId } = useAuth();
   const fetchFn = useApiClient();
-  const { options } = useDeveloperOptions();
 
-  // Keep collection mutation handlers and the queryFn informed of the current
-  // user ID and API base URL so they can attach auth cookies and queue outbox
-  // entries under the correct user key.
+  // Keep collection mutation handlers informed of the current user ID so they
+  // can attach auth cookies and queue outbox entries under the correct user key.
   useEffect(() => {
-    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null, options.apiUrl);
-  }, [isAuthenticated, userId, options.apiUrl]);
+    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null);
+  }, [isAuthenticated, userId]);
 
   // Build the incremental-pull callback. When a pull returns data, apply it
   // to all collections via direct writes (no server re-push triggered).
@@ -126,15 +123,13 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     onIncrementalPull,
   );
 
-  // Build the SSE transport once per API base URL change.  The transport is
+  // Build the SSE transport. The transport is
   // null when the user is not authenticated so that no connection is opened
   // before sync is established.
   const sseTransport = useMemo<SyncSignalTransport | null>(() => {
     if (!isAuthenticated) return null;
-    if (!options.apiUrl) return null;
-    const eventsUrl = new URL("/api/sync/events", options.apiUrl).toString();
-    return createSseTransport(eventsUrl);
-  }, [isAuthenticated, options.apiUrl]);
+    return createSseTransport("/api/sync/events");
+  }, [isAuthenticated]);
 
   // Subscribe to sync-changed signals and trigger incremental pulls.
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);

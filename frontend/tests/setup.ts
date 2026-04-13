@@ -35,6 +35,15 @@ vi.mock("supertokens-auth-react", () => ({
   SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+vi.mock("supertokens-auth-react/ui", () => ({
+  canHandleRoute: vi.fn(() => false),
+  getRoutingComponent: vi.fn(() => null),
+}));
+
+vi.mock("supertokens-auth-react/recipe/emailpassword/prebuiltui", () => ({
+  EmailPasswordPreBuiltUI: class EmailPasswordPreBuiltUI {},
+}));
+
 vi.mock("supertokens-auth-react/recipe/session", () => ({
   default: {
     signOut: vi.fn().mockResolvedValue(undefined),

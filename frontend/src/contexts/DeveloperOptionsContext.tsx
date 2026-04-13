@@ -8,7 +8,6 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "er
 
 export interface DeveloperOptions {
   enabled: boolean;
-  apiUrl: string;
   connectionStatus: ConnectionStatus;
   lastConnectionTest: number | null; // timestamp
   autoConnect: boolean;
@@ -18,16 +17,14 @@ export interface DeveloperOptions {
 interface DeveloperOptionsContextType {
   options: DeveloperOptions;
   isDevMode: boolean;
-  updateApiUrl: (url: string) => void;
   updateAutoConnect: (autoConnect: boolean) => void;
   toggleDevMode: () => void;
-  testConnection: (url?: string) => Promise<boolean>;
+  testConnection: () => Promise<boolean>;
   disconnect: () => void;
 }
 
 const defaultOptions: DeveloperOptions = {
   enabled: false,
-  apiUrl: import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im",
   connectionStatus: "disconnected",
   lastConnectionTest: null,
   autoConnect: false,
@@ -82,19 +79,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount
 
-  const updateApiUrl = useCallback(
-    (url: string) => {
-      setOptions((prev) => ({
-        ...prev,
-        apiUrl: url,
-        connectionStatus: "disconnected",
-        enabled: false,
-        lastConnectionTest: null,
-      }));
-    },
-    [setOptions],
-  );
-
   const updateAutoConnect = useCallback(
     (autoConnect: boolean) => {
       setOptions((prev) => ({ ...prev, autoConnect }));
@@ -107,12 +91,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   }, []);
 
   const testConnection = useCallback(
-    async (url?: string): Promise<boolean> => {
-      const testUrl = url || options.apiUrl;
-      if (!testUrl) {
-        return false;
-      }
-
+    async (): Promise<boolean> => {
       setOptions((prev) => ({ ...prev, connectionStatus: "connecting" }));
 
       let timeoutId: number | undefined;
@@ -120,7 +99,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         const controller = new AbortController();
         timeoutId = window.setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch(`${testUrl}/api/health`, {
+        const response = await fetch("/api/health", {
           method: "GET",
           signal: controller.signal,
           headers: {
@@ -159,7 +138,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
         }
       }
     },
-    [options.apiUrl, setOptions],
+    [setOptions],
   );
 
   const disconnect = useCallback(() => {
@@ -174,7 +153,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     () => ({
       options,
       isDevMode,
-      updateApiUrl,
       updateAutoConnect,
       toggleDevMode,
       testConnection,
@@ -183,7 +161,6 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
     [
       options,
       isDevMode,
-      updateApiUrl,
       updateAutoConnect,
       toggleDevMode,
       testConnection,
