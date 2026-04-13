@@ -16,8 +16,8 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "./AuthContext";
-import { useSettings } from "./SettingsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
   useOngoingSync,

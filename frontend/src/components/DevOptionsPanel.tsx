@@ -152,7 +152,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting}
+              disabled={isTesting || options.connectionStatus === "connecting"}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>

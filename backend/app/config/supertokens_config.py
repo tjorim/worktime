@@ -17,13 +17,12 @@ from typing import Any
 from urllib.parse import urlparse
 
 from sqlalchemy import select
-from supertokens_python.asyncio import get_user as st_get_user
+from sqlalchemy.exc import IntegrityError
 from supertokens_python import InputAppInfo, SupertokensConfig, init
+from supertokens_python.asyncio import get_user as st_get_user
 from supertokens_python.recipe import dashboard, emailpassword, session
 from supertokens_python.recipe.session.interfaces import (
     RecipeInterface as SessionRecipeInterface,
-)
-from supertokens_python.recipe.session.interfaces import (
     SessionContainer,
 )
 from supertokens_python.types import RecipeUserId
@@ -78,15 +77,25 @@ async def _get_or_create_local_user(user_id: str):
         if username_result.scalar_one_or_none() is not None:
             username = f"{username}-{user_id[:8]}"
 
-        local_user = await create_user(
-            db_session,
-            UserCreate(
-                username=username,
-                display_name=display_name,
-                settings={},
-            ),
-            supertokens_user_id=user_id,
-        )
+        try:
+            local_user = await create_user(
+                db_session,
+                UserCreate(
+                    username=username,
+                    display_name=display_name,
+                    settings={},
+                ),
+                supertokens_user_id=user_id,
+            )
+        except IntegrityError:
+            await db_session.rollback()
+            result = await db_session.execute(
+                select(User).where(User.supertokens_user_id == user_id),
+            )
+            local_user = result.scalar_one_or_none()
+            if local_user is None:
+                raise
+
         logger.info(
             "Auto-provisioned local Worktime user %s for SuperTokens user %s",
             username,

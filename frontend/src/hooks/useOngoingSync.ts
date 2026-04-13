@@ -422,6 +422,8 @@ export function useOngoingSync(
               // Pull succeeded — now run post-success reconciliation.
               try {
                 onIncrementalPullRef.current?.(pullResult);
+                await reconcilePreferences(fetchFn);
+                if (!mountedRef.current) return;
                 storeSyncCursor(userId, pullResult.server_timestamp);
                 setLastSyncedAt(pullResult.server_timestamp);
                 setHasSyncError(false);
