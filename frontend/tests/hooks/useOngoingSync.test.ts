@@ -16,6 +16,7 @@ const emptySyncPayload = () => ({
 });
 
 const emptyPushResponse = { results: {} };
+const failedResponse = { ok: false };
 
 const incrementalPullResponse = {
   labels: [],
@@ -101,6 +102,7 @@ describe("useOngoingSync", () => {
       //    because the push response does not include a server_timestamp)
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // enqueueChange push
         .mockResolvedValueOnce({ ok: true, json: async () => refreshedStatus }); // status refresh
 
@@ -108,7 +110,7 @@ describe("useOngoingSync", () => {
 
       // Wait for initial flush to complete.
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
       });
 
       const change = emptySyncPayload();
@@ -342,8 +344,10 @@ describe("useOngoingSync", () => {
       // enqueueChange: push (conflict) then full pull to reconcile.
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push with conflict
-        .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }); // full pull after conflict
+        .mockResolvedValueOnce({ ok: true, json: async () => fullPullResponse }) // full pull after conflict
+        .mockResolvedValueOnce(failedResponse); // reconciliation preferences fetch
 
       const pullCallback = vi.fn();
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
@@ -396,6 +400,7 @@ describe("useOngoingSync", () => {
 
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => initialPullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push with conflict
         .mockResolvedValueOnce({ ok: false }); // reconciliation full pull fails
 
@@ -498,9 +503,12 @@ describe("useOngoingSync", () => {
       // Initial pull → conflict push + full pull → clean pull (triggered by visibility).
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // initial pull (empty outbox)
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // enqueueChange push (conflict)
         .mockResolvedValueOnce({ ok: true, json: async () => pullWithConflict }) // reconciliation full pull
-        .mockResolvedValueOnce({ ok: true, json: async () => cleanPull }); // visibility-change pull
+        .mockResolvedValueOnce(failedResponse) // reconciliation preferences fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => cleanPull }) // visibility-change pull
+        .mockResolvedValueOnce(failedResponse); // visibility-change preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -561,8 +569,10 @@ describe("useOngoingSync", () => {
 
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // initial pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse }) // push conflict
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // reconciliation pull
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // reconciliation pull
+        .mockResolvedValueOnce(failedResponse); // reconciliation preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -615,8 +625,10 @@ describe("useOngoingSync", () => {
       // Initial pull + push conflict + reconciliation pull.
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => pullResponse })
+        .mockResolvedValueOnce(failedResponse)
         .mockResolvedValueOnce({ ok: true, json: async () => conflictPushResponse })
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse });
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse })
+        .mockResolvedValueOnce(failedResponse);
 
       return { changePayload, pullResponse };
     };
@@ -711,14 +723,16 @@ describe("useOngoingSync", () => {
       // triggerPull: only pull (outbox still empty).
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
-        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }); // triggerPull pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // triggerPull pull
+        .mockResolvedValueOnce(failedResponse); // triggerPull preferences fetch
 
       const pullCallback = vi.fn();
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch, pullCallback));
 
       // Wait for initial flush.
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(result.current.lastSyncedAt).toBe("2026-02-01T00:00:00.000Z");
       });
 
       // Call triggerPull directly (simulates an SSE signal).
@@ -745,7 +759,9 @@ describe("useOngoingSync", () => {
 
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => incrementalPullResponse }) // initial pull
-        .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }); // triggerPull pull
+        .mockResolvedValueOnce(failedResponse) // initial preferences fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => laterPullResponse }) // triggerPull pull
+        .mockResolvedValueOnce(failedResponse); // triggerPull preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -784,7 +800,8 @@ describe("useOngoingSync", () => {
       // triggerPull should flush outbox (push) then pull — caller just calls triggerPull().
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => emptyPushResponse }) // outbox flush push
-        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }); // pull
+        .mockResolvedValueOnce({ ok: true, json: async () => pullResponse }) // pull
+        .mockResolvedValueOnce(failedResponse); // preferences fetch
 
       const { result } = renderHook(() => useOngoingSync(true, "user-1", mockFetch));
 
@@ -806,7 +823,7 @@ describe("useOngoingSync", () => {
 
       // Assert push-before-pull call order: first call is the outbox flush
       // (push endpoint), second is the incremental pull (pull endpoint).
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
       const [firstCall, secondCall] = mockFetch.mock.calls as [[string], [string]];
       expect(firstCall[0]).toBe("/api/sync/push");
       expect(secondCall[0]).toMatch(/^\/api\/sync\/pull/);

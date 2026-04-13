@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import { SettingsProvider } from "@/contexts/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 import * as SuperTokensUi from "supertokens-auth-react/ui";
@@ -122,36 +121,24 @@ describe("App", () => {
   });
 
   describe("Component Structure", () => {
-    it("renders all main components", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+    it("renders all main components", async () => {
+      render(<App />);
 
-      expect(screen.getByTestId("header")).toBeInTheDocument();
-      expect(screen.getByTestId("current-status")).toBeInTheDocument();
-      expect(screen.getByTestId("main-tabs")).toBeInTheDocument();
+      expect(await screen.findByTestId("header")).toBeInTheDocument();
+      expect(await screen.findByTestId("current-status")).toBeInTheDocument();
+      expect(await screen.findByTestId("main-tabs")).toBeInTheDocument();
       expect(screen.getByTestId("welcome-wizard")).toBeInTheDocument();
     });
 
     it("wraps components in error boundaries", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      render(<App />);
 
       const errorBoundaries = screen.getAllByTestId("error-boundary");
       expect(errorBoundaries.length).toBeGreaterThan(0);
     });
 
     it("has proper layout structure", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      render(<App />);
 
       // Should have Bootstrap container structure
       const container = document.querySelector(".container-fluid");
@@ -168,11 +155,7 @@ describe("App", () => {
   describe("Toast Provider Integration", () => {
     it("provides toast context to child components without errors", () => {
       // Test that the app renders without errors - indicates toast context is working
-      const { container } = render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      const { container } = render(<App />);
       expect(container).toBeInTheDocument();
 
       // Verify all major components receive toast context successfully
@@ -182,11 +165,7 @@ describe("App", () => {
     });
 
     it("renders toast container in DOM structure", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      render(<App />);
 
       // The ToastProvider should create the necessary DOM structure
       // Even though we can't directly test toast context value without accessing internals,
@@ -197,22 +176,14 @@ describe("App", () => {
 
   describe("App Architecture", () => {
     it("separates AppContent from App wrapper", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      render(<App />);
 
       // Both App and AppContent should render successfully
       expect(screen.getByTestId("current-status")).toBeInTheDocument();
     });
 
     it("integrates with realistic shift calculation data", () => {
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>,
-      );
+      render(<App />);
 
       // Test that app handles realistic shift data without errors
       // Mock data includes proper ShiftResult structure with dates, codes, and shift details

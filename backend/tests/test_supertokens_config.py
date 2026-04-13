@@ -132,7 +132,9 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
             self.calls += 1
             if self.calls == 1:
                 return FakeResult(None)
-            return FakeResult(object())
+            if self.calls == 2:
+                return FakeResult(object())
+            return FakeResult(None)
 
     monkeypatch.setattr(st_config, "get_session_factory", lambda: FakeSession)
     async def fake_st_get_user(user_id):
@@ -157,3 +159,57 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
 
     assert local_user is created_local_user
     assert recorded["username"] == "person@example.com-st-user-"
+
+
+async def test_get_or_create_local_user_keeps_searching_after_suffixed_username_conflict(
+    monkeypatch,
+) -> None:
+    class FakeResult:
+        def __init__(self, value):
+            self._value = value
+
+        def scalar_one_or_none(self):
+            return self._value
+
+    class FakeSession:
+        def __init__(self):
+            self.calls = 0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def execute(self, _query):
+            self.calls += 1
+            if self.calls == 1:
+                return FakeResult(None)
+            if self.calls in {2, 3}:
+                return FakeResult(object())
+            return FakeResult(None)
+
+    monkeypatch.setattr(st_config, "get_session_factory", lambda: FakeSession)
+
+    async def fake_st_get_user(user_id):
+        return SimpleNamespace(emails=["person@example.com"], id=user_id)
+
+    monkeypatch.setattr(st_config, "st_get_user", fake_st_get_user)
+
+    created_local_user = SimpleNamespace(
+        id=44,
+        username="person@example.com-st-user-1",
+        display_name="person",
+    )
+    recorded: dict[str, object] = {}
+
+    async def fake_create_user(session, payload, *, supertokens_user_id):
+        recorded["username"] = payload.username
+        return created_local_user
+
+    monkeypatch.setattr(st_config, "create_user", fake_create_user)
+
+    local_user = await st_config._get_or_create_local_user("st-user-123")
+
+    assert local_user is created_local_user
+    assert recorded["username"] == "person@example.com-st-user-1"

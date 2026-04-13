@@ -371,28 +371,24 @@ function AppContent() {
  */
 
 function App() {
-  if (canHandleRoute(AUTH_PREBUILT_UI_LIST)) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <SuperTokensWrapper>{getRoutingComponent(AUTH_PREBUILT_UI_LIST)}</SuperTokensWrapper>
-      </QueryClientProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <SuperTokensWrapper>
-        <SettingsProvider>
-          <EventStoreProvider>
-            <DeveloperOptionsProvider>
-              <ToastProvider>
-                <AuthProvider>
-                  <AppContent />
-                </AuthProvider>
-              </ToastProvider>
-            </DeveloperOptionsProvider>
-          </EventStoreProvider>
-        </SettingsProvider>
+        {canHandleRoute(AUTH_PREBUILT_UI_LIST) ? (
+          getRoutingComponent(AUTH_PREBUILT_UI_LIST)
+        ) : (
+          <SettingsProvider>
+            <EventStoreProvider>
+              <DeveloperOptionsProvider>
+                <ToastProvider>
+                  <AuthProvider>
+                    <AppContent />
+                  </AuthProvider>
+                </ToastProvider>
+              </DeveloperOptionsProvider>
+            </EventStoreProvider>
+          </SettingsProvider>
+        )}
       </SuperTokensWrapper>
     </QueryClientProvider>
   );

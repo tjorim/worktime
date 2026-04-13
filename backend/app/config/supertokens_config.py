@@ -55,6 +55,29 @@ def _derive_username_and_display_name(email: str, user_id: str) -> tuple[str, st
     return raw_email, display_name
 
 
+async def _find_available_username(db_session, base_username: str, user_id: str) -> str:
+    """Return a unique local username candidate for a SuperTokens identity."""
+    from app.database.models import User
+
+    candidate = base_username
+    attempt = 0
+
+    while True:
+        username_result = await db_session.execute(
+            select(User).where(User.username == candidate),
+        )
+        if username_result.scalar_one_or_none() is None:
+            return candidate
+
+        attempt += 1
+        suffix_length = min(8 + attempt - 1, len(user_id))
+        suffix = user_id[:suffix_length]
+        if suffix_length < len(user_id):
+            candidate = f"{base_username}-{suffix}"
+        else:
+            candidate = f"{base_username}-{suffix}-{attempt}"
+
+
 async def _get_or_create_local_user(user_id: str):
     """Return the local user for a SuperTokens user, auto-provisioning when missing."""
     from app.database.models import User
@@ -72,10 +95,7 @@ async def _get_or_create_local_user(user_id: str):
 
         primary_email = st_user.emails[0] if st_user.emails else ""
         username, display_name = _derive_username_and_display_name(primary_email, user_id)
-
-        username_result = await db_session.execute(select(User).where(User.username == username))
-        if username_result.scalar_one_or_none() is not None:
-            username = f"{username}-{user_id[:8]}"
+        username = await _find_available_username(db_session, username, user_id)
 
         try:
             local_user = await create_user(

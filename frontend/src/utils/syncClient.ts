@@ -263,8 +263,9 @@ export function syncStatusHasData(status: SyncStatusResponse): boolean {
  * push response.  Returns 0 when there are no conflicts.
  */
 export function countPushConflicts(response: SyncPushResponse): number {
-  return Object.values(response.results).reduce(
-    (total, records) => total + records.filter((r) => r.status === "conflict").length,
+  return Object.values(response.results ?? {}).reduce(
+    (total, records) =>
+      total + (records ?? []).filter((r) => r.status === "conflict").length,
     0,
   );
 }
@@ -282,9 +283,9 @@ export function extractConflictedItems(
   response: SyncPushResponse,
 ): SyncPushPayload {
   const conflicted: Record<string, Set<string>> = {};
-  for (const [entityType, results] of Object.entries(response.results)) {
+  for (const [entityType, results] of Object.entries(response.results ?? {})) {
     conflicted[entityType] = new Set(
-      results.filter((r) => r.status === "conflict").map((r) => r.id),
+      (results ?? []).filter((r) => r.status === "conflict").map((r) => r.id),
     );
   }
   const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
