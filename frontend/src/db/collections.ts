@@ -68,7 +68,15 @@ let _currentUserId: string | null = null;
  * from `OngoingSyncProvider`.
  */
 export function setSyncCollectionAuth(userId: string | null): void {
+  if (_currentUserId === userId) {
+    return;
+  }
   _currentUserId = userId;
+  // QueryCollections use staleTime=Infinity, so an auth transition from
+  // "unknown" to "authenticated" would otherwise leave already-mounted
+  // collections stuck on their initial empty snapshot until some later local
+  // mutation or manual refresh forces a pull.
+  void queryClient.invalidateQueries({ queryKey: ["sync"] });
 }
 
 export function hasSyncCollectionAuth(): boolean {
