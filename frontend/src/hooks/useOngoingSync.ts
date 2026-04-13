@@ -173,8 +173,6 @@ export function useOngoingSync(
   const retryDelayMsRef = useRef(0);
   const retryAfterRef = useRef<number | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
-  const syncedPreferencesTimestampRef = useRef<string | null>(null);
-  const hasHydratedPreferencesRef = useRef(false);
 
   /**
    * Advance the back-off delay and set the next retry window.
@@ -282,10 +280,8 @@ export function useOngoingSync(
         if (!mountedRef.current) return;
         if (pullResult) {
           onIncrementalPullRef.current?.(pullResult);
-          const syncedPreferencesTimestamp = await reconcilePreferences(fetchFn);
+          await reconcilePreferences(fetchFn);
           if (!mountedRef.current) return;
-          syncedPreferencesTimestampRef.current = syncedPreferencesTimestamp;
-          hasHydratedPreferencesRef.current = true;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
           setHasSyncError(false);
@@ -360,8 +356,6 @@ export function useOngoingSync(
     retryDelayMsRef.current = 0;
     retryAfterRef.current = null;
     setRetryAfter(null);
-    syncedPreferencesTimestampRef.current = null;
-    hasHydratedPreferencesRef.current = false;
     hasRunInitialFlushRef.current = false;
   }, [userId]);
 
