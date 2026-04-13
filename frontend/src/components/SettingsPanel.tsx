@@ -66,7 +66,16 @@ interface SettingsPanelProps {
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
   variant?: "offcanvas" | "page";
+  activeSection?: SettingsSection | null;
 }
+
+export type SettingsSection =
+  | "general"
+  | "features"
+  | "account"
+  | "sync"
+  | "data"
+  | "about";
 
 interface AccountProfile {
   id: number;
@@ -107,6 +116,7 @@ export function SettingsPanel({
   onChangeSchedule,
   onChangeTeam,
   variant = "offcanvas",
+  activeSection = null,
 }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -459,9 +469,14 @@ export function SettingsPanel({
     );
   };
 
+  const visibleSection = variant === "page" ? (activeSection ?? "general") : null;
+  const showSection = (section: SettingsSection) =>
+    visibleSection === null || visibleSection === section;
+
   const settingsBody = (
     <>
-      <div className="border-bottom">
+      {showSection("account") && (
+        <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-person-circle me-2"></i>
@@ -602,8 +617,10 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
 
-      <div className="border-bottom">
+      {showSection("sync") && (
+        <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-cloud-check me-2"></i>
@@ -667,9 +684,10 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
 
-      {/* App Preferences Section */}
-      <div className="border-bottom">
+      {showSection("general") && (
+        <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-sliders me-2"></i>
@@ -761,6 +779,7 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
     </>
   );
 
@@ -768,7 +787,8 @@ export function SettingsPanel({
     <>
       {settingsBody}
 
-      <div className="border-bottom">
+      {showSection("features") && (
+        <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-grid me-2"></i>
@@ -840,8 +860,9 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
 
-      {settings.enableCrossBorderTracking && (
+      {showSection("features") && settings.enableCrossBorderTracking && (
         <div className="border-bottom">
           <div className="p-3">
             <h6 className="text-muted mb-3">
@@ -869,7 +890,8 @@ export function SettingsPanel({
         </div>
       )}
 
-      <div className="border-bottom">
+      {showSection("about") && (
+        <div className="border-bottom">
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-info-circle me-2"></i>
@@ -929,8 +951,10 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
 
-      <div>
+      {showSection("data") && (
+        <div>
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-lightning me-2"></i>
@@ -1016,6 +1040,7 @@ export function SettingsPanel({
           </ListGroup>
         </div>
       </div>
+      )}
     </>
   );
 

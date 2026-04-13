@@ -16,6 +16,22 @@ const homeRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { section?: "general" | "features" | "account" | "sync" | "data" | "about" } => {
+    const section = typeof search.section === "string" ? search.section : undefined;
+    if (
+      section === "general" ||
+      section === "features" ||
+      section === "account" ||
+      section === "sync" ||
+      section === "data" ||
+      section === "about"
+    ) {
+      return { section };
+    }
+    return {};
+  },
   component: SettingsPage,
 });
 
