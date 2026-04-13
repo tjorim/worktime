@@ -107,7 +107,6 @@ export function CalendarView({
   // Fetch long weekend data (only for standard 9-5 schedule)
   const {
     periods: longWeekendPeriods,
-    longWeekendMap,
     loading: longWeekendLoading,
     error: longWeekendError,
   } = useLongWeekend(
@@ -463,7 +462,6 @@ export function CalendarView({
                 publicHolidays={publicHolidayMap}
                 schoolHolidays={schoolHolidayMap}
                 paydayMap={paydayMapForYear}
-                longWeekendMap={longWeekendMap}
                 workLocationMap={workLocationMap}
                 onMonthChange={setCurrentMonth}
                 onAddEvent={handleAddEventForDate}
