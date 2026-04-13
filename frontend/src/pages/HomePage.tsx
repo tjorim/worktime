@@ -1,0 +1,39 @@
+import { CurrentStatus } from "@/components/CurrentStatus";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MainTabs } from "@/components/MainTabs";
+import { useAppShellContext } from "@/contexts/AppShellContext";
+
+export function HomePage() {
+  const {
+    myTeam,
+    currentDate,
+    setCurrentDate,
+    activeTab,
+    onTabChange,
+    onChangeSchedule,
+    onChangeTeam,
+  } = useAppShellContext();
+
+  return (
+    <>
+      <ErrorBoundary>
+        <CurrentStatus
+          myTeam={myTeam}
+          onChangeTeam={onChangeTeam}
+          onChangeSchedule={onChangeSchedule}
+        />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <MainTabs
+          myTeam={myTeam}
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          onChangeSchedule={onChangeSchedule}
+          onChangeTeam={onChangeTeam}
+        />
+      </ErrorBoundary>
+    </>
+  );
+}

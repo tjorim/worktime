@@ -65,6 +65,7 @@ interface SettingsPanelProps {
   onShowAbout?: () => void;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
+  variant?: "offcanvas" | "page";
 }
 
 interface AccountProfile {
@@ -105,6 +106,7 @@ export function SettingsPanel({
   onShowAbout,
   onChangeSchedule,
   onChangeTeam,
+  variant = "offcanvas",
 }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -457,26 +459,54 @@ export function SettingsPanel({
     );
   };
 
-  return (
+  const settingsBody = (
     <>
-      <Offcanvas show={show} onHide={onHide} placement="end">
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>
-            <i className="bi bi-gear me-2"></i>
-            {m.settings_title()}
-          </Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0 d-flex flex-column">
-          {/* Account Section */}
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-person-circle me-2"></i>
-                {m.account_section_title()}
-              </h6>
-              <ListGroup variant="flush">
-                {isValidating ? (
-                  <ListGroup.Item>
+      <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-person-circle me-2"></i>
+            {m.account_section_title()}
+          </h6>
+          <ListGroup variant="flush">
+            {isValidating ? (
+              <ListGroup.Item>
+                <div className="d-flex align-items-center gap-2 text-muted small">
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  <span>{m.loading()}</span>
+                </div>
+              </ListGroup.Item>
+            ) : isAuthenticated ? (
+              <ListGroup.Item>
+                <div className="d-flex flex-column gap-3">
+                  <div className="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <div className="fw-medium">
+                        <i className="bi bi-person-check me-2 text-success"></i>
+                        {resolvedDisplayName
+                          ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
+                          : m.account_signed_in()}
+                      </div>
+                      {accountProfile?.username ? (
+                        <small className="text-muted">@{accountProfile.username}</small>
+                      ) : null}
+                    </div>
+                    <Button variant="outline-secondary" size="sm" onClick={logout}>
+                      <i className="bi bi-box-arrow-right me-1"></i>
+                      {m.auth_logout()}
+                    </Button>
+                  </div>
+
+                  {profileError ? (
+                    <Alert variant="warning" className="mb-0 py-2">
+                      {profileError}
+                    </Alert>
+                  ) : null}
+
+                  {isProfileLoading && accountProfile === null ? (
                     <div className="d-flex align-items-center gap-2 text-muted small">
                       <span
                         className="spinner-border spinner-border-sm"
@@ -485,548 +515,543 @@ export function SettingsPanel({
                       ></span>
                       <span>{m.loading()}</span>
                     </div>
-                  </ListGroup.Item>
-                ) : isAuthenticated ? (
-                  <ListGroup.Item>
-                    <div className="d-flex flex-column gap-3">
-                      <div className="d-flex justify-content-between align-items-start gap-3">
-                        <div>
-                          <div className="fw-medium">
-                            <i className="bi bi-person-check me-2 text-success"></i>
-                            {resolvedDisplayName
-                              ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
-                              : m.account_signed_in()}
-                          </div>
-                          {accountProfile?.username ? (
-                            <small className="text-muted">@{accountProfile.username}</small>
-                          ) : null}
-                        </div>
-                        <Button variant="outline-secondary" size="sm" onClick={logout}>
-                          <i className="bi bi-box-arrow-right me-1"></i>
-                          {m.auth_logout()}
-                        </Button>
-                      </div>
+                  ) : (
+                    <>
+                      <Form.Group controlId="account-display-name">
+                        <Form.Label className="fw-medium mb-1">
+                          {m.account_profile_display_name_label()}
+                        </Form.Label>
+                        <Form.Control
+                          size="sm"
+                          type="text"
+                          value={profileDraft}
+                          onChange={(event) => setProfileDraft(event.target.value)}
+                          placeholder={m.account_profile_display_name_placeholder()}
+                          disabled={accountProfile === null || isProfileSaving}
+                        />
+                        <Form.Text className="text-muted">
+                          {m.account_profile_display_name_description()}
+                        </Form.Text>
+                      </Form.Group>
 
-                      {profileError ? (
-                        <Alert variant="warning" className="mb-0 py-2">
-                          {profileError}
-                        </Alert>
-                      ) : null}
-
-                      {isProfileLoading && accountProfile === null ? (
-                        <div className="d-flex align-items-center gap-2 text-muted small">
-                          <span
-                            className="spinner-border spinner-border-sm"
-                            role="status"
-                            aria-hidden="true"
-                          ></span>
-                          <span>{m.loading()}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Form.Group controlId="account-display-name">
-                            <Form.Label className="fw-medium mb-1">
-                              {m.account_profile_display_name_label()}
-                            </Form.Label>
-                            <Form.Control
-                              size="sm"
-                              type="text"
-                              value={profileDraft}
-                              onChange={(event) => setProfileDraft(event.target.value)}
-                              placeholder={m.account_profile_display_name_placeholder()}
-                              disabled={accountProfile === null || isProfileSaving}
-                            />
-                            <Form.Text className="text-muted">
-                              {m.account_profile_display_name_description()}
-                            </Form.Text>
-                          </Form.Group>
-
-                          <div className="small text-muted d-flex flex-column gap-1">
-                            <div>
-                              <span className="fw-medium">
-                                {m.account_profile_username_label()}:
-                              </span>{" "}
-                              {accountProfile?.username ?? "—"}
-                            </div>
-                            <div>
-                              <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
-                              {accountProfile?.id ?? userId ?? "—"}
-                            </div>
-                            <div>
-                              <span className="fw-medium">{m.account_profile_role_label()}:</span>{" "}
-                              {accountProfile?.is_admin
-                                ? m.account_profile_role_admin()
-                                : m.account_profile_role_member()}
-                            </div>
-                          </div>
-
-                          <div className="d-flex gap-2 flex-wrap">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={handleSaveProfile}
-                              disabled={
-                                !hasProfileChanges || isProfileSaving || accountProfile === null
-                              }
-                            >
-                              <i className="bi bi-floppy me-1"></i>
-                              {isProfileSaving
-                                ? m.account_profile_saving_btn()
-                                : m.account_profile_save_btn()}
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </ListGroup.Item>
-                ) : (
-                  <ListGroup.Item>
-                    <div className="mb-2">
-                      <div className="fw-medium mb-1">
-                        <i className="bi bi-person-x me-2 text-muted"></i>
-                        {m.account_not_signed_in()}
-                      </div>
-                      <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
-                      <div className="d-flex flex-wrap gap-2 mb-3">
-                        <small className="text-muted">
-                          <i className="bi bi-cloud-check text-success me-1"></i>
-                          {m.account_sync_benefit_backup()}
-                        </small>
-                        <small className="text-muted">
-                          <i className="bi bi-phone text-success me-1"></i>
-                          {m.account_sync_benefit_crossdevice()}
-                        </small>
-                      </div>
-                    </div>
-                    <div className="d-flex gap-2 flex-wrap">
-                      <Button variant="primary" size="sm" onClick={triggerSignup}>
-                        <i className="bi bi-person-plus me-1"></i>
-                        {m.account_connect_btn()}
-                      </Button>
-                      <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
-                        <i className="bi bi-box-arrow-in-right me-1"></i>
-                        {m.account_sign_in_btn()}
-                      </Button>
-                    </div>
-                  </ListGroup.Item>
-                )}
-              </ListGroup>
-            </div>
-          </div>
-
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-cloud-check me-2"></i>
-                {m.sync_section_title()}
-              </h6>
-              <ListGroup variant="flush">
-                {isAuthenticated ? (
-                  <ListGroup.Item>
-                    <div className="d-flex flex-column gap-3">
-                      <div className={`fw-medium text-${syncStatus.variant}`}>
-                        <i
-                          className={`bi ${syncStatus.icon}${isSyncing ? " sync-spin" : ""} me-2`}
-                          aria-hidden="true"
-                        ></i>
-                        {syncStatus.label}
-                      </div>
                       <div className="small text-muted d-flex flex-column gap-1">
                         <div>
-                          <span className="fw-medium">{m.sync_last_synced_label()}:</span>{" "}
-                          {lastSyncedLabel}
+                          <span className="fw-medium">{m.account_profile_username_label()}:</span>{" "}
+                          {accountProfile?.username ?? "—"}
                         </div>
                         <div>
-                          <span className="fw-medium">{m.sync_pending_changes_label()}:</span>{" "}
-                          {outboxCount}
+                          <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
+                          {accountProfile?.id ?? userId ?? "—"}
                         </div>
                         <div>
-                          <span className="fw-medium">{m.sync_conflicts_label()}:</span>{" "}
-                          {conflictCount}
+                          <span className="fw-medium">{m.account_profile_role_label()}:</span>{" "}
+                          {accountProfile?.is_admin
+                            ? m.account_profile_role_admin()
+                            : m.account_profile_role_member()}
                         </div>
-                        <div>
-                          <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
-                          {accountProfile?.capabilities.backup_enabled
-                            ? m.sync_backup_status_enabled()
-                            : m.sync_backup_status_disabled()}
-                        </div>
-                        {hasSyncError && retryInSeconds !== null ? (
-                          <div>
-                            <span className="fw-medium">{m.sync_retry_in_label()}:</span>{" "}
-                            {m.sync_retry_in_seconds({ seconds: String(retryInSeconds) })}
-                          </div>
-                        ) : null}
                       </div>
+
                       <div className="d-flex gap-2 flex-wrap">
                         <Button
-                          variant="outline-primary"
+                          variant="primary"
                           size="sm"
-                          onClick={triggerPull}
-                          disabled={isSyncing}
+                          onClick={handleSaveProfile}
+                          disabled={!hasProfileChanges || isProfileSaving || accountProfile === null}
                         >
-                          <i className="bi bi-arrow-repeat me-1"></i>
-                          {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
+                          <i className="bi bi-floppy me-1"></i>
+                          {isProfileSaving
+                            ? m.account_profile_saving_btn()
+                            : m.account_profile_save_btn()}
                         </Button>
                       </div>
-                    </div>
-                  </ListGroup.Item>
-                ) : (
-                  <ListGroup.Item>
-                    <small className="text-muted">{m.sync_signed_out_description()}</small>
-                  </ListGroup.Item>
-                )}
-              </ListGroup>
-            </div>
-          </div>
+                    </>
+                  )}
+                </div>
+              </ListGroup.Item>
+            ) : (
+              <ListGroup.Item>
+                <div className="mb-2">
+                  <div className="fw-medium mb-1">
+                    <i className="bi bi-person-x me-2 text-muted"></i>
+                    {m.account_not_signed_in()}
+                  </div>
+                  <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <small className="text-muted">
+                      <i className="bi bi-cloud-check text-success me-1"></i>
+                      {m.account_sync_benefit_backup()}
+                    </small>
+                    <small className="text-muted">
+                      <i className="bi bi-phone text-success me-1"></i>
+                      {m.account_sync_benefit_crossdevice()}
+                    </small>
+                  </div>
+                </div>
+                <div className="d-flex gap-2 flex-wrap">
+                  <Button variant="primary" size="sm" onClick={triggerSignup}>
+                    <i className="bi bi-person-plus me-1"></i>
+                    {m.account_connect_btn()}
+                  </Button>
+                  <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
+                    <i className="bi bi-box-arrow-in-right me-1"></i>
+                    {m.account_sign_in_btn()}
+                  </Button>
+                </div>
+              </ListGroup.Item>
+            )}
+          </ListGroup>
+        </div>
+      </div>
 
-          {/* App Preferences Section */}
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-sliders me-2"></i>
-                {m.preferences_title()}
-              </h6>
-              <ListGroup variant="flush">
-                <ListGroup.Item className="">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">{m.time_format_label()}</div>
-                      <small className="text-muted">{m.time_format_description()}</small>
-                    </div>
-                    <ButtonGroup size="sm" aria-label={m.time_format_label()}>
-                      <Button
-                        variant={settings.timeFormat === "24h" ? "primary" : "outline-secondary"}
-                        aria-pressed={settings.timeFormat === "24h"}
-                        onClick={() => updateTimeFormat("24h")}
-                      >
-                        24h
-                      </Button>
-                      <Button
-                        variant={settings.timeFormat === "12h" ? "primary" : "outline-secondary"}
-                        aria-pressed={settings.timeFormat === "12h"}
-                        onClick={() => updateTimeFormat("12h")}
-                      >
-                        12h
-                      </Button>
-                    </ButtonGroup>
+      <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-cloud-check me-2"></i>
+            {m.sync_section_title()}
+          </h6>
+          <ListGroup variant="flush">
+            {isAuthenticated ? (
+              <ListGroup.Item>
+                <div className="d-flex flex-column gap-3">
+                  <div className={`fw-medium text-${syncStatus.variant}`}>
+                    <i
+                      className={`bi ${syncStatus.icon}${isSyncing ? " sync-spin" : ""} me-2`}
+                      aria-hidden="true"
+                    ></i>
+                    {syncStatus.label}
                   </div>
-                </ListGroup.Item>
-                <ListGroup.Item className="">
-                  <div className="d-flex justify-content-between align-items-center">
+                  <div className="small text-muted d-flex flex-column gap-1">
                     <div>
-                      <div className="fw-medium">{m.theme_label()}</div>
-                      <small className="text-muted">{m.theme_description()}</small>
+                      <span className="fw-medium">{m.sync_last_synced_label()}:</span>{" "}
+                      {lastSyncedLabel}
                     </div>
-                    <ButtonGroup size="sm" aria-label={m.theme_label()}>
-                      <Button
-                        variant={settings.theme === "auto" ? "primary" : "outline-secondary"}
-                        aria-pressed={settings.theme === "auto"}
-                        onClick={() => updateTheme("auto")}
-                      >
-                        <i className="bi bi-circle-half me-1"></i>
-                        {m.theme_auto()}
-                      </Button>
-                      <Button
-                        variant={settings.theme === "light" ? "primary" : "outline-secondary"}
-                        aria-pressed={settings.theme === "light"}
-                        onClick={() => updateTheme("light")}
-                      >
-                        <i className="bi bi-sun me-1"></i>
-                        {m.theme_light()}
-                      </Button>
-                      <Button
-                        variant={settings.theme === "dark" ? "primary" : "outline-secondary"}
-                        aria-pressed={settings.theme === "dark"}
-                        onClick={() => updateTheme("dark")}
-                      >
-                        <i className="bi bi-moon me-1"></i>
-                        {m.theme_dark()}
-                      </Button>
-                    </ButtonGroup>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item className="">
-                  <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">{m.language_label()}</div>
-                      <small className="text-muted">{m.language_description()}</small>
+                      <span className="fw-medium">{m.sync_pending_changes_label()}:</span>{" "}
+                      {outboxCount}
                     </div>
-                    <ButtonGroup size="sm" aria-label={m.language_label()}>
-                      <Button
-                        variant={getLocale() === "en" ? "primary" : "outline-secondary"}
-                        aria-pressed={getLocale() === "en"}
-                        onClick={() => setLocale("en")}
-                      >
-                        EN
-                      </Button>
-                      <Button
-                        variant={getLocale() === "nl" ? "primary" : "outline-secondary"}
-                        aria-pressed={getLocale() === "nl"}
-                        onClick={() => setLocale("nl")}
-                      >
-                        NL
-                      </Button>
-                    </ButtonGroup>
-                  </div>
-                </ListGroup.Item>
-              </ListGroup>
-            </div>
-          </div>
-
-          {/* Feature Toggles */}
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-grid me-2"></i>
-                {m.features_title()}
-              </h6>
-              <ListGroup variant="flush">
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
                     <div>
-                      <div className="fw-medium">{m.time_off_label()}</div>
-                      <small className="text-muted">{m.time_off_description()}</small>
+                      <span className="fw-medium">{m.sync_conflicts_label()}:</span>{" "}
+                      {conflictCount}
                     </div>
-                    <Form.Check
-                      type="switch"
-                      id="toggle-timeoff"
-                      checked={settings.enableTimeOff}
-                      onChange={(event) => updateTimeOffEnabled(event.target.checked)}
-                      aria-label="Toggle time off"
-                    />
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item>
-                  <div className="d-flex flex-column gap-2">
-                    <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
+                      {accountProfile?.capabilities.backup_enabled
+                        ? m.sync_backup_status_enabled()
+                        : m.sync_backup_status_disabled()}
+                    </div>
+                    {hasSyncError && retryInSeconds !== null ? (
                       <div>
-                        <div className="fw-medium">{m.time_tracking_label()}</div>
-                        <small className="text-muted">{m.time_tracking_description()}</small>
+                        <span className="fw-medium">{m.sync_retry_in_label()}:</span>{" "}
+                        {m.sync_retry_in_seconds({ seconds: String(retryInSeconds) })}
                       </div>
-                      <Form.Check
-                        type="switch"
-                        id="toggle-timetracking"
-                        checked={settings.enableTimeTracking}
-                        onChange={(event) => updateTimeTrackingEnabled(event.target.checked)}
-                        aria-label="Toggle time tracking"
-                      />
-                    </div>
+                    ) : null}
                   </div>
-                </ListGroup.Item>
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">{m.personal_gantt_label()}</div>
-                      <small className="text-muted">{m.personal_gantt_description()}</small>
-                    </div>
-                    <Form.Check
-                      type="switch"
-                      id="toggle-gantt"
-                      checked={settings.enableGantt}
-                      onChange={(event) => updateGanttEnabled(event.target.checked)}
-                      aria-label="Toggle personal gantt"
-                    />
+                  <div className="d-flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={triggerPull}
+                      disabled={isSyncing}
+                    >
+                      <i className="bi bi-arrow-repeat me-1"></i>
+                      {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
+                    </Button>
                   </div>
-                </ListGroup.Item>
-                <ListGroup.Item>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">{m.cross_border_tracking_label()}</div>
-                      <small className="text-muted">{m.cross_border_tracking_description()}</small>
-                    </div>
-                    <Form.Check
-                      type="switch"
-                      id="toggle-crossborder"
-                      checked={settings.enableCrossBorderTracking}
-                      onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
-                      aria-label="Toggle cross-border tracking"
-                    />
-                  </div>
-                </ListGroup.Item>
-              </ListGroup>
-            </div>
-          </div>
+                </div>
+              </ListGroup.Item>
+            ) : (
+              <ListGroup.Item>
+                <small className="text-muted">{m.sync_signed_out_description()}</small>
+              </ListGroup.Item>
+            )}
+          </ListGroup>
+        </div>
+      </div>
 
-          {/* Cross-Border Setup Section — only shown when the feature is enabled */}
-          {settings.enableCrossBorderTracking && (
-            <div className="border-bottom">
-              <div className="p-3">
-                <h6 className="text-muted mb-3">
-                  <i className="bi bi-globe me-2"></i>
-                  {m.cross_border_setup_label()}
-                </h6>
-                <small className="text-muted d-block mb-3">
-                  {m.cross_border_setup_description()}
-                </small>
-                <ListGroup variant="flush">
-                  <CountrySelectItem
-                    label={m.home_country_label()}
-                    description={m.home_country_description()}
-                    value={settings.homeCountry ?? null}
-                    onUpdate={updateHomeCountry}
-                    ariaLabel={m.home_country_label()}
-                  />
-                  <CountrySelectItem
-                    label={m.office_country_label()}
-                    description={m.office_country_description()}
-                    value={settings.officeCountry ?? null}
-                    onUpdate={updateOfficeCountry}
-                    ariaLabel={m.office_country_label()}
-                  />
-                </ListGroup>
+      {/* App Preferences Section */}
+      <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-sliders me-2"></i>
+            {m.preferences_title()}
+          </h6>
+          <ListGroup variant="flush">
+            <ListGroup.Item className="">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.time_format_label()}</div>
+                  <small className="text-muted">{m.time_format_description()}</small>
+                </div>
+                <ButtonGroup size="sm" aria-label={m.time_format_label()}>
+                  <Button
+                    variant={settings.timeFormat === "24h" ? "primary" : "outline-secondary"}
+                    aria-pressed={settings.timeFormat === "24h"}
+                    onClick={() => updateTimeFormat("24h")}
+                  >
+                    24h
+                  </Button>
+                  <Button
+                    variant={settings.timeFormat === "12h" ? "primary" : "outline-secondary"}
+                    aria-pressed={settings.timeFormat === "12h"}
+                    onClick={() => updateTimeFormat("12h")}
+                  >
+                    12h
+                  </Button>
+                </ButtonGroup>
               </div>
-            </div>
-          )}
+            </ListGroup.Item>
+            <ListGroup.Item className="">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.theme_label()}</div>
+                  <small className="text-muted">{m.theme_description()}</small>
+                </div>
+                <ButtonGroup size="sm" aria-label={m.theme_label()}>
+                  <Button
+                    variant={settings.theme === "auto" ? "primary" : "outline-secondary"}
+                    aria-pressed={settings.theme === "auto"}
+                    onClick={() => updateTheme("auto")}
+                  >
+                    <i className="bi bi-circle-half me-1"></i>
+                    {m.theme_auto()}
+                  </Button>
+                  <Button
+                    variant={settings.theme === "light" ? "primary" : "outline-secondary"}
+                    aria-pressed={settings.theme === "light"}
+                    onClick={() => updateTheme("light")}
+                  >
+                    <i className="bi bi-sun me-1"></i>
+                    {m.theme_light()}
+                  </Button>
+                  <Button
+                    variant={settings.theme === "dark" ? "primary" : "outline-secondary"}
+                    aria-pressed={settings.theme === "dark"}
+                    onClick={() => updateTheme("dark")}
+                  >
+                    <i className="bi bi-moon me-1"></i>
+                    {m.theme_dark()}
+                  </Button>
+                </ButtonGroup>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item className="">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.language_label()}</div>
+                  <small className="text-muted">{m.language_description()}</small>
+                </div>
+                <ButtonGroup size="sm" aria-label={m.language_label()}>
+                  <Button
+                    variant={getLocale() === "en" ? "primary" : "outline-secondary"}
+                    aria-pressed={getLocale() === "en"}
+                    onClick={() => setLocale("en")}
+                  >
+                    EN
+                  </Button>
+                  <Button
+                    variant={getLocale() === "nl" ? "primary" : "outline-secondary"}
+                    aria-pressed={getLocale() === "nl"}
+                    onClick={() => setLocale("nl")}
+                  >
+                    NL
+                  </Button>
+                </ButtonGroup>
+              </div>
+            </ListGroup.Item>
+          </ListGroup>
+        </div>
+      </div>
+    </>
+  );
 
-          {/* Information Section */}
-          <div className="border-bottom">
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-info-circle me-2"></i>
-                {m.information_title()}
-              </h6>
-              <ListGroup variant="flush">
-                <ListGroup.Item action onClick={handleChangelogClick}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-stars me-2"></i>
-                        {m.whats_new_label()}
-                      </div>
-                      <small className="text-muted">{m.whats_new_description()}</small>
-                    </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={handleAboutHelpClick}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-question-circle me-2"></i>
-                        {m.about_help_label()}
-                      </div>
-                      <small className="text-muted">{m.about_help_description()}</small>
-                    </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={handleShortcutsClick}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-keyboard me-2"></i>
-                        {m.keyboard_shortcuts_label()}
-                      </div>
-                      <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
-                    </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                {isDevMode && (
-                  <ListGroup.Item action onClick={handleDevOptionsClick}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-code-slash me-2"></i>
-                          {m.developer_options_label()}
-                        </div>
-                        <small className="text-muted">{m.developer_options_description()}</small>
-                      </div>
-                      <i className="bi bi-chevron-right text-muted"></i>
-                    </div>
-                  </ListGroup.Item>
-                )}
-              </ListGroup>
-            </div>
-          </div>
+  const settingsSections = (
+    <>
+      {settingsBody}
 
-          {/* Quick Actions Section */}
-          <div>
-            <div className="p-3">
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-lightning me-2"></i>
-                {m.quick_actions_title()}
-              </h6>
-              <ListGroup variant="flush">
-                {onChangeSchedule && (
-                  <ListGroup.Item action onClick={handleChangeSchedule}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-calendar-week me-2"></i>
-                          {m.select_schedule_label()}
-                        </div>
-                        <small className="text-muted">{m.select_schedule_description()}</small>
-                      </div>
-                      <i className="bi bi-chevron-right text-muted"></i>
-                    </div>
-                  </ListGroup.Item>
-                )}
-                {onChangeTeam && hasMultipleTeams(scheduleType) && (
-                  <ListGroup.Item action onClick={handleChangeTeam}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <div className="fw-medium">
-                          <i className="bi bi-person-gear me-2"></i>
-                          {m.select_team_label()}
-                        </div>
-                        <small className="text-muted">{m.select_team_description()}</small>
-                      </div>
-                      <i className="bi bi-chevron-right text-muted"></i>
-                    </div>
-                  </ListGroup.Item>
-                )}
-                <ListGroup.Item action onClick={handleShareApp}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-share me-2"></i>
-                        {m.share_app_label()}
-                      </div>
-                      <small className="text-muted">{m.share_app_description()}</small>
-                    </div>
-                    <i className="bi bi-share text-muted"></i>
+      <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-grid me-2"></i>
+            {m.features_title()}
+          </h6>
+          <ListGroup variant="flush">
+            <ListGroup.Item>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.time_off_label()}</div>
+                  <small className="text-muted">{m.time_off_description()}</small>
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="toggle-timeoff"
+                  checked={settings.enableTimeOff}
+                  onChange={(event) => updateTimeOffEnabled(event.target.checked)}
+                  aria-label="Toggle time off"
+                />
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item>
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div className="fw-medium">{m.time_tracking_label()}</div>
+                    <small className="text-muted">{m.time_tracking_description()}</small>
                   </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={() => setShowBackupDialog(true)}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-download me-2"></i>
-                        {m.backup_app_data_label()}
-                      </div>
-                      <small className="text-muted">{m.backup_app_data_description()}</small>
-                    </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-upload me-2"></i>
-                        {m.restore_backup_label()}
-                      </div>
-                      <small className="text-muted">{m.restore_backup_description()}</small>
-                    </div>
-                    <i className="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </ListGroup.Item>
-                <ListGroup.Item action onClick={handleClearData} className="text-danger">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-trash me-2"></i>
-                        {m.reset_settings_label()}
-                      </div>
-                      <small className="text-muted">{m.reset_settings_description()}</small>
-                    </div>
-                    <i className="bi bi-arrow-clockwise text-danger"></i>
-                  </div>
-                </ListGroup.Item>
-              </ListGroup>
-            </div>
+                  <Form.Check
+                    type="switch"
+                    id="toggle-timetracking"
+                    checked={settings.enableTimeTracking}
+                    onChange={(event) => updateTimeTrackingEnabled(event.target.checked)}
+                    aria-label="Toggle time tracking"
+                  />
+                </div>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.personal_gantt_label()}</div>
+                  <small className="text-muted">{m.personal_gantt_description()}</small>
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="toggle-gantt"
+                  checked={settings.enableGantt}
+                  onChange={(event) => updateGanttEnabled(event.target.checked)}
+                  aria-label="Toggle personal gantt"
+                />
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.cross_border_tracking_label()}</div>
+                  <small className="text-muted">{m.cross_border_tracking_description()}</small>
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="toggle-crossborder"
+                  checked={settings.enableCrossBorderTracking}
+                  onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
+                  aria-label="Toggle cross-border tracking"
+                />
+              </div>
+            </ListGroup.Item>
+          </ListGroup>
+        </div>
+      </div>
+
+      {settings.enableCrossBorderTracking && (
+        <div className="border-bottom">
+          <div className="p-3">
+            <h6 className="text-muted mb-3">
+              <i className="bi bi-globe me-2"></i>
+              {m.cross_border_setup_label()}
+            </h6>
+            <small className="text-muted d-block mb-3">{m.cross_border_setup_description()}</small>
+            <ListGroup variant="flush">
+              <CountrySelectItem
+                label={m.home_country_label()}
+                description={m.home_country_description()}
+                value={settings.homeCountry ?? null}
+                onUpdate={updateHomeCountry}
+                ariaLabel={m.home_country_label()}
+              />
+              <CountrySelectItem
+                label={m.office_country_label()}
+                description={m.office_country_description()}
+                value={settings.officeCountry ?? null}
+                onUpdate={updateOfficeCountry}
+                ariaLabel={m.office_country_label()}
+              />
+            </ListGroup>
           </div>
+        </div>
+      )}
+
+      <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-info-circle me-2"></i>
+            {m.information_title()}
+          </h6>
+          <ListGroup variant="flush">
+            <ListGroup.Item action onClick={handleChangelogClick}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-stars me-2"></i>
+                    {m.whats_new_label()}
+                  </div>
+                  <small className="text-muted">{m.whats_new_description()}</small>
+                </div>
+                <i className="bi bi-chevron-right text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item action onClick={handleAboutHelpClick}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-question-circle me-2"></i>
+                    {m.about_help_label()}
+                  </div>
+                  <small className="text-muted">{m.about_help_description()}</small>
+                </div>
+                <i className="bi bi-chevron-right text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item action onClick={handleShortcutsClick}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-keyboard me-2"></i>
+                    {m.keyboard_shortcuts_label()}
+                  </div>
+                  <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
+                </div>
+                <i className="bi bi-chevron-right text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            {isDevMode && (
+              <ListGroup.Item action onClick={handleDevOptionsClick}>
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div className="fw-medium">
+                      <i className="bi bi-code-slash me-2"></i>
+                      {m.developer_options_label()}
+                    </div>
+                    <small className="text-muted">{m.developer_options_description()}</small>
+                  </div>
+                  <i className="bi bi-chevron-right text-muted"></i>
+                </div>
+              </ListGroup.Item>
+            )}
+          </ListGroup>
+        </div>
+      </div>
+
+      <div>
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-lightning me-2"></i>
+            {m.quick_actions_title()}
+          </h6>
+          <ListGroup variant="flush">
+            {onChangeSchedule && (
+              <ListGroup.Item action onClick={handleChangeSchedule}>
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div className="fw-medium">
+                      <i className="bi bi-calendar-week me-2"></i>
+                      {m.select_schedule_label()}
+                    </div>
+                    <small className="text-muted">{m.select_schedule_description()}</small>
+                  </div>
+                  <i className="bi bi-chevron-right text-muted"></i>
+                </div>
+              </ListGroup.Item>
+            )}
+            {onChangeTeam && hasMultipleTeams(scheduleType) && (
+              <ListGroup.Item action onClick={handleChangeTeam}>
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div className="fw-medium">
+                      <i className="bi bi-person-gear me-2"></i>
+                      {m.select_team_label()}
+                    </div>
+                    <small className="text-muted">{m.select_team_description()}</small>
+                  </div>
+                  <i className="bi bi-chevron-right text-muted"></i>
+                </div>
+              </ListGroup.Item>
+            )}
+            <ListGroup.Item action onClick={handleShareApp}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-share me-2"></i>
+                    {m.share_app_label()}
+                  </div>
+                  <small className="text-muted">{m.share_app_description()}</small>
+                </div>
+                <i className="bi bi-share text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item action onClick={() => setShowBackupDialog(true)}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-download me-2"></i>
+                    {m.backup_app_data_label()}
+                  </div>
+                  <small className="text-muted">{m.backup_app_data_description()}</small>
+                </div>
+                <i className="bi bi-chevron-right text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-upload me-2"></i>
+                    {m.restore_backup_label()}
+                  </div>
+                  <small className="text-muted">{m.restore_backup_description()}</small>
+                </div>
+                <i className="bi bi-chevron-right text-muted"></i>
+              </div>
+            </ListGroup.Item>
+            <ListGroup.Item action onClick={handleClearData} className="text-danger">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">
+                    <i className="bi bi-trash me-2"></i>
+                    {m.reset_settings_label()}
+                  </div>
+                  <small className="text-muted">{m.reset_settings_description()}</small>
+                </div>
+                <i className="bi bi-arrow-clockwise text-danger"></i>
+              </div>
+            </ListGroup.Item>
+          </ListGroup>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {variant === "page" ? (
+        <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-bottom bg-body-tertiary">
+            <h2 className="h5 mb-1">{m.settings_title()}</h2>
+            <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
+          </div>
+          <div>{settingsSections}</div>
+          <div className="px-4 py-3 text-center border-top">
+            <button
+              type="button"
+              className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
+              onClick={handleVersionClick}
+              onKeyDown={handleVersionKeyDown}
+              style={{ cursor: "pointer", userSelect: "none" }}
+              aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
+            >
+              {m.footer_version({ version: CONFIG.VERSION })}
+            </button>
+            <small className="text-muted">{m.footer_built_by()}</small>
+          </div>
+        </section>
+      ) : (
+        <Offcanvas show={show} onHide={onHide} placement="end">
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>
+            <i className="bi bi-gear me-2"></i>
+            {m.settings_title()}
+          </Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body className="p-0 d-flex flex-column">
+          {settingsSections}
 
           {/* App Version Footer */}
           <div className="mt-auto p-3 text-center border-top">
@@ -1044,6 +1069,7 @@ export function SettingsPanel({
           </div>
         </Offcanvas.Body>
       </Offcanvas>
+      )}
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={handleChangelogClose} />
