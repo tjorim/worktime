@@ -28,7 +28,7 @@ dev = [
   "httpx>=0.28",
   "anyio>=4",
   "ruff>=0.9",
-  "ty~=0.0.26",
+  "ty~=0.0.31",
 ]
 
 [tool.hatch.build.targets.wheel]
