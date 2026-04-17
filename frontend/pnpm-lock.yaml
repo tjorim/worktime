@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@tanstack/query-db-collection':
-        specifier: ^1.0.35
-        version: 1.0.35(@tanstack/query-core@5.99.0)(typescript@6.0.2)
+        specifier: ^1.0.36
+        version: 1.0.36(@tanstack/query-core@5.99.0)(typescript@6.0.2)
       '@tanstack/react-db':
         specifier: ^0.1.82
         version: 0.1.82(react@19.2.5)(typescript@6.0.2)
@@ -969,6 +969,11 @@ packages:
     peerDependencies:
       typescript: '>=4.7'
 
+  '@tanstack/db@0.6.5':
+    resolution: {integrity: sha512-gtCuAo4UtC9SR/kTMu5fVEff6qZ2R1FZi9X7MybtHKA6wve7RePifGG6qBI4OmMB+7juT5/+glNbnqZOrG0/pg==}
+    peerDependencies:
+      typescript: '>=4.7'
+
   '@tanstack/pacer-lite@0.2.1':
     resolution: {integrity: sha512-3PouiFjR4B6x1c969/Pl4ZIJleof1M0n6fNX8NRiC9Sqv1g06CVDlEaXUR4212ycGFyfq4q+t8Gi37Xy+z34iQ==}
     engines: {node: '>=18'}
@@ -976,8 +981,8 @@ packages:
   '@tanstack/query-core@5.99.0':
     resolution: {integrity: sha512-3Jv3WQG0BCcH7G+7lf/bP8QyBfJOXeY+T08Rin3GZ1bshvwlbPt7NrDHMEzGdKIOmOzvIQmxjk28YEQX60k7pQ==}
 
-  '@tanstack/query-db-collection@1.0.35':
-    resolution: {integrity: sha512-hfVwlkJoVlhJSCZm9B/KdkYvxl9twVrEt3q0IkXSEmblvslE/+vFQ7IoRciKKKBbJb6PoT2tQFD8FhxFvcypLg==}
+  '@tanstack/query-db-collection@1.0.36':
+    resolution: {integrity: sha512-WOHSZeqFOflWpMxp7ndu8x3M8GyLieWyUsS1fReG8wv6I/1MGOz1j3+XNlGoeoWolYF2hV4l324/dB9BxjAwxw==}
     peerDependencies:
       '@tanstack/query-core': ^5.0.0
       typescript: '>=4.7'
@@ -2785,14 +2790,21 @@ snapshots:
       '@tanstack/pacer-lite': 0.2.1
       typescript: 6.0.2
 
+  '@tanstack/db@0.6.5(typescript@6.0.2)':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@tanstack/db-ivm': 0.1.18(typescript@6.0.2)
+      '@tanstack/pacer-lite': 0.2.1
+      typescript: 6.0.2
+
   '@tanstack/pacer-lite@0.2.1': {}
 
   '@tanstack/query-core@5.99.0': {}
 
-  '@tanstack/query-db-collection@1.0.35(@tanstack/query-core@5.99.0)(typescript@6.0.2)':
+  '@tanstack/query-db-collection@1.0.36(@tanstack/query-core@5.99.0)(typescript@6.0.2)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db': 0.6.4(typescript@6.0.2)
+      '@tanstack/db': 0.6.5(typescript@6.0.2)
       '@tanstack/query-core': 5.99.0
       typescript: 6.0.2
 
