@@ -94,7 +94,6 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   const { isAuthenticated, userId } = useAuth();
   const {
     settings,
-    lastUsed,
     myTeam,
     scheduleType,
     hasCompletedOnboarding,
@@ -145,9 +144,10 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   // Subscribe to sync-changed signals and trigger incremental pulls.
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
 
+  // lastUsed (activeTab, scheduleView, otherSchedule) is local UI navigation state —
+  // exclude it so routine tab switches don't trigger unnecessary sync pulls.
   const preferencesSyncKey = JSON.stringify({
     settings,
-    lastUsed,
     myTeam,
     scheduleType,
     hasCompletedOnboarding,

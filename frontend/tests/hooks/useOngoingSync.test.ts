@@ -822,11 +822,13 @@ describe("useOngoingSync", () => {
       });
 
       // Assert push-before-pull call order: first call is the outbox flush
-      // (push endpoint), second is the incremental pull (pull endpoint).
+      // (push endpoint), second is the incremental pull (pull endpoint),
+      // third is the preferences fetch (/api/preferences).
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      const [firstCall, secondCall] = mockFetch.mock.calls as [[string], [string]];
+      const [firstCall, secondCall, thirdCall] = mockFetch.mock.calls as [[string], [string], [string]];
       expect(firstCall[0]).toBe("/api/sync/push");
       expect(secondCall[0]).toMatch(/^\/api\/sync\/pull/);
+      expect(thirdCall[0]).toBe("/api/preferences");
     });
   });
 

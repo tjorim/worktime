@@ -105,6 +105,12 @@ export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") =>
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
 
+function parseTimestampMs(ts: string | null | undefined): number {
+  if (!ts) return 0;
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
 async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
   const [localPrefs, serverPrefs] = await Promise.all([
     Promise.resolve(buildLocalPreferencesPayload()),
@@ -114,12 +120,15 @@ async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
   const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
   const serverTimestamp = serverPrefs?.client_updated_at ?? null;
 
-  if (localPrefs && (!serverPrefs || localPrefs.clientUpdatedAt > serverPrefs.client_updated_at)) {
+  const localMs = parseTimestampMs(localTimestamp);
+  const serverMs = parseTimestampMs(serverTimestamp);
+
+  if (localPrefs && (!serverPrefs || localMs > serverMs)) {
     const pushed = await pushPreferences(fetchFn, localPrefs.data, localPrefs.clientUpdatedAt);
     return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
   }
 
-  if (serverPrefs && (!localPrefs || serverPrefs.client_updated_at > localPrefs.clientUpdatedAt)) {
+  if (serverPrefs && (!localPrefs || serverMs > localMs)) {
     applyPreferencesPull(serverPrefs.data);
     return serverPrefs.client_updated_at;
   }

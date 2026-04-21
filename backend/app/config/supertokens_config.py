@@ -32,7 +32,7 @@ from supertokens_python.types import RecipeUserId
 from app.config import settings
 from app.database.engine import get_session_factory
 from app.schemas import UserCreate
-from app.services.db_service import create_user
+from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +111,15 @@ async def _get_or_create_local_user(user_id: str):
                 ),
                 supertokens_user_id=user_id,
             )
-        except IntegrityError:
-            # Handles a race: two concurrent first-logins for the same ST user.
-            # Re-fetch by supertokens_user_id only — if the conflict was on the
-            # username constraint instead (shouldn't happen after _find_available_username
-            # reserved a free slot, but possible under extreme concurrency), the fetch
-            # returns None and we re-raise so the caller gets a clean error.
+        except (IntegrityError, ConflictError):
+            # Handles two concurrent-first-login races:
+            # - IntegrityError: both requests passed the pre-insert username check and the
+            #   DB unique constraint fired on the second INSERT.
+            # - ConflictError: create_user's pre-insert get_user_by_username check found the
+            #   name already taken (a different user claimed it after _find_available_username
+            #   returned the candidate, or a concurrent first-login for the same ST user won).
+            # In both cases, re-fetch by supertokens_user_id: if the winner was this same ST
+            # user, return their row.  If not (name taken by a different user), re-raise.
             await db_session.rollback()
             result = await db_session.execute(
                 select(User).where(User.supertokens_user_id == user_id),
