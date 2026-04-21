@@ -164,9 +164,7 @@ export function DailyTaskList({
       const current = tasks[i];
       const next = tasks[i + 1];
       if (!current?.stopTime || !next) continue;
-      const stopMin = dayjs(current.stopTime).hour() * 60 + dayjs(current.stopTime).minute();
-      const nextStartMin = dayjs(next.startTime).hour() * 60 + dayjs(next.startTime).minute();
-      const gap = nextStartMin - stopMin;
+      const gap = dayjs(next.startTime).diff(dayjs(current.stopTime), "minute");
       if (gap >= MIN_GAP_DISPLAY_MINUTES) gaps[i] = gap;
     }
 
@@ -174,9 +172,7 @@ export function DailyTaskList({
     if (isToday && liveTime && tasks.length > 0) {
       const last = tasks[tasks.length - 1];
       if (last?.stopTime) {
-        const stopMin = dayjs(last.stopTime).hour() * 60 + dayjs(last.stopTime).minute();
-        const nowMin = liveTime.hour() * 60 + liveTime.minute();
-        const gap = nowMin - stopMin;
+        const gap = liveTime.diff(dayjs(last.stopTime), "minute");
         if (gap >= MIN_GAP_DISPLAY_MINUTES) toNow = gap;
       }
     }
