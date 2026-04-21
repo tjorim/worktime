@@ -83,6 +83,7 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
         text="dark"
         pill
         className="flex-shrink-0"
+        title={m.tt_gap_aria({ minutes: durationMinutes })}
         style={{ fontSize: "0.75rem" }}
       >
         <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
