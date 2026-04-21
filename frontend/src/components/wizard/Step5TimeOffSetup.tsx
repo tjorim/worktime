@@ -21,6 +21,7 @@ interface Step5TimeOffSetupProps {
   isInvalid: boolean;
   onPrev: () => void;
   onNext: () => void;
+  isLastStep?: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
@@ -34,6 +35,7 @@ export function Step5TimeOffSetup({
   isInvalid,
   onPrev,
   onNext,
+  isLastStep,
   firstButtonRef,
 }: Step5TimeOffSetupProps) {
   const currentYear = dayjs().year();
@@ -131,8 +133,8 @@ export function Step5TimeOffSetup({
           className="order-1 order-sm-2"
           disabled={isEnabled && isInvalid}
         >
-          {m.continue()}
-          <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          {isLastStep ? m.wizard_finish_setup() : m.continue()}
+          <i className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`} aria-hidden="true"></i>
         </Button>
       </div>
     </>

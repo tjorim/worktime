@@ -9,6 +9,7 @@ interface Step7GanttSetupProps {
   onToggle: (enabled: boolean) => void;
   onPrev: () => void;
   onNext: () => void;
+  isLastStep?: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
@@ -17,6 +18,7 @@ export function Step7GanttSetup({
   onToggle,
   onPrev,
   onNext,
+  isLastStep,
   firstButtonRef,
 }: Step7GanttSetupProps) {
   return (
@@ -55,7 +57,8 @@ export function Step7GanttSetup({
           <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {m.continue()} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+          {isLastStep ? m.wizard_finish_setup() : m.continue()}
+          <i className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`} aria-hidden="true"></i>
         </Button>
       </div>
     </>

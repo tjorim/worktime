@@ -178,6 +178,7 @@ export function WelcomeWizard({
   const visibleSteps = getVisibleSteps(wizardContext);
   const isCurrentStepVisible = visibleSteps.some((s) => s.id === currentStep);
   const effectiveStep = isCurrentStepVisible ? currentStep : (visibleSteps[0]?.id ?? startStep);
+  const isLastStep = getStepConfig(effectiveStep).getNextStep(wizardContext) === null;
 
   // Reset to startStep when modal opens
   const handleModalEntered = () => {
@@ -368,6 +369,7 @@ export function WelcomeWizard({
                 isInvalid={vacationValidation.isInvalid}
                 onPrev={prevStep}
                 onNext={handleTimeOffComplete}
+                isLastStep={isLastStep}
                 firstButtonRef={firstButtonRef}
               />
             )}
@@ -377,6 +379,7 @@ export function WelcomeWizard({
                 onToggle={setIsTimeTrackingEnabled}
                 onPrev={prevStep}
                 onComplete={handleTimeTrackingComplete}
+                isLastStep={isLastStep}
                 firstButtonRef={firstButtonRef}
               />
             )}
@@ -386,6 +389,7 @@ export function WelcomeWizard({
                 onToggle={setIsGanttEnabled}
                 onPrev={prevStep}
                 onNext={nextStep}
+                isLastStep={isLastStep}
                 firstButtonRef={firstButtonRef}
               />
             )}
@@ -399,6 +403,7 @@ export function WelcomeWizard({
                 onOfficeCountryChange={setOfficeCountry}
                 onPrev={prevStep}
                 onComplete={handleWorkLocationComplete}
+                isLastStep={isLastStep}
                 firstButtonRef={firstButtonRef}
               />
             )}
