@@ -5,6 +5,9 @@
  */
 export const BREAK_DURATION_MINUTES = 30;
 
+/** Minimum gap duration in minutes before a gap indicator is shown. */
+export const MIN_GAP_DISPLAY_MINUTES = 5;
+
 /** Lunch window start in minutes from midnight (11:30). */
 const LUNCH_WINDOW_START = 11 * 60 + 30; // 690
 

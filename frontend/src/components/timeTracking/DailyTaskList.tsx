@@ -15,7 +15,7 @@ import {
 } from "./constants";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
-import { BREAK_DURATION_MINUTES } from "./timeUtils";
+import { BREAK_DURATION_MINUTES, MIN_GAP_DISPLAY_MINUTES } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
 
 export type EditRequest = {
@@ -62,6 +62,36 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
         {liveTime.format("HH:mm")}
       </Badge>
       <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
+    </div>
+  );
+}
+
+function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
+  return (
+    <div
+      className="d-flex align-items-center gap-2 px-3 py-1"
+      role="separator"
+      aria-label={m.tt_gap_aria({ minutes: durationMinutes })}
+      data-testid="gap-indicator"
+    >
+      <div
+        className="flex-grow-1"
+        style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
+      />
+      <Badge
+        bg="warning"
+        text="dark"
+        pill
+        className="flex-shrink-0"
+        style={{ fontSize: "0.75rem" }}
+      >
+        <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
+        {m.tt_gap_label({ minutes: durationMinutes })}
+      </Badge>
+      <div
+        className="flex-grow-1"
+        style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
+      />
     </div>
   );
 }
@@ -122,6 +152,35 @@ export function DailyTaskList({
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
+
+  // gapAfter[i] = gap in minutes between tasks[i].stopTime and tasks[i+1].startTime (if >= threshold)
+  // gapToNow = gap in minutes between the last stopped task and liveTime (today only)
+  const { gapAfter, gapToNow } = useMemo(() => {
+    const gaps: (number | null)[] = tasks.map(() => null);
+
+    for (let i = 0; i < tasks.length - 1; i++) {
+      const current = tasks[i];
+      const next = tasks[i + 1];
+      if (!current?.stopTime || !next) continue;
+      const stopMin = dayjs(current.stopTime).hour() * 60 + dayjs(current.stopTime).minute();
+      const nextStartMin = dayjs(next.startTime).hour() * 60 + dayjs(next.startTime).minute();
+      const gap = nextStartMin - stopMin;
+      if (gap >= MIN_GAP_DISPLAY_MINUTES) gaps[i] = gap;
+    }
+
+    let toNow: number | null = null;
+    if (isToday && liveTime && tasks.length > 0) {
+      const last = tasks[tasks.length - 1];
+      if (last?.stopTime) {
+        const stopMin = dayjs(last.stopTime).hour() * 60 + dayjs(last.stopTime).minute();
+        const nowMin = liveTime.hour() * 60 + liveTime.minute();
+        const gap = nowMin - stopMin;
+        if (gap >= MIN_GAP_DISPLAY_MINUTES) toNow = gap;
+      }
+    }
+
+    return { gapAfter: gaps, gapToNow: toNow };
+  }, [tasks, isToday, liveTime]);
 
   const nowPosition = useMemo<NowPosition>(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
@@ -378,6 +437,7 @@ export function DailyTaskList({
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
+            const gap = gapAfter[index] ?? null;
             return (
               <Fragment key={task.id}>
                 <ListGroup.Item
@@ -439,6 +499,9 @@ export function DailyTaskList({
                     </div>
                   </div>
                 </ListGroup.Item>
+                {gap != null && <GapIndicator durationMinutes={gap} />}
+                {gapToNow != null &&
+                  index === tasks.length - 1 && <GapIndicator durationMinutes={gapToNow} />}
                 {nowPosition?.type === "separator" &&
                   nowPosition.insertBeforeIndex === index + 1 &&
                   liveTime && <NowIndicator liveTime={liveTime} />}
