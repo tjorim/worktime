@@ -6,7 +6,6 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
-import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -64,10 +63,8 @@ function CountrySelectItem({
 }
 
 interface SettingsPanelProps {
-  show: boolean;
   onHide: () => void;
   onShowAbout?: () => void;
-  variant?: "offcanvas" | "page";
   activeSection?: SettingsSection | null;
 }
 
@@ -112,10 +109,8 @@ function clearCollectionById(collection: {
  * @returns The rendered settings panel element
  */
 export function SettingsPanel({
-  show,
   onHide,
   onShowAbout,
-  variant = "offcanvas",
   activeSection = null,
 }: SettingsPanelProps) {
   const [showChangelog, setShowChangelog] = useState(false);
@@ -159,7 +154,7 @@ export function SettingsPanel({
   } = useSettings();
 
   useEffect(() => {
-    if (!show || !isAuthenticated) {
+    if (!isAuthenticated) {
       setAccountProfile(null);
       setProfileDraft("");
       setProfileError(null);
@@ -195,7 +190,7 @@ export function SettingsPanel({
     return () => {
       isCancelled = true;
     };
-  }, [show, isAuthenticated, fetchFn]);
+  }, [isAuthenticated, fetchFn]);
 
   const handleSaveProfile = async () => {
     if (!accountProfile) return;
@@ -473,9 +468,8 @@ export function SettingsPanel({
     );
   };
 
-  const visibleSection = variant === "page" ? (activeSection ?? "general") : null;
-  const showSection = (section: SettingsSection) =>
-    visibleSection === null || visibleSection === section;
+  const visibleSection = activeSection ?? "general";
+  const showSection = (section: SettingsSection) => visibleSection === section;
 
   const settingsBody = (
     <>
@@ -1115,55 +1109,26 @@ export function SettingsPanel({
 
   return (
     <>
-      {variant === "page" ? (
-        <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-bottom bg-body-tertiary">
-            <h2 className="h5 mb-1">{m.settings_title()}</h2>
-            <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
-          </div>
-          <div>{settingsSections}</div>
-          <div className="px-4 py-3 text-center border-top">
-            <button
-              type="button"
-              className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
-              onClick={handleVersionClick}
-              onKeyDown={handleVersionKeyDown}
-              style={{ cursor: "pointer", userSelect: "none" }}
-              aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
-            >
-              {m.footer_version({ version: CONFIG.VERSION })}
-            </button>
-            <small className="text-muted">{m.footer_built_by()}</small>
-          </div>
-        </section>
-      ) : (
-        <Offcanvas show={show} onHide={onHide} placement="end">
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>
-            <i className="bi bi-gear me-2"></i>
-            {m.settings_title()}
-          </Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0 d-flex flex-column">
-          {settingsSections}
-
-          {/* App Version Footer */}
-          <div className="mt-auto p-3 text-center border-top">
-            <button
-              type="button"
-              className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
-              onClick={handleVersionClick}
-              onKeyDown={handleVersionKeyDown}
-              style={{ cursor: "pointer", userSelect: "none" }}
-              aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
-            >
-              {m.footer_version({ version: CONFIG.VERSION })}
-            </button>
-            <small className="text-muted">{m.footer_built_by()}</small>
-          </div>
-        </Offcanvas.Body>
-      </Offcanvas>
-      )}
+      <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-bottom bg-body-tertiary">
+          <h2 className="h5 mb-1">{m.settings_title()}</h2>
+          <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
+        </div>
+        <div>{settingsSections}</div>
+        <div className="px-4 py-3 text-center border-top">
+          <button
+            type="button"
+            className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
+            onClick={handleVersionClick}
+            onKeyDown={handleVersionKeyDown}
+            style={{ cursor: "pointer", userSelect: "none" }}
+            aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
+          >
+            {m.footer_version({ version: CONFIG.VERSION })}
+          </button>
+          <small className="text-muted">{m.footer_built_by()}</small>
+        </div>
+      </section>
 
       {/* Changelog Modal */}
       <ChangelogModal show={showChangelog} onHide={handleChangelogClose} />

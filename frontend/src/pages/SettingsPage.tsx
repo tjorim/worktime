@@ -82,8 +82,6 @@ export function SettingsPage() {
 
           <div className="col-12 col-lg-8 col-xl-9">
             <SettingsPanel
-              show
-              variant="page"
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
