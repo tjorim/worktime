@@ -21,7 +21,7 @@ const SETTINGS_SECTIONS: Array<{
 export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
-  const { openAbout, onChangeSchedule, onChangeTeam } = useAppShellContext();
+  const { openAbout } = useAppShellContext();
   const activeSection = search.section ?? "general";
 
   const sectionMeta = useMemo(() => {
@@ -87,8 +87,6 @@ export function SettingsPage() {
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
             />
           </div>
         </div>

@@ -191,13 +191,9 @@ function AppContent() {
           setMyTeam(null);
           // Provide appropriate message based on the reason for reset
           if (scheduleChanged) {
-            showInfo(
-              "Your team selection has been reset because you changed schedules. Please select your team again.",
-            );
+            showInfo(m.schedule_team_reset_changed());
           } else {
-            showInfo(
-              "Your team selection has been reset because the selected schedule does not use team assignments.",
-            );
+            showInfo(m.schedule_team_reset_no_teams());
           }
         }
       }

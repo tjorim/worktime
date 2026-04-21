@@ -18,7 +18,10 @@ import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { BackupDialog } from "./BackupDialog";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { CONFIG } from "@/utils/config";
-import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { hasMultipleTeams, getTeamCountForOption } from "@/utils/scheduleUtils";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "./ChangelogModal";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
@@ -64,8 +67,6 @@ interface SettingsPanelProps {
   show: boolean;
   onHide: () => void;
   onShowAbout?: () => void;
-  onChangeSchedule?: () => void;
-  onChangeTeam?: () => void;
   variant?: "offcanvas" | "page";
   activeSection?: SettingsSection | null;
 }
@@ -114,8 +115,6 @@ export function SettingsPanel({
   show,
   onHide,
   onShowAbout,
-  onChangeSchedule,
-  onChangeTeam,
   variant = "offcanvas",
   activeSection = null,
 }: SettingsPanelProps) {
@@ -145,6 +144,9 @@ export function SettingsPanel({
   const {
     settings,
     scheduleType,
+    myTeam,
+    setMyTeam,
+    setScheduleType,
     updateTimeFormat,
     updateTheme,
     updateTimeOffEnabled,
@@ -451,15 +453,16 @@ export function SettingsPanel({
     onShowAbout?.();
   };
 
-  const handleChangeSchedule = () => {
-    // Close first to avoid stacked overlays if the callback opens another UI surface
-    onHide();
-    onChangeSchedule?.();
-  };
-
-  const handleChangeTeam = () => {
-    onHide();
-    onChangeTeam?.();
+  const handleScheduleChange = (schedule: ScheduleOption) => {
+    const scheduleChanged = schedule !== scheduleType;
+    if (scheduleChanged && myTeam !== null) {
+      setMyTeam(null);
+      toast?.showInfo(m.schedule_team_reset_changed());
+    } else if (!hasMultipleTeams(schedule) && myTeam !== null) {
+      setMyTeam(null);
+      toast?.showInfo(m.schedule_team_reset_no_teams());
+    }
+    setScheduleType(schedule);
   };
 
   // Share handler
@@ -691,6 +694,77 @@ export function SettingsPanel({
 
       {showSection("general") && (
         <div className="border-bottom">
+        <div className="p-3">
+          <h6 className="text-muted mb-3">
+            <i className="bi bi-calendar-week me-2"></i>
+            {m.select_schedule_label()}
+          </h6>
+          <ListGroup variant="flush" className="mb-3">
+            {SCHEDULE_OPTIONS.map((schedule) => {
+              const isSelected = scheduleType === schedule.value;
+              const item = (
+                <ListGroup.Item
+                  key={schedule.value}
+                  action
+                  active={isSelected}
+                  disabled={!schedule.isAvailable}
+                  onClick={() => schedule.isAvailable && handleScheduleChange(schedule.value)}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <div>
+                    <div className="fw-semibold d-flex align-items-center gap-2">
+                      {schedule.title}
+                      {!schedule.isAvailable && (
+                        <Badge bg="secondary" className="fw-normal" style={{ fontSize: "0.65em" }}>
+                          {m.wizard_coming_soon_badge()}
+                        </Badge>
+                      )}
+                    </div>
+                    <small className={isSelected ? "text-white-50" : "text-muted"}>
+                      {schedule.description}
+                    </small>
+                  </div>
+                  {isSelected && <i className="bi bi-check-lg ms-2 flex-shrink-0" aria-hidden="true" />}
+                </ListGroup.Item>
+              );
+              return schedule.isAvailable ? item : (
+                <OverlayTrigger
+                  key={schedule.value}
+                  placement="top"
+                  overlay={<Tooltip>{m.wizard_schedule_coming_soon_tooltip()}</Tooltip>}
+                >
+                  <span>{item}</span>
+                </OverlayTrigger>
+              );
+            })}
+          </ListGroup>
+
+          {scheduleType && hasMultipleTeams(scheduleType) && (
+            <>
+              <h6 className="text-muted mb-3">
+                <i className="bi bi-people me-2"></i>
+                {m.select_team_label()}
+              </h6>
+              <div className="d-flex flex-wrap gap-2 mb-3">
+                {Array.from({ length: getTeamCountForOption(scheduleType) }, (_, i) => i + 1).map((team) => (
+                  <Button
+                    key={team}
+                    size="sm"
+                    variant={myTeam === team ? "primary" : "outline-secondary"}
+                    aria-pressed={myTeam === team}
+                    aria-label={m.wizard_team_btn_aria({ team: String(team) })}
+                    onClick={() => setMyTeam(team)}
+                  >
+                    {m.wizard_team_btn_label({ team: String(team) })}
+                  </Button>
+                ))}
+              </div>
+              {myTeam === null && (
+                <small className="text-muted">{m.settings_no_team_selected()}</small>
+              )}
+            </>
+          )}
+        </div>
         <div className="p-3">
           <h6 className="text-muted mb-3">
             <i className="bi bi-sliders me-2"></i>
@@ -984,34 +1058,6 @@ export function SettingsPanel({
             {m.quick_actions_title()}
           </h6>
           <ListGroup variant="flush">
-            {onChangeSchedule && (
-              <ListGroup.Item action onClick={handleChangeSchedule}>
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="fw-medium">
-                      <i className="bi bi-calendar-week me-2"></i>
-                      {m.select_schedule_label()}
-                    </div>
-                    <small className="text-muted">{m.select_schedule_description()}</small>
-                  </div>
-                  <i className="bi bi-chevron-right text-muted"></i>
-                </div>
-              </ListGroup.Item>
-            )}
-            {onChangeTeam && hasMultipleTeams(scheduleType) && (
-              <ListGroup.Item action onClick={handleChangeTeam}>
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="fw-medium">
-                      <i className="bi bi-person-gear me-2"></i>
-                      {m.select_team_label()}
-                    </div>
-                    <small className="text-muted">{m.select_team_description()}</small>
-                  </div>
-                  <i className="bi bi-chevron-right text-muted"></i>
-                </div>
-              </ListGroup.Item>
-            )}
             <ListGroup.Item action onClick={handleShareApp}>
               <div className="d-flex justify-content-between align-items-center">
                 <div>
