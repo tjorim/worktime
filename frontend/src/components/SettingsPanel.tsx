@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import Alert from "react-bootstrap/Alert";
+import Row from "react-bootstrap/Row";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +28,8 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
 import { dayjs } from "@/utils/dateTimeUtils";
+import type { VacationAllowanceUnit } from "@/utils/vacationCalculations";
+import { getEffectiveAmount } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
@@ -146,6 +150,8 @@ export function SettingsPanel({
     scheduleType,
     updateTimeFormat,
     updateTheme,
+    updateNotifications,
+    updateVacationAllowance,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -154,6 +160,56 @@ export function SettingsPanel({
     updateOfficeCountry,
     resetSettings,
   } = useSettings();
+
+  const currentYear = dayjs().year();
+  const [vacationAmountInput, setVacationAmountInput] = useState(() =>
+    getEffectiveAmount(settings.vacationAllowance, currentYear).toString(),
+  );
+  const [vacationHoursPerDayInput, setVacationHoursPerDayInput] = useState(() =>
+    settings.vacationAllowance.hoursPerDay.toString(),
+  );
+
+  useEffect(() => {
+    setVacationAmountInput(getEffectiveAmount(settings.vacationAllowance, currentYear).toString());
+  }, [settings.vacationAllowance, currentYear]);
+
+  useEffect(() => {
+    setVacationHoursPerDayInput(settings.vacationAllowance.hoursPerDay.toString());
+  }, [settings.vacationAllowance.hoursPerDay]);
+
+  const vacationAmountValue = Number(vacationAmountInput);
+  const isVacationAmountInvalid =
+    vacationAmountInput !== "" &&
+    !(Number.isFinite(vacationAmountValue) && vacationAmountValue >= 0);
+
+  const vacationHoursPerDayValue = Number(vacationHoursPerDayInput);
+  const isVacationHoursPerDayInvalid =
+    vacationHoursPerDayInput !== "" &&
+    !(Number.isFinite(vacationHoursPerDayValue) && vacationHoursPerDayValue >= 1);
+
+  const handleVacationAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target.value;
+    setVacationAmountInput(input);
+    const value = Number(input);
+    if (input !== "" && Number.isFinite(value) && value >= 0) {
+      updateVacationAllowance({
+        yearlyAmounts: { ...settings.vacationAllowance.yearlyAmounts, [String(currentYear)]: value },
+      });
+    }
+  };
+
+  const handleVacationUnitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    updateVacationAllowance({ unit: event.target.value as VacationAllowanceUnit });
+  };
+
+  const handleVacationHoursPerDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target.value;
+    setVacationHoursPerDayInput(input);
+    const value = Number(input);
+    if (input !== "" && Number.isFinite(value) && value >= 1) {
+      updateVacationAllowance({ hoursPerDay: value });
+    }
+  };
 
   useEffect(() => {
     if (!show || !isAuthenticated) {
@@ -778,6 +834,21 @@ export function SettingsPanel({
                 </ButtonGroup>
               </div>
             </ListGroup.Item>
+            <ListGroup.Item>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-medium">{m.notifications_label()}</div>
+                  <small className="text-muted">{m.notifications_description()}</small>
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="toggle-notifications"
+                  checked={settings.notifications === "on"}
+                  onChange={(event) => updateNotifications(event.target.checked ? "on" : "off")}
+                  aria-label={m.notifications_label()}
+                />
+              </div>
+            </ListGroup.Item>
           </ListGroup>
         </div>
       </div>
@@ -888,6 +959,73 @@ export function SettingsPanel({
                 ariaLabel={m.office_country_label()}
               />
             </ListGroup>
+          </div>
+        </div>
+      )}
+
+      {showSection("features") && settings.enableTimeOff && (
+        <div className="border-bottom">
+          <div className="p-3">
+            <h6 className="text-muted mb-3">
+              <i className="bi bi-calendar-check me-2" aria-hidden="true"></i>
+              {m.timeoff_allowance_settings()}
+            </h6>
+            <small className="text-muted d-block mb-3">
+              {m.settings_vacation_allowance_description()}
+            </small>
+            <Form.Group className="mb-3" controlId="settings-vacation-amount">
+              <Form.Label>{m.timeoff_allowance_for_year({ year: currentYear })}</Form.Label>
+              <Form.Control
+                type="number"
+                min={0}
+                step={0.5}
+                value={vacationAmountInput}
+                onChange={handleVacationAmountChange}
+                placeholder={m.timeoff_allowance_placeholder()}
+                isInvalid={isVacationAmountInvalid}
+              />
+              {isVacationAmountInvalid && (
+                <Form.Control.Feedback type="invalid">
+                  {m.timeoff_allowance_invalid()}
+                </Form.Control.Feedback>
+              )}
+              <Form.Text className="text-muted">
+                {m.timeoff_allowance_help({ year: currentYear })}
+              </Form.Text>
+            </Form.Group>
+            <Row className="g-2">
+              <Col xs={6}>
+                <Form.Group controlId="settings-vacation-unit">
+                  <Form.Label>{m.timeoff_unit()}</Form.Label>
+                  <Form.Select
+                    value={settings.vacationAllowance.unit}
+                    onChange={handleVacationUnitChange}
+                  >
+                    <option value="days">{m.timeoff_vacation_unit_days()}</option>
+                    <option value="hours">{m.timeoff_vacation_unit_hours()}</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col xs={6}>
+                <Form.Group controlId="settings-vacation-hoursperday">
+                  <Form.Label>{m.timeoff_hours_per_day()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    step={0.5}
+                    value={vacationHoursPerDayInput}
+                    onChange={handleVacationHoursPerDayChange}
+                    isInvalid={isVacationHoursPerDayInvalid}
+                  />
+                  {isVacationHoursPerDayInvalid && (
+                    <Form.Control.Feedback type="invalid">
+                      {m.timeoff_hours_per_day_invalid()}
+                    </Form.Control.Feedback>
+                  )}
+                  <Form.Text className="text-muted">{m.timeoff_hours_per_day_help()}</Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
           </div>
         </div>
       )}
