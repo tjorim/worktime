@@ -466,15 +466,23 @@ export function DailyTaskList({
                           </Badge>
                         )}
                         {task.includesBreak && (
-                          <Badge
-                            bg="secondary"
-                            className="ms-2"
-                            title={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
-                            aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id={`break-badge-${task.id}`}>
+                                {m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                              </Tooltip>
+                            }
                           >
-                            <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                            {BREAK_DURATION_MINUTES}min
-                          </Badge>
+                            <Badge
+                              bg="secondary"
+                              className="ms-2"
+                              aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                            >
+                              <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                              {BREAK_DURATION_MINUTES}min
+                            </Badge>
+                          </OverlayTrigger>
                         )}
                       </div>
                       <div className="small text-muted">
