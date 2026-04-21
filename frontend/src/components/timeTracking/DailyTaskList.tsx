@@ -2,8 +2,10 @@ import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -67,6 +69,7 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
 }
 
 function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
+  const tooltipId = useId();
   return (
     <div
       className="d-flex align-items-center gap-2 px-3 py-1"
@@ -78,17 +81,15 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
         className="flex-grow-1"
         style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
       />
-      <Badge
-        bg="warning"
-        text="dark"
-        pill
-        className="flex-shrink-0"
-        title={m.tt_gap_aria({ minutes: durationMinutes })}
-        style={{ fontSize: "0.75rem" }}
+      <OverlayTrigger
+        placement="top"
+        overlay={<Tooltip id={tooltipId}>{m.tt_gap_aria({ minutes: durationMinutes })}</Tooltip>}
       >
-        <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
-        {m.tt_gap_label({ minutes: durationMinutes })}
-      </Badge>
+        <Badge bg="warning" text="dark" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }}>
+          <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
+          {m.tt_gap_label({ minutes: durationMinutes })}
+        </Badge>
+      </OverlayTrigger>
       <div
         className="flex-grow-1"
         style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
