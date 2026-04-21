@@ -113,7 +113,7 @@
   "language_description": "Display language",
   "notifications_label": "Notifications",
   "notifications_description": "Browser notifications for app events",
-  "settings_vacation_allowance_description": "Configure your annual vacation allowance for time off tracking",
+  "timeoff_days_logged_in": "days logged in {year}",
   "loading": "Loading...",
   "error": "Error",
   "close": "Close",

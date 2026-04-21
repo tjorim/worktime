@@ -106,7 +106,7 @@
   "language_description": "Weergavetaal",
   "notifications_label": "Meldingen",
   "notifications_description": "Browsermeldingen voor app-gebeurtenissen",
-  "settings_vacation_allowance_description": "Configureer uw jaarlijks verloftegoed voor het bijhouden van vrije tijd",
+  "timeoff_days_logged_in": "dagen geregistreerd in {year}",
   "loading": "Laden...",
   "error": "Fout",
   "close": "Sluiten",

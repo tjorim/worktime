@@ -74,7 +74,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
   const helpText = getViewModeHelpText();
   const { rawText, entries, addEntries, updateEntry, deleteEntry, deleteEntries, importHday } =
     useEventStore();
-  const { settings, lastUsed, updateVacationAllowance, updateLastTimeOffView } = useSettings();
+  const { lastUsed, updateLastTimeOffView } = useSettings();
   const { options } = useDeveloperOptions();
   const toast = useToast();
 
@@ -510,11 +510,7 @@ export function TimeOffView({ isActive = false }: TimeOffViewProps) {
 
       {viewMode === "stats" && (
         <div role="region" aria-label={m.timeoff_vacation_stats()}>
-          <TimeOffStatsView
-            entries={entries}
-            allowance={settings.vacationAllowance}
-            onUpdateAllowance={updateVacationAllowance}
-          />
+          <TimeOffStatsView entries={entries} />
         </div>
       )}
 
