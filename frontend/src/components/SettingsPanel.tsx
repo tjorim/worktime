@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
@@ -146,7 +147,6 @@ export function SettingsPanel({
     scheduleType,
     updateTimeFormat,
     updateTheme,
-    updateNotifications,
     updateTimeOffEnabled,
     updateTimeTrackingEnabled,
     updateGanttEnabled,
@@ -779,17 +779,22 @@ export function SettingsPanel({
                 </ButtonGroup>
               </div>
             </ListGroup.Item>
-            <ListGroup.Item>
+            <ListGroup.Item className="text-muted">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="fw-medium">{m.notifications_label()}</div>
-                  <small className="text-muted">{m.notifications_description()}</small>
+                  <div className="fw-medium d-flex align-items-center gap-2">
+                    {m.notifications_label()}
+                    <Badge bg="secondary" pill className="fw-normal" style={{ fontSize: "0.65em" }}>
+                      {m.wizard_coming_soon_badge()}
+                    </Badge>
+                  </div>
+                  <small>{m.notifications_description()}</small>
                 </div>
                 <Form.Check
                   type="switch"
                   id="toggle-notifications"
-                  checked={settings.notifications === "on"}
-                  onChange={(event) => updateNotifications(event.target.checked ? "on" : "off")}
+                  checked={false}
+                  disabled
                   aria-label={m.notifications_label()}
                 />
               </div>
