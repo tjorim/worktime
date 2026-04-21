@@ -1000,6 +1000,7 @@
   "sync_backup_status_label": "Backup",
   "sync_backup_status_enabled": "Enabled",
   "sync_backup_status_disabled": "Unavailable",
+  "sync_backup_status_unknown": "Checking...",
   "sync_retry_in_label": "Retry",
   "sync_retry_in_seconds": "In {seconds}s",
   "sync_manual_pull_btn": "Sync now",

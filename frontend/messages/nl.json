@@ -978,6 +978,7 @@
   "sync_backup_status_label": "Back-up",
   "sync_backup_status_enabled": "Ingeschakeld",
   "sync_backup_status_disabled": "Niet beschikbaar",
+  "sync_backup_status_unknown": "Controleren...",
   "sync_retry_in_label": "Opnieuw proberen",
   "sync_retry_in_seconds": "Over {seconds}s",
   "sync_manual_pull_btn": "Nu synchroniseren",

@@ -30,6 +30,8 @@ import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/h
 import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
 import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
 
+const PREFERENCES_PULL_DEBOUNCE_MS = 250;
+
 export interface OngoingSyncContextType extends OngoingSyncState {
   /**
    * Push a single change payload to the server (or queue it for later flush).
@@ -156,17 +158,35 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     crossBorderAnnouncementSeen,
   });
   const hasSeenPreferencesStateRef = useRef(false);
+  const pendingPullTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isSyncEstablished || !isAuthenticated) {
       hasSeenPreferencesStateRef.current = false;
+      if (pendingPullTimerRef.current !== null) {
+        clearTimeout(pendingPullTimerRef.current);
+        pendingPullTimerRef.current = null;
+      }
       return;
     }
     if (!hasSeenPreferencesStateRef.current) {
       hasSeenPreferencesStateRef.current = true;
       return;
     }
-    triggerPull();
+    if (pendingPullTimerRef.current !== null) {
+      clearTimeout(pendingPullTimerRef.current);
+    }
+    pendingPullTimerRef.current = setTimeout(() => {
+      pendingPullTimerRef.current = null;
+      triggerPull();
+    }, PREFERENCES_PULL_DEBOUNCE_MS);
+
+    return () => {
+      if (pendingPullTimerRef.current !== null) {
+        clearTimeout(pendingPullTimerRef.current);
+        pendingPullTimerRef.current = null;
+      }
+    };
   }, [isSyncEstablished, isAuthenticated, preferencesSyncKey, triggerPull]);
 
   const value = useMemo<OngoingSyncContextType>(

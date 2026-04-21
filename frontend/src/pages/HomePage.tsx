@@ -15,7 +15,7 @@ export function HomePage() {
   } = useAppShellContext();
 
   return (
-    <>
+    <main id="main-content" role="main">
       <ErrorBoundary>
         <CurrentStatus
           myTeam={myTeam}
@@ -34,6 +34,6 @@ export function HomePage() {
           onChangeTeam={onChangeTeam}
         />
       </ErrorBoundary>
-    </>
+    </main>
   );
 }

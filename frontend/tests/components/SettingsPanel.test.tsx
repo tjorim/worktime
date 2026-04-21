@@ -18,6 +18,7 @@ const mockRedirectToAuth = vi.mocked((await import("supertokens-auth-react")).re
 const mockSignOut = vi.mocked(
   (await import("supertokens-auth-react/recipe/session")).default.signOut,
 );
+let useSessionContextSpy: { mockRestore: () => void } | undefined;
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -35,6 +36,8 @@ function renderWithProviders(ui: React.ReactElement) {
 
 describe("SettingsPanel Account Section", () => {
   afterEach(() => {
+    useSessionContextSpy?.mockRestore();
+    useSessionContextSpy = undefined;
     vi.clearAllMocks();
   });
 
@@ -66,7 +69,7 @@ describe("SettingsPanel Account Section", () => {
   it("calls signOut when Sign Out is clicked (authenticated state)", async () => {
     // Override the session mock for this test to simulate an authenticated user
     const sessionMod = await import("supertokens-auth-react/recipe/session");
-    const useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
+    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
       loading: false,
       doesSessionExist: true,
       userId: "u1",
@@ -80,13 +83,11 @@ describe("SettingsPanel Account Section", () => {
     expect(screen.getByText("Signed in as Alice")).toBeInTheDocument();
     await user.click(screen.getByText("Sign Out"));
     expect(mockSignOut).toHaveBeenCalled();
-
-    useSessionContextSpy.mockRestore();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {
     const sessionMod = await import("supertokens-auth-react/recipe/session");
-    const useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
+    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
       loading: false,
       doesSessionExist: true,
       userId: "u1",
@@ -109,8 +110,6 @@ describe("SettingsPanel Account Section", () => {
         (_content, element) => element?.textContent === "Pending changes: 0",
       ),
     ).toBeInTheDocument();
-
-    useSessionContextSpy.mockRestore();
   });
 
   it("saves profile changes for authenticated users", async () => {
@@ -129,7 +128,7 @@ describe("SettingsPanel Account Section", () => {
     );
 
     const sessionMod = await import("supertokens-auth-react/recipe/session");
-    const useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
+    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
       loading: false,
       doesSessionExist: true,
       userId: "u1",
@@ -147,8 +146,6 @@ describe("SettingsPanel Account Section", () => {
     await user.click(screen.getByText("Save profile"));
 
     expect(await screen.findByDisplayValue("Alice Updated")).toBeInTheDocument();
-
-    useSessionContextSpy.mockRestore();
   });
 
   it("renders account section title regardless of auth state", () => {

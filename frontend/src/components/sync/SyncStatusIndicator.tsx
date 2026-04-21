@@ -53,7 +53,7 @@ export function SyncStatusIndicator() {
     return () => clearInterval(id);
   }, [hasSyncError, retryAfter]);
 
-  // Icon, label, and variant are stable between minute ticks — memoize them.
+  // Icon, label, and tone are stable between minute ticks — memoize them.
   const { icon, label, tone } = useMemo(() => {
     if (hasSyncError)
       return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), tone: "danger" };

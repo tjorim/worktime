@@ -339,7 +339,7 @@ export function extractConflictedItems(
  */
 export function maxConflictServerTimestamp(response: SyncPushResponse): string | undefined {
   let max: number | undefined;
-  for (const results of Object.values(response.results)) {
+  for (const results of Object.values(response.results ?? {})) {
     for (const r of results) {
       if (r.status === "conflict" && r.server_updated_at) {
         const ms = new Date(r.server_updated_at).getTime();

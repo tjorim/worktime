@@ -652,9 +652,11 @@ export function SettingsPanel({
                     </div>
                     <div>
                       <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
-                      {accountProfile?.capabilities.backup_enabled
+                      {accountProfile?.capabilities?.backup_enabled === true
                         ? m.sync_backup_status_enabled()
-                        : m.sync_backup_status_disabled()}
+                        : accountProfile?.capabilities?.backup_enabled === false
+                          ? m.sync_backup_status_disabled()
+                          : m.sync_backup_status_unknown()}
                     </div>
                     {hasSyncError && retryInSeconds !== null ? (
                       <div>

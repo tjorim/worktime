@@ -16,7 +16,7 @@ const emptySyncPayload = () => ({
 });
 
 const emptyPushResponse = { results: {} };
-const failedResponse = { ok: false };
+const failedResponse = { ok: false, json: async () => null };
 
 const incrementalPullResponse = {
   labels: [],

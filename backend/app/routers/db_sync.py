@@ -140,6 +140,8 @@ async def events_endpoint(
         try:
             while True:
                 # Check disconnect state at the start of each loop iteration.
+                # Client disconnects may only be observed once per
+                # `_SSE_KEEPALIVE_TIMEOUT` interval while waiting for events.
                 # `request.is_disconnected()` returns a boolean, so keeping one
                 # long-lived task and treating "task completed" as "client
                 # disconnected" is incorrect: a completed task may simply mean
@@ -149,9 +151,9 @@ async def events_endpoint(
                     break
 
                 queue_task = asyncio.create_task(queue.get())
-                done, _ = await asyncio.wait({queue_task}, timeout=_SSE_KEEPALIVE_TIMEOUT)
+                await asyncio.wait({queue_task}, timeout=_SSE_KEEPALIVE_TIMEOUT)
 
-                if queue_task in done:
+                if queue_task.done():
                     yield queue_task.result()
                 else:
                     # Timeout — send keepalive and loop
