@@ -41,7 +41,7 @@ export function Step5TimeOffSetup({
   return (
     <>
       <div className="text-center mb-4">
-        <i className="bi bi-calendar-check display-4 text-primary"></i>
+        <i className="bi bi-calendar-check display-4 text-primary" aria-hidden="true"></i>
         <h4 className="mt-3">{m.wizard_timeoff_heading()}</h4>
         <p className="text-muted">{m.wizard_timeoff_subtitle()}</p>
       </div>
@@ -123,7 +123,7 @@ export function Step5TimeOffSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> {m.back()}
+          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button
           variant="primary"
@@ -132,7 +132,7 @@ export function Step5TimeOffSetup({
           disabled={isEnabled && isInvalid}
         >
           {m.continue()}
-          <i className="bi bi-arrow-right ms-1"></i>
+          <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
         </Button>
       </div>
     </>

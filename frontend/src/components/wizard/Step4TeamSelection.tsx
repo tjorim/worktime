@@ -57,7 +57,7 @@ export function Step4TeamSelection({
             <h6 className="mb-2">{m.wizard_team_option2_heading()}</h6>
             <p className="small text-muted mb-3">{m.wizard_team_option2_desc()}</p>
             <Button variant="outline-secondary" onClick={onSkip}>
-              <i className="bi bi-eye me-1"></i>
+              <i className="bi bi-eye me-1" aria-hidden="true"></i>
               {m.wizard_team_browse_btn()}
             </Button>
           </div>
@@ -66,7 +66,7 @@ export function Step4TeamSelection({
 
       <div className="d-flex justify-content-start mt-3">
         <Button variant="outline-secondary" size="sm" onClick={onPrev}>
-          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>
+          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")} aria-hidden="true"></i>
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
       </div>
