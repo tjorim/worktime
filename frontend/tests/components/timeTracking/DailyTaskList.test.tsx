@@ -203,6 +203,128 @@ describe("DailyTaskList", () => {
     });
   });
 
+  describe("Gap indicator", () => {
+    const DATE = "2026-02-07";
+    const task1 = makeTask({ id: "t1", startTime: `${DATE}T09:00`, stopTime: `${DATE}T11:00` });
+    const task2 = makeTask({
+      id: "t2",
+      text: "Afternoon work",
+      startTime: `${DATE}T13:00`,
+      stopTime: `${DATE}T17:00`,
+    });
+
+    it("shows gap indicator between tasks with a gap >= 5 minutes", () => {
+      renderList([task1, task2]);
+      expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
+      expect(screen.getByText("120min gap")).toBeInTheDocument();
+    });
+
+    it("does not show gap indicator when tasks are adjacent (no gap)", () => {
+      const adjacent = makeTask({
+        id: "t2",
+        text: "Afternoon work",
+        startTime: `${DATE}T11:00`,
+        stopTime: `${DATE}T17:00`,
+      });
+      renderList([task1, adjacent]);
+      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+    });
+
+    it("does not show gap indicator when gap is below 5 minutes", () => {
+      const nearlyAdjacent = makeTask({
+        id: "t2",
+        text: "Afternoon work",
+        startTime: `${DATE}T11:03`,
+        stopTime: `${DATE}T17:00`,
+      });
+      renderList([task1, nearlyAdjacent]);
+      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+    });
+
+    it("shows gap-to-now indicator after last stopped task on today's view", () => {
+      const liveTime = dayjs(`${DATE}T18:00`);
+      renderList([task1, task2], TEST_LABELS, { liveTime, isToday: true });
+      // Two gap indicators: one between tasks (120min) and one to now (60min)
+      const indicators = screen.getAllByTestId("gap-indicator");
+      expect(indicators).toHaveLength(2);
+      expect(screen.getByText("60min gap")).toBeInTheDocument();
+    });
+
+    it("does not show gap-to-now when isToday is false", () => {
+      const liveTime = dayjs(`${DATE}T18:00`);
+      renderList([task1, task2], TEST_LABELS, { liveTime, isToday: false });
+      // Only inter-task gap, no gap-to-now
+      const indicators = screen.getAllByTestId("gap-indicator");
+      expect(indicators).toHaveLength(1);
+    });
+
+    it("does not show gap-to-now when last task is still running", () => {
+      const runningTask = makeTask({
+        id: "t2",
+        text: "Running work",
+        startTime: `${DATE}T13:00`,
+        stopTime: undefined,
+      });
+      const liveTime = dayjs(`${DATE}T18:00`);
+      renderList([task1, runningTask], TEST_LABELS, { liveTime, isToday: true });
+      // Only inter-task gap, no gap-to-now (running task has no stopTime)
+      const indicators = screen.getAllByTestId("gap-indicator");
+      expect(indicators).toHaveLength(1);
+    });
+
+    it("shows gap indicator when gap is exactly 5 minutes (threshold boundary)", () => {
+      const atThreshold = makeTask({
+        id: "t2",
+        text: "Afternoon work",
+        startTime: `${DATE}T11:05`,
+        stopTime: `${DATE}T17:00`,
+      });
+      renderList([task1, atThreshold]);
+      expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
+      expect(screen.getByText("5min gap")).toBeInTheDocument();
+    });
+
+    it("does not show gap indicator when gap is exactly 4 minutes (below threshold)", () => {
+      const belowThreshold = makeTask({
+        id: "t2",
+        text: "Afternoon work",
+        startTime: `${DATE}T11:04`,
+        stopTime: `${DATE}T17:00`,
+      });
+      renderList([task1, belowThreshold]);
+      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+    });
+
+    it("GapIndicator has correct aria-label with gap duration", () => {
+      renderList([task1, task2]);
+      const indicator = screen.getByTestId("gap-indicator");
+      expect(indicator).toHaveAttribute("aria-label", "120 minutes of untracked time");
+    });
+
+    it("shows multiple gap indicators between three tasks with gaps", () => {
+      const task3 = makeTask({
+        id: "t3",
+        text: "Evening work",
+        startTime: `${DATE}T19:00`,
+        stopTime: `${DATE}T20:00`,
+      });
+      renderList([task1, task2, task3]);
+      // gap between t1 and t2 (120min), gap between t2 and t3 (120min)
+      const indicators = screen.getAllByTestId("gap-indicator");
+      expect(indicators).toHaveLength(2);
+    });
+
+    it("does not show any gap indicator when there is only one task", () => {
+      renderList([task1]);
+      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+    });
+
+    it("does not show any gap indicator when the task list is empty", () => {
+      renderList([]);
+      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+    });
+  });
+
   describe("Now indicator", () => {
     const DATE = "2026-02-07";
     const task1 = makeTask({ id: "t1", startTime: `${DATE}T09:00`, stopTime: `${DATE}T11:00` });

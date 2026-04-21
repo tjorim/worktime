@@ -4,9 +4,21 @@ import {
   isValidRange,
   calculateDurationHours,
   overlaps,
+  MIN_GAP_DISPLAY_MINUTES,
+  BREAK_DURATION_MINUTES,
 } from "@/components/timeTracking/timeUtils";
 
 describe("Time Tracking Utils", () => {
+  describe("exported constants", () => {
+    it("BREAK_DURATION_MINUTES is 30", () => {
+      expect(BREAK_DURATION_MINUTES).toBe(30);
+    });
+
+    it("MIN_GAP_DISPLAY_MINUTES is 5", () => {
+      expect(MIN_GAP_DISPLAY_MINUTES).toBe(5);
+    });
+  });
+
   describe("timeToMinutes", () => {
     it("should convert valid time to minutes", () => {
       expect(timeToMinutes("00:00")).toBe(0);

@@ -68,21 +68,36 @@ describe("TimelineProgressBar", () => {
     });
   });
 
-  describe("break legend", () => {
-    it("shows legend when tasks include a break", () => {
+
+  describe("break legend removal", () => {
+    it("does not show 'Break (30min)' legend text even when a task includes a break", () => {
       const task = makeTask({ includesBreak: true });
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      expect(screen.getByText("Break (30min)")).toBeInTheDocument();
+      expect(screen.queryByText(/Break \(30min\)/)).not.toBeInTheDocument();
     });
 
-    it("does not show legend when no tasks have breaks", () => {
+    it("does not show break legend text for tasks without a break", () => {
       const task = makeTask();
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      expect(screen.queryByText("Break (30min)")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Break \(30min\)/)).not.toBeInTheDocument();
+    });
+
+    it("does not show break legend text when multiple tasks include breaks", () => {
+      const task1 = makeTask({ id: "task-1", includesBreak: true });
+      const task2 = makeTask({
+        id: "task-2",
+        startTime: "2026-02-07T09:00",
+        stopTime: "2026-02-07T11:00",
+        includesBreak: true,
+      });
+
+      render(<TimelineProgressBar tasks={[task1, task2]} labels={TEST_LABELS} />);
+
+      expect(screen.queryByText(/Break \(30min\)/)).not.toBeInTheDocument();
     });
   });
 
