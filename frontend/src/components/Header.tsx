@@ -19,8 +19,8 @@ export function Header() {
   const isSettingsPage = pathname === "/settings";
 
   const handleToggleSettings = useCallback(() => {
-    void navigate({ to: "/settings" });
-  }, [navigate]);
+    void navigate({ to: isSettingsPage ? "/" : "/settings" });
+  }, [navigate, isSettingsPage]);
 
   const handleNavigateHome = useCallback(() => {
     void navigate({ to: "/" });

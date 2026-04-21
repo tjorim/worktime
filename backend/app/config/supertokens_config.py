@@ -74,6 +74,8 @@ async def _find_available_username(db_session, base_username: str, user_id: str)
         attempt += 1
         suffix_length = min(8 + attempt - 1, len(user_id))
         suffix = user_id[:suffix_length]
+        # When user_id is shorter than the desired suffix length (atypical for UUIDs
+        # but possible in tests), we fall through to the counter-suffixed form immediately.
         if suffix_length < len(user_id):
             candidate = f"{base_username}-{suffix}"
         else:
@@ -110,6 +112,11 @@ async def _get_or_create_local_user(user_id: str):
                 supertokens_user_id=user_id,
             )
         except IntegrityError:
+            # Handles a race: two concurrent first-logins for the same ST user.
+            # Re-fetch by supertokens_user_id only — if the conflict was on the
+            # username constraint instead (shouldn't happen after _find_available_username
+            # reserved a free slot, but possible under extreme concurrency), the fetch
+            # returns None and we re-raise so the caller gets a clean error.
             await db_session.rollback()
             result = await db_session.execute(
                 select(User).where(User.supertokens_user_id == user_id),

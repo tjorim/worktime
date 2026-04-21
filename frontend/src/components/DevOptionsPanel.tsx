@@ -124,10 +124,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
         {/* Connection Configuration */}
         <div className="mb-4">
           <h6 className="mb-3">{m.dev_api_config_heading()}</h6>
-          <p className="text-muted small mb-3">
-            This panel can still test the live backend connection, but the app no longer allows
-            changing the backend API URL.
-          </p>
+          <p className="text-muted small mb-3">{m.dev_api_url_readonly()}</p>
 
           <Form.Check
             type="checkbox"

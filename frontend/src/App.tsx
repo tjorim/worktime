@@ -3,15 +3,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { queryClient } from "@/lib/queryClient";
 import { SuperTokensWrapper } from "supertokens-auth-react";
-import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
-import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
-import { WelcomeWizard, type WizardCompletionPayload } from "@/components/WelcomeWizard";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppShellProvider } from "@/contexts/AppShellContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { OngoingSyncProvider, useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
+import { OngoingSyncProvider } from "@/contexts/OngoingSyncContext";
+import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
 import { SettingsProvider, type TabKey, useSettings } from "@/contexts/SettingsContext";
 import { ToastProvider, useToast } from "@/contexts/ToastContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
@@ -23,26 +20,6 @@ import { getScheduleConfig } from "@/utils/scheduleUtils";
 import { validateVacationAllowance } from "@/utils/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/router";
-import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
-
-const AUTH_PREBUILT_UI_LIST = [EmailPasswordPreBuiltUI];
-
-/**
- * Inner component that consumes OngoingSyncContext to render the conflict
- * resolution dialog.  Must be rendered inside <OngoingSyncProvider>.
- */
-function OngoingConflictHandler() {
-  const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
-
-  return (
-    <OngoingConflictDialog
-      show={conflictCount > 0}
-      conflictCount={conflictCount}
-      conflictedPayload={conflictedPayload}
-      onResolve={resolveOngoingConflicts}
-    />
-  );
-}
 
 /**
  * The main application component for team selection and shift management.
@@ -316,33 +293,25 @@ function AppContent() {
             onTabChange: handleTabChange,
             onChangeSchedule: handleChangeSchedule,
             onChangeTeam: handleChangeTeam,
-          }}
-        >
-          <RouterProvider router={router} />
-          <WelcomeWizard
-            show={showTeamModal}
-            onTeamSelect={handleTeamSelect}
-            onScheduleSelect={handleScheduleSelect}
-            onSkip={() => {
-              setMyTeam(null);
-            }}
-            onHide={handleTeamModalHide}
-            onDefer={handleWizardDefer}
-            mode={teamModalMode}
-            startStep={
+            showTeamModal,
+            teamModalMode,
+            teamWizardStartStep:
               teamModalMode === "onboarding"
                 ? "welcome"
                 : teamModalMode === "change-schedule"
                   ? "schedule-selection"
-                  : "team-selection"
-            }
-          />
-          <FirstSyncConflictDialog
-            show={syncPhase === "conflict"}
-            onResolve={resolveConflict}
-            onDismiss={dismissSync}
-          />
-          <OngoingConflictHandler />
+                  : "team-selection",
+            onTeamSelect: handleTeamSelect,
+            onScheduleSelect: handleScheduleSelect,
+            onSkipTeamWizard: () => setMyTeam(null),
+            onHideTeamModal: handleTeamModalHide,
+            onDeferTeamWizard: handleWizardDefer,
+            syncConflictShow: syncPhase === "conflict",
+            onResolveSyncConflict: resolveConflict,
+            onDismissSyncConflict: dismissSync,
+          }}
+        >
+          <RouterProvider router={router} />
         </AppShellProvider>
       </ErrorBoundary>
     </OngoingSyncProvider>
@@ -374,21 +343,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SuperTokensWrapper>
-        {canHandleRoute(AUTH_PREBUILT_UI_LIST) ? (
-          getRoutingComponent(AUTH_PREBUILT_UI_LIST)
-        ) : (
-          <SettingsProvider>
-            <EventStoreProvider>
-              <DeveloperOptionsProvider>
-                <ToastProvider>
-                  <AuthProvider>
-                    <AppContent />
-                  </AuthProvider>
-                </ToastProvider>
-              </DeveloperOptionsProvider>
-            </EventStoreProvider>
-          </SettingsProvider>
-        )}
+        <SettingsProvider>
+          <EventStoreProvider>
+            <DeveloperOptionsProvider>
+              <ToastProvider>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </ToastProvider>
+            </DeveloperOptionsProvider>
+          </EventStoreProvider>
+        </SettingsProvider>
       </SuperTokensWrapper>
     </QueryClientProvider>
   );

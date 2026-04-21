@@ -20,6 +20,9 @@ describe("Header", () => {
 
   afterEach(() => {
     localStorage.clear();
+    // Reset URL so settings-toggle behaviour (navigate home when already on /settings)
+    // doesn't carry over into the next test.
+    window.history.pushState(null, "", "/");
   });
 
   describe("Basic rendering", () => {

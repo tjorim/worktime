@@ -107,7 +107,7 @@ describe("App", () => {
   });
 
   describe("SuperTokens Routing", () => {
-    it("renders the SuperTokens auth UI when the current route is an auth route", () => {
+    it("renders the SuperTokens auth UI when the current route is an auth route", async () => {
       vi.mocked(SuperTokensUi.canHandleRoute).mockReturnValue(true);
       vi.mocked(SuperTokensUi.getRoutingComponent).mockReturnValue(
         <div data-testid="supertokens-auth-route">Auth Route</div>,
@@ -115,7 +115,9 @@ describe("App", () => {
 
       render(<App />);
 
-      expect(screen.getByTestId("supertokens-auth-route")).toBeInTheDocument();
+      // canHandleRoute is checked inside AppLayout (rendered by RouterProvider),
+      // so the auth UI appears asynchronously after the router initialises.
+      expect(await screen.findByTestId("supertokens-auth-route")).toBeInTheDocument();
       expect(screen.queryByTestId("welcome-wizard")).not.toBeInTheDocument();
     });
   });

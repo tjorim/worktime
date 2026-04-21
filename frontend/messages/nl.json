@@ -660,6 +660,7 @@
   "dev_connecting": "Verbinding maken...",
   "dev_disconnected": "Verbroken",
   "dev_api_config_heading": "API-configuratie",
+  "dev_api_url_readonly": "De backend-API-URL is vast ingesteld op dezelfde oorsprong als de app. Gebruik de testknop hieronder om de verbinding te controleren.",
   "dev_api_url_label": "Backend API-URL",
   "dev_api_url_help": "De basis-URL van uw lokale backend-API-server (standaard: http://localhost:8000)",
   "dev_save_url": "URL opslaan",

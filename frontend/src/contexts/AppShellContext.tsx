@@ -1,7 +1,11 @@
 import type { Dayjs } from "dayjs";
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
+import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
+import type { WizardStep } from "@/components/wizardStepConfig";
+import type { ScheduleOption } from "@/data/rosters";
 import type { TabKey } from "@/contexts/SettingsContext";
+import type { ConflictChoice } from "@/hooks/useFirstSyncFlow";
 
 export interface FeatureAnnouncement {
   name: string;
@@ -21,6 +25,19 @@ export interface AppShellContextType {
   onTabChange: (tab: TabKey) => void;
   onChangeSchedule: () => void;
   onChangeTeam: () => void;
+  // WelcomeWizard state — lifted here so AppLayout can render the wizard outside the route outlet
+  showTeamModal: boolean;
+  teamModalMode: "onboarding" | "change-team" | "change-schedule";
+  teamWizardStartStep: WizardStep;
+  onTeamSelect: (team: number) => void;
+  onScheduleSelect: (schedule: ScheduleOption) => void;
+  onSkipTeamWizard: () => void;
+  onHideTeamModal: (payload?: WizardCompletionPayload) => void;
+  onDeferTeamWizard: () => void;
+  // First-sync conflict dialog state
+  syncConflictShow: boolean;
+  onResolveSyncConflict: (choice: ConflictChoice) => void;
+  onDismissSyncConflict: () => void;
 }
 
 const AppShellContext = createContext<AppShellContextType | null>(null);

@@ -667,6 +667,7 @@
   "dev_connecting": "Connecting...",
   "dev_disconnected": "Disconnected",
   "dev_api_config_heading": "API Configuration",
+  "dev_api_url_readonly": "The backend API URL is fixed to the same origin as the app. Use the test button below to verify connectivity.",
   "dev_api_url_label": "Backend API URL",
   "dev_api_url_help": "The base URL of your local backend API server (default: http://localhost:8000)",
   "dev_save_url": "Save URL",
