@@ -212,7 +212,7 @@ const finishOnboardingSetup = async (user: ReturnType<typeof userEvent.setup>) =
   await waitFor(() => {
     expect(screen.getByRole("heading", { name: /Set Up Time Tracking/i })).toBeInTheDocument();
   });
-  await user.click(screen.getByRole("button", { name: /Finish Setup/i }));
+  await user.click(screen.getByRole("button", { name: /Continue/i }));
 
   await waitFor(() => {
     expect(screen.getByRole("heading", { name: /Personal Gantt Chart/i })).toBeInTheDocument();

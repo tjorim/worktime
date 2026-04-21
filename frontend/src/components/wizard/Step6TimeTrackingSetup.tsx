@@ -57,7 +57,7 @@ export function Step6TimeTrackingSetup({
           <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
-          {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1" aria-hidden="true"></i>
+          {m.continue()} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
         </Button>
       </div>
     </>
