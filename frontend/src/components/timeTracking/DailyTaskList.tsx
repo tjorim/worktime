@@ -85,7 +85,7 @@ function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
         placement="top"
         overlay={<Tooltip id={tooltipId}>{m.tt_gap_aria({ minutes: durationMinutes })}</Tooltip>}
       >
-        <Badge bg="warning" text="dark" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }}>
+        <Badge bg="warning" text="dark" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }} tabIndex={0}>
           <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
           {m.tt_gap_label({ minutes: durationMinutes })}
         </Badge>
@@ -474,6 +474,7 @@ export function DailyTaskList({
                               bg="secondary"
                               className="ms-2"
                               aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                              tabIndex={0}
                             >
                               <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
                               {BREAK_DURATION_MINUTES}min

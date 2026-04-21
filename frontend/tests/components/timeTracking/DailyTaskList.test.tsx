@@ -230,6 +230,18 @@ describe("DailyTaskList", () => {
       expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
     });
 
+    it("shows gap indicator when gap is exactly 5 minutes", () => {
+      const exactlyFive = makeTask({
+        id: "t2",
+        text: "Afternoon work",
+        startTime: `${DATE}T11:05`,
+        stopTime: `${DATE}T17:00`,
+      });
+      renderList([task1, exactlyFive]);
+      expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
+      expect(screen.getByText("5min gap")).toBeInTheDocument();
+    });
+
     it("does not show gap indicator when gap is below 5 minutes", () => {
       const nearlyAdjacent = makeTask({
         id: "t2",
