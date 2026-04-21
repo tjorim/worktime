@@ -4,8 +4,7 @@ import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";
-import type { VacationAllowanceSettings } from "@/utils/vacationCalculations";
-import { sanitizeVacationAllowance } from "@/utils/vacationCalculations";
+
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 
 export type TimeFormat = "12h" | "24h";
@@ -31,7 +30,6 @@ interface UserSettings {
   timeFormat: TimeFormat;
   theme: Theme;
   notifications: NotificationSetting;
-  vacationAllowance: VacationAllowanceSettings;
   enableTimeOff: boolean;
   enableTimeTracking: boolean;
   enableGantt: boolean;
@@ -46,7 +44,6 @@ interface SettingsContextType {
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
   updateNotifications: (setting: NotificationSetting) => void;
-  updateVacationAllowance: (allowance: Partial<VacationAllowanceSettings>) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateGanttEnabled: (enabled: boolean) => void;
@@ -82,17 +79,11 @@ interface SettingsContextType {
   setCrossBorderAnnouncementSeen: (value: boolean) => void;
   // Atomic update for onboarding completion with team selection
   completeOnboardingWithTeam: (team: number | null) => void;
-  // Atomic update for onboarding completion with optional vacation allowance
-  completeOnboardingWithVacation: (
-    team: number | null,
-    vacationAllowance?: Partial<VacationAllowanceSettings>,
-  ) => void;
   // Atomic update for onboarding completion with schedule selection
   completeOnboardingWithSchedule: (
     scheduleType: ScheduleOption | null,
     team: number | null,
     preferences?: {
-      vacationAllowance?: Partial<VacationAllowanceSettings>;
       enableTimeOff?: boolean;
       enableTimeTracking?: boolean;
       enableGantt?: boolean;
@@ -108,11 +99,6 @@ export const defaultSettings: UserSettings = {
   timeFormat: "24h",
   theme: "auto",
   notifications: "off",
-  vacationAllowance: {
-    yearlyAmounts: {},
-    unit: "days",
-    hoursPerDay: 8,
-  },
   enableTimeOff: false,
   enableTimeTracking: false,
   enableGantt: false,
@@ -193,10 +179,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     ? (settings.notifications as NotificationSetting)
     : defaultSettings.notifications;
 
-  const vacationAllowance = sanitizeVacationAllowance(
-    settings.vacationAllowance as Partial<VacationAllowanceSettings> | undefined,
-    defaultSettings.vacationAllowance,
-  );
   const enableTimeOff =
     typeof settings.enableTimeOff === "boolean"
       ? settings.enableTimeOff
@@ -325,7 +307,6 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
       timeFormat,
       theme,
       notifications,
-      vacationAllowance,
       enableTimeOff,
       enableTimeTracking,
       enableGantt,
@@ -397,19 +378,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setUserState((prev) => ({
         ...prev,
         settings: { ...prev.settings, notifications },
-      }));
-    },
-    [setUserState],
-  );
-
-  const updateVacationAllowance = useCallback(
-    (allowance: Partial<VacationAllowanceSettings>) => {
-      setUserState((prev) => ({
-        ...prev,
-        settings: {
-          ...prev.settings,
-          vacationAllowance: sanitizeVacationAllowance(allowance, prev.settings.vacationAllowance),
-        },
       }));
     },
     [setUserState],
@@ -590,29 +558,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [setUserState],
   );
 
-  const completeOnboardingWithVacation = useCallback(
-    (team: number | null, vacationAllowance?: Partial<VacationAllowanceSettings>) => {
-      setUserState((prev) => ({
-        ...prev,
-        hasCompletedOnboarding: true,
-        myTeam: team,
-        settings: {
-          ...prev.settings,
-          vacationAllowance: vacationAllowance
-            ? sanitizeVacationAllowance(vacationAllowance, prev.settings.vacationAllowance)
-            : prev.settings.vacationAllowance,
-        },
-      }));
-    },
-    [setUserState],
-  );
-
   const completeOnboardingWithSchedule = useCallback(
     (
       scheduleType: ScheduleOption | null,
       team: number | null,
       preferences?: {
-        vacationAllowance?: Partial<VacationAllowanceSettings>;
         enableTimeOff?: boolean;
         enableTimeTracking?: boolean;
         enableGantt?: boolean;
@@ -648,12 +598,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         myTeam: team,
         settings: {
           ...prev.settings,
-          vacationAllowance: preferences?.vacationAllowance
-            ? sanitizeVacationAllowance(
-                preferences.vacationAllowance,
-                prev.settings.vacationAllowance,
-              )
-            : prev.settings.vacationAllowance,
           enableTimeOff: preferences?.enableTimeOff ?? prev.settings.enableTimeOff,
           enableTimeTracking: preferences?.enableTimeTracking ?? prev.settings.enableTimeTracking,
           enableGantt: preferences?.enableGantt ?? prev.settings.enableGantt,
@@ -695,7 +639,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
-      updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,
@@ -723,7 +666,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       crossBorderAnnouncementSeen: userState.crossBorderAnnouncementSeen,
       setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
-      completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
     }),
     [
@@ -731,7 +673,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateTimeFormat,
       updateTheme,
       updateNotifications,
-      updateVacationAllowance,
       updateTimeOffEnabled,
       updateTimeTrackingEnabled,
       updateGanttEnabled,
@@ -753,7 +694,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       setGanttAnnouncementSeen,
       setCrossBorderAnnouncementSeen,
       completeOnboardingWithTeam,
-      completeOnboardingWithVacation,
       completeOnboardingWithSchedule,
     ],
   );

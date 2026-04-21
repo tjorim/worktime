@@ -5,8 +5,6 @@ import {
   formatVacationValue,
   getAvailableYears,
   getHalfDayLabel,
-  sanitizeVacationAllowance,
-  type VacationAllowanceSettings,
 } from "@/utils/vacationCalculations";
 
 const dateEntry = (
@@ -149,24 +147,6 @@ describe("vacationCalculations", () => {
         2025,
       );
       expect(years).toEqual([2025, 2024, 2023]);
-    });
-  });
-
-  describe("sanitizeVacationAllowance", () => {
-    const fallback: VacationAllowanceSettings = {
-      yearlyAmounts: { "2025": 25 },
-      unit: "days",
-      hoursPerDay: 8,
-    };
-
-    it("sanitizes invalid allowance fields", () => {
-      const result = sanitizeVacationAllowance(
-        { yearlyAmounts: { "2025": -10, "2026": 20 }, unit: "invalid" as never, hoursPerDay: -5 },
-        fallback,
-      );
-      expect(result.yearlyAmounts).toEqual({ "2025": 25, "2026": 20 });
-      expect(result.unit).toBe("days");
-      expect(result.hoursPerDay).toBe(1);
     });
   });
 

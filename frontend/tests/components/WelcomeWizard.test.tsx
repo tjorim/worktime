@@ -83,11 +83,6 @@ const defaultUserState = {
     timeFormat: "24h",
     theme: "auto",
     notifications: "off",
-    vacationAllowance: {
-      yearlyAmounts: {},
-      unit: "days",
-      hoursPerDay: 8,
-    },
     enableTimeOff: true,
     enableTimeTracking: true,
   },
@@ -376,36 +371,6 @@ describe("WelcomeWizard", () => {
       expect(screen.getByLabelText(/Enable time off/i)).not.toBeChecked();
     });
 
-    it("should carry vacation allowance when values entered", async () => {
-      const mockOnHide = vi.fn();
-
-      renderWithProviders(
-        <WelcomeWizard
-          show={true}
-          onTeamSelect={vi.fn()}
-          onHide={mockOnHide}
-          startStep="timeoff-setup"
-        />,
-      );
-
-      const user = userEvent.setup();
-
-      await enableTimeOffToggle(user);
-      const amountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.clear(amountInput);
-      await user.type(amountInput, "28");
-
-      // Select hours unit
-      await user.selectOptions(screen.getByLabelText(/Unit/i), "hours");
-
-      // Complete
-      await user.click(screen.getByRole("button", { name: /Continue/i }));
-
-      // Should continue to time tracking setup
-      expect(screen.getByText(/Set Up Time Tracking/i)).toBeInTheDocument();
-      expect(mockOnHide).not.toHaveBeenCalled();
-    });
-
     it("should allow navigating back from time off setup", async () => {
       renderWithProviders(
         <WelcomeWizard
@@ -436,92 +401,6 @@ describe("WelcomeWizard", () => {
       expect(screen.getByText(/Step 5 of 9/i)).toBeInTheDocument();
     });
 
-    it("should show validation error for negative vacation amount", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(
-        <WelcomeWizard
-          show={true}
-          onTeamSelect={vi.fn()}
-          onHide={vi.fn()}
-          startStep="timeoff-setup"
-        />,
-      );
-
-      await enableTimeOffToggle(user);
-      const amountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.type(amountInput, "-5");
-
-      // Should show validation error
-      expect(screen.getByText(/Please enter a valid number \(0 or greater\)/i)).toBeVisible();
-
-      // Complete button should be disabled
-      const continueButton = screen.getByRole("button", { name: /Continue/i });
-      expect(continueButton).toBeDisabled();
-    });
-
-    it("should enable Continue button for valid positive amount", async () => {
-      const user = userEvent.setup();
-      renderWithProviders(
-        <WelcomeWizard
-          show={true}
-          onTeamSelect={vi.fn()}
-          onHide={vi.fn()}
-          startStep="timeoff-setup"
-        />,
-      );
-
-      await enableTimeOffToggle(user);
-      const amountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.type(amountInput, "25");
-
-      // Input should not have invalid styling for valid input
-      expect(amountInput).not.toHaveClass("is-invalid");
-
-      // Save button should be enabled
-      const continueButton = screen.getByRole("button", { name: /Continue/i });
-      expect(continueButton).toBeEnabled();
-    });
-
-    it("should handle zero amount as valid (disables vacation tracking)", async () => {
-      const user = userEvent.setup();
-      const mockOnHide = vi.fn();
-      renderWithProviders(
-        <WelcomeWizard
-          show={true}
-          onTeamSelect={vi.fn()}
-          onHide={mockOnHide}
-          startStep="timeoff-setup"
-        />,
-      );
-
-      await enableTimeOffToggle(user);
-      const amountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.type(amountInput, "0");
-
-      // Input should not have invalid styling for zero
-      expect(amountInput).not.toHaveClass("is-invalid");
-
-      // Continue button should be enabled
-      const continueButton = screen.getByRole("button", { name: /Continue/i });
-      expect(continueButton).toBeEnabled();
-
-      // Click the continue button
-      await user.click(continueButton);
-
-      // Complete the remaining setup steps to trigger onHide
-      await finishOnboardingSetup(user);
-
-      // Should call onHide with 0 amount for current year (explicitly disabling vacation tracking)
-      const currentYear = String(new Date().getFullYear());
-      expect(mockOnHide).toHaveBeenCalledWith(
-        expect.objectContaining({
-          vacationAllowance: {
-            yearlyAmounts: { [currentYear]: 0 },
-            unit: "days",
-          },
-        }),
-      );
-    });
   });
 
   describe("Account Setup Step", () => {
@@ -722,122 +601,9 @@ describe("WelcomeWizard", () => {
       await user.click(screen.getByRole("button", { name: /Continue/i }));
       await waitForStep(4, 9);
 
-      // Select a team to go to vacation allowance step
+      // Select a team to go to time off setup step
       await user.click(screen.getByLabelText(/Select Team 1/i));
       await waitForStep(5, 9);
-    }, 15000);
-
-    it("should save vacation allowance when browsing all teams without selecting one", async () => {
-      const user = userEvent.setup();
-      window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
-      render(<App />);
-
-      // Verify welcome wizard appears
-      await findModalTitle(/Welcome to Worktime/i);
-
-      // Navigate through wizard to team selection
-      await navigateToTeamSelection(user);
-
-      // Click "Browse All Teams" instead of selecting a team
-      await user.click(screen.getByRole("button", { name: /Browse All Teams/i }));
-
-      // Should be on time off setup step
-      expect(screen.getByRole("heading", { name: /Set Up Time Off/i })).toBeInTheDocument();
-      await enableTimeOffToggle(user);
-
-      // Enter vacation allowance
-      const amountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.clear(amountInput);
-      await user.type(amountInput, "35");
-
-      // Complete wizard
-      await finishOnboardingSetup(user);
-
-      // Modal should close
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("heading", { name: /Track Where You Work/i }),
-        ).not.toBeInTheDocument(),
-      );
-
-      // Verify vacation allowance was saved to localStorage even without selecting a team
-      const currentYear = String(new Date().getFullYear());
-      const saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(35);
-      expect(saved.settings?.vacationAllowance?.unit).toBe("days");
-      expect(saved.settings).toEqual(
-        expect.objectContaining({
-          enableGantt: expect.any(Boolean),
-          enableCrossBorderTracking: expect.any(Boolean),
-        }),
-      );
-      expect(saved.hasCompletedOnboarding).toBe(true);
-      expect(saved.myTeam).toBeNull(); // No team was selected
-    }, 15000);
-
-    it("should save vacation allowance when updated in change-team mode", async () => {
-      const user = userEvent.setup();
-      window.localStorage.setItem("worktime_user_state", JSON.stringify(defaultUserState));
-      render(<App />);
-
-      // Complete initial onboarding
-      await findModalTitle(/Welcome to Worktime/i);
-      await navigateToTeamSelection(user);
-      await user.click(screen.getByLabelText(/Select Team 1/i));
-      await enableTimeOffToggle(user);
-
-      // Set initial vacation allowance
-      const initialAmountInput = screen.getByLabelText(/Vacation allowance/i);
-      await user.clear(initialAmountInput);
-      await user.type(initialAmountInput, "25");
-      await finishOnboardingSetup(user);
-
-      // Wait for wizard to close
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("heading", { name: /Track Where You Work/i }),
-        ).not.toBeInTheDocument(),
-      );
-
-      // Verify initial vacation allowance was saved
-      const currentYear = String(new Date().getFullYear());
-      let saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25);
-      expect(saved.settings).toEqual(
-        expect.objectContaining({
-          enableGantt: expect.any(Boolean),
-          enableCrossBorderTracking: expect.any(Boolean),
-        }),
-      );
-      expect(saved.myTeam).toBe(1);
-
-      // Now open the wizard in change-team mode via Settings panel
-      const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
-      await user.click(settingsButton);
-      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
-      const selectTeamButton = await screen.findByRole("button", { name: /Select Team/i });
-      await user.click(selectTeamButton);
-
-      // Should show the wizard again
-      await waitFor(() => expect(screen.getByText(/Choose your team/i)).toBeInTheDocument());
-
-      // In change-team mode, selecting a team should close the wizard immediately (no vacation step)
-      await user.click(screen.getByLabelText(/Select Team 2/i));
-
-      // Wait for wizard to close
-      await waitFor(() => expect(screen.queryByText(/Choose your team/i)).not.toBeInTheDocument());
-
-      // Verify team was changed but vacation allowance remains unchanged
-      saved = JSON.parse(localStorage.getItem("worktime_user_state") || "{}");
-      expect(saved.settings?.vacationAllowance?.yearlyAmounts?.[currentYear]).toBe(25); // Unchanged from onboarding
-      expect(saved.settings?.vacationAllowance?.unit).toBe("days");
-      expect(saved.settings).toEqual(
-        expect.objectContaining({
-          enableGantt: expect.any(Boolean),
-          enableCrossBorderTracking: expect.any(Boolean),
-        }),
-      );
-      expect(saved.myTeam).toBe(2); // Team was changed
     }, 15000);
 
     it("should navigate directly to schedule selection in change-schedule mode", async () => {

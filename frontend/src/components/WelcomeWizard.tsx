@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
 import Modal from "react-bootstrap/Modal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Spinner from "react-bootstrap/Spinner";
@@ -13,7 +12,6 @@ import {
   isValidScheduleType,
 } from "@/utils/scheduleUtils";
 import { type CountryCode, isValidCountryCode } from "@/types/countries";
-import type { VacationAllowanceUnit } from "@/utils/vacationCalculations";
 import {
   type WizardStep,
   type WizardContext,
@@ -33,31 +31,7 @@ import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
 import * as m from "@/paraglide/messages.js";
 
-/**
- * Validates vacation amount input.
- * Returns an object with validation state:
- * - isValid: true if amount is valid for saving (not empty, not NaN, >= 0; 0 disables vacation tracking)
- * - isInvalid: true if amount has been entered but is invalid (NaN or < 0)
- * - parsedAmount: the parsed number, or null if not a valid number
- */
-function validateVacationAmount(amount: string) {
-  const trimmedAmount = amount.trim();
-  if (trimmedAmount === "") {
-    return { isValid: false, isInvalid: false, parsedAmount: null };
-  }
-  const parsed = parseFloat(trimmedAmount);
-  const isNotANumber = Number.isNaN(parsed);
-  const isNegative = parsed < 0;
-
-  return {
-    isValid: !isNotANumber && parsed >= 0,
-    isInvalid: isNotANumber || isNegative,
-    parsedAmount: !isNotANumber ? parsed : null,
-  };
-}
-
 export type WizardCompletionPayload = {
-  vacationAllowance?: { yearlyAmounts: Record<string, number>; unit: VacationAllowanceUnit };
   enableTimeOff?: boolean;
   enableTimeTracking?: boolean;
   enableGantt?: boolean;
@@ -112,19 +86,10 @@ export function WelcomeWizard({
 }: WelcomeWizardProps) {
   const { scheduleType, settings } = useSettings();
   const { isAuthenticated, displayName, triggerSignup } = useAuth();
-  const currentYear = dayjs().format("YYYY");
   const [currentStep, setCurrentStep] = useState<WizardStep>(startStep);
   const initialStepRef = useRef(startStep);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Vacation allowance form state - initialize from settings for current year
-  const [vacationAmount, setVacationAmount] = useState<string>(() => {
-    const amount = settings.vacationAllowance?.yearlyAmounts?.[currentYear] ?? 0;
-    return amount > 0 ? amount.toString() : "";
-  });
-  const [vacationUnit, setVacationUnit] = useState<VacationAllowanceUnit>(
-    settings.vacationAllowance?.unit ?? "days",
-  );
   const [isTimeOffEnabled, setIsTimeOffEnabled] = useState<boolean>(
     settings.enableTimeOff ?? false,
   );
@@ -145,6 +110,7 @@ export function WelcomeWizard({
   const [selectedSchedule, setSelectedSchedule] = useSyncedState(scheduleType);
 
   // Sync currentStep when startStep prop changes (uses ref to avoid sync on initial render)
+
   useEffect(() => {
     if (startStep !== initialStepRef.current) {
       setCurrentStep(startStep);
@@ -163,7 +129,6 @@ export function WelcomeWizard({
   const shouldShowTeamSelection = resolvedSchedule ? hasMultipleTeams(resolvedSchedule) : false;
   const teamCount = resolvedSchedule ? getTeamCountForOption(resolvedSchedule) : 0;
   const teams = Array.from({ length: teamCount }, (_, i) => i + 1);
-  const vacationValidation = validateVacationAmount(vacationAmount);
 
   // Create wizard context for configuration functions
   const wizardContext: WizardContext = {
@@ -202,9 +167,6 @@ export function WelcomeWizard({
   };
 
   const handleTimeOffComplete = () => {
-    if (isTimeOffEnabled && vacationValidation.isInvalid) {
-      return;
-    }
     nextStep();
   };
 
@@ -217,12 +179,7 @@ export function WelcomeWizard({
   };
 
   const handleAccountSetupComplete = (accountConnected?: boolean) => {
-    const vacationPayload =
-      isTimeOffEnabled && vacationValidation.isValid && vacationValidation.parsedAmount !== null
-        ? { yearlyAmounts: { [currentYear]: vacationValidation.parsedAmount }, unit: vacationUnit }
-        : undefined;
     onHide({
-      vacationAllowance: vacationPayload,
       enableTimeOff: isTimeOffEnabled,
       enableTimeTracking: isTimeTrackingEnabled,
       enableGantt: isGanttEnabled,
@@ -362,11 +319,6 @@ export function WelcomeWizard({
               <Step5TimeOffSetup
                 isEnabled={isTimeOffEnabled}
                 onToggle={setIsTimeOffEnabled}
-                vacationAmount={vacationAmount}
-                vacationUnit={vacationUnit}
-                onVacationAmountChange={setVacationAmount}
-                onVacationUnitChange={setVacationUnit}
-                isInvalid={vacationValidation.isInvalid}
                 onPrev={prevStep}
                 onNext={handleTimeOffComplete}
                 isLastStep={isLastStep}

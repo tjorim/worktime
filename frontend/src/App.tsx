@@ -17,7 +17,7 @@ import { useShiftCalculation } from "@/hooks/useShiftCalculation";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
-import { validateVacationAllowance } from "@/utils/vacationCalculations";
+
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/router";
 
@@ -44,7 +44,6 @@ function AppContent() {
     completeOnboardingWithSchedule,
     scheduleType,
     setScheduleType,
-    updateVacationAllowance,
     updateLastActiveTab,
     settings,
     lastUsed,
@@ -249,17 +248,6 @@ function AppContent() {
           `Team ${teamForCompletion} selected! Your shifts are now personalized.`,
           "bi-people-fill",
         );
-      }
-    } else if (
-      (teamModalMode === "change-team" || teamModalMode === "change-schedule") &&
-      payload?.vacationAllowance
-    ) {
-      const result = validateVacationAllowance(payload.vacationAllowance);
-      if (result.valid) {
-        updateVacationAllowance(payload.vacationAllowance);
-        showSuccess("Vacation allowance updated successfully.");
-      } else {
-        showError(`Vacation allowance update failed: ${result.errors.join(", ")}`);
       }
     }
     setShowTeamModal(false);
