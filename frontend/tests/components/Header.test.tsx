@@ -3,38 +3,36 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
-import { Header } from "@/components/Header";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 
-function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <SettingsProvider>
-      <EventStoreProvider>
-        <DeveloperOptionsProvider>
-          <ToastProvider>
-            <AuthProvider>{ui}</AuthProvider>
-          </ToastProvider>
-        </DeveloperOptionsProvider>
-      </EventStoreProvider>
-    </SettingsProvider>,
-  );
-}
-
 describe("Header", () => {
+  beforeEach(() => {
+    localStorage.setItem(
+      "worktime_user_state",
+      JSON.stringify({
+        hasCompletedOnboarding: true,
+        scheduleType: "5-shift",
+        myTeam: 1,
+      }),
+    );
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    // Reset URL so settings-toggle behaviour (navigate home when already on /settings)
+    // doesn't carry over into the next test.
+    window.history.pushState(null, "", "/");
+  });
+
   describe("Basic rendering", () => {
-    it("renders Worktime title", () => {
-      renderWithProviders(<Header />);
-      expect(screen.getByText("Worktime")).toBeInTheDocument();
+    it("renders Worktime title", async () => {
+      render(<App />);
+      expect(await screen.findByText("Worktime")).toBeInTheDocument();
     });
 
     it("renders Settings button", () => {
-      renderWithProviders(<Header />);
+      render(<App />);
       expect(screen.getByLabelText("Settings")).toBeInTheDocument();
     });
   });
@@ -42,14 +40,14 @@ describe("Header", () => {
   describe("About modal", () => {
     it("opens About modal when accessed from Settings panel in full App", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      render(<App />);
 
       // Open Settings panel first
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
-      // Click About & Help in settings panel
-      const aboutHelpButton = screen.getByText("About & Help");
+      await user.click(await screen.findByRole("button", { name: /Information/i }));
+      const aboutHelpButton = await screen.findByText("About & Help");
       await user.click(aboutHelpButton);
 
       // Modal should be open
@@ -58,14 +56,14 @@ describe("Header", () => {
 
     it("closes About modal when Close button is clicked", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      render(<App />);
 
       // Open Settings panel first
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
-      // Click About & Help in settings panel
-      const aboutHelpButton = screen.getByText("About & Help");
+      await user.click(await screen.findByRole("button", { name: /Information/i }));
+      const aboutHelpButton = await screen.findByText("About & Help");
       await user.click(aboutHelpButton);
 
       // Modal should be open
@@ -93,14 +91,14 @@ describe("Header", () => {
 
     it("applies dark theme to document.documentElement when theme is set to dark", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      render(<App />);
 
       // Open Settings panel
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
       // Find and click the dark theme button
-      const darkThemeButton = screen.getByRole("button", {
+      const darkThemeButton = await screen.findByRole("button", {
         name: /Dark/i,
       });
       await user.click(darkThemeButton);
@@ -111,14 +109,14 @@ describe("Header", () => {
 
     it("applies light theme to document.documentElement when theme is set to light", async () => {
       const user = userEvent.setup();
-      renderWithProviders(<App />);
+      render(<App />);
 
       // Open Settings panel
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
       // Find and click the light theme button
-      const lightThemeButton = screen.getByRole("button", {
+      const lightThemeButton = await screen.findByRole("button", {
         name: /Light/i,
       });
       await user.click(lightThemeButton);
@@ -145,14 +143,15 @@ describe("Header", () => {
         })),
       });
 
-      renderWithProviders(<App />);
+      render(<App />);
+
 
       // Open Settings panel
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
       // Find and click the auto theme button (should be default)
-      const autoThemeButton = screen.getByRole("button", {
+      const autoThemeButton = await screen.findByRole("button", {
         name: /Auto/i,
       });
       await user.click(autoThemeButton);
@@ -183,13 +182,13 @@ describe("Header", () => {
         })),
       });
 
-      renderWithProviders(<App />);
+      render(<App />);
 
       // Open Settings panel and ensure auto theme is selected (default)
-      const settingsButton = screen.getByLabelText("Settings");
+      const settingsButton = await screen.findByLabelText("Settings");
       await user.click(settingsButton);
 
-      const autoThemeButton = screen.getByRole("button", {
+      const autoThemeButton = await screen.findByRole("button", {
         name: /Auto/i,
       });
       await user.click(autoThemeButton);

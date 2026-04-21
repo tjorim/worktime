@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -15,35 +15,6 @@ interface DevOptionsPanelProps {
   onHide: () => void;
 }
 
-function getApiUrlSecurityWarning(url: string): string | null {
-  if (!url) return m.dev_api_url_warning_invalid();
-
-  try {
-    const parsed = new URL(url);
-    const normalizedHostname = parsed.hostname.replace(/^\[/, "").replace(/\]$/, "");
-    const isLocalhost =
-      normalizedHostname === "localhost" ||
-      normalizedHostname === "127.0.0.1" ||
-      normalizedHostname === "::1";
-
-    if (parsed.protocol === "https:") {
-      return null;
-    }
-
-    if (parsed.protocol === "http:" && isLocalhost) {
-      return null;
-    }
-
-    if (parsed.protocol === "http:") {
-      return m.dev_api_url_warning_insecure();
-    }
-
-    return m.dev_api_url_warning_invalid_scheme();
-  } catch {
-    return m.dev_api_url_warning_invalid();
-  }
-}
-
 /**
  * Developer options panel for managing backend API connectivity.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
@@ -53,53 +24,21 @@ function getApiUrlSecurityWarning(url: string): string | null {
  * @returns The rendered developer options modal
  */
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
-  const { options, updateApiUrl, updateAutoConnect, testConnection, disconnect } =
-    useDeveloperOptions();
+  const { options, updateAutoConnect, testConnection, disconnect } = useDeveloperOptions();
   const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
-  const [localApiUrl, setLocalApiUrl] = useState(options.apiUrl);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const normalizedLocalApiUrl = localApiUrl.trim();
-  const normalizedOptionApiUrl = options.apiUrl.trim();
-  const apiUrlSecurityWarning = getApiUrlSecurityWarning(normalizedLocalApiUrl);
-
-  // Sync localApiUrl with options.apiUrl when panel opens or options change
-  useEffect(() => {
-    if (show) {
-      setLocalApiUrl(options.apiUrl);
-    }
-  }, [options.apiUrl, show]);
-
-  const handleApiUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalApiUrl(e.target.value);
-    setTestResult(null);
-  };
-
-  const handleSaveUrl = () => {
-    if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
-      return;
-    }
-
-    updateApiUrl(normalizedLocalApiUrl);
-    setLocalApiUrl(normalizedLocalApiUrl);
-    setTestResult({ success: true, message: m.dev_url_updated() });
-  };
 
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
 
     try {
-      if (!normalizedLocalApiUrl || apiUrlSecurityWarning) {
-        return;
-      }
-
-      // Test with the current local URL (unsaved or saved)
-      const success = await testConnection(normalizedLocalApiUrl);
+      const success = await testConnection();
       setTestResult({
         success,
         message: success ? m.dev_connection_success() : m.dev_connection_failed(),
@@ -182,41 +121,10 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           )}
         </div>
 
-        {/* API Configuration */}
+        {/* Connection Configuration */}
         <div className="mb-4">
           <h6 className="mb-3">{m.dev_api_config_heading()}</h6>
-
-          <Form.Group className="mb-3">
-            <Form.Label>{m.dev_api_url_label()}</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="http://localhost:8000"
-              value={localApiUrl}
-              onChange={handleApiUrlChange}
-              disabled={options.connectionStatus === "connecting"}
-            />
-            <Form.Text className="text-muted">{m.dev_api_url_help()}</Form.Text>
-          </Form.Group>
-
-          {apiUrlSecurityWarning && (
-            <Alert variant="warning" className="mb-3">
-              <i className="bi bi-shield-exclamation me-2"></i>
-              {apiUrlSecurityWarning}
-            </Alert>
-          )}
-
-          {normalizedLocalApiUrl !== normalizedOptionApiUrl && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSaveUrl}
-              className="mb-3"
-              disabled={Boolean(apiUrlSecurityWarning)}
-            >
-              <i className="bi bi-save me-1"></i>
-              {m.dev_save_url()}
-            </Button>
-          )}
+          <p className="text-muted small mb-3">{m.dev_api_url_readonly()}</p>
 
           <Form.Check
             type="checkbox"
@@ -241,7 +149,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
             <Button
               variant="primary"
               onClick={handleTestConnection}
-              disabled={isTesting || !normalizedLocalApiUrl || Boolean(apiUrlSecurityWarning)}
+              disabled={isTesting || options.connectionStatus === "connecting"}
             >
               {isTesting && <Spinner animation="border" size="sm" className="me-2" />}
               <i className="bi bi-plug me-1"></i>

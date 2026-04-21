@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { apiFetch } from "@/utils/apiClient";
 
 /**
@@ -10,15 +9,12 @@ import { apiFetch } from "@/utils/apiClient";
  * routes that are deliberately accessible without an authenticated session.
  */
 export function usePublicApiClient() {
-  const { options } = useDeveloperOptions();
-
   return useCallback(
     async (url: string, init: RequestInit = {}) =>
       apiFetch(url, init, {
-        apiUrl: options.apiUrl,
         onUnauthorized: () => {},
         onForbidden: () => {},
       }),
-    [options.apiUrl],
+    [],
   );
 }

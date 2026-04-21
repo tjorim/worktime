@@ -53,27 +53,27 @@ export function SyncStatusIndicator() {
     return () => clearInterval(id);
   }, [hasSyncError, retryAfter]);
 
-  // Icon, label, and variant are stable between minute ticks — memoize them.
-  const { icon, label, variant } = useMemo(() => {
+  // Icon, label, and tone are stable between minute ticks — memoize them.
+  const { icon, label, tone } = useMemo(() => {
     if (hasSyncError)
-      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
+      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), tone: "danger" };
     if (conflictCount > 0)
       return {
         icon: "bi-exclamation-triangle",
         label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
-        variant: "warning",
+        tone: "warning",
       };
     if (isSyncing)
-      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
+      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), tone: "info" };
     if (outboxCount > 0)
       return {
         icon: "bi-cloud-upload",
         label: m.sync_indicator_pending({ count: String(outboxCount) }),
-        variant: "warning",
+        tone: "warning",
       };
     if (lastSyncedAt)
-      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
-    return { icon: "bi-cloud", label: "", variant: "secondary" };
+      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), tone: "success" };
+    return { icon: "bi-cloud", label: "", tone: "neutral" };
   }, [hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
   // Tooltip text is computed fresh every render so fromNow() stays accurate
@@ -102,7 +102,7 @@ export function SyncStatusIndicator() {
 
   const indicator = (
     <span
-      className={`d-flex align-items-center gap-1 text-${variant} small`}
+      className={`sync-indicator sync-indicator--${tone}`}
       aria-label={`${m.sync_indicator_aria_label()}: ${label}`}
       aria-live="polite"
       aria-atomic="true"

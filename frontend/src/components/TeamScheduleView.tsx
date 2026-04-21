@@ -71,7 +71,6 @@ function getEventsForDate(member: TeamMemberHdayData, date: Dayjs): HdayEvent[] 
  */
 export function TeamScheduleView() {
   const { options } = useDeveloperOptions();
-  const apiUrl = options.apiUrl;
   const connectionStatus = options.connectionStatus;
 
   const [teamId, setTeamId] = useState(() => {
@@ -138,16 +137,13 @@ export function TeamScheduleView() {
 
     try {
       // Fetch team .hday data (includes team info)
-      const response = await fetch(
-        `${apiUrl}/api/team/${encodeURIComponent(teamId)}/hday?format=parsed`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          signal: abortController.signal,
+      const response = await fetch(`/api/team/${encodeURIComponent(teamId)}/hday?format=parsed`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
         },
-      );
+        signal: abortController.signal,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -175,7 +171,7 @@ export function TeamScheduleView() {
         setIsLoading(false);
       }
     }
-  }, [teamId, apiUrl]);
+  }, [teamId]);
 
   // Auto-load team data if team ID is available and connected (only once per team ID)
   useEffect(() => {

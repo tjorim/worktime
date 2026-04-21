@@ -137,33 +137,29 @@ async def events_endpoint(
     sync_event_manager.subscribe(authenticated_user_id, queue)
 
     async def event_generator():
-        # Race queue delivery against client disconnect so the coroutine exits
-        # promptly on an unclean TCP drop rather than waiting up to
-        # _SSE_KEEPALIVE_TIMEOUT seconds for the next write to fail.
-        disconnect_task = asyncio.create_task(request.is_disconnected())
         try:
             while True:
-                queue_task = asyncio.create_task(queue.get())
-                done, _ = await asyncio.wait(
-                    {queue_task, disconnect_task},
-                    timeout=_SSE_KEEPALIVE_TIMEOUT,
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-
-                if disconnect_task in done:
-                    queue_task.cancel()
+                # Check disconnect state at the start of each loop iteration.
+                # Client disconnects may only be observed once per
+                # `_SSE_KEEPALIVE_TIMEOUT` interval while waiting for events.
+                # `request.is_disconnected()` returns a boolean, so keeping one
+                # long-lived task and treating "task completed" as "client
+                # disconnected" is incorrect: a completed task may simply mean
+                # the answer was `False`. Poll each iteration instead.
+                if await request.is_disconnected():
                     logger.debug("SSE: client disconnected for user %d", authenticated_user_id)
                     break
 
-                if queue_task in done:
+                queue_task = asyncio.create_task(queue.get())
+                await asyncio.wait({queue_task}, timeout=_SSE_KEEPALIVE_TIMEOUT)
+
+                if queue_task.done():
                     yield queue_task.result()
                 else:
                     # Timeout — send keepalive and loop
                     queue_task.cancel()
                     yield ": keepalive\n\n"
         finally:
-            if not disconnect_task.done():
-                disconnect_task.cancel()
             sync_event_manager.unsubscribe(authenticated_user_id, queue)
 
     return StreamingResponse(

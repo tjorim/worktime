@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type React from "react";
@@ -648,10 +648,11 @@ describe("WelcomeWizard", () => {
         ).not.toBeInTheDocument(),
       );
 
-      // Simulate reset
-      fireEvent.click(screen.getByLabelText(/Settings/i));
-      fireEvent.click(screen.getByText(/Reset Settings/i));
-      fireEvent.click(screen.getByRole("button", { name: /Reset Now/i }));
+      // Simulate reset from the routed settings page
+      await user.click(screen.getByLabelText(/Settings/i));
+      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
+      await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
+      await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
       const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
@@ -689,8 +690,9 @@ describe("WelcomeWizard", () => {
 
       // Should be able to open settings and reset again
       await user.click(screen.getByLabelText(/Settings/i));
-      await user.click(screen.getByText(/Reset Settings/i));
-      await user.click(screen.getByRole("button", { name: /Reset Now/i }));
+      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
+      await user.click(await screen.findByRole("button", { name: /Reset Settings/i }));
+      await user.click(await screen.findByRole("button", { name: /Reset Now/i }));
 
       const welcomeHeadingsAfterReset = await screen.findAllByText(/Welcome to Worktime/i);
       const modalHeadingAfterReset = welcomeHeadingsAfterReset.find((el) =>
@@ -812,7 +814,8 @@ describe("WelcomeWizard", () => {
       // Now open the wizard in change-team mode via Settings panel
       const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
       await user.click(settingsButton);
-      const selectTeamButton = screen.getByRole("button", { name: /Select Team/i });
+      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
+      const selectTeamButton = await screen.findByRole("button", { name: /Select Team/i });
       await user.click(selectTeamButton);
 
       // Should show the wizard again
@@ -1011,13 +1014,10 @@ describe("WelcomeWizard", () => {
       // Open Settings panel (match exact "Settings", not "Reset Settings")
       const settingsButton = screen.getByRole("button", { name: /^Settings$/i });
       await user.click(settingsButton);
+      await user.click(await screen.findByRole("button", { name: /Quick Actions/i }));
 
       // Click Select Schedule button
-      const selectScheduleButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /Select Schedule/i });
-        expect(button).toBeInTheDocument();
-        return button;
-      });
+      const selectScheduleButton = await screen.findByRole("button", { name: /Select Schedule/i });
       await user.click(selectScheduleButton);
 
       // Should open wizard in change-schedule mode

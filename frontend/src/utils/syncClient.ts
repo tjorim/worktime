@@ -263,8 +263,9 @@ export function syncStatusHasData(status: SyncStatusResponse): boolean {
  * push response.  Returns 0 when there are no conflicts.
  */
 export function countPushConflicts(response: SyncPushResponse): number {
-  return Object.values(response.results).reduce(
-    (total, records) => total + records.filter((r) => r.status === "conflict").length,
+  return Object.values(response.results ?? {}).reduce(
+    (total, records) =>
+      total + (records ?? []).filter((r) => r.status === "conflict").length,
     0,
   );
 }
@@ -282,9 +283,9 @@ export function extractConflictedItems(
   response: SyncPushResponse,
 ): SyncPushPayload {
   const conflicted: Record<string, Set<string>> = {};
-  for (const [entityType, results] of Object.entries(response.results)) {
+  for (const [entityType, results] of Object.entries(response.results ?? {})) {
     conflicted[entityType] = new Set(
-      results.filter((r) => r.status === "conflict").map((r) => r.id),
+      (results ?? []).filter((r) => r.status === "conflict").map((r) => r.id),
     );
   }
   const ids = (key: string): Set<string> => conflicted[key] ?? new Set();
@@ -338,7 +339,7 @@ export function extractConflictedItems(
  */
 export function maxConflictServerTimestamp(response: SyncPushResponse): string | undefined {
   let max: number | undefined;
-  for (const results of Object.values(response.results)) {
+  for (const results of Object.values(response.results ?? {})) {
     for (const r of results) {
       if (r.status === "conflict" && r.server_updated_at) {
         const ms = new Date(r.server_updated_at).getTime();
@@ -500,7 +501,19 @@ export function buildLocalPreferencesPayload(): {
  */
 export function applyPreferencesPull(data: Record<string, unknown>): void {
   try {
-    localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(data));
+    const serialized = JSON.stringify(data);
+    const oldValue = localStorage.getItem(USER_STATE_STORAGE_KEY);
+    localStorage.setItem(USER_STATE_STORAGE_KEY, serialized);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: USER_STATE_STORAGE_KEY,
+          newValue: serialized,
+          oldValue,
+          storageArea: localStorage,
+        }),
+      );
+    }
   } catch {
     // Ignore storage errors (e.g., private browsing with full storage quota)
   }

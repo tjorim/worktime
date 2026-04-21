@@ -13,7 +13,7 @@ import Session from "supertokens-auth-react/recipe/session";
  * Environment variables (all optional, with production defaults):
  *   VITE_API_DOMAIN          — Backend origin          (default: https://worktime.tjor.im)
  *   VITE_WEBSITE_DOMAIN      — Frontend origin          (default: https://worktime.tjor.im)
- *   VITE_API_BASE_PATH       — SuperTokens API base     (default: /auth)
+ *   VITE_API_BASE_PATH       — SuperTokens API base     (default: /api/auth)
  *   VITE_WEBSITE_BASE_PATH   — SuperTokens UI route     (default: /auth)
  *
  * Session cookies are managed automatically by the session recipe.
@@ -21,7 +21,7 @@ import Session from "supertokens-auth-react/recipe/session";
 
 const API_DOMAIN = import.meta.env.VITE_API_DOMAIN ?? "https://worktime.tjor.im";
 const WEBSITE_DOMAIN = import.meta.env.VITE_WEBSITE_DOMAIN ?? "https://worktime.tjor.im";
-const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH ?? "/auth";
+const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH ?? "/api/auth";
 const WEBSITE_BASE_PATH = import.meta.env.VITE_WEBSITE_BASE_PATH ?? "/auth";
 
 export function initSuperTokens(): void {

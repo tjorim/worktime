@@ -15,9 +15,9 @@
  */
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "./AuthContext";
-import { useDeveloperOptions } from "./DeveloperOptionsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
   useOngoingSync,
@@ -29,6 +29,8 @@ import {
 import { useSyncSignal, createSseTransport, type SyncSignalTransport } from "@/hooks/useSyncSignal";
 import { setSyncCollectionAuth, applyIncrementalPullToCollections } from "@/db/collections";
 import { type SyncPullResponse, type SyncPushPayload } from "@/utils/syncClient";
+
+const PREFERENCES_PULL_DEBOUNCE_MS = 250;
 
 export interface OngoingSyncContextType extends OngoingSyncState {
   /**
@@ -92,15 +94,22 @@ interface OngoingSyncProviderProps {
  */
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
   const { isAuthenticated, userId } = useAuth();
+  const {
+    settings,
+    myTeam,
+    scheduleType,
+    hasCompletedOnboarding,
+    accountSyncAnnouncementSeen,
+    ganttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+  } = useSettings();
   const fetchFn = useApiClient();
-  const { options } = useDeveloperOptions();
 
-  // Keep collection mutation handlers and the queryFn informed of the current
-  // user ID and API base URL so they can attach auth cookies and queue outbox
-  // entries under the correct user key.
+  // Keep collection mutation handlers informed of the current user ID so they
+  // can attach auth cookies and queue outbox entries under the correct user key.
   useEffect(() => {
-    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null, options.apiUrl);
-  }, [isAuthenticated, userId, options.apiUrl]);
+    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null);
+  }, [isAuthenticated, userId]);
 
   // Build the incremental-pull callback. When a pull returns data, apply it
   // to all collections via direct writes (no server re-push triggered).
@@ -126,18 +135,59 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
     onIncrementalPull,
   );
 
-  // Build the SSE transport once per API base URL change.  The transport is
+  // Build the SSE transport. The transport is
   // null when the user is not authenticated so that no connection is opened
   // before sync is established.
   const sseTransport = useMemo<SyncSignalTransport | null>(() => {
     if (!isAuthenticated) return null;
-    if (!options.apiUrl) return null;
-    const eventsUrl = new URL("/api/sync/events", options.apiUrl).toString();
-    return createSseTransport(eventsUrl);
-  }, [isAuthenticated, options.apiUrl]);
+    return createSseTransport("/api/sync/events");
+  }, [isAuthenticated]);
 
   // Subscribe to sync-changed signals and trigger incremental pulls.
   useSyncSignal(isSyncEstablished && isAuthenticated, userId, triggerPull, sseTransport);
+
+  // lastUsed (activeTab, scheduleView, otherSchedule) is local UI navigation state —
+  // exclude it so routine tab switches don't trigger unnecessary sync pulls.
+  const preferencesSyncKey = JSON.stringify({
+    settings,
+    myTeam,
+    scheduleType,
+    hasCompletedOnboarding,
+    accountSyncAnnouncementSeen,
+    ganttAnnouncementSeen,
+    crossBorderAnnouncementSeen,
+  });
+  const hasSeenPreferencesStateRef = useRef(false);
+  const pendingPullTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isSyncEstablished || !isAuthenticated) {
+      hasSeenPreferencesStateRef.current = false;
+      if (pendingPullTimerRef.current !== null) {
+        clearTimeout(pendingPullTimerRef.current);
+        pendingPullTimerRef.current = null;
+      }
+      return;
+    }
+    if (!hasSeenPreferencesStateRef.current) {
+      hasSeenPreferencesStateRef.current = true;
+      return;
+    }
+    if (pendingPullTimerRef.current !== null) {
+      clearTimeout(pendingPullTimerRef.current);
+    }
+    pendingPullTimerRef.current = setTimeout(() => {
+      pendingPullTimerRef.current = null;
+      triggerPull();
+    }, PREFERENCES_PULL_DEBOUNCE_MS);
+
+    return () => {
+      if (pendingPullTimerRef.current !== null) {
+        clearTimeout(pendingPullTimerRef.current);
+        pendingPullTimerRef.current = null;
+      }
+    };
+  }, [isSyncEstablished, isAuthenticated, preferencesSyncKey, triggerPull]);
 
   const value = useMemo<OngoingSyncContextType>(
     () => ({

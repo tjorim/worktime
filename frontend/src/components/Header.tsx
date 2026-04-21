@@ -1,33 +1,30 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
 import * as m from "@/paraglide/messages.js";
-import { SettingsPanel } from "./SettingsPanel";
-
-interface HeaderProps {
-  onShowAbout?: () => void;
-  onChangeSchedule?: () => void;
-  onChangeTeam?: () => void;
-}
 
 /**
  * Render the application header with title and Settings button.
  *
- * @param onShowAbout - Optional callback invoked when About is accessed from Settings panel
- * @param onChangeSchedule - Optional callback invoked when the work schedule settings are changed
- * @param onChangeTeam - Optional callback invoked when the user wants to change their team
  * @returns The header React element containing the app title and Settings button
  */
-export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderProps = {}) {
+export function Header() {
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  const [showSettings, setShowSettings] = useState(false);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isSettingsPage = pathname === "/settings";
 
   const handleToggleSettings = useCallback(() => {
-    setShowSettings((prev) => !prev);
-  }, []);
+    void navigate({ to: isSettingsPage ? "/" : "/settings" });
+  }, [navigate, isSettingsPage]);
+
+  const handleNavigateHome = useCallback(() => {
+    void navigate({ to: "/" });
+  }, [navigate]);
 
   const shortcuts = useMemo(
     () => ({
@@ -45,16 +42,21 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
       </a>
       <Navbar fixed="top" bg="primary" data-bs-theme="dark" className="shadow-sm">
         <Container fluid>
-          <Navbar.Brand className="d-flex align-items-center">
+          <Navbar.Brand
+            as="button"
+            type="button"
+            onClick={handleNavigateHome}
+            className="d-flex align-items-center border-0 bg-transparent"
+          >
             <i className="bi bi-clock-history me-2 header-icon"></i>
             <span className="fw-bold">Worktime</span>
           </Navbar.Brand>
           <div className="d-flex align-items-center gap-3 ms-auto">
             <SyncStatusIndicator />
             <Button
-              variant="outline-light"
+              variant={isSettingsPage ? "light" : "outline-light"}
               size="sm"
-              onClick={() => setShowSettings(true)}
+              onClick={handleToggleSettings}
               aria-label={m.settings_title()}
               title={isMac ? m.settings_cmd() : m.settings_ctrl()}
               aria-keyshortcuts={isMac ? "Meta+," : "Control+,"}
@@ -65,15 +67,6 @@ export function Header({ onShowAbout, onChangeSchedule, onChangeTeam }: HeaderPr
           </div>
         </Container>
       </Navbar>
-
-      {/* Settings Panel */}
-      <SettingsPanel
-        show={showSettings}
-        onHide={() => setShowSettings(false)}
-        onShowAbout={onShowAbout}
-        onChangeSchedule={onChangeSchedule}
-        onChangeTeam={onChangeTeam}
-      />
     </>
   );
 }

@@ -7,8 +7,6 @@
  */
 
 export interface ApiClientOptions {
-  /** Base API URL configured by developer options. */
-  apiUrl: string;
   /** Called when a 401 Unauthorized response is received. */
   onUnauthorized: () => void;
   /** Called when a 403 Forbidden response is received. */
@@ -47,9 +45,12 @@ export async function apiFetch(
   const requestHeaders = new Headers(init.headers);
   requestHeaders.forEach((value, key) => mergedHeaders.set(key, value));
 
-  // Resolve the provided URL against the configured API base URL so that
-  // relative paths (e.g. "/data") target the correct backend origin.
-  const resolvedUrl = new URL(url, clientOptions.apiUrl).toString();
+  // Resolve relative paths against the current origin so production uses the
+  // same host consistently without a mutable per-browser API base URL.
+  const resolvedUrl =
+    typeof window === "undefined" || /^https?:\/\//i.test(url)
+      ? url
+      : new URL(url, window.location.origin).toString();
 
   const response = await fetch(resolvedUrl, {
     ...init,

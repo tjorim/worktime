@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +12,7 @@ from app.database.engine import get_session
 from app.routers.auth import get_authenticated_user_id
 from app.schemas import UserPreferencesRead, UserPreferencesWrite
 from app.services.db_service import get_user_preferences, upsert_user_preferences
+from app.utils.sse_manager import sync_event_manager
 from app.utils.timing import time_operation
 
 router = APIRouter(prefix="/preferences", tags=["Preferences"])
@@ -52,6 +55,9 @@ async def put_preferences_endpoint(
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         prefs = await upsert_user_preferences(session, authenticated_user_id, payload)
+
+    with contextlib.suppress(Exception):
+        await sync_event_manager.broadcast_sync_changed(authenticated_user_id)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

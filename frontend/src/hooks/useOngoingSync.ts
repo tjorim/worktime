@@ -27,15 +27,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  applyPreferencesPull,
   appendToSyncOutbox,
+  buildLocalPreferencesPayload,
   bumpClientTimestamps,
   countPushConflicts,
   dequeueAndMergeSyncOutbox,
   extractConflictedItems,
+  fetchPreferences,
   fetchSyncStatus,
   getSyncOutboxSize,
   maxConflictServerTimestamp,
   pullSyncData,
+  pushPreferences,
   pushSyncPayload,
   storeSyncCursor,
   type SyncPullResponse,
@@ -100,6 +104,37 @@ export type ResolveOngoingConflictsFn = (choice: "keep-server" | "keep-mine") =>
 
 /** Stable no-op used by the inactive-mode return value to ensure consistent function identity. */
 const NOOP = () => {};
+
+function parseTimestampMs(ts: string | null | undefined): number {
+  if (!ts) return 0;
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+async function reconcilePreferences(fetchFn: FetchFn): Promise<string | null> {
+  const [localPrefs, serverPrefs] = await Promise.all([
+    Promise.resolve(buildLocalPreferencesPayload()),
+    fetchPreferences(fetchFn),
+  ]);
+
+  const localTimestamp = localPrefs?.clientUpdatedAt ?? null;
+  const serverTimestamp = serverPrefs?.client_updated_at ?? null;
+
+  const localMs = parseTimestampMs(localTimestamp);
+  const serverMs = parseTimestampMs(serverTimestamp);
+
+  if (localPrefs && (!serverPrefs || localMs > serverMs)) {
+    const pushed = await pushPreferences(fetchFn, localPrefs.data, localPrefs.clientUpdatedAt);
+    return pushed ? localPrefs.clientUpdatedAt : serverTimestamp;
+  }
+
+  if (serverPrefs && (!localPrefs || serverMs > localMs)) {
+    applyPreferencesPull(serverPrefs.data);
+    return serverPrefs.client_updated_at;
+  }
+
+  return localTimestamp ?? serverTimestamp;
+}
 
 /**
  * Hook that manages ongoing write-through sync and incremental pulls after the
@@ -254,6 +289,8 @@ export function useOngoingSync(
         if (!mountedRef.current) return;
         if (pullResult) {
           onIncrementalPullRef.current?.(pullResult);
+          await reconcilePreferences(fetchFn);
+          if (!mountedRef.current) return;
           storeSyncCursor(userId, pullResult.server_timestamp);
           setLastSyncedAt(pullResult.server_timestamp);
           setHasSyncError(false);
@@ -394,6 +431,8 @@ export function useOngoingSync(
               // Pull succeeded — now run post-success reconciliation.
               try {
                 onIncrementalPullRef.current?.(pullResult);
+                await reconcilePreferences(fetchFn);
+                if (!mountedRef.current) return;
                 storeSyncCursor(userId, pullResult.server_timestamp);
                 setLastSyncedAt(pullResult.server_timestamp);
                 setHasSyncError(false);

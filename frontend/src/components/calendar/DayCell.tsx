@@ -6,7 +6,6 @@ import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
-import type { LongWeekendDayInfo } from "@/types/longWeekend";
 import { WORK_LOCATION_ICON_CLASS } from "./workLocationConstants";
 import {
   getEventColorClass,
@@ -29,7 +28,6 @@ interface DayCellProps {
   publicHoliday?: PublicHolidayInfo;
   paydayInfo?: PaydayInfo;
   schoolHoliday?: SchoolHolidayInfo;
-  longWeekendInfo?: LongWeekendDayInfo;
   events: DayEvent[];
   shiftBadge?: { code: string; label: string; isWorking: boolean }; // Optional shift info
   workLocation?: WorkLocationInfo; // Optional work location (home/office/other)
@@ -88,7 +86,6 @@ const getIndicatorDetails = (
   publicHoliday?: PublicHolidayInfo,
   paydayInfo?: PaydayInfo,
   schoolHoliday?: SchoolHolidayInfo,
-  longWeekendInfo?: LongWeekendDayInfo,
 ) => {
   return [
     publicHoliday && {
@@ -108,18 +105,6 @@ const getIndicatorDetails = (
       emoji: "💶",
       title: paydayInfo.name,
       label: paydayInfo.name,
-    },
-    longWeekendInfo?.isBridgeDay && {
-      key: "bridge-day",
-      emoji: "🌉",
-      title: m.calendar_legend_bridge_day(),
-      label: m.calendar_legend_bridge_day(),
-    },
-    longWeekendInfo && !longWeekendInfo.isBridgeDay && {
-      key: "long-weekend",
-      emoji: "🏖️",
-      title: m.calendar_legend_long_weekend(),
-      label: m.calendar_legend_long_weekend(),
     },
   ].filter(Boolean) as Array<{
     key: string;
@@ -192,7 +177,6 @@ export function DayCell({
   publicHoliday,
   paydayInfo,
   schoolHoliday,
-  longWeekendInfo,
   events,
   shiftBadge,
   workLocation,
@@ -216,7 +200,7 @@ export function DayCell({
     [locale],
   );
   const indicators = getIndicatorIcons(events);
-  const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday, longWeekendInfo);
+  const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
   const ariaLabelParts = [longDateFormatter.format(date.toDate())];
   if (isToday) {
@@ -236,11 +220,6 @@ export function DayCell({
   }
   if (paydayInfo) {
     ariaLabelParts.push(paydayInfo.name);
-  }
-  if (longWeekendInfo?.isBridgeDay) {
-    ariaLabelParts.push(m.calendar_legend_bridge_day());
-  } else if (longWeekendInfo) {
-    ariaLabelParts.push(m.calendar_legend_long_weekend());
   }
 
   // Long-press state for touch support
@@ -407,8 +386,6 @@ export function DayCell({
         publicHoliday && "is-public-holiday",
         schoolHoliday && "is-school-holiday",
         paydayInfo && "is-payday",
-        longWeekendInfo && !longWeekendInfo.isBridgeDay && "is-long-weekend",
-        longWeekendInfo?.isBridgeDay && "is-bridge-day",
       )}
       onContextMenu={(e) => {
         if (onDayContextMenu) {
