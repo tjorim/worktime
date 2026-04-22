@@ -88,7 +88,7 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       '@typescript/native-preview':
-        specifier: beta
+        specifier: 7.0.0-dev.20260421.2
         version: 7.0.0-dev.20260421.2
       '@vitejs/plugin-react':
         specifier: ^6.0.1
