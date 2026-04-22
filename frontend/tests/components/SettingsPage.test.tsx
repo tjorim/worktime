@@ -45,7 +45,11 @@ afterEach(() => {
   useOngoingSyncContextSpy?.mockRestore();
   useOngoingSyncContextSpy = undefined;
   vi.clearAllMocks();
-  labelsCollection.toArray.forEach((label) => {
+
+  localStorage.removeItem(USER_STATE_STORAGE_KEY);
+
+  const labelsSnapshot = [...labelsCollection.toArray];
+  labelsSnapshot.forEach((label) => {
     labelsCollection.delete(label.id);
   });
 });
