@@ -319,105 +319,99 @@ export function SettingsContent({
     );
   };
 
-  const showSection = (section: SettingsSection) => activeSection === section;
-
-  const coreSectionContent = (
-    <>
-      {showSection("account") && (
-        <SettingsAccountSection
-          isValidating={isValidating}
-          isAuthenticated={isAuthenticated}
-          resolvedDisplayName={resolvedDisplayName}
-          username={accountProfile?.username ?? null}
-          accountId={accountProfile?.id ?? null}
-          userId={userId}
-          isAdmin={accountProfile?.is_admin ?? false}
-          profileError={profileError}
-          isProfileLoading={isProfileLoading}
-          profileDraft={profileDraft}
-          isProfileSaving={isProfileSaving}
-          hasProfileChanges={hasProfileChanges}
-          onProfileDraftChange={setProfileDraft}
-          onSaveProfile={() => void handleSaveProfile()}
-          onLogout={logout}
-          onSignup={triggerSignup}
-          onLogin={triggerLogin}
-        />
-      )}
-
-      {showSection("sync") && (
-        <SettingsSyncSection
-          isAuthenticated={isAuthenticated}
-          isSyncing={isSyncing}
-          syncStatus={syncStatus}
-          lastSyncedLabel={lastSyncedLabel}
-          outboxCount={outboxCount}
-          conflictCount={conflictCount}
-          backupStatusLabel={backupStatusLabel}
-          hasSyncError={hasSyncError}
-          retryInSeconds={retryInSeconds}
-          onTriggerPull={triggerPull}
-        />
-      )}
-
-      {showSection("general") && (
-        <SettingsGeneralSection
-          scheduleType={scheduleType}
-          myTeam={myTeam}
-          timeFormat={settings.timeFormat}
-          theme={settings.theme}
-          locale={getLocale() === "nl" ? "nl" : "en"}
-          onScheduleChange={handleScheduleChange}
-          onTeamChange={setMyTeam}
-          onTimeFormatChange={updateTimeFormat}
-          onThemeChange={updateTheme}
-          onLocaleChange={setLocale}
-        />
-      )}
-    </>
-  );
-
-  const renderedSectionContent = (
-    <>
-      {coreSectionContent}
-
-      {showSection("features") && (
-        <SettingsFeaturesSection
-          enableTimeOff={settings.enableTimeOff}
-          enableTimeTracking={settings.enableTimeTracking}
-          enableGantt={settings.enableGantt}
-          enableCrossBorderTracking={settings.enableCrossBorderTracking}
-          homeCountry={settings.homeCountry ?? null}
-          officeCountry={settings.officeCountry ?? null}
-          onToggleTimeOff={updateTimeOffEnabled}
-          onToggleTimeTracking={updateTimeTrackingEnabled}
-          onToggleGantt={updateGanttEnabled}
-          onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
-          onUpdateHomeCountry={updateHomeCountry}
-          onUpdateOfficeCountry={updateOfficeCountry}
-        />
-      )}
-
-      {showSection("about") && (
-        <SettingsAboutSection
-          isDevMode={isDevMode}
-          onShowChangelog={handleChangelogClick}
-          onShowAboutHelp={handleAboutHelpClick}
-          onShowShortcuts={handleShortcutsClick}
-          onShowDevOptions={handleDevOptionsClick}
-        />
-      )}
-
-      {showSection("data") && (
-        <SettingsDataSection
-          onShareApp={handleShareApp}
-          onShowBackupDialog={() => setShowBackupDialog(true)}
-          onRestoreBackup={() => restoreFileInputRef.current?.click()}
-          onResetSettings={handleClearData}
-        />
-      )}
-    </>
-  );
+  const sectionContent = (() => {
+    switch (activeSection) {
+      case "account":
+        return (
+          <SettingsAccountSection
+            isValidating={isValidating}
+            isAuthenticated={isAuthenticated}
+            resolvedDisplayName={resolvedDisplayName}
+            username={accountProfile?.username ?? null}
+            accountId={accountProfile?.id ?? null}
+            userId={userId}
+            isAdmin={accountProfile?.is_admin ?? false}
+            profileError={profileError}
+            isProfileLoading={isProfileLoading}
+            profileDraft={profileDraft}
+            isProfileSaving={isProfileSaving}
+            hasProfileChanges={hasProfileChanges}
+            onProfileDraftChange={setProfileDraft}
+            onSaveProfile={() => void handleSaveProfile()}
+            onLogout={logout}
+            onSignup={triggerSignup}
+            onLogin={triggerLogin}
+          />
+        );
+      case "sync":
+        return (
+          <SettingsSyncSection
+            isAuthenticated={isAuthenticated}
+            isSyncing={isSyncing}
+            syncStatus={syncStatus}
+            lastSyncedLabel={lastSyncedLabel}
+            outboxCount={outboxCount}
+            conflictCount={conflictCount}
+            backupStatusLabel={backupStatusLabel}
+            hasSyncError={hasSyncError}
+            retryInSeconds={retryInSeconds}
+            onTriggerPull={triggerPull}
+          />
+        );
+      case "features":
+        return (
+          <SettingsFeaturesSection
+            enableTimeOff={settings.enableTimeOff}
+            enableTimeTracking={settings.enableTimeTracking}
+            enableGantt={settings.enableGantt}
+            enableCrossBorderTracking={settings.enableCrossBorderTracking}
+            homeCountry={settings.homeCountry ?? null}
+            officeCountry={settings.officeCountry ?? null}
+            onToggleTimeOff={updateTimeOffEnabled}
+            onToggleTimeTracking={updateTimeTrackingEnabled}
+            onToggleGantt={updateGanttEnabled}
+            onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+            onUpdateHomeCountry={updateHomeCountry}
+            onUpdateOfficeCountry={updateOfficeCountry}
+          />
+        );
+      case "about":
+        return (
+          <SettingsAboutSection
+            isDevMode={isDevMode}
+            onShowChangelog={handleChangelogClick}
+            onShowAboutHelp={handleAboutHelpClick}
+            onShowShortcuts={handleShortcutsClick}
+            onShowDevOptions={handleDevOptionsClick}
+          />
+        );
+      case "data":
+        return (
+          <SettingsDataSection
+            onShareApp={handleShareApp}
+            onShowBackupDialog={() => setShowBackupDialog(true)}
+            onRestoreBackup={() => restoreFileInputRef.current?.click()}
+            onResetSettings={handleClearData}
+          />
+        );
+      case "general":
+      default:
+        return (
+          <SettingsGeneralSection
+            scheduleType={scheduleType}
+            myTeam={myTeam}
+            timeFormat={settings.timeFormat}
+            theme={settings.theme}
+            locale={getLocale() === "nl" ? "nl" : "en"}
+            onScheduleChange={handleScheduleChange}
+            onTeamChange={setMyTeam}
+            onTimeFormatChange={updateTimeFormat}
+            onThemeChange={updateTheme}
+            onLocaleChange={setLocale}
+          />
+        );
+    }
+  })();
 
   return (
     <>
@@ -426,7 +420,7 @@ export function SettingsContent({
           <h2 className="h5 mb-1">{m.settings_title()}</h2>
           <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
         </div>
-        <div>{renderedSectionContent}</div>
+        <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
           <button
             type="button"
