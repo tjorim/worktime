@@ -27,6 +27,8 @@ import { ChangelogModal } from "@/components/ChangelogModal";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/ResetSettingsModal";
+import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
+import { SettingsDataSection } from "@/components/settings/SettingsDataSection";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
@@ -1072,127 +1074,22 @@ export function SettingsContent({
       )}
 
       {showSection("about") && (
-        <div className="border-bottom">
-        <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-info-circle me-2"></i>
-            {m.information_title()}
-          </h6>
-          <ListGroup variant="flush">
-            <ListGroup.Item action onClick={handleChangelogClick}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-stars me-2"></i>
-                    {m.whats_new_label()}
-                  </div>
-                  <small className="text-muted">{m.whats_new_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item action onClick={handleAboutHelpClick}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-question-circle me-2"></i>
-                    {m.about_help_label()}
-                  </div>
-                  <small className="text-muted">{m.about_help_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item action onClick={handleShortcutsClick}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-keyboard me-2"></i>
-                    {m.keyboard_shortcuts_label()}
-                  </div>
-                  <small className="text-muted">{m.keyboard_shortcuts_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            {isDevMode && (
-              <ListGroup.Item action onClick={handleDevOptionsClick}>
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="fw-medium">
-                      <i className="bi bi-code-slash me-2"></i>
-                      {m.developer_options_label()}
-                    </div>
-                    <small className="text-muted">{m.developer_options_description()}</small>
-                  </div>
-                  <i className="bi bi-chevron-right text-muted"></i>
-                </div>
-              </ListGroup.Item>
-            )}
-          </ListGroup>
-        </div>
-      </div>
+        <SettingsAboutSection
+          isDevMode={isDevMode}
+          onShowChangelog={handleChangelogClick}
+          onShowAboutHelp={handleAboutHelpClick}
+          onShowShortcuts={handleShortcutsClick}
+          onShowDevOptions={handleDevOptionsClick}
+        />
       )}
 
       {showSection("data") && (
-        <div>
-        <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-lightning me-2"></i>
-            {m.quick_actions_title()}
-          </h6>
-          <ListGroup variant="flush">
-            <ListGroup.Item action onClick={handleShareApp}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-share me-2"></i>
-                    {m.share_app_label()}
-                  </div>
-                  <small className="text-muted">{m.share_app_description()}</small>
-                </div>
-                <i className="bi bi-share text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item action onClick={() => setShowBackupDialog(true)}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-download me-2"></i>
-                    {m.backup_app_data_label()}
-                  </div>
-                  <small className="text-muted">{m.backup_app_data_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item action onClick={() => restoreFileInputRef.current?.click()}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-upload me-2"></i>
-                    {m.restore_backup_label()}
-                  </div>
-                  <small className="text-muted">{m.restore_backup_description()}</small>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item action onClick={handleClearData} className="text-danger">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">
-                    <i className="bi bi-trash me-2"></i>
-                    {m.reset_settings_label()}
-                  </div>
-                  <small className="text-muted">{m.reset_settings_description()}</small>
-                </div>
-                <i className="bi bi-arrow-clockwise text-danger"></i>
-              </div>
-            </ListGroup.Item>
-          </ListGroup>
-        </div>
-      </div>
+        <SettingsDataSection
+          onShareApp={handleShareApp}
+          onShowBackupDialog={() => setShowBackupDialog(true)}
+          onRestoreBackup={() => restoreFileInputRef.current?.click()}
+          onResetSettings={handleClearData}
+        />
       )}
     </>
   );
