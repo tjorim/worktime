@@ -61,17 +61,22 @@ export function useSettingsSyncStatus({
     };
   }, [isAuthenticated, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
 
-  const retryInSeconds =
-    retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000)) : null;
-  const lastSyncedLabel = lastSyncedAt
-    ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
-    : m.sync_never_synced();
-  const backupStatusLabel =
-    backupEnabled === true
-      ? m.sync_backup_status_enabled()
-      : backupEnabled === false
-        ? m.sync_backup_status_disabled()
-        : m.sync_backup_status_unknown();
+  const { retryInSeconds, lastSyncedLabel, backupStatusLabel } = useMemo(
+    () => ({
+      retryInSeconds:
+        retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000)) : null,
+      lastSyncedLabel: lastSyncedAt
+        ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
+        : m.sync_never_synced(),
+      backupStatusLabel:
+        backupEnabled === true
+          ? m.sync_backup_status_enabled()
+          : backupEnabled === false
+            ? m.sync_backup_status_disabled()
+            : m.sync_backup_status_unknown(),
+    }),
+    [retryAfter, lastSyncedAt, backupEnabled],
+  );
 
   return {
     syncStatus,

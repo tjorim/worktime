@@ -90,6 +90,7 @@ export function useSettingsAccount({
     try {
       const response = await fetchFn(`/api/users/${accountProfile.id}`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ display_name: nextDisplayName }),
       });
       if (!response.ok) {

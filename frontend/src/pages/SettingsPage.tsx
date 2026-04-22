@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
+import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClickEasterEgg";
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
@@ -31,7 +32,6 @@ import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncSta
 import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
-
 
 const SETTINGS_SECTIONS: Array<{
   key: SettingsSection;
@@ -150,8 +150,6 @@ export function SettingsContent({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
-  const versionClickCountRef = useRef(0);
-  const versionClickTimeoutRef = useRef<number | null>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { clearAll: clearTimeOffEvents } = useEventStore();
@@ -219,63 +217,11 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
     showWarningToast: toast.showWarning,
   });
-
-  const handleChangelogClick = () => {
-    setShowChangelog(true);
-  };
-
-  const handleChangelogClose = () => {
-    setShowChangelog(false);
-  };
-
-  const handleShortcutsClick = () => {
-    setShowShortcuts(true);
-  };
-
-  const handleShortcutsClose = () => {
-    setShowShortcuts(false);
-  };
-
-  const handleDevOptionsClick = () => {
-    setShowDevOptions(true);
-  };
-
-  const handleDevOptionsClose = () => {
-    setShowDevOptions(false);
-  };
-
-  // Triple-click on version to toggle dev mode
-  const handleVersionClick = () => {
-    // Clear existing timeout if any
-    if (versionClickTimeoutRef.current !== null) {
-      clearTimeout(versionClickTimeoutRef.current);
-    }
-
-    // Increment click count
-    versionClickCountRef.current += 1;
-
-    // If third click, toggle dev mode
-    if (versionClickCountRef.current === 3) {
-      toggleDevMode();
-      const message = isDevMode ? m.developer_mode_disabled() : m.developer_mode_enabled();
-      toast.showInfo(message);
-      versionClickCountRef.current = 0;
-      versionClickTimeoutRef.current = null;
-    } else {
-      // Reset counter after 1 second
-      versionClickTimeoutRef.current = window.setTimeout(() => {
-        versionClickCountRef.current = 0;
-        versionClickTimeoutRef.current = null;
-      }, 1000);
-    }
-  };
-
-  const handleVersionKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleVersionClick();
-    }
-  };
+  const { handleVersionClick, handleVersionKeyDown } = useVersionClickEasterEgg({
+    isDevMode,
+    toggleDevMode,
+    showInfoToast: toast.showInfo,
+  });
 
   const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -293,11 +239,6 @@ export function SettingsContent({
     } finally {
       event.target.value = "";
     }
-  };
-
-  // Open the app-level About experience through the optional callback.
-  const handleAboutHelpClick = () => {
-    onShowAbout?.();
   };
 
   const handleScheduleChange = (schedule: ScheduleOption) => {
@@ -388,10 +329,10 @@ export function SettingsContent({
     about: () => (
       <SettingsAboutSection
         isDevMode={isDevMode}
-        onShowChangelog={handleChangelogClick}
-        onShowAboutHelp={handleAboutHelpClick}
-        onShowShortcuts={handleShortcutsClick}
-        onShowDevOptions={handleDevOptionsClick}
+        onShowChangelog={() => setShowChangelog(true)}
+        onShowAboutHelp={() => onShowAbout?.()}
+        onShowShortcuts={() => setShowShortcuts(true)}
+        onShowDevOptions={() => setShowDevOptions(true)}
       />
     ),
     data: () => (
@@ -429,19 +370,19 @@ export function SettingsContent({
       </section>
 
       {/* Changelog Modal */}
-      <ChangelogModal show={showChangelog} onHide={handleChangelogClose} />
+      <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         show={showShortcuts}
-        onHide={handleShortcutsClose}
+        onHide={() => setShowShortcuts(false)}
         enableTimeOff={settings.enableTimeOff}
         enableTimeTracking={settings.enableTimeTracking}
         enableGantt={settings.enableGantt}
       />
 
       {/* Developer Options Modal */}
-      <DevOptionsPanel show={showDevOptions} onHide={handleDevOptionsClose} />
+      <DevOptionsPanel show={showDevOptions} onHide={() => setShowDevOptions(false)} />
 
       {/* Backup Dialog */}
       <BackupDialog show={showBackupDialog} onHide={() => setShowBackupDialog(false)} />
