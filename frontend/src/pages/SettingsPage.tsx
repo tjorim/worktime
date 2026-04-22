@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
@@ -319,101 +319,91 @@ export function SettingsContent({
     );
   };
 
-  const renderSection = () => {
-    switch (activeSection) {
-      case "account":
-        return (
-          <SettingsAccountSection
-            isValidating={isValidating}
-            isAuthenticated={isAuthenticated}
-            resolvedDisplayName={resolvedDisplayName}
-            username={accountProfile?.username ?? null}
-            accountId={accountProfile?.id ?? null}
-            userId={userId}
-            isAdmin={accountProfile?.is_admin ?? false}
-            profileError={profileError}
-            isProfileLoading={isProfileLoading}
-            profileDraft={profileDraft}
-            isProfileSaving={isProfileSaving}
-            hasProfileChanges={hasProfileChanges}
-            onProfileDraftChange={setProfileDraft}
-            onSaveProfile={() => void handleSaveProfile()}
-            onLogout={logout}
-            onSignup={triggerSignup}
-            onLogin={triggerLogin}
-          />
-        );
-      case "sync":
-        return (
-          <SettingsSyncSection
-            isAuthenticated={isAuthenticated}
-            isSyncing={isSyncing}
-            syncStatus={syncStatus}
-            lastSyncedLabel={lastSyncedLabel}
-            outboxCount={outboxCount}
-            conflictCount={conflictCount}
-            backupStatusLabel={backupStatusLabel}
-            hasSyncError={hasSyncError}
-            retryInSeconds={retryInSeconds}
-            onTriggerPull={triggerPull}
-          />
-        );
-      case "features":
-        return (
-          <SettingsFeaturesSection
-            enableTimeOff={settings.enableTimeOff}
-            enableTimeTracking={settings.enableTimeTracking}
-            enableGantt={settings.enableGantt}
-            enableCrossBorderTracking={settings.enableCrossBorderTracking}
-            homeCountry={settings.homeCountry ?? null}
-            officeCountry={settings.officeCountry ?? null}
-            onToggleTimeOff={updateTimeOffEnabled}
-            onToggleTimeTracking={updateTimeTrackingEnabled}
-            onToggleGantt={updateGanttEnabled}
-            onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
-            onUpdateHomeCountry={updateHomeCountry}
-            onUpdateOfficeCountry={updateOfficeCountry}
-          />
-        );
-      case "about":
-        return (
-          <SettingsAboutSection
-            isDevMode={isDevMode}
-            onShowChangelog={handleChangelogClick}
-            onShowAboutHelp={handleAboutHelpClick}
-            onShowShortcuts={handleShortcutsClick}
-            onShowDevOptions={handleDevOptionsClick}
-          />
-        );
-      case "data":
-        return (
-          <SettingsDataSection
-            onShareApp={handleShareApp}
-            onShowBackupDialog={() => setShowBackupDialog(true)}
-            onRestoreBackup={() => restoreFileInputRef.current?.click()}
-            onResetSettings={handleClearData}
-          />
-        );
-      case "general":
-      default:
-        return (
-          <SettingsGeneralSection
-            scheduleType={scheduleType}
-            myTeam={myTeam}
-            timeFormat={settings.timeFormat}
-            theme={settings.theme}
-            locale={getLocale() === "nl" ? "nl" : "en"}
-            onScheduleChange={handleScheduleChange}
-            onTeamChange={setMyTeam}
-            onTimeFormatChange={updateTimeFormat}
-            onThemeChange={updateTheme}
-            onLocaleChange={setLocale}
-          />
-        );
-    }
+  const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
+    account: () => (
+      <SettingsAccountSection
+        isValidating={isValidating}
+        isAuthenticated={isAuthenticated}
+        resolvedDisplayName={resolvedDisplayName}
+        username={accountProfile?.username ?? null}
+        accountId={accountProfile?.id ?? null}
+        userId={userId}
+        isAdmin={accountProfile?.is_admin ?? false}
+        profileError={profileError}
+        isProfileLoading={isProfileLoading}
+        profileDraft={profileDraft}
+        isProfileSaving={isProfileSaving}
+        hasProfileChanges={hasProfileChanges}
+        onProfileDraftChange={setProfileDraft}
+        onSaveProfile={() => void handleSaveProfile()}
+        onLogout={logout}
+        onSignup={triggerSignup}
+        onLogin={triggerLogin}
+      />
+    ),
+    sync: () => (
+      <SettingsSyncSection
+        isAuthenticated={isAuthenticated}
+        isSyncing={isSyncing}
+        syncStatus={syncStatus}
+        lastSyncedLabel={lastSyncedLabel}
+        outboxCount={outboxCount}
+        conflictCount={conflictCount}
+        backupStatusLabel={backupStatusLabel}
+        hasSyncError={hasSyncError}
+        retryInSeconds={retryInSeconds}
+        onTriggerPull={triggerPull}
+      />
+    ),
+    general: () => (
+      <SettingsGeneralSection
+        scheduleType={scheduleType}
+        myTeam={myTeam}
+        timeFormat={settings.timeFormat}
+        theme={settings.theme}
+        locale={getLocale() === "nl" ? "nl" : "en"}
+        onScheduleChange={handleScheduleChange}
+        onTeamChange={setMyTeam}
+        onTimeFormatChange={updateTimeFormat}
+        onThemeChange={updateTheme}
+        onLocaleChange={setLocale}
+      />
+    ),
+    features: () => (
+      <SettingsFeaturesSection
+        enableTimeOff={settings.enableTimeOff}
+        enableTimeTracking={settings.enableTimeTracking}
+        enableGantt={settings.enableGantt}
+        enableCrossBorderTracking={settings.enableCrossBorderTracking}
+        homeCountry={settings.homeCountry ?? null}
+        officeCountry={settings.officeCountry ?? null}
+        onToggleTimeOff={updateTimeOffEnabled}
+        onToggleTimeTracking={updateTimeTrackingEnabled}
+        onToggleGantt={updateGanttEnabled}
+        onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+        onUpdateHomeCountry={updateHomeCountry}
+        onUpdateOfficeCountry={updateOfficeCountry}
+      />
+    ),
+    about: () => (
+      <SettingsAboutSection
+        isDevMode={isDevMode}
+        onShowChangelog={handleChangelogClick}
+        onShowAboutHelp={handleAboutHelpClick}
+        onShowShortcuts={handleShortcutsClick}
+        onShowDevOptions={handleDevOptionsClick}
+      />
+    ),
+    data: () => (
+      <SettingsDataSection
+        onShareApp={handleShareApp}
+        onShowBackupDialog={() => setShowBackupDialog(true)}
+        onRestoreBackup={() => restoreFileInputRef.current?.click()}
+        onResetSettings={handleClearData}
+      />
+    ),
   };
-
-  const sectionContent = renderSection();
+  const sectionContent = sectionRenderers[activeSection]();
 
   return (
     <>
