@@ -5,7 +5,6 @@ import Badge from "react-bootstrap/Badge";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
 import Alert from "react-bootstrap/Alert";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -27,6 +26,7 @@ import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
+import { ResetSettingsModal } from "@/components/ResetSettingsModal";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
@@ -1249,46 +1249,15 @@ export function SettingsContent({
       />
 
       {/* Reset Confirmation Modal */}
-      <Modal show={showResetConfirm} onHide={handleCloseResetModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>{m.reset_settings_modal_title()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p className="mb-3">{m.reset_settings_modal_body()}</p>
-          <Form>
-            <Form.Check
-              id="reset-clear-time-tracking"
-              type="checkbox"
-              label={m.reset_also_clear_time_tracking()}
-              checked={clearTimeTrackingData}
-              onChange={(event) => setClearTimeTrackingData(event.target.checked)}
-            />
-            <Form.Check
-              id="reset-clear-time-off"
-              type="checkbox"
-              className="mt-2"
-              label={m.reset_also_clear_time_off()}
-              checked={clearTimeOffData}
-              onChange={(event) => setClearTimeOffData(event.target.checked)}
-            />
-          </Form>
-          {(clearTimeTrackingData || clearTimeOffData) && (
-            <Alert variant="warning" className="mt-3 mb-0">
-              <div className="fw-semibold mb-1">{m.reset_warning()}</div>
-              {clearTimeTrackingData && <div>{m.reset_warning_time_tracking()}</div>}
-              {clearTimeOffData && <div>{m.reset_warning_time_off()}</div>}
-            </Alert>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="outline-secondary" onClick={handleCloseResetModal}>
-            {m.cancel()}
-          </Button>
-          <Button variant="danger" onClick={handleConfirmReset}>
-            {m.reset_now()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <ResetSettingsModal
+        show={showResetConfirm}
+        clearTimeTrackingData={clearTimeTrackingData}
+        clearTimeOffData={clearTimeOffData}
+        onClose={handleCloseResetModal}
+        onConfirm={handleConfirmReset}
+        onChangeClearTimeTrackingData={setClearTimeTrackingData}
+        onChangeClearTimeOffData={setClearTimeOffData}
+      />
     </>
   );
 }
