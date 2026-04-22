@@ -319,8 +319,8 @@ export function SettingsContent({
     );
   };
 
-  const sectionElements: Record<SettingsSection, ReactNode> = {
-    account: (
+  const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
+    account: () => (
       <SettingsAccountSection
         isValidating={isValidating}
         isAuthenticated={isAuthenticated}
@@ -341,7 +341,7 @@ export function SettingsContent({
         onLogin={triggerLogin}
       />
     ),
-    sync: (
+    sync: () => (
       <SettingsSyncSection
         isAuthenticated={isAuthenticated}
         isSyncing={isSyncing}
@@ -355,7 +355,7 @@ export function SettingsContent({
         onTriggerPull={triggerPull}
       />
     ),
-    general: (
+    general: () => (
       <SettingsGeneralSection
         scheduleType={scheduleType}
         myTeam={myTeam}
@@ -369,7 +369,7 @@ export function SettingsContent({
         onLocaleChange={setLocale}
       />
     ),
-    features: (
+    features: () => (
       <SettingsFeaturesSection
         enableTimeOff={settings.enableTimeOff}
         enableTimeTracking={settings.enableTimeTracking}
@@ -385,7 +385,7 @@ export function SettingsContent({
         onUpdateOfficeCountry={updateOfficeCountry}
       />
     ),
-    about: (
+    about: () => (
       <SettingsAboutSection
         isDevMode={isDevMode}
         onShowChangelog={handleChangelogClick}
@@ -394,7 +394,7 @@ export function SettingsContent({
         onShowDevOptions={handleDevOptionsClick}
       />
     ),
-    data: (
+    data: () => (
       <SettingsDataSection
         onShareApp={handleShareApp}
         onShowBackupDialog={() => setShowBackupDialog(true)}
@@ -403,14 +403,7 @@ export function SettingsContent({
       />
     ),
   };
-  const renderedSections = SETTINGS_SECTIONS.map((section) => ({
-    key: section.key,
-    element: sectionElements[section.key],
-  }));
-
-  const sectionContent =
-    renderedSections.find((section) => section.key === activeSection)?.element ??
-    renderedSections.find((section) => section.key === "general")?.element;
+  const sectionContent = sectionRenderers[activeSection]();
 
   return (
     <>
