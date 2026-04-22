@@ -38,7 +38,8 @@ const createMockSyncContext = (overrides = {}) => ({
   ...overrides,
 });
 
-function cleanupSettingsPageTests() {
+// Shared test cleanup for every section suite in this file.
+afterEach(() => {
   useSessionContextSpy?.mockRestore();
   useSessionContextSpy = undefined;
   useOngoingSyncContextSpy?.mockRestore();
@@ -47,9 +48,7 @@ function cleanupSettingsPageTests() {
   labelsCollection.toArray.forEach((label) => {
     labelsCollection.delete(label.id);
   });
-}
-
-afterEach(cleanupSettingsPageTests);
+});
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
