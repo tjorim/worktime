@@ -130,14 +130,12 @@ export type SettingsSection =
   | "about";
 
 /**
- * Render the settings sidebar with preferences, information and quick actions.
+ * Renders the settings content for the selected section in the settings page layout.
  *
- * @param show - Whether the settings panel is visible
- * @param onHide - Callback invoked to hide the settings panel
- * @param onShowAbout - Optional callback invoked to show the About modal
- * @param onChangeSchedule - Optional callback invoked when the user wants to change the schedule
- * @param onChangeTeam - Optional callback invoked when the user wants to change their team
- * @returns The rendered settings panel element
+ * @param onHide - Callback invoked when a settings action should close the page
+ * @param onShowAbout - Optional callback invoked to open the global About experience
+ * @param activeSection - Active settings section key; defaults to "general" when unset
+ * @returns Rendered settings page content
  */
 export function SettingsContent({
   onHide,
@@ -297,7 +295,7 @@ export function SettingsContent({
     }
   };
 
-  // Open About modal through callback prop
+  // Open the app-level About experience through the optional callback.
   const handleAboutHelpClick = () => {
     onShowAbout?.();
   };
@@ -314,7 +312,6 @@ export function SettingsContent({
     setScheduleType(schedule);
   };
 
-  // Share handler
   const handleShareApp = () => {
     shareApp(
       () => toast?.showSuccess(m.share_success()),
@@ -325,7 +322,7 @@ export function SettingsContent({
   const visibleSection = activeSection ?? "general";
   const showSection = (section: SettingsSection) => visibleSection === section;
 
-  const settingsBody = (
+  const coreSectionContent = (
     <>
       {showSection("account") && (
         <SettingsAccountSection
@@ -381,9 +378,9 @@ export function SettingsContent({
     </>
   );
 
-  const settingsSections = (
+  const renderedSectionContent = (
     <>
-      {settingsBody}
+      {coreSectionContent}
 
       {showSection("features") && (
         <SettingsFeaturesSection
@@ -430,7 +427,7 @@ export function SettingsContent({
           <h2 className="h5 mb-1">{m.settings_title()}</h2>
           <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
         </div>
-        <div>{settingsSections}</div>
+        <div>{renderedSectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
           <button
             type="button"
