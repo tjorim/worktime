@@ -24,6 +24,31 @@ const mockSignOut = vi.mocked(
 let useSessionContextSpy: { mockRestore: () => void } | undefined;
 let useOngoingSyncContextSpy: { mockRestore: () => void } | undefined;
 
+const createMockSyncContext = (overrides = {}) => ({
+  isSyncing: false,
+  lastSyncedAt: "2026-04-20T00:00:00Z",
+  outboxCount: 0,
+  hasSyncError: false,
+  conflictCount: 0,
+  conflictedPayload: null,
+  retryAfter: null,
+  enqueueChange: vi.fn(),
+  triggerPull: vi.fn(),
+  resolveOngoingConflicts: vi.fn(),
+  ...overrides,
+});
+
+afterEach(() => {
+  useSessionContextSpy?.mockRestore();
+  useSessionContextSpy = undefined;
+  useOngoingSyncContextSpy?.mockRestore();
+  useOngoingSyncContextSpy = undefined;
+  vi.clearAllMocks();
+  labelsCollection.toArray.forEach((label) => {
+    labelsCollection.delete(label.id);
+  });
+});
+
 function renderWithProviders(ui: React.ReactElement) {
   return render(
     <SettingsProvider>
@@ -39,14 +64,6 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("SettingsPage Account Section", () => {
-  afterEach(() => {
-    useSessionContextSpy?.mockRestore();
-    useSessionContextSpy = undefined;
-    useOngoingSyncContextSpy?.mockRestore();
-    useOngoingSyncContextSpy = undefined;
-    vi.clearAllMocks();
-  });
-
   it("renders connect account and sign in buttons when not authenticated", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Connect Account")).toBeInTheDocument();
@@ -161,14 +178,6 @@ describe("SettingsPage Account Section", () => {
 });
 
 describe("SettingsPage Sync Section", () => {
-  afterEach(() => {
-    useSessionContextSpy?.mockRestore();
-    useSessionContextSpy = undefined;
-    useOngoingSyncContextSpy?.mockRestore();
-    useOngoingSyncContextSpy = undefined;
-    vi.clearAllMocks();
-  });
-
   it("shows signed-out messaging when unauthenticated", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
     expect(screen.getByText(m.sync_signed_out_description())).toBeInTheDocument();
@@ -186,18 +195,15 @@ describe("SettingsPage Sync Section", () => {
       invalidClaims: [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
-    useOngoingSyncContextSpy = vi.spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext").mockReturnValue({
-      isSyncing: false,
-      lastSyncedAt: "2026-04-20T00:00:00Z",
-      outboxCount: 2,
-      hasSyncError: false,
-      conflictCount: 1,
-      conflictedPayload: null,
-      retryAfter: null,
-      enqueueChange: vi.fn(),
-      triggerPull: triggerPullMock,
-      resolveOngoingConflicts: vi.fn(),
-    });
+    useOngoingSyncContextSpy = vi
+      .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
+      .mockReturnValue(
+        createMockSyncContext({
+          outboxCount: 2,
+          conflictCount: 1,
+          triggerPull: triggerPullMock,
+        }),
+      );
 
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
@@ -219,18 +225,9 @@ describe("SettingsPage Sync Section", () => {
       invalidClaims: [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
-    useOngoingSyncContextSpy = vi.spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext").mockReturnValue({
-      isSyncing: true,
-      lastSyncedAt: "2026-04-20T00:00:00Z",
-      outboxCount: 0,
-      hasSyncError: false,
-      conflictCount: 0,
-      conflictedPayload: null,
-      retryAfter: null,
-      enqueueChange: vi.fn(),
-      triggerPull: vi.fn(),
-      resolveOngoingConflicts: vi.fn(),
-    });
+    useOngoingSyncContextSpy = vi
+      .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
+      .mockReturnValue(createMockSyncContext({ isSyncing: true }));
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="sync" />);
     expect(screen.getByRole("button", { name: m.sync_manual_pull_busy() })).toBeDisabled();
