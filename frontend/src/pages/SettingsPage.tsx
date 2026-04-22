@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Button from "react-bootstrap/Button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -26,8 +26,9 @@ import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSec
 import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
-import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
+import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
@@ -128,28 +129,6 @@ export type SettingsSection =
   | "data"
   | "about";
 
-interface AccountProfile {
-  id: number;
-  username: string;
-  display_name: string;
-  is_admin: boolean;
-  capabilities: {
-    backup_enabled: boolean;
-  };
-}
-
-function clearCollectionById(collection: {
-  toArray: Array<{ id: string }>;
-  has: (id: string) => boolean;
-  delete: (id: string) => void;
-}): void {
-  for (const item of [...collection.toArray]) {
-    if (collection.has(item.id)) {
-      collection.delete(item.id);
-    }
-  }
-}
-
 /**
  * Render the settings sidebar with preferences, information and quick actions.
  *
@@ -171,16 +150,8 @@ export function SettingsContent({
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
-  const [clearTimeTrackingData, setClearTimeTrackingData] = useState(false);
-  const [clearTimeOffData, setClearTimeOffData] = useState(false);
-  const [accountProfile, setAccountProfile] = useState<AccountProfile | null>(null);
-  const [profileDraft, setProfileDraft] = useState("");
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
-  const [isProfileSaving, setIsProfileSaving] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const versionClickCountRef = useRef(0);
   const versionClickTimeoutRef = useRef<number | null>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
@@ -208,137 +179,48 @@ export function SettingsContent({
     updateOfficeCountry,
     resetSettings,
   } = useSettings();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setAccountProfile(null);
-      setProfileDraft("");
-      setProfileError(null);
-      setIsProfileLoading(false);
-      return;
-    }
-
-    let isCancelled = false;
-    setIsProfileLoading(true);
-    setProfileError(null);
-
-    fetchFn("/api/me")
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Unexpected status: ${response.status}`);
-        }
-        const profile = (await response.json()) as AccountProfile;
-        if (isCancelled) return;
-        setAccountProfile(profile);
-        setProfileDraft(profile.display_name);
-      })
-      .catch((error) => {
-        if (isCancelled) return;
-        console.error("Failed to load account profile:", error);
-        setProfileError(m.account_profile_load_failed());
-      })
-      .finally(() => {
-        if (!isCancelled) {
-          setIsProfileLoading(false);
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isAuthenticated, fetchFn]);
-
-  const handleSaveProfile = async () => {
-    if (!accountProfile) return;
-    const nextDisplayName = profileDraft.trim();
-    if (!nextDisplayName) {
-      setProfileError(m.account_profile_display_name_required());
-      return;
-    }
-
-    setIsProfileSaving(true);
-    setProfileError(null);
-
-    try {
-      const response = await fetchFn(`/api/users/${accountProfile.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ display_name: nextDisplayName }),
-      });
-      if (!response.ok) {
-        throw new Error(`Unexpected status: ${response.status}`);
-      }
-      const updatedProfile = (await response.json()) as {
-        id: number;
-        username: string;
-        display_name: string;
-      };
-      setAccountProfile((current) =>
-        current
-          ? {
-              ...current,
-              username: updatedProfile.username,
-              display_name: updatedProfile.display_name,
-            }
-          : current,
-      );
-      setProfileDraft(updatedProfile.display_name);
-      toast.showSuccess(m.account_profile_saved(), "bi-person-check");
-    } catch (error) {
-      console.error("Failed to save account profile:", error);
-      setProfileError(m.account_profile_save_failed());
-    } finally {
-      setIsProfileSaving(false);
-    }
-  };
-
-  const syncStatus = useMemo(() => {
-    if (!isAuthenticated) {
-      return {
-        icon: "bi-cloud-slash",
-        label: m.account_not_signed_in(),
-        variant: "muted",
-      };
-    }
-    if (hasSyncError) {
-      return { icon: "bi-cloud-slash", label: m.sync_indicator_error(), variant: "danger" };
-    }
-    if (conflictCount > 0) {
-      return {
-        icon: "bi-exclamation-triangle",
-        label: m.sync_indicator_conflicts({ count: String(conflictCount) }),
-        variant: "warning",
-      };
-    }
-    if (isSyncing) {
-      return { icon: "bi-arrow-repeat", label: m.sync_indicator_syncing(), variant: "info" };
-    }
-    if (outboxCount > 0) {
-      return {
-        icon: "bi-cloud-upload",
-        label: m.sync_indicator_pending({ count: String(outboxCount) }),
-        variant: "warning",
-      };
-    }
-    if (lastSyncedAt) {
-      return { icon: "bi-cloud-check", label: m.sync_indicator_synced(), variant: "success" };
-    }
-    return {
-      icon: "bi-cloud",
-      label: m.sync_never_synced(),
-      variant: "muted",
-    };
-  }, [isAuthenticated, hasSyncError, conflictCount, isSyncing, outboxCount, lastSyncedAt]);
-
-  const retryInSeconds =
-    retryAfter !== null ? Math.max(0, Math.ceil((retryAfter - Date.now()) / 1_000)) : null;
-  const hasProfileChanges =
-    accountProfile !== null &&
-    profileDraft.trim() !== "" &&
-    profileDraft.trim() !== accountProfile.display_name;
-  const lastSyncedLabel = lastSyncedAt
-    ? dayjs(lastSyncedAt).format("DD MMM YYYY HH:mm")
-    : m.sync_never_synced();
-  const resolvedDisplayName = accountProfile?.display_name ?? displayName;
+  const {
+    accountProfile,
+    profileDraft,
+    setProfileDraft,
+    isProfileLoading,
+    isProfileSaving,
+    profileError,
+    hasProfileChanges,
+    resolvedDisplayName,
+    handleSaveProfile,
+  } = useSettingsAccount({
+    isAuthenticated,
+    displayName,
+    fetchFn,
+    showSuccessToast: toast.showSuccess,
+  });
+  const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
+    isAuthenticated,
+    hasSyncError,
+    conflictCount,
+    isSyncing,
+    outboxCount,
+    lastSyncedAt,
+    retryAfter,
+    backupEnabled: accountProfile?.capabilities?.backup_enabled,
+  });
+  const {
+    showResetConfirm,
+    clearTimeTrackingData,
+    setClearTimeTrackingData,
+    clearTimeOffData,
+    setClearTimeOffData,
+    handleClearData,
+    handleCloseResetModal,
+    handleConfirmReset,
+  } = useSettingsResetFlow({
+    resetSettings,
+    clearTimeOffEvents,
+    onHide,
+    showSuccessToast: toast.showSuccess,
+    showWarningToast: toast.showWarning,
+  });
 
   const handleChangelogClick = () => {
     setShowChangelog(true);
@@ -394,90 +276,6 @@ export function SettingsContent({
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleVersionClick();
-    }
-  };
-
-  // Clear/reset all settings
-  const handleClearData = () => {
-    setShowResetConfirm(true);
-  };
-
-  const handleCloseResetModal = () => {
-    setShowResetConfirm(false);
-    setClearTimeTrackingData(false);
-    setClearTimeOffData(false);
-  };
-
-  const handleConfirmReset = () => {
-    const listFormat = new Intl.ListFormat(getLocale(), { style: "long", type: "conjunction" });
-    let settingsCleared = false;
-    let timeTrackingCleared = false;
-    let timeOffCleared = false;
-    const errors: string[] = [];
-
-    // Attempt settings reset
-    try {
-      resetSettings();
-      settingsCleared = true;
-    } catch (error) {
-      console.error("Failed to reset settings:", error);
-      errors.push(m.reset_item_settings());
-    }
-
-    // Attempt time tracking data clearing if requested
-    if (clearTimeTrackingData) {
-      try {
-        clearCollectionById(tasksCollection);
-        clearCollectionById(templatesCollection);
-        clearCollectionById(labelsCollection);
-        timeTrackingCleared = true;
-      } catch (error) {
-        console.error("Failed to clear time tracking data:", error);
-        errors.push(m.reset_item_time_tracking_data());
-      }
-    }
-
-    // Attempt time off data clearing if requested
-    if (clearTimeOffData) {
-      try {
-        clearTimeOffEvents();
-        timeOffCleared = true;
-      } catch (error) {
-        console.error("Failed to clear time off data:", error);
-        errors.push(m.reset_item_time_off_data());
-      }
-    }
-
-    // Always close modal and settings panel
-    handleCloseResetModal();
-    onHide();
-
-    // Aggregate results and show appropriate toast
-    const anythingSucceeded = settingsCleared || timeTrackingCleared || timeOffCleared;
-    const somethingFailed = errors.length > 0;
-
-    if (anythingSucceeded && !somethingFailed) {
-      // All attempted operations succeeded
-      const parts: string[] = [];
-      if (settingsCleared) parts.push(m.reset_item_settings());
-      if (timeTrackingCleared) parts.push(m.reset_item_time_tracking_data());
-      if (timeOffCleared) parts.push(m.reset_item_time_off_data());
-      toast.showSuccess(m.data_cleared({ items: listFormat.format(parts) }), "bi-trash");
-    } else if (!anythingSucceeded && somethingFailed) {
-      // All attempted operations failed
-      toast.showWarning(m.failed_to_clear({ items: listFormat.format(errors) }));
-    } else if (anythingSucceeded && somethingFailed) {
-      // Mixed results: some succeeded, some failed
-      const successParts: string[] = [];
-      if (settingsCleared) successParts.push(m.reset_item_settings());
-      if (timeTrackingCleared) successParts.push(m.reset_item_time_tracking_data());
-      if (timeOffCleared) successParts.push(m.reset_item_time_off_data());
-      toast.showWarning(
-        m.cleared_but_failed_to_clear({
-          clearedItems: listFormat.format(successParts),
-          failedItems: listFormat.format(errors),
-        }),
-      );
     }
   };
 
@@ -559,13 +357,7 @@ export function SettingsContent({
           lastSyncedLabel={lastSyncedLabel}
           outboxCount={outboxCount}
           conflictCount={conflictCount}
-          backupStatusLabel={
-            accountProfile?.capabilities?.backup_enabled === true
-              ? m.sync_backup_status_enabled()
-              : accountProfile?.capabilities?.backup_enabled === false
-                ? m.sync_backup_status_disabled()
-                : m.sync_backup_status_unknown()
-          }
+          backupStatusLabel={backupStatusLabel}
           hasSyncError={hasSyncError}
           retryInSeconds={retryInSeconds}
           onTriggerPull={triggerPull}
