@@ -13,8 +13,6 @@ import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { type CountryCode } from "@/types/countries";
-import { CountrySelect } from "@/components/shared/CountrySelect";
 import { useEventStore } from "@/contexts/EventStoreContext";
 import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { BackupDialog } from "@/components/BackupDialog";
@@ -29,6 +27,8 @@ import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/ResetSettingsModal";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
 import { SettingsDataSection } from "@/components/settings/SettingsDataSection";
+import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
+import { SettingsSyncSection } from "@/components/settings/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
@@ -122,37 +122,6 @@ export function SettingsPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-
-interface CountrySelectItemProps {
-  label: string;
-  description: string;
-  value: CountryCode | null;
-  onUpdate: (country: CountryCode | null) => void;
-  ariaLabel?: string;
-}
-
-function CountrySelectItem({
-  label,
-  description,
-  value,
-  onUpdate,
-  ariaLabel,
-}: CountrySelectItemProps) {
-  return (
-    <ListGroup.Item>
-      <div className="d-flex justify-content-between align-items-center gap-3">
-        <div>
-          <div className="fw-medium">{label}</div>
-          <small className="text-muted">{description}</small>
-        </div>
-        <div style={{ minWidth: "12rem" }}>
-          <CountrySelect value={value} onChange={onUpdate} ariaLabel={ariaLabel ?? label} />
-        </div>
-      </div>
-    </ListGroup.Item>
   );
 }
 
@@ -710,72 +679,24 @@ export function SettingsContent({
       )}
 
       {showSection("sync") && (
-        <div className="border-bottom">
-        <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-cloud-check me-2"></i>
-            {m.sync_section_title()}
-          </h6>
-          <ListGroup variant="flush">
-            {isAuthenticated ? (
-              <ListGroup.Item>
-                <div className="d-flex flex-column gap-3">
-                  <div className={`fw-medium text-${syncStatus.variant}`}>
-                    <i
-                      className={`bi ${syncStatus.icon}${isSyncing ? " sync-spin" : ""} me-2`}
-                      aria-hidden="true"
-                    ></i>
-                    {syncStatus.label}
-                  </div>
-                  <div className="small text-muted d-flex flex-column gap-1">
-                    <div>
-                      <span className="fw-medium">{m.sync_last_synced_label()}:</span>{" "}
-                      {lastSyncedLabel}
-                    </div>
-                    <div>
-                      <span className="fw-medium">{m.sync_pending_changes_label()}:</span>{" "}
-                      {outboxCount}
-                    </div>
-                    <div>
-                      <span className="fw-medium">{m.sync_conflicts_label()}:</span>{" "}
-                      {conflictCount}
-                    </div>
-                    <div>
-                      <span className="fw-medium">{m.sync_backup_status_label()}:</span>{" "}
-                      {accountProfile?.capabilities?.backup_enabled === true
-                        ? m.sync_backup_status_enabled()
-                        : accountProfile?.capabilities?.backup_enabled === false
-                          ? m.sync_backup_status_disabled()
-                          : m.sync_backup_status_unknown()}
-                    </div>
-                    {hasSyncError && retryInSeconds !== null ? (
-                      <div>
-                        <span className="fw-medium">{m.sync_retry_in_label()}:</span>{" "}
-                        {m.sync_retry_in_seconds({ seconds: String(retryInSeconds) })}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="d-flex gap-2 flex-wrap">
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={triggerPull}
-                      disabled={isSyncing}
-                    >
-                      <i className="bi bi-arrow-repeat me-1"></i>
-                      {isSyncing ? m.sync_manual_pull_busy() : m.sync_manual_pull_btn()}
-                    </Button>
-                  </div>
-                </div>
-              </ListGroup.Item>
-            ) : (
-              <ListGroup.Item>
-                <small className="text-muted">{m.sync_signed_out_description()}</small>
-              </ListGroup.Item>
-            )}
-          </ListGroup>
-        </div>
-      </div>
+        <SettingsSyncSection
+          isAuthenticated={isAuthenticated}
+          isSyncing={isSyncing}
+          syncStatus={syncStatus}
+          lastSyncedLabel={lastSyncedLabel}
+          outboxCount={outboxCount}
+          conflictCount={conflictCount}
+          backupStatusLabel={
+            accountProfile?.capabilities?.backup_enabled === true
+              ? m.sync_backup_status_enabled()
+              : accountProfile?.capabilities?.backup_enabled === false
+                ? m.sync_backup_status_disabled()
+                : m.sync_backup_status_unknown()
+          }
+          hasSyncError={hasSyncError}
+          retryInSeconds={retryInSeconds}
+          onTriggerPull={triggerPull}
+        />
       )}
 
       {showSection("general") && (
@@ -971,106 +892,20 @@ export function SettingsContent({
       {settingsBody}
 
       {showSection("features") && (
-        <div className="border-bottom">
-          <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-grid me-2"></i>
-            {m.features_title()}
-          </h6>
-          <ListGroup variant="flush">
-            <ListGroup.Item>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.time_off_label()}</div>
-                  <small className="text-muted">{m.time_off_description()}</small>
-                </div>
-                <Form.Check
-                  type="switch"
-                  id="toggle-timeoff"
-                  checked={settings.enableTimeOff}
-                  onChange={(event) => updateTimeOffEnabled(event.target.checked)}
-                  aria-label="Toggle time off"
-                />
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item>
-              <div className="d-flex flex-column gap-2">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="fw-medium">{m.time_tracking_label()}</div>
-                    <small className="text-muted">{m.time_tracking_description()}</small>
-                  </div>
-                  <Form.Check
-                    type="switch"
-                    id="toggle-timetracking"
-                    checked={settings.enableTimeTracking}
-                    onChange={(event) => updateTimeTrackingEnabled(event.target.checked)}
-                    aria-label="Toggle time tracking"
-                  />
-                </div>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.personal_gantt_label()}</div>
-                  <small className="text-muted">{m.personal_gantt_description()}</small>
-                </div>
-                <Form.Check
-                  type="switch"
-                  id="toggle-gantt"
-                  checked={settings.enableGantt}
-                  onChange={(event) => updateGanttEnabled(event.target.checked)}
-                  aria-label="Toggle personal gantt"
-                />
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.cross_border_tracking_label()}</div>
-                  <small className="text-muted">{m.cross_border_tracking_description()}</small>
-                </div>
-                <Form.Check
-                  type="switch"
-                  id="toggle-crossborder"
-                  checked={settings.enableCrossBorderTracking}
-                  onChange={(event) => updateCrossBorderTrackingEnabled(event.target.checked)}
-                  aria-label="Toggle cross-border tracking"
-                />
-              </div>
-            </ListGroup.Item>
-          </ListGroup>
-        </div>
-      </div>
-      )}
-
-      {showSection("features") && settings.enableCrossBorderTracking && (
-        <div className="border-bottom">
-          <div className="p-3">
-            <h6 className="text-muted mb-3">
-              <i className="bi bi-globe me-2"></i>
-              {m.cross_border_setup_label()}
-            </h6>
-            <small className="text-muted d-block mb-3">{m.cross_border_setup_description()}</small>
-            <ListGroup variant="flush">
-              <CountrySelectItem
-                label={m.home_country_label()}
-                description={m.home_country_description()}
-                value={settings.homeCountry ?? null}
-                onUpdate={updateHomeCountry}
-                ariaLabel={m.home_country_label()}
-              />
-              <CountrySelectItem
-                label={m.office_country_label()}
-                description={m.office_country_description()}
-                value={settings.officeCountry ?? null}
-                onUpdate={updateOfficeCountry}
-                ariaLabel={m.office_country_label()}
-              />
-            </ListGroup>
-          </div>
-        </div>
+        <SettingsFeaturesSection
+          enableTimeOff={settings.enableTimeOff}
+          enableTimeTracking={settings.enableTimeTracking}
+          enableGantt={settings.enableGantt}
+          enableCrossBorderTracking={settings.enableCrossBorderTracking}
+          homeCountry={settings.homeCountry ?? null}
+          officeCountry={settings.officeCountry ?? null}
+          onToggleTimeOff={updateTimeOffEnabled}
+          onToggleTimeTracking={updateTimeTrackingEnabled}
+          onToggleGantt={updateGanttEnabled}
+          onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+          onUpdateHomeCountry={updateHomeCountry}
+          onUpdateOfficeCountry={updateOfficeCountry}
+        />
       )}
 
       {showSection("about") && (
