@@ -319,7 +319,7 @@ export function SettingsContent({
     );
   };
 
-  const sectionContent = (() => {
+  const renderSection = () => {
     switch (activeSection) {
       case "account":
         return (
@@ -411,7 +411,9 @@ export function SettingsContent({
           />
         );
     }
-  })();
+  };
+
+  const sectionContent = renderSection();
 
   return (
     <>
