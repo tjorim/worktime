@@ -140,11 +140,11 @@ export type SettingsSection =
 export function SettingsContent({
   onHide,
   onShowAbout,
-  activeSection = null,
+  activeSection = "general",
 }: {
   onHide: () => void;
   onShowAbout?: () => void;
-  activeSection?: SettingsSection | null;
+  activeSection?: SettingsSection;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -319,8 +319,7 @@ export function SettingsContent({
     );
   };
 
-  const visibleSection = activeSection ?? "general";
-  const showSection = (section: SettingsSection) => visibleSection === section;
+  const showSection = (section: SettingsSection) => activeSection === section;
 
   const coreSectionContent = (
     <>
