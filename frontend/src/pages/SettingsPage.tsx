@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Button from "react-bootstrap/Button";
-import Badge from "react-bootstrap/Badge";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
-import Alert from "react-bootstrap/Alert";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -18,16 +11,18 @@ import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
 import { BackupDialog } from "@/components/BackupDialog";
 import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
 import { CONFIG } from "@/utils/config";
-import { hasMultipleTeams, getTeamCountForOption } from "@/utils/scheduleUtils";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { type ScheduleOption } from "@/data/rosters";
 import { shareApp } from "@/utils/share";
 import { ChangelogModal } from "@/components/ChangelogModal";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { DevOptionsPanel } from "@/components/DevOptionsPanel";
 import { ResetSettingsModal } from "@/components/ResetSettingsModal";
+import { SettingsAccountSection } from "@/components/settings/SettingsAccountSection";
 import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
 import { SettingsDataSection } from "@/components/settings/SettingsDataSection";
 import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
+import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
 import { SettingsSyncSection } from "@/components/settings/SettingsSyncSection";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
@@ -535,147 +530,25 @@ export function SettingsContent({
   const settingsBody = (
     <>
       {showSection("account") && (
-        <div className="border-bottom">
-          <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-person-circle me-2"></i>
-            {m.account_section_title()}
-          </h6>
-          <ListGroup variant="flush">
-            {isValidating ? (
-              <ListGroup.Item>
-                <div className="d-flex align-items-center gap-2 text-muted small">
-                  <span
-                    className="spinner-border spinner-border-sm"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{m.loading()}</span>
-                </div>
-              </ListGroup.Item>
-            ) : isAuthenticated ? (
-              <ListGroup.Item>
-                <div className="d-flex flex-column gap-3">
-                  <div className="d-flex justify-content-between align-items-start gap-3">
-                    <div>
-                      <div className="fw-medium">
-                        <i className="bi bi-person-check me-2 text-success"></i>
-                        {resolvedDisplayName
-                          ? m.auth_logged_in_as({ displayName: resolvedDisplayName })
-                          : m.account_signed_in()}
-                      </div>
-                      {accountProfile?.username ? (
-                        <small className="text-muted">@{accountProfile.username}</small>
-                      ) : null}
-                    </div>
-                    <Button variant="outline-secondary" size="sm" onClick={logout}>
-                      <i className="bi bi-box-arrow-right me-1"></i>
-                      {m.auth_logout()}
-                    </Button>
-                  </div>
-
-                  {profileError ? (
-                    <Alert variant="warning" className="mb-0 py-2">
-                      {profileError}
-                    </Alert>
-                  ) : null}
-
-                  {isProfileLoading && accountProfile === null ? (
-                    <div className="d-flex align-items-center gap-2 text-muted small">
-                      <span
-                        className="spinner-border spinner-border-sm"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
-                      <span>{m.loading()}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Form.Group controlId="account-display-name">
-                        <Form.Label className="fw-medium mb-1">
-                          {m.account_profile_display_name_label()}
-                        </Form.Label>
-                        <Form.Control
-                          size="sm"
-                          type="text"
-                          value={profileDraft}
-                          onChange={(event) => setProfileDraft(event.target.value)}
-                          placeholder={m.account_profile_display_name_placeholder()}
-                          disabled={accountProfile === null || isProfileSaving}
-                        />
-                        <Form.Text className="text-muted">
-                          {m.account_profile_display_name_description()}
-                        </Form.Text>
-                      </Form.Group>
-
-                      <div className="small text-muted d-flex flex-column gap-1">
-                        <div>
-                          <span className="fw-medium">{m.account_profile_username_label()}:</span>{" "}
-                          {accountProfile?.username ?? "—"}
-                        </div>
-                        <div>
-                          <span className="fw-medium">{m.account_profile_user_id_label()}:</span>{" "}
-                          {accountProfile?.id ?? userId ?? "—"}
-                        </div>
-                        <div>
-                          <span className="fw-medium">{m.account_profile_role_label()}:</span>{" "}
-                          {accountProfile?.is_admin
-                            ? m.account_profile_role_admin()
-                            : m.account_profile_role_member()}
-                        </div>
-                      </div>
-
-                      <div className="d-flex gap-2 flex-wrap">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleSaveProfile}
-                          disabled={!hasProfileChanges || isProfileSaving || accountProfile === null}
-                        >
-                          <i className="bi bi-floppy me-1"></i>
-                          {isProfileSaving
-                            ? m.account_profile_saving_btn()
-                            : m.account_profile_save_btn()}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </ListGroup.Item>
-            ) : (
-              <ListGroup.Item>
-                <div className="mb-2">
-                  <div className="fw-medium mb-1">
-                    <i className="bi bi-person-x me-2 text-muted"></i>
-                    {m.account_not_signed_in()}
-                  </div>
-                  <small className="text-muted d-block mb-2">{m.account_sync_benefits()}</small>
-                  <div className="d-flex flex-wrap gap-2 mb-3">
-                    <small className="text-muted">
-                      <i className="bi bi-cloud-check text-success me-1"></i>
-                      {m.account_sync_benefit_backup()}
-                    </small>
-                    <small className="text-muted">
-                      <i className="bi bi-phone text-success me-1"></i>
-                      {m.account_sync_benefit_crossdevice()}
-                    </small>
-                  </div>
-                </div>
-                <div className="d-flex gap-2 flex-wrap">
-                  <Button variant="primary" size="sm" onClick={triggerSignup}>
-                    <i className="bi bi-person-plus me-1"></i>
-                    {m.account_connect_btn()}
-                  </Button>
-                  <Button variant="outline-primary" size="sm" onClick={triggerLogin}>
-                    <i className="bi bi-box-arrow-in-right me-1"></i>
-                    {m.account_sign_in_btn()}
-                  </Button>
-                </div>
-              </ListGroup.Item>
-            )}
-          </ListGroup>
-        </div>
-      </div>
+        <SettingsAccountSection
+          isValidating={isValidating}
+          isAuthenticated={isAuthenticated}
+          resolvedDisplayName={resolvedDisplayName}
+          username={accountProfile?.username ?? null}
+          accountId={accountProfile?.id ?? null}
+          userId={userId}
+          isAdmin={accountProfile?.is_admin ?? false}
+          profileError={profileError}
+          isProfileLoading={isProfileLoading}
+          profileDraft={profileDraft}
+          isProfileSaving={isProfileSaving}
+          hasProfileChanges={hasProfileChanges}
+          onProfileDraftChange={setProfileDraft}
+          onSaveProfile={() => void handleSaveProfile()}
+          onLogout={logout}
+          onSignup={triggerSignup}
+          onLogin={triggerLogin}
+        />
       )}
 
       {showSection("sync") && (
@@ -700,189 +573,18 @@ export function SettingsContent({
       )}
 
       {showSection("general") && (
-        <div className="border-bottom">
-        <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-calendar-week me-2"></i>
-            {m.select_schedule_label()}
-          </h6>
-          <ListGroup variant="flush" className="mb-3">
-            {SCHEDULE_OPTIONS.map((schedule) => {
-              const isSelected = scheduleType === schedule.value;
-              const item = (
-                <ListGroup.Item
-                  key={schedule.value}
-                  action
-                  active={isSelected}
-                  disabled={!schedule.isAvailable}
-                  onClick={() => schedule.isAvailable && handleScheduleChange(schedule.value)}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <div>
-                    <div className="fw-semibold d-flex align-items-center gap-2">
-                      {schedule.title}
-                      {!schedule.isAvailable && (
-                        <Badge bg="secondary" className="fw-normal" style={{ fontSize: "0.65em" }}>
-                          {m.wizard_coming_soon_badge()}
-                        </Badge>
-                      )}
-                    </div>
-                    <small className={isSelected ? "text-white-50" : "text-muted"}>
-                      {schedule.description}
-                    </small>
-                  </div>
-                  {isSelected && <i className="bi bi-check-lg ms-2 flex-shrink-0" aria-hidden="true" />}
-                </ListGroup.Item>
-              );
-              return schedule.isAvailable ? item : (
-                <OverlayTrigger
-                  key={schedule.value}
-                  placement="top"
-                  overlay={<Tooltip>{m.wizard_schedule_coming_soon_tooltip()}</Tooltip>}
-                >
-                  <span>{item}</span>
-                </OverlayTrigger>
-              );
-            })}
-          </ListGroup>
-
-          {scheduleType && hasMultipleTeams(scheduleType) && (
-            <>
-              <h6 className="text-muted mb-3">
-                <i className="bi bi-people me-2"></i>
-                {m.select_team_label()}
-              </h6>
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                {Array.from({ length: getTeamCountForOption(scheduleType) }, (_, i) => i + 1).map((team) => (
-                  <Button
-                    key={team}
-                    size="sm"
-                    variant={myTeam === team ? "primary" : "outline-secondary"}
-                    aria-pressed={myTeam === team}
-                    aria-label={m.wizard_team_btn_aria({ team: String(team) })}
-                    onClick={() => setMyTeam(team)}
-                  >
-                    {m.wizard_team_btn_label({ team: String(team) })}
-                  </Button>
-                ))}
-              </div>
-              {myTeam === null && (
-                <small className="text-muted">{m.settings_no_team_selected()}</small>
-              )}
-            </>
-          )}
-        </div>
-        <div className="p-3">
-          <h6 className="text-muted mb-3">
-            <i className="bi bi-sliders me-2"></i>
-            {m.preferences_title()}
-          </h6>
-          <ListGroup variant="flush">
-            <ListGroup.Item className="">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.time_format_label()}</div>
-                  <small className="text-muted">{m.time_format_description()}</small>
-                </div>
-                <ButtonGroup size="sm" aria-label={m.time_format_label()}>
-                  <Button
-                    variant={settings.timeFormat === "24h" ? "primary" : "outline-secondary"}
-                    aria-pressed={settings.timeFormat === "24h"}
-                    onClick={() => updateTimeFormat("24h")}
-                  >
-                    24h
-                  </Button>
-                  <Button
-                    variant={settings.timeFormat === "12h" ? "primary" : "outline-secondary"}
-                    aria-pressed={settings.timeFormat === "12h"}
-                    onClick={() => updateTimeFormat("12h")}
-                  >
-                    12h
-                  </Button>
-                </ButtonGroup>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item className="">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.theme_label()}</div>
-                  <small className="text-muted">{m.theme_description()}</small>
-                </div>
-                <ButtonGroup size="sm" aria-label={m.theme_label()}>
-                  <Button
-                    variant={settings.theme === "auto" ? "primary" : "outline-secondary"}
-                    aria-pressed={settings.theme === "auto"}
-                    onClick={() => updateTheme("auto")}
-                  >
-                    <i className="bi bi-circle-half me-1"></i>
-                    {m.theme_auto()}
-                  </Button>
-                  <Button
-                    variant={settings.theme === "light" ? "primary" : "outline-secondary"}
-                    aria-pressed={settings.theme === "light"}
-                    onClick={() => updateTheme("light")}
-                  >
-                    <i className="bi bi-sun me-1"></i>
-                    {m.theme_light()}
-                  </Button>
-                  <Button
-                    variant={settings.theme === "dark" ? "primary" : "outline-secondary"}
-                    aria-pressed={settings.theme === "dark"}
-                    onClick={() => updateTheme("dark")}
-                  >
-                    <i className="bi bi-moon me-1"></i>
-                    {m.theme_dark()}
-                  </Button>
-                </ButtonGroup>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item className="">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">{m.language_label()}</div>
-                  <small className="text-muted">{m.language_description()}</small>
-                </div>
-                <ButtonGroup size="sm" aria-label={m.language_label()}>
-                  <Button
-                    variant={getLocale() === "en" ? "primary" : "outline-secondary"}
-                    aria-pressed={getLocale() === "en"}
-                    onClick={() => setLocale("en")}
-                  >
-                    EN
-                  </Button>
-                  <Button
-                    variant={getLocale() === "nl" ? "primary" : "outline-secondary"}
-                    aria-pressed={getLocale() === "nl"}
-                    onClick={() => setLocale("nl")}
-                  >
-                    NL
-                  </Button>
-                </ButtonGroup>
-              </div>
-            </ListGroup.Item>
-            <ListGroup.Item className="text-muted">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium d-flex align-items-center gap-2">
-                    {m.notifications_label()}
-                    <Badge bg="secondary" pill className="fw-normal" style={{ fontSize: "0.65em" }}>
-                      {m.wizard_coming_soon_badge()}
-                    </Badge>
-                  </div>
-                  <small>{m.notifications_description()}</small>
-                </div>
-                <Form.Check
-                  type="switch"
-                  id="toggle-notifications"
-                  checked={false}
-                  disabled
-                  aria-label={m.notifications_label()}
-                />
-              </div>
-            </ListGroup.Item>
-          </ListGroup>
-        </div>
-      </div>
+        <SettingsGeneralSection
+          scheduleType={scheduleType}
+          myTeam={myTeam}
+          timeFormat={settings.timeFormat}
+          theme={settings.theme}
+          locale={getLocale() === "nl" ? "nl" : "en"}
+          onScheduleChange={handleScheduleChange}
+          onTeamChange={setMyTeam}
+          onTimeFormatChange={updateTimeFormat}
+          onThemeChange={updateTheme}
+          onLocaleChange={setLocale}
+        />
       )}
     </>
   );
