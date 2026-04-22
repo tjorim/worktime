@@ -26,9 +26,9 @@
   "scripts": {
     "dev": "vite",
     "dev:playwright:start": "vite --host 0.0.0.0 --port 4173",
-    "build": "pnpm paraglide:compile && tsc -b && vite build",
+    "build": "pnpm paraglide:compile && tsgo -b && vite build",
     "preview": "vite preview",
-    "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
+    "typecheck": "pnpm paraglide:compile && tsgo -b --noEmit",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "lint": "oxlint",
     "format": "oxfmt .",
@@ -79,7 +79,8 @@
     "sass": "^1.99.0",
     "terser": "^5.46.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2",
+    "@typescript/native-preview": "beta",
+    "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4"
   },
