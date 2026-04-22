@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsPanel } from "@/components/SettingsPanel";
+import { SettingsContent } from "@/pages/SettingsPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
 import { EventStoreProvider } from "@/contexts/EventStoreContext";
@@ -34,7 +34,7 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
-describe("SettingsPanel Account Section", () => {
+describe("SettingsPage Account Section", () => {
   afterEach(() => {
     useSessionContextSpy?.mockRestore();
     useSessionContextSpy = undefined;
@@ -42,26 +42,26 @@ describe("SettingsPanel Account Section", () => {
   });
 
   it("renders connect account and sign in buttons when not authenticated", () => {
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Connect Account")).toBeInTheDocument();
     expect(screen.getByText("Sign In")).toBeInTheDocument();
   });
 
   it("shows sync benefits description when not authenticated", () => {
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText(/Your data stays local by default/i)).toBeInTheDocument();
   });
 
   it("calls redirectToAuth with signin when Sign In is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     await user.click(screen.getByText("Sign In"));
     expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
   });
 
   it("calls redirectToAuth with signup when Connect Account is clicked", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     await user.click(screen.getByText("Connect Account"));
     expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
   });
@@ -79,7 +79,7 @@ describe("SettingsPanel Account Section", () => {
     } as any);
 
     const user = userEvent.setup();
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Signed in as Alice")).toBeInTheDocument();
     await user.click(screen.getByText("Sign Out"));
     expect(mockSignOut).toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe("SettingsPanel Account Section", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
 
     expect(await screen.findByDisplayValue("Dev User")).toBeInTheDocument();
     expect(
@@ -132,7 +132,7 @@ describe("SettingsPanel Account Section", () => {
     } as any);
 
     const user = userEvent.setup();
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
 
     const displayNameInput = await screen.findByDisplayValue("Dev User");
     await user.clear(displayNameInput);
@@ -143,12 +143,12 @@ describe("SettingsPanel Account Section", () => {
   });
 
   it("renders account section title regardless of auth state", () => {
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Account")).toBeInTheDocument();
   });
 
   it("shows sync benefits (backup and cross-device icons) when not authenticated", () => {
-    renderWithProviders(<SettingsPanel onHide={vi.fn()} activeSection="account" />);
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Automatic cloud backup")).toBeInTheDocument();
     expect(screen.getByText("Cross-device access")).toBeInTheDocument();
   });
