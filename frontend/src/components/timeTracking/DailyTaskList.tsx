@@ -2,8 +2,10 @@ import type { Dayjs } from "dayjs";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import { dayjs } from "@/utils/dateTimeUtils";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
@@ -15,7 +17,7 @@ import {
 } from "./constants";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
-import { BREAK_DURATION_MINUTES } from "./timeUtils";
+import { BREAK_DURATION_MINUTES, MIN_GAP_DISPLAY_MINUTES } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
 
 export type EditRequest = {
@@ -62,6 +64,36 @@ function NowIndicator({ liveTime }: { liveTime: Dayjs }) {
         {liveTime.format("HH:mm")}
       </Badge>
       <div className="flex-grow-1" style={{ borderTop: "2px solid var(--bs-danger)" }} />
+    </div>
+  );
+}
+
+function GapIndicator({ durationMinutes }: { durationMinutes: number }) {
+  const tooltipId = useId();
+  return (
+    <div
+      className="d-flex align-items-center gap-2 px-3 py-1"
+      role="separator"
+      aria-label={m.tt_gap_aria({ minutes: durationMinutes })}
+      data-testid="gap-indicator"
+    >
+      <div
+        className="flex-grow-1"
+        style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
+      />
+      <OverlayTrigger
+        placement="top"
+        overlay={<Tooltip id={tooltipId}>{m.tt_gap_aria({ minutes: durationMinutes })}</Tooltip>}
+      >
+        <Badge bg="warning" text="dark" pill className="flex-shrink-0" style={{ fontSize: "0.75rem" }} tabIndex={0}>
+          <i className="bi bi-hourglass-split me-1" aria-hidden="true" />
+          {m.tt_gap_label({ minutes: durationMinutes })}
+        </Badge>
+      </OverlayTrigger>
+      <div
+        className="flex-grow-1"
+        style={{ borderTop: "1px dashed var(--bs-warning-border-subtle, #ffc107)" }}
+      />
     </div>
   );
 }
@@ -122,6 +154,31 @@ export function DailyTaskList({
     : null;
 
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
+
+  // gapAfter[i] = gap in minutes between tasks[i].stopTime and tasks[i+1].startTime (if >= threshold)
+  // gapToNow = gap in minutes between the last stopped task and liveTime (today only)
+  const { gapAfter, gapToNow } = useMemo(() => {
+    const gaps: (number | null)[] = tasks.map(() => null);
+
+    for (let i = 0; i < tasks.length - 1; i++) {
+      const current = tasks[i];
+      const next = tasks[i + 1];
+      if (!current?.stopTime || !next) continue;
+      const gap = dayjs(next.startTime).diff(dayjs(current.stopTime), "minute");
+      if (gap >= MIN_GAP_DISPLAY_MINUTES) gaps[i] = gap;
+    }
+
+    let toNow: number | null = null;
+    if (isToday && liveTime && tasks.length > 0) {
+      const last = tasks[tasks.length - 1];
+      if (last?.stopTime) {
+        const gap = liveTime.diff(dayjs(last.stopTime), "minute");
+        if (gap >= MIN_GAP_DISPLAY_MINUTES) toNow = gap;
+      }
+    }
+
+    return { gapAfter: gaps, gapToNow: toNow };
+  }, [tasks, isToday, liveTime]);
 
   const nowPosition = useMemo<NowPosition>(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
@@ -378,6 +435,7 @@ export function DailyTaskList({
             const labelBackground = colorByLabelId[task.label] ?? getDefaultLabelColor();
             const labelTextColor = getContrastingTextColor(labelBackground);
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
+            const gap = gapAfter[index] ?? null;
             return (
               <Fragment key={task.id}>
                 <ListGroup.Item
@@ -404,15 +462,24 @@ export function DailyTaskList({
                           </Badge>
                         )}
                         {task.includesBreak && (
-                          <Badge
-                            bg="secondary"
-                            className="ms-2"
-                            title={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
-                            aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id={`break-badge-${task.id}`}>
+                                {m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                              </Tooltip>
+                            }
                           >
-                            <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
-                            {BREAK_DURATION_MINUTES}min
-                          </Badge>
+                            <Badge
+                              bg="secondary"
+                              className="ms-2"
+                              aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                              tabIndex={0}
+                            >
+                              <i className="bi bi-cup-hot me-1" aria-hidden="true"></i>-
+                              {BREAK_DURATION_MINUTES}min
+                            </Badge>
+                          </OverlayTrigger>
                         )}
                       </div>
                       <div className="small text-muted">
@@ -439,6 +506,9 @@ export function DailyTaskList({
                     </div>
                   </div>
                 </ListGroup.Item>
+                {gap != null && <GapIndicator durationMinutes={gap} />}
+                {gapToNow != null &&
+                  index === tasks.length - 1 && <GapIndicator durationMinutes={gapToNow} />}
                 {nowPosition?.type === "separator" &&
                   nowPosition.insertBeforeIndex === index + 1 &&
                   liveTime && <NowIndicator liveTime={liveTime} />}

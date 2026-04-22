@@ -1,4 +1,6 @@
 import Button from "react-bootstrap/Button";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import clsx from "clsx";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
@@ -36,16 +38,8 @@ export function Step3ScheduleSelection({
         {SCHEDULE_OPTIONS.map((schedule) => {
           const isSelected = selectedSchedule === schedule.value;
 
-          return (
-            <Button
-              key={schedule.value}
-              variant={isSelected ? "primary" : "outline-primary"}
-              className="w-100 text-start mb-2"
-              onClick={() => onScheduleChange(schedule.value)}
-              disabled={!schedule.isAvailable}
-              title={!schedule.isAvailable ? m.wizard_schedule_coming_soon_tooltip() : undefined}
-              ref={schedule.value === "9-5" ? firstButtonRef : undefined}
-            >
+          const buttonInner = (
+            <>
               <div className="fw-semibold d-flex align-items-center gap-2">
                 <span>{schedule.title}</span>
                 {!schedule.isAvailable && (
@@ -55,6 +49,38 @@ export function Step3ScheduleSelection({
               <small className={clsx("d-block", isSelected ? "text-white-50" : "text-muted")}>
                 {schedule.description}
               </small>
+            </>
+          );
+
+          if (!schedule.isAvailable) {
+            return (
+              <OverlayTrigger
+                key={schedule.value}
+                placement="top"
+                overlay={
+                  <Tooltip id={`schedule-coming-soon-${schedule.value}`}>
+                    {m.wizard_schedule_coming_soon_tooltip()}
+                  </Tooltip>
+                }
+              >
+                <span className="d-block" tabIndex={0}>
+                  <Button variant="outline-primary" className="w-100 text-start mb-2" disabled>
+                    {buttonInner}
+                  </Button>
+                </span>
+              </OverlayTrigger>
+            );
+          }
+
+          return (
+            <Button
+              key={schedule.value}
+              variant={isSelected ? "primary" : "outline-primary"}
+              className="w-100 text-start mb-2"
+              onClick={() => onScheduleChange(schedule.value)}
+              ref={schedule.value === "9-5" ? firstButtonRef : undefined}
+            >
+              {buttonInner}
             </Button>
           );
         })}
@@ -62,7 +88,7 @@ export function Step3ScheduleSelection({
 
       <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
         <Button variant="outline-secondary" onClick={onPrev} className="order-2 order-sm-1">
-          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")}></i>{" "}
+          <i className={clsx("bi", isChangeFlow ? "bi-x-lg" : "bi-arrow-left", "me-1")} aria-hidden="true"></i>{" "}
           {isChangeFlow ? m.cancel() : m.back()}
         </Button>
         <Button
@@ -71,7 +97,7 @@ export function Step3ScheduleSelection({
           disabled={!selectedSchedule}
           className="order-1 order-sm-2"
         >
-          {continueLabel} <i className="bi bi-arrow-right ms-1"></i>
+          {continueLabel} <i className="bi bi-arrow-right ms-1" aria-hidden="true"></i>
         </Button>
       </div>
     </>

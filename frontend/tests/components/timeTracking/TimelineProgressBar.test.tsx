@@ -68,23 +68,6 @@ describe("TimelineProgressBar", () => {
     });
   });
 
-  describe("break legend", () => {
-    it("shows legend when tasks include a break", () => {
-      const task = makeTask({ includesBreak: true });
-
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
-
-      expect(screen.getByText("Break (30min)")).toBeInTheDocument();
-    });
-
-    it("does not show legend when no tasks have breaks", () => {
-      const task = makeTask();
-
-      render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
-
-      expect(screen.queryByText("Break (30min)")).not.toBeInTheDocument();
-    });
-  });
 
   describe("effective duration with break", () => {
     it("deducts break from displayed hours", () => {

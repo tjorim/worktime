@@ -1,9 +1,37 @@
+import { useMemo, useRef, useState } from "react";
+import type { ChangeEvent, ReactNode } from "react";
+import { useVersionClickEasterEgg } from "@/pages/settings/hooks/useVersionClickEasterEgg";
 import Button from "react-bootstrap/Button";
-import { useMemo } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { type SettingsSection, SettingsPanel } from "@/components/SettingsPanel";
 import { useAppShellContext } from "@/contexts/AppShellContext";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEventStore } from "@/contexts/EventStoreContext";
+import { validateAppBackupPayload, restoreAppBackup } from "@/utils/appBackup";
+import { BackupDialog } from "@/components/BackupDialog";
+import { useDeveloperOptions } from "@/contexts/DeveloperOptionsContext";
+import { CONFIG } from "@/utils/config";
+import { hasMultipleTeams } from "@/utils/scheduleUtils";
+import { type ScheduleOption } from "@/data/rosters";
+import { shareApp } from "@/utils/share";
+import { ChangelogModal } from "@/components/ChangelogModal";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
+import { DevOptionsPanel } from "@/components/DevOptionsPanel";
+import { ResetSettingsModal } from "@/components/settings/data/ResetSettingsModal";
+import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
+import { SettingsAboutSection } from "@/components/settings/SettingsAboutSection";
+import { SettingsDataSection } from "@/components/settings/data/SettingsDataSection";
+import { SettingsFeaturesSection } from "@/components/settings/SettingsFeaturesSection";
+import { SettingsGeneralSection } from "@/components/settings/SettingsGeneralSection";
+import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncSection";
+import { useApiClient } from "@/hooks/useApiClient";
+import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
+import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
+import { useSettingsSyncStatus } from "@/pages/settings/hooks/useSettingsSyncStatus";
+import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
 import * as m from "@/paraglide/messages.js";
+import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 const SETTINGS_SECTIONS: Array<{
   key: SettingsSection;
@@ -21,7 +49,7 @@ const SETTINGS_SECTIONS: Array<{
 export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
-  const { openAbout, onChangeSchedule, onChangeTeam } = useAppShellContext();
+  const { openAbout } = useAppShellContext();
   const activeSection = search.section ?? "general";
 
   const sectionMeta = useMemo(() => {
@@ -81,18 +109,304 @@ export function SettingsPage() {
           </div>
 
           <div className="col-12 col-lg-8 col-xl-9">
-            <SettingsPanel
-              show
-              variant="page"
+            <SettingsContent
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
-              onChangeSchedule={onChangeSchedule}
-              onChangeTeam={onChangeTeam}
             />
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+export type SettingsSection =
+  | "general"
+  | "features"
+  | "account"
+  | "sync"
+  | "data"
+  | "about";
+
+/**
+ * Renders the settings content for the selected section in the settings page layout.
+ *
+ * @param onHide - Callback invoked when a settings action should close the page
+ * @param onShowAbout - Optional callback invoked to open the global About experience
+ * @param activeSection - Active settings section key; defaults to "general" when unset
+ * @returns Rendered settings page content
+ */
+export function SettingsContent({
+  onHide,
+  onShowAbout,
+  activeSection = "general",
+}: {
+  onHide: () => void;
+  onShowAbout?: () => void;
+  activeSection?: SettingsSection;
+}) {
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showDevOptions, setShowDevOptions] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const { clearAll: clearTimeOffEvents } = useEventStore();
+  const { isDevMode, toggleDevMode } = useDeveloperOptions();
+  const fetchFn = useApiClient();
+  const { isAuthenticated, isValidating, userId, displayName, triggerLogin, triggerSignup, logout } =
+    useAuth();
+  const { isSyncing, lastSyncedAt, outboxCount, hasSyncError, conflictCount, retryAfter, triggerPull } =
+    useOngoingSyncContext();
+  const {
+    settings,
+    scheduleType,
+    myTeam,
+    setMyTeam,
+    setScheduleType,
+    updateTimeFormat,
+    updateTheme,
+    updateTimeOffEnabled,
+    updateTimeTrackingEnabled,
+    updateGanttEnabled,
+    updateCrossBorderTrackingEnabled,
+    updateHomeCountry,
+    updateOfficeCountry,
+    resetSettings,
+  } = useSettings();
+  const {
+    accountProfile,
+    profileDraft,
+    setProfileDraft,
+    isProfileLoading,
+    isProfileSaving,
+    profileError,
+    hasProfileChanges,
+    resolvedDisplayName,
+    handleSaveProfile,
+  } = useSettingsAccount({
+    isAuthenticated,
+    displayName,
+    fetchFn,
+    showSuccessToast: toast.showSuccess,
+  });
+  const { syncStatus, retryInSeconds, lastSyncedLabel, backupStatusLabel } = useSettingsSyncStatus({
+    isAuthenticated,
+    hasSyncError,
+    conflictCount,
+    isSyncing,
+    outboxCount,
+    lastSyncedAt,
+    retryAfter,
+    backupEnabled: accountProfile?.capabilities?.backup_enabled,
+  });
+  const {
+    showResetConfirm,
+    clearTimeTrackingData,
+    setClearTimeTrackingData,
+    clearTimeOffData,
+    setClearTimeOffData,
+    handleClearData,
+    handleCloseResetModal,
+    handleConfirmReset,
+  } = useSettingsResetFlow({
+    resetSettings,
+    clearTimeOffEvents,
+    onHide,
+    showSuccessToast: toast.showSuccess,
+    showWarningToast: toast.showWarning,
+  });
+  const { handleVersionClick, handleVersionKeyDown } = useVersionClickEasterEgg({
+    isDevMode,
+    toggleDevMode,
+    showInfoToast: toast.showInfo,
+  });
+
+  const handleRestoreFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!validateAppBackupPayload(parsed)) {
+        toast.showError(m.restore_failed());
+        return;
+      }
+      restoreAppBackup(parsed);
+    } catch {
+      toast.showError(m.restore_failed());
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleScheduleChange = (schedule: ScheduleOption) => {
+    const scheduleChanged = schedule !== scheduleType;
+    if (scheduleChanged && myTeam !== null) {
+      setMyTeam(null);
+      toast?.showInfo(m.schedule_team_reset_changed());
+    } else if (!hasMultipleTeams(schedule) && myTeam !== null) {
+      setMyTeam(null);
+      toast?.showInfo(m.schedule_team_reset_no_teams());
+    }
+    setScheduleType(schedule);
+  };
+
+  const handleShareApp = () => {
+    shareApp(
+      () => toast?.showSuccess(m.share_success()),
+      () => toast?.showError(m.share_failed()),
+    );
+  };
+
+  const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
+    account: () => (
+      <SettingsAccountSection
+        isValidating={isValidating}
+        isAuthenticated={isAuthenticated}
+        resolvedDisplayName={resolvedDisplayName}
+        username={accountProfile?.username ?? null}
+        accountId={accountProfile?.id ?? null}
+        userId={userId}
+        isAdmin={accountProfile?.is_admin ?? false}
+        profileError={profileError}
+        isProfileLoading={isProfileLoading}
+        profileDraft={profileDraft}
+        isProfileSaving={isProfileSaving}
+        hasProfileChanges={hasProfileChanges}
+        onProfileDraftChange={setProfileDraft}
+        onSaveProfile={() => void handleSaveProfile()}
+        onLogout={logout}
+        onSignup={triggerSignup}
+        onLogin={triggerLogin}
+      />
+    ),
+    sync: () => (
+      <SettingsSyncSection
+        isAuthenticated={isAuthenticated}
+        isSyncing={isSyncing}
+        syncStatus={syncStatus}
+        lastSyncedLabel={lastSyncedLabel}
+        outboxCount={outboxCount}
+        conflictCount={conflictCount}
+        backupStatusLabel={backupStatusLabel}
+        hasSyncError={hasSyncError}
+        retryInSeconds={retryInSeconds}
+        onTriggerPull={triggerPull}
+      />
+    ),
+    general: () => (
+      <SettingsGeneralSection
+        scheduleType={scheduleType}
+        myTeam={myTeam}
+        timeFormat={settings.timeFormat}
+        theme={settings.theme}
+        locale={getLocale() === "nl" ? "nl" : "en"}
+        onScheduleChange={handleScheduleChange}
+        onTeamChange={setMyTeam}
+        onTimeFormatChange={updateTimeFormat}
+        onThemeChange={updateTheme}
+        onLocaleChange={setLocale}
+      />
+    ),
+    features: () => (
+      <SettingsFeaturesSection
+        enableTimeOff={settings.enableTimeOff}
+        enableTimeTracking={settings.enableTimeTracking}
+        enableGantt={settings.enableGantt}
+        enableCrossBorderTracking={settings.enableCrossBorderTracking}
+        homeCountry={settings.homeCountry ?? null}
+        officeCountry={settings.officeCountry ?? null}
+        onToggleTimeOff={updateTimeOffEnabled}
+        onToggleTimeTracking={updateTimeTrackingEnabled}
+        onToggleGantt={updateGanttEnabled}
+        onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+        onUpdateHomeCountry={updateHomeCountry}
+        onUpdateOfficeCountry={updateOfficeCountry}
+      />
+    ),
+    about: () => (
+      <SettingsAboutSection
+        isDevMode={isDevMode}
+        onShowChangelog={() => setShowChangelog(true)}
+        onShowAboutHelp={() => onShowAbout?.()}
+        onShowShortcuts={() => setShowShortcuts(true)}
+        onShowDevOptions={() => setShowDevOptions(true)}
+      />
+    ),
+    data: () => (
+      <SettingsDataSection
+        onShareApp={handleShareApp}
+        onShowBackupDialog={() => setShowBackupDialog(true)}
+        onRestoreBackup={() => restoreFileInputRef.current?.click()}
+        onResetSettings={handleClearData}
+      />
+    ),
+  };
+  const sectionContent = sectionRenderers[activeSection]();
+
+  return (
+    <>
+      <section className="rounded-4 border bg-body shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-bottom bg-body-tertiary">
+          <h2 className="h5 mb-1">{m.settings_title()}</h2>
+          <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
+        </div>
+        <div>{sectionContent}</div>
+        <div className="px-4 py-3 text-center border-top">
+          <button
+            type="button"
+            className="btn btn-link text-muted d-block p-0 mx-auto text-decoration-none"
+            onClick={handleVersionClick}
+            onKeyDown={handleVersionKeyDown}
+            style={{ cursor: "pointer", userSelect: "none" }}
+            aria-label={m.footer_version_aria({ version: CONFIG.VERSION })}
+          >
+            {m.footer_version({ version: CONFIG.VERSION })}
+          </button>
+          <small className="text-muted">{m.footer_built_by()}</small>
+        </div>
+      </section>
+
+      {/* Changelog Modal */}
+      <ChangelogModal show={showChangelog} onHide={() => setShowChangelog(false)} />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        show={showShortcuts}
+        onHide={() => setShowShortcuts(false)}
+        enableTimeOff={settings.enableTimeOff}
+        enableTimeTracking={settings.enableTimeTracking}
+        enableGantt={settings.enableGantt}
+      />
+
+      {/* Developer Options Modal */}
+      <DevOptionsPanel show={showDevOptions} onHide={() => setShowDevOptions(false)} />
+
+      {/* Backup Dialog */}
+      <BackupDialog show={showBackupDialog} onHide={() => setShowBackupDialog(false)} />
+
+      {/* Hidden file input for restore */}
+      <input
+        ref={restoreFileInputRef}
+        type="file"
+        accept="application/json"
+        className="d-none"
+        aria-label="Restore backup file"
+        onChange={handleRestoreFileChange}
+      />
+
+      {/* Reset Confirmation Modal */}
+      <ResetSettingsModal
+        show={showResetConfirm}
+        clearTimeTrackingData={clearTimeTrackingData}
+        clearTimeOffData={clearTimeOffData}
+        onClose={handleCloseResetModal}
+        onConfirm={handleConfirmReset}
+        onChangeClearTimeTrackingData={setClearTimeTrackingData}
+        onChangeClearTimeOffData={setClearTimeOffData}
+      />
+    </>
   );
 }

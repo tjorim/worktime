@@ -142,7 +142,6 @@ export function TimelineProgressBar({
   const normalizationFactor = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
 
   const isOvertime = totalPercentage > 100;
-  const hasBreakSegments = segments.some((s) => s.includesBreak);
 
   // Position of the "Now" line mapped to the same rendered timeline scale as the segments.
   // This avoids drifting into task gaps or clamping before compressed overtime segments.
@@ -266,24 +265,6 @@ export function TimelineProgressBar({
         </div>
       ) : (
         <BootstrapProgressBar now={0} />
-      )}
-
-      {/* Break legend */}
-      {hasBreakSegments && (
-        <div className="text-muted mt-1 d-flex align-items-center" style={{ fontSize: "0.75rem" }}>
-          <span
-            style={{
-              display: "inline-block",
-              width: "12px",
-              height: "12px",
-              backgroundColor: "currentColor",
-              opacity: 0.3,
-              borderRadius: "2px",
-              marginRight: "0.35rem",
-            }}
-          />
-          Break ({BREAK_DURATION_MINUTES}min)
-        </div>
       )}
 
       {/* Summary text */}

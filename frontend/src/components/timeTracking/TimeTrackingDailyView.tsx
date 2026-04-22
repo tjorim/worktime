@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import ReactSelect from "react-select";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -58,6 +60,7 @@ interface WorkLocationDayHeaderProps {
 }
 
 function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
+  const clearTooltipId = useId();
   const { settings } = useSettings();
   const year = dayjs(date).year();
   const { workLocationMap, setLocationForDate, clearLocationForDate } =
@@ -95,7 +98,6 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "home" ? "primary" : "outline-secondary"}
             onClick={handleHome}
             aria-pressed={stored?.location === "home"}
-            title={m.tt_work_from_home()}
           >
             <i className="bi bi-house me-1" aria-hidden="true"></i>
             {m.work_location_home()}
@@ -107,7 +109,6 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
             variant={stored?.location === "office" ? "primary" : "outline-secondary"}
             onClick={handleOffice}
             aria-pressed={stored?.location === "office"}
-            title={m.tt_work_from_office()}
           >
             <i className="bi bi-building me-1" aria-hidden="true"></i>
             {m.work_location_office()}
@@ -118,21 +119,24 @@ function WorkLocationDayHeader({ date }: WorkLocationDayHeaderProps) {
           variant={stored?.location === "other" ? "primary" : "outline-secondary"}
           onClick={() => setShowOtherModal(true)}
           aria-pressed={stored?.location === "other"}
-          title={m.tt_work_from_other()}
         >
           <i className="bi bi-geo-alt me-1" aria-hidden="true"></i>
           {m.tt_other_location()}
         </Button>
         {stored && (
-          <Button
-            size="sm"
-            variant="outline-danger"
-            onClick={handleClear}
-            aria-label={m.tt_clear_work_location()}
-            title={m.tt_clear_work_location()}
+          <OverlayTrigger
+            placement="top"
+            overlay={<Tooltip id={clearTooltipId}>{m.tt_clear_work_location()}</Tooltip>}
           >
-            <i className="bi bi-x" aria-hidden="true"></i>
-          </Button>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              onClick={handleClear}
+              aria-label={m.tt_clear_work_location()}
+            >
+              <i className="bi bi-x" aria-hidden="true"></i>
+            </Button>
+          </OverlayTrigger>
         )}
       </div>
       <OtherLocationModal

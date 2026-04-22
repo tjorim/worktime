@@ -491,7 +491,7 @@ describe("TimeOffView Integration Tests", () => {
       const user = userEvent.setup();
       renderWithProviders();
 
-      // Import multi-type events
+      // Import multi-type events (entries are in 2025)
       const fileInput = screen.getByLabelText(/Import \.hday file/i);
       const file = new File([MULTI_TYPE_HDAY], "test.hday", { type: "text/plain" });
       await user.upload(fileInput, file);
@@ -499,13 +499,16 @@ describe("TimeOffView Integration Tests", () => {
       // Switch to statistics view
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
 
-      // Verify statistics view groups events by type
+      // Verify statistics view renders
       const statsRegion = screen.getByRole("region", { name: /Vacation statistics/i });
       expect(statsRegion).toBeInTheDocument();
 
-      // Statistics should show breakdown by event type
-      // (The exact text depends on the implementation, but we're verifying the view renders)
-      expect(within(statsRegion).getByText(/Holiday/i)).toBeInTheDocument();
+      // Select the year that has events
+      const yearSelect = within(statsRegion).getByRole("combobox", { name: /select year/i });
+      await user.selectOptions(yearSelect, "2025");
+
+      // Statistics should show breakdown by event type for 2025
+      expect(within(statsRegion).getByText("Holiday")).toBeInTheDocument();
     });
   });
 

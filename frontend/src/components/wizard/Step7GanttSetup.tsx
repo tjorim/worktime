@@ -9,6 +9,7 @@ interface Step7GanttSetupProps {
   onToggle: (enabled: boolean) => void;
   onPrev: () => void;
   onNext: () => void;
+  isLastStep?: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
@@ -17,12 +18,13 @@ export function Step7GanttSetup({
   onToggle,
   onPrev,
   onNext,
+  isLastStep,
   firstButtonRef,
 }: Step7GanttSetupProps) {
   return (
     <>
       <div className="text-center mb-4">
-        <i className="bi bi-bar-chart-steps display-4 text-warning"></i>
+        <i className="bi bi-bar-chart-steps display-4 text-warning" aria-hidden="true"></i>
         <h4 className="mt-3">{m.wizard_gantt_heading()}</h4>
         <p className="text-muted">{m.wizard_gantt_subtitle()}</p>
       </div>
@@ -52,10 +54,11 @@ export function Step7GanttSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> {m.back()}
+          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onNext} className="order-1 order-sm-2">
-          {m.continue()} <i className="bi bi-arrow-right ms-1"></i>
+          {isLastStep ? m.wizard_finish_setup() : m.continue()}
+          <i className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`} aria-hidden="true"></i>
         </Button>
       </div>
     </>

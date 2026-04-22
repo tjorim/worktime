@@ -9,6 +9,7 @@ interface Step6TimeTrackingSetupProps {
   onToggle: (enabled: boolean) => void;
   onPrev: () => void;
   onComplete: () => void;
+  isLastStep?: boolean;
   firstButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
@@ -17,12 +18,13 @@ export function Step6TimeTrackingSetup({
   onToggle,
   onPrev,
   onComplete,
+  isLastStep,
   firstButtonRef,
 }: Step6TimeTrackingSetupProps) {
   return (
     <>
       <div className="text-center mb-4">
-        <i className="bi bi-stopwatch display-4 text-success"></i>
+        <i className="bi bi-stopwatch display-4 text-success" aria-hidden="true"></i>
         <h4 className="mt-3">{m.wizard_tracking_heading()}</h4>
         <p className="text-muted">{m.wizard_tracking_subtitle()}</p>
       </div>
@@ -54,10 +56,11 @@ export function Step6TimeTrackingSetup({
           ref={firstButtonRef}
           className="order-2 order-sm-1"
         >
-          <i className="bi bi-arrow-left me-1"></i> {m.back()}
+          <i className="bi bi-arrow-left me-1" aria-hidden="true"></i> {m.back()}
         </Button>
         <Button variant="primary" onClick={onComplete} className="order-1 order-sm-2">
-          {m.wizard_finish_setup()} <i className="bi bi-check-lg ms-1"></i>
+          {isLastStep ? m.wizard_finish_setup() : m.continue()}
+          <i className={`bi ${isLastStep ? "bi-check-lg" : "bi-arrow-right"} ms-1`} aria-hidden="true"></i>
         </Button>
       </div>
     </>
