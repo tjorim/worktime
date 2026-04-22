@@ -130,23 +130,21 @@ export type SettingsSection =
   | "about";
 
 /**
- * Render the settings sidebar with preferences, information and quick actions.
+ * Renders the settings content for the selected section in the settings page layout.
  *
- * @param show - Whether the settings panel is visible
- * @param onHide - Callback invoked to hide the settings panel
- * @param onShowAbout - Optional callback invoked to show the About modal
- * @param onChangeSchedule - Optional callback invoked when the user wants to change the schedule
- * @param onChangeTeam - Optional callback invoked when the user wants to change their team
- * @returns The rendered settings panel element
+ * @param onHide - Callback invoked when a settings action should close the page
+ * @param onShowAbout - Optional callback invoked to open the global About experience
+ * @param activeSection - Active settings section key; defaults to "general" when unset
+ * @returns Rendered settings page content
  */
 export function SettingsContent({
   onHide,
   onShowAbout,
-  activeSection = null,
+  activeSection = "general",
 }: {
   onHide: () => void;
   onShowAbout?: () => void;
-  activeSection?: SettingsSection | null;
+  activeSection?: SettingsSection;
 }) {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -297,7 +295,7 @@ export function SettingsContent({
     }
   };
 
-  // Open About modal through callback prop
+  // Open the app-level About experience through the optional callback.
   const handleAboutHelpClick = () => {
     onShowAbout?.();
   };
@@ -314,7 +312,6 @@ export function SettingsContent({
     setScheduleType(schedule);
   };
 
-  // Share handler
   const handleShareApp = () => {
     shareApp(
       () => toast?.showSuccess(m.share_success()),
@@ -322,106 +319,101 @@ export function SettingsContent({
     );
   };
 
-  const visibleSection = activeSection ?? "general";
-  const showSection = (section: SettingsSection) => visibleSection === section;
+  const renderSection = () => {
+    switch (activeSection) {
+      case "account":
+        return (
+          <SettingsAccountSection
+            isValidating={isValidating}
+            isAuthenticated={isAuthenticated}
+            resolvedDisplayName={resolvedDisplayName}
+            username={accountProfile?.username ?? null}
+            accountId={accountProfile?.id ?? null}
+            userId={userId}
+            isAdmin={accountProfile?.is_admin ?? false}
+            profileError={profileError}
+            isProfileLoading={isProfileLoading}
+            profileDraft={profileDraft}
+            isProfileSaving={isProfileSaving}
+            hasProfileChanges={hasProfileChanges}
+            onProfileDraftChange={setProfileDraft}
+            onSaveProfile={() => void handleSaveProfile()}
+            onLogout={logout}
+            onSignup={triggerSignup}
+            onLogin={triggerLogin}
+          />
+        );
+      case "sync":
+        return (
+          <SettingsSyncSection
+            isAuthenticated={isAuthenticated}
+            isSyncing={isSyncing}
+            syncStatus={syncStatus}
+            lastSyncedLabel={lastSyncedLabel}
+            outboxCount={outboxCount}
+            conflictCount={conflictCount}
+            backupStatusLabel={backupStatusLabel}
+            hasSyncError={hasSyncError}
+            retryInSeconds={retryInSeconds}
+            onTriggerPull={triggerPull}
+          />
+        );
+      case "features":
+        return (
+          <SettingsFeaturesSection
+            enableTimeOff={settings.enableTimeOff}
+            enableTimeTracking={settings.enableTimeTracking}
+            enableGantt={settings.enableGantt}
+            enableCrossBorderTracking={settings.enableCrossBorderTracking}
+            homeCountry={settings.homeCountry ?? null}
+            officeCountry={settings.officeCountry ?? null}
+            onToggleTimeOff={updateTimeOffEnabled}
+            onToggleTimeTracking={updateTimeTrackingEnabled}
+            onToggleGantt={updateGanttEnabled}
+            onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
+            onUpdateHomeCountry={updateHomeCountry}
+            onUpdateOfficeCountry={updateOfficeCountry}
+          />
+        );
+      case "about":
+        return (
+          <SettingsAboutSection
+            isDevMode={isDevMode}
+            onShowChangelog={handleChangelogClick}
+            onShowAboutHelp={handleAboutHelpClick}
+            onShowShortcuts={handleShortcutsClick}
+            onShowDevOptions={handleDevOptionsClick}
+          />
+        );
+      case "data":
+        return (
+          <SettingsDataSection
+            onShareApp={handleShareApp}
+            onShowBackupDialog={() => setShowBackupDialog(true)}
+            onRestoreBackup={() => restoreFileInputRef.current?.click()}
+            onResetSettings={handleClearData}
+          />
+        );
+      case "general":
+      default:
+        return (
+          <SettingsGeneralSection
+            scheduleType={scheduleType}
+            myTeam={myTeam}
+            timeFormat={settings.timeFormat}
+            theme={settings.theme}
+            locale={getLocale() === "nl" ? "nl" : "en"}
+            onScheduleChange={handleScheduleChange}
+            onTeamChange={setMyTeam}
+            onTimeFormatChange={updateTimeFormat}
+            onThemeChange={updateTheme}
+            onLocaleChange={setLocale}
+          />
+        );
+    }
+  };
 
-  const settingsBody = (
-    <>
-      {showSection("account") && (
-        <SettingsAccountSection
-          isValidating={isValidating}
-          isAuthenticated={isAuthenticated}
-          resolvedDisplayName={resolvedDisplayName}
-          username={accountProfile?.username ?? null}
-          accountId={accountProfile?.id ?? null}
-          userId={userId}
-          isAdmin={accountProfile?.is_admin ?? false}
-          profileError={profileError}
-          isProfileLoading={isProfileLoading}
-          profileDraft={profileDraft}
-          isProfileSaving={isProfileSaving}
-          hasProfileChanges={hasProfileChanges}
-          onProfileDraftChange={setProfileDraft}
-          onSaveProfile={() => void handleSaveProfile()}
-          onLogout={logout}
-          onSignup={triggerSignup}
-          onLogin={triggerLogin}
-        />
-      )}
-
-      {showSection("sync") && (
-        <SettingsSyncSection
-          isAuthenticated={isAuthenticated}
-          isSyncing={isSyncing}
-          syncStatus={syncStatus}
-          lastSyncedLabel={lastSyncedLabel}
-          outboxCount={outboxCount}
-          conflictCount={conflictCount}
-          backupStatusLabel={backupStatusLabel}
-          hasSyncError={hasSyncError}
-          retryInSeconds={retryInSeconds}
-          onTriggerPull={triggerPull}
-        />
-      )}
-
-      {showSection("general") && (
-        <SettingsGeneralSection
-          scheduleType={scheduleType}
-          myTeam={myTeam}
-          timeFormat={settings.timeFormat}
-          theme={settings.theme}
-          locale={getLocale() === "nl" ? "nl" : "en"}
-          onScheduleChange={handleScheduleChange}
-          onTeamChange={setMyTeam}
-          onTimeFormatChange={updateTimeFormat}
-          onThemeChange={updateTheme}
-          onLocaleChange={setLocale}
-        />
-      )}
-    </>
-  );
-
-  const settingsSections = (
-    <>
-      {settingsBody}
-
-      {showSection("features") && (
-        <SettingsFeaturesSection
-          enableTimeOff={settings.enableTimeOff}
-          enableTimeTracking={settings.enableTimeTracking}
-          enableGantt={settings.enableGantt}
-          enableCrossBorderTracking={settings.enableCrossBorderTracking}
-          homeCountry={settings.homeCountry ?? null}
-          officeCountry={settings.officeCountry ?? null}
-          onToggleTimeOff={updateTimeOffEnabled}
-          onToggleTimeTracking={updateTimeTrackingEnabled}
-          onToggleGantt={updateGanttEnabled}
-          onToggleCrossBorderTracking={updateCrossBorderTrackingEnabled}
-          onUpdateHomeCountry={updateHomeCountry}
-          onUpdateOfficeCountry={updateOfficeCountry}
-        />
-      )}
-
-      {showSection("about") && (
-        <SettingsAboutSection
-          isDevMode={isDevMode}
-          onShowChangelog={handleChangelogClick}
-          onShowAboutHelp={handleAboutHelpClick}
-          onShowShortcuts={handleShortcutsClick}
-          onShowDevOptions={handleDevOptionsClick}
-        />
-      )}
-
-      {showSection("data") && (
-        <SettingsDataSection
-          onShareApp={handleShareApp}
-          onShowBackupDialog={() => setShowBackupDialog(true)}
-          onRestoreBackup={() => restoreFileInputRef.current?.click()}
-          onResetSettings={handleClearData}
-        />
-      )}
-    </>
-  );
+  const sectionContent = renderSection();
 
   return (
     <>
@@ -430,7 +422,7 @@ export function SettingsContent({
           <h2 className="h5 mb-1">{m.settings_title()}</h2>
           <p className="text-muted mb-0">{m.settings_page_surface_description()}</p>
         </div>
-        <div>{settingsSections}</div>
+        <div>{sectionContent}</div>
         <div className="px-4 py-3 text-center border-top">
           <button
             type="button"
