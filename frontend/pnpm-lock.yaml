@@ -54,8 +54,8 @@ importers:
         specifier: ^0.16.0
         version: 0.16.0
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.16.0
