@@ -94,7 +94,7 @@ async def readiness(
         try:
             # Use a statement timeout to protect against connection pool exhaustion
             # or hung queries silently blocking the readiness probe.
-            await db.execute(text("SET LOCAL statement_timeout = '2000'"))
+            await db.execute(text("SET LOCAL statement_timeout = '2s'"))
             await db.execute(text("SELECT 1"))
             return "ok", False
         except Exception as e:
