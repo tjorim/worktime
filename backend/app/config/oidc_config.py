@@ -24,6 +24,8 @@ from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 
 from app.config import settings
+from app.database.engine import get_session_factory
+from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)
 
@@ -178,10 +180,8 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
     from sqlalchemy import select
     from sqlalchemy.exc import IntegrityError
 
-    from app.database.engine import get_session_factory
     from app.database.models import User
     from app.schemas import UserCreate
-    from app.services.db_service import ConflictError, create_user
 
     session_factory = get_session_factory()
     async with session_factory() as db_session:
