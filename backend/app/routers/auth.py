@@ -8,6 +8,7 @@ validated Bearer JWT so that existing endpoint code does not need to change.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
@@ -15,6 +16,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
+
+logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
 
@@ -40,7 +43,7 @@ async def get_authenticated_principal(
     except OIDCTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
@@ -54,10 +57,17 @@ async def get_authenticated_principal(
 
     try:
         local_user = await get_or_create_local_user(subject, claims)
-    except Exception as exc:
+    except OIDCTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Failed to resolve local user from token",
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Failed to resolve local user for subject %s", subject)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service error",
         ) from exc
 
     admin_usernames = {u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip()}

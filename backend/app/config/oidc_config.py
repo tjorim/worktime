@@ -140,6 +140,9 @@ def _derive_username_and_display_name(claims: dict[str, Any], subject: str) -> t
     return username, display_name
 
 
+_MAX_USERNAME_ATTEMPTS = 50
+
+
 async def _find_available_username(db_session, base_username: str, subject: str) -> str:
     """Return a unique local username candidate for an OIDC identity."""
     from sqlalchemy import select
@@ -149,7 +152,7 @@ async def _find_available_username(db_session, base_username: str, subject: str)
     candidate = base_username
     attempt = 0
 
-    while True:
+    while attempt < _MAX_USERNAME_ATTEMPTS:
         result = await db_session.execute(select(User).where(User.username == candidate))
         if result.scalar_one_or_none() is None:
             return candidate
@@ -162,6 +165,8 @@ async def _find_available_username(db_session, base_username: str, subject: str)
             candidate = f"{base_username}-{suffix}"
         else:
             candidate = f"{base_username}-{suffix}-{attempt}"
+
+    raise RuntimeError(f"Could not find available username for {base_username!r} after {_MAX_USERNAME_ATTEMPTS} attempts")
 
 
 async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
