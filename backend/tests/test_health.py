@@ -1,4 +1,4 @@
-"""Tests for health check endpoint."""
+"""Tests for health check endpoints."""
 
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,8 +17,40 @@ def client():
     return TestClient(app)
 
 
-def test_health_check_success(client, tmp_path, monkeypatch):
-    """Test health check when share directory is accessible."""
+# ---------------------------------------------------------------------------
+# Liveness endpoint
+# ---------------------------------------------------------------------------
+
+
+def test_liveness_returns_200(client):
+    """GET /api/health/liveness always returns 200 with no external I/O."""
+    response = client.get("/api/health/liveness")
+    assert response.status_code == 200
+    assert response.json() == {"status": "alive"}
+
+
+# ---------------------------------------------------------------------------
+# Health summary endpoint
+# ---------------------------------------------------------------------------
+
+
+def test_health_summary_returns_200_with_links(client):
+    """GET /api/health returns 200 with links to liveness and readiness."""
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["links"]["liveness"] == "/api/health/liveness"
+    assert data["links"]["readiness"] == "/api/health/readiness"
+
+
+# ---------------------------------------------------------------------------
+# Readiness endpoint
+# ---------------------------------------------------------------------------
+
+
+def test_readiness_check_success(client, tmp_path, monkeypatch):
+    """Test readiness check when share directory is accessible."""
     share_dir = tmp_path / "share"
     share_dir.mkdir()
     (share_dir / "test.txt").write_text("test")
@@ -26,7 +58,7 @@ def test_health_check_success(client, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "SHARE_DIR", str(share_dir))
     monkeypatch.setattr(settings, "LEGACY_FILESHARE_ENABLED", True)
 
-    # Override the DB dependency so the health check succeeds without a real DB.
+    # Override the DB dependency so the readiness check succeeds without a real DB.
     async def mock_db():
         yield AsyncMock()
 
@@ -43,7 +75,7 @@ def test_health_check_success(client, tmp_path, monkeypatch):
 
     try:
         with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
-            response = client.get("/api/health")
+            response = client.get("/api/health/readiness")
     finally:
         del app.dependency_overrides[_get_db_if_enabled]
 
@@ -55,8 +87,8 @@ def test_health_check_success(client, tmp_path, monkeypatch):
     assert data["share"] == "ok"
 
 
-def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
-    """Test health check when share directory does not exist."""
+def test_readiness_check_directory_not_found(client, tmp_path, monkeypatch):
+    """Test readiness check when share directory does not exist."""
     # Use a non-existent directory
     share_dir = tmp_path / "nonexistent"
 
@@ -79,7 +111,7 @@ def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
 
     try:
         with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
-            response = client.get("/api/health")
+            response = client.get("/api/health/readiness")
     finally:
         del app.dependency_overrides[_get_db_if_enabled]
 
@@ -89,8 +121,8 @@ def test_health_check_directory_not_found(client, tmp_path, monkeypatch):
     assert data["share"] == "not_found"
 
 
-def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
-    """Test health check when share path is a file, not a directory."""
+def test_readiness_check_not_a_directory(client, tmp_path, monkeypatch):
+    """Test readiness check when share path is a file, not a directory."""
     # Create a file instead of a directory
     share_file = tmp_path / "sharefile"
     share_file.write_text("not a directory")
@@ -114,7 +146,7 @@ def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
 
     try:
         with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
-            response = client.get("/api/health")
+            response = client.get("/api/health/readiness")
     finally:
         del app.dependency_overrides[_get_db_if_enabled]
 
@@ -124,8 +156,8 @@ def test_health_check_not_a_directory(client, tmp_path, monkeypatch):
     assert data["share"] == "not_found"
 
 
-def test_health_check_permission_denied(client, tmp_path, monkeypatch):
-    """Test health check when permission is denied to read directory."""
+def test_readiness_check_permission_denied(client, tmp_path, monkeypatch):
+    """Test readiness check when permission is denied to read directory."""
     # Create a directory
     share_dir = tmp_path / "share"
     share_dir.mkdir()
@@ -159,7 +191,7 @@ def test_health_check_permission_denied(client, tmp_path, monkeypatch):
 
     try:
         with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
-            response = client.get("/api/health")
+            response = client.get("/api/health/readiness")
     finally:
         del app.dependency_overrides[_get_db_if_enabled]
 
@@ -169,8 +201,8 @@ def test_health_check_permission_denied(client, tmp_path, monkeypatch):
     assert data["share"] == "permission_denied"
 
 
-def test_health_check_general_error(client, tmp_path, monkeypatch):
-    """Test health check when a general error occurs."""
+def test_readiness_check_general_error(client, tmp_path, monkeypatch):
+    """Test readiness check when a general error occurs."""
     # Create a directory
     share_dir = tmp_path / "share"
     share_dir.mkdir()
@@ -204,7 +236,7 @@ def test_health_check_general_error(client, tmp_path, monkeypatch):
 
     try:
         with patch("app.routers.health.httpx.AsyncClient", return_value=mock_http_ctx):
-            response = client.get("/api/health")
+            response = client.get("/api/health/readiness")
     finally:
         del app.dependency_overrides[_get_db_if_enabled]
 

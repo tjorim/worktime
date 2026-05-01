@@ -25,6 +25,7 @@ from .middleware.timing import TimingMiddleware
 from .routers.hday import router as hday_router
 from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
+from .routers.metrics import router as metrics_router
 from .routers.team import router as team_router
 from .utils.sse_manager import sync_event_manager
 
@@ -187,6 +188,7 @@ app.add_middleware(TimingMiddleware)
 
 # Register API routers — all backend routes are served under /api
 app.include_router(health_router, prefix="/api")
+app.include_router(metrics_router, prefix="/api")
 app.include_router(holidays_router, prefix="/api")
 if settings.LEGACY_FILESHARE_ENABLED:
     app.include_router(hday_router, prefix="/api")

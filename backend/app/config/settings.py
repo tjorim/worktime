@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     # Example: ADMIN_USERNAMES=jorim,alice
     ADMIN_USERNAMES: str = ""
 
+    # HMAC secret for the /api/metrics endpoint.
+    # When empty the metrics endpoint returns 404 so it stays invisible to scanners.
+    # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"
+    METRICS_HMAC_SECRET: str = ""
+
     # SuperTokens authentication configuration
     SUPERTOKENS_CONNECTION_URI: str = "http://localhost:3567"
     SUPERTOKENS_API_KEY: str = ""
