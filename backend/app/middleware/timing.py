@@ -35,20 +35,16 @@ class TimingMiddleware(BaseHTTPMiddleware):
         Returns:
             Response with X-Total-Ms header added
         """
-        # Capture start time with high precision
         start_time = time.perf_counter()
 
-        # Process the request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            request_metrics.record(elapsed_ms, 500)
+            raise
 
-        # Calculate elapsed time in milliseconds
-        elapsed_time = time.perf_counter() - start_time
-        elapsed_ms = elapsed_time * 1000
-
-        # Add timing header to response
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
         response.headers["X-Total-Ms"] = f"{elapsed_ms:.3f}"
-
-        # Feed into rolling metrics window
         request_metrics.record(elapsed_ms, response.status_code)
-
         return response

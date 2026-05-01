@@ -112,23 +112,32 @@ async def readiness(
 
     if settings.LEGACY_FILESHARE_ENABLED:
         share_path = settings.get_share_dir_path()
-        try:
-            if not share_path.exists() or not share_path.is_dir():
-                logger.warning(f"Readiness check failed: SHARE_DIR not found: {share_path}")
-                content["share"] = "not_found"
-                degraded = True
-            else:
+
+        def _probe_share() -> tuple[str, bool, dict]:
+            try:
+                if not share_path.exists() or not share_path.is_dir():
+                    logger.warning(f"Readiness check failed: SHARE_DIR not found: {share_path}")
+                    return "not_found", True, {}
                 next(share_path.iterdir(), None)
-                content["share"] = "ok"
-        except PermissionError:
-            logger.error(f"Readiness check failed: permission denied for SHARE_DIR: {share_path}")
-            content["share"] = "permission_denied"
-            degraded = True
-        except Exception as e:
-            logger.error("Readiness check failed: error accessing SHARE_DIR", exc_info=e)
-            content["share"] = "error"
-            content["error"] = "internal_error"
-            degraded = True
+                return "ok", False, {}
+            except PermissionError:
+                logger.error(f"Readiness check failed: permission denied for SHARE_DIR: {share_path}")
+                return "permission_denied", True, {}
+            except Exception as e:
+                logger.error("Readiness check failed: error accessing SHARE_DIR", exc_info=e)
+                return "error", True, {"error": "internal_error"}
+
+        try:
+            share_status, share_degraded, share_extra = await asyncio.wait_for(
+                asyncio.to_thread(_probe_share), timeout=2
+            )
+        except asyncio.TimeoutError:
+            logger.error("Readiness check failed: SHARE_DIR probe timed out")
+            share_status, share_degraded, share_extra = "error", True, {"error": "internal_error"}
+
+        content["share"] = share_status
+        content.update(share_extra)
+        degraded = degraded or share_degraded
 
     content["status"] = "degraded" if degraded else "ok"
     return JSONResponse(

@@ -23,6 +23,8 @@ class InMemoryRequestMetrics:
     """
 
     def __init__(self, window_seconds: int = 60) -> None:
+        if window_seconds <= 0:
+            raise ValueError(f"window_seconds must be a positive integer, got {window_seconds!r}")
         self._start_time: float = time.time()
         self._window_seconds: int = window_seconds
         self._lock: Lock = Lock()

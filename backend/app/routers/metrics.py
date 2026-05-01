@@ -54,9 +54,10 @@ def _verify_token(token: str, secret: str) -> bool:
     except (ValueError, AttributeError):
         return False
 
-    # Reject tokens that are too old or in the future.
     now = int(time.time())
-    if abs(now - ts) > _MAX_TOKEN_AGE_SECONDS:
+    if ts > now:
+        return False
+    if now - ts > _MAX_TOKEN_AGE_SECONDS:
         return False
 
     expected_sig = hmac.new(secret.encode(), ts_str.encode(), hashlib.sha256).hexdigest()

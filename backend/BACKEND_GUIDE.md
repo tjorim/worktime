@@ -57,7 +57,7 @@ The app conditionally exposes:
 - `GET /` returns the API title and version
 - `GET /api/health` — lightweight summary with links to the liveness and readiness probes
 - `GET /api/health/liveness` — instant alive check with no external I/O; use for liveness probes
-- `GET /api/health/readiness` — verifies database connectivity (2-second statement timeout), SuperTokens reachability, and share-directory accessibility; use for readiness probes
+- `GET /api/health/readiness` — verifies database connectivity (2-second statement timeout), SuperTokens reachability, and share-directory accessibility (only when legacy file-share is enabled); use for readiness probes
 - `GET /api/metrics` — HMAC-protected snapshot of in-memory request metrics (requires `METRICS_HMAC_SECRET`)
 
 ### Shared `.hday` routes
