@@ -131,7 +131,7 @@ async def readiness(
             share_status, share_degraded, share_extra = await asyncio.wait_for(
                 asyncio.to_thread(_probe_share), timeout=2
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Readiness check failed: SHARE_DIR probe timed out")
             share_status, share_degraded, share_extra = "error", True, {"error": "internal_error"}
 

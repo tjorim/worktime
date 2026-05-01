@@ -39,7 +39,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
-        except Exception as exc:
+        except Exception:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             request_metrics.record(elapsed_ms, 500)
             raise
