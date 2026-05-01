@@ -1,6 +1,6 @@
-"""Tests for SuperTokens-based authentication helpers.
+"""Tests for OIDC-based authentication helpers.
 
-The SuperTokens core is not available in the test environment, so these
+The OIDC provider is not available in the test environment, so these
 tests exercise the ``get_authenticated_principal`` dependency through the
 ``_test_auth_principal`` override registered by the ``db_client`` fixture.
 """
@@ -59,7 +59,6 @@ def test_non_admin_cannot_create_user(
             "username": "non-admin-user",
             "display_name": "Non Admin",
             "settings": {},
-            "password": "test-password-1",
         },
         headers=auth_headers(99),
     )
@@ -78,7 +77,6 @@ def test_admin_can_create_user(
             "username": "admin-created-user",
             "display_name": "Admin Created",
             "settings": {},
-            "password": "test-password-1",
         },
         headers=admin_headers,
     )

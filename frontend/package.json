@@ -49,12 +49,12 @@
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
     "frappe-gantt": "^1.2.2",
+    "oidc-client-ts": "^3.5.0",
     "react": "^19.2.5",
     "react-bootstrap": "^3.0.0-beta.5",
     "react-dom": "^19.2.5",
+    "react-oidc-context": "^3.3.1",
     "react-select": "^5.10.2",
-    "supertokens-auth-react": "^0.51.2",
-    "supertokens-web-js": "^0.16.0",
     "uuid": "^14.0.0"
   },
   "devDependencies": {

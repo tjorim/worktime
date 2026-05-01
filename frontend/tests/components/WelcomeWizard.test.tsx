@@ -3,13 +3,14 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as oidcContext from "react-oidc-context";
 import App from "@/App";
 import { WelcomeWizard } from "@/components/WelcomeWizard";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 
-// SuperTokens mocks are provided globally by tests/setup.ts
+// OIDC mocks are provided globally by tests/setup.ts
 
 vi.mock("react-select", () => ({
   default: ({
@@ -429,7 +430,15 @@ describe("WelcomeWizard", () => {
     it("persists wizard state and triggers signup redirect when clicking Connect Account", async () => {
       const user = userEvent.setup();
       const mockOnHide = vi.fn();
-      const mockRedirectToAuth = vi.mocked((await import("supertokens-auth-react")).redirectToAuth);
+      const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
+      const useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        signinRedirect: mockSigninRedirect,
+        removeUser: vi.fn().mockResolvedValue(undefined),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
 
       renderWithProviders(
         <WelcomeWizard
@@ -451,8 +460,10 @@ describe("WelcomeWizard", () => {
       expect(mockOnHide).toHaveBeenCalledWith(
         expect.not.objectContaining({ accountConnected: expect.anything() }),
       );
-      // Auth redirect is triggered with signup mode
-      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
+      // Auth redirect is triggered via signinRedirect
+      expect(mockSigninRedirect).toHaveBeenCalled();
+
+      useOidcAuthSpy.mockRestore();
     });
   });
 

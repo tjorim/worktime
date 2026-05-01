@@ -1,7 +1,5 @@
 import Container from "react-bootstrap/Container";
 import { Outlet } from "@tanstack/react-router";
-import { canHandleRoute, getRoutingComponent } from "supertokens-auth-react/ui";
-import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import { AboutModal } from "@/components/AboutModal";
 import { FeatureIntroAlert } from "@/components/FeatureIntroAlert";
 import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
@@ -11,28 +9,16 @@ import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
 import { useAppShellContext } from "@/contexts/AppShellContext";
 import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
 
-const AUTH_PREBUILT_UI_LIST = [EmailPasswordPreBuiltUI];
-
 /**
  * Root layout for all app routes.
  *
- * Also intercepts SuperTokens auth paths (e.g. /auth) and renders the
- * pre-built auth UI without app chrome, removing the need for a separate
- * canHandleRoute check at the App level.
+ * Renders the application chrome (header, modals, dialogs) around the
+ * routed page content. Authentication redirects are handled by the OIDC
+ * provider; there is no inline auth UI route intercept.
  */
 export function AppLayout() {
-  // canHandleRoute is a plain function (not a hook) — safe to call before hooks.
-  const isAuthRoute = canHandleRoute(AUTH_PREBUILT_UI_LIST);
-
-  // Hooks must always be called unconditionally, even when isAuthRoute is true.
-  // AppShellProvider and OngoingSyncProvider are mounted above this component
-  // so both contexts are always available.
   const shell = useAppShellContext();
   const { conflictCount, conflictedPayload, resolveOngoingConflicts } = useOngoingSyncContext();
-
-  if (isAuthRoute) {
-    return <>{getRoutingComponent(AUTH_PREBUILT_UI_LIST)}</>;
-  }
 
   return (
     <div className="min-vh-100">

@@ -15,28 +15,26 @@ def _auth_headers(user_id: int, *, is_admin: bool = False) -> dict[str, str]:
 
 def test_db_user_crud_endpoints(
     db_client: TestClient,
-    supertokens_update_email_calls: list[dict[str, str | None]],
-    supertokens_delete_calls: list[str],
 ) -> None:
     client = db_client
     admin_headers = _auth_headers(1, is_admin=True)
 
     unauthenticated_create = client.post(
         "/api/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
     )
     assert unauthenticated_create.status_code == 401
 
     forbidden_create = client.post(
         "/api/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         headers=_auth_headers(2),
     )
     assert forbidden_create.status_code == 403
 
     user_response = client.post(
         "/api/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         headers=admin_headers,
     )
     assert user_response.status_code == 201
@@ -44,14 +42,14 @@ def test_db_user_crud_endpoints(
 
     duplicate_response = client.post(
         "/api/users/",
-        json={"username": "api-user", "display_name": "API User 2", "settings": {}, "password": "test-password-1"},
+        json={"username": "api-user", "display_name": "API User 2", "settings": {}},
         headers=admin_headers,
     )
     assert duplicate_response.status_code == 409
 
     other_user_response = client.post(
         "/api/users/",
-        json={"username": "api-user-other", "display_name": "Other", "settings": {}, "password": "test-password-1"},
+        json={"username": "api-user-other", "display_name": "Other", "settings": {}},
         headers=admin_headers,
     )
     assert other_user_response.status_code == 201
@@ -91,9 +89,6 @@ def test_db_user_crud_endpoints(
     assert update_response.status_code == 200
     assert update_response.json()["username"] == "api-user-renamed"
     assert update_response.json()["display_name"] == "Renamed"
-    assert len(supertokens_update_email_calls) == 1
-    assert supertokens_update_email_calls[0]["email"] == "api-user-renamed@worktime.local"
-    assert supertokens_update_email_calls[0]["password"] is None
 
     forbidden_update = client.put(
         f"/api/users/{other_user_id}",
@@ -138,10 +133,8 @@ def test_db_user_crud_endpoints(
     )
     assert forbidden_delete.status_code == 403
 
-    delete_calls_before = len(supertokens_delete_calls)
     delete_response = client.delete(f"/api/users/{user_id}", headers=_auth_headers(user_id))
     assert delete_response.status_code == 204
-    assert len(supertokens_delete_calls) == delete_calls_before + 1
 
     missing_response = client.get(
         f"/api/users/{user_id}",
@@ -156,12 +149,12 @@ def test_db_time_tracking_endpoints_require_auth_and_user_match(db_client: TestC
 
     owner_id = client.post(
         "/api/users/",
-        json={"username": "time-user", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
+        json={"username": "time-user", "display_name": "Time User", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
         "/api/users/",
-        json={"username": "other-user", "display_name": "Other User", "settings": {}, "password": "test-password-1"},
+        json={"username": "other-user", "display_name": "Other User", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
 
@@ -181,7 +174,7 @@ def test_db_time_tracking_endpoints(db_client: TestClient) -> None:
 
     user_id = client.post(
         "/api/users/",
-        json={"username": "time-user-2", "display_name": "Time User", "settings": {}, "password": "test-password-1"},
+        json={"username": "time-user-2", "display_name": "Time User", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)
@@ -302,12 +295,12 @@ def test_work_location_endpoints_require_auth_and_user_match(db_client: TestClie
 
     owner_id = client.post(
         "/api/users/",
-        json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}, "password": "test-password-1"},
+        json={"username": "loc-owner", "display_name": "Location Owner", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
     other_id = client.post(
         "/api/users/",
-        json={"username": "loc-other", "display_name": "Location Other", "settings": {}, "password": "test-password-1"},
+        json={"username": "loc-other", "display_name": "Location Other", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
 
@@ -327,7 +320,7 @@ def test_work_location_endpoints(db_client: TestClient) -> None:
 
     user_id = client.post(
         "/api/users/",
-        json={"username": "loc-user", "display_name": "Location User", "settings": {}, "password": "test-password-1"},
+        json={"username": "loc-user", "display_name": "Location User", "settings": {}},
         headers=admin_headers,
     ).json()["id"]
     headers = _auth_headers(user_id)

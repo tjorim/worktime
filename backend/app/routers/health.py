@@ -35,7 +35,7 @@ async def health_check(
     """Health check endpoint.
 
     Checks database connectivity when DATABASE_ENABLED is true,
-    SuperTokens core reachability always, and share directory
+    OIDC provider reachability always, and share directory
     accessibility when LEGACY_FILESHARE_ENABLED is true.
 
     Returns:
@@ -46,15 +46,18 @@ async def health_check(
     content: dict = {}
 
     async def _check_auth() -> tuple[str, bool]:
+        """Check that the OIDC provider's JWKS endpoint is reachable."""
+        from ..config.oidc_config import _get_jwks_uri
+        jwks_uri = _get_jwks_uri()
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                response = await client.get(f"{settings.SUPERTOKENS_CONNECTION_URI}/hello")
+                response = await client.get(jwks_uri)
             if response.status_code == 200:
                 return "ok", False
-            logger.warning("Health check: SuperTokens returned unexpected status %s", response.status_code)
+            logger.warning("Health check: OIDC provider returned unexpected status %s", response.status_code)
             return "unreachable", True
         except Exception as e:
-            logger.error("Health check failed: SuperTokens core unreachable", exc_info=e)
+            logger.error("Health check failed: OIDC provider unreachable", exc_info=e)
             return "unreachable", True
 
     async def _check_db() -> tuple[str, bool] | None:

@@ -23,12 +23,9 @@ def test_default_settings():
     assert settings.DATABASE_ENABLED is True
     assert settings.DATABASE_URL.startswith("postgresql+asyncpg://")
     assert settings.DATABASE_ECHO is False
-    assert settings.SUPERTOKENS_CONNECTION_URI == "http://localhost:3567"
-    assert settings.SUPERTOKENS_API_KEY == ""
-    assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
-    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/api/auth"
-    assert settings.SUPERTOKENS_WEBSITE_BASE_PATH == "/auth"
+    assert settings.OIDC_ISSUER_URL == "http://localhost:9000/application/o/worktime"
+    assert settings.OIDC_AUDIENCE == ""
+    assert settings.OIDC_ALGORITHMS == "RS256"
 
 
 def test_custom_settings():
@@ -48,8 +45,7 @@ def test_custom_settings():
         os.environ["DATABASE_ENABLED"] = "false"
         os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@dbhost/mydb"
         os.environ["DATABASE_ECHO"] = "true"
-        os.environ["SUPERTOKENS_CONNECTION_URI"] = "http://supertokens:3567"
-        os.environ["SUPERTOKENS_API_KEY"] = "test-api-key"
+        os.environ["OIDC_ISSUER_URL"] = "https://auth.example.com/application/o/worktime"
         
         # Create new settings instance
         settings = Settings()
@@ -64,8 +60,7 @@ def test_custom_settings():
         assert settings.DATABASE_ENABLED is False
         assert settings.DATABASE_URL == "postgresql+asyncpg://user:pass@dbhost/mydb"
         assert settings.DATABASE_ECHO is True
-        assert settings.SUPERTOKENS_CONNECTION_URI == "http://supertokens:3567"
-        assert settings.SUPERTOKENS_API_KEY == "test-api-key"
+        assert settings.OIDC_ISSUER_URL == "https://auth.example.com/application/o/worktime"
     finally:
         # Restore original environment
         os.environ.clear()
@@ -107,7 +102,6 @@ def test_cors_origins_wildcard_production():
     settings = Settings(
         ENVIRONMENT="production",
         CORS_ORIGINS="*",
-        SUPERTOKENS_API_KEY="test-key",
     )
     origins = settings.get_cors_origins_list()
     
@@ -121,7 +115,7 @@ def test_environment_validation():
     settings_dev = Settings(ENVIRONMENT="development")
     assert settings_dev.ENVIRONMENT == "development"
     
-    settings_prod = Settings(ENVIRONMENT="production", SUPERTOKENS_API_KEY="test-key")
+    settings_prod = Settings(ENVIRONMENT="production")
     assert settings_prod.ENVIRONMENT == "production"
     
     # Invalid environment should raise error
@@ -197,30 +191,21 @@ def test_ensure_share_dir_exists_already_exists():
         assert test_dir.exists()
 
 
-def test_supertokens_defaults() -> None:
-    """Test default SuperTokens configuration values."""
+def test_oidc_defaults() -> None:
+    """Test default OIDC configuration values."""
     settings = Settings(_env_file=None)
-    assert settings.SUPERTOKENS_CONNECTION_URI == "http://localhost:3567"
-    assert settings.SUPERTOKENS_API_KEY == ""
-    assert settings.SUPERTOKENS_API_DOMAIN == "http://localhost:8000"
-    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "http://localhost:5173"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/api/auth"
-    assert settings.SUPERTOKENS_WEBSITE_BASE_PATH == "/auth"
+    assert settings.OIDC_ISSUER_URL == "http://localhost:9000/application/o/worktime"
+    assert settings.OIDC_AUDIENCE == ""
+    assert settings.OIDC_ALGORITHMS == "RS256"
 
 
-def test_supertokens_custom_values() -> None:
-    """Test overriding SuperTokens configuration."""
+def test_oidc_custom_values() -> None:
+    """Test overriding OIDC configuration."""
     settings = Settings(
-        SUPERTOKENS_CONNECTION_URI="http://supertokens:3567",
-        SUPERTOKENS_API_KEY="my-api-key",
-        SUPERTOKENS_API_DOMAIN="https://api.example.com",
-        SUPERTOKENS_WEBSITE_DOMAIN="https://worktime.example.com",
-        SUPERTOKENS_API_BASE_PATH="/custom-auth",
-        SUPERTOKENS_WEBSITE_BASE_PATH="/signin",
+        OIDC_ISSUER_URL="https://auth.example.com/application/o/worktime",
+        OIDC_AUDIENCE="worktime",
+        OIDC_ALGORITHMS="RS256,RS512",
     )
-    assert settings.SUPERTOKENS_CONNECTION_URI == "http://supertokens:3567"
-    assert settings.SUPERTOKENS_API_KEY == "my-api-key"
-    assert settings.SUPERTOKENS_API_DOMAIN == "https://api.example.com"
-    assert settings.SUPERTOKENS_WEBSITE_DOMAIN == "https://worktime.example.com"
-    assert settings.SUPERTOKENS_API_BASE_PATH == "/custom-auth"
-    assert settings.SUPERTOKENS_WEBSITE_BASE_PATH == "/signin"
+    assert settings.OIDC_ISSUER_URL == "https://auth.example.com/application/o/worktime"
+    assert settings.OIDC_AUDIENCE == "worktime"
+    assert settings.OIDC_ALGORITHMS == "RS256,RS512"

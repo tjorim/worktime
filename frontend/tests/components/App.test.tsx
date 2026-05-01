@@ -3,9 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ShiftResult } from "@/utils/shiftCalculations";
-import * as SuperTokensUi from "supertokens-auth-react/ui";
 
-// SuperTokens mocks are provided globally by tests/setup.ts
+// OIDC mocks are provided globally by tests/setup.ts
 
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
 vi.mock("@/utils/dateTimeUtils", () => {
@@ -102,24 +101,7 @@ vi.mock("@/hooks/useShiftCalculation", () => ({
 
 describe("App", () => {
   beforeEach(() => {
-    vi.mocked(SuperTokensUi.canHandleRoute).mockReturnValue(false);
-    vi.mocked(SuperTokensUi.getRoutingComponent).mockReturnValue(null);
-  });
-
-  describe("SuperTokens Routing", () => {
-    it("renders the SuperTokens auth UI when the current route is an auth route", async () => {
-      vi.mocked(SuperTokensUi.canHandleRoute).mockReturnValue(true);
-      vi.mocked(SuperTokensUi.getRoutingComponent).mockReturnValue(
-        <div data-testid="supertokens-auth-route">Auth Route</div>,
-      );
-
-      render(<App />);
-
-      // canHandleRoute is checked inside AppLayout (rendered by RouterProvider),
-      // so the auth UI appears asynchronously after the router initialises.
-      expect(await screen.findByTestId("supertokens-auth-route")).toBeInTheDocument();
-      expect(screen.queryByTestId("welcome-wizard")).not.toBeInTheDocument();
-    });
+    vi.clearAllMocks();
   });
 
   describe("Component Structure", () => {

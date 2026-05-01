@@ -32,7 +32,7 @@ def test_health_check_success(client, tmp_path, monkeypatch):
 
     app.dependency_overrides[_get_db_if_enabled] = mock_db
 
-    # Mock SuperTokens core reachability.
+    # Mock OIDC provider reachability check.
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_http_client = AsyncMock()
