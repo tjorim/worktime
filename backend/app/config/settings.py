@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     # Example: ADMIN_USERNAMES=jorim,alice
     ADMIN_USERNAMES: str = ""
 
+    # HMAC secret for the /api/metrics endpoint.
+    # When empty the metrics endpoint returns 404 so it stays invisible to scanners.
+    # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"
+    METRICS_HMAC_SECRET: str = ""
+
     # OIDC authentication configuration
     # OIDC_ISSUER_URL: Base URL of the OIDC provider (e.g. https://auth.example.com/application/o/worktime)
     OIDC_ISSUER_URL: str = "http://localhost:9000/application/o/worktime"
