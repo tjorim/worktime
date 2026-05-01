@@ -15,8 +15,8 @@ Token subject claim (``sub``) is used as the stable external identity key.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import threading
 from typing import Any
 
 import httpx
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # JWKS cache — fetched once per process lifetime, refreshed on key-not-found.
 # ---------------------------------------------------------------------------
 
-_jwks_lock = threading.Lock()
+_jwks_lock = asyncio.Lock()
 _jwks_cache: dict[str, Any] | None = None
 
 
@@ -43,11 +43,12 @@ def _get_jwks_uri() -> str:
     return f"{base}/.well-known/jwks.json"
 
 
-def _fetch_jwks() -> dict[str, Any]:
-    """Fetch the JWKS document from the OIDC provider."""
+async def _fetch_jwks() -> dict[str, Any]:
+    """Fetch the JWKS document from the OIDC provider (async, non-blocking)."""
     uri = _get_jwks_uri()
     try:
-        response = httpx.get(uri, timeout=10)
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(uri)
         response.raise_for_status()
         return response.json()
     except Exception as exc:
@@ -55,12 +56,12 @@ def _fetch_jwks() -> dict[str, Any]:
         raise
 
 
-def _get_jwks(*, force_refresh: bool = False) -> dict[str, Any]:
+async def _get_jwks(*, force_refresh: bool = False) -> dict[str, Any]:
     """Return the cached JWKS document, fetching it on first call or when forced."""
     global _jwks_cache  # noqa: PLW0603
-    with _jwks_lock:
+    async with _jwks_lock:
         if _jwks_cache is None or force_refresh:
-            _jwks_cache = _fetch_jwks()
+            _jwks_cache = await _fetch_jwks()
         return _jwks_cache
 
 
@@ -72,8 +73,8 @@ class OIDCTokenError(Exception):
     """Raised when a JWT cannot be validated."""
 
 
-def decode_token(token: str) -> dict[str, Any]:
-    """Decode and validate a JWT Bearer token.
+async def decode_token(token: str) -> dict[str, Any]:
+    """Decode and validate a JWT Bearer token (async, non-blocking).
 
     Tries the cached JWKS first; on a key-not-found error, refreshes the JWKS
     once and retries to handle key rotation.
@@ -95,7 +96,7 @@ def decode_token(token: str) -> dict[str, Any]:
 
     for attempt in range(2):
         try:
-            jwks = _get_jwks(force_refresh=(attempt == 1))
+            jwks = await _get_jwks(force_refresh=(attempt == 1))
             return jwt.decode(
                 token,
                 jwks,
@@ -122,18 +123,19 @@ def decode_token(token: str) -> dict[str, Any]:
 
 def _derive_username_and_display_name(claims: dict[str, Any], subject: str) -> tuple[str, str]:
     """Derive a local username and display name from OIDC token claims."""
-    # Prefer preferred_username → email local part → sub prefix
-    username = (
-        claims.get("preferred_username")
-        or (claims.get("email") or "").split("@")[0]
-        or f"user-{subject[:8]}"
-    ).strip()
+    # Prefer preferred_username → email local part → sub prefix (explicit fallbacks)
+    username = (claims.get("preferred_username") or "").strip()
+    if not username:
+        email = (claims.get("email") or "").strip()
+        username = email.split("@")[0] if email else ""
+    if not username:
+        username = f"user-{subject[:8]}"
 
     display_name = (
-        claims.get("name")
-        or claims.get("display_name")
+        (claims.get("name") or "").strip()
+        or (claims.get("display_name") or "").strip()
         or username
-    ).strip()
+    )
 
     return username, display_name
 
@@ -153,9 +155,10 @@ async def _find_available_username(db_session, base_username: str, subject: str)
             return candidate
 
         attempt += 1
-        suffix_length = min(8 + attempt - 1, len(subject))
-        suffix = subject[:suffix_length]
-        if suffix_length < len(subject):
+        # Progressively use more of the subject string as a disambiguation suffix.
+        # Once the full subject is exhausted, append a numeric counter too.
+        suffix = subject[:min(8 + attempt, len(subject))]
+        if attempt <= len(subject) - 8:
             candidate = f"{base_username}-{suffix}"
         else:
             candidate = f"{base_username}-{suffix}-{attempt}"

@@ -17,11 +17,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Rename the column
+    # Rename the column — PostgreSQL preserves all existing values on rename.
     op.alter_column("users", "supertokens_user_id", new_column_name="oidc_subject")
-    # Make it nullable (existing rows keep their values; new rows may not have a subject yet)
+    # Allow null so newly-created rows that haven't authenticated yet are valid.
     op.alter_column("users", "oidc_subject", nullable=True)
-    # Rename the index
+    # Rename the index to match the new column name.
     op.drop_index("ix_users_supertokens_user_id", table_name="users")
     op.create_index("ix_users_oidc_subject", "users", ["oidc_subject"], unique=True)
 

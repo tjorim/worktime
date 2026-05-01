@@ -36,7 +36,7 @@ async def get_authenticated_principal(
     """
     token = credentials.credentials
     try:
-        claims = decode_token(token)
+        claims = await decode_token(token)
     except OIDCTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,10 +45,10 @@ async def get_authenticated_principal(
         ) from exc
 
     subject = claims.get("sub")
-    if not subject:
+    if not isinstance(subject, str) or not subject.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing subject claim",
+            detail="Token missing or empty subject claim",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
