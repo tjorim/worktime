@@ -1,13 +1,15 @@
 """Self-serve user registration endpoint.
 
-Provides a public ``POST /users/register`` route as a lightweight fallback for
-pre-creating local user accounts.  User authentication and identity management
-are handled by the configured OIDC provider (e.g. authentik, Keycloak, ZITADEL).
+Provides a public ``POST /users/register`` route for pre-creating local user
+accounts.  User authentication and identity management are handled by the
+configured OIDC provider (e.g. authentik, Keycloak, ZITADEL).
 
-On first OIDC login the backend auto-provisions a local user record from the
-token claims (see ``app.config.oidc_config``).  This endpoint is retained for
-administrative pre-provisioning scenarios where the local record should exist
-before the user's first sign-in.
+Pre-provisioned users created via this endpoint are NOT automatically linked to
+an OIDC login.  On first login the backend provisions a new local user record
+from the token claims (see ``app.config.oidc_config``), regardless of any
+pre-existing rows with a matching username.  Use this endpoint only when a local
+record must exist before the user's first sign-in and the admin will manually
+associate the ``oidc_subject`` out-of-band.
 """
 
 from __future__ import annotations
@@ -34,8 +36,9 @@ async def register_user(
     """Pre-register a local user account.
 
     Creates a local database user row.  No password is stored; authentication
-    is handled by the OIDC provider.  The ``oidc_subject`` for this row will be
-    populated automatically on the user's first OIDC login.
+    is handled by the OIDC provider.  The ``oidc_subject`` is left NULL and is
+    NOT populated automatically — pre-provisioned users are not auto-linked to
+    a matching OIDC login.
     """
     user_create = UserCreate(
         username=payload.username,

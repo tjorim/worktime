@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     OIDC_ISSUER_URL: str = "http://localhost:9000/application/o/worktime"
     # OIDC_AUDIENCE: Expected audience claim in the JWT (leave empty to skip audience check)
     OIDC_AUDIENCE: str = ""
-    # OIDC_JWKS_URI: JWKS endpoint (defaults to {OIDC_ISSUER_URL}/jwks/ when empty)
+    # OIDC_JWKS_URI: JWKS endpoint (defaults to {OIDC_ISSUER_URL}/.well-known/jwks.json when empty)
     OIDC_JWKS_URI: str = ""
     # OIDC_ALGORITHMS: Comma-separated list of accepted signing algorithms
     OIDC_ALGORITHMS: str = "RS256"

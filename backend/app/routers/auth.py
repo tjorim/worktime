@@ -57,12 +57,6 @@ async def get_authenticated_principal(
 
     try:
         local_user = await get_or_create_local_user(subject, claims)
-    except OIDCTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
     except Exception as exc:
         logger.exception("Failed to resolve local user for subject %s", subject)
         raise HTTPException(

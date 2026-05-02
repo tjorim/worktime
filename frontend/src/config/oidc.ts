@@ -24,11 +24,12 @@ export const oidcConfig: AuthProviderProps = {
   scope: OIDC_SCOPE,
   post_logout_redirect_uri: window.location.origin,
   /**
-   * Automatically redirect back to the page the user was on before logging in.
-   * The state is encoded in the OIDC state parameter and restored on callback.
+   * Restore the pre-login URL from the OIDC state parameter after callback.
+   * Falls back to "/" when no returnTo was saved (e.g. direct /auth/callback visit).
+   * Callers must pass `state: { returnTo: window.location.pathname }` to signinRedirect.
    */
-  onSigninCallback: () => {
-    // Remove the OIDC query params from the URL after successful login
-    window.history.replaceState({}, document.title, window.location.pathname);
+  onSigninCallback: (user) => {
+    const returnTo = (user?.state as { returnTo?: string } | undefined)?.returnTo ?? "/";
+    window.history.replaceState({}, document.title, returnTo);
   },
 };

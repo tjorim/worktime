@@ -163,7 +163,7 @@ async def _find_available_username(db_session, base_username: str, subject: str)
         # Progressively use more of the subject string as a disambiguation suffix.
         # Once the full subject is exhausted, append a numeric counter too.
         suffix = subject[:min(8 + attempt, len(subject))]
-        if attempt <= len(subject) - 8:
+        if len(suffix) < len(subject):
             candidate = f"{base_username}-{suffix}"
         else:
             candidate = f"{base_username}-{suffix}-{attempt}"
@@ -203,6 +203,11 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
                 ),
                 oidc_subject=subject,
             )
+            logger.info(
+                "Auto-provisioned local Worktime user %r for OIDC subject %s",
+                username,
+                subject,
+            )
         except (IntegrityError, ConflictError):
             # Race condition: concurrent first-login for the same subject.
             await db_session.rollback()
@@ -211,9 +216,4 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
             if local_user is None:
                 raise
 
-        logger.info(
-            "Auto-provisioned local Worktime user %r for OIDC subject %s",
-            username,
-            subject,
-        )
         return local_user

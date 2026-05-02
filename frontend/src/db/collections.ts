@@ -60,6 +60,7 @@ import { dayjs } from "@/utils/dateTimeUtils";
 // ---------------------------------------------------------------------------
 
 let _currentUserId: string | null = null;
+let _currentAccessToken: string | null = null;
 
 /**
  * Update the auth context used by collection mutation handlers.
@@ -67,11 +68,12 @@ let _currentUserId: string | null = null;
  * Must be called whenever the user's authentication state changes — typically
  * from `OngoingSyncProvider`.
  */
-export function setSyncCollectionAuth(userId: string | null): void {
-  if (_currentUserId === userId) {
+export function setSyncCollectionAuth(userId: string | null, accessToken: string | null = null): void {
+  if (_currentUserId === userId && _currentAccessToken === accessToken) {
     return;
   }
   _currentUserId = userId;
+  _currentAccessToken = accessToken;
   // QueryCollections use staleTime=Infinity, so an auth transition from
   // "unknown" to "authenticated" would otherwise leave already-mounted
   // collections stuck on their initial empty snapshot until some later local
@@ -89,12 +91,16 @@ export function hasSyncCollectionAuth(): boolean {
 
 /**
  * Perform a fetch request against the configured sync API base URL.
- * Uses `credentials: "include"` so that session cookies are sent automatically.
+ * Injects the OIDC Bearer token when one is available.
  */
 async function collectionFetch(url: string, init?: RequestInit): Promise<Response> {
   const fullUrl =
     typeof window === "undefined" ? url : new URL(url, window.location.origin).toString();
-  return fetch(fullUrl, { ...init, credentials: "include" });
+  const headers = new Headers(init?.headers);
+  if (_currentAccessToken) {
+    headers.set("Authorization", `Bearer ${_currentAccessToken}`);
+  }
+  return fetch(fullUrl, { ...init, headers });
 }
 
 /**

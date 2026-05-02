@@ -20,6 +20,7 @@ import * as m from "@/paraglide/messages.js";
 
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
 const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
+const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
 let useOidcAuthSpy: { mockRestore: () => void } | undefined;
 let useOngoingSyncContextSpy: { mockRestore: () => void } | undefined;
 
@@ -77,6 +78,7 @@ function mockAuthenticatedUser(displayName = "Alice") {
     },
     signinRedirect: mockSigninRedirect,
     removeUser: mockRemoveUser,
+    signoutRedirect: mockSignoutRedirect,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
 }
@@ -94,12 +96,13 @@ describe("SettingsPage Account Section", () => {
   });
 
   it("calls signinRedirect when Sign In is clicked", async () => {
-    vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+    useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
       user: null,
       signinRedirect: mockSigninRedirect,
       removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     const user = userEvent.setup();
@@ -109,12 +112,13 @@ describe("SettingsPage Account Section", () => {
   });
 
   it("calls signinRedirect when Connect Account is clicked", async () => {
-    vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+    useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
       user: null,
       signinRedirect: mockSigninRedirect,
       removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     const user = userEvent.setup();
@@ -123,14 +127,14 @@ describe("SettingsPage Account Section", () => {
     expect(mockSigninRedirect).toHaveBeenCalled();
   });
 
-  it("calls removeUser when Sign Out is clicked (authenticated state)", async () => {
+  it("calls signoutRedirect when Sign Out is clicked (authenticated state)", async () => {
     mockAuthenticatedUser("Alice");
 
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Signed in as Alice")).toBeInTheDocument();
     await user.click(screen.getByText("Sign Out"));
-    expect(mockRemoveUser).toHaveBeenCalled();
+    expect(mockSignoutRedirect).toHaveBeenCalled();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {
