@@ -93,7 +93,7 @@ interface OngoingSyncProviderProps {
  * `<ToastProvider>`, and `<EventStoreProvider>`.
  */
 export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSyncProviderProps) {
-  const { isAuthenticated, userId } = useAuth();
+  const { isAuthenticated, userId, getAccessToken } = useAuth();
   const {
     settings,
     myTeam,
@@ -105,11 +105,14 @@ export function OngoingSyncProvider({ children, isSyncEstablished }: OngoingSync
   } = useSettings();
   const fetchFn = useApiClient();
 
-  // Keep collection mutation handlers informed of the current user ID so they
-  // can attach auth cookies and queue outbox entries under the correct user key.
+  // Keep collection mutation handlers informed of the current user ID and token
+  // so they can send the Bearer JWT and queue outbox entries under the correct user key.
   useEffect(() => {
-    setSyncCollectionAuth(isAuthenticated ? (userId ?? null) : null);
-  }, [isAuthenticated, userId]);
+    setSyncCollectionAuth(
+      isAuthenticated ? (userId ?? null) : null,
+      isAuthenticated ? getAccessToken() : null,
+    );
+  }, [isAuthenticated, userId, getAccessToken]);
 
   // Build the incremental-pull callback. When a pull returns data, apply it
   // to all collections via direct writes (no server re-push triggered).

@@ -61,10 +61,9 @@ async def readiness(
 ) -> JSONResponse:
     """Readiness probe — checks that all required dependencies are healthy.
 
-    Verifies:
-    - Database connectivity (with a 2-second statement timeout to avoid hanging).
-    - SuperTokens authentication core reachability.
-    - Share directory accessibility (when ``LEGACY_FILESHARE_ENABLED`` is true).
+    Checks database connectivity when DATABASE_ENABLED is true,
+    OIDC provider reachability always, and share directory
+    accessibility when LEGACY_FILESHARE_ENABLED is true.
 
     Use this for Kubernetes/load-balancer readiness probes.  A failure here
     stops routing new traffic without restarting the pod.
@@ -77,15 +76,18 @@ async def readiness(
     content: dict = {}
 
     async def _check_auth() -> tuple[str, bool]:
+        """Check that the OIDC provider's JWKS endpoint is reachable."""
+        from ..config.oidc_config import _get_jwks_uri
+        jwks_uri = _get_jwks_uri()
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                response = await client.get(f"{settings.SUPERTOKENS_CONNECTION_URI}/hello")
+                response = await client.get(jwks_uri)
             if response.status_code == 200:
                 return "ok", False
-            logger.warning("Readiness check: SuperTokens returned unexpected status %s", response.status_code)
+            logger.warning("Health check: OIDC provider returned unexpected status %s", response.status_code)
             return "unreachable", True
         except Exception as e:
-            logger.error("Readiness check failed: SuperTokens core unreachable", exc_info=e)
+            logger.error("Health check failed: OIDC provider unreachable", exc_info=e)
             return "unreachable", True
 
     async def _check_db() -> tuple[str, bool] | None:

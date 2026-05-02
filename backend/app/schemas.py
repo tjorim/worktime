@@ -27,10 +27,10 @@ class UserRegister(BaseModel):
     """Payload for the self-serve registration endpoint.
 
     ``display_name`` is optional; it defaults to the username when omitted.
+    Authentication is handled by the OIDC provider; no password is stored locally.
     """
 
     username: str = Field(min_length=1, max_length=150)
-    password: str = Field(min_length=8)
     display_name: str | None = None
 
 
@@ -38,15 +38,6 @@ class UserCreate(BaseModel):
     username: str
     display_name: str
     settings: dict[str, Any] = Field(default_factory=dict)
-
-
-class UserCreateWithPassword(UserCreate):
-    """Admin-only payload that extends UserCreate with a password field.
-
-    The password is passed to SuperTokens and never stored in the local DB.
-    """
-
-    password: str = Field(min_length=8)
 
 
 class UserRead(BaseModel):

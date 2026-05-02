@@ -21,7 +21,7 @@ from app.utils.sse_manager import SyncEventManager
 def _create_user(client: TestClient, admin_headers: dict, username: str) -> int:
     resp = client.post(
         "/api/users/",
-        json={"username": username, "display_name": username, "settings": {}, "password": "test-password-1"},
+        json={"username": username, "display_name": username, "settings": {}},
         headers=admin_headers,
     )
     assert resp.status_code == 201, resp.text

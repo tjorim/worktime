@@ -2,8 +2,9 @@
  * API client wrapper.
  *
  * Handles common error responses and surfaces the appropriate callbacks
- * for auth failures. Authentication is managed automatically by
- * SuperTokens session cookies — no manual header injection required.
+ * for auth failures. Authentication is performed using a Bearer JWT from
+ * the OIDC provider — pass the token via the `Authorization` header in
+ * the `init.headers` argument.
  */
 
 export interface ApiClientOptions {
@@ -21,8 +22,10 @@ export interface ApiClientOptions {
  * - On 403: calls `onForbidden` and throws.
  * - Otherwise: returns the raw Response for the caller to inspect.
  *
- * Session credentials are attached automatically by the SuperTokens
- * session recipe, so no Authorization header is injected here.
+ * Callers should inject the OIDC Bearer token via `init.headers`:
+ * ```ts
+ * apiFetch(url, { headers: { Authorization: `Bearer ${token}` } }, options)
+ * ```
  *
  * @param url - The URL to fetch.
  * @param init - Optional fetch options.
@@ -55,7 +58,6 @@ export async function apiFetch(
   const response = await fetch(resolvedUrl, {
     ...init,
     headers: mergedHeaders,
-    credentials: "include",
   });
 
   if (response.status === 401) {

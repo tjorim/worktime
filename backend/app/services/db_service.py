@@ -68,14 +68,15 @@ def _get_non_nullable_model_fields(model: type[Base]) -> set[str]:
 # User operations
 
 async def create_user(
-    session: AsyncSession, payload: UserCreate, *, supertokens_user_id: str
+    session: AsyncSession, payload: UserCreate, *, oidc_subject: str | None = None
 ) -> User:
     existing = await get_user_by_username(session, payload.username)
     if existing is not None:
         raise ConflictError("username already exists")
 
     data = payload.model_dump()
-    data["supertokens_user_id"] = supertokens_user_id
+    if oidc_subject is not None:
+        data["oidc_subject"] = oidc_subject
     user = User(**data)
     session.add(user)
     await session.commit()

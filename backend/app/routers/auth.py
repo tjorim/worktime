@@ -1,18 +1,28 @@
 """Authentication helpers for protected API endpoints.
 
-Session verification is delegated to the SuperTokens SDK.  The helper
-dependencies exposed here (``get_authenticated_principal``,
+Session verification is delegated to the OIDC JWT validation layer.  The
+helper dependencies exposed here (``get_authenticated_principal``,
 ``get_authenticated_user_id``, …) extract identity information from the
-verified session so that existing endpoint code does not need to change.
+validated Bearer JWT so that existing endpoint code does not need to change.
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
-from supertokens_python.recipe.session import SessionContainer
-from supertokens_python.recipe.session.framework.fastapi import verify_session
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
+from app.database.engine import get_session
+
+logger = logging.getLogger(__name__)
+
+_bearer_scheme = HTTPBearer(auto_error=True)
+_ADMIN_USERNAMES: frozenset[str] = frozenset(u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip())
 
 
 @dataclass(frozen=True)
@@ -21,35 +31,46 @@ class AuthenticatedPrincipal:
     is_admin: bool = False
 
 
-def get_authenticated_principal(
-    session: SessionContainer = Depends(verify_session()),
+async def get_authenticated_principal(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    session: AsyncSession = Depends(get_session),
 ) -> AuthenticatedPrincipal:
-    """Extract authenticated principal data from a verified SuperTokens session.
+    """Validate a Bearer JWT and return the authenticated principal.
 
-    Reads ``local_user_id`` and ``is_admin`` custom claims that are stored in
-    the access-token payload during session creation (see
-    ``app.config.supertokens_config``).
+    Decodes the OIDC access token, looks up (or auto-provisions) the local
+    user record by the token ``sub`` claim, and derives ``is_admin`` from the
+    configured ``ADMIN_USERNAMES`` list.
     """
-    payload = session.get_access_token_payload()
-    local_user_id = payload.get("local_user_id")
-    if local_user_id is None:
+    token = credentials.credentials
+    try:
+        claims = await decode_token(token)
+    except OIDCTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session missing local user mapping",
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    subject = claims.get("sub")
+    if not isinstance(subject, str) or not subject.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing or empty subject claim",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:
-        user_id = int(local_user_id)
-    except (ValueError, TypeError):
+        local_user = await get_or_create_local_user(subject, claims, session)
+    except Exception as exc:
+        logger.exception("Failed to resolve local user for subject %s", subject)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session contains invalid local user mapping",
-        ) from None
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service error",
+        ) from exc
 
-    return AuthenticatedPrincipal(
-        user_id=user_id,
-        is_admin=bool(payload.get("is_admin", False)),
-    )
+    is_admin = local_user.username in _ADMIN_USERNAMES
+
+    return AuthenticatedPrincipal(user_id=local_user.id, is_admin=is_admin)
 
 
 def get_authenticated_user_id(

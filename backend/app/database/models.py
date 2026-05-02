@@ -49,8 +49,8 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String, index=True, unique=True)
-    supertokens_user_id: Mapped[str] = mapped_column(
-        String, unique=True, index=True
+    oidc_subject: Mapped[str | None] = mapped_column(
+        String, unique=True, index=True, nullable=True
     )
     display_name: Mapped[str] = mapped_column(String)
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)

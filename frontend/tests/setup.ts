@@ -25,35 +25,20 @@ declare module "vitest" {
 }
 
 // ---------------------------------------------------------------------------
-// Global SuperTokens mocks — default no-session state.
+// Global react-oidc-context mocks — default no-session state.
 //
 // Individual test files (e.g. AuthContext.test.tsx) can override with their
 // own vi.mock() calls for custom session behavior.
 // ---------------------------------------------------------------------------
-vi.mock("supertokens-auth-react", () => ({
-  redirectToAuth: vi.fn().mockResolvedValue(undefined),
-  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-vi.mock("supertokens-auth-react/ui", () => ({
-  canHandleRoute: vi.fn(() => false),
-  getRoutingComponent: vi.fn(() => null),
-}));
-
-vi.mock("supertokens-auth-react/recipe/emailpassword/prebuiltui", () => ({
-  EmailPasswordPreBuiltUI: class EmailPasswordPreBuiltUI {},
-}));
-
-vi.mock("supertokens-auth-react/recipe/session", () => ({
-  default: {
-    signOut: vi.fn().mockResolvedValue(undefined),
-  },
-  useSessionContext: () => ({
-    loading: false,
-    doesSessionExist: false,
-    userId: "",
-    accessTokenPayload: {},
-    invalidClaims: [],
+vi.mock("react-oidc-context", () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: () => ({
+    isAuthenticated: false,
+    isLoading: false,
+    user: null,
+    signinRedirect: vi.fn().mockResolvedValue(undefined),
+    signoutRedirect: vi.fn().mockResolvedValue(undefined),
+    removeUser: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 

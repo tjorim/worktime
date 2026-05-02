@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { queryClient } from "@/lib/queryClient";
-import { SuperTokensWrapper } from "supertokens-auth-react";
+import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
+import { oidcConfig } from "@/config/oidc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppShellProvider } from "@/contexts/AppShellContext";
@@ -305,7 +306,7 @@ function AppContent() {
 /**
  * Root application component that composes context providers and renders the app content.
  *
- * @returns The root React element: SuperTokensWrapper, SettingsProvider, EventStoreProvider,
+ * @returns The root React element: OidcAuthProvider, SettingsProvider, EventStoreProvider,
  *   DeveloperOptionsProvider, ToastProvider, and AuthProvider wrapping AppContent
  */
 
@@ -326,7 +327,7 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SuperTokensWrapper>
+      <OidcAuthProvider {...oidcConfig}>
         <SettingsProvider>
           <EventStoreProvider>
             <DeveloperOptionsProvider>
@@ -338,7 +339,7 @@ function App() {
             </DeveloperOptionsProvider>
           </EventStoreProvider>
         </SettingsProvider>
-      </SuperTokensWrapper>
+      </OidcAuthProvider>
     </QueryClientProvider>
   );
 }

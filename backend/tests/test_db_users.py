@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -11,13 +10,12 @@ from fastapi.testclient import TestClient
 def test_user_crud_and_settings_roundtrip(
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
-    supertokens_delete_calls: list[str],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
 
     create_response = db_client.post(
         "/api/users/",
-        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}, "password": "test-password-1"},
+        json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         headers=admin_headers,
     )
     assert create_response.status_code == 201
@@ -67,14 +65,14 @@ def test_user_duplicate_and_not_found(
 
     first_create = db_client.post(
         "/api/users/",
-        json={"username": "duplicate", "display_name": "First", "settings": {}, "password": "test-password-1"},
+        json={"username": "duplicate", "display_name": "First", "settings": {}},
         headers=admin_headers,
     )
     assert first_create.status_code == 201
 
     duplicate_create = db_client.post(
         "/api/users/",
-        json={"username": "duplicate", "display_name": "Second", "settings": {}, "password": "test-password-1"},
+        json={"username": "duplicate", "display_name": "Second", "settings": {}},
         headers=admin_headers,
     )
     assert duplicate_create.status_code == 409
@@ -91,20 +89,3 @@ def test_user_duplicate_and_not_found(
 
     missing_user_delete = db_client.delete("/api/users/99999", headers=auth_headers(99999, is_admin=True))
     assert missing_user_delete.status_code == 404
-
-
-def test_delete_user_preserves_local_user_when_supertokens_delete_fails(
-    db_client: TestClient,
-    auth_headers: Callable[..., dict[str, str]],
-    create_user_factory: Callable[..., int],
-) -> None:
-    admin_headers = auth_headers(1, is_admin=True)
-    user_id = create_user_factory(db_client, admin_headers, "delete-st-fail")
-
-    with patch("app.routers.db_users.st_delete_user", return_value=False):
-        delete_response = db_client.delete(f"/api/users/{user_id}", headers=admin_headers)
-
-    assert delete_response.status_code == 502
-
-    get_response = db_client.get(f"/api/users/{user_id}", headers=admin_headers)
-    assert get_response.status_code == 200

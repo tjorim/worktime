@@ -18,7 +18,8 @@ dependencies = [
   "pydantic-settings==2.14.0",
   "python-dotenv==1.2.2",
   "pycountry==26.2.16",
-  "supertokens-python==0.31.2",
+  "python-jose[cryptography]==3.5.0",
+  "httpx==0.28.1",
 ]
 
 [dependency-groups]

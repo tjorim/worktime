@@ -5,20 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 
-// Mock supertokens-auth-react modules
-const mockRedirectToAuth = vi.fn().mockResolvedValue(undefined);
-const mockSignOut = vi.fn().mockResolvedValue(undefined);
-let mockSessionContext: Record<string, unknown> = { loading: true };
+// Mock react-oidc-context
+const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
+const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
+const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
+let mockOidcAuth: Record<string, unknown> = {
+  isAuthenticated: false,
+  isLoading: true,
+  user: null,
+  signinRedirect: mockSigninRedirect,
+  removeUser: mockRemoveUser,
+  signoutRedirect: mockSignoutRedirect,
+};
 
-vi.mock("supertokens-auth-react", () => ({
-  redirectToAuth: (...args: unknown[]) => mockRedirectToAuth(...args),
-}));
-
-vi.mock("supertokens-auth-react/recipe/session", () => ({
-  default: {
-    signOut: (...args: unknown[]) => mockSignOut(...args),
-  },
-  useSessionContext: () => mockSessionContext,
+vi.mock("react-oidc-context", () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: () => mockOidcAuth,
 }));
 
 // Minimal wrapper to expose auth context values via a test component
@@ -56,7 +58,14 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("AuthContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSessionContext = { loading: true };
+    mockOidcAuth = {
+      isAuthenticated: false,
+      isLoading: true,
+      user: null,
+      signinRedirect: mockSigninRedirect,
+      removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
+    };
   });
 
   afterEach(() => {
@@ -64,110 +73,100 @@ describe("AuthContext", () => {
   });
 
   describe("initial state", () => {
-    it("shows validating state when session is loading", () => {
-      mockSessionContext = { loading: true };
+    it("shows validating state when OIDC is loading", () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: true, isAuthenticated: false, user: null };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-validating")).toHaveTextContent("true");
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
       expect(screen.getByTestId("user-id")).toHaveTextContent("null");
     });
 
-    it("is not authenticated when session does not exist", () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: false,
-        userId: "",
-        accessTokenPayload: {},
-        invalidClaims: [],
-      };
+    it("is not authenticated when OIDC returns no user", () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("false");
       expect(screen.getByTestId("user-id")).toHaveTextContent("null");
       expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
 
-    it("is authenticated when session exists", () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: true,
-        userId: "42",
-        accessTokenPayload: { displayName: "Alice" },
-        invalidClaims: [],
+    it("is authenticated when OIDC returns a user", () => {
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: true,
+        user: {
+          access_token: "tok-abc",
+          profile: { sub: "sub-42", name: "Alice" },
+        },
       };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
-      expect(screen.getByTestId("user-id")).toHaveTextContent("42");
+      expect(screen.getByTestId("user-id")).toHaveTextContent("sub-42");
       expect(screen.getByTestId("display-name")).toHaveTextContent("Alice");
     });
 
-    it("handles missing displayName in access token payload", () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: true,
-        userId: "7",
-        accessTokenPayload: {},
-        invalidClaims: [],
+    it("handles missing name in profile and falls back to preferred_username", () => {
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: true,
+        user: {
+          access_token: "tok-abc",
+          profile: { sub: "sub-7", preferred_username: "alice" },
+        },
       };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
-      expect(screen.getByTestId("user-id")).toHaveTextContent("7");
-      expect(screen.getByTestId("display-name")).toHaveTextContent("null");
+      expect(screen.getByTestId("user-id")).toHaveTextContent("sub-7");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("alice");
     });
 
-    it("falls back to display_name in access token payload", () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: true,
-        userId: "9",
-        accessTokenPayload: { display_name: "Alice Fallback" },
-        invalidClaims: [],
+    it("returns null displayName when no name or preferred_username in profile", () => {
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: true,
+        user: {
+          access_token: "tok-abc",
+          profile: { sub: "sub-9" },
+        },
       };
       renderWithProviders(<AuthStatusDisplay />);
       expect(screen.getByTestId("is-authenticated")).toHaveTextContent("true");
-      expect(screen.getByTestId("display-name")).toHaveTextContent("Alice Fallback");
+      expect(screen.getByTestId("display-name")).toHaveTextContent("null");
     });
   });
 
   describe("triggerLogin", () => {
-    it("calls redirectToAuth when triggerLogin is invoked", async () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: false,
-        userId: "",
-        accessTokenPayload: {},
-        invalidClaims: [],
-      };
+    it("calls signinRedirect when triggerLogin is invoked", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
       const user = userEvent.setup();
       renderWithProviders(<AuthActions />);
       await user.click(screen.getByText("triggerLogin"));
-      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
+      expect(mockSigninRedirect).toHaveBeenCalled();
     });
   });
 
   describe("triggerSignup", () => {
-    it("calls redirectToAuth with signup when triggerSignup is invoked", async () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: false,
-        userId: "",
-        accessTokenPayload: {},
-        invalidClaims: [],
-      };
+    it("calls signinRedirect when triggerSignup is invoked", async () => {
+      mockOidcAuth = { ...mockOidcAuth, isLoading: false, isAuthenticated: false, user: null };
       const user = userEvent.setup();
       renderWithProviders(<AuthActions />);
       await user.click(screen.getByText("triggerSignup"));
-      expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
+      expect(mockSigninRedirect).toHaveBeenCalled();
     });
   });
 
   describe("logout", () => {
-    it("calls Session.signOut when logout is invoked", async () => {
-      mockSessionContext = {
-        loading: false,
-        doesSessionExist: true,
-        userId: "3",
-        accessTokenPayload: { displayName: "Alice" },
-        invalidClaims: [],
+    it("calls signoutRedirect when logout is invoked", async () => {
+      mockOidcAuth = {
+        ...mockOidcAuth,
+        isLoading: false,
+        isAuthenticated: true,
+        user: {
+          access_token: "tok-abc",
+          profile: { sub: "sub-3", name: "Alice" },
+        },
       };
       const user = userEvent.setup();
       renderWithProviders(
@@ -177,7 +176,7 @@ describe("AuthContext", () => {
         </>,
       );
       await user.click(screen.getByText("logout"));
-      expect(mockSignOut).toHaveBeenCalled();
+      expect(mockSignoutRedirect).toHaveBeenCalled();
     });
   });
 

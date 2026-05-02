@@ -25,6 +25,7 @@ def readiness_client(client):
 
     app.dependency_overrides[_get_db_if_enabled] = mock_db
 
+    # Mock OIDC provider reachability check.
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_http_client = AsyncMock()

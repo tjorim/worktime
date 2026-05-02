@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as oidcContext from "react-oidc-context";
 import { SettingsContent } from "@/pages/SettingsPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DeveloperOptionsProvider } from "@/contexts/DeveloperOptionsContext";
@@ -14,14 +15,13 @@ import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 
-// Global SuperTokens mocks come from tests/setup.ts (no-session default).
-// Override for authenticated state tests using vi.mocked().
+// Global react-oidc-context mocks come from tests/setup.ts (no-session default).
+// Override for authenticated state tests by calling mockAuthenticatedUser().
 
-const mockRedirectToAuth = vi.mocked((await import("supertokens-auth-react")).redirectToAuth);
-const mockSignOut = vi.mocked(
-  (await import("supertokens-auth-react/recipe/session")).default.signOut,
-);
-let useSessionContextSpy: { mockRestore: () => void } | undefined;
+const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
+const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
+const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
+let useOidcAuthSpy: { mockRestore: () => void } | undefined;
 let useOngoingSyncContextSpy: { mockRestore: () => void } | undefined;
 
 const createMockSyncContext = (overrides = {}) => ({
@@ -40,8 +40,8 @@ const createMockSyncContext = (overrides = {}) => ({
 
 // Shared test cleanup for every section suite in this file.
 afterEach(() => {
-  useSessionContextSpy?.mockRestore();
-  useSessionContextSpy = undefined;
+  useOidcAuthSpy?.mockRestore();
+  useOidcAuthSpy = undefined;
   useOngoingSyncContextSpy?.mockRestore();
   useOngoingSyncContextSpy = undefined;
   vi.clearAllMocks();
@@ -68,6 +68,21 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
+function mockAuthenticatedUser(displayName = "Alice") {
+  useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      access_token: "tok-test",
+      profile: { sub: "sub-u1", name: displayName } as Record<string, unknown>,
+    },
+    signinRedirect: mockSigninRedirect,
+    removeUser: mockRemoveUser,
+    signoutRedirect: mockSignoutRedirect,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
+}
+
 describe("SettingsPage Account Section", () => {
   it("renders connect account and sign in buttons when not authenticated", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
@@ -80,49 +95,50 @@ describe("SettingsPage Account Section", () => {
     expect(screen.getByText(/Your data stays local by default/i)).toBeInTheDocument();
   });
 
-  it("calls redirectToAuth with signin when Sign In is clicked", async () => {
+  it("calls signinRedirect when Sign In is clicked", async () => {
+    useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+      signinRedirect: mockSigninRedirect,
+      removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     await user.click(screen.getByText("Sign In"));
-    expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signin" });
+    expect(mockSigninRedirect).toHaveBeenCalled();
   });
 
-  it("calls redirectToAuth with signup when Connect Account is clicked", async () => {
+  it("calls signinRedirect when Connect Account is clicked", async () => {
+    useOidcAuthSpy = vi.spyOn(oidcContext, "useAuth").mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+      signinRedirect: mockSigninRedirect,
+      removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     await user.click(screen.getByText("Connect Account"));
-    expect(mockRedirectToAuth).toHaveBeenCalledWith({ show: "signup" });
+    expect(mockSigninRedirect).toHaveBeenCalled();
   });
 
-  it("calls signOut when Sign Out is clicked (authenticated state)", async () => {
-    // Override the session mock for this test to simulate an authenticated user
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
-      loading: false,
-      doesSessionExist: true,
-      userId: "u1",
-      accessTokenPayload: { displayName: "Alice" },
-      invalidClaims: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+  it("calls signoutRedirect when Sign Out is clicked (authenticated state)", async () => {
+    mockAuthenticatedUser("Alice");
 
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
     expect(screen.getByText("Signed in as Alice")).toBeInTheDocument();
     await user.click(screen.getByText("Sign Out"));
-    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockSignoutRedirect).toHaveBeenCalled();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
-      loading: false,
-      doesSessionExist: true,
-      userId: "u1",
-      accessTokenPayload: { displayName: "Alice" },
-      invalidClaims: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    mockAuthenticatedUser("Alice");
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
 
@@ -149,15 +165,7 @@ describe("SettingsPage Account Section", () => {
       }),
     );
 
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
-      loading: false,
-      doesSessionExist: true,
-      userId: "u1",
-      accessTokenPayload: { displayName: "Alice" },
-      invalidClaims: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    mockAuthenticatedUser("Alice");
 
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
@@ -191,15 +199,7 @@ describe("SettingsPage Sync Section", () => {
 
   it("renders signed-in status and calls pull action when button is enabled", async () => {
     const triggerPullMock = vi.fn();
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
-      loading: false,
-      doesSessionExist: true,
-      userId: "u1",
-      accessTokenPayload: { displayName: "Alice" },
-      invalidClaims: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    mockAuthenticatedUser("Alice");
     useOngoingSyncContextSpy = vi
       .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
       .mockReturnValue(
@@ -221,15 +221,7 @@ describe("SettingsPage Sync Section", () => {
   });
 
   it("disables pull action button while sync is in progress", async () => {
-    const sessionMod = await import("supertokens-auth-react/recipe/session");
-    useSessionContextSpy = vi.spyOn(sessionMod, "useSessionContext").mockReturnValue({
-      loading: false,
-      doesSessionExist: true,
-      userId: "u1",
-      accessTokenPayload: { displayName: "Alice" },
-      invalidClaims: [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    mockAuthenticatedUser("Alice");
     useOngoingSyncContextSpy = vi
       .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
       .mockReturnValue(createMockSyncContext({ isSyncing: true }));
