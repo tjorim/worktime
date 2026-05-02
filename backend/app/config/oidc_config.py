@@ -163,10 +163,7 @@ async def _find_available_username(db_session, base_username: str, subject: str)
         # Progressively use more of the subject string as a disambiguation suffix.
         # Once the full subject is exhausted, append a numeric counter too.
         suffix = subject[:min(8 + attempt, len(subject))]
-        if len(suffix) < len(subject):
-            candidate = f"{base_username}-{suffix}"
-        else:
-            candidate = f"{base_username}-{suffix}-{attempt}"
+        candidate = f"{base_username}-{suffix}" if len(suffix) < len(subject) else f"{base_username}-{suffix}-{attempt}"
 
     raise RuntimeError(f"Could not find available username for {base_username!r} after {_MAX_USERNAME_ATTEMPTS} attempts")
 

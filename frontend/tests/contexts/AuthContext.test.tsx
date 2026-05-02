@@ -8,12 +8,14 @@ import { ToastProvider } from "@/contexts/ToastContext";
 // Mock react-oidc-context
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
 const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
+const mockSignoutRedirect = vi.fn().mockResolvedValue(undefined);
 let mockOidcAuth: Record<string, unknown> = {
   isAuthenticated: false,
   isLoading: true,
   user: null,
   signinRedirect: mockSigninRedirect,
   removeUser: mockRemoveUser,
+  signoutRedirect: mockSignoutRedirect,
 };
 
 vi.mock("react-oidc-context", () => ({
@@ -155,7 +157,7 @@ describe("AuthContext", () => {
   });
 
   describe("logout", () => {
-    it("calls removeUser when logout is invoked", async () => {
+    it("calls signoutRedirect when logout is invoked", async () => {
       mockOidcAuth = {
         ...mockOidcAuth,
         isLoading: false,
@@ -173,7 +175,7 @@ describe("AuthContext", () => {
         </>,
       );
       await user.click(screen.getByText("logout"));
-      expect(mockRemoveUser).toHaveBeenCalled();
+      expect(mockSignoutRedirect).toHaveBeenCalled();
     });
   });
 
