@@ -64,6 +64,7 @@ describe("AuthContext", () => {
       user: null,
       signinRedirect: mockSigninRedirect,
       removeUser: mockRemoveUser,
+      signoutRedirect: mockSignoutRedirect,
     };
   });
 
