@@ -13,13 +13,16 @@ from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
+from app.database.engine import get_session
 
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
+_ADMIN_USERNAMES: frozenset[str] = frozenset(u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip())
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,7 @@ class AuthenticatedPrincipal:
 
 async def get_authenticated_principal(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    session: AsyncSession = Depends(get_session),
 ) -> AuthenticatedPrincipal:
     """Validate a Bearer JWT and return the authenticated principal.
 
@@ -56,7 +60,7 @@ async def get_authenticated_principal(
         )
 
     try:
-        local_user = await get_or_create_local_user(subject, claims)
+        local_user = await get_or_create_local_user(subject, claims, session)
     except Exception as exc:
         logger.exception("Failed to resolve local user for subject %s", subject)
         raise HTTPException(
@@ -64,8 +68,7 @@ async def get_authenticated_principal(
             detail="Authentication service error",
         ) from exc
 
-    admin_usernames = {u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip()}
-    is_admin = local_user.username in admin_usernames
+    is_admin = local_user.username in _ADMIN_USERNAMES
 
     return AuthenticatedPrincipal(user_id=local_user.id, is_admin=is_admin)
 

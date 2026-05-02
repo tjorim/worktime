@@ -24,10 +24,14 @@ from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 
 from app.config import settings
-from app.database.engine import get_session_factory
 from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)
+
+# Pre-parsed at import time — avoids repeated string splitting on every request.
+_OIDC_ALGORITHMS: list[str] = [a.strip() for a in settings.OIDC_ALGORITHMS.split(",") if a.strip()]
+_OIDC_AUDIENCE: str | None = settings.OIDC_AUDIENCE or None
+_OIDC_ISSUER: str | None = settings.OIDC_ISSUER_URL or None
 
 # ---------------------------------------------------------------------------
 # JWKS cache — fetched once per process lifetime, refreshed on key-not-found.
@@ -87,13 +91,9 @@ async def decode_token(token: str) -> dict[str, Any]:
     Raises:
         OIDCTokenError: When the token is missing, expired, or otherwise invalid.
     """
-    algorithms = [a.strip() for a in settings.OIDC_ALGORITHMS.split(",") if a.strip()]
-    audience = settings.OIDC_AUDIENCE or None
-    issuer = settings.OIDC_ISSUER_URL or None
-
     options: dict[str, Any] = {
-        "verify_aud": audience is not None,
-        "verify_iss": issuer is not None,
+        "verify_aud": _OIDC_AUDIENCE is not None,
+        "verify_iss": _OIDC_ISSUER is not None,
     }
 
     for attempt in range(2):
@@ -102,9 +102,9 @@ async def decode_token(token: str) -> dict[str, Any]:
             return jwt.decode(
                 token,
                 jwks,
-                algorithms=algorithms,
-                audience=audience,
-                issuer=issuer,
+                algorithms=_OIDC_ALGORITHMS,
+                audience=_OIDC_AUDIENCE,
+                issuer=_OIDC_ISSUER,
                 options=options,
             )
         except ExpiredSignatureError as exc:
@@ -168,7 +168,7 @@ async def _find_available_username(db_session, base_username: str, subject: str)
     raise RuntimeError(f"Could not find available username for {base_username!r} after {_MAX_USERNAME_ATTEMPTS} attempts")
 
 
-async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
+async def get_or_create_local_user(subject: str, claims: dict[str, Any], db_session: Any):
     """Return the local user for an OIDC subject, auto-provisioning when missing.
 
     Looks up by ``oidc_subject`` first. If not found, derives a username and
@@ -180,37 +180,35 @@ async def get_or_create_local_user(subject: str, claims: dict[str, Any]):
     from app.database.models import User
     from app.schemas import UserCreate
 
-    session_factory = get_session_factory()
-    async with session_factory() as db_session:
+    result = await db_session.execute(select(User).where(User.oidc_subject == subject))
+    local_user = result.scalar_one_or_none()
+    if local_user is not None:
+        return local_user
+
+    username, display_name = _derive_username_and_display_name(claims, subject)
+    username = await _find_available_username(db_session, username, subject)
+
+    try:
+        local_user = await create_user(
+            db_session,
+            UserCreate(
+                username=username,
+                display_name=display_name,
+                settings={},
+            ),
+            oidc_subject=subject,
+        )
+        logger.info(
+            "Auto-provisioned local Worktime user %r for OIDC subject %s",
+            username,
+            subject,
+        )
+    except (IntegrityError, ConflictError):
+        # Race condition: concurrent first-login for the same subject.
+        await db_session.rollback()
         result = await db_session.execute(select(User).where(User.oidc_subject == subject))
         local_user = result.scalar_one_or_none()
-        if local_user is not None:
-            return local_user
+        if local_user is None:
+            raise
 
-        username, display_name = _derive_username_and_display_name(claims, subject)
-        username = await _find_available_username(db_session, username, subject)
-
-        try:
-            local_user = await create_user(
-                db_session,
-                UserCreate(
-                    username=username,
-                    display_name=display_name,
-                    settings={},
-                ),
-                oidc_subject=subject,
-            )
-            logger.info(
-                "Auto-provisioned local Worktime user %r for OIDC subject %s",
-                username,
-                subject,
-            )
-        except (IntegrityError, ConflictError):
-            # Race condition: concurrent first-login for the same subject.
-            await db_session.rollback()
-            result = await db_session.execute(select(User).where(User.oidc_subject == subject))
-            local_user = result.scalar_one_or_none()
-            if local_user is None:
-                raise
-
-        return local_user
+    return local_user

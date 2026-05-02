@@ -42,19 +42,11 @@ async def test_get_or_create_local_user_auto_provisions_missing_user(monkeypatch
         def __init__(self):
             self.calls = 0
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
         async def execute(self, _query):
             self.calls += 1
             if self.calls == 1:
                 return FakeResult(None)  # oidc_subject lookup → not found
             return FakeResult(None)  # username uniqueness check → available
-
-    monkeypatch.setattr(oidc_config, "get_session_factory", lambda: FakeSession)
 
     recorded: dict = {}
 
@@ -69,6 +61,7 @@ async def test_get_or_create_local_user_auto_provisions_missing_user(monkeypatch
     local_user = await oidc_config.get_or_create_local_user(
         "sub-abc123",
         {"preferred_username": "alice", "name": "Alice"},
+        FakeSession(),
     )
 
     assert local_user is created_local_user
@@ -85,18 +78,10 @@ async def test_get_or_create_local_user_returns_existing(monkeypatch) -> None:
             return existing_user
 
     class FakeSession:
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
         async def execute(self, _query):
             return FakeResult()
 
-    monkeypatch.setattr(oidc_config, "get_session_factory", lambda: FakeSession)
-
-    local_user = await oidc_config.get_or_create_local_user("sub-bob", {})
+    local_user = await oidc_config.get_or_create_local_user("sub-bob", {}, FakeSession())
     assert local_user is existing_user
 
 
@@ -114,12 +99,6 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
         def __init__(self):
             self.calls = 0
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
         async def execute(self, _query):
             self.calls += 1
             if self.calls == 1:
@@ -127,8 +106,6 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
             if self.calls == 2:
                 return FakeResult(object())  # username "alice" already taken
             return FakeResult(None)  # "alice-sub-abc1" is available
-
-    monkeypatch.setattr(oidc_config, "get_session_factory", lambda: FakeSession)
 
     recorded: dict = {}
 
@@ -141,6 +118,7 @@ async def test_get_or_create_local_user_appends_suffix_on_username_conflict(monk
     local_user = await oidc_config.get_or_create_local_user(
         "sub-abc12345",
         {"preferred_username": "alice"},
+        FakeSession(),
     )
 
     assert local_user is created_local_user
