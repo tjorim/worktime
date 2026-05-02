@@ -16,7 +16,7 @@ interface DevOptionsPanelProps {
 }
 
 /**
- * Developer options panel for managing backend API connectivity.
+ * Developer options panel for managing backend API connectivity and the local .hday helper.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
  *
  * @param show - Whether the panel is visible
@@ -24,11 +24,20 @@ interface DevOptionsPanelProps {
  * @returns The rendered developer options modal
  */
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
-  const { options, updateAutoConnect, testConnection, disconnect } = useDeveloperOptions();
+  const { options, updateAutoConnect, updateHdayHelperUrl, testConnection, disconnect } =
+    useDeveloperOptions();
   const { isAuthenticated, displayName, triggerLogin, logout } = useAuth();
 
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  // Local state for the hday helper URL input (reflects saved value on open)
+  const [hdayHelperUrlDraft, setHdayHelperUrlDraft] = useState(options.hdayHelperUrl ?? "");
+  const [isTestingHelper, setIsTestingHelper] = useState(false);
+  const [helperTestResult, setHelperTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
@@ -58,6 +67,45 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   const handleDisconnect = () => {
     disconnect();
     setTestResult({ success: true, message: m.dev_disconnected_msg() });
+  };
+
+  const handleSaveHdayHelperUrl = () => {
+    updateHdayHelperUrl(hdayHelperUrlDraft.trim() || null);
+    setHelperTestResult(null);
+  };
+
+  const handleTestHelperConnection = async () => {
+    const url = hdayHelperUrlDraft.trim();
+    if (!url) return;
+
+    setIsTestingHelper(true);
+    setHelperTestResult(null);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch(`${url}/health`, {
+          method: "GET",
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          // Save the URL on successful connection
+          updateHdayHelperUrl(url);
+          setHelperTestResult({ success: true, message: m.dev_hday_helper_connected() });
+        } else {
+          setHelperTestResult({ success: false, message: m.dev_hday_helper_failed() });
+        }
+      } catch {
+        clearTimeout(timeoutId);
+        setHelperTestResult({ success: false, message: m.dev_hday_helper_failed() });
+      }
+    } finally {
+      setIsTestingHelper(false);
+    }
   };
 
   const getStatusBadge = () => {
@@ -195,6 +243,60 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
           </div>
         )}
 
+        <hr />
+
+        {/* .hday Helper Configuration */}
+        <div className="mb-4">
+          <h6 className="mb-1">
+            <i className="bi bi-file-earmark-text me-2"></i>
+            {m.dev_hday_helper_heading()}
+          </h6>
+          <p className="text-muted small mb-3">{m.dev_hday_helper_desc()}</p>
+
+          <Form.Group controlId="hday-helper-url" className="mb-2">
+            <Form.Label className="small fw-medium">{m.dev_hday_helper_url_label()}</Form.Label>
+            <div className="d-flex gap-2">
+              <Form.Control
+                type="url"
+                placeholder="http://localhost:8080"
+                value={hdayHelperUrlDraft}
+                onChange={(e) => {
+                  setHdayHelperUrlDraft(e.target.value);
+                  setHelperTestResult(null);
+                }}
+                size="sm"
+              />
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleSaveHdayHelperUrl}
+                disabled={hdayHelperUrlDraft.trim() === (options.hdayHelperUrl ?? "")}
+              >
+                {m.dev_save_url()}
+              </Button>
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={handleTestHelperConnection}
+                disabled={isTestingHelper || !hdayHelperUrlDraft.trim()}
+              >
+                {isTestingHelper && <Spinner animation="border" size="sm" className="me-1" />}
+                {m.dev_hday_helper_test()}
+              </Button>
+            </div>
+            <Form.Text className="text-muted">{m.dev_hday_helper_url_help()}</Form.Text>
+          </Form.Group>
+
+          {helperTestResult && (
+            <Alert
+              variant={helperTestResult.success ? "success" : "danger"}
+              className="mb-0 py-2 small"
+            >
+              {helperTestResult.message}
+            </Alert>
+          )}
+        </div>
+
         {/* Backend Information */}
         <div className="mt-4 p-3 bg-light rounded">
           <h6 className="mb-2">{m.dev_endpoints_heading()}</h6>
@@ -226,3 +328,4 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
     </Modal>
   );
 }
+

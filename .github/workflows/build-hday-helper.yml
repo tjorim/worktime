@@ -1,0 +1,99 @@
+name: Build .hday Helper EXE
+
+on:
+  # Manual trigger; build on demand (fast — typically < 2 min with Bun).
+  workflow_dispatch:
+  # Also build on pushes that touch the helper source or this workflow.
+  push:
+    branches: [main]
+    paths:
+      - "hday-helper/**"
+      - "frontend/src/lib/hday/**"
+      - ".github/workflows/build-hday-helper.yml"
+
+# Prevent concurrent builds on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows-exe:
+    name: Build Windows EXE
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Extract version from frontend package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Windows EXE
+        run: |
+          bun build hday-helper/src/main.ts \
+            --compile \
+            --target=bun-windows-x64 \
+            --outfile=dist/worktime-hday-helper.exe
+
+      - name: Verify executable
+        run: |
+          if [ -f dist/worktime-hday-helper.exe ]; then
+            SIZE=$(du -sh dist/worktime-hday-helper.exe | cut -f1)
+            echo "✅ Executable created — size: $SIZE"
+          else
+            echo "❌ Executable not found"
+            exit 1
+          fi
+
+      - name: Create release notes
+        run: |
+          cat > dist/README.txt << 'EOF'
+          Worktime .hday Helper
+
+          A minimal HTTP server that reads and writes .hday files from a local or
+          network-share directory.  No Python, no Bun runtime required.
+
+          Quick start:
+            1. Place worktime-hday-helper.exe in any folder.
+            2. Create a .env file next to it (optional):
+                 SHARE_DIR=Z:\worktime
+                 CORS_ORIGINS=https://worktime.example.com
+                 PORT=8080
+            3. Run worktime-hday-helper.exe
+            4. In Worktime → Settings → About → Developer Options,
+               set the .hday helper URL to http://localhost:8080
+
+          Configuration (env vars / .env):
+            SHARE_DIR      Directory with .hday files  (default: ./hday_files)
+            PORT           Listening port               (default: 8080)
+            HOST           Bind address                 (default: 127.0.0.1)
+            CORS_ORIGINS   Allowed origins, comma-sep   (default: http://localhost:5173)
+
+          See hday-helper/README.md in the repository for full documentation.
+          EOF
+          echo "Build info:" >> dist/README.txt
+          echo "  Version: ${{ steps.version.outputs.version }}" >> dist/README.txt
+          echo "  Commit:  ${{ github.sha }}" >> dist/README.txt
+          echo "  Ref:     ${{ github.ref }}" >> dist/README.txt
+          echo "  Date:    $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> dist/README.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worktime-hday-helper-windows-${{ steps.version.outputs.version }}
+          path: |
+            dist/worktime-hday-helper.exe
+            dist/README.txt
+          retention-days: 30
+          if-no-files-found: error
