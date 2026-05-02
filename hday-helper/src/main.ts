@@ -34,6 +34,9 @@ import {
   writeFileSync,
 } from "fs";
 import { basename, join, resolve, sep } from "path";
+// These imports use relative paths to reuse the frontend .hday parser directly.
+// `bun build --compile` bundles all resolved modules into the output binary, so the
+// relative paths work at build time even though the EXE has no filesystem access.
 import { parseHday } from "../../frontend/src/lib/hday/parser";
 import { toLine } from "../../frontend/src/lib/hday/serializer";
 import type { HdayEvent } from "../../frontend/src/lib/hday/types";
@@ -156,7 +159,9 @@ function writeHdayFile(username: string, content: string, expectedEtag: string |
   // Conflict detection
   if (expectedEtag !== null) {
     if (!fileExists) {
-      throw new HdayConflictError();
+      // The client expected a file at this etag, but it no longer exists.
+      // This is a precondition failure and maps to HTTP 409 in the handler.
+      throw new HdayFileNotFoundError(username);
     }
     const currentRaw = readFileSync(filePath, "utf-8");
     if (computeEtag(currentRaw) !== expectedEtag) {
@@ -248,7 +253,7 @@ async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ detail: "Not found" }, 404, corsHeaders);
   }
 
-  const username = decodeURIComponent(hdayMatch[1]!);
+  const username = decodeURIComponent(hdayMatch[1] ?? "");
 
   try {
     // validate early — getHdayPath throws RangeError on bad username
@@ -324,8 +329,10 @@ async function handleRequest(req: Request): Promise<Response> {
       const newEtag = writeHdayFile(username, content, expectedEtag);
       return jsonResponse({ etag: newEtag }, 200, corsHeaders);
     } catch (err) {
-      if (err instanceof HdayConflictError) {
-        // Return current file state for the client to resolve the conflict
+      if (err instanceof HdayConflictError || err instanceof HdayFileNotFoundError) {
+        // Return current file state for the client to resolve the conflict.
+        // HdayFileNotFoundError here means the client provided an etag but the file
+        // has since been deleted — this is a precondition failure (409).
         try {
           const { raw: currentRaw, etag: currentEtag } = readHdayFile(username);
           let currentEvents: HdayEvent[] = [];

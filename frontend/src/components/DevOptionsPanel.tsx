@@ -23,6 +23,9 @@ interface DevOptionsPanelProps {
  * @param onHide - Callback to hide the panel
  * @returns The rendered developer options modal
  */
+/** Timeout in ms for helper connectivity checks. */
+const HELPER_CONNECTION_TIMEOUT_MS = 5000;
+
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   const { options, updateAutoConnect, updateHdayHelperUrl, testConnection, disconnect } =
     useDeveloperOptions();
@@ -83,7 +86,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
 
     try {
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      const timeoutId = window.setTimeout(() => controller.abort(), HELPER_CONNECTION_TIMEOUT_MS);
       try {
         const response = await fetch(`${url}/health`, {
           method: "GET",
