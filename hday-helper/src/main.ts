@@ -33,6 +33,7 @@ import {
   renameSync,
   readFileSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "fs";
 import { basename, join, resolve, sep } from "path";
@@ -221,8 +222,16 @@ function writeHdayFile(username: string, content: string, expectedEtag: string |
 
     // Unique temp path prevents concurrent requests from clobbering each other's tmp file
     const tmpPath = `${filePath}.${Math.random().toString(36).slice(2)}.tmp`;
-    writeFileSync(tmpPath, content, "utf-8");
-    renameSync(tmpPath, filePath);
+    try {
+      writeFileSync(tmpPath, content, "utf-8");
+      renameSync(tmpPath, filePath);
+    } finally {
+      try {
+        if (existsSync(tmpPath)) unlinkSync(tmpPath);
+      } catch {
+        // ignore cleanup failure
+      }
+    }
 
     return computeEtag(content);
   });
@@ -462,7 +471,7 @@ async function handleRequest(req: Request): Promise<Response> {
     // PUT /hday/:username
     if (req.method === "PUT") {
       const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-      if (contentLength > 10 * 1024 * 1024) {
+      if (Number.isNaN(contentLength) || contentLength > 10 * 1024 * 1024) {
         return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
       }
 
