@@ -6,7 +6,8 @@ required on the target machine.
 
 ## What it does
 
-- Exposes the same `/hday/:username` API shape as `backend/app/routers/hday.py`
+- Exposes the same `/hday/:username` and `/team/:teamId` API shapes as the Python backend
+- Reads `.hday` files from the share root; reads team config (`.conf`, `.people`) from `{SHARE_DIR}/config/`
 - Reads from / writes to a configurable directory (local path or UNC/mapped-drive path)
 - No database, no OIDC, no authentication — pure file I/O over HTTP
 
@@ -62,22 +63,20 @@ Returns the server status and whether the share directory is accessible.
 
 HTTP 200 when accessible, 503 when the share directory cannot be reached.
 
-### `GET /hday/:username[?format=raw|parsed]`
+### `GET /hday/:username`
 
-Returns a user's `.hday` file content.
-
-- `format=raw` (default) — returns raw text only
-- `format=parsed` — also parses the file into structured events
+Returns a user's `.hday` file content, always including parsed events.
 
 ```json
 {
   "username": "jsmith",
   "raw": "2025/01/15 # Day off\n",
   "etag": "sha256:abc123...",
-  "events": null
+  "events": [{ "date": "2025-01-15", "label": "Day off" }]
 }
 ```
 
+`events` is an empty array if the file exists but cannot be parsed.
 HTTP 200 on success, 404 if the file does not exist, 503 if the share is unreachable.
 
 ### `PUT /hday/:username`
@@ -100,6 +99,51 @@ Request body:
 
 Returns HTTP 200 `{ "etag": "sha256:..." }` on success, 409 if the etag doesn't match
 (conflict), 422 if neither `raw` nor `events` is provided, 503 if the share is unreachable.
+
+### `GET /team/:teamId`
+
+Returns team name and member list parsed from `{SHARE_DIR}/config/{teamId}.conf` and
+`{SHARE_DIR}/config/{teamId}.people`.
+
+```json
+{
+  "team_id": "myteam",
+  "name": "My Team",
+  "sections": [
+    { "title": "Management", "members": [{ "username": "jsmith", "display_name": "Jane Smith" }] }
+  ],
+  "members": [{ "username": "jsmith", "display_name": "Jane Smith" }]
+}
+```
+
+If the `.people` file has no `<h2>` section headers, `sections` contains a single entry with `title: null`.
+HTTP 200 on success, 404 if team config/people files not found, 503 if the share is unreachable.
+
+### `GET /team/:teamId/hday`
+
+Returns team info plus each member's `.hday` file content, always including parsed events.
+Members without a `.hday` file get `raw: ""`, `etag: null`, `events: []`.
+
+```json
+{
+  "team_id": "myteam",
+  "name": "My Team",
+  "sections": [
+    {
+      "title": "Management",
+      "members": [
+        { "username": "jsmith", "display_name": "Jane Smith", "raw": "...", "etag": "sha256:...", "events": [...] }
+      ]
+    }
+  ],
+  "members": [
+    { "username": "jsmith", "display_name": "Jane Smith", "raw": "...", "etag": "sha256:...", "events": [...] }
+  ]
+}
+```
+
+HTTP 200 on success, 404 if team not found, 503 if the share is unreachable.
+Response headers include `X-File-Read-Ms` and `X-Parse-Time-Ms`.
 
 ## Building from source
 

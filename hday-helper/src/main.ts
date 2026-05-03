@@ -15,12 +15,13 @@
  * | HOST           | 127.0.0.1             | Bind address                        |
  * | CORS_ORIGINS   | http://localhost:5173 | Comma-separated allowed origins     |
  *
- * ## API (mirrors backend/app/routers/hday.py)
+ * ## API (mirrors backend/app/routers/hday.py + team.py)
  *
- * GET  /health                        — health + share-directory status
- * GET  /hday/:username[?format=raw]   — read a user's .hday file
- * GET  /hday/:username?format=parsed  — read + parse a user's .hday file
- * PUT  /hday/:username                — create or update a user's .hday file
+ * GET  /health              — health + share-directory status
+ * GET  /hday/:username      — read a user's .hday file (always includes parsed events)
+ * PUT  /hday/:username      — create or update a user's .hday file
+ * GET  /team/:teamId        — read team config + member list
+ * GET  /team/:teamId/hday   — read aggregated team .hday files (always includes parsed events)
  */
 
 import { createHash } from "crypto";
@@ -97,6 +98,13 @@ class ShareNotAccessibleError extends Error {
   }
 }
 
+class TeamNotFoundError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "TeamNotFoundError";
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Etag helpers
 // ---------------------------------------------------------------------------
@@ -127,6 +135,27 @@ function getHdayPath(username: string): string {
     throw new RangeError("Invalid username format");
   }
 
+  return filePath;
+}
+
+// ---------------------------------------------------------------------------
+// Team path helpers — config files live in {SHARE_DIR}/config/
+// ---------------------------------------------------------------------------
+
+function getConfigDir(): string {
+  return resolve(join(SHARE_DIR, "config"));
+}
+
+function getTeamFilePath(teamId: string, ext: string): string {
+  if (!USERNAME_RE.test(teamId) || teamId.includes("..")) {
+    throw new RangeError("Invalid team_id format");
+  }
+  const safeFilename = basename(`${teamId}.${ext}`);
+  const configDir = getConfigDir();
+  const filePath = resolve(join(configDir, safeFilename));
+  if (!filePath.startsWith(configDir + sep)) {
+    throw new RangeError("Invalid team_id format");
+  }
   return filePath;
 }
 
@@ -208,6 +237,117 @@ function eventsToText(events: HdayEvent[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Team types
+// ---------------------------------------------------------------------------
+
+interface TeamMember {
+  username: string;
+  display_name: string;
+}
+
+interface TeamSection {
+  title: string | null;
+  members: TeamMember[];
+}
+
+interface TeamMemberHdayData {
+  username: string;
+  display_name: string;
+  raw: string;
+  events: HdayEvent[];
+  etag: string | null;
+}
+
+interface TeamSectionHdayData {
+  title: string | null;
+  members: TeamMemberHdayData[];
+}
+
+// ---------------------------------------------------------------------------
+// Team file parsers
+// ---------------------------------------------------------------------------
+
+function parseTeamConfig(teamId: string): string {
+  checkShareAccessible();
+
+  const configDir = getConfigDir();
+  if (!existsSync(configDir) || !statSync(configDir).isDirectory()) {
+    throw new TeamNotFoundError("Config directory not found");
+  }
+
+  const configPath = getTeamFilePath(teamId, "conf");
+  if (!existsSync(configPath)) {
+    throw new TeamNotFoundError("Team configuration not found");
+  }
+
+  const content = readFileSync(configPath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.includes("=")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key === "groupname" && value) return value;
+  }
+
+  throw new TeamNotFoundError("groupname field not found in config file");
+}
+
+interface ParsedPeople {
+  sections: TeamSection[];
+  members: TeamMember[];
+}
+
+function parsePeopleFile(teamId: string): ParsedPeople {
+  checkShareAccessible();
+
+  const peoplePath = getTeamFilePath(teamId, "people");
+  if (!existsSync(peoplePath)) {
+    throw new TeamNotFoundError("Team members file not found");
+  }
+
+  const content = readFileSync(peoplePath, "utf-8");
+  const sections: TeamSection[] = [];
+  const allMembers: TeamMember[] = [];
+  let currentTitle: string | null = null;
+  let currentMembers: TeamMember[] = [];
+
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const headingMatch = line.match(/^<h([1-6])\b[^>]*>(.*)<\/h\1>\s*$/i);
+    if (headingMatch) {
+      if (currentMembers.length > 0) {
+        sections.push({ title: currentTitle, members: currentMembers });
+        currentMembers = [];
+      }
+      currentTitle = headingMatch[2].trim();
+      continue;
+    }
+
+    if (!line.includes(",")) continue;
+    const commaIdx = line.indexOf(",");
+    const username = line.slice(0, commaIdx).trim();
+    const displayName = line.slice(commaIdx + 1).trim();
+    if (username) {
+      const member: TeamMember = { username, display_name: displayName };
+      currentMembers.push(member);
+      allMembers.push(member);
+    }
+  }
+
+  if (currentMembers.length > 0) {
+    sections.push({ title: currentTitle, members: currentMembers });
+  }
+  if (sections.length === 0 && allMembers.length > 0) {
+    sections.push({ title: null, members: allMembers });
+  }
+
+  return { sections, members: allMembers };
+}
+
+// ---------------------------------------------------------------------------
 // CORS helpers
 // ---------------------------------------------------------------------------
 
@@ -271,135 +411,212 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // /hday/:username
   const hdayMatch = pathname.match(/^\/hday\/([^/]+)$/);
-  if (!hdayMatch) {
-    return jsonResponse({ detail: "Not found" }, 404, corsHeaders);
-  }
+  if (hdayMatch) {
+    const username = decodeURIComponent(hdayMatch[1] ?? "");
 
-  const username = decodeURIComponent(hdayMatch[1] ?? "");
-
-  try {
-    // validate early — getHdayPath throws RangeError on bad username
-    getHdayPath(username);
-  } catch {
-    return jsonResponse({ detail: "Invalid username format" }, 400, corsHeaders);
-  }
-
-  // GET /hday/:username[?format=raw|parsed]
-  if (req.method === "GET") {
-    const format = url.searchParams.get("format") ?? "raw";
-    if (format !== "raw" && format !== "parsed") {
-      return jsonResponse({ detail: "Unsupported format" }, 400, corsHeaders);
-    }
-    const t0 = performance.now();
-
-    let raw: string;
-    let etag: string;
     try {
-      ({ raw, etag } = readHdayFile(username));
+      // validate early — getHdayPath throws RangeError on bad username
+      getHdayPath(username);
+    } catch {
+      return jsonResponse({ detail: "Invalid username format" }, 400, corsHeaders);
+    }
+
+    // GET /hday/:username
+    if (req.method === "GET") {
+      const t0 = performance.now();
+
+      let raw: string;
+      let etag: string;
+      try {
+        ({ raw, etag } = readHdayFile(username));
+      } catch (err) {
+        if (err instanceof HdayFileNotFoundError) {
+          return jsonResponse({ detail: err.message }, 404, corsHeaders);
+        }
+        return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);
+      }
+
+      const fileReadMs = performance.now() - t0;
+
+      const parseT0 = performance.now();
+      let events: HdayEvent[] = [];
+      try {
+        events = parseHday(raw);
+      } catch {
+        // malformed file — return empty events
+      }
+      const parseMs = performance.now() - parseT0;
+
+      return jsonResponse(
+        { username, raw, etag, events },
+        200,
+        {
+          ...corsHeaders,
+          ETag: etag,
+          "X-File-Read-Ms": fileReadMs.toFixed(3),
+          "X-Parse-Time-Ms": parseMs.toFixed(3),
+        },
+      );
+    }
+
+    // PUT /hday/:username
+    if (req.method === "PUT") {
+      const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+      if (contentLength > 10 * 1024 * 1024) {
+        return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
+      }
+
+      let body: { raw?: string; events?: HdayEvent[]; etag?: string | null };
+      try {
+        body = (await req.json()) as { raw?: string; events?: HdayEvent[]; etag?: string | null };
+      } catch {
+        return jsonResponse({ detail: "Invalid JSON body" }, 400, corsHeaders);
+      }
+
+      if (body.raw == null && body.events == null) {
+        return jsonResponse(
+          { detail: "Either 'raw' or 'events' must be provided" },
+          422,
+          corsHeaders,
+        );
+      }
+
+      if (body.raw != null && typeof body.raw !== "string") {
+        return jsonResponse({ detail: "'raw' must be a string" }, 400, corsHeaders);
+      }
+
+      if (body.events != null && !Array.isArray(body.events)) {
+        return jsonResponse({ detail: "'events' must be an array" }, 422, corsHeaders);
+      }
+
+      // events takes precedence over raw when both are provided
+      let content: string;
+      if (body.events != null) {
+        try {
+          content = eventsToText(body.events);
+        } catch {
+          return jsonResponse({ detail: "Failed to serialize events" }, 422, corsHeaders);
+        }
+      } else {
+        content = body.raw as string;
+      }
+      const expectedEtag = body.etag ?? null;
+
+      try {
+        const newEtag = await writeHdayFile(username, content, expectedEtag);
+        return jsonResponse({ etag: newEtag }, 200, corsHeaders);
+      } catch (err) {
+        if (err instanceof HdayConflictError) {
+          // Return current file state for the client to resolve the conflict.
+          try {
+            const { raw: currentRaw, etag: currentEtag } = readHdayFile(username);
+            let currentEvents: HdayEvent[] = [];
+            try {
+              currentEvents = parseHday(currentRaw);
+            } catch {
+              // return empty list on parse failure
+            }
+            return jsonResponse(
+              { raw: currentRaw, events: currentEvents, etag: currentEtag },
+              409,
+              corsHeaders,
+            );
+          } catch {
+            return jsonResponse({ raw: "", events: [], etag: null }, 409, corsHeaders);
+          }
+        }
+        return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);
+      }
+    }
+
+    return jsonResponse({ detail: "Method not allowed" }, 405, corsHeaders);
+  }
+
+  // /team/:teamId[/hday]
+  const teamMatch = pathname.match(/^\/team\/([^/]+)(\/hday)?$/);
+  if (teamMatch) {
+    const teamId = decodeURIComponent(teamMatch[1] ?? "");
+    const isHdayRoute = !!teamMatch[2];
+
+    try {
+      getTeamFilePath(teamId, "conf");
+    } catch {
+      return jsonResponse({ detail: "Invalid team_id format" }, 400, corsHeaders);
+    }
+
+    if (req.method !== "GET") {
+      return jsonResponse({ detail: "Method not allowed" }, 405, corsHeaders);
+    }
+
+    // GET /team/:teamId
+    if (!isHdayRoute) {
+      try {
+        const teamName = parseTeamConfig(teamId);
+        const { sections, members } = parsePeopleFile(teamId);
+        return jsonResponse({ team_id: teamId, name: teamName, sections, members }, 200, corsHeaders);
+      } catch (err) {
+        if (err instanceof TeamNotFoundError) {
+          return jsonResponse({ detail: err.message }, 404, corsHeaders);
+        }
+        return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);
+      }
+    }
+
+    // GET /team/:teamId/hday
+    try {
+      const teamName = parseTeamConfig(teamId);
+      const { sections, members } = parsePeopleFile(teamId);
+
+      const fileReadT0 = performance.now();
+      const memberDataMap = new Map<string, TeamMemberHdayData>();
+      for (const member of members) {
+        try {
+          const { raw, etag } = readHdayFile(member.username);
+          memberDataMap.set(member.username, { ...member, raw, etag, events: [] });
+        } catch (err) {
+          if (err instanceof ShareNotAccessibleError) throw err;
+          // File missing or invalid username — return empty data for this member
+          memberDataMap.set(member.username, { ...member, raw: "", etag: null, events: [] });
+        }
+      }
+      const fileReadMs = performance.now() - fileReadT0;
+
+      const parseT0 = performance.now();
+      for (const data of memberDataMap.values()) {
+        if (data.raw) {
+          try { data.events = parseHday(data.raw); } catch { data.events = []; }
+        }
+      }
+      const parseMs = performance.now() - parseT0;
+
+      const sectionsWithHday: TeamSectionHdayData[] = sections.map((s) => ({
+        title: s.title,
+        members: s.members.map((m) => memberDataMap.get(m.username)!),
+      }));
+
+      return jsonResponse(
+        {
+          team_id: teamId,
+          name: teamName,
+          sections: sectionsWithHday,
+          members: members.map((m) => memberDataMap.get(m.username)!),
+        },
+        200,
+        {
+          ...corsHeaders,
+          "X-File-Read-Ms": fileReadMs.toFixed(3),
+          "X-Parse-Time-Ms": parseMs.toFixed(3),
+        },
+      );
     } catch (err) {
-      if (err instanceof HdayFileNotFoundError) {
+      if (err instanceof TeamNotFoundError) {
         return jsonResponse({ detail: err.message }, 404, corsHeaders);
       }
       return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);
     }
-
-    const fileReadMs = performance.now() - t0;
-
-    let events: HdayEvent[] | null = null;
-    let parseMs = 0;
-    if (format === "parsed") {
-      const t1 = performance.now();
-      try {
-        events = parseHday(raw);
-      } catch {
-        events = [];
-      }
-      parseMs = performance.now() - t1;
-    }
-
-    return jsonResponse(
-      { username, raw, etag, events },
-      200,
-      {
-        ...corsHeaders,
-        ETag: etag,
-        "X-File-Read-Ms": fileReadMs.toFixed(3),
-        "X-Parse-Time-Ms": parseMs.toFixed(3),
-      },
-    );
   }
 
-  // PUT /hday/:username
-  if (req.method === "PUT") {
-    const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-    if (contentLength > 10 * 1024 * 1024) {
-      return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
-    }
-
-    let body: { raw?: string; events?: HdayEvent[]; etag?: string | null };
-    try {
-      body = (await req.json()) as { raw?: string; events?: HdayEvent[]; etag?: string | null };
-    } catch {
-      return jsonResponse({ detail: "Invalid JSON body" }, 400, corsHeaders);
-    }
-
-    if (body.raw == null && body.events == null) {
-      return jsonResponse(
-        { detail: "Either 'raw' or 'events' must be provided" },
-        422,
-        corsHeaders,
-      );
-    }
-
-    if (body.raw != null && typeof body.raw !== "string") {
-      return jsonResponse({ detail: "'raw' must be a string" }, 400, corsHeaders);
-    }
-
-    if (body.events != null && !Array.isArray(body.events)) {
-      return jsonResponse({ detail: "'events' must be an array" }, 422, corsHeaders);
-    }
-
-    // events takes precedence over raw when both are provided
-    let content: string;
-    if (body.events != null) {
-      try {
-        content = eventsToText(body.events);
-      } catch {
-        return jsonResponse({ detail: "Failed to serialize events" }, 422, corsHeaders);
-      }
-    } else {
-      content = body.raw as string;
-    }
-    const expectedEtag = body.etag ?? null;
-
-    try {
-      const newEtag = await writeHdayFile(username, content, expectedEtag);
-      return jsonResponse({ etag: newEtag }, 200, corsHeaders);
-    } catch (err) {
-      if (err instanceof HdayConflictError) {
-        // Return current file state for the client to resolve the conflict.
-        try {
-          const { raw: currentRaw, etag: currentEtag } = readHdayFile(username);
-          let currentEvents: HdayEvent[] = [];
-          try {
-            currentEvents = parseHday(currentRaw);
-          } catch {
-            // return empty list on parse failure
-          }
-          return jsonResponse(
-            { raw: currentRaw, events: currentEvents, etag: currentEtag },
-            409,
-            corsHeaders,
-          );
-        } catch {
-          return jsonResponse({ raw: "", events: [], etag: null }, 409, corsHeaders);
-        }
-      }
-      return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);
-    }
-  }
-
-  return jsonResponse({ detail: "Method not allowed" }, 405, corsHeaders);
+  return jsonResponse({ detail: "Not found" }, 404, corsHeaders);
 }
 
 // ---------------------------------------------------------------------------
