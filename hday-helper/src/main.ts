@@ -54,6 +54,21 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .filter(Boolean);
 
 // ---------------------------------------------------------------------------
+// Per-user write mutex — serializes concurrent writes to the same .hday file
+// ---------------------------------------------------------------------------
+
+const writeLocks = new Map<string, Promise<unknown>>();
+
+function withUserLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+  const prev = writeLocks.get(filePath) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  // Store a non-rejecting tail so future calls can safely chain off it.
+  // Errors propagate through `next` returned to the caller, not the map entry.
+  writeLocks.set(filePath, next.then(() => {}, () => {}));
+  return next;
+}
+
+// ---------------------------------------------------------------------------
 // Custom error types
 // ---------------------------------------------------------------------------
 
@@ -150,31 +165,33 @@ function readHdayFile(username: string): { raw: string; etag: string } {
   return { raw, etag: computeEtag(raw) };
 }
 
-function writeHdayFile(username: string, content: string, expectedEtag: string | null): string {
+function writeHdayFile(username: string, content: string, expectedEtag: string | null): Promise<string> {
   checkShareAccessible();
 
   const filePath = getHdayPath(username);
-  const fileExists = existsSync(filePath);
+  return withUserLock(filePath, async () => {
+    const fileExists = existsSync(filePath);
 
-  // Conflict detection
-  if (expectedEtag !== null) {
-    if (!fileExists) {
-      // The client expected a file at this etag, but it no longer exists.
-      // This is a precondition failure and maps to HTTP 409 in the handler.
-      throw new HdayFileNotFoundError(username);
+    // Conflict detection (inside lock so ETag check and write are atomic)
+    if (expectedEtag !== null) {
+      if (!fileExists) {
+        // The client expected a file at this etag, but it no longer exists.
+        // This is a precondition failure and maps to HTTP 409 in the handler.
+        throw new HdayFileNotFoundError(username);
+      }
+      const currentRaw = readFileSync(filePath, "utf-8");
+      if (computeEtag(currentRaw) !== expectedEtag) {
+        throw new HdayConflictError();
+      }
     }
-    const currentRaw = readFileSync(filePath, "utf-8");
-    if (computeEtag(currentRaw) !== expectedEtag) {
-      throw new HdayConflictError();
-    }
-  }
 
-  // Atomic write: write to temp file then rename
-  const tmpPath = `${filePath}.tmp`;
-  writeFileSync(tmpPath, content, "utf-8");
-  renameSync(tmpPath, filePath);
+    // Unique temp path prevents concurrent requests from clobbering each other's tmp file
+    const tmpPath = `${filePath}.${Math.random().toString(36).slice(2)}.tmp`;
+    writeFileSync(tmpPath, content, "utf-8");
+    renameSync(tmpPath, filePath);
 
-  return computeEtag(content);
+    return computeEtag(content);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -265,6 +282,9 @@ async function handleRequest(req: Request): Promise<Response> {
   // GET /hday/:username[?format=raw|parsed]
   if (req.method === "GET") {
     const format = url.searchParams.get("format") ?? "raw";
+    if (format !== "raw" && format !== "parsed") {
+      return jsonResponse({ detail: "Unsupported format" }, 400, corsHeaders);
+    }
     const t0 = performance.now();
 
     let raw: string;
@@ -321,12 +341,20 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
+    if (body.raw != null && typeof body.raw !== "string") {
+      return jsonResponse({ detail: "'raw' must be a string" }, 400, corsHeaders);
+    }
+
+    if (body.events != null && !Array.isArray(body.events)) {
+      return jsonResponse({ detail: "'events' must be an array" }, 422, corsHeaders);
+    }
+
     // events takes precedence over raw when both are provided
     const content = body.events != null ? eventsToText(body.events) : (body.raw as string);
     const expectedEtag = body.etag ?? null;
 
     try {
-      const newEtag = writeHdayFile(username, content, expectedEtag);
+      const newEtag = await writeHdayFile(username, content, expectedEtag);
       return jsonResponse({ etag: newEtag }, 200, corsHeaders);
     } catch (err) {
       if (err instanceof HdayConflictError || err instanceof HdayFileNotFoundError) {

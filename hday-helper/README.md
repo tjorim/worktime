@@ -15,7 +15,7 @@ required on the target machine.
 1. Download `worktime-hday-helper.exe` from the [Actions artifacts][ci]
 2. Place it in any folder
 3. Create a `.env` file next to it (optional):
-   ```
+   ```env
    SHARE_DIR=Z:\worktime
    CORS_ORIGINS=https://worktime.example.com
    PORT=8080

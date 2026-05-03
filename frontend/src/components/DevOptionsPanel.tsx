@@ -78,8 +78,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   };
 
   const handleTestHelperConnection = async () => {
-    const url = hdayHelperUrlDraft.trim();
-    if (!url) return;
+    const normalizedUrl = hdayHelperUrlDraft.trim().replace(/\/+$/, "");
+    if (!normalizedUrl) return;
 
     setIsTestingHelper(true);
     setHelperTestResult(null);
@@ -88,7 +88,7 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), HELPER_CONNECTION_TIMEOUT_MS);
       try {
-        const response = await fetch(`${url}/health`, {
+        const response = await fetch(`${normalizedUrl}/health`, {
           method: "GET",
           signal: controller.signal,
           headers: { Accept: "application/json" },
@@ -96,8 +96,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          // Save the URL on successful connection
-          updateHdayHelperUrl(url);
+          // Save the normalized URL on successful connection
+          updateHdayHelperUrl(normalizedUrl);
           setHelperTestResult({ success: true, message: m.dev_hday_helper_connected() });
         } else {
           setHelperTestResult({ success: false, message: m.dev_hday_helper_failed() });
