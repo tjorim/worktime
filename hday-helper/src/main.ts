@@ -25,9 +25,10 @@
 
 import { createHash } from "crypto";
 import {
+  accessSync,
+  constants,
   existsSync,
   mkdirSync,
-  readdirSync,
   renameSync,
   readFileSync,
   statSync,
@@ -62,9 +63,12 @@ const writeLocks = new Map<string, Promise<unknown>>();
 function withUserLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
   const prev = writeLocks.get(filePath) ?? Promise.resolve();
   const next = prev.then(fn, fn);
-  // Store a non-rejecting tail so future calls can safely chain off it.
-  // Errors propagate through `next` returned to the caller, not the map entry.
-  writeLocks.set(filePath, next.then(() => {}, () => {}));
+  // Non-rejecting tail used as chain anchor; pruned from the map on completion
+  // to prevent unbounded growth. Guard ensures we don't prune a newer entry.
+  let tail: Promise<unknown>;
+  const cleanup = () => { if (writeLocks.get(filePath) === tail) writeLocks.delete(filePath); };
+  tail = next.then(cleanup, cleanup);
+  writeLocks.set(filePath, tail);
   return next;
 }
 
@@ -136,10 +140,12 @@ function checkShareAccessible(): void {
     if (!stat.isDirectory()) {
       throw new ShareNotAccessibleError("Share path is not a directory");
     }
-    readdirSync(SHARE_DIR); // probe read access
+    accessSync(SHARE_DIR, constants.R_OK | constants.W_OK);
   } catch (err) {
     if (err instanceof ShareNotAccessibleError) throw err;
-    throw new ShareNotAccessibleError(`Share directory not accessible: ${err}`);
+    throw new ShareNotAccessibleError(
+      `Share directory not accessible: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
@@ -175,9 +181,8 @@ function writeHdayFile(username: string, content: string, expectedEtag: string |
     // Conflict detection (inside lock so ETag check and write are atomic)
     if (expectedEtag !== null) {
       if (!fileExists) {
-        // The client expected a file at this etag, but it no longer exists.
-        // This is a precondition failure and maps to HTTP 409 in the handler.
-        throw new HdayFileNotFoundError(username);
+        // Client sent an etag but the file no longer exists — precondition failure.
+        throw new HdayConflictError();
       }
       const currentRaw = readFileSync(filePath, "utf-8");
       if (computeEtag(currentRaw) !== expectedEtag) {
@@ -326,6 +331,11 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // PUT /hday/:username
   if (req.method === "PUT") {
+    const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+    if (contentLength > 10 * 1024 * 1024) {
+      return jsonResponse({ detail: "Payload too large" }, 413, corsHeaders);
+    }
+
     let body: { raw?: string; events?: HdayEvent[]; etag?: string | null };
     try {
       body = (await req.json()) as { raw?: string; events?: HdayEvent[]; etag?: string | null };
@@ -350,17 +360,24 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     // events takes precedence over raw when both are provided
-    const content = body.events != null ? eventsToText(body.events) : (body.raw as string);
+    let content: string;
+    if (body.events != null) {
+      try {
+        content = eventsToText(body.events);
+      } catch {
+        return jsonResponse({ detail: "Failed to serialize events" }, 422, corsHeaders);
+      }
+    } else {
+      content = body.raw as string;
+    }
     const expectedEtag = body.etag ?? null;
 
     try {
       const newEtag = await writeHdayFile(username, content, expectedEtag);
       return jsonResponse({ etag: newEtag }, 200, corsHeaders);
     } catch (err) {
-      if (err instanceof HdayConflictError || err instanceof HdayFileNotFoundError) {
+      if (err instanceof HdayConflictError) {
         // Return current file state for the client to resolve the conflict.
-        // HdayFileNotFoundError here means the client provided an etag but the file
-        // has since been deleted — this is a precondition failure (409).
         try {
           const { raw: currentRaw, etag: currentEtag } = readHdayFile(username);
           let currentEvents: HdayEvent[] = [];
@@ -375,7 +392,7 @@ async function handleRequest(req: Request): Promise<Response> {
             corsHeaders,
           );
         } catch {
-          return jsonResponse({ raw: "", events: [], etag: "" }, 409, corsHeaders);
+          return jsonResponse({ raw: "", events: [], etag: null }, 409, corsHeaders);
         }
       }
       return jsonResponse({ detail: "Share directory not accessible" }, 503, corsHeaders);

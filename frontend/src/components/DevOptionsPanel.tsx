@@ -15,6 +15,8 @@ interface DevOptionsPanelProps {
   onHide: () => void;
 }
 
+const HELPER_CONNECTION_TIMEOUT_MS = 5000;
+
 /**
  * Developer options panel for managing backend API connectivity and the local .hday helper.
  * Hidden by default, revealed only by triple-clicking the version button in Settings.
@@ -23,9 +25,6 @@ interface DevOptionsPanelProps {
  * @param onHide - Callback to hide the panel
  * @returns The rendered developer options modal
  */
-/** Timeout in ms for helper connectivity checks. */
-const HELPER_CONNECTION_TIMEOUT_MS = 5000;
-
 export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   const { options, updateAutoConnect, updateHdayHelperUrl, testConnection, disconnect } =
     useDeveloperOptions();
@@ -73,7 +72,8 @@ export function DevOptionsPanel({ show, onHide }: DevOptionsPanelProps) {
   };
 
   const handleSaveHdayHelperUrl = () => {
-    updateHdayHelperUrl(hdayHelperUrlDraft.trim() || null);
+    const normalized = hdayHelperUrlDraft.trim().replace(/\/+$/, "");
+    updateHdayHelperUrl(normalized || null);
     setHelperTestResult(null);
   };
 
