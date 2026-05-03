@@ -36,6 +36,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "fs";
+import { readFile } from "fs/promises";
 import { basename, join, resolve, sep } from "path";
 // These imports use relative paths to reuse the frontend .hday parser directly.
 // `bun build --compile` bundles all resolved modules into the output binary, so the
@@ -49,8 +50,8 @@ import type { HdayEvent } from "../../frontend/src/lib/hday/types";
 // ---------------------------------------------------------------------------
 
 const SHARE_DIR = resolve(process.env.SHARE_DIR ?? "./hday_files");
-const PORT = parseInt(process.env.PORT ?? "8080", 10);
-const HOST = process.env.HOST ?? "127.0.0.1";
+const PORT = parseInt(process.env.PORT || "8080", 10) || 8080;
+const HOST = process.env.HOST || "127.0.0.1";
 const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
@@ -132,7 +133,7 @@ function getHdayPath(username: string): string {
   const filePath = resolve(join(resolvedShare, safeFilename));
 
   // Ensure the resolved path stays inside the share directory
-  if (!filePath.startsWith(resolvedShare + sep)) {
+  if (!filePath.startsWith(resolvedShare.endsWith(sep) ? resolvedShare : resolvedShare + sep)) {
     throw new RangeError("Invalid username format");
   }
 
@@ -154,7 +155,7 @@ function getTeamFilePath(teamId: string, ext: string): string {
   const safeFilename = basename(`${teamId}.${ext}`);
   const configDir = getConfigDir();
   const filePath = resolve(join(configDir, safeFilename));
-  if (!filePath.startsWith(configDir + sep)) {
+  if (!filePath.startsWith(configDir.endsWith(sep) ? configDir : configDir + sep)) {
     throw new RangeError("Invalid team_id format");
   }
   return filePath;
@@ -199,6 +200,22 @@ function readHdayFile(username: string): { raw: string; etag: string } {
 
   const raw = readFileSync(filePath, "utf-8");
   return { raw, etag: computeEtag(raw) };
+}
+
+async function readHdayFileAsync(username: string): Promise<{ raw: string; etag: string }> {
+  checkShareAccessible();
+
+  const filePath = getHdayPath(username);
+
+  try {
+    const raw = await readFile(filePath, "utf-8");
+    return { raw, etag: computeEtag(raw) };
+  } catch (err) {
+    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+      throw new HdayFileNotFoundError(username);
+    }
+    throw err;
+  }
 }
 
 function writeHdayFile(username: string, content: string, expectedEtag: string | null): Promise<string> {
@@ -577,17 +594,19 @@ async function handleRequest(req: Request): Promise<Response> {
       const { sections, members } = parsePeopleFile(teamId);
 
       const fileReadT0 = performance.now();
-      const memberDataMap = new Map<string, TeamMemberHdayData>();
-      for (const member of members) {
-        try {
-          const { raw, etag } = readHdayFile(member.username);
-          memberDataMap.set(member.username, { ...member, raw, etag, events: [] });
-        } catch (err) {
-          if (err instanceof ShareNotAccessibleError) throw err;
-          // File missing or invalid username — return empty data for this member
-          memberDataMap.set(member.username, { ...member, raw: "", etag: null, events: [] });
-        }
-      }
+      const memberData = await Promise.all(
+        members.map(async (member): Promise<TeamMemberHdayData> => {
+          try {
+            const { raw, etag } = await readHdayFileAsync(member.username);
+            return { ...member, raw, etag, events: [] };
+          } catch (err) {
+            if (err instanceof ShareNotAccessibleError) throw err;
+            // File missing or invalid username — return empty data for this member
+            return { ...member, raw: "", etag: null, events: [] };
+          }
+        }),
+      );
+      const memberDataMap = new Map(memberData.map((data) => [data.username, data]));
       const fileReadMs = performance.now() - fileReadT0;
 
       const parseT0 = performance.now();
