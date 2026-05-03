@@ -968,13 +968,11 @@
   "dev_api_url_warning_insecure": "Warning: This API URL uses insecure HTTP on a non-local host. Use HTTPS unless you are connecting to localhost.",
   "dev_api_url_warning_invalid_scheme": "Warning: API URL must use HTTPS (or HTTP for localhost).",
   "dev_api_url_warning_invalid": "Warning: Enter a valid API URL (for example, https://api.example.com or http://localhost:8000).",
-
   "first_sync_checking": "Checking server…",
   "first_sync_pushing": "Uploading your local data…",
   "first_sync_pulling": "Restoring your data from the server…",
   "first_sync_done": "Sync set up successfully.",
   "first_sync_error": "Sync setup failed. Your local data is unchanged.",
-
   "first_sync_conflict_title": "Your local data and your account both have data",
   "first_sync_conflict_body": "This device has local data and your account already has data on the server. Choose which version to keep. The other will be overwritten.",
   "first_sync_conflict_keep_local": "Keep my local data",
@@ -983,7 +981,6 @@
   "first_sync_conflict_use_server_desc": "Server data will be downloaded to this device, replacing your local copy.",
   "first_sync_conflict_confirm": "Apply",
   "first_sync_conflict_cancel": "Decide later",
-
   "ongoing_conflict_title_one": "1 record overwritten by another device",
   "ongoing_conflict_title_other": "{count} records overwritten by another device",
   "ongoing_conflict_body_one": "Another device saved a newer version of 1 record at the same time. The server version is now active. Choose which version to keep.",
@@ -1000,7 +997,6 @@
   "ongoing_conflict_entity_work_locations": "work locations",
   "ongoing_conflict_entity_time_off_entries": "time-off entries",
   "ongoing_conflict_entity_gantt_tasks": "Gantt tasks",
-
   "sync_section_title": "Sync",
   "sync_last_synced_label": "Last synced",
   "sync_never_synced": "Not synced yet",
@@ -1015,7 +1011,7 @@
   "sync_manual_pull_btn": "Sync now",
   "sync_manual_pull_busy": "Syncing…",
   "sync_signed_out_description": "Sign in to enable cloud backup, cross-device sync, and live sync status.",
-  "sync_indicator_syncing": "Syncing\u2026",
+  "sync_indicator_syncing": "Syncing…",
   "sync_indicator_synced": "Synced",
   "sync_indicator_pending": "{count} pending",
   "sync_indicator_error": "Sync failed",
@@ -1024,6 +1020,13 @@
   "sync_indicator_tooltip_synced_at": "Last synced: {time}",
   "sync_indicator_tooltip_pending": "{count} change(s) waiting to sync",
   "sync_indicator_tooltip_error": "The last sync attempt failed. Changes will be retried automatically.",
-  "sync_indicator_tooltip_retry_in": "Retrying in {seconds}s\u2026",
-  "sync_indicator_tooltip_conflicts": "{count} record(s) had a conflict and were reverted to the server version."
+  "sync_indicator_tooltip_retry_in": "Retrying in {seconds}s…",
+  "sync_indicator_tooltip_conflicts": "{count} record(s) had a conflict and were reverted to the server version.",
+  "dev_hday_helper_heading": ".hday File Helper",
+  "dev_hday_helper_desc": "Connect to a local helper server that reads and writes .hday files from a network share. Download worktime-hday-helper.exe from the CI artifacts and run it locally.",
+  "dev_hday_helper_url_label": "Helper URL",
+  "dev_hday_helper_url_help": "Base URL of the running worktime-hday-helper (e.g. http://localhost:8080)",
+  "dev_hday_helper_test": "Test",
+  "dev_hday_helper_connected": "✓ Connected to .hday helper",
+  "dev_hday_helper_failed": "✗ Could not connect to .hday helper — check URL and ensure it is running"
 }

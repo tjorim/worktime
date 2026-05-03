@@ -12,12 +12,14 @@ export interface DeveloperOptions {
   lastConnectionTest: number | null; // timestamp
   autoConnect: boolean;
   isDevMode: boolean; // Persist dev mode visibility
+  hdayHelperUrl: string | null; // URL of the local .hday helper server
 }
 
 interface DeveloperOptionsContextType {
   options: DeveloperOptions;
   isDevMode: boolean;
   updateAutoConnect: (autoConnect: boolean) => void;
+  updateHdayHelperUrl: (url: string | null) => void;
   toggleDevMode: () => void;
   testConnection: () => Promise<boolean>;
   disconnect: () => void;
@@ -29,6 +31,7 @@ const defaultOptions: DeveloperOptions = {
   lastConnectionTest: null,
   autoConnect: false,
   isDevMode: false,
+  hdayHelperUrl: null,
 };
 
 const DeveloperOptionsContext = createContext<DeveloperOptionsContextType | null>(null);
@@ -82,6 +85,13 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
   const updateAutoConnect = useCallback(
     (autoConnect: boolean) => {
       setOptions((prev) => ({ ...prev, autoConnect }));
+    },
+    [setOptions],
+  );
+
+  const updateHdayHelperUrl = useCallback(
+    (url: string | null) => {
+      setOptions((prev) => ({ ...prev, hdayHelperUrl: url || null }));
     },
     [setOptions],
   );
@@ -154,6 +164,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
       options,
       isDevMode,
       updateAutoConnect,
+      updateHdayHelperUrl,
       toggleDevMode,
       testConnection,
       disconnect,
@@ -162,6 +173,7 @@ export function DeveloperOptionsProvider({ children }: DeveloperOptionsProviderP
       options,
       isDevMode,
       updateAutoConnect,
+      updateHdayHelperUrl,
       toggleDevMode,
       testConnection,
       disconnect,

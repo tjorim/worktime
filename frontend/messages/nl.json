@@ -961,7 +961,6 @@
   "dev_api_url_warning_insecure": "Waarschuwing: Deze API-URL gebruikt onveilig HTTP op een niet-lokale host. Gebruik HTTPS tenzij u verbinding maakt met localhost.",
   "dev_api_url_warning_invalid_scheme": "Waarschuwing: API-URL moet HTTPS gebruiken (of HTTP voor localhost).",
   "dev_api_url_warning_invalid": "Waarschuwing: Voer een geldige API-URL in (bijvoorbeeld https://api.example.com of http://localhost:8000).",
-
   "ongoing_conflict_title_one": "1 record overschreven door een ander apparaat",
   "ongoing_conflict_title_other": "{count} records overschreven door een ander apparaat",
   "ongoing_conflict_body_one": "Een ander apparaat heeft op hetzelfde moment een nieuwere versie van 1 record opgeslagen. De serverversie is nu actief. Kies welke versie u wilt behouden.",
@@ -978,7 +977,6 @@
   "ongoing_conflict_entity_work_locations": "werklocaties",
   "ongoing_conflict_entity_time_off_entries": "verlofregistraties",
   "ongoing_conflict_entity_gantt_tasks": "Gantt-taken",
-
   "sync_section_title": "Synchronisatie",
   "sync_last_synced_label": "Laatst gesynchroniseerd",
   "sync_never_synced": "Nog niet gesynchroniseerd",
@@ -993,7 +991,7 @@
   "sync_manual_pull_btn": "Nu synchroniseren",
   "sync_manual_pull_busy": "Synchroniseren…",
   "sync_signed_out_description": "Meld u aan om cloudback-up, synchronisatie tussen apparaten en live synchronisatiestatus in te schakelen.",
-  "sync_indicator_syncing": "Synchroniseren\u2026",
+  "sync_indicator_syncing": "Synchroniseren…",
   "sync_indicator_synced": "Gesynchroniseerd",
   "sync_indicator_pending": "{count} in behandeling",
   "sync_indicator_error": "Synchronisatie mislukt",
@@ -1002,6 +1000,13 @@
   "sync_indicator_tooltip_synced_at": "Laatst gesynchroniseerd: {time}",
   "sync_indicator_tooltip_pending": "{count} wijziging(en) wacht(en) op synchronisatie",
   "sync_indicator_tooltip_error": "De laatste synchronisatiepoging is mislukt. Wijzigingen worden automatisch opnieuw geprobeerd.",
-  "sync_indicator_tooltip_retry_in": "Opnieuw proberen over {seconds}s\u2026",
-  "sync_indicator_tooltip_conflicts": "{count} record(s) had(den) een conflict en zijn teruggezet naar de serverversie."
+  "sync_indicator_tooltip_retry_in": "Opnieuw proberen over {seconds}s…",
+  "sync_indicator_tooltip_conflicts": "{count} record(s) had(den) een conflict en zijn teruggezet naar de serverversie.",
+  "dev_hday_helper_heading": ".hday-bestandshelper",
+  "dev_hday_helper_desc": "Verbinding maken met een lokale helperserver die .hday-bestanden leest en schrijft van een netwerkshare. Download worktime-hday-helper.exe uit de CI-artefacten en start het lokaal.",
+  "dev_hday_helper_url_label": "Helper-URL",
+  "dev_hday_helper_url_help": "Basis-URL van de actieve worktime-hday-helper (bijv. http://localhost:8080)",
+  "dev_hday_helper_test": "Testen",
+  "dev_hday_helper_connected": "✓ Verbonden met .hday-helper",
+  "dev_hday_helper_failed": "✗ Kan geen verbinding maken met .hday-helper — controleer de URL en zorg dat deze actief is"
 }
