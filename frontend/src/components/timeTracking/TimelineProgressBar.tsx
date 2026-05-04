@@ -1,6 +1,9 @@
 import type { Dayjs } from "dayjs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Overlay from "react-bootstrap/Overlay";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
+import Tooltip from "react-bootstrap/Tooltip";
+import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
   buildLabelColorMap,
@@ -27,6 +30,7 @@ type TimelineProgressBarProps = {
 };
 
 type TaskSegment = {
+  type: "task";
   id: string;
   text: string;
   color: string;
@@ -43,27 +47,14 @@ type TaskSegment = {
   afterBreakHours?: number;
 };
 
-function calculateElapsedVisualHours(tasks: StoredTimeTrackingTask[], liveTime: Dayjs): number {
-  let elapsedVisualHours = 0;
+type GapSegment = {
+  type: "gap";
+  id: string;
+  durationHours: number;
+  percentage: number;
+};
 
-  // Assumes tasks are already sorted by startTime in the parent view.
-  for (const task of tasks) {
-    const taskStart = dayjs(task.startTime);
-    const taskStop = dayjs(task.stopTime ?? liveTime);
-
-    if (!liveTime.isAfter(taskStart)) break;
-    if (!taskStop.isAfter(taskStart)) continue;
-
-    const intervalEnd = liveTime.isBefore(taskStop) ? liveTime : taskStop;
-    const overlapHours = intervalEnd.diff(taskStart, "hour", true);
-
-    if (overlapHours > 0) {
-      elapsedVisualHours += overlapHours;
-    }
-  }
-
-  return elapsedVisualHours;
-}
+type RenderSegment = TaskSegment | GapSegment;
 
 const LABEL_STYLE: React.CSSProperties = {
   fontSize: "0.7rem",
@@ -81,16 +72,27 @@ export function TimelineProgressBar({
   liveTime,
   isToday,
 }: TimelineProgressBarProps) {
-  // Validate and sanitize targetHours: ensure it's finite and > 0
   const sanitizedTargetHours =
     Number.isFinite(targetHours) && targetHours > 0 ? targetHours : DEFAULT_TARGET_HOURS;
 
-  // Build color map from labels using shared helper
   const colorByLabelId = useMemo(() => buildLabelColorMap(labels), [labels]);
 
-  // Calculate segments for each task
-  const segments = useMemo<TaskSegment[]>(() => {
-    return tasks.map((task) => {
+  const [tooltipInfo, setTooltipInfo] = useState<{
+    label: string;
+    target: HTMLElement;
+  } | null>(null);
+
+  const showTooltip = (label: string) => (e: React.MouseEvent<HTMLElement>) =>
+    setTooltipInfo({ label, target: e.currentTarget });
+  const hideTooltip = () => setTooltipInfo(null);
+
+  const renderSegments = useMemo<RenderSegment[]>(() => {
+    const result: RenderSegment[] = [];
+
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      if (!task) continue;
+
       const startDayjs = dayjs(task.startTime);
       const stopDayjs = task.stopTime ? dayjs(task.stopTime) : (liveTime ?? dayjs());
       const rawDurationHours = Math.max(stopDayjs.diff(startDayjs, "hour", true), 0);
@@ -99,6 +101,7 @@ export function TimelineProgressBar({
       const textColor = getContrastingTextColor(color);
 
       const segment: TaskSegment = {
+        type: "task",
         id: task.id,
         text: task.text,
         color,
@@ -109,7 +112,6 @@ export function TimelineProgressBar({
       };
 
       if (task.includesBreak && rawDurationHours > 0) {
-        // Calculate break position based on actual clock times and lunch window
         const taskStartMinutes = startDayjs.hour() * 60 + startDayjs.minute();
         const taskStopMinutes = stopDayjs.hour() * 60 + stopDayjs.minute();
         const pos = calculateBreakPosition(taskStartMinutes, taskStopMinutes);
@@ -118,66 +120,95 @@ export function TimelineProgressBar({
         segment.afterBreakHours = pos.afterHours;
       }
 
-      return segment;
-    });
+      result.push(segment);
+
+      // Insert a gap segment between this task and the next.
+      const next = tasks[i + 1];
+      if (task.stopTime && next?.startTime) {
+        const gapHours = dayjs(next.startTime).diff(dayjs(task.stopTime), "hour", true);
+        if (gapHours > 0) {
+          result.push({
+            type: "gap",
+            id: `gap-${task.id}`,
+            durationHours: gapHours,
+            percentage: (gapHours / sanitizedTargetHours) * 100,
+          });
+        }
+      }
+    }
+
+    return result;
   }, [tasks, colorByLabelId, liveTime, sanitizedTargetHours]);
 
-  // Calculate total hours and percentage (break already deducted from durationHours)
-  const totalHours = useMemo(
-    () => segments.reduce((sum, segment) => sum + segment.durationHours, 0),
-    [segments],
-  );
+  const { totalHours, totalPercentage, totalBreakHours, totalGapHours } = useMemo(() => {
+    let hours = 0, percentage = 0, breakHours = 0, gapHours = 0;
+    for (const s of renderSegments) {
+      if (s.type === "task") {
+        hours += s.durationHours;
+        percentage += s.percentage;
+        breakHours += s.breakHours ?? 0;
+      } else {
+        gapHours += s.durationHours;
+      }
+    }
+    return { totalHours: hours, totalPercentage: percentage, totalBreakHours: breakHours, totalGapHours: gapHours };
+  }, [renderSegments]);
 
-  const totalPercentage = useMemo(
-    () => segments.reduce((sum, segment) => sum + segment.percentage, 0),
-    [segments],
-  );
-
-  // Include break hours in the visual total for normalization
-  const totalBreakHours = useMemo(
-    () => segments.reduce((sum, segment) => sum + (segment.breakHours ?? 0), 0),
-    [segments],
-  );
-  const visualTotalPercentage = totalPercentage + (totalBreakHours / sanitizedTargetHours) * 100;
+  const visualTotalPercentage =
+    totalPercentage +
+    (totalBreakHours / sanitizedTargetHours) * 100 +
+    (totalGapHours / sanitizedTargetHours) * 100;
   const normalizationFactor = visualTotalPercentage > 100 ? 100 / visualTotalPercentage : 1;
 
   const isOvertime = totalPercentage > 100;
 
-  // Position of the "Now" line mapped to the same rendered timeline scale as the segments.
-  // This avoids drifting into task gaps or clamping before compressed overtime segments.
+  // Now line is positioned at wall-clock elapsed time from the first task's start,
+  // so it accounts for gaps between tasks correctly.
   const nowPct = useMemo(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
-
-    const elapsedVisualHours = calculateElapsedVisualHours(tasks, liveTime);
-
-    const scaledPct = (elapsedVisualHours / sanitizedTargetHours) * 100 * normalizationFactor;
+    const firstTask = tasks[0];
+    if (!firstTask?.startTime) return null;
+    const elapsedHours = liveTime.diff(dayjs(firstTask.startTime), "hour", true);
+    const scaledPct = (elapsedHours / sanitizedTargetHours) * 100 * normalizationFactor;
     return Math.max(0, Math.min(scaledPct, 100));
   }, [isToday, liveTime, tasks, sanitizedTargetHours, normalizationFactor]);
 
   return (
     <div className="my-3">
-      {/* Stacked Progress Bar */}
-      {segments.length > 0 ? (
+      {renderSegments.length > 0 ? (
         <div style={{ position: "relative" }}>
           <BootstrapProgressBar>
-            {segments.map((segment) => {
-              const tooltipText = `${segment.text}: ${segment.durationHours.toFixed(2)}h`;
-              // For segments with a break, render three sub-segments positioned
-              // according to where the break falls within the lunch window.
+            {renderSegments.map((rs) => {
+              if (rs.type === "gap") {
+                const gapLabel = m.tt_gap_aria({ minutes: Math.round(rs.durationHours * 60) });
+                return (
+                  <BootstrapProgressBar
+                    key={rs.id}
+                    now={rs.percentage * normalizationFactor}
+                    style={{ backgroundColor: "var(--bs-secondary-bg-subtle, #e9ecef)" }}
+                    aria-label={gapLabel}
+                    onMouseEnter={showTooltip(gapLabel)}
+                    onMouseLeave={hideTooltip}
+                  />
+                );
+              }
+
+              const tooltipText = `${rs.text}: ${rs.durationHours.toFixed(2)}h`;
+
               if (
-                segment.includesBreak &&
-                segment.breakHours != null &&
-                segment.beforeBreakHours != null &&
-                segment.afterBreakHours != null
+                rs.includesBreak &&
+                rs.breakHours != null &&
+                rs.beforeBreakHours != null &&
+                rs.afterBreakHours != null
               ) {
                 const beforePct =
-                  (segment.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                  (rs.beforeBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
                 const breakPct =
-                  (segment.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                  (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
                 const afterPct =
-                  (segment.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                  (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
+                const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
 
-                // Show label on whichever work portion is larger
                 const showLabelOnBefore = beforePct >= afterPct;
                 const labelOnBefore = showLabelOnBefore && beforePct > 10;
                 const labelOnAfter = !showLabelOnBefore && afterPct > 10;
@@ -187,40 +218,39 @@ export function TimelineProgressBar({
                 if (beforePct > 0) {
                   parts.push(
                     <BootstrapProgressBar
-                      key={segment.id}
+                      key={rs.id}
                       now={beforePct}
-                      style={{ backgroundColor: segment.color, color: segment.textColor }}
-                      title={tooltipText}
+                      style={{ backgroundColor: rs.color, color: rs.textColor }}
                       aria-label={tooltipText}
-                      label={
-                        labelOnBefore ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
-                      }
+                      label={labelOnBefore ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
+                      onMouseEnter={showTooltip(tooltipText)}
+                      onMouseLeave={hideTooltip}
                     />,
                   );
                 }
 
                 parts.push(
                   <BootstrapProgressBar
-                    key={`${segment.id}-break`}
+                    key={`${rs.id}-break`}
                     now={breakPct}
-                    style={{ backgroundColor: segment.color, opacity: 0.3 }}
-                    title={`Break: ${BREAK_DURATION_MINUTES}min`}
+                    style={{ backgroundColor: rs.color, opacity: 0.3 }}
                     aria-label={`Break deduction: ${BREAK_DURATION_MINUTES} minutes`}
-                    data-testid={`break-segment-${segment.id}`}
+                    data-testid={`break-segment-${rs.id}`}
+                    onMouseEnter={showTooltip(breakTooltipText)}
+                    onMouseLeave={hideTooltip}
                   />,
                 );
 
                 if (afterPct > 0) {
                   parts.push(
                     <BootstrapProgressBar
-                      key={`${segment.id}-after`}
+                      key={`${rs.id}-after`}
                       now={afterPct}
-                      style={{ backgroundColor: segment.color, color: segment.textColor }}
-                      title={tooltipText}
+                      style={{ backgroundColor: rs.color, color: rs.textColor }}
                       aria-label={tooltipText}
-                      label={
-                        labelOnAfter ? <span style={LABEL_STYLE}>{segment.text}</span> : undefined
-                      }
+                      label={labelOnAfter ? <span style={LABEL_STYLE}>{rs.text}</span> : undefined}
+                      onMouseEnter={showTooltip(tooltipText)}
+                      onMouseLeave={hideTooltip}
                     />,
                   );
                 }
@@ -228,24 +258,29 @@ export function TimelineProgressBar({
                 return parts;
               }
 
-              // Regular segment (no break)
-              const normalizedPercent = segment.percentage * normalizationFactor;
+              const normalizedPercent = rs.percentage * normalizationFactor;
               return (
                 <BootstrapProgressBar
-                  key={segment.id}
+                  key={rs.id}
                   now={normalizedPercent}
-                  style={{ backgroundColor: segment.color, color: segment.textColor }}
-                  title={tooltipText}
+                  style={{ backgroundColor: rs.color, color: rs.textColor }}
                   aria-label={tooltipText}
                   label={
                     normalizedPercent > 10 ? (
-                      <span style={LABEL_STYLE}>{segment.text}</span>
+                      <span style={LABEL_STYLE}>{rs.text}</span>
                     ) : undefined
                   }
+                  onMouseEnter={showTooltip(tooltipText)}
+                  onMouseLeave={hideTooltip}
                 />
               );
             })}
           </BootstrapProgressBar>
+
+          <Overlay show={tooltipInfo !== null} target={tooltipInfo?.target ?? null} placement="top">
+            <Tooltip id="progress-bar-tooltip">{tooltipInfo?.label}</Tooltip>
+          </Overlay>
+
           {nowPct !== null && liveTime && (
             <div
               style={{
@@ -267,7 +302,6 @@ export function TimelineProgressBar({
         <BootstrapProgressBar now={0} />
       )}
 
-      {/* Summary text */}
       <div className="text-muted mt-2 d-flex justify-content-between align-items-center">
         <span data-testid="timeline-total-duration">
           {totalHours.toFixed(2)}h ({totalPercentage.toFixed(1)}%)

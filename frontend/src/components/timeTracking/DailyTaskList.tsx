@@ -17,7 +17,7 @@ import {
 } from "./constants";
 import { TaskEditModal, type TaskEditForm } from "./TaskEditModal";
 import type { StoredTimeTrackingTask } from "./types";
-import { BREAK_DURATION_MINUTES, MIN_GAP_DISPLAY_MINUTES } from "./timeUtils";
+import { BREAK_DURATION_MINUTES } from "./timeUtils";
 import * as m from "@/paraglide/messages.js";
 
 export type EditRequest = {
@@ -156,8 +156,7 @@ export function DailyTaskList({
   const taskWithBreak = useMemo(() => tasks.find((task) => task.includesBreak) ?? null, [tasks]);
 
   // gapAfter[i] = gap in minutes between tasks[i].stopTime and tasks[i+1].startTime (if >= threshold)
-  // gapToNow = gap in minutes between the last stopped task and liveTime (today only)
-  const { gapAfter, gapToNow } = useMemo(() => {
+  const gapAfter = useMemo(() => {
     const gaps: (number | null)[] = tasks.map(() => null);
 
     for (let i = 0; i < tasks.length - 1; i++) {
@@ -165,20 +164,11 @@ export function DailyTaskList({
       const next = tasks[i + 1];
       if (!current?.stopTime || !next) continue;
       const gap = dayjs(next.startTime).diff(dayjs(current.stopTime), "minute");
-      if (gap >= MIN_GAP_DISPLAY_MINUTES) gaps[i] = gap;
+      if (gap > 0) gaps[i] = gap;
     }
 
-    let toNow: number | null = null;
-    if (isToday && liveTime && tasks.length > 0) {
-      const last = tasks[tasks.length - 1];
-      if (last?.stopTime) {
-        const gap = liveTime.diff(dayjs(last.stopTime), "minute");
-        if (gap >= MIN_GAP_DISPLAY_MINUTES) toNow = gap;
-      }
-    }
-
-    return { gapAfter: gaps, gapToNow: toNow };
-  }, [tasks, isToday, liveTime]);
+    return gaps;
+  }, [tasks]);
 
   const nowPosition = useMemo<NowPosition>(() => {
     if (!isToday || !liveTime || tasks.length === 0) return null;
@@ -507,8 +497,6 @@ export function DailyTaskList({
                   </div>
                 </ListGroup.Item>
                 {gap != null && <GapIndicator durationMinutes={gap} />}
-                {gapToNow != null &&
-                  index === tasks.length - 1 && <GapIndicator durationMinutes={gapToNow} />}
                 {nowPosition?.type === "separator" &&
                   nowPosition.insertBeforeIndex === index + 1 &&
                   liveTime && <NowIndicator liveTime={liveTime} />}

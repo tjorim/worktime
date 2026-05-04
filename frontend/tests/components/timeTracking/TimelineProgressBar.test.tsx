@@ -56,15 +56,14 @@ describe("TimelineProgressBar", () => {
       expect(breakBar).toHaveStyle("opacity: 0.3");
     });
 
-    it("shows break title tooltip on break segment", () => {
+    it("has an aria-label on the break segment", () => {
       const task = makeTask({ includesBreak: true });
 
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      const breakSegment = screen.getByLabelText(
-        `Break deduction: ${BREAK_DURATION_MINUTES} minutes`,
-      );
-      expect(breakSegment).toHaveAttribute("title", `Break: ${BREAK_DURATION_MINUTES}min`);
+      expect(
+        screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`),
+      ).toBeInTheDocument();
     });
   });
 
@@ -151,8 +150,8 @@ describe("TimelineProgressBar", () => {
         />,
       );
 
-      // One 2h segment completed on an 8h target => 25%.
-      expect(getNowLineLeft()).toBe("25%");
+      // Wall-clock elapsed from first task start (08:00) to liveTime (11:00) = 3h on 8h target => 37.5%.
+      expect(getNowLineLeft()).toBe("37.5%");
     });
 
     it("uses the same overtime compression scale as rendered segments", () => {

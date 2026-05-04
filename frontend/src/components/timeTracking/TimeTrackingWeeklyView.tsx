@@ -1,8 +1,10 @@
-import { useMemo, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
+import Tooltip from "react-bootstrap/Tooltip";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
@@ -60,6 +62,22 @@ export function TimeTrackingWeeklyView({
   weeklyWorkingDays,
   onSwitchToDaily,
 }: TimeTrackingWeeklyViewProps) {
+  const [copiedCellId, setCopiedCellId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCopyCell = useCallback((id: string, value: string) => {
+    navigator.clipboard.writeText(value).then(() => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopiedCellId(id);
+      copyTimeoutRef.current = setTimeout(() => setCopiedCellId(null), 1500);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
   const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
   const { settings } = useSettings();
   const crossBorderEnabled = settings.enableCrossBorderTracking;
@@ -343,6 +361,14 @@ export function TimeTrackingWeeklyView({
 
                   return (
                     <div key={day.iso} className="col">
+                      <OverlayTrigger
+                        trigger={onSwitchToDaily ? ["hover", "focus"] : []}
+                        overlay={
+                          <Tooltip id={`weekly-day-${day.iso}`}>
+                            {m.tt_open_daily_log_title({ day: day.label })}
+                          </Tooltip>
+                        }
+                      >
                       <div
                         className={`text-center p-2 rounded ${isToday ? "bg-primary bg-opacity-10" : ""}${onSwitchToDaily ? " hover-highlight" : ""}`}
                         role={onSwitchToDaily ? "button" : undefined}
@@ -350,11 +376,6 @@ export function TimeTrackingWeeklyView({
                         onClick={() => onSwitchToDaily?.(day.iso)}
                         onKeyDown={
                           onSwitchToDaily ? createDayKeyDownHandler(day.iso, true) : undefined
-                        }
-                        title={
-                          onSwitchToDaily
-                            ? m.tt_open_daily_log_title({ day: day.label })
-                            : undefined
                         }
                         style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
                       >
@@ -420,6 +441,7 @@ export function TimeTrackingWeeklyView({
                           </div>
                         )}
                       </div>
+                      </OverlayTrigger>
                     </div>
                   );
                 })}
@@ -456,23 +478,13 @@ export function TimeTrackingWeeklyView({
                       <tr
                         key={day.iso}
                         className={isToday ? "table-primary" : ""}
-                        onClick={() => onSwitchToDaily?.(day.iso)}
-                        style={onSwitchToDaily ? { cursor: "pointer" } : undefined}
-                        title={
-                          onSwitchToDaily
-                            ? m.tt_open_daily_log_title({ day: day.label })
-                            : undefined
-                        }
                       >
                         <th scope="row">
                           {onSwitchToDaily ? (
                             <button
                               type="button"
                               className="btn btn-link p-0 text-decoration-none text-reset fw-semibold"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSwitchToDaily(day.iso);
-                              }}
+                              onClick={() => onSwitchToDaily(day.iso)}
                               aria-label={m.tt_open_daily_log_title({ day: day.label })}
                             >
                               {day.label}
@@ -500,13 +512,41 @@ export function TimeTrackingWeeklyView({
                         </th>
                         {labelNames.map((label) => {
                           const hours = daySummary[label] ?? 0;
+                          const cellId = `${day.iso}-${label}`;
+                          const cellValue = hours > 0 ? hours.toFixed(2) : null;
                           return (
-                            <td key={`${day.iso}-${label}`}>
-                              {hours > 0 ? hours.toFixed(2) : "-"}
-                            </td>
+                            <OverlayTrigger
+                              key={cellId}
+                              show={copiedCellId === cellId}
+                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
+                            >
+                              <td
+                                onClick={cellValue ? () => handleCopyCell(cellId, cellValue) : undefined}
+                                style={cellValue ? { cursor: "copy" } : undefined}
+                              >
+                                {cellValue ?? "-"}
+                              </td>
+                            </OverlayTrigger>
                           );
                         })}
-                        <td className="fw-semibold">{dayTotal > 0 ? dayTotal.toFixed(2) : "-"}</td>
+                        {(() => {
+                          const cellId = `${day.iso}-total`;
+                          const cellValue = dayTotal > 0 ? dayTotal.toFixed(2) : null;
+                          return (
+                            <OverlayTrigger
+                              show={copiedCellId === cellId}
+                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
+                            >
+                              <td
+                                className="fw-semibold"
+                                onClick={cellValue ? () => handleCopyCell(cellId, cellValue) : undefined}
+                                style={cellValue ? { cursor: "copy" } : undefined}
+                              >
+                                {cellValue ?? "-"}
+                              </td>
+                            </OverlayTrigger>
+                          );
+                        })()}
                       </tr>
                     );
                   })}
