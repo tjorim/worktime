@@ -495,7 +495,7 @@
   "tt_open_daily_log_title": "Open daglogboek van {day}",
   "tt_total_label": "Totaal",
   "tt_target_label": "Doel",
-  "tt_gap_label": "{minutes}min gat",
+  "tt_gap_label": "{minutes}min leeg",
   "tt_gap_aria": "{minutes} minuten niet bijgehouden",
   "timeoff_import_events_aria": "Gebeurtenissen importeren",
   "timeoff_export_events_aria": "Gebeurtenissen exporteren",
