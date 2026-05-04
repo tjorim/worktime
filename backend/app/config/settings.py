@@ -56,10 +56,6 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 5
     DATABASE_POOL_MAX_OVERFLOW: int = 10
 
-    # Comma-separated list of usernames that are granted admin privileges.
-    # Example: ADMIN_USERNAMES=jorim,alice
-    ADMIN_USERNAMES: str = ""
-
     # HMAC secret for the /api/metrics endpoint.
     # When empty the metrics endpoint returns 404 so it stays invisible to scanners.
     # Generate a suitable value with: python -c "import secrets; print(secrets.token_hex(32))"

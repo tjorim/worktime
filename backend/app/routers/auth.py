@@ -15,14 +15,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.config.oidc_config import OIDCTokenError, decode_token, get_or_create_local_user
 from app.database.engine import get_session
 
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
-_ADMIN_USERNAMES: frozenset[str] = frozenset(u.strip() for u in settings.ADMIN_USERNAMES.split(",") if u.strip())
 
 
 @dataclass(frozen=True)
@@ -39,7 +37,7 @@ async def get_authenticated_principal(
 
     Decodes the OIDC access token, looks up (or auto-provisions) the local
     user record by the token ``sub`` claim, and derives ``is_admin`` from the
-    configured ``ADMIN_USERNAMES`` list.
+    ``realm_access.roles`` claim (Keycloak realm role ``admin``).
     """
     token = credentials.credentials
     try:
@@ -68,7 +66,7 @@ async def get_authenticated_principal(
             detail="Authentication service error",
         ) from exc
 
-    is_admin = local_user.username in _ADMIN_USERNAMES
+    is_admin = "admin" in claims.get("realm_access", {}).get("roles", [])
 
     return AuthenticatedPrincipal(user_id=local_user.id, is_admin=is_admin)
 
