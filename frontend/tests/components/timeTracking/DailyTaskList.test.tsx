@@ -242,7 +242,7 @@ describe("DailyTaskList", () => {
       expect(screen.getByText("5min gap")).toBeInTheDocument();
     });
 
-    it("does not show gap indicator when gap is below 5 minutes", () => {
+    it("shows gap indicator even when gap is below 5 minutes", () => {
       const nearlyAdjacent = makeTask({
         id: "t2",
         text: "Afternoon work",
@@ -250,16 +250,15 @@ describe("DailyTaskList", () => {
         stopTime: `${DATE}T17:00`,
       });
       renderList([task1, nearlyAdjacent]);
-      expect(screen.queryByTestId("gap-indicator")).not.toBeInTheDocument();
+      expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
     });
 
-    it("shows gap-to-now indicator after last stopped task on today's view", () => {
+    it("does not show gap-to-now indicator after last stopped task on today's view", () => {
       const liveTime = dayjs(`${DATE}T18:00`);
       renderList([task1, task2], TEST_LABELS, { liveTime, isToday: true });
-      // Two gap indicators: one between tasks (120min) and one to now (60min)
+      // Only the inter-task gap indicator; gap-to-now was removed
       const indicators = screen.getAllByTestId("gap-indicator");
-      expect(indicators).toHaveLength(2);
-      expect(screen.getByText("60min gap")).toBeInTheDocument();
+      expect(indicators).toHaveLength(1);
     });
 
     it("does not show gap-to-now when isToday is false", () => {
