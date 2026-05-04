@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Overlay from "react-bootstrap/Overlay";
 import BootstrapProgressBar from "react-bootstrap/ProgressBar";
 import Tooltip from "react-bootstrap/Tooltip";
+import * as m from "@/paraglide/messages.js";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {
   buildLabelColorMap,
@@ -139,37 +140,19 @@ export function TimelineProgressBar({
     return result;
   }, [tasks, colorByLabelId, liveTime, sanitizedTargetHours]);
 
-  const totalHours = useMemo(
-    () =>
-      renderSegments
-        .filter((s): s is TaskSegment => s.type === "task")
-        .reduce((sum, s) => sum + s.durationHours, 0),
-    [renderSegments],
-  );
-
-  const totalPercentage = useMemo(
-    () =>
-      renderSegments
-        .filter((s): s is TaskSegment => s.type === "task")
-        .reduce((sum, s) => sum + s.percentage, 0),
-    [renderSegments],
-  );
-
-  const totalBreakHours = useMemo(
-    () =>
-      renderSegments
-        .filter((s): s is TaskSegment => s.type === "task")
-        .reduce((sum, s) => sum + (s.breakHours ?? 0), 0),
-    [renderSegments],
-  );
-
-  const totalGapHours = useMemo(
-    () =>
-      renderSegments
-        .filter((s): s is GapSegment => s.type === "gap")
-        .reduce((sum, s) => sum + s.durationHours, 0),
-    [renderSegments],
-  );
+  const { totalHours, totalPercentage, totalBreakHours, totalGapHours } = useMemo(() => {
+    let hours = 0, percentage = 0, breakHours = 0, gapHours = 0;
+    for (const s of renderSegments) {
+      if (s.type === "task") {
+        hours += s.durationHours;
+        percentage += s.percentage;
+        breakHours += s.breakHours ?? 0;
+      } else {
+        gapHours += s.durationHours;
+      }
+    }
+    return { totalHours: hours, totalPercentage: percentage, totalBreakHours: breakHours, totalGapHours: gapHours };
+  }, [renderSegments]);
 
   const visualTotalPercentage =
     totalPercentage +
@@ -197,7 +180,7 @@ export function TimelineProgressBar({
           <BootstrapProgressBar>
             {renderSegments.map((rs) => {
               if (rs.type === "gap") {
-                const gapLabel = `${Math.round(rs.durationHours * 60)} minutes untracked`;
+                const gapLabel = m.tt_gap_aria({ minutes: Math.round(rs.durationHours * 60) });
                 return (
                   <BootstrapProgressBar
                     key={rs.id}
@@ -224,7 +207,7 @@ export function TimelineProgressBar({
                   (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
                 const afterPct =
                   (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-                const breakTooltipText = `Break: ${BREAK_DURATION_MINUTES}min`;
+                const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
 
                 const showLabelOnBefore = beforePct >= afterPct;
                 const labelOnBefore = showLabelOnBefore && beforePct > 10;

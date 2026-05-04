@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Badge from "react-bootstrap/Badge";
 import Card from "react-bootstrap/Card";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -70,6 +70,12 @@ export function TimeTrackingWeeklyView({
       setCopiedCellId(id);
       copyTimeoutRef.current = setTimeout(() => setCopiedCellId(null), 1500);
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
   }, []);
 
   const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
@@ -512,7 +518,7 @@ export function TimeTrackingWeeklyView({
                             <OverlayTrigger
                               key={cellId}
                               show={copiedCellId === cellId}
-                              overlay={<Tooltip id={`copy-${cellId}`}>Copied!</Tooltip>}
+                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
                             >
                               <td
                                 onClick={cellValue ? () => handleCopyCell(cellId, cellValue) : undefined}
@@ -529,7 +535,7 @@ export function TimeTrackingWeeklyView({
                           return (
                             <OverlayTrigger
                               show={copiedCellId === cellId}
-                              overlay={<Tooltip id={`copy-${cellId}`}>Copied!</Tooltip>}
+                              overlay={<Tooltip id={`copy-${cellId}`}>{m.tt_copied()}</Tooltip>}
                             >
                               <td
                                 className="fw-semibold"

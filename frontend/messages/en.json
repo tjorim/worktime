@@ -502,6 +502,7 @@
   "tt_open_daily_log_title": "Open {day} daily log",
   "tt_total_label": "Total",
   "tt_target_label": "Target",
+  "tt_copied": "Copied!",
   "tt_gap_label": "{minutes}min gap",
   "tt_gap_aria": "{minutes} minutes of untracked time",
   "timeoff_import_events_aria": "Import events",
