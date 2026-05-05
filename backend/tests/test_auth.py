@@ -158,6 +158,11 @@ async def test_is_admin_false_with_null_realm_access() -> None:
     assert await _call_principal(claims) is False
 
 
+async def test_is_admin_false_with_non_dict_realm_access() -> None:
+    """is_admin must be False when realm_access is not an object."""
+    claims = {"sub": "user-sub", "realm_access": "admin"}
+    assert await _call_principal(claims) is False
+
 async def test_is_admin_false_with_empty_roles() -> None:
     """is_admin must be False when realm_access.roles is an empty list."""
     claims = {"sub": "user-sub", "realm_access": {"roles": []}}
