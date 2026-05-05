@@ -66,7 +66,9 @@ async def get_authenticated_principal(
             detail="Authentication service error",
         ) from exc
 
-    is_admin = "admin" in claims.get("realm_access", {}).get("roles", [])
+    realm_access = claims.get("realm_access") or {}
+    roles = realm_access.get("roles") or []
+    is_admin = "admin" in roles if isinstance(roles, list) else False
 
     return AuthenticatedPrincipal(user_id=local_user.id, is_admin=is_admin)
 
