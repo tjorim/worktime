@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { HomePage } from "@/pages/HomePage";
+import { PrivacyPage } from "@/pages/PrivacyPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
 const rootRoute = createRootRoute({
@@ -35,7 +36,13 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, settingsRoute]);
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: PrivacyPage,
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, settingsRoute, privacyRoute]);
 
 export const router = createRouter({
   routeTree,

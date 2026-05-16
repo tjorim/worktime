@@ -690,6 +690,24 @@ class GanttTaskSyncRead(BaseModel):
     deleted_at: dt_datetime | None
 
 
+class UserExportSummary(BaseModel):
+    id: int
+    username: str
+    display_name: str
+
+
+class UserDataExport(BaseModel):
+    exported_at: dt_datetime
+    user: UserExportSummary
+    time_tracking_labels: list[LabelSyncRead]
+    time_tracking_tasks: list[TaskSyncRead]
+    time_tracking_templates: list[TemplateSyncRead]
+    work_locations: list[WorkLocationSyncRead]
+    gantt_tasks: list[GanttTaskSyncRead]
+    time_off_entries: list[TimeOffEntrySyncRead]
+    preferences: dict[str, Any]
+
+
 class SyncPushRequest(BaseModel):
     """Batched push of local changes from client to server."""
 

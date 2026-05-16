@@ -150,6 +150,15 @@ describe("SettingsPage Account Section", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the authenticated privacy notice with a link to the privacy policy", async () => {
+    mockAuthenticatedUser("Alice");
+
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
+
+    expect(await screen.findByText(/trusted-server model/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Learn more" })).toHaveAttribute("href", "/privacy");
+  });
+
   it("does not fetch admin users or render user management for non-admin accounts", async () => {
     let adminUsersRequestCount = 0;
     server.use(

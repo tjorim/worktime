@@ -109,6 +109,15 @@ export function SettingsAccountSection({
                   </Alert>
                 ) : null}
 
+                <Alert variant="info" className="mb-0 py-2">
+                  <div className="small">
+                    {m.account_privacy_notice_body()}{" "}
+                    <a href="/privacy" className="alert-link">
+                      {m.account_privacy_notice_link()}
+                    </a>
+                  </div>
+                </Alert>
+
                 {isProfileLoading && accountId === null ? (
                   <div className="d-flex align-items-center gap-2 text-muted small">
                     <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.engine import get_session
@@ -13,7 +15,20 @@ from app.routers.auth import (
     get_authenticated_principal,
     require_user_or_admin_match,
 )
-from app.schemas import UserCreate, UserListResponse, UserRead, UserUpdate
+from app.schemas import (
+    GanttTaskSyncRead,
+    LabelSyncRead,
+    TaskSyncRead,
+    TemplateSyncRead,
+    TimeOffEntrySyncRead,
+    UserCreate,
+    UserDataExport,
+    UserExportSummary,
+    UserListResponse,
+    UserRead,
+    UserUpdate,
+    WorkLocationSyncRead,
+)
 from app.services.db_service import (
     MAX_USER_LIST_LIMIT,
     ConflictError,
@@ -23,6 +38,7 @@ from app.services.db_service import (
     delete_user_uncommitted,
     get_user,
     get_user_by_username,
+    get_user_export_data,
     list_users,
     update_user,
 )
@@ -88,6 +104,51 @@ async def get_user_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
     return UserRead.model_validate(user, from_attributes=True)
+
+
+@router.get("/{user_id}/export", response_model=UserDataExport)
+async def export_user_endpoint(
+    user_id: int,
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    require_user_or_admin_match(user_id, principal)
+    try:
+        (
+            user,
+            labels,
+            tasks,
+            templates,
+            work_locations,
+            gantt_tasks,
+            time_off_entries,
+            preferences,
+        ) = await get_user_export_data(session, user_id)
+    except NotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+    response = UserDataExport(
+        exported_at=datetime.now(UTC),
+        user=UserExportSummary.model_validate(user, from_attributes=True),
+        time_tracking_labels=[LabelSyncRead.model_validate(item, from_attributes=True) for item in labels],
+        time_tracking_tasks=[TaskSyncRead.model_validate(item, from_attributes=True) for item in tasks],
+        time_tracking_templates=[
+            TemplateSyncRead.model_validate(item, from_attributes=True) for item in templates
+        ],
+        work_locations=[
+            WorkLocationSyncRead.model_validate(item, from_attributes=True) for item in work_locations
+        ],
+        gantt_tasks=[GanttTaskSyncRead.model_validate(item, from_attributes=True) for item in gantt_tasks],
+        time_off_entries=[
+            TimeOffEntrySyncRead.model_validate(item, from_attributes=True) for item in time_off_entries
+        ],
+        preferences=preferences,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=response.model_dump(mode="json"),
+        headers={"Content-Disposition": 'attachment; filename="worktime-export.json"'},
+    )
 
 
 @router.get("/by-username/{username}", response_model=UserRead)
