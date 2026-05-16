@@ -10,6 +10,7 @@
  *  GET  /api/me
  *  GET  /api/users/
  *  PUT  /api/users/:id
+ *  DELETE /api/users/:id
  */
 
 import { http, HttpResponse } from "msw";
@@ -90,5 +91,10 @@ export const syncHandlers = [
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     });
+  }),
+
+  // DELETE /api/users/:id
+  http.delete("*/api/users/:id", () => {
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

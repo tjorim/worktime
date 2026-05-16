@@ -188,6 +188,9 @@ export function SettingsContent({
     adminUsers,
     isAdminUsersLoading,
     adminUsersError,
+    adminUsersDeleteError,
+    deletingAdminUserId,
+    handleDeleteAdminUser,
   } = useSettingsAccount({
     isAuthenticated,
     displayName,
@@ -283,6 +286,9 @@ export function SettingsContent({
         adminUsers={adminUsers}
         isAdminUsersLoading={isAdminUsersLoading}
         adminUsersError={adminUsersError}
+        adminUsersDeleteError={adminUsersDeleteError}
+        deletingAdminUserId={deletingAdminUserId}
+        onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
         onLogout={logout}
         onSignup={triggerSignup}
         onLogin={triggerLogin}

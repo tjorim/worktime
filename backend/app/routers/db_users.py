@@ -191,6 +191,12 @@ async def delete_user_endpoint(
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
 ) -> Response:
+    if principal.is_admin and principal.user_id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins cannot delete their own account via this endpoint.",
+        )
+
     require_user_or_admin_match(user_id, principal)
 
     try:
