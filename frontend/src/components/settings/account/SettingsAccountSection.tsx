@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -123,9 +124,9 @@ export function SettingsAccountSection({
                 <Alert variant="info" className="mb-0 py-2">
                   <div className="small">
                     {m.account_privacy_notice_body()}{" "}
-                    <a href="/privacy" className="alert-link">
+                    <Link to="/privacy" className="alert-link">
                       {m.account_privacy_notice_link()}
-                    </a>
+                    </Link>
                   </div>
                 </Alert>
 
@@ -230,7 +231,7 @@ export function SettingsAccountSection({
                                           <Button
                                             variant="outline-danger"
                                             size="sm"
-                                            disabled={accountId === user.id || deletingAdminUserId === user.id}
+                                            disabled={accountId === user.id || deletingAdminUserId !== null}
                                             title={
                                               accountId === user.id
                                                 ? m.account_admin_users_delete_self_blocked()
