@@ -4,14 +4,6 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  type AnyRouter,
-} from "@tanstack/react-router";
 import { SettingsContent } from "@/pages/SettingsPage";
 import { SettingsAccountSection } from "@/components/settings/account/SettingsAccountSection";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -24,6 +16,17 @@ import { labelsCollection } from "@/db/collections";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import * as m from "@/paraglide/messages.js";
+
+// Stub <Link> so tests don't need a RouterProvider context.
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) => (
+      <a href={to} className={className}>{children}</a>
+    ),
+  };
+});
 
 // Global react-oidc-context mocks come from tests/setup.ts (no-session default).
 // Override for authenticated state tests by calling mockAuthenticatedUser().
@@ -64,35 +67,17 @@ afterEach(() => {
   });
 });
 
-// Wraps UI in a minimal TanStack Router context so <Link> components don't crash.
-// The root route renders the given element; /privacy is registered for Link resolution.
-function withTestRouter(ui: React.ReactElement): React.ReactElement {
-  const rootRoute = createRootRoute({ component: () => ui });
-  const privacyRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/privacy",
-    component: () => null,
-  });
-  const testRouter = createRouter({
-    routeTree: rootRoute.addChildren([privacyRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  return <RouterProvider router={testRouter as AnyRouter} />;
-}
-
 function renderWithProviders(ui: React.ReactElement) {
   return render(
-    withTestRouter(
-      <SettingsProvider>
-        <EventStoreProvider>
-          <DeveloperOptionsProvider>
-            <ToastProvider>
-              <AuthProvider>{ui}</AuthProvider>
-            </ToastProvider>
-          </DeveloperOptionsProvider>
-        </EventStoreProvider>
-      </SettingsProvider>,
-    ),
+    <SettingsProvider>
+      <EventStoreProvider>
+        <DeveloperOptionsProvider>
+          <ToastProvider>
+            <AuthProvider>{ui}</AuthProvider>
+          </ToastProvider>
+        </DeveloperOptionsProvider>
+      </EventStoreProvider>
+    </SettingsProvider>,
   );
 }
 
@@ -178,7 +163,7 @@ function renderSettingsAccountHarness({
     );
   }
 
-  render(withTestRouter(<Harness />));
+  render(<Harness />);
   return { showSuccessToast };
 }
 
