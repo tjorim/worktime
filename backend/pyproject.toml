@@ -18,7 +18,7 @@ dependencies = [
   "pydantic-settings==2.14.1",
   "python-dotenv==1.2.2",
   "pycountry==26.2.16",
-  "python-jose[cryptography]==3.5.0",
+  "PyJWT[crypto]>=2.9",
   "httpx==0.28.1",
 ]
 
