@@ -11,6 +11,14 @@ interface AccountProfile {
   };
 }
 
+interface ManagedUser {
+  id: number;
+  username: string;
+  display_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface UseSettingsAccountParams {
   isAuthenticated: boolean;
   displayName: string | null;
@@ -29,6 +37,9 @@ export function useSettingsAccount({
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [adminUsers, setAdminUsers] = useState<ManagedUser[]>([]);
+  const [isAdminUsersLoading, setIsAdminUsersLoading] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -68,6 +79,45 @@ export function useSettingsAccount({
       isCancelled = true;
     };
   }, [isAuthenticated, fetchFn]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accountProfile?.is_admin) {
+      setAdminUsers([]);
+      setAdminUsersError(null);
+      setIsAdminUsersLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsAdminUsersLoading(true);
+    setAdminUsersError(null);
+
+    fetchFn("/api/users/?limit=100")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Unexpected status: ${response.status}`);
+        }
+        const payload = (await response.json()) as {
+          items?: ManagedUser[];
+        };
+        if (isCancelled) return;
+        setAdminUsers(payload.items ?? []);
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        console.error("Failed to load admin user list:", error);
+        setAdminUsersError(m.account_admin_users_load_failed());
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsAdminUsersLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, accountProfile?.is_admin, fetchFn]);
 
   const hasProfileChanges =
     accountProfile !== null &&
@@ -130,5 +180,8 @@ export function useSettingsAccount({
     hasProfileChanges,
     resolvedDisplayName,
     handleSaveProfile,
+    adminUsers,
+    isAdminUsersLoading,
+    adminUsersError,
   };
 }
