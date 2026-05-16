@@ -217,3 +217,35 @@ class TestPutPreferences:
         )
         assert resp.status_code == 200
         assert resp.json()["data"] == complex_data
+
+    def test_users_cannot_overwrite_each_others_preferences(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        admin_h = auth_headers(1, is_admin=True)
+        user_a = create_user_factory(db_client, admin_h, "prefs-write-a")
+        user_b = create_user_factory(db_client, admin_h, "prefs-write-b")
+
+        headers_a = auth_headers(user_a)
+        headers_b = auth_headers(user_b)
+
+        assert db_client.put(
+            "/api/preferences",
+            json={"data": {"theme": "dark"}, "client_updated_at": _ts()},
+            headers=headers_a,
+        ).status_code == 200
+        assert db_client.put(
+            "/api/preferences",
+            json={"data": {"theme": "light"}, "client_updated_at": _ts(1)},
+            headers=headers_b,
+        ).status_code == 200
+
+        resp_a = db_client.get("/api/preferences", headers=headers_a)
+        assert resp_a.status_code == 200
+        assert resp_a.json()["data"] == {"theme": "dark"}
+
+        resp_b = db_client.get("/api/preferences", headers=headers_b)
+        assert resp_b.status_code == 200
+        assert resp_b.json()["data"] == {"theme": "light"}

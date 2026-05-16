@@ -172,7 +172,7 @@ const waitForStep = async (stepNumber: number, totalSteps: number = 9, timeout =
   );
 };
 
-const enableTimeOffToggle = async (user: ReturnType<typeof userEvent.setup>) => {
+const _enableTimeOffToggle = async (user: ReturnType<typeof userEvent.setup>) => {
   const toggle = screen.getByLabelText(/Enable time off/i) as HTMLInputElement;
   if (!toggle.checked) {
     await user.click(toggle);

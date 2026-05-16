@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -96,6 +97,55 @@ async def get_user_by_username(session: AsyncSession, username: str) -> User | N
     return result.scalar_one_or_none()
 
 
+async def get_user_export_data(
+    session: AsyncSession, user_id: int
+) -> tuple[
+    User,
+    list[TimeTrackingLabel],
+    list[TimeTrackingTask],
+    list[TimeTrackingTemplate],
+    list[WorkLocation],
+    list[GanttTask],
+    list[TimeOffEntry],
+    dict[str, Any],
+]:
+    user = await get_user(session, user_id)
+
+    async def _list_rows(model: type[Base], *order_by: Any) -> list[Any]:
+        result = await session.execute(
+            select(model).where(model.user_id == user_id).order_by(*order_by)
+        )
+        return list(result.scalars().all())
+
+    labels = await _list_rows(TimeTrackingLabel, TimeTrackingLabel.created_at, TimeTrackingLabel.id)
+    tasks = await _list_rows(TimeTrackingTask, TimeTrackingTask.created_at, TimeTrackingTask.id)
+    templates = await _list_rows(
+        TimeTrackingTemplate,
+        TimeTrackingTemplate.created_at,
+        TimeTrackingTemplate.id,
+    )
+    work_locations = await _list_rows(WorkLocation, WorkLocation.date, WorkLocation.id)
+    gantt_tasks = await _list_rows(GanttTask, GanttTask.start_date, GanttTask.id)
+    time_off_entries = await _list_rows(
+        TimeOffEntry,
+        sql_func.coalesce(TimeOffEntry.date, TimeOffEntry.start_date).nulls_last(),
+        TimeOffEntry.weekday,
+        TimeOffEntry.entry_id,
+    )
+    preferences = await get_user_preferences(session, user_id)
+
+    return (
+        user,
+        labels,
+        tasks,
+        templates,
+        work_locations,
+        gantt_tasks,
+        time_off_entries,
+        preferences.data if preferences is not None else {},
+    )
+
+
 async def list_users(
     session: AsyncSession,
     *,
@@ -153,6 +203,9 @@ async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
     await session.execute(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
     await session.execute(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))
     await session.execute(delete(WorkLocation).where(WorkLocation.user_id == user_id))
+    await session.execute(delete(GanttTask).where(GanttTask.user_id == user_id))
+    await session.execute(delete(TimeOffEntry).where(TimeOffEntry.user_id == user_id))
+    await session.execute(delete(UserPreferences).where(UserPreferences.user_id == user_id))
 
     await session.delete(user)
 

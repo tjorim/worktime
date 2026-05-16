@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import UTC, date, datetime, time
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import GanttTask
+from app.database.models import (
+    GanttTask,
+    TimeOffEntry,
+    TimeTrackingLabel,
+    TimeTrackingTask,
+    TimeTrackingTemplate,
+    UserPreferences,
+    WorkLocation,
+)
 from app.schemas import (
     GanttTaskCreate,
     GanttTaskUpdate,
@@ -17,7 +25,9 @@ from app.schemas import (
     TaskCreate,
     TaskUpdate,
     TemplateCreate,
+    TimeOffEntryCreate,
     UserCreate,
+    UserPreferencesWrite,
     UserUpdate,
     WorkLocationCreate,
 )
@@ -26,6 +36,7 @@ from app.services.db_service import (
     NotFoundError,
     create_gantt_task,
     create_label,
+    create_or_update_time_off_entry,
     create_or_update_work_location,
     create_task,
     create_template,
@@ -41,6 +52,7 @@ from app.services.db_service import (
     update_gantt_task,
     update_task,
     update_user,
+    upsert_user_preferences,
 )
 from app.services.db_service import (
     ValidationError as ServiceValidationError,
@@ -243,9 +255,40 @@ async def test_work_location_upsert(db_session: AsyncSession) -> None:
     assert second.label == "Client office"
 
 
-async def test_delete_user_removes_gantt_tasks(db_session: AsyncSession) -> None:
-    user = await create_user(db_session, UserCreate(username="gantt-owner", display_name="Gantt Owner"))
+async def test_delete_user_removes_all_user_scoped_rows(db_session: AsyncSession) -> None:
+    user = await create_user(db_session, UserCreate(username="delete-owner", display_name="Delete Owner"))
 
+    label = await create_label(db_session, user.id, LabelCreate(name="Delete Label", color="#112233"))
+    await create_task(
+        db_session,
+        user.id,
+        TaskCreate(
+            text="Delete task",
+            label_id=label.id,
+            start_time=datetime(2026, 3, 1, 9, 0),
+            stop_time=datetime(2026, 3, 1, 10, 0),
+            includes_break=False,
+        ),
+    )
+    await create_template(
+        db_session,
+        user.id,
+        TemplateCreate(
+            text="Delete template",
+            label_id=label.id,
+            start_time=time(8, 0),
+            stop_time=time(9, 0),
+        ),
+    )
+    await create_or_update_work_location(
+        db_session,
+        user.id,
+        WorkLocationCreate(
+            date=date(2026, 3, 2),
+            country_code="NL",
+            label="Home",
+        ),
+    )
     await create_gantt_task(
         db_session,
         user.id,
@@ -256,14 +299,46 @@ async def test_delete_user_removes_gantt_tasks(db_session: AsyncSession) -> None
             progress=40,
         ),
     )
+    await upsert_user_preferences(
+        db_session,
+        user.id,
+        UserPreferencesWrite(
+            data={"theme": "dark"},
+            client_updated_at=datetime(2026, 3, 1, 12, 0, tzinfo=UTC),
+        ),
+    )
+    await create_or_update_time_off_entry(
+        db_session,
+        user.id,
+        TimeOffEntryCreate(
+            date=date(2026, 3, 3),
+            entry_type="vacation",
+        ),
+    )
 
-    result = await db_session.execute(select(GanttTask).where(GanttTask.user_id == user.id))
-    assert result.scalar_one_or_none() is not None
+    user_scoped_models = (
+        TimeTrackingTask,
+        TimeTrackingTemplate,
+        TimeTrackingLabel,
+        WorkLocation,
+        GanttTask,
+        UserPreferences,
+        TimeOffEntry,
+    )
+
+    for model in user_scoped_models:
+        count = await db_session.scalar(
+            select(func.count()).select_from(model).where(model.user_id == user.id)
+        )
+        assert count == 1
 
     await delete_user(db_session, user.id)
 
-    result = await db_session.execute(select(GanttTask).where(GanttTask.user_id == user.id))
-    assert result.scalar_one_or_none() is None
+    for model in user_scoped_models:
+        count = await db_session.scalar(
+            select(func.count()).select_from(model).where(model.user_id == user.id)
+        )
+        assert count == 0
 
 
 async def test_gantt_task_create_rejects_invalid_date_range(db_session: AsyncSession) -> None:

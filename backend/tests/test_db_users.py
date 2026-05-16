@@ -77,15 +77,25 @@ def test_user_duplicate_and_not_found(
     )
     assert duplicate_create.status_code == 409
 
-    missing_user_get = db_client.get("/api/users/99999", headers=auth_headers(99999, is_admin=True))
+    missing_user_get = db_client.get("/api/users/99999", headers=admin_headers)
     assert missing_user_get.status_code == 404
 
     missing_user_update = db_client.put(
         "/api/users/99999",
         json={"display_name": "Missing"},
-        headers=auth_headers(99999, is_admin=True),
+        headers=admin_headers,
     )
     assert missing_user_update.status_code == 404
 
-    missing_user_delete = db_client.delete("/api/users/99999", headers=auth_headers(99999, is_admin=True))
+    missing_user_delete = db_client.delete("/api/users/99999", headers=admin_headers)
     assert missing_user_delete.status_code == 404
+
+
+def test_admin_cannot_delete_own_account(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+) -> None:
+    response = db_client.delete("/api/users/1", headers=auth_headers(1, is_admin=True))
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Admins cannot delete their own account via this endpoint."

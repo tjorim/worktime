@@ -355,3 +355,93 @@ def test_template_crud(
     )
     assert empty_templates_response.status_code == 200
     assert empty_templates_response.json()["total"] == 0
+
+
+def test_cross_user_cannot_read_modify_or_delete_time_tracking_resources(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "tt-owner")
+    other_id = create_user_factory(db_client, admin_headers, "tt-other")
+
+    owner_headers = auth_headers(owner_id)
+    other_headers = auth_headers(other_id)
+
+    label_response = db_client.post(
+        f"/api/time-tracking/labels?user_id={owner_id}",
+        json={"name": "Owner Label", "color": "#123456"},
+        headers=owner_headers,
+    )
+    assert label_response.status_code == 201
+    label_id = label_response.json()["id"]
+
+    task_response = db_client.post(
+        f"/api/time-tracking/tasks?user_id={owner_id}",
+        json={
+            "text": "Owner task",
+            "label_id": label_id,
+            "start_time": datetime(2026, 4, 1, 9, 0).isoformat(),
+            "stop_time": datetime(2026, 4, 1, 10, 0).isoformat(),
+            "includes_break": False,
+        },
+        headers=owner_headers,
+    )
+    assert task_response.status_code == 201
+    task_id = task_response.json()["id"]
+
+    template_response = db_client.post(
+        f"/api/time-tracking/templates?user_id={owner_id}",
+        json={
+            "text": "Owner template",
+            "label_id": label_id,
+            "start_time": "09:00:00",
+            "stop_time": "10:00:00",
+        },
+        headers=owner_headers,
+    )
+    assert template_response.status_code == 201
+    template_id = template_response.json()["id"]
+
+    assert db_client.get(
+        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.put(
+        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+        json={"name": "Intrusion", "color": "#654321"},
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.delete(
+        f"/api/time-tracking/labels/{label_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+
+    assert db_client.get(
+        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.put(
+        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+        json={"text": "Intrusion"},
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.delete(
+        f"/api/time-tracking/tasks/{task_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+
+    assert db_client.get(
+        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.put(
+        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+        json={"text": "Intrusion"},
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.delete(
+        f"/api/time-tracking/templates/{template_id}?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
