@@ -4,6 +4,19 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Table from "react-bootstrap/Table";
 import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
+
+const formatTimestamp = (value: string): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  const locale = getLocale() === "nl" ? "nl-NL" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+};
 
 interface SettingsAccountSectionProps {
   isValidating: boolean;
@@ -183,8 +196,8 @@ export function SettingsAccountSection({
                                     <td>{user.id}</td>
                                     <td>{user.username}</td>
                                     <td>{user.display_name}</td>
-                                    <td>{user.created_at}</td>
-                                    <td>{user.updated_at}</td>
+                                    <td>{formatTimestamp(user.created_at)}</td>
+                                    <td>{formatTimestamp(user.updated_at)}</td>
                                   </tr>
                                 ))}
                               </tbody>
