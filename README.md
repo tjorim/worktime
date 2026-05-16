@@ -44,5 +44,6 @@ uv run uvicorn app.main:app --reload
 ## More Details
 
 - [backend/README.md](backend/README.md) for backend architecture, API surface, and deployment
+- [docs/privacy-model.md](docs/privacy-model.md) for the Worktime privacy stance and follow-up privacy work
 - `frontend/` for the web app source
 - `examples/` for sample `.hday` and share-style data

@@ -14,6 +14,17 @@ This document serves as a general to-do list and development roadmap for Worktim
 
 Features that enhance functionality with moderate development effort.
 
+#### Privacy Model Follow-up
+
+- **Scope**: Follow-up tasks from the documented trusted-server privacy model
+- **Goals**:
+  - Add explicit privacy notice in frontend and docs
+  - Strengthen tests for cross-user access boundaries
+  - Document backup encryption and operational access expectations
+  - Evaluate field-level encryption for sensitive fields
+  - Research client-side encryption feasibility
+- **Status**: 🔲 Planned
+
 #### 1. Cross-Schedule Transfer View Enhancement
 
 - **Component**: TransferView with cross-schedule coordination
