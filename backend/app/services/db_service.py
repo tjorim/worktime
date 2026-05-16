@@ -153,6 +153,9 @@ async def delete_user_uncommitted(session: AsyncSession, user_id: int) -> None:
     await session.execute(delete(TimeTrackingTemplate).where(TimeTrackingTemplate.user_id == user_id))
     await session.execute(delete(TimeTrackingLabel).where(TimeTrackingLabel.user_id == user_id))
     await session.execute(delete(WorkLocation).where(WorkLocation.user_id == user_id))
+    await session.execute(delete(GanttTask).where(GanttTask.user_id == user_id))
+    await session.execute(delete(TimeOffEntry).where(TimeOffEntry.user_id == user_id))
+    await session.execute(delete(UserPreferences).where(UserPreferences.user_id == user_id))
 
     await session.delete(user)
 

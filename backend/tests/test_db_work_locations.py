@@ -74,3 +74,37 @@ def test_work_location_country_code_validation(
         headers=headers,
     )
     assert invalid_country_code.status_code == 422
+
+
+def test_cross_user_cannot_read_modify_or_delete_work_locations(
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    create_user_factory: Callable[..., int],
+) -> None:
+    admin_headers = auth_headers(1, is_admin=True)
+    owner_id = create_user_factory(db_client, admin_headers, "loc-isolation-owner")
+    other_id = create_user_factory(db_client, admin_headers, "loc-isolation-other")
+
+    owner_headers = auth_headers(owner_id)
+    other_headers = auth_headers(other_id)
+
+    create_response = db_client.post(
+        f"/api/work-locations/?user_id={owner_id}",
+        json={"date": "2026-02-05", "country_code": "NL", "label": "Home"},
+        headers=owner_headers,
+    )
+    assert create_response.status_code == 201
+
+    assert db_client.get(
+        f"/api/work-locations/2026-02-05?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.post(
+        f"/api/work-locations/?user_id={owner_id}",
+        json={"date": "2026-02-05", "country_code": "BE", "label": "Office"},
+        headers=other_headers,
+    ).status_code == 403
+    assert db_client.delete(
+        f"/api/work-locations/2026-02-05?user_id={owner_id}",
+        headers=other_headers,
+    ).status_code == 403

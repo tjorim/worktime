@@ -136,6 +136,19 @@ def test_gantt_task_crud_and_validation(
     )
     assert impersonate_resp.status_code == 403
 
+    impersonate_update_resp = db_client.put(
+        f"/api/gantt-tasks/{other_task_id}?user_id={other_id}",
+        json={"name": "Hijacked"},
+        headers=owner_headers,
+    )
+    assert impersonate_update_resp.status_code == 403
+
+    impersonate_delete_resp = db_client.delete(
+        f"/api/gantt-tasks/{other_task_id}?user_id={other_id}",
+        headers=owner_headers,
+    )
+    assert impersonate_delete_resp.status_code == 403
+
     # 404 for non-existent task ID
     nonexistent_resp = db_client.get(
         f"/api/gantt-tasks/nonexistent-id?user_id={owner_id}",
